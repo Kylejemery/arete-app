@@ -54,6 +54,15 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
+        name="timer"
+        options={{
+          title: 'Read',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="timer-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
