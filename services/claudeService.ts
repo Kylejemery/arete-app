@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -114,6 +116,174 @@ ${COUNSELOR_PROFILES}
 Today's date is ${today}. Kyle is engaging with his Cabinet of Invisible Counselors.`;
 }
 
+function formatReadingTime(seconds: number): string {
+  const totalMinutes = Math.floor(seconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes} minutes`;
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  return mins > 0 ? `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes` : `${hours} hour${hours > 1 ? 's' : ''}`;
+}
+
+export async function gatherAppContext(): Promise<string> {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const [
+    morningTasksRaw,
+    eveningTasksRaw,
+    reflectionAnswerRaw,
+    stoicAnswerRaw,
+    journalEntriesRaw,
+    commonplaceQuotesRaw,
+    readingSessionsRaw,
+    currentBooksRaw,
+    booksReadRaw,
+    todayReadingSecondsRaw,
+    streakRaw,
+  ] = await Promise.all([
+    AsyncStorage.getItem('morningTasks'),
+    AsyncStorage.getItem('eveningTasks'),
+    AsyncStorage.getItem('reflectionAnswer'),
+    AsyncStorage.getItem('stoicAnswer'),
+    AsyncStorage.getItem('journalEntries'),
+    AsyncStorage.getItem('commonplaceQuotes'),
+    AsyncStorage.getItem('readingSessions'),
+    AsyncStorage.getItem('currentBooks'),
+    AsyncStorage.getItem('booksRead'),
+    AsyncStorage.getItem('todayReadingSeconds'),
+    AsyncStorage.getItem('streak'),
+  ]);
+
+  const lines: string[] = [];
+  lines.push(`=== KYLE'S CURRENT APP DATA (as of ${today}) ===`);
+
+  // Morning routine
+  try {
+    const morningTasks: { title: string; done: boolean }[] = morningTasksRaw ? JSON.parse(morningTasksRaw) : [];
+    if (morningTasks.length > 0) {
+      lines.push('');
+      lines.push('MORNING ROUTINE:');
+      morningTasks.forEach((t) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+    }
+  } catch { /* skip */ }
+
+  // Evening tasks
+  try {
+    const eveningTasks: { title: string; done: boolean }[] = eveningTasksRaw ? JSON.parse(eveningTasksRaw) : [];
+    if (eveningTasks.length > 0) {
+      lines.push('');
+      lines.push('EVENING TASKS:');
+      eveningTasks.forEach((t) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+    }
+  } catch { /* skip */ }
+
+  // Evening reflection
+  lines.push('');
+  lines.push('EVENING REFLECTION:');
+  lines.push(`Q: Evening Reflection`);
+  lines.push(`A: ${reflectionAnswerRaw || '(not yet answered)'}`);
+
+  // Stoic journal
+  lines.push('');
+  lines.push('STOIC JOURNAL:');
+  lines.push(`Q: Stoic Journal`);
+  lines.push(`A: ${stoicAnswerRaw || '(not yet answered)'}`);
+
+  // Recent journal entries
+  try {
+    const journalEntries: { text: string; date: string; time: string }[] = journalEntriesRaw ? JSON.parse(journalEntriesRaw) : [];
+    const recentJournal = journalEntries.slice(-3);
+    lines.push('');
+    lines.push('RECENT JOURNAL ENTRIES (last 3):');
+    if (recentJournal.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      recentJournal.forEach((e) => {
+        const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
+        lines.push(`${e.date} — ${snippet}`);
+      });
+    }
+  } catch { /* skip */ }
+
+  // Commonplace quotes
+  try {
+    const quotes: { quote: string; book: string; author: string }[] = commonplaceQuotesRaw ? JSON.parse(commonplaceQuotesRaw) : [];
+    const recentQuotes = quotes.slice(-5);
+    lines.push('');
+    lines.push('COMMONPLACE BOOK (last 5 quotes):');
+    if (recentQuotes.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      recentQuotes.forEach((q) => lines.push(`"${q.quote}" — ${q.book} by ${q.author}`));
+    }
+  } catch { /* skip */ }
+
+  // Currently reading
+  try {
+    const currentBooks: { title: string; author: string; currentPage: number }[] = currentBooksRaw ? JSON.parse(currentBooksRaw) : [];
+    lines.push('');
+    lines.push('READING — CURRENTLY READING:');
+    if (currentBooks.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      currentBooks.forEach((b) => lines.push(`- ${b.title} by ${b.author} (currently on page ${b.currentPage})`));
+    }
+  } catch { /* skip */ }
+
+  // Today's reading time
+  try {
+    const readingSeconds = todayReadingSecondsRaw ? parseInt(todayReadingSecondsRaw, 10) : 0;
+    lines.push('');
+    lines.push(`TODAY'S READING TIME: ${formatReadingTime(isNaN(readingSeconds) ? 0 : readingSeconds)}`);
+  } catch { /* skip */ }
+
+  // Recent reading sessions
+  try {
+    const sessions: { bookTitle: string; pagesRead: number; duration: number; dateFormatted: string }[] = readingSessionsRaw ? JSON.parse(readingSessionsRaw) : [];
+    const recentSessions = sessions.slice(-5);
+    lines.push('');
+    lines.push('RECENT READING SESSIONS (last 5):');
+    if (recentSessions.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      recentSessions.forEach((s) => {
+        const dur = typeof s.duration === 'number' ? formatReadingTime(s.duration) : String(s.duration);
+        lines.push(`${s.dateFormatted} — ${s.bookTitle}: ${s.pagesRead} pages, ${dur}`);
+      });
+    }
+  } catch { /* skip */ }
+
+  // Books finished
+  try {
+    const booksRead: { title: string; author: string; dateFinished: string }[] = booksReadRaw ? JSON.parse(booksReadRaw) : [];
+    lines.push('');
+    lines.push(`BOOKS FINISHED (${booksRead.length}):`);
+    if (booksRead.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      booksRead.forEach((b) => lines.push(`- ${b.title} by ${b.author} (finished ${b.dateFinished})`));
+    }
+  } catch { /* skip */ }
+
+  // Overall stats
+  try {
+    const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
+    const journalCount = journalEntriesRaw ? (JSON.parse(journalEntriesRaw) as unknown[]).length : 0;
+    const quoteCount = commonplaceQuotesRaw ? (JSON.parse(commonplaceQuotesRaw) as unknown[]).length : 0;
+    lines.push('');
+    lines.push('OVERALL STATS:');
+    lines.push(`- Streak: ${isNaN(streak) ? 0 : streak} days`);
+    lines.push(`- Total journal entries: ${journalCount}`);
+    lines.push(`- Total quotes saved: ${quoteCount}`);
+  } catch { /* skip */ }
+
+  return lines.join('\n');
+}
+
 export async function sendMessageToCabinet(messages: Message[]): Promise<string> {
   const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
   if (!apiKey) {
@@ -131,7 +301,7 @@ export async function sendMessageToCabinet(messages: Message[]): Promise<string>
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 1500,
-        system: buildSystemPrompt(),
+        system: buildSystemPrompt() + '\n\n---\n\n' + (await gatherAppContext()),
         messages: messages.map((m) => ({ role: m.role, content: m.content })),
       }),
     });

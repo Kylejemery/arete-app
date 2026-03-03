@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +22,26 @@ export default function CabinetScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  useEffect(() => {
+    AsyncStorage.getItem('cabinetMessages').then((raw) => {
+      if (raw) {
+        try {
+          const saved: Message[] = JSON.parse(raw);
+          if (Array.isArray(saved) && saved.length > 0) {
+            setMessages(saved);
+          }
+        } catch { /* ignore corrupt data */ }
+      }
+    });
+  }, []);
+
+  const saveMessages = async (msgs: Message[]) => {
+    const capped = msgs.length > 50 ? msgs.slice(msgs.length - 50) : msgs;
+    try {
+      await AsyncStorage.setItem('cabinetMessages', JSON.stringify(capped));
+    } catch { /* ignore storage errors silently */ }
+  };
+
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || isLoading) return;
@@ -30,14 +51,17 @@ export default function CabinetScreen() {
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
+    await saveMessages(updatedMessages);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     const reply = await sendMessageToCabinet(updatedMessages);
 
     const assistantMessage: Message = { role: 'assistant', content: reply };
-    setMessages((prev) => [...prev, assistantMessage]);
+    const finalMessages = [...updatedMessages, assistantMessage];
+    setMessages(finalMessages);
     setIsLoading(false);
+    await saveMessages(finalMessages);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   };
@@ -52,7 +76,10 @@ export default function CabinetScreen() {
         {
           text: 'New Session',
           style: 'destructive',
-          onPress: () => setMessages([]),
+          onPress: () => {
+            setMessages([]);
+            AsyncStorage.removeItem('cabinetMessages');
+          },
         },
       ]
     );
