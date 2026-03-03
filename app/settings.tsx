@@ -20,6 +20,79 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
+const MORNING_MESSAGES = [
+  "The impediment to action advances action. What stands in the way becomes the way. Your morning awaits.",
+  "Waste no more time arguing about what a good man should be. Be one. Begin your morning.",
+  "You have power over your mind — not outside events. Realize this, and you will find strength. Open the Cabinet.",
+  "It is not death that a man should fear, but he should fear never beginning to live. Start your morning.",
+  "Begin at once to live, and count each separate day as a separate life. Your cabinet is waiting.",
+  "The first rule is to keep an untroubled spirit. The second is to look things in the face. Morning check-in time.",
+  "Do not indulge in dreams of what you have not, but count up the chief of the blessings you do have. Good morning.",
+];
+
+const EVENING_MESSAGES = [
+  "Confine yourself to the present. The evening asks: did you live virtuously today?",
+  "The day is ending. Give an account of it to your cabinet.",
+  "Before you sleep: what progress did you make today toward the person you are trying to become?",
+  "Evening review: did your actions today match your values? Your cabinet is ready to reflect.",
+  "A day well-lived makes sleep easy. What was well-lived today?",
+  "Marcus reminded himself every evening: what emotion did I let control me today? What will you answer?",
+  "End the day with honesty. Your cabinet awaits your debrief.",
+];
+
+// Midday task reminder — counselor rotates by day (Sun–Sat)
+const TASK_COUNSELORS = [
+  'Theodore Roosevelt', // Sunday (0)
+  'Marcus Aurelius',    // Monday (1)
+  'David Goggins',      // Tuesday (2)
+  'Epictetus',          // Wednesday (3)
+  'Theodore Roosevelt', // Thursday (4)
+  'David Goggins',      // Friday (5)
+  'Future Kyle',        // Saturday (6)
+];
+
+const TASK_MESSAGES = [
+  "Get action! Do things — be sane, don't fritter away your time. Check your task list.",
+  "How are your tasks progressing? What remains undone is still within your power.",
+  "Midday check. What's left on your list? Stop making excuses and get after it.",
+  "What is within your control today that remains undone? Address it. Now.",
+  "Get action! Do things — be sane, don't fritter away your time. Check your task list.",
+  "Midday check. What's left on your list? Stop making excuses and get after it.",
+  "Hey. It's afternoon. I know what's on your list. Do not let yourself down.",
+];
+
+const WORKOUT_MESSAGES = [
+  "Sunday is not a rest day from becoming who you need to be. Get after it.",
+  "Monday sets the tone for the whole week. Do not waste it. Get your workout in.",
+  "You told yourself you'd train today. That conversation is over. Go.",
+  "Midweek. Most people take their foot off the gas. That is exactly why you won't.",
+  "Thursday. You've put in the work this week. Don't stop now.",
+  "Friday. Some people are already coasting into the weekend. Not you. Train.",
+  "Saturday. No meetings, no excuses. The best workout of the week is waiting for you.",
+];
+
+const READING_MESSAGES = [
+  "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane. Read tonight.",
+  "You have a book waiting. What excuse will you offer the man you are trying to become?",
+  "Receive without pride, relinquish without struggle. But first — read.",
+  "He who lives in harmony with himself lives in harmony with the universe. Have you read today?",
+  "If it is not right, do not do it. If it is not true, do not say it. But reading — always reading.",
+  "Never esteem anything as of advantage to you that will make you break your word — or lose your self-respect. Or miss your reading.",
+  "The impediment to reading? There is none. Only the choice.",
+];
+
+const FUTURE_KYLE_MESSAGES = [
+  "Is what you're doing right now something I would recognize? — Future Kyle",
+  "I remember this week. What you do today matters more than you know. — Future Kyle",
+  "The Arete app. The boxing. The reading. The family. You can do all of it. I'm proof. — Future Kyle",
+  "Midweek. This is where most people give up. This is also where you separate yourself. — Future Kyle",
+  "I didn't get here by accident. Neither will you. Keep going. — Future Kyle",
+  "Friday Kyle is tired. I know. I remember. Do the one hard thing anyway. — Future Kyle",
+  "Saturdays were sacred. Family, training, reading. Do not waste this one. — Future Kyle",
+];
+
 export default function SettingsScreen() {
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
@@ -28,10 +101,21 @@ export default function SettingsScreen() {
   const [eveningHour, setEveningHour] = useState('20');
   const [eveningMinute, setEveningMinute] = useState('00');
 
-  const [screenTimeEnabled, setScreenTimeEnabled] = useState(true);
-  const [screenTimeGoal, setScreenTimeGoal] = useState('2');
-  const [screenTimeReminderHour, setScreenTimeReminderHour] = useState('21');
-  const [screenTimeReminderMinute, setScreenTimeReminderMinute] = useState('00');
+  const [taskReminderEnabled, setTaskReminderEnabled] = useState(true);
+  const [taskReminderHour, setTaskReminderHour] = useState('12');
+  const [taskReminderMinute, setTaskReminderMinute] = useState('00');
+
+  const [workoutReminderEnabled, setWorkoutReminderEnabled] = useState(true);
+  const [workoutReminderHour, setWorkoutReminderHour] = useState('6');
+  const [workoutReminderMinute, setWorkoutReminderMinute] = useState('00');
+
+  const [readingReminderEnabled, setReadingReminderEnabled] = useState(true);
+  const [readingReminderHour, setReadingReminderHour] = useState('21');
+  const [readingReminderMinute, setReadingReminderMinute] = useState('00');
+
+  const [futureKyleEnabled, setFutureKyleEnabled] = useState(false);
+  const [futureKyleHour, setFutureKyleHour] = useState('15');
+  const [futureKyleMinute, setFutureKyleMinute] = useState('00');
 
   useEffect(() => {
     loadSettings();
@@ -59,10 +143,18 @@ export default function SettingsScreen() {
         setMorningMinute(parsed.morningMinute ?? '00');
         setEveningHour(parsed.eveningHour ?? '20');
         setEveningMinute(parsed.eveningMinute ?? '00');
-        setScreenTimeEnabled(parsed.screenTimeEnabled ?? true);
-        setScreenTimeGoal(parsed.screenTimeGoal ?? '2');
-        setScreenTimeReminderHour(parsed.screenTimeReminderHour ?? '21');
-        setScreenTimeReminderMinute(parsed.screenTimeReminderMinute ?? '00');
+        setTaskReminderEnabled(parsed.taskReminderEnabled ?? true);
+        setTaskReminderHour(parsed.taskReminderHour ?? '12');
+        setTaskReminderMinute(parsed.taskReminderMinute ?? '00');
+        setWorkoutReminderEnabled(parsed.workoutReminderEnabled ?? true);
+        setWorkoutReminderHour(parsed.workoutReminderHour ?? '6');
+        setWorkoutReminderMinute(parsed.workoutReminderMinute ?? '00');
+        setReadingReminderEnabled(parsed.readingReminderEnabled ?? true);
+        setReadingReminderHour(parsed.readingReminderHour ?? '21');
+        setReadingReminderMinute(parsed.readingReminderMinute ?? '00');
+        setFutureKyleEnabled(parsed.futureKyleEnabled ?? false);
+        setFutureKyleHour(parsed.futureKyleHour ?? '15');
+        setFutureKyleMinute(parsed.futureKyleMinute ?? '00');
       }
     } catch (e) {
       console.error(e);
@@ -78,10 +170,18 @@ export default function SettingsScreen() {
         morningMinute,
         eveningHour,
         eveningMinute,
-        screenTimeEnabled,
-        screenTimeGoal,
-        screenTimeReminderHour,
-        screenTimeReminderMinute,
+        taskReminderEnabled,
+        taskReminderHour,
+        taskReminderMinute,
+        workoutReminderEnabled,
+        workoutReminderHour,
+        workoutReminderMinute,
+        readingReminderEnabled,
+        readingReminderHour,
+        readingReminderMinute,
+        futureKyleEnabled,
+        futureKyleHour,
+        futureKyleMinute,
       };
       await AsyncStorage.setItem('notificationSettings', JSON.stringify(settings));
       await scheduleNotifications(settings);
@@ -93,55 +193,92 @@ export default function SettingsScreen() {
   };
 
   const scheduleNotifications = async (settings: any) => {
-    // Cancel all existing notifications first
     await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Morning notification
+    // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
+    // Expo CalendarTrigger weekday: 1=Sunday, 2=Monday, …, 7=Saturday
+    const scheduleWeekly = async (
+      titleFn: (day: number) => string,
+      bodyFn: (day: number) => string,
+      hour: number,
+      minute: number,
+    ) => {
+      for (let day = 0; day < 7; day++) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: titleFn(day),
+            body: bodyFn(day),
+            sound: true,
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            weekday: day + 1, // Expo: 1=Sunday … 7=Saturday
+            hour,
+            minute,
+            repeats: true,
+          },
+        });
+      }
+    };
+
+    // Morning check-in — Marcus Aurelius chairs every morning
     if (settings.morningEnabled) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '☀️ Good Morning!',
-          body: 'Good morning, time to convene your board of counselors for the morning kickoff!',
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: parseInt(settings.morningHour),
-          minute: parseInt(settings.morningMinute),
-        },
-      });
+      await scheduleWeekly(
+        () => 'Marcus Aurelius — Chair',
+        (day) => MORNING_MESSAGES[day],
+        parseInt(settings.morningHour),
+        parseInt(settings.morningMinute),
+      );
     }
 
-    // Evening notification
+    // Evening check-in — Marcus Aurelius
     if (settings.eveningEnabled) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '🌙 Evening Check-in',
-          body: "It's evening, time to debrief with your board on the day's progress.",
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: parseInt(settings.eveningHour),
-          minute: parseInt(settings.eveningMinute),
-        },
-      });
+      await scheduleWeekly(
+        () => 'Marcus Aurelius — Chair',
+        (day) => EVENING_MESSAGES[day],
+        parseInt(settings.eveningHour),
+        parseInt(settings.eveningMinute),
+      );
     }
 
-    // Screen time reminder
-    if (settings.screenTimeEnabled) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: '📱 Screen Time Check',
-          body: `Have you logged your screen time today? Your goal is ${settings.screenTimeGoal}h or less!`,
-          sound: true,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DAILY,
-          hour: parseInt(settings.screenTimeReminderHour),
-          minute: parseInt(settings.screenTimeReminderMinute),
-        },
-      });
+    // Midday task reminder — rotating counselors
+    if (settings.taskReminderEnabled) {
+      await scheduleWeekly(
+        (day) => TASK_COUNSELORS[day],
+        (day) => TASK_MESSAGES[day],
+        parseInt(settings.taskReminderHour),
+        parseInt(settings.taskReminderMinute),
+      );
+    }
+
+    // Goggins — workout reminder
+    if (settings.workoutReminderEnabled) {
+      await scheduleWeekly(
+        () => 'David Goggins',
+        (day) => WORKOUT_MESSAGES[day],
+        parseInt(settings.workoutReminderHour),
+        parseInt(settings.workoutReminderMinute),
+      );
+    }
+
+    // Marcus — reading reminder
+    if (settings.readingReminderEnabled) {
+      await scheduleWeekly(
+        () => 'Marcus Aurelius — Chair',
+        (day) => READING_MESSAGES[day],
+        parseInt(settings.readingReminderHour),
+        parseInt(settings.readingReminderMinute),
+      );
+    }
+
+    // Future Kyle — big picture check-in (opt-in)
+    if (settings.futureKyleEnabled) {
+      await scheduleWeekly(
+        () => 'Future Kyle — Age 50',
+        (day) => FUTURE_KYLE_MESSAGES[day],
+        parseInt(settings.futureKyleHour),
+        parseInt(settings.futureKyleMinute),
+      );
     }
   };
 
@@ -152,14 +289,44 @@ export default function SettingsScreen() {
     return `${displayHour}:${minute.padStart(2, '0')} ${ampm}`;
   };
 
+  const renderTimeInputs = (
+    hour: string,
+    setHour: (v: string) => void,
+    minute: string,
+    setMinute: (v: string) => void,
+    hourPlaceholder: string,
+  ) => (
+    <>
+      <Text style={styles.previewText}>{formatDisplayTime(hour, minute)}</Text>
+      <Text style={styles.label}>Hour (0–23)</Text>
+      <TextInput
+        style={styles.input}
+        value={hour}
+        onChangeText={setHour}
+        keyboardType="number-pad"
+        placeholder={hourPlaceholder}
+        placeholderTextColor="#555"
+      />
+      <Text style={styles.label}>Minute</Text>
+      <TextInput
+        style={styles.input}
+        value={minute}
+        onChangeText={setMinute}
+        keyboardType="number-pad"
+        placeholder="00"
+        placeholderTextColor="#555"
+      />
+    </>
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>⚙️ Settings</Text>
 
-      {/* Morning Notification */}
+      {/* Morning Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>☀️ Morning Reminder</Text>
+          <Text style={styles.cardTitle}>☀️ Marcus Aurelius — Morning Check-In</Text>
           <Switch
             value={morningEnabled}
             onValueChange={setMorningEnabled}
@@ -167,43 +334,16 @@ export default function SettingsScreen() {
             thumbColor="#fff"
           />
         </View>
-        {morningEnabled && (
-          <>
-            <Text style={styles.previewText}>
-              {formatDisplayTime(morningHour, morningMinute)}
-            </Text>
-            <Text style={styles.label}>Hour (0–23)</Text>
-            <TextInput
-              style={styles.input}
-              value={morningHour}
-              onChangeText={setMorningHour}
-              keyboardType="number-pad"
-              placeholder="7"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.label}>Minute</Text>
-            <TextInput
-              style={styles.input}
-              value={morningMinute}
-              onChangeText={setMorningMinute}
-              keyboardType="number-pad"
-              placeholder="00"
-              placeholderTextColor="#555"
-            />
-            <View style={styles.messageBox}>
-              <Text style={styles.messageLabel}>Message:</Text>
-              <Text style={styles.messageText}>
-                "Good morning, time to convene your board of counselors for the morning kickoff!"
-              </Text>
-            </View>
-          </>
-        )}
+        <Text style={styles.cardSubtitle}>
+          {'"Begin at once to live, and count each separate day as a separate life."'}
+        </Text>
+        {morningEnabled && renderTimeInputs(morningHour, setMorningHour, morningMinute, setMorningMinute, '7')}
       </View>
 
-      {/* Evening Notification */}
+      {/* Evening Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>🌙 Evening Reminder</Text>
+          <Text style={styles.cardTitle}>🌙 Marcus Aurelius — Evening Check-In</Text>
           <Switch
             value={eveningEnabled}
             onValueChange={setEveningEnabled}
@@ -211,87 +351,75 @@ export default function SettingsScreen() {
             thumbColor="#fff"
           />
         </View>
-        {eveningEnabled && (
-          <>
-            <Text style={styles.previewText}>
-              {formatDisplayTime(eveningHour, eveningMinute)}
-            </Text>
-            <Text style={styles.label}>Hour (0–23)</Text>
-            <TextInput
-              style={styles.input}
-              value={eveningHour}
-              onChangeText={setEveningHour}
-              keyboardType="number-pad"
-              placeholder="20"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.label}>Minute</Text>
-            <TextInput
-              style={styles.input}
-              value={eveningMinute}
-              onChangeText={setEveningMinute}
-              keyboardType="number-pad"
-              placeholder="00"
-              placeholderTextColor="#555"
-            />
-            <View style={styles.messageBox}>
-              <Text style={styles.messageLabel}>Message:</Text>
-              <Text style={styles.messageText}>
-                "It's evening, time to debrief with your board on the day's progress."
-              </Text>
-            </View>
-          </>
-        )}
+        <Text style={styles.cardSubtitle}>{'"Confine yourself to the present."'}</Text>
+        {eveningEnabled && renderTimeInputs(eveningHour, setEveningHour, eveningMinute, setEveningMinute, '20')}
       </View>
 
-      {/* Screen Time */}
+      {/* Midday Task Reminder */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>📱 Screen Time Reminder</Text>
+          <Text style={styles.cardTitle}>📋 Midday Task Reminder</Text>
           <Switch
-            value={screenTimeEnabled}
-            onValueChange={setScreenTimeEnabled}
+            value={taskReminderEnabled}
+            onValueChange={setTaskReminderEnabled}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
         </View>
-        {screenTimeEnabled && (
-          <>
-            <Text style={styles.previewText}>
-              Reminder at {formatDisplayTime(screenTimeReminderHour, screenTimeReminderMinute)}
-            </Text>
-            <Text style={styles.label}>Daily Goal (hours)</Text>
-            <TextInput
-              style={styles.input}
-              value={screenTimeGoal}
-              onChangeText={setScreenTimeGoal}
-              keyboardType="number-pad"
-              placeholder="2"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.label}>Reminder Hour (0–23)</Text>
-            <TextInput
-              style={styles.input}
-              value={screenTimeReminderHour}
-              onChangeText={setScreenTimeReminderHour}
-              keyboardType="number-pad"
-              placeholder="21"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.label}>Reminder Minute</Text>
-            <TextInput
-              style={styles.input}
-              value={screenTimeReminderMinute}
-              onChangeText={setScreenTimeReminderMinute}
-              keyboardType="number-pad"
-              placeholder="00"
-              placeholderTextColor="#555"
-            />
-            <Text style={styles.hint}>
-              💡 Log your daily screen time in the Progress screen to track against your goal.
-            </Text>
-          </>
-        )}
+        <Text style={styles.cardSubtitle}>
+          {'"Your counselors rotate midday — keeping you on task."'}
+        </Text>
+        {taskReminderEnabled && renderTimeInputs(taskReminderHour, setTaskReminderHour, taskReminderMinute, setTaskReminderMinute, '12')}
+      </View>
+
+      {/* Goggins — Workout Reminder */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>💪 David Goggins — Workout Reminder</Text>
+          <Switch
+            value={workoutReminderEnabled}
+            onValueChange={setWorkoutReminderEnabled}
+            trackColor={{ false: '#333', true: '#c9a84c' }}
+            thumbColor="#fff"
+          />
+        </View>
+        <Text style={styles.cardSubtitle}>{'"Stop making excuses and get after it."'}</Text>
+        {workoutReminderEnabled && renderTimeInputs(workoutReminderHour, setWorkoutReminderHour, workoutReminderMinute, setWorkoutReminderMinute, '6')}
+      </View>
+
+      {/* Marcus — Reading Reminder */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>📖 Marcus Aurelius — Reading Reminder</Text>
+          <Switch
+            value={readingReminderEnabled}
+            onValueChange={setReadingReminderEnabled}
+            trackColor={{ false: '#333', true: '#c9a84c' }}
+            thumbColor="#fff"
+          />
+        </View>
+        <Text style={styles.cardSubtitle}>
+          {'"The impediment to reading? There is none. Only the choice."'}
+        </Text>
+        {readingReminderEnabled && renderTimeInputs(readingReminderHour, setReadingReminderHour, readingReminderMinute, setReadingReminderMinute, '21')}
+      </View>
+
+      {/* Future Kyle — Daily Check-In */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>🔮 Future Kyle — Daily Check-In</Text>
+          <Switch
+            value={futureKyleEnabled}
+            onValueChange={setFutureKyleEnabled}
+            trackColor={{ false: '#333', true: '#c9a84c' }}
+            thumbColor="#fff"
+          />
+        </View>
+        <Text style={styles.cardSubtitle}>
+          {"\"Is what you're doing right now something I would recognize? — Future Kyle\""}{'\n'}
+          <Text style={styles.hintInline}>Off by default — opt in when ready.</Text>
+        </Text>
+        {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute, '15')}
       </View>
 
       {/* Save Button */}
@@ -339,6 +467,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+    flex: 1,
+    marginRight: 10,
+  },
+  cardSubtitle: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   previewText: {
     color: '#c9a84c',
@@ -359,29 +494,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c9a84c33',
   },
-  messageBox: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-    marginTop: 5,
-  },
-  messageLabel: {
-    color: '#888',
-    fontSize: 11,
-    marginBottom: 4,
-  },
-  messageText: {
-    color: '#c9a84c',
-    fontSize: 13,
-    fontStyle: 'italic',
-  },
   hint: {
     color: '#888',
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 5,
+  },
+  hintInline: {
+    color: '#888',
+    fontSize: 11,
+    fontStyle: 'italic',
   },
   saveButton: {
     backgroundColor: '#c9a84c',
