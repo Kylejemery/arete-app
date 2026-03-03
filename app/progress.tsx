@@ -3,7 +3,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -486,6 +488,7 @@ export default function ProgressScreen() {
 
       {/* Add Book Modal */}
       <Modal visible={showBookModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>📚 Book Finished!</Text>
@@ -514,6 +517,7 @@ export default function ProgressScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
