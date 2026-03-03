@@ -11,6 +11,8 @@ export default function Layout() {
           backgroundColor: '#1a1a2e',
           borderTopWidth: 0,
           elevation: 10,
+          paddingBottom: 5,
+          height: 60,
         },
         headerShown: false,
       }}
@@ -62,6 +64,12 @@ export default function Layout() {
       />
       <Tabs.Screen
         name="setup"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="home"
         options={{
           href: null,
         }}
