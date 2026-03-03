@@ -45,6 +45,15 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
+        name="cabinet"
+        options={{
+          title: 'Cabinet',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="people-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="journal"
         options={{
           title: 'Journal',
