@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const loadData = async () => {
     const name = await AsyncStorage.getItem('userName');
     if (!name) {
-      router.replace('/setup');
+      router.replace('/setup' as any);
       return;
     }
     setUserName(name);

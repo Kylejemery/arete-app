@@ -348,7 +348,7 @@ export default function JournalScreen() {
             filteredQuotes.map(quote => (
               <View key={quote.id} style={styles.quoteCard}>
                 <View style={styles.quoteHeader}>
-                  <Ionicons name="quote" size={20} color="#c9a84c" />
+                  <Ionicons name="chatbubble-outline" size={20} color="#c9a84c" />
                   <TouchableOpacity onPress={() => deleteQuote(quote.id)}>
                     <Ionicons name="trash-outline" size={18} color="#ff4444" />
                   </TouchableOpacity>
