@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import {
-    Alert, Modal,
+    Alert, KeyboardAvoidingView, Modal,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -403,6 +404,7 @@ export default function TimerScreen() {
 
       {/* Start Page Modal */}
       <Modal visible={showStartPageModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>📖 Starting Page</Text>
@@ -429,10 +431,12 @@ export default function TimerScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* End Page Modal */}
       <Modal visible={showEndPageModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>✅ Session Complete!</Text>
@@ -461,10 +465,12 @@ export default function TimerScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Add Book Modal */}
       <Modal visible={showAddBookModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>�� Add Book</Text>
@@ -509,6 +515,7 @@ export default function TimerScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Finish Book Modal */}
