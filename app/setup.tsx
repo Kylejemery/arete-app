@@ -295,7 +295,7 @@ export default function SetupScreen() {
       <View style={styles.stepContainer}>
         <Text style={styles.stepHeading}>Your Commitment</Text>
         <Text style={styles.stepSubtext}>
-          Review what you have declared. The Cabinet has heard it. Now honour it.
+          Review what you have declared. The Cabinet has heard it. Now honor it.
         </Text>
 
         <View style={styles.summaryCard}>

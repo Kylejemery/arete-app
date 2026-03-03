@@ -44,6 +44,11 @@ const COUNSELOR_PROFILE_MAP: Record<string, string> = {
   roosevelt: ROOSEVELT_PROFILE,
 };
 
+async function getUserName(): Promise<string> {
+  const raw = await AsyncStorage.getItem('userName');
+  return raw || 'the user';
+}
+
 async function buildSystemPrompt(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -53,20 +58,18 @@ async function buildSystemPrompt(): Promise<string> {
   });
 
   const [
-    userNameRaw,
     userGoalsRaw,
     futureSelfYearsRaw,
     futureSelfDescriptionRaw,
     cabinetMembersRaw,
   ] = await Promise.all([
-    AsyncStorage.getItem('userName'),
     AsyncStorage.getItem('userGoals'),
     AsyncStorage.getItem('futureSelfYears'),
     AsyncStorage.getItem('futureSelfDescription'),
     AsyncStorage.getItem('cabinetMembers'),
   ]);
 
-  const userName = userNameRaw || 'the user';
+  const userName = await getUserName();
   const userGoals = userGoalsRaw || '(not yet specified)';
   const futureSelfYears = futureSelfYearsRaw || '10';
   const futureSelfDescription = futureSelfDescriptionRaw || '(not yet described)';
@@ -186,8 +189,7 @@ export async function gatherAppContext(): Promise<string> {
     AsyncStorage.getItem('streak'),
   ]);
 
-  const userNameRaw = await AsyncStorage.getItem('userName');
-  const userName = userNameRaw || 'the user';
+  const userName = await getUserName();
 
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S CURRENT APP DATA (as of ${today}) ===`);
