@@ -3,12 +3,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 
 const defaultTasks = [
@@ -85,7 +88,6 @@ export default function EveningScreen() {
       const savedTasks = await AsyncStorage.getItem('eveningTasks');
       const lastReset = await AsyncStorage.getItem('eveningLastReset');
       const today = new Date().toDateString();
-
       if (lastReset !== today) {
         const resetTasks = savedTasks
           ? JSON.parse(savedTasks).map((t: any) => ({ ...t, done: false }))
@@ -116,11 +118,7 @@ export default function EveningScreen() {
 
   const addTask = async () => {
     if (newTask.trim()) {
-      const newTaskObj = {
-        id: Date.now().toString(),
-        title: newTask.trim(),
-        done: false,
-      };
+      const newTaskObj = { id: Date.now().toString(), title: newTask.trim(), done: false };
       const updated = [...tasks, newTaskObj];
       setTasks(updated);
       await saveTasks(updated);
@@ -147,121 +145,132 @@ export default function EveningScreen() {
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-      {/* Header */}
-      <Text style={styles.title}>Evening Routine 🌙</Text>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>Evening Routine 🌙</Text>
+            <View style={styles.badgeRow}>
+              <Text style={styles.badge}>{completedCount}/{totalCount}</Text>
+            </View>
+          </View>
 
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <View style={styles.progressHeader}>
-          <Text style={styles.progressText}>Today's Progress</Text>
-          <Text style={styles.progressCount}>{completedCount}/{totalCount}</Text>
-        </View>
-        <View style={styles.progressBarBackground}>
-          <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
-        </View>
-      </View>
+          {/* Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressHeader}>
+              <Text style={styles.progressText}>Today's Progress</Text>
+              <Text style={styles.progressPercent}>{Math.round(progressPercent)}%</Text>
+            </View>
+            <View style={styles.progressBarBackground}>
+              <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+            </View>
+          </View>
 
-      {/* Tasks */}
-      <View style={styles.tasksContainer}>
-        {tasks.map(task => (
-          <View key={task.id} style={styles.taskRow}>
-            <TouchableOpacity
-              style={[styles.taskCard, task.done && styles.taskCardDone]}
-              onPress={() => toggleTask(task.id)}
-            >
-              <Ionicons
-                name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
-                size={24}
-                color={task.done ? '#1a1a2e' : '#c9a84c'}
+          {/* Tasks */}
+          <View style={styles.tasksContainer}>
+            {tasks.map(task => (
+              <View key={task.id} style={styles.taskRow}>
+                <TouchableOpacity
+                  style={[styles.taskCard, task.done && styles.taskCardDone]}
+                  onPress={() => toggleTask(task.id)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={26}
+                    color={task.done ? '#1a1a2e' : '#c9a84c'}
+                  />
+                  <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
+                    {task.title}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteButton} onPress={() => deleteTask(task.id)}>
+                  <Ionicons name="trash-outline" size={20} color="#ff4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+
+          {/* Add Task */}
+          {showInput ? (
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter task name..."
+                placeholderTextColor="#555"
+                value={newTask}
+                onChangeText={setNewTask}
+                autoFocus
               />
-              <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
-                {task.title}
-              </Text>
+              <View style={styles.inputButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowInput(false)}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.addConfirmButton} onPress={addTask}>
+                  <Text style={styles.addConfirmText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.addButton} onPress={() => setShowInput(true)}>
+              <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
+              <Text style={styles.addButtonText}>Add Task</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => deleteTask(task.id)}
-            >
-              <Ionicons name="trash-outline" size={20} color="#ff4444" />
-            </TouchableOpacity>
+          )}
+
+          {/* Reflection Prompt */}
+          <View style={styles.promptContainer}>
+            <View style={styles.promptHeader}>
+              <Ionicons name="heart-outline" size={20} color="#c9a84c" />
+              <Text style={styles.promptTitle}>Evening Reflection</Text>
+            </View>
+            <Text style={styles.promptQuestion}>{reflectionPrompt}</Text>
+            <TextInput
+              style={styles.promptInput}
+              placeholder="Write your thoughts..."
+              placeholderTextColor="#555"
+              multiline
+              numberOfLines={4}
+              value={reflectionAnswer}
+              onChangeText={saveReflection}
+            />
           </View>
-        ))}
-      </View>
 
-      {/* Add Task */}
-      {showInput ? (
-        <View style={styles.inputContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter task name..."
-            placeholderTextColor="#888"
-            value={newTask}
-            onChangeText={setNewTask}
-            autoFocus
-          />
-          <View style={styles.inputButtons}>
-            <TouchableOpacity style={styles.cancelButton} onPress={() => setShowInput(false)}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.addConfirmButton} onPress={addTask}>
-              <Text style={styles.addConfirmText}>Add</Text>
-            </TouchableOpacity>
+          {/* Stoic Prompt */}
+          <View style={styles.promptContainer}>
+            <View style={styles.promptHeader}>
+              <Ionicons name="library-outline" size={20} color="#c9a84c" />
+              <Text style={styles.promptTitle}>Stoic Journal</Text>
+            </View>
+            <Text style={styles.promptQuestion}>{stoicPrompt}</Text>
+            <TextInput
+              style={styles.promptInput}
+              placeholder="Write your thoughts..."
+              placeholderTextColor="#555"
+              multiline
+              numberOfLines={4}
+              value={stoicAnswer}
+              onChangeText={saveStoic}
+            />
           </View>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.addButton} onPress={() => setShowInput(true)}>
-          <Ionicons name="add-circle-outline" size={24} color="#c9a84c" />
-          <Text style={styles.addButtonText}>Add Task</Text>
-        </TouchableOpacity>
-      )}
 
-      {/* Reflection Prompt */}
-      <View style={styles.promptContainer}>
-        <View style={styles.promptHeader}>
-          <Ionicons name="heart-outline" size={20} color="#c9a84c" />
-          <Text style={styles.promptTitle}>Evening Reflection</Text>
-        </View>
-        <Text style={styles.promptQuestion}>{reflectionPrompt}</Text>
-        <TextInput
-          style={styles.promptInput}
-          placeholder="Write your thoughts..."
-          placeholderTextColor="#888"
-          multiline
-          numberOfLines={4}
-          value={reflectionAnswer}
-          onChangeText={saveReflection}
-        />
-      </View>
+          {/* All Done */}
+          {completedCount === totalCount && totalCount > 0 && (
+            <View style={styles.allDoneContainer}>
+              <Text style={styles.allDoneEmoji}>🌙</Text>
+              <Text style={styles.allDoneText}>Evening Routine Complete!</Text>
+              <Text style={styles.allDoneSubtext}>Rest well, you earned it!</Text>
+            </View>
+          )}
 
-      {/* Stoic Prompt */}
-      <View style={styles.promptContainer}>
-        <View style={styles.promptHeader}>
-          <Ionicons name="library-outline" size={20} color="#c9a84c" />
-          <Text style={styles.promptTitle}>Stoic Journal</Text>
-        </View>
-        <Text style={styles.promptQuestion}>{stoicPrompt}</Text>
-        <TextInput
-          style={styles.promptInput}
-          placeholder="Write your thoughts..."
-          placeholderTextColor="#888"
-          multiline
-          numberOfLines={4}
-          value={stoicAnswer}
-          onChangeText={saveStoic}
-        />
-      </View>
-
-      {/* All Done Message */}
-      {completedCount === totalCount && totalCount > 0 && (
-        <View style={styles.allDoneContainer}>
-          <Text style={styles.allDoneText}>🌙 Evening Routine Complete!</Text>
-          <Text style={styles.allDoneSubtext}>Rest well, you earned it!</Text>
-        </View>
-      )}
-
-    </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -272,16 +281,34 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 25,
-    paddingTop: 60,
+    paddingTop: 20,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#c9a84c',
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
   },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#c9a84c',
+  },
+  badgeRow: {
+    backgroundColor: '#c9a84c22',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: '#c9a84c55',
+  },
+  badge: {
+    color: '#c9a84c',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
   progressContainer: {
-    marginBottom: 25,
+    marginBottom: 22,
   },
   progressHeader: {
     flexDirection: 'row',
@@ -290,18 +317,18 @@ const styles = StyleSheet.create({
   },
   progressText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  progressCount: {
+  progressPercent: {
     color: '#c9a84c',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
   },
   progressBarBackground: {
     backgroundColor: '#16213e',
     borderRadius: 10,
-    height: 10,
+    height: 12,
     overflow: 'hidden',
   },
   progressBarFill: {
@@ -321,16 +348,17 @@ const styles = StyleSheet.create({
   taskCard: {
     flex: 1,
     backgroundColor: '#16213e',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 18,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
     borderWidth: 1,
     borderColor: '#c9a84c33',
   },
   taskCardDone: {
     backgroundColor: '#c9a84c',
+    borderColor: '#c9a84c',
   },
   taskText: {
     color: '#fff',
@@ -344,11 +372,15 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 10,
+    backgroundColor: '#16213e',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ff444433',
   },
   inputContainer: {
     backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
+    borderRadius: 14,
+    padding: 16,
     marginBottom: 15,
     borderWidth: 1,
     borderColor: '#c9a84c',
@@ -356,7 +388,10 @@ const styles = StyleSheet.create({
   input: {
     color: '#fff',
     fontSize: 16,
-    marginBottom: 10,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c33',
   },
   inputButtons: {
     flexDirection: 'row',
@@ -364,8 +399,8 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cancelButton: {
-    padding: 8,
-    paddingHorizontal: 16,
+    padding: 10,
+    paddingHorizontal: 18,
   },
   cancelText: {
     color: '#888',
@@ -373,9 +408,9 @@ const styles = StyleSheet.create({
   },
   addConfirmButton: {
     backgroundColor: '#c9a84c',
-    padding: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    padding: 10,
+    paddingHorizontal: 24,
+    borderRadius: 10,
   },
   addConfirmText: {
     color: '#1a1a2e',
@@ -386,21 +421,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 15,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#c9a84c33',
+    borderColor: '#c9a84c44',
     borderStyle: 'dashed',
     justifyContent: 'center',
     marginBottom: 20,
   },
   addButtonText: {
     color: '#c9a84c',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '600',
   },
   promptContainer: {
     backgroundColor: '#16213e',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
@@ -420,35 +456,39 @@ const styles = StyleSheet.create({
   promptQuestion: {
     color: '#fff',
     fontSize: 15,
-    marginBottom: 12,
+    marginBottom: 14,
     lineHeight: 22,
     fontStyle: 'italic',
   },
   promptInput: {
     backgroundColor: '#1a1a2e',
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 10,
+    padding: 14,
     color: '#fff',
     fontSize: 14,
     textAlignVertical: 'top',
     minHeight: 100,
     borderWidth: 1,
     borderColor: '#c9a84c33',
+    lineHeight: 22,
   },
   allDoneContainer: {
     backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 14,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#c9a84c',
     marginBottom: 20,
+    gap: 6,
+  },
+  allDoneEmoji: {
+    fontSize: 36,
   },
   allDoneText: {
     color: '#c9a84c',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 5,
   },
   allDoneSubtext: {
     color: '#fff',

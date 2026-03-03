@@ -2,13 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
-    Alert, KeyboardAvoidingView, Platform,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 
 const journalPrompts = [
@@ -23,14 +26,10 @@ const journalPrompts = [
 
 export default function JournalScreen() {
   const [activeTab, setActiveTab] = useState<'journal' | 'commonplace'>('journal');
-
-  // Journal state
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [newEntry, setNewEntry] = useState('');
   const [prompt, setPrompt] = useState('');
   const [showJournalInput, setShowJournalInput] = useState(false);
-
-  // Commonplace state
   const [quotes, setQuotes] = useState<any[]>([]);
   const [newQuote, setNewQuote] = useState('');
   const [newBook, setNewBook] = useState('');
@@ -53,18 +52,14 @@ export default function JournalScreen() {
     try {
       const saved = await AsyncStorage.getItem('journalEntries');
       if (saved) setJournalEntries(JSON.parse(saved));
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const loadQuotes = async () => {
     try {
       const saved = await AsyncStorage.getItem('commonplaceQuotes');
       if (saved) setQuotes(JSON.parse(saved));
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
   };
 
   const addJournalEntry = async () => {
@@ -75,9 +70,7 @@ export default function JournalScreen() {
         date: new Date().toLocaleDateString('en-US', {
           weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         }),
-        time: new Date().toLocaleTimeString('en-US', {
-          hour: '2-digit', minute: '2-digit'
-        }),
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         timestamp: Date.now(),
       };
       const updated = [entry, ...journalEntries];
@@ -116,9 +109,7 @@ export default function JournalScreen() {
       const updated = [quote, ...quotes];
       setQuotes(updated);
       await AsyncStorage.setItem('commonplaceQuotes', JSON.stringify(updated));
-      setNewQuote('');
-      setNewBook('');
-      setNewAuthor('');
+      setNewQuote(''); setNewBook(''); setNewAuthor('');
       setShowQuoteInput(false);
     } else {
       Alert.alert('Required', 'Please enter a quote and book title.');
@@ -145,479 +136,272 @@ export default function JournalScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Journal 📓</Text>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
-        {/* Tabs */}
-        <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'journal' && styles.activeTab]}
-            onPress={() => setActiveTab('journal')}
-          >
-            <Text style={[styles.tabText, activeTab === 'journal' && styles.activeTabText]}>
-              Journal
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'commonplace' && styles.activeTab]}
-            onPress={() => setActiveTab('commonplace')}
-          >
-            <Text style={[styles.tabText, activeTab === 'commonplace' && styles.activeTabText]}>
-              Commonplace
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* JOURNAL TAB */}
-      {activeTab === 'journal' && (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-
-          {/* Daily Prompt */}
-          <View style={styles.promptContainer}>
-            <Ionicons name="bulb-outline" size={18} color="#c9a84c" />
-            <Text style={styles.promptText}>"{prompt}"</Text>
-          </View>
-
-          {/* New Entry Input */}
-          {showJournalInput ? (
-            <View style={styles.inputCard}>
-              <Text style={styles.inputDate}>
-                {new Date().toLocaleDateString('en-US', {
-                  weekday: 'long', month: 'long', day: 'numeric'
-                })} · {new Date().toLocaleTimeString('en-US', {
-                  hour: '2-digit', minute: '2-digit'
-                })}
-              </Text>
-              <TextInput
-                style={styles.journalInput}
-                placeholder="Write your thoughts..."
-                placeholderTextColor="#888"
-                multiline
-                autoFocus
-                value={newEntry}
-                onChangeText={setNewEntry}
-              />
-              <View style={styles.inputButtons}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => { setShowJournalInput(false); setNewEntry(''); }}
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={addJournalEntry}>
-                  <Text style={styles.saveText}>Save Entry</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Journal 📓</Text>
+          <View style={styles.tabs}>
             <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowJournalInput(true)}
+              style={[styles.tab, activeTab === 'journal' && styles.activeTab]}
+              onPress={() => setActiveTab('journal')}
             >
-              <Ionicons name="add-circle-outline" size={24} color="#c9a84c" />
-              <Text style={styles.addButtonText}>New Journal Entry</Text>
+              <Text style={[styles.tabText, activeTab === 'journal' && styles.activeTabText]}>Journal</Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'commonplace' && styles.activeTab]}
+              onPress={() => setActiveTab('commonplace')}
+            >
+              <Text style={[styles.tabText, activeTab === 'commonplace' && styles.activeTabText]}>Commonplace</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-          {/* Journal Entries */}
-          {journalEntries.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="book-outline" size={48} color="#c9a84c33" />
-              <Text style={styles.emptyText}>No entries yet.</Text>
-              <Text style={styles.emptySubtext}>Start writing your story!</Text>
+        {/* JOURNAL TAB */}
+        {activeTab === 'journal' && (
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.promptContainer}>
+              <Ionicons name="bulb-outline" size={18} color="#c9a84c" />
+              <Text style={styles.promptText}>"{prompt}"</Text>
             </View>
-          ) : (
-            journalEntries.map(entry => (
-              <View key={entry.id} style={styles.entryCard}>
-                <View style={styles.entryHeader}>
-                  <View>
-                    <Text style={styles.entryDate}>{entry.date}</Text>
-                    <Text style={styles.entryTime}>{entry.time}</Text>
-                  </View>
-                  <TouchableOpacity onPress={() => deleteJournalEntry(entry.id)}>
-                    <Ionicons name="trash-outline" size={18} color="#ff4444" />
+
+            {showJournalInput ? (
+              <View style={styles.inputCard}>
+                <Text style={styles.inputDate}>
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  {' · '}
+                  {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <TextInput
+                  style={styles.journalInput}
+                  placeholder="Write your thoughts..."
+                  placeholderTextColor="#555"
+                  multiline
+                  autoFocus
+                  value={newEntry}
+                  onChangeText={setNewEntry}
+                />
+                <View style={styles.inputButtons}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowJournalInput(false); setNewEntry(''); }}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={addJournalEntry}>
+                    <Text style={styles.saveText}>Save Entry</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.entryText}>{entry.text}</Text>
               </View>
-            ))
-          )}
-        </ScrollView>
-      )}
-
-      {/* COMMONPLACE TAB */}
-      {activeTab === 'commonplace' && (
-        <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={18} color="#888" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search quotes, books, authors..."
-              placeholderTextColor="#888"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color="#888" />
+            ) : (
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowJournalInput(true)}>
+                <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
+                <Text style={styles.addButtonText}>New Journal Entry</Text>
               </TouchableOpacity>
             )}
-          </View>
 
-          {/* Add Quote Input */}
-          {showQuoteInput ? (
-            <View style={styles.inputCard}>
-              <TextInput
-                style={styles.quoteInput}
-                placeholder="Enter quote..."
-                placeholderTextColor="#888"
-                multiline
-                autoFocus
-                value={newQuote}
-                onChangeText={setNewQuote}
-              />
-              <TextInput
-                style={styles.smallInput}
-                placeholder="Book title *"
-                placeholderTextColor="#888"
-                value={newBook}
-                onChangeText={setNewBook}
-              />
-              <TextInput
-                style={styles.smallInput}
-                placeholder="Author (optional)"
-                placeholderTextColor="#888"
-                value={newAuthor}
-                onChangeText={setNewAuthor}
-              />
-              <View style={styles.inputButtons}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => {
-                    setShowQuoteInput(false);
-                    setNewQuote(''); setNewBook(''); setNewAuthor('');
-                  }}
-                >
-                  <Text style={styles.cancelText}>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.saveButton} onPress={addQuote}>
-                  <Text style={styles.saveText}>Save Quote</Text>
-                </TouchableOpacity>
+            {journalEntries.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="book-outline" size={52} color="#c9a84c22" />
+                <Text style={styles.emptyText}>No entries yet.</Text>
+                <Text style={styles.emptySubtext}>Start writing your story!</Text>
               </View>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => setShowQuoteInput(true)}
-            >
-              <Ionicons name="add-circle-outline" size={24} color="#c9a84c" />
-              <Text style={styles.addButtonText}>Add Quote</Text>
-            </TouchableOpacity>
-          )}
+            ) : (
+              journalEntries.map(entry => (
+                <View key={entry.id} style={styles.entryCard}>
+                  <View style={styles.entryHeader}>
+                    <View>
+                      <Text style={styles.entryDate}>{entry.date}</Text>
+                      <Text style={styles.entryTime}>{entry.time}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => deleteJournalEntry(entry.id)}>
+                      <Ionicons name="trash-outline" size={18} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.entryText}>{entry.text}</Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        )}
 
-          {/* Quotes Count */}
-          {quotes.length > 0 && (
-            <Text style={styles.countText}>
-              {filteredQuotes.length} {filteredQuotes.length === 1 ? 'quote' : 'quotes'}
-              {searchQuery ? ' found' : ' saved'}
-            </Text>
-          )}
+        {/* COMMONPLACE TAB */}
+        {activeTab === 'commonplace' && (
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={18} color="#888" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search quotes, books, authors..."
+                placeholderTextColor="#555"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={18} color="#888" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-          {/* Quotes List */}
-          {filteredQuotes.length === 0 && quotes.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="library-outline" size={48} color="#c9a84c33" />
-              <Text style={styles.emptyText}>No quotes yet.</Text>
-              <Text style={styles.emptySubtext}>Start building your commonplace notebook!</Text>
-            </View>
-          ) : filteredQuotes.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="search-outline" size={48} color="#c9a84c33" />
-              <Text style={styles.emptyText}>No results found.</Text>
-              <Text style={styles.emptySubtext}>Try a different search term.</Text>
-            </View>
-          ) : (
-            filteredQuotes.map(quote => (
-              <View key={quote.id} style={styles.quoteCard}>
-                <View style={styles.quoteHeader}>
-                  <Ionicons name="chatbubble-outline" size={20} color="#c9a84c" />
-                  <TouchableOpacity onPress={() => deleteQuote(quote.id)}>
-                    <Ionicons name="trash-outline" size={18} color="#ff4444" />
+            {showQuoteInput ? (
+              <View style={styles.inputCard}>
+                <TextInput
+                  style={styles.quoteInput}
+                  placeholder="Enter quote..."
+                  placeholderTextColor="#555"
+                  multiline
+                  autoFocus
+                  value={newQuote}
+                  onChangeText={setNewQuote}
+                />
+                <TextInput
+                  style={styles.smallInput}
+                  placeholder="Book title *"
+                  placeholderTextColor="#555"
+                  value={newBook}
+                  onChangeText={setNewBook}
+                />
+                <TextInput
+                  style={styles.smallInput}
+                  placeholder="Author (optional)"
+                  placeholderTextColor="#555"
+                  value={newAuthor}
+                  onChangeText={setNewAuthor}
+                />
+                <View style={styles.inputButtons}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowQuoteInput(false); setNewQuote(''); setNewBook(''); setNewAuthor(''); }}>
+                    <Text style={styles.cancelText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={addQuote}>
+                    <Text style={styles.saveText}>Save Quote</Text>
                   </TouchableOpacity>
                 </View>
-                <Text style={styles.quoteText}>"{quote.quote}"</Text>
-                <View style={styles.quoteFooter}>
-                  <Text style={styles.quoteBook}>📖 {quote.book}</Text>
-                  {quote.author ? (
-                    <Text style={styles.quoteAuthor}>— {quote.author}</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.quoteDate}>{quote.date}</Text>
               </View>
-            ))
-          )}
-        </ScrollView>
-      )}
-    </KeyboardAvoidingView>
+            ) : (
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowQuoteInput(true)}>
+                <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
+                <Text style={styles.addButtonText}>Add Quote</Text>
+              </TouchableOpacity>
+            )}
+
+            {quotes.length > 0 && (
+              <Text style={styles.countText}>
+                {filteredQuotes.length} {filteredQuotes.length === 1 ? 'quote' : 'quotes'}
+                {searchQuery ? ' found' : ' saved'}
+              </Text>
+            )}
+
+            {filteredQuotes.length === 0 && quotes.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="library-outline" size={52} color="#c9a84c22" />
+                <Text style={styles.emptyText}>No quotes yet.</Text>
+                <Text style={styles.emptySubtext}>Start building your commonplace notebook!</Text>
+              </View>
+            ) : filteredQuotes.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="search-outline" size={52} color="#c9a84c22" />
+                <Text style={styles.emptyText}>No results found.</Text>
+                <Text style={styles.emptySubtext}>Try a different search term.</Text>
+              </View>
+            ) : (
+              filteredQuotes.map(quote => (
+                <View key={quote.id} style={styles.quoteCard}>
+                  <View style={styles.quoteHeader}>
+                    <Ionicons name="chatbubble-outline" size={18} color="#c9a84c" />
+                    <TouchableOpacity onPress={() => deleteQuote(quote.id)}>
+                      <Ionicons name="trash-outline" size={18} color="#ff4444" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.quoteText}>"{quote.quote}"</Text>
+                  <View style={styles.quoteFooter}>
+                    <Text style={styles.quoteBook}>📖 {quote.book}</Text>
+                    {quote.author ? <Text style={styles.quoteAuthor}>— {quote.author}</Text> : null}
+                  </View>
+                  <Text style={styles.quoteDate}>{quote.date}</Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 25,
-    paddingBottom: 0,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#c9a84c',
-    marginBottom: 20,
-  },
+  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  header: { paddingTop: 20, paddingHorizontal: 25, paddingBottom: 0 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#c9a84c', marginBottom: 18 },
   tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 5,
+    flexDirection: 'row', backgroundColor: '#16213e',
+    borderRadius: 12, padding: 4, marginBottom: 5,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: {
-    backgroundColor: '#c9a84c',
-  },
-  tabText: {
-    color: '#888',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: '#1a1a2e',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 25,
-    paddingTop: 15,
-  },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  activeTab: { backgroundColor: '#c9a84c' },
+  tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
+  activeTabText: { color: '#1a1a2e' },
+  scrollView: { flex: 1 },
+  content: { padding: 25, paddingTop: 15 },
   promptContainer: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: '#c9a84c',
+    backgroundColor: '#16213e', borderRadius: 14, padding: 16,
+    marginBottom: 18, flexDirection: 'row', alignItems: 'flex-start',
+    gap: 10, borderLeftWidth: 3, borderLeftColor: '#c9a84c',
   },
-  promptText: {
-    color: '#c9a84c',
-    fontSize: 14,
-    fontStyle: 'italic',
-    flex: 1,
-    lineHeight: 22,
-  },
+  promptText: { color: '#c9a84c', fontSize: 14, fontStyle: 'italic', flex: 1, lineHeight: 22 },
   inputCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c',
+    backgroundColor: '#16213e', borderRadius: 14, padding: 16,
+    marginBottom: 18, borderWidth: 1, borderColor: '#c9a84c',
   },
-  inputDate: {
-    color: '#c9a84c',
-    fontSize: 12,
-    marginBottom: 10,
-  },
+  inputDate: { color: '#c9a84c', fontSize: 12, marginBottom: 10 },
   journalInput: {
-    color: '#fff',
-    fontSize: 15,
-    minHeight: 120,
-    textAlignVertical: 'top',
-    lineHeight: 24,
-    marginBottom: 10,
+    color: '#fff', fontSize: 15, minHeight: 120,
+    textAlignVertical: 'top', lineHeight: 24, marginBottom: 10,
   },
   quoteInput: {
-    color: '#fff',
-    fontSize: 15,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    lineHeight: 24,
-    marginBottom: 10,
-    fontStyle: 'italic',
+    color: '#fff', fontSize: 15, minHeight: 80,
+    textAlignVertical: 'top', lineHeight: 24, marginBottom: 10, fontStyle: 'italic',
   },
   smallInput: {
-    color: '#fff',
-    fontSize: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#c9a84c22',
-    paddingTop: 10,
-    marginBottom: 8,
+    color: '#fff', fontSize: 14, borderTopWidth: 1,
+    borderTopColor: '#c9a84c22', paddingTop: 10, marginBottom: 8,
   },
-  inputButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 5,
-  },
-  cancelButton: {
-    padding: 8,
-    paddingHorizontal: 16,
-  },
-  cancelText: {
-    color: '#888',
-    fontSize: 14,
-  },
-  saveButton: {
-    backgroundColor: '#c9a84c',
-    padding: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  saveText: {
-    color: '#1a1a2e',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
+  inputButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 5 },
+  cancelButton: { padding: 10, paddingHorizontal: 18 },
+  cancelText: { color: '#888', fontSize: 14 },
+  saveButton: { backgroundColor: '#c9a84c', padding: 10, paddingHorizontal: 20, borderRadius: 10 },
+  saveText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16,
+    borderRadius: 14, borderWidth: 1, borderColor: '#c9a84c44',
+    borderStyle: 'dashed', justifyContent: 'center', marginBottom: 18,
   },
-  addButtonText: {
-    color: '#c9a84c',
-    fontSize: 16,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingTop: 60,
-    gap: 10,
-  },
-  emptyText: {
-    color: '#888',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  emptySubtext: {
-    color: '#555',
-    fontSize: 14,
-  },
+  addButtonText: { color: '#c9a84c', fontSize: 15, fontWeight: '600' },
+  emptyContainer: { alignItems: 'center', paddingTop: 60, gap: 10 },
+  emptyText: { color: '#888', fontSize: 18, fontWeight: '600' },
+  emptySubtext: { color: '#555', fontSize: 14 },
   entryCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
+    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
+    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c22',
   },
-  entryHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  entryDate: {
-    color: '#c9a84c',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  entryTime: {
-    color: '#888',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  entryText: {
-    color: '#fff',
-    fontSize: 15,
-    lineHeight: 24,
-  },
+  entryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  entryDate: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
+  entryTime: { color: '#888', fontSize: 11, marginTop: 2 },
+  entryText: { color: '#fff', fontSize: 15, lineHeight: 24 },
   searchContainer: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
+    backgroundColor: '#16213e', borderRadius: 12, padding: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginBottom: 18, borderWidth: 1, borderColor: '#c9a84c33',
   },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 14,
-  },
-  countText: {
-    color: '#888',
-    fontSize: 13,
-    marginBottom: 15,
-  },
+  searchInput: { flex: 1, color: '#fff', fontSize: 14 },
+  countText: { color: '#888', fontSize: 13, marginBottom: 14 },
   quoteCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-    borderLeftWidth: 3,
-    borderLeftColor: '#c9a84c',
+    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
+    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c22',
+    borderLeftWidth: 3, borderLeftColor: '#c9a84c',
   },
-  quoteHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  quoteText: {
-    color: '#fff',
-    fontSize: 15,
-    lineHeight: 24,
-    fontStyle: 'italic',
-    marginBottom: 12,
-  },
-  quoteFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 6,
-  },
-  quoteBook: {
-    color: '#c9a84c',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  quoteAuthor: {
-    color: '#888',
-    fontSize: 13,
-  },
-  quoteDate: {
-    color: '#555',
-    fontSize: 11,
-  },
+  quoteHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  quoteText: { color: '#fff', fontSize: 15, lineHeight: 24, fontStyle: 'italic', marginBottom: 12 },
+  quoteFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 },
+  quoteBook: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
+  quoteAuthor: { color: '#888', fontSize: 13 },
+  quoteDate: { color: '#555', fontSize: 11 },
 });

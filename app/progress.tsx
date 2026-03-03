@@ -2,13 +2,15 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
-    Alert, Modal,
+    Alert,
+    Modal,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 
 const MILESTONES = [
@@ -27,8 +29,6 @@ export default function ProgressScreen() {
   const [weekData, setWeekData] = useState<any[]>([]);
   const [calendarData, setCalendarData] = useState<any>({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
-
-  // Reading state
   const [books, setBooks] = useState<any[]>([]);
   const [pagesLog, setPagesLog] = useState<any[]>([]);
   const [todayPages, setTodayPages] = useState('');
@@ -36,6 +36,12 @@ export default function ProgressScreen() {
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookAuthor, setNewBookAuthor] = useState('');
   const [totalPages, setTotalPages] = useState(0);
+  const [totalReadingSeconds, setTotalReadingSeconds] = useState(0);
+
+  // Screen time
+  const [screenTimeGoal, setScreenTimeGoal] = useState(2);
+  const [screenTimeLog, setScreenTimeLog] = useState<any[]>([]);
+  const [todayScreenTime, setTodayScreenTime] = useState('');
 
   useEffect(() => {
     loadAllData();
@@ -43,24 +49,18 @@ export default function ProgressScreen() {
 
   const loadAllData = async () => {
     try {
-      // Streak
       const s = await AsyncStorage.getItem('streak');
       if (s) setStreak(parseInt(s));
 
-      // Journal & quotes count
       const journal = await AsyncStorage.getItem('journalEntries');
       const quotes = await AsyncStorage.getItem('commonplaceQuotes');
       if (journal) setJournalCount(JSON.parse(journal).length);
       if (quotes) setQuoteCount(JSON.parse(quotes).length);
 
-      // Calendar data
       const calData = await AsyncStorage.getItem('calendarData');
       if (calData) setCalendarData(JSON.parse(calData));
-
-      // Week data
       buildWeekData(calData ? JSON.parse(calData) : {});
 
-      // Reading data
       const savedBooks = await AsyncStorage.getItem('booksRead');
       const savedPages = await AsyncStorage.getItem('pagesLog');
       if (savedBooks) setBooks(JSON.parse(savedBooks));
@@ -70,13 +70,33 @@ export default function ProgressScreen() {
         setTotalPages(pages.reduce((sum: number, p: any) => sum + p.pages, 0));
       }
 
-      // Today's pages
       const today = new Date().toDateString();
       const savedPagesLog = savedPages ? JSON.parse(savedPages) : [];
       const todayLog = savedPagesLog.find((p: any) => p.date === today);
       if (todayLog) setTodayPages(todayLog.pages.toString());
 
-      // Update calendar with today's routines
+      // Reading sessions total time
+      const savedSessions = await AsyncStorage.getItem('readingSessions');
+      if (savedSessions) {
+        const sessions = JSON.parse(savedSessions);
+        const total = sessions.reduce((sum: number, s: any) => sum + s.duration, 0);
+        setTotalReadingSeconds(total);
+      }
+
+      // Screen time settings & log
+      const notifSettings = await AsyncStorage.getItem('notificationSettings');
+      if (notifSettings) {
+        const parsed = JSON.parse(notifSettings);
+        setScreenTimeGoal(parseInt(parsed.screenTimeGoal) || 2);
+      }
+      const savedScreenLog = await AsyncStorage.getItem('screenTimeLog');
+      if (savedScreenLog) {
+        const log = JSON.parse(savedScreenLog);
+        setScreenTimeLog(log);
+        const todayScreen = log.find((l: any) => l.date === today);
+        if (todayScreen) setTodayScreenTime(todayScreen.hours.toString());
+      }
+
       await updateTodayCalendar(calData ? JSON.parse(calData) : {});
     } catch (e) {
       console.error(e);
@@ -87,13 +107,9 @@ export default function ProgressScreen() {
     const today = new Date().toDateString();
     const morningDone = await AsyncStorage.getItem('morningDone');
     const eveningDone = await AsyncStorage.getItem('eveningDone');
-
     const updated = {
       ...existingData,
-      [today]: {
-        morning: morningDone === 'true',
-        evening: eveningDone === 'true',
-      }
+      [today]: { morning: morningDone === 'true', evening: eveningDone === 'true' }
     };
     setCalendarData(updated);
     await AsyncStorage.setItem('calendarData', JSON.stringify(updated));
@@ -108,9 +124,7 @@ export default function ProgressScreen() {
       d.setDate(d.getDate() - i);
       const key = d.toDateString();
       week.push({
-        label: days[d.getDay()],
-        date: d.getDate(),
-        key,
+        label: days[d.getDay()], date: d.getDate(), key,
         morning: calData[key]?.morning || false,
         evening: calData[key]?.evening || false,
         isToday: i === 0,
@@ -119,39 +133,31 @@ export default function ProgressScreen() {
     setWeekData(week);
   };
 
-  const getDaysInMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const formatReadingTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
   };
 
-  const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  };
+  const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const getFirstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentMonth);
     const firstDay = getFirstDayOfMonth(currentMonth);
     const cells = [];
-
     for (let i = 0; i < firstDay; i++) {
       cells.push(<View key={`empty-${i}`} style={styles.calCell} />);
     }
-
     for (let day = 1; day <= daysInMonth; day++) {
       const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
       const key = d.toDateString();
       const data = calendarData[key];
       const isToday = key === new Date().toDateString();
-      const bothDone = data?.morning && data?.evening;
-      const oneDone = data?.morning || data?.evening;
-
       cells.push(
-        <View key={day} style={[
-          styles.calCell,
-          isToday && styles.calCellToday,
-        ]}>
-          <Text style={[styles.calDayNum, isToday && styles.calDayToday]}>
-            {day}
-          </Text>
+        <View key={day} style={[styles.calCell, isToday && styles.calCellToday]}>
+          <Text style={[styles.calDayNum, isToday && styles.calDayToday]}>{day}</Text>
           <View style={styles.calDots}>
             <View style={[styles.calDot, data?.morning && styles.calDotMorning]} />
             <View style={[styles.calDot, data?.evening && styles.calDotEvening]} />
@@ -159,24 +165,17 @@ export default function ProgressScreen() {
         </View>
       );
     }
-
     return cells;
   };
 
   const logPages = async () => {
     const pages = parseInt(todayPages);
-    if (!pages || pages <= 0) {
-      Alert.alert('Invalid', 'Please enter a valid number of pages.');
-      return;
-    }
+    if (!pages || pages <= 0) { Alert.alert('Invalid', 'Please enter a valid number of pages.'); return; }
     const today = new Date().toDateString();
     const existing = pagesLog.filter((p: any) => p.date !== today);
     const updated = [{
-      date: today,
-      pages,
-      dateFormatted: new Date().toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
-      })
+      date: today, pages,
+      dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     }, ...existing];
     setPagesLog(updated);
     setTotalPages(updated.reduce((sum, p) => sum + p.pages, 0));
@@ -184,24 +183,33 @@ export default function ProgressScreen() {
     Alert.alert('✅ Logged!', `${pages} pages logged for today!`);
   };
 
+  const logScreenTime = async () => {
+    const hours = parseFloat(todayScreenTime);
+    if (!hours || hours < 0) { Alert.alert('Invalid', 'Please enter valid hours.'); return; }
+    const today = new Date().toDateString();
+    const existing = screenTimeLog.filter((l: any) => l.date !== today);
+    const updated = [{
+      date: today, hours,
+      dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    }, ...existing];
+    setScreenTimeLog(updated);
+    await AsyncStorage.setItem('screenTimeLog', JSON.stringify(updated));
+    const status = hours <= screenTimeGoal ? '✅ Under goal!' : '⚠️ Over goal.';
+    Alert.alert('Screen Time Logged!', `${hours}h logged. ${status}`);
+  };
+
   const addBook = async () => {
-    if (!newBookTitle.trim()) {
-      Alert.alert('Required', 'Please enter a book title.');
-      return;
-    }
+    if (!newBookTitle.trim()) { Alert.alert('Required', 'Please enter a book title.'); return; }
     const book = {
       id: Date.now().toString(),
       title: newBookTitle.trim(),
       author: newBookAuthor.trim(),
-      dateFinished: new Date().toLocaleDateString('en-US', {
-        month: 'long', day: 'numeric', year: 'numeric'
-      }),
+      dateFinished: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     };
     const updated = [book, ...books];
     setBooks(updated);
     await AsyncStorage.setItem('booksRead', JSON.stringify(updated));
-    setNewBookTitle('');
-    setNewBookAuthor('');
+    setNewBookTitle(''); setNewBookAuthor('');
     setShowBookModal(false);
   };
 
@@ -218,76 +226,102 @@ export default function ProgressScreen() {
     ]);
   };
 
-  const prevMonth = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() - 1);
-    setCurrentMonth(d);
-  };
+  const prevMonth = () => { const d = new Date(currentMonth); d.setMonth(d.getMonth() - 1); setCurrentMonth(d); };
+  const nextMonth = () => { const d = new Date(currentMonth); d.setMonth(d.getMonth() + 1); setCurrentMonth(d); };
+  const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  const nextMonth = () => {
-    const d = new Date(currentMonth);
-    d.setMonth(d.getMonth() + 1);
-    setCurrentMonth(d);
-  };
-
-  const monthLabel = currentMonth.toLocaleDateString('en-US', {
-    month: 'long', year: 'numeric'
-  });
+  const todayScreenEntry = screenTimeLog.find(l => l.date === new Date().toDateString());
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Progress 📊</Text>
         <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
-            onPress={() => setActiveTab('overview')}
-          >
-            <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>
-              Overview
-            </Text>
+          <TouchableOpacity style={[styles.tab, activeTab === 'overview' && styles.activeTab]} onPress={() => setActiveTab('overview')}>
+            <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>Overview</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'reading' && styles.activeTab]}
-            onPress={() => setActiveTab('reading')}
-          >
-            <Text style={[styles.tabText, activeTab === 'reading' && styles.activeTabText]}>
-              Reading
-            </Text>
+          <TouchableOpacity style={[styles.tab, activeTab === 'reading' && styles.activeTab]} onPress={() => setActiveTab('reading')}>
+            <Text style={[styles.tabText, activeTab === 'reading' && styles.activeTabText]}>Reading</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* OVERVIEW TAB */}
         {activeTab === 'overview' && (
           <>
-            {/* Streak Card */}
+            {/* Streak */}
             <View style={styles.streakCard}>
               <Text style={styles.streakIcon}>🔥</Text>
               <Text style={styles.streakNumber}>{streak}</Text>
               <Text style={styles.streakLabel}>Day Streak</Text>
             </View>
 
-            {/* Stats Row */}
+            {/* Stats */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Ionicons name="book-outline" size={24} color="#c9a84c" />
+                <Ionicons name="book-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{journalCount}</Text>
                 <Text style={styles.statLabel}>Journal{'\n'}Entries</Text>
               </View>
               <View style={styles.statCard}>
-                <Ionicons name="library-outline" size={24} color="#c9a84c" />
+                <Ionicons name="library-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{quoteCount}</Text>
                 <Text style={styles.statLabel}>Quotes{'\n'}Saved</Text>
               </View>
               <View style={styles.statCard}>
-                <Ionicons name="reader-outline" size={24} color="#c9a84c" />
+                <Ionicons name="reader-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{books.length}</Text>
                 <Text style={styles.statLabel}>Books{'\n'}Read</Text>
               </View>
+            </View>
+
+            {/* Screen Time Card */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>📱 Screen Time</Text>
+              <View style={styles.screenTimeRow}>
+                <View style={styles.screenTimeStat}>
+                  <Text style={styles.screenTimeHours}>
+                    {todayScreenEntry ? `${todayScreenEntry.hours}h` : '—'}
+                  </Text>
+                  <Text style={styles.screenTimeLabel}>Today</Text>
+                </View>
+                <View style={styles.screenTimeDivider} />
+                <View style={styles.screenTimeStat}>
+                  <Text style={[
+                    styles.screenTimeHours,
+                    todayScreenEntry && todayScreenEntry.hours <= screenTimeGoal
+                      ? styles.screenTimeGood : styles.screenTimeBad
+                  ]}>
+                    {screenTimeGoal}h
+                  </Text>
+                  <Text style={styles.screenTimeLabel}>Daily Goal</Text>
+                </View>
+              </View>
+              <View style={styles.pagesInputRow}>
+                <TextInput
+                  style={styles.pagesInput}
+                  placeholder="Log today's screen time (hrs)..."
+                  placeholderTextColor="#555"
+                  keyboardType="decimal-pad"
+                  value={todayScreenTime}
+                  onChangeText={setTodayScreenTime}
+                />
+                <TouchableOpacity style={styles.logButton} onPress={logScreenTime}>
+                  <Text style={styles.logButtonText}>Log</Text>
+                </TouchableOpacity>
+              </View>
+              {screenTimeLog.slice(0, 5).map((log, i) => (
+                <View key={i} style={styles.pagesLogRow}>
+                  <Text style={styles.pagesLogDate}>{log.dateFormatted}</Text>
+                  <Text style={[
+                    styles.pagesLogCount,
+                    log.hours <= screenTimeGoal ? styles.screenTimeGood : styles.screenTimeBad
+                  ]}>
+                    {log.hours}h {log.hours <= screenTimeGoal ? '✅' : '⚠️'}
+                  </Text>
+                </View>
+              ))}
             </View>
 
             {/* Weekly View */}
@@ -296,12 +330,8 @@ export default function ProgressScreen() {
               <View style={styles.weekRow}>
                 {weekData.map((day, i) => (
                   <View key={i} style={styles.weekDay}>
-                    <Text style={[styles.weekDayLabel, day.isToday && styles.weekDayToday]}>
-                      {day.label}
-                    </Text>
-                    <Text style={[styles.weekDayNum, day.isToday && styles.weekDayToday]}>
-                      {day.date}
-                    </Text>
+                    <Text style={[styles.weekDayLabel, day.isToday && styles.weekDayToday]}>{day.label}</Text>
+                    <Text style={[styles.weekDayNum, day.isToday && styles.weekDayToday]}>{day.date}</Text>
                     <View style={styles.weekDots}>
                       <View style={[styles.weekDot, day.morning && styles.weekDotMorning]} />
                       <View style={[styles.weekDot, day.evening && styles.weekDotEvening]} />
@@ -321,7 +351,7 @@ export default function ProgressScreen() {
               </View>
             </View>
 
-            {/* Monthly Calendar */}
+            {/* Calendar */}
             <View style={styles.sectionCard}>
               <View style={styles.calHeader}>
                 <TouchableOpacity onPress={prevMonth}>
@@ -337,9 +367,7 @@ export default function ProgressScreen() {
                   <Text key={d} style={styles.calDayLabelText}>{d}</Text>
                 ))}
               </View>
-              <View style={styles.calGrid}>
-                {renderCalendar()}
-              </View>
+              <View style={styles.calGrid}>{renderCalendar()}</View>
               <View style={styles.legend}>
                 <View style={styles.legendItem}>
                   <View style={[styles.legendDot, { backgroundColor: '#c9a84c' }]} />
@@ -357,20 +385,10 @@ export default function ProgressScreen() {
               <Text style={styles.sectionTitle}>Milestones</Text>
               <View style={styles.milestonesGrid}>
                 {MILESTONES.map(m => (
-                  <View key={m.days} style={[
-                    styles.milestoneCard,
-                    streak >= m.days && styles.milestoneCardEarned
-                  ]}>
+                  <View key={m.days} style={[styles.milestoneCard, streak >= m.days && styles.milestoneCardEarned]}>
                     <Text style={styles.milestoneIcon}>{m.icon}</Text>
-                    <Text style={[
-                      styles.milestoneLabel,
-                      streak >= m.days && styles.milestoneLabelEarned
-                    ]}>
-                      {m.label}
-                    </Text>
-                    {streak >= m.days && (
-                      <Ionicons name="checkmark-circle" size={16} color="#c9a84c" />
-                    )}
+                    <Text style={[styles.milestoneLabel, streak >= m.days && styles.milestoneLabelEarned]}>{m.label}</Text>
+                    {streak >= m.days && <Ionicons name="checkmark-circle" size={16} color="#c9a84c" />}
                   </View>
                 ))}
               </View>
@@ -378,31 +396,35 @@ export default function ProgressScreen() {
           </>
         )}
 
-        {/* READING TAB */}
         {activeTab === 'reading' && (
           <>
             {/* Reading Stats */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
-                <Ionicons name="book-outline" size={24} color="#c9a84c" />
+                <Ionicons name="book-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{books.length}</Text>
                 <Text style={styles.statLabel}>Books{'\n'}Finished</Text>
               </View>
               <View style={styles.statCard}>
-                <Ionicons name="document-text-outline" size={24} color="#c9a84c" />
+                <Ionicons name="document-text-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{totalPages}</Text>
                 <Text style={styles.statLabel}>Total{'\n'}Pages</Text>
               </View>
+              <View style={styles.statCard}>
+                <Ionicons name="time-outline" size={22} color="#c9a84c" />
+                <Text style={styles.statNumber}>{formatReadingTime(totalReadingSeconds)}</Text>
+                <Text style={styles.statLabel}>Total{'\n'}Time</Text>
+              </View>
             </View>
 
-            {/* Log Pages Today */}
+            {/* Log Pages */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>📖 Log Today's Pages</Text>
               <View style={styles.pagesInputRow}>
                 <TextInput
                   style={styles.pagesInput}
                   placeholder="Pages read today..."
-                  placeholderTextColor="#888"
+                  placeholderTextColor="#555"
                   keyboardType="number-pad"
                   value={todayPages}
                   onChangeText={setTodayPages}
@@ -426,24 +448,17 @@ export default function ProgressScreen() {
               </View>
             )}
 
-            {/* Books Read */}
+            {/* Books Finished */}
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>📚 Books Finished</Text>
-                <TouchableOpacity
-                  style={styles.addSmallButton}
-                  onPress={() => setShowBookModal(true)}
-                >
+                <TouchableOpacity style={styles.addSmallButton} onPress={() => setShowBookModal(true)}>
                   <Ionicons name="add" size={20} color="#1a1a2e" />
                 </TouchableOpacity>
               </View>
-
               {books.length === 0 ? (
-                <TouchableOpacity
-                  style={styles.emptyBooks}
-                  onPress={() => setShowBookModal(true)}
-                >
-                  <Ionicons name="add-circle-outline" size={24} color="#c9a84c" />
+                <TouchableOpacity style={styles.emptyBooks} onPress={() => setShowBookModal(true)}>
+                  <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
                   <Text style={styles.emptyBooksText}>Add your first finished book!</Text>
                 </TouchableOpacity>
               ) : (
@@ -454,9 +469,7 @@ export default function ProgressScreen() {
                     </View>
                     <View style={styles.bookInfo}>
                       <Text style={styles.bookTitle}>{book.title}</Text>
-                      {book.author ? (
-                        <Text style={styles.bookAuthor}>by {book.author}</Text>
-                      ) : null}
+                      {book.author ? <Text style={styles.bookAuthor}>by {book.author}</Text> : null}
                       <Text style={styles.bookDate}>Finished {book.dateFinished}</Text>
                     </View>
                     <TouchableOpacity onPress={() => deleteBook(book.id)}>
@@ -479,7 +492,7 @@ export default function ProgressScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Book title *"
-              placeholderTextColor="#888"
+              placeholderTextColor="#555"
               value={newBookTitle}
               onChangeText={setNewBookTitle}
               autoFocus
@@ -487,19 +500,12 @@ export default function ProgressScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Author (optional)"
-              placeholderTextColor="#888"
+              placeholderTextColor="#555"
               value={newBookAuthor}
               onChangeText={setNewBookAuthor}
             />
             <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={styles.modalCancel}
-                onPress={() => {
-                  setShowBookModal(false);
-                  setNewBookTitle('');
-                  setNewBookAuthor('');
-                }}
-              >
+              <TouchableOpacity style={styles.modalCancel} onPress={() => { setShowBookModal(false); setNewBookTitle(''); setNewBookAuthor(''); }}>
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={addBook}>
@@ -509,423 +515,110 @@ export default function ProgressScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 25,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#c9a84c',
-    marginBottom: 20,
-  },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 5,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: {
-    backgroundColor: '#c9a84c',
-  },
-  tabText: {
-    color: '#888',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: '#1a1a2e',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 25,
-    paddingTop: 15,
-  },
+  container: { flex: 1, backgroundColor: '#1a1a2e' },
+  header: { paddingTop: 20, paddingHorizontal: 25 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#c9a84c', marginBottom: 18 },
+  tabs: { flexDirection: 'row', backgroundColor: '#16213e', borderRadius: 12, padding: 4, marginBottom: 5 },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
+  activeTab: { backgroundColor: '#c9a84c' },
+  tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
+  activeTabText: { color: '#1a1a2e' },
+  scrollView: { flex: 1 },
+  content: { padding: 25, paddingTop: 15 },
   streakCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 16,
-    padding: 30,
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c',
+    backgroundColor: '#16213e', borderRadius: 16, padding: 28,
+    alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#c9a84c',
   },
-  streakIcon: {
-    fontSize: 40,
-    marginBottom: 5,
-  },
-  streakNumber: {
-    fontSize: 64,
-    fontWeight: 'bold',
-    color: '#c9a84c',
-    lineHeight: 70,
-  },
-  streakLabel: {
-    color: '#fff',
-    fontSize: 18,
-    marginTop: 5,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
+  streakIcon: { fontSize: 40, marginBottom: 5 },
+  streakNumber: { fontSize: 64, fontWeight: 'bold', color: '#c9a84c', lineHeight: 70 },
+  streakLabel: { color: '#fff', fontSize: 18, marginTop: 5 },
+  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   statCard: {
-    flex: 1,
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 15,
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
+    flex: 1, backgroundColor: '#16213e', borderRadius: 12, padding: 14,
+    alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#c9a84c22',
   },
-  statNumber: {
-    color: '#c9a84c',
-    fontSize: 24,
-    fontWeight: 'bold',
-  },
-  statLabel: {
-    color: '#888',
-    fontSize: 11,
-    textAlign: 'center',
-    lineHeight: 16,
-  },
-  sectionCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    color: '#c9a84c',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-  },
-  weekRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  weekDay: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  weekDayLabel: {
-    color: '#888',
-    fontSize: 11,
-  },
-  weekDayNum: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  weekDayToday: {
-    color: '#c9a84c',
-    fontWeight: 'bold',
-  },
-  weekDots: {
-    flexDirection: 'row',
-    gap: 3,
-  },
-  weekDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#333',
-  },
-  weekDotMorning: {
-    backgroundColor: '#c9a84c',
-  },
-  weekDotEvening: {
-    backgroundColor: '#4a6fa5',
-  },
-  legend: {
-    flexDirection: 'row',
-    gap: 20,
-    justifyContent: 'center',
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendText: {
-    color: '#888',
-    fontSize: 12,
-  },
-  calHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
-  },
-  calDayLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 8,
-  },
-  calDayLabelText: {
-    color: '#888',
-    fontSize: 11,
-    width: 36,
-    textAlign: 'center',
-  },
-  calGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 15,
-  },
-  calCell: {
-    width: '14.28%',
-    alignItems: 'center',
-    paddingVertical: 4,
-    marginBottom: 4,
-  },
-  calCellToday: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 8,
-  },
-  calDayNum: {
-    color: '#fff',
-    fontSize: 12,
-    marginBottom: 3,
-  },
-  calDayToday: {
-    color: '#c9a84c',
-    fontWeight: 'bold',
-  },
-  calDots: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  calDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#333',
-  },
-  calDotMorning: {
-    backgroundColor: '#c9a84c',
-  },
-  calDotEvening: {
-    backgroundColor: '#4a6fa5',
-  },
-  milestonesGrid: {
-    gap: 10,
-  },
+  statNumber: { color: '#c9a84c', fontSize: 22, fontWeight: 'bold' },
+  statLabel: { color: '#888', fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  sectionCard: { backgroundColor: '#16213e', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#c9a84c22' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
+  sectionTitle: { color: '#c9a84c', fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
+  screenTimeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginBottom: 15 },
+  screenTimeStat: { alignItems: 'center', gap: 4 },
+  screenTimeHours: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
+  screenTimeLabel: { color: '#888', fontSize: 12 },
+  screenTimeDivider: { width: 1, height: 40, backgroundColor: '#c9a84c33' },
+  screenTimeGood: { color: '#4caf50' },
+  screenTimeBad: { color: '#ff4444' },
+  weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
+  weekDay: { alignItems: 'center', gap: 4 },
+  weekDayLabel: { color: '#888', fontSize: 11 },
+  weekDayNum: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  weekDayToday: { color: '#c9a84c', fontWeight: 'bold' },
+  weekDots: { flexDirection: 'row', gap: 3 },
+  weekDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#333' },
+  weekDotMorning: { backgroundColor: '#c9a84c' },
+  weekDotEvening: { backgroundColor: '#4a6fa5' },
+  legend: { flexDirection: 'row', gap: 20, justifyContent: 'center' },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  legendDot: { width: 10, height: 10, borderRadius: 5 },
+  legendText: { color: '#888', fontSize: 12 },
+  calHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 },
+  calDayLabels: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 8 },
+  calDayLabelText: { color: '#888', fontSize: 11, width: 36, textAlign: 'center' },
+  calGrid: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 15 },
+  calCell: { width: '14.28%', alignItems: 'center', paddingVertical: 4, marginBottom: 4 },
+  calCellToday: { backgroundColor: '#1a1a2e', borderRadius: 8 },
+  calDayNum: { color: '#fff', fontSize: 12, marginBottom: 3 },
+  calDayToday: { color: '#c9a84c', fontWeight: 'bold' },
+  calDots: { flexDirection: 'row', gap: 2 },
+  calDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#333' },
+  calDotMorning: { backgroundColor: '#c9a84c' },
+  calDotEvening: { backgroundColor: '#4a6fa5' },
+  milestonesGrid: { gap: 10 },
   milestoneCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 12,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#333',
+    flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14,
+    backgroundColor: '#1a1a2e', borderRadius: 12, borderWidth: 1, borderColor: '#333',
   },
-  milestoneCardEarned: {
-    borderColor: '#c9a84c',
-    backgroundColor: '#c9a84c11',
-  },
-  milestoneIcon: {
-    fontSize: 24,
-  },
-  milestoneLabel: {
-    color: '#888',
-    fontSize: 14,
-    flex: 1,
-  },
-  milestoneLabelEarned: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  pagesInputRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
+  milestoneCardEarned: { borderColor: '#c9a84c', backgroundColor: '#c9a84c11' },
+  milestoneIcon: { fontSize: 24 },
+  milestoneLabel: { color: '#888', fontSize: 14, flex: 1 },
+  milestoneLabelEarned: { color: '#fff', fontWeight: '600' },
+  pagesInputRow: { flexDirection: 'row', gap: 10, marginBottom: 5 },
   pagesInput: {
-    flex: 1,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    padding: 12,
-    color: '#fff',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
+    flex: 1, backgroundColor: '#1a1a2e', borderRadius: 10, padding: 12,
+    color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#c9a84c33',
   },
-  logButton: {
-    backgroundColor: '#c9a84c',
-    borderRadius: 10,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-  },
-  logButtonText: {
-    color: '#1a1a2e',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  pagesLogRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#c9a84c11',
-  },
-  pagesLogDate: {
-    color: '#888',
-    fontSize: 13,
-  },
-  pagesLogCount: {
-    color: '#c9a84c',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  addSmallButton: {
-    backgroundColor: '#c9a84c',
-    borderRadius: 20,
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 15,
-  },
+  logButton: { backgroundColor: '#c9a84c', borderRadius: 10, paddingHorizontal: 20, justifyContent: 'center' },
+  logButtonText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
+  pagesLogRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#c9a84c11' },
+  pagesLogDate: { color: '#888', fontSize: 13 },
+  pagesLogCount: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
+  addSmallButton: { backgroundColor: '#c9a84c', borderRadius: 20, width: 32, height: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 15 },
   emptyBooks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 15,
+    borderRadius: 12, borderWidth: 1, borderColor: '#c9a84c33',
+    borderStyle: 'dashed', justifyContent: 'center',
   },
-  emptyBooksText: {
-    color: '#c9a84c',
-    fontSize: 14,
-  },
-  bookCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#c9a84c11',
-  },
-  bookNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#c9a84c22',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bookNumberText: {
-    color: '#c9a84c',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  bookInfo: {
-    flex: 1,
-  },
-  bookTitle: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  bookAuthor: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  bookDate: {
-    color: '#555',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: '#000000aa',
-    justifyContent: 'flex-end',
-  },
-  modalCard: {
-    backgroundColor: '#16213e',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 25,
-    gap: 15,
-  },
-  modalTitle: {
-    color: '#c9a84c',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  modalInput: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    padding: 12,
-    color: '#fff',
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
-    marginTop: 5,
-  },
-  modalCancel: {
-    padding: 12,
-    paddingHorizontal: 20,
-  },
-  modalCancelText: {
-    color: '#888',
-    fontSize: 15,
-  },
-  modalSave: {
-    backgroundColor: '#c9a84c',
-    borderRadius: 10,
-    padding: 12,
-    paddingHorizontal: 25,
-  },
-  modalSaveText: {
-    color: '#1a1a2e',
-    fontWeight: 'bold',
-    fontSize: 15,
-  },
+  emptyBooksText: { color: '#c9a84c', fontSize: 14 },
+  bookCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#c9a84c11' },
+  bookNumber: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#c9a84c22', alignItems: 'center', justifyContent: 'center' },
+  bookNumberText: { color: '#c9a84c', fontSize: 12, fontWeight: 'bold' },
+  bookInfo: { flex: 1 },
+  bookTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  bookAuthor: { color: '#888', fontSize: 12, marginTop: 2 },
+  bookDate: { color: '#555', fontSize: 11, marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 25, gap: 15 },
+  modalTitle: { color: '#c9a84c', fontSize: 20, fontWeight: 'bold', marginBottom: 5 },
+  modalInput: { backgroundColor: '#1a1a2e', borderRadius: 10, padding: 12, color: '#fff', fontSize: 15, borderWidth: 1, borderColor: '#c9a84c33' },
+  modalButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 5 },
+  modalCancel: { padding: 12, paddingHorizontal: 20 },
+  modalCancelText: { color: '#888', fontSize: 15 },
+  modalSave: { backgroundColor: '#c9a84c', borderRadius: 10, padding: 12, paddingHorizontal: 25 },
+  modalSaveText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
 });
