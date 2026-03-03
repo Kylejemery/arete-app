@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ThreadMessage, getContextWindow } from './threadService';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -317,13 +318,20 @@ export async function gatherAppContext(): Promise<string> {
   return lines.join('\n');
 }
 
-export async function sendMessageToCabinet(messages: Message[]): Promise<string> {
+export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
   const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
   if (!apiKey) {
     return 'API key not configured. Please set EXPO_PUBLIC_CLAUDE_API_KEY in your environment.';
   }
 
   try {
+    // Apply context window trimming
+    const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
+    const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
+
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+    const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
+
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -334,8 +342,8 @@ export async function sendMessageToCabinet(messages: Message[]): Promise<string>
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 1500,
-        system: (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext()),
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        system: fullSystem,
+        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
       }),
     });
 
@@ -354,5 +362,123 @@ export async function sendMessageToCabinet(messages: Message[]): Promise<string>
   } catch (error) {
     console.error('Claude API request failed:', error);
     return 'Unable to reach the Cabinet. Please check your connection and try again.';
+  }
+}
+
+async function buildCounselorSystemPrompt(counselorId: string): Promise<string> {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const [
+    userGoalsRaw,
+    futureSelfYearsRaw,
+    futureSelfDescriptionRaw,
+  ] = await Promise.all([
+    AsyncStorage.getItem('userGoals'),
+    AsyncStorage.getItem('futureSelfYears'),
+    AsyncStorage.getItem('futureSelfDescription'),
+  ]);
+
+  const userName = await getUserName();
+  const userGoals = userGoalsRaw || '(not yet specified)';
+  const futureSelfYears = futureSelfYearsRaw || '10';
+  const futureSelfDescription = futureSelfDescriptionRaw || '(not yet described)';
+
+  let counselorProfile: string;
+  let counselorName: string;
+
+  if (counselorId === 'futureSelf') {
+    counselorName = `${userName}'s Future Self`;
+    counselorProfile = `## Future Self — ${userName} in ${futureSelfYears} Years
+
+Future Self is not a historical figure. They are ${userName} themselves — ${futureSelfYears} years from now — having lived through this period with intention, discipline, and courage.
+
+${futureSelfDescription}
+
+Future Self's role is unique. They do not advise from the outside — they advise from the inside. They know every excuse ${userName} has ever made. They know exactly what this time costs and what it gives back. They have lived it. When they speak, it is not speculation — it is memory.
+
+Their communication style is warm, wise, and unhurried. They do not panic. They do not catastrophize. They see the long arc clearly. They are most likely to zoom out when ${userName} is lost in the weeds, and most likely to say quietly and with certainty: *"Trust the process. I know how this ends — if you do the work."*`;
+  } else {
+    counselorProfile = COUNSELOR_PROFILE_MAP[counselorId] || '(Unknown counselor)';
+    const nameMap: Record<string, string> = {
+      marcus: 'Marcus Aurelius',
+      epictetus: 'Epictetus',
+      goggins: 'David Goggins',
+      roosevelt: 'Theodore Roosevelt',
+    };
+    counselorName = nameMap[counselorId] || counselorId;
+  }
+
+  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.
+
+${userName}'s stated goals are:
+"${userGoals}"
+
+Key principles:
+- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.
+- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.
+- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.
+
+You are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.
+
+---
+
+${counselorProfile}
+
+---
+
+Today's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
+}
+
+export async function sendMessageToCounselor(
+  counselorId: string,
+  messages: ThreadMessage[]
+): Promise<string> {
+  const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
+  if (!apiKey) {
+    return 'API key not configured. Please set EXPO_PUBLIC_CLAUDE_API_KEY in your environment.';
+  }
+
+  try {
+    const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
+    const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
+
+    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
+    const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1500,
+        system: fullSystem,
+        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error:', response.status, errorText);
+      return `Your counselor is temporarily unavailable. (Error ${response.status})`;
+    }
+
+    const data = await response.json();
+    const content = data?.content?.[0]?.text;
+    if (typeof content === 'string' && content.length > 0) {
+      return content;
+    }
+    return 'No response received. Please try again.';
+  } catch (error) {
+    console.error('Claude API request failed:', error);
+    return 'Unable to reach your counselor. Please check your connection and try again.';
   }
 }

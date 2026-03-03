@@ -1,0 +1,375 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { sendMessageToCounselor } from '../services/claudeService';
+import { ThreadMessage, appendMessages, clearThread, loadThread } from '../services/threadService';
+
+const COUNSELOR_META: Record<string, { name: string; role: string }> = {
+  marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
+  epictetus: { name: 'Epictetus', role: 'Philosopher & Former Slave' },
+  goggins: { name: 'David Goggins', role: 'Navy SEAL & Endurance Athlete' },
+  roosevelt: { name: 'Theodore Roosevelt', role: '26th President & Adventurer' },
+  futureSelf: { name: 'Future Self', role: 'Years From Now' },
+};
+
+export default function CounselorChatScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const counselorId = id || 'marcus';
+
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [counselorName, setCounselorName] = useState(
+    COUNSELOR_META[counselorId]?.name || counselorId
+  );
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    // Resolve futureSelf display name using userName
+    if (counselorId === 'futureSelf') {
+      AsyncStorage.getItem('userName').then((name) => {
+        if (name) setCounselorName(`${name}'s Future Self`);
+      });
+    }
+    // Load thread
+    loadThread(counselorId).then((thread) => {
+      setMessages(thread.messages);
+    });
+  }, [counselorId]);
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!text || isLoading) return;
+
+    const userMessage: ThreadMessage = {
+      role: 'user',
+      content: text,
+      timestamp: Date.now(),
+    };
+
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputText('');
+    setIsLoading(true);
+
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+
+    const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+
+    const assistantMessage: ThreadMessage = {
+      role: 'assistant',
+      content: reply,
+      timestamp: Date.now(),
+      counselorId,
+    };
+
+    const finalMessages = [...updatedMessages, assistantMessage];
+    setMessages(finalMessages);
+    setIsLoading(false);
+
+    // Persist via appendMessages (load fresh + append both new messages)
+    await appendMessages(counselorId, [userMessage, assistantMessage]);
+
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const handleNewSession = () => {
+    if (messages.length === 0) return;
+    Alert.alert(
+      'New Session',
+      `Clear this conversation with ${counselorName} and start fresh?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'New Session',
+          style: 'destructive',
+          onPress: () => {
+            setMessages([]);
+            clearThread(counselorId);
+          },
+        },
+      ]
+    );
+  };
+
+  const meta = COUNSELOR_META[counselorId];
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={24} color="#c9a84c" />
+        </TouchableOpacity>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>{counselorName}</Text>
+          {meta && <Text style={styles.subtitle}>{meta.role}</Text>}
+        </View>
+        <TouchableOpacity
+          style={styles.newSessionButton}
+          onPress={handleNewSession}
+          disabled={messages.length === 0}
+        >
+          <Ionicons
+            name="refresh-outline"
+            size={20}
+            color={messages.length === 0 ? '#555' : '#c9a84c'}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        {/* Messages */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          showsVerticalScrollIndicator={false}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        >
+          {messages.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="person-outline" size={56} color="#c9a84c44" />
+              <Text style={styles.emptyQuote}>
+                &ldquo;Begin your private conversation with {counselorName}.&rdquo;
+              </Text>
+              {meta && <Text style={styles.emptyRole}>{meta.role}</Text>}
+            </View>
+          ) : (
+            messages.map((msg, index) =>
+              msg.role === 'user' ? (
+                <View key={index} style={styles.userMessageRow}>
+                  <View style={styles.userBubble}>
+                    <Text style={styles.userText}>{msg.content}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View key={index} style={styles.counselorMessageRow}>
+                  <View style={styles.counselorBubble}>
+                    <Text style={styles.counselorLabel}>{counselorName}</Text>
+                    <Text style={styles.counselorText}>{msg.content}</Text>
+                  </View>
+                </View>
+              )
+            )
+          )}
+
+          {isLoading && (
+            <View style={styles.counselorMessageRow}>
+              <View style={styles.counselorBubble}>
+                <Text style={styles.counselorLabel}>{counselorName}</Text>
+                <View style={styles.loadingRow}>
+                  <ActivityIndicator size="small" color="#c9a84c" />
+                  <Text style={styles.loadingText}>Composing a response...</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Input Bar */}
+        <View style={styles.inputBar}>
+          <TextInput
+            style={styles.textInput}
+            placeholder={`Speak to ${counselorName}...`}
+            placeholderTextColor="#555"
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={2000}
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+            onPress={handleSend}
+            disabled={!inputText.trim() || isLoading}
+          >
+            <Ionicons
+              name="send"
+              size={18}
+              color={!inputText.trim() || isLoading ? '#555' : '#1a1a2e'}
+            />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+  },
+  flex: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+    gap: 8,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#c9a84c',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  newSessionButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 60,
+    gap: 16,
+  },
+  emptyQuote: {
+    color: '#888',
+    fontSize: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  emptyRole: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  userMessageRow: {
+    alignItems: 'flex-end',
+    marginBottom: 12,
+  },
+  userBubble: {
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    borderWidth: 1,
+    borderColor: '#c9a84c',
+    borderRadius: 16,
+    borderBottomRightRadius: 4,
+    padding: 14,
+    maxWidth: '80%',
+  },
+  userText: {
+    color: '#fff',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  counselorMessageRow: {
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  counselorBubble: {
+    backgroundColor: '#16213e',
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    padding: 14,
+    maxWidth: '85%',
+  },
+  counselorLabel: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  counselorText: {
+    color: '#e0e0e0',
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    paddingBottom: 16,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c9a84c22',
+    gap: 10,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 15,
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  sendButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#16213e',
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+});
