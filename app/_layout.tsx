@@ -73,15 +73,15 @@ export default function Layout() {
       />
       <Tabs.Screen
         name="setup"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="home"
-        options={{
-          href: null,
-        }}
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{ href: null }}
       />
     </Tabs>
   );

@@ -61,10 +61,18 @@ export default function HomeScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-      {/* Greeting */}
-      <View style={styles.greetingContainer}>
-        <Text style={styles.greeting}>{greeting},</Text>
-        <Text style={styles.name}>{userName} 💪</Text>
+      {/* Top Bar with Settings */}
+      <View style={styles.topBar}>
+        <View>
+          <Text style={styles.greeting}>{greeting},</Text>
+          <Text style={styles.name}>{userName} 💪</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.settingsButton}
+          onPress={() => router.push('/settings' as any)}
+        >
+          <Ionicons name="settings-outline" size={24} color="#c9a84c" />
+        </TouchableOpacity>
       </View>
 
       {/* Daily Quote */}
@@ -133,7 +141,10 @@ const styles = StyleSheet.create({
     padding: 25,
     paddingTop: 60,
   },
-  greetingContainer: {
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 25,
   },
   greeting: {
@@ -144,6 +155,14 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  settingsButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    marginTop: 5,
   },
   quoteContainer: {
     backgroundColor: '#16213e',
