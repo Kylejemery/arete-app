@@ -16,8 +16,8 @@ import {
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const defaultTasks = [
-  { id: '1', title: 'Plan Tomorrow 📋', done: false },
-  { id: '2', title: 'Reflect on Your Day 🪞', done: false },
+  { id: '1', title: 'Plan Tomorrow 📜', done: false },
+  { id: '2', title: 'Reflect on Your Day 👁️', done: false },
 ];
 
 const reflectionPrompts = [
@@ -31,13 +31,13 @@ const reflectionPrompts = [
 ];
 
 const stoicPrompts = [
-  "What could you have done better today?",
-  "Did you act in line with your values today?",
-  "What obstacles did you face and how did you respond?",
-  "What emotions controlled you today? How can you improve?",
-  "What would Marcus Aurelius say about your day?",
-  "Where did you waste time or energy today?",
-  "What are you grateful for that you usually take for granted?",
+  "What could you have done better today? What would Epictetus say?",
+  "Did you act in line with your values today? Would Marcus Aurelius approve?",
+  "What obstacles did you face and how did you respond? Were you the master of your reactions?",
+  "What emotions controlled you today? How can you cultivate greater equanimity?",
+  "What would Marcus Aurelius say about your day — did you act for the common good?",
+  "Where did you waste time or energy today? How will you reclaim it tomorrow?",
+  "What are you grateful for that you usually take for granted? As Epictetus taught, count your blessings.",
 ];
 
 export default function EveningScreen() {
@@ -142,10 +142,10 @@ export default function EveningScreen() {
   };
 
   const deleteTask = (id: string) => {
-    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
+    Alert.alert('Remove Discipline', 'Are you sure you want to remove this discipline?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: async () => {
+        text: 'Remove', style: 'destructive', onPress: async () => {
           const updated = tasks.filter(t => t.id !== id);
           setTasks(updated);
           await saveTasks(updated);
@@ -215,7 +215,7 @@ export default function EveningScreen() {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Enter task name..."
+                placeholder="Name your discipline..."
                 placeholderTextColor="#555"
                 value={newTask}
                 onChangeText={setNewTask}
@@ -233,7 +233,7 @@ export default function EveningScreen() {
           ) : (
             <TouchableOpacity style={styles.addButton} onPress={() => setShowInput(true)}>
               <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
-              <Text style={styles.addButtonText}>Add Task</Text>
+              <Text style={styles.addButtonText}>Add Discipline</Text>
             </TouchableOpacity>
           )}
 
@@ -255,7 +255,7 @@ export default function EveningScreen() {
               onBlur={() => saveReflection(reflectionAnswer)}
             />
             <TouchableOpacity style={styles.saveButton} onPress={() => saveReflection(reflectionAnswer)}>
-              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Saved!' : 'Save'}</Text>
+              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Inscribed' : 'Inscribe'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -277,16 +277,16 @@ export default function EveningScreen() {
               onBlur={() => saveStoic(stoicAnswer)}
             />
             <TouchableOpacity style={styles.saveButton} onPress={() => saveStoic(stoicAnswer)}>
-              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Saved!' : 'Save'}</Text>
+              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Inscribed' : 'Inscribe'}</Text>
             </TouchableOpacity>
           </View>
 
           {/* All Done */}
           {completedCount === totalCount && totalCount > 0 && (
             <View style={styles.allDoneContainer}>
-              <Text style={styles.allDoneEmoji}>🌙</Text>
-              <Text style={styles.allDoneText}>Evening Routine Complete!</Text>
-              <Text style={styles.allDoneSubtext}>Rest well, you earned it!</Text>
+              <Text style={styles.allDoneEmoji}>🌿</Text>
+              <Text style={styles.allDoneText}>Vesper Complete</Text>
+              <Text style={styles.allDoneSubtext}>Sleep sound. You have lived this day well.</Text>
             </View>
           )}
 
