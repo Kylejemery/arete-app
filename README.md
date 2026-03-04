@@ -2,19 +2,53 @@
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
-## Get started
+## Getting Started
 
-1. Install dependencies
+### 1. Clone the repo
 
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/Kylejemery/arete-app.git
+cd arete-app
+```
 
-2. Start the app
+### 2. Set up the backend server
 
-   ```bash
-   npx expo start
-   ```
+```bash
+cd server
+npm install
+cp .env.example .env
+```
+
+Open `server/.env` and add your Anthropic API key:
+
+```
+CLAUDE_API_KEY=sk-ant-api03-your-key-here
+```
+
+Start the backend:
+
+```bash
+npm run dev
+```
+
+The server will run on `http://localhost:3000`.
+
+### 3. Set up the app
+
+In a new terminal, from the repo root:
+
+```bash
+cp .env.example .env
+```
+
+The default `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000` points to your local backend — no changes needed for local development.
+
+Install app dependencies and start:
+
+```bash
+npm install
+npx expo start
+```
 
 In the output, you'll find options to open the app in a
 
@@ -23,7 +57,15 @@ In the output, you'll find options to open the app in a
 - [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 4. Production deployment
+
+Deploy the `server/` directory to [Railway](https://railway.app):
+
+1. Create a new Railway project and connect your GitHub repo (or deploy just the `server/` folder).
+2. In Railway's **Variables** tab, set `CLAUDE_API_KEY` to your Anthropic API key. Railway sets `PORT` automatically.
+3. Copy the Railway-provided URL (e.g. `https://your-app.railway.app`).
+4. In your app's `.env`, update `EXPO_PUBLIC_API_BASE_URL` to your Railway URL.
+5. Rebuild and publish the Expo app.
 
 ## Get a fresh project
 
