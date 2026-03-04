@@ -50,9 +50,9 @@ export default function HomeScreen() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return { salutation: 'Salve,', subtitle: 'Rise and pursue virtue' };
-    if (hour < 18) return { salutation: 'Bene agis,', subtitle: 'Continue with excellence' };
-    return { salutation: 'Vale,', subtitle: 'Reflect on this day' };
+    if (hour < 12) return { salutation: 'Good morning,', subtitle: 'Rise and pursue virtue' };
+    if (hour < 18) return { salutation: 'Keep going,', subtitle: 'Continue with excellence' };
+    return { salutation: 'Good evening,', subtitle: 'Reflect on this day' };
   };
 
   const getDailyQuote = () => {
@@ -115,23 +115,22 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Quick Actions */}
-      <Text style={styles.sectionTitle}>Begin Your Practice</Text>
+      <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsContainer}>
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/morning')}>
-          <Ionicons name="sunny-outline" size={24} color="#c9a84c" />
-          <Text style={styles.actionText}>Morning</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/cabinet')}>
+          <Ionicons name="mic-outline" size={24} color="#c9a84c" />
+          <Text style={styles.actionText}>Cabinet</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/evening')}>
-          <Ionicons name="moon-outline" size={24} color="#c9a84c" />
-          <Text style={styles.actionText}>Evening</Text>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/timer')}>
+          <Ionicons name="timer-outline" size={24} color="#c9a84c" />
+          <Text style={styles.actionText}>Focus</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/journal')}>
           <Ionicons name="book-outline" size={24} color="#c9a84c" />
           <Text style={styles.actionText}>Journal</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/progress')}>
-          <Ionicons name="bar-chart-outline" size={24} color="#c9a84c" />
+          <Ionicons name="podium-outline" size={24} color="#c9a84c" />
           <Text style={styles.actionText}>Progress</Text>
         </TouchableOpacity>
       </View>
