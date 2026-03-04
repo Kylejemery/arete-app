@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const dailyQuotes = [
   "Push yourself, because no one else is going to do it for you.",
@@ -22,6 +23,7 @@ export default function HomeScreen() {
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
   const router = useRouter();
+  const swipeHandlers = useSwipeNavigation('/');
 
   useEffect(() => {
     loadData();
@@ -59,7 +61,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} {...swipeHandlers}>
 
       {/* Top Bar with Settings */}
       <View style={styles.topBar}>
@@ -89,22 +91,24 @@ export default function HomeScreen() {
       </View>
 
       {/* Today's Progress */}
-      <Text style={styles.sectionTitle}>Today's Progress</Text>
+      <TouchableOpacity onPress={() => router.push('/progress')}>
+        <Text style={styles.sectionTitle}>Today's Progress</Text>
+      </TouchableOpacity>
       <View style={styles.progressContainer}>
-        <View style={[styles.progressCard, morningDone && styles.progressCardDone]}>
+        <TouchableOpacity style={[styles.progressCard, morningDone && styles.progressCardDone]} onPress={() => router.push('/morning')}>
           <Ionicons name="sunny-outline" size={24} color={morningDone ? '#1a1a2e' : '#c9a84c'} />
           <Text style={[styles.progressText, morningDone && styles.progressTextDone]}>
             Morning Routine
           </Text>
           {morningDone && <Ionicons name="checkmark-circle" size={20} color="#1a1a2e" />}
-        </View>
-        <View style={[styles.progressCard, eveningDone && styles.progressCardDone]}>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.progressCard, eveningDone && styles.progressCardDone]} onPress={() => router.push('/evening')}>
           <Ionicons name="moon-outline" size={24} color={eveningDone ? '#1a1a2e' : '#c9a84c'} />
           <Text style={[styles.progressText, eveningDone && styles.progressTextDone]}>
             Evening Routine
           </Text>
           {eveningDone && <Ionicons name="checkmark-circle" size={20} color="#1a1a2e" />}
-        </View>
+        </TouchableOpacity>
       </View>
 
       {/* Quick Actions */}

@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const journalPrompts = [
   "What is on your mind today?",
@@ -25,6 +26,7 @@ const journalPrompts = [
 ];
 
 export default function JournalScreen() {
+  const swipeHandlers = useSwipeNavigation('/journal');
   const [activeTab, setActiveTab] = useState<'journal' | 'commonplace'>('journal');
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
   const [newEntry, setNewEntry] = useState('');
@@ -136,7 +138,7 @@ export default function JournalScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* Header */}

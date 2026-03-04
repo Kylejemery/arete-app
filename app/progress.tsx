@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -24,6 +25,7 @@ const MILESTONES = [
 ];
 
 export default function ProgressScreen() {
+  const swipeHandlers = useSwipeNavigation('/progress');
   const [activeTab, setActiveTab] = useState<'overview' | 'reading'>('overview');
   const [streak, setStreak] = useState(0);
   const [journalCount, setJournalCount] = useState(0);
@@ -235,7 +237,7 @@ export default function ProgressScreen() {
   const todayScreenEntry = screenTimeLog.find(l => l.date === new Date().toDateString());
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
       <View style={styles.header}>
         <Text style={styles.title}>Progress 📊</Text>
         <View style={styles.tabs}>
