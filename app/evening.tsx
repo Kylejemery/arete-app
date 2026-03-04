@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const defaultTasks = [
   { id: '1', title: 'Plan Tomorrow 📋', done: false },
@@ -40,6 +41,7 @@ const stoicPrompts = [
 ];
 
 export default function EveningScreen() {
+  const swipeHandlers = useSwipeNavigation('/evening');
   const [tasks, setTasks] = useState(defaultTasks);
   const [newTask, setNewTask] = useState('');
   const [showInput, setShowInput] = useState(false);
@@ -47,11 +49,19 @@ export default function EveningScreen() {
   const [stoicPrompt, setStoicPrompt] = useState('');
   const [reflectionAnswer, setReflectionAnswer] = useState('');
   const [stoicAnswer, setStoicAnswer] = useState('');
+  const [reflectionSaved, setReflectionSaved] = useState(false);
+  const [stoicSaved, setStoicSaved] = useState(false);
+  const reflectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     loadTasks();
     loadPrompts();
     loadAnswers();
+    return () => {
+      if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
+      if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
+    };
   }, []);
 
   const loadPrompts = () => {
@@ -72,15 +82,19 @@ export default function EveningScreen() {
   };
 
   const saveReflection = async (text: string) => {
-    setReflectionAnswer(text);
     await AsyncStorage.setItem('reflectionAnswer', text);
     await AsyncStorage.setItem('eveningAnswerDate', new Date().toDateString());
+    setReflectionSaved(true);
+    if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
+    reflectionTimerRef.current = setTimeout(() => setReflectionSaved(false), 2000);
   };
 
   const saveStoic = async (text: string) => {
-    setStoicAnswer(text);
     await AsyncStorage.setItem('stoicAnswer', text);
     await AsyncStorage.setItem('eveningAnswerDate', new Date().toDateString());
+    setStoicSaved(true);
+    if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
+    stoicTimerRef.current = setTimeout(() => setStoicSaved(false), 2000);
   };
 
   const loadTasks = async () => {
@@ -145,7 +159,7 @@ export default function EveningScreen() {
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -237,8 +251,12 @@ export default function EveningScreen() {
               multiline
               numberOfLines={4}
               value={reflectionAnswer}
-              onChangeText={saveReflection}
+              onChangeText={setReflectionAnswer}
+              onBlur={() => saveReflection(reflectionAnswer)}
             />
+            <TouchableOpacity style={styles.saveButton} onPress={() => saveReflection(reflectionAnswer)}>
+              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Saved!' : 'Save'}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Stoic Prompt */}
@@ -255,8 +273,12 @@ export default function EveningScreen() {
               multiline
               numberOfLines={4}
               value={stoicAnswer}
-              onChangeText={saveStoic}
+              onChangeText={setStoicAnswer}
+              onBlur={() => saveStoic(stoicAnswer)}
             />
+            <TouchableOpacity style={styles.saveButton} onPress={() => saveStoic(stoicAnswer)}>
+              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Saved!' : 'Save'}</Text>
+            </TouchableOpacity>
           </View>
 
           {/* All Done */}
@@ -471,6 +493,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#c9a84c33',
     lineHeight: 22,
+  },
+  saveButton: {
+    marginTop: 10,
+    alignSelf: 'flex-end',
+    backgroundColor: '#c9a84c',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+  },
+  saveButtonText: {
+    color: '#1a1a2e',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   allDoneContainer: {
     backgroundColor: '#16213e',

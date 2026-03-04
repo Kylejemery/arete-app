@@ -11,8 +11,10 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 export default function TimerScreen() {
+  const swipeHandlers = useSwipeNavigation('/timer');
   const [activeTab, setActiveTab] = useState<'timer' | 'history'>('timer');
 
   // Current books
@@ -253,7 +255,7 @@ export default function TimerScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...swipeHandlers}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Reading Timer ⏱️</Text>
