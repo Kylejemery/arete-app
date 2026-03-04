@@ -100,6 +100,10 @@ export default function Layout() {
         name="know-thyself"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="weekly-review"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

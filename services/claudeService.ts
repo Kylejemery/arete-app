@@ -363,6 +363,239 @@ export async function gatherAppContext(): Promise<string> {
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
+export interface WeeklyReview {
+  id: string;
+  weekEnding: string;
+  content: string;
+  generatedAt: string;
+}
+
+async function gatherWeeklyContext(): Promise<string> {
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+
+  const [
+    streakRaw,
+    calendarDataRaw,
+    journalEntriesRaw,
+    reflectionAnswerRaw,
+    stoicAnswerRaw,
+    readingSessionsRaw,
+    currentBooksRaw,
+    booksReadRaw,
+    commonplaceQuotesRaw,
+    screenTimeLogRaw,
+  ] = await Promise.all([
+    AsyncStorage.getItem('streak'),
+    AsyncStorage.getItem('calendarData'),
+    AsyncStorage.getItem('journalEntries'),
+    AsyncStorage.getItem('reflectionAnswer'),
+    AsyncStorage.getItem('stoicAnswer'),
+    AsyncStorage.getItem('readingSessions'),
+    AsyncStorage.getItem('currentBooks'),
+    AsyncStorage.getItem('booksRead'),
+    AsyncStorage.getItem('commonplaceQuotes'),
+    AsyncStorage.getItem('screenTimeLog'),
+  ]);
+
+  const userName = await getUserName();
+
+  const weekStartLabel = weekAgo.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const weekEndLabel = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const lines: string[] = [];
+  lines.push(`=== ${userName.toUpperCase()}'S WEEKLY DATA (${weekStartLabel} – ${weekEndLabel}) ===`);
+
+  // Streak
+  try {
+    const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
+    lines.push('');
+    lines.push(`CURRENT STREAK: ${isNaN(streak) ? 0 : streak} days`);
+  } catch { /* skip */ }
+
+  // Morning/Evening completion for the past 7 days
+  try {
+    const calData: Record<string, { morning: boolean; evening: boolean }> = calendarDataRaw ? JSON.parse(calendarDataRaw) : {};
+    lines.push('');
+    lines.push('MORNING/EVENING COMPLETION (past 7 days):');
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const key = d.toDateString();
+      const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const entry = calData[key];
+      const morning = entry?.morning ? '✓' : '✗';
+      const evening = entry?.evening ? '✓' : '✗';
+      lines.push(`  ${label}: Morning ${morning}, Evening ${evening}`);
+    }
+  } catch { /* skip */ }
+
+  // Journal entries for the past 7 days
+  try {
+    const journalEntries: { text: string; date: string; time: string }[] = journalEntriesRaw ? JSON.parse(journalEntriesRaw) : [];
+    const weekEntries = journalEntries.filter((e) => {
+      try {
+        const entryDate = new Date(e.date);
+        return entryDate >= weekAgo && entryDate <= now;
+      } catch { return false; }
+    });
+    lines.push('');
+    lines.push(`JOURNAL ENTRIES THIS WEEK (${weekEntries.length}):`);
+    if (weekEntries.length === 0) {
+      lines.push('(none)');
+    } else {
+      weekEntries.forEach((e) => {
+        const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
+        lines.push(`${e.date} — ${snippet}`);
+      });
+    }
+  } catch { /* skip */ }
+
+  // Evening reflections (most recent)
+  lines.push('');
+  lines.push('EVENING REFLECTION (most recent):');
+  lines.push(reflectionAnswerRaw || '(not answered)');
+  lines.push('');
+  lines.push('STOIC JOURNAL (most recent):');
+  lines.push(stoicAnswerRaw || '(not answered)');
+
+  // Reading sessions for the past 7 days
+  try {
+    const sessions: { bookTitle: string; pagesRead: number; duration: number; dateFormatted: string; date?: string }[] = readingSessionsRaw ? JSON.parse(readingSessionsRaw) : [];
+    const weekSessions = sessions.filter((s) => {
+      try {
+        if (s.date) {
+          const d = new Date(s.date);
+          return d >= weekAgo && d <= now;
+        }
+        // fallback: include all if no date field
+        return true;
+      } catch { return true; }
+    });
+    lines.push('');
+    lines.push(`READING SESSIONS THIS WEEK (${weekSessions.length}):`);
+    if (weekSessions.length === 0) {
+      lines.push('(none)');
+    } else {
+      weekSessions.forEach((s) => {
+        const dur = typeof s.duration === 'number' ? formatReadingTime(s.duration) : String(s.duration);
+        lines.push(`${s.dateFormatted} — ${s.bookTitle}: ${s.pagesRead} pages, ${dur}`);
+      });
+    }
+  } catch { /* skip */ }
+
+  // Currently reading
+  try {
+    const currentBooks: { title: string; author: string; currentPage: number }[] = currentBooksRaw ? JSON.parse(currentBooksRaw) : [];
+    lines.push('');
+    lines.push('CURRENTLY READING:');
+    if (currentBooks.length === 0) {
+      lines.push('(none)');
+    } else {
+      currentBooks.forEach((b) => lines.push(`- ${b.title} by ${b.author} (page ${b.currentPage})`));
+    }
+  } catch { /* skip */ }
+
+  // Books finished
+  try {
+    const booksRead: { title: string; author: string; dateFinished: string }[] = booksReadRaw ? JSON.parse(booksReadRaw) : [];
+    lines.push('');
+    lines.push(`BOOKS FINISHED (total ${booksRead.length}):`);
+    if (booksRead.length === 0) {
+      lines.push('(none)');
+    } else {
+      booksRead.forEach((b) => lines.push(`- ${b.title} by ${b.author} (finished ${b.dateFinished})`));
+    }
+  } catch { /* skip */ }
+
+  // Commonplace quotes (last 5)
+  try {
+    const quotes: { quote: string; book: string; author: string }[] = commonplaceQuotesRaw ? JSON.parse(commonplaceQuotesRaw) : [];
+    const recentQuotes = quotes.slice(-5);
+    lines.push('');
+    lines.push('QUOTES SAVED (last 5):');
+    if (recentQuotes.length === 0) {
+      lines.push('(none)');
+    } else {
+      recentQuotes.forEach((q) => lines.push(`"${q.quote}" — ${q.book} by ${q.author}`));
+    }
+  } catch { /* skip */ }
+
+  // Screen time log (past 7 days)
+  try {
+    const screenLog: { date: string; hours: number; dateFormatted: string }[] = screenTimeLogRaw ? JSON.parse(screenTimeLogRaw) : [];
+    const weekScreenLog = screenLog.filter((l) => {
+      try {
+        const d = new Date(l.date);
+        return d >= weekAgo && d <= now;
+      } catch { return false; }
+    });
+    lines.push('');
+    lines.push('SCREEN TIME LOG (past 7 days):');
+    if (weekScreenLog.length === 0) {
+      lines.push('(none logged)');
+    } else {
+      weekScreenLog.forEach((l) => lines.push(`${l.dateFormatted}: ${l.hours}h`));
+    }
+  } catch { /* skip */ }
+
+  return lines.join('\n');
+}
+
+export async function generateWeeklyReview(): Promise<string> {
+  const userName = await getUserName();
+  const weeklyContext = await gatherWeeklyContext();
+
+  const systemPrompt = `You are the Cabinet of Invisible Counselors — Marcus Aurelius (Chair), Epictetus, David Goggins, and Theodore Roosevelt — conducting ${userName}'s Weekly Review.
+
+This is not a casual conversation. This is a formal review of the week that just ended. You have been given the full data of ${userName}'s week: their routines, journal entries, reading, reflections, and habits.
+
+Your task:
+1. Review the week with complete honesty — no sycophancy, no softening the truth to spare feelings.
+2. Name specifically what was consistent and what fell short. Use the data you've been given.
+3. Identify any patterns you see — in what they did, what they avoided, what they prioritized.
+4. Give a clear, actionable charge for the coming week — one or two specific things they must focus on.
+5. Keep the response focused and substantive — aim for 600-800 words.
+
+Format:
+- Marcus opens and closes (as Chair, he sets the tone and delivers the final charge)
+- One or two other counselors may weigh in on specific points
+- End with Marcus's closing charge for the coming week
+
+Voice: measured, honest, grounded in Stoic philosophy. No cheerleading. No empty praise. Genuine care delivered through honest assessment.`;
+
+  const userMessage = `${weeklyContext}
+
+The week has ended. Give me your honest assessment.`;
+
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 2000,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Backend/Claude API error:', response.status, errorText);
+    throw new Error(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
+  }
+
+  const data = await response.json();
+  const content = data?.content?.[0]?.text;
+  if (typeof content === 'string' && content.length > 0) {
+    return content;
+  }
+  throw new Error('The Cabinet did not respond. Please try again.');
+}
+
 export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
   try {
     // Apply context window trimming
