@@ -76,7 +76,7 @@ export default function Layout() {
         options={{
           title: 'Progress',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="podium-outline" color={color} size={size} />
+            <Ionicons name="trophy-outline" color={color} size={size} />
           ),
         }}
       />
