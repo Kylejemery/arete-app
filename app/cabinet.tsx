@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../services/claudeService';
 import {
   ThreadMessage,
@@ -45,6 +46,7 @@ function timeAgo(timestamp: number): string {
 
 export default function CabinetScreen() {
   const router = useRouter();
+  const swipeHandlers = useSwipeNavigation('/cabinet');
   const [activeTab, setActiveTab] = useState<'cabinet' | 'counselors'>('cabinet');
 
   // --- Cabinet (Group) Tab State ---
@@ -160,7 +162,7 @@ export default function CabinetScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerText}>

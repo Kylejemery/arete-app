@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const defaultTasks = [
   { id: '1', title: 'Eat Breakfast 🍳', done: false },
@@ -28,6 +29,7 @@ const affirmations = [
 ];
 
 export default function MorningScreen() {
+  const swipeHandlers = useSwipeNavigation('/morning');
   const [tasks, setTasks] = useState(defaultTasks);
   const [newTask, setNewTask] = useState('');
   const [affirmation, setAffirmation] = useState('');
@@ -117,7 +119,7 @@ export default function MorningScreen() {
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
