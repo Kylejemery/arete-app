@@ -14,18 +14,18 @@ import {
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
 const defaultTasks = [
-  { id: '1', title: 'Eat Breakfast 🍳', done: false },
-  { id: '2', title: 'Meditate 🧘', done: false },
+  { id: '1', title: 'Eat Breakfast 🫙', done: false },
+  { id: '2', title: 'Meditate 🌿', done: false },
 ];
 
 const affirmations = [
-  "I am capable of amazing things.",
-  "Today I choose to be my best self.",
-  "I am strong, focused, and determined.",
-  "Every day I am growing and improving.",
-  "I have the power to create change.",
-  "I am worthy of success and happiness.",
-  "Today is full of possibilities.",
+  "Confine yourself to the present. — Marcus Aurelius",
+  "Do not indulge in expectations — meet each moment. — Epictetus",
+  "It is not the man who has too little, but the man who craves more, that is poor. — Seneca",
+  "You have power over your mind, not outside events. — Marcus Aurelius",
+  "Seek not the good in external things; seek it in yourself. — Epictetus",
+  "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. — Epictetus",
+  "Begin at once to live, and count each separate day as a separate life. — Seneca",
 ];
 
 export default function MorningScreen() {
@@ -102,10 +102,10 @@ export default function MorningScreen() {
   };
 
   const deleteTask = (id: string) => {
-    Alert.alert('Delete Task', 'Are you sure you want to delete this task?', [
+    Alert.alert('Remove Discipline', 'Are you sure you want to remove this discipline?', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: async () => {
+        text: 'Remove', style: 'destructive', onPress: async () => {
           const updated = tasks.filter(t => t.id !== id);
           setTasks(updated);
           await saveTasks(updated);
@@ -177,7 +177,7 @@ export default function MorningScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Enter task name..."
+              placeholder="Name your discipline..."
               placeholderTextColor="#555"
               value={newTask}
               onChangeText={setNewTask}
@@ -195,16 +195,16 @@ export default function MorningScreen() {
         ) : (
           <TouchableOpacity style={styles.addButton} onPress={() => setShowInput(true)}>
             <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
-            <Text style={styles.addButtonText}>Add Task</Text>
+            <Text style={styles.addButtonText}>Add Discipline</Text>
           </TouchableOpacity>
         )}
 
         {/* All Done */}
         {completedCount === totalCount && totalCount > 0 && (
           <View style={styles.allDoneContainer}>
-            <Text style={styles.allDoneEmoji}>🎉</Text>
-            <Text style={styles.allDoneText}>Morning Routine Complete!</Text>
-            <Text style={styles.allDoneSubtext}>You're crushing it today!</Text>
+            <Text style={styles.allDoneEmoji}>🏛️</Text>
+            <Text style={styles.allDoneText}>Aurora Complete</Text>
+            <Text style={styles.allDoneSubtext}>The morning belongs to the disciplined.</Text>
           </View>
         )}
 
