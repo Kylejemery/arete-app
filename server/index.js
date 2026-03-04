@@ -5,6 +5,7 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+console.log('Key starts with:', CLAUDE_API_KEY?.slice(0, 15));
 
 app.use(cors());
 app.use(express.json());
