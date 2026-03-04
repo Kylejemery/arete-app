@@ -20,7 +20,7 @@ export default function Layout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Agora',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" color={color} size={size} />
           ),
@@ -29,7 +29,7 @@ export default function Layout() {
       <Tabs.Screen
         name="morning"
         options={{
-          title: 'Morning',
+          title: 'Aurora',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="sunny-outline" color={color} size={size} />
           ),
@@ -38,7 +38,7 @@ export default function Layout() {
       <Tabs.Screen
         name="evening"
         options={{
-          title: 'Evening',
+          title: 'Vesper',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="moon-outline" color={color} size={size} />
           ),
@@ -47,16 +47,16 @@ export default function Layout() {
       <Tabs.Screen
         name="cabinet"
         options={{
-          title: 'Cabinet',
+          title: 'Consilium',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people-outline" color={color} size={size} />
+            <Ionicons name="mic-outline" color={color} size={size} />
           ),
         }}
       />
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Journal',
+          title: 'Codex',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book-outline" color={color} size={size} />
           ),
@@ -65,16 +65,16 @@ export default function Layout() {
       <Tabs.Screen
         name="timer"
         options={{
-          title: 'Read',
+          title: 'Lectio',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="timer-outline" color={color} size={size} />
+            <Ionicons name="library-outline" color={color} size={size} />
           ),
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progress',
+          title: 'Virtus',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="bar-chart-outline" color={color} size={size} />
           ),
