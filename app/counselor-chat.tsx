@@ -34,17 +34,18 @@ export default function CounselorChatScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [counselorName, setCounselorName] = useState(
-    COUNSELOR_META[counselorId]?.name || counselorId
-  );
+  const [counselorName, setCounselorName] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    // Resolve futureSelf display name using userName
+    // Always reset state when counselorId changes
+    setMessages([]);
     if (counselorId === 'futureSelf') {
       AsyncStorage.getItem('userName').then((name) => {
-        if (name) setCounselorName(`${name}'s Future Self`);
+        setCounselorName(name ? `${name}'s Future Self` : 'Future Self');
       });
+    } else {
+      setCounselorName(COUNSELOR_META[counselorId]?.name || counselorId);
     }
     // Load thread
     loadThread(counselorId).then((thread) => {
@@ -113,7 +114,16 @@ export default function CounselorChatScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/cabinet' as any);
+            }
+          }}
+        >
           <Ionicons name="chevron-back" size={24} color="#c9a84c" />
         </TouchableOpacity>
         <View style={styles.headerText}>
