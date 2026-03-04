@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
@@ -94,6 +95,7 @@ const FUTURE_KYLE_MESSAGES = [
 ];
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState('7');
@@ -323,6 +325,10 @@ export default function SettingsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>⚙️ Settings</Text>
 
+      <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/know-thyself' as any)}>
+        <Text style={styles.profileButtonText}>📖 Edit Your Know Thyself Profile</Text>
+      </TouchableOpacity>
+
       {/* Morning Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
@@ -522,5 +528,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 30,
+  },
+  profileButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  profileButtonText: {
+    color: '#c9a84c',
+    fontWeight: 'bold',
+    fontSize: 15,
   },
 });

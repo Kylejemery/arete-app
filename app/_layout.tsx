@@ -96,6 +96,10 @@ export default function Layout() {
         name="counselor-chat"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="know-thyself"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
