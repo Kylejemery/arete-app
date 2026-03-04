@@ -22,6 +22,7 @@ export default function HomeScreen() {
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
 
@@ -38,6 +39,9 @@ export default function HomeScreen() {
       return;
     }
     setUserName(name);
+
+    const ktGoals = await AsyncStorage.getItem('kt_goals');
+    setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
 
     const morning = await AsyncStorage.getItem('morningDone');
     const evening = await AsyncStorage.getItem('eveningDone');
@@ -93,6 +97,22 @@ export default function HomeScreen() {
         <Text style={styles.streakNumber}>{streak}</Text>
         <Text style={styles.streakLabel}>Days of Discipline 🕯️</Text>
       </View>
+
+      {/* Know Thyself Incomplete Banner */}
+      {knowThyselfIncomplete && (
+        <View style={styles.ktBanner}>
+          <View style={styles.ktBannerHeader}>
+            <Ionicons name="person-circle-outline" size={24} color="#c9a84c" />
+            <Text style={styles.ktBannerTitle}>Complete Your Profile</Text>
+          </View>
+          <Text style={styles.ktBannerSubtitle}>
+            Your Cabinet needs to know you. Fill out Know Thyself to unlock the full power of your counselors.
+          </Text>
+          <TouchableOpacity onPress={() => router.push('/know-thyself' as any)}>
+            <Text style={styles.ktBannerLink}>Complete Now →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Today's Progress */}
       <TouchableOpacity onPress={() => router.push('/progress')}>
@@ -267,6 +287,36 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ktBanner: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 18,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#c9a84c',
+  },
+  ktBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  ktBannerTitle: {
+    color: '#c9a84c',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  ktBannerSubtitle: {
+    color: '#ccc',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  ktBannerLink: {
+    color: '#c9a84c',
     fontSize: 14,
     fontWeight: '600',
   },
