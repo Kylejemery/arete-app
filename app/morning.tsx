@@ -203,7 +203,7 @@ export default function MorningScreen() {
         {completedCount === totalCount && totalCount > 0 && (
           <View style={styles.allDoneContainer}>
             <Text style={styles.allDoneEmoji}>🏛️</Text>
-            <Text style={styles.allDoneText}>Aurora Complete</Text>
+            <Text style={styles.allDoneText}>Morning Complete</Text>
             <Text style={styles.allDoneSubtext}>The morning belongs to the disciplined.</Text>
           </View>
         )}

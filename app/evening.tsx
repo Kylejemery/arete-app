@@ -255,7 +255,7 @@ export default function EveningScreen() {
               onBlur={() => saveReflection(reflectionAnswer)}
             />
             <TouchableOpacity style={styles.saveButton} onPress={() => saveReflection(reflectionAnswer)}>
-              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Inscribed' : 'Inscribe'}</Text>
+              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Saved' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -277,7 +277,7 @@ export default function EveningScreen() {
               onBlur={() => saveStoic(stoicAnswer)}
             />
             <TouchableOpacity style={styles.saveButton} onPress={() => saveStoic(stoicAnswer)}>
-              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Inscribed' : 'Inscribe'}</Text>
+              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Saved' : 'Save'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -285,7 +285,7 @@ export default function EveningScreen() {
           {completedCount === totalCount && totalCount > 0 && (
             <View style={styles.allDoneContainer}>
               <Text style={styles.allDoneEmoji}>🌿</Text>
-              <Text style={styles.allDoneText}>Vesper Complete</Text>
+              <Text style={styles.allDoneText}>Evening Complete</Text>
               <Text style={styles.allDoneSubtext}>Sleep sound. You have lived this day well.</Text>
             </View>
           )}
