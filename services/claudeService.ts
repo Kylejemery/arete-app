@@ -318,12 +318,9 @@ export async function gatherAppContext(): Promise<string> {
   return lines.join('\n');
 }
 
-export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
-  const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
-  if (!apiKey) {
-    return 'API key not configured. Please set EXPO_PUBLIC_CLAUDE_API_KEY in your environment.';
-  }
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
+export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
   try {
     // Apply context window trimming
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
@@ -332,12 +329,10 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
@@ -349,7 +344,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Claude API error:', response.status, errorText);
+      console.error('Backend/Claude API error:', response.status, errorText);
       return `The Cabinet is temporarily unavailable. (Error ${response.status})`;
     }
 
@@ -360,8 +355,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     }
     return 'The Cabinet did not respond. Please try again.';
   } catch (error) {
-    console.error('Claude API request failed:', error);
-    return 'Unable to reach the Cabinet. Please check your connection and try again.';
+    console.error('Backend request failed:', error);
+    return 'Backend server not reachable. Make sure the server is running.';
   }
 }
 
@@ -438,11 +433,6 @@ export async function sendMessageToCounselor(
   counselorId: string,
   messages: ThreadMessage[]
 ): Promise<string> {
-  const apiKey = process.env.EXPO_PUBLIC_CLAUDE_API_KEY;
-  if (!apiKey) {
-    return 'API key not configured. Please set EXPO_PUBLIC_CLAUDE_API_KEY in your environment.';
-  }
-
   try {
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
@@ -450,12 +440,10 @@ export async function sendMessageToCounselor(
     const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
@@ -467,7 +455,7 @@ export async function sendMessageToCounselor(
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Claude API error:', response.status, errorText);
+      console.error('Backend/Claude API error:', response.status, errorText);
       return `Your counselor is temporarily unavailable. (Error ${response.status})`;
     }
 
@@ -478,7 +466,7 @@ export async function sendMessageToCounselor(
     }
     return 'No response received. Please try again.';
   } catch (error) {
-    console.error('Claude API request failed:', error);
-    return 'Unable to reach your counselor. Please check your connection and try again.';
+    console.error('Backend request failed:', error);
+    return 'Backend server not reachable. Make sure the server is running.';
   }
 }
