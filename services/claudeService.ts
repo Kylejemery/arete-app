@@ -50,6 +50,61 @@ async function getUserName(): Promise<string> {
   return raw || 'the user';
 }
 
+async function gatherUserProfile(): Promise<string> {
+  const [
+    kt_background,
+    kt_identity,
+    kt_goals,
+    kt_strengths,
+    kt_weaknesses,
+    kt_patterns,
+    kt_major_events,
+    futureSelfYearsRaw,
+    futureSelfDescriptionRaw,
+  ] = await Promise.all([
+    AsyncStorage.getItem('kt_background'),
+    AsyncStorage.getItem('kt_identity'),
+    AsyncStorage.getItem('kt_goals'),
+    AsyncStorage.getItem('kt_strengths'),
+    AsyncStorage.getItem('kt_weaknesses'),
+    AsyncStorage.getItem('kt_patterns'),
+    AsyncStorage.getItem('kt_major_events'),
+    AsyncStorage.getItem('futureSelfYears'),
+    AsyncStorage.getItem('futureSelfDescription'),
+  ]);
+
+  const userName = await getUserName();
+  const lines: string[] = [];
+
+  lines.push(`=== WHO ${userName.toUpperCase()} IS — PERMANENT PROFILE ===`);
+  lines.push('');
+  lines.push('BACKGROUND & LIFE STORY:');
+  lines.push(kt_background || '(not yet provided)');
+  lines.push('');
+  lines.push('PROFESSIONAL IDENTITY & PURSUITS:');
+  lines.push(kt_identity || '(not yet provided)');
+  lines.push('');
+  lines.push('GOALS:');
+  lines.push(kt_goals || '(not yet provided)');
+  lines.push('');
+  lines.push('STRENGTHS:');
+  lines.push(kt_strengths || '(not yet provided)');
+  lines.push('');
+  lines.push('WEAKNESSES:');
+  lines.push(kt_weaknesses || '(not yet provided)');
+  lines.push('');
+  lines.push('PATTERNS & FAILURE MODES:');
+  lines.push(kt_patterns || '(not yet provided)');
+  lines.push('');
+  lines.push('MAJOR LIFE EVENTS & DEFINING MOMENTS:');
+  lines.push(kt_major_events || '(not yet provided)');
+  lines.push('');
+  lines.push(`FUTURE SELF (${futureSelfYearsRaw || '10'} years from now):`);
+  lines.push(futureSelfDescriptionRaw || '(not yet described)');
+
+  return lines.join('\n');
+}
+
 async function buildSystemPrompt(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -133,19 +188,7 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
     profileSections.push(futureSelfProfile);
   }
 
-  return `${instructions}
-
----
-
-${cabinetIntro}
-
----
-
-${profileSections.join('\n\n---\n\n')}
-
----
-
-Today's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
+  return `${instructions}\n\n---\n\n${cabinetIntro}\n\n---\n\n${profileSections.join('\n\n---\n\n')}\n\n---\n\n${await gatherUserProfile()}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
 }
 
 function formatReadingTime(seconds: number): string {
@@ -369,17 +412,14 @@ async function buildCounselorSystemPrompt(counselorId: string): Promise<string> 
   });
 
   const [
-    userGoalsRaw,
     futureSelfYearsRaw,
     futureSelfDescriptionRaw,
   ] = await Promise.all([
-    AsyncStorage.getItem('userGoals'),
     AsyncStorage.getItem('futureSelfYears'),
     AsyncStorage.getItem('futureSelfDescription'),
   ]);
 
   const userName = await getUserName();
-  const userGoals = userGoalsRaw || '(not yet specified)';
   const futureSelfYears = futureSelfYearsRaw || '10';
   const futureSelfDescription = futureSelfDescriptionRaw || '(not yet described)';
 
@@ -408,25 +448,7 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
     counselorName = nameMap[counselorId] || counselorId;
   }
 
-  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.
-
-${userName}'s stated goals are:
-"${userGoals}"
-
-Key principles:
-- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.
-- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.
-- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.
-
-You are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.
-
----
-
-${counselorProfile}
-
----
-
-Today's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
+  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${await gatherUserProfile()}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.\n- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
 export async function sendMessageToCounselor(

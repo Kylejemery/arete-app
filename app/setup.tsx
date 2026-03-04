@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 11;
+const OPTIONAL_STEPS = [3, 4, 6, 7, 8];
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
 
@@ -71,20 +72,33 @@ export default function SetupScreen() {
   // Step 2
   const [name, setName] = useState('');
   // Step 3
-  const [goals, setGoals] = useState('');
+  const [background, setBackground] = useState('');
   // Step 4
+  const [identity, setIdentity] = useState('');
+  // Step 5
+  const [goals, setGoals] = useState('');
+  // Step 6
+  const [strengths, setStrengths] = useState('');
+  const [weaknesses, setWeaknesses] = useState('');
+  // Step 7
+  const [patterns, setPatterns] = useState('');
+  // Step 8
+  const [majorEvents, setMajorEvents] = useState('');
+  // Step 9
   const [futureSelfYears, setFutureSelfYears] = useState(10);
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
-  // Step 5
+  // Step 10
   const [activeMembers, setActiveMembers] = useState<string[]>([
     'marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf',
   ]);
 
+  const isOptionalStep = (): boolean => OPTIONAL_STEPS.includes(step);
+
   const canContinue = (): boolean => {
     if (step === 2) return name.trim().length > 0;
-    if (step === 3) return goals.trim().length > 0;
-    if (step === 4) return futureSelfDescription.trim().length > 0;
-    if (step === 5) {
+    if (step === 5) return goals.trim().length > 0;
+    if (step === 9) return futureSelfDescription.trim().length > 0;
+    if (step === 10) {
       const optionals = activeMembers.filter(
         (id) => id !== 'marcus' && id !== 'futureSelf'
       );
@@ -110,6 +124,13 @@ export default function SetupScreen() {
   const handleCommit = async () => {
     await AsyncStorage.setItem('userName', name.trim());
     await AsyncStorage.setItem('userGoals', goals.trim());
+    await AsyncStorage.setItem('kt_background', background.trim());
+    await AsyncStorage.setItem('kt_identity', identity.trim());
+    await AsyncStorage.setItem('kt_goals', goals.trim());
+    await AsyncStorage.setItem('kt_strengths', strengths.trim());
+    await AsyncStorage.setItem('kt_weaknesses', weaknesses.trim());
+    await AsyncStorage.setItem('kt_patterns', patterns.trim());
+    await AsyncStorage.setItem('kt_major_events', majorEvents.trim());
     await AsyncStorage.setItem('futureSelfYears', String(futureSelfYears));
     await AsyncStorage.setItem('futureSelfDescription', futureSelfDescription.trim());
     await AsyncStorage.setItem('cabinetMembers', JSON.stringify(activeMembers));
@@ -177,6 +198,46 @@ export default function SetupScreen() {
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
+      <Text style={styles.stepHeading}>Your Background & Life Story</Text>
+      <Text style={styles.stepSubtext}>
+        Where are you from, and how did you get to where you are today? Describe your career path,
+        major life moments, how your path unfolded.
+      </Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="I grew up in..."
+        placeholderTextColor="#555"
+        value={background}
+        onChangeText={setBackground}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+      />
+    </View>
+  );
+
+  const renderStep4 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepHeading}>Who You Are Today</Text>
+      <Text style={styles.stepSubtext}>
+        What do you do professionally? What are you pursuing outside of work? What does your
+        daily life look like?
+      </Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="Professionally, I..."
+        placeholderTextColor="#555"
+        value={identity}
+        onChangeText={setIdentity}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+      />
+    </View>
+  );
+
+  const renderStep5 = () => (
+    <View style={styles.stepContainer}>
       <Text style={styles.stepHeading}>What are you here to build?</Text>
       <Text style={styles.stepSubtext}>
         Describe what you are working toward. Be specific. Vague goals produce vague results.
@@ -194,7 +255,78 @@ export default function SetupScreen() {
     </View>
   );
 
-  const renderStep4 = () => (
+  const renderStep6 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepHeading}>Strengths & Weaknesses</Text>
+      <Text style={styles.stepSubtext}>
+        Knowing yourself is the beginning of all wisdom. What are your greatest strengths?
+        What do you struggle with?
+      </Text>
+      <Text style={styles.inputLabel}>Your Strengths</Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="I am strong at..."
+        placeholderTextColor="#555"
+        value={strengths}
+        onChangeText={setStrengths}
+        multiline
+        numberOfLines={5}
+        textAlignVertical="top"
+      />
+      <Text style={styles.inputLabel}>Your Weaknesses</Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="I struggle with..."
+        placeholderTextColor="#555"
+        value={weaknesses}
+        onChangeText={setWeaknesses}
+        multiline
+        numberOfLines={5}
+        textAlignVertical="top"
+      />
+    </View>
+  );
+
+  const renderStep7 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepHeading}>Patterns & Failure Modes</Text>
+      <Text style={styles.stepSubtext}>
+        What patterns do you notice in yourself? What tends to derail you?
+      </Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="When under pressure, I tend to..."
+        placeholderTextColor="#555"
+        value={patterns}
+        onChangeText={setPatterns}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+      />
+    </View>
+  );
+
+  const renderStep8 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepHeading}>Major Life Events</Text>
+      <Text style={styles.stepSubtext}>
+        What are the defining moments, turning points, or crucible experiences that shaped who
+        you are? Loss, failure, triumph, change.
+      </Text>
+      <TextInput
+        style={[styles.input, styles.multilineInput]}
+        placeholder="The experiences that made me who I am..."
+        placeholderTextColor="#555"
+        value={majorEvents}
+        onChangeText={setMajorEvents}
+        multiline
+        numberOfLines={6}
+        textAlignVertical="top"
+      />
+    </View>
+  );
+
+  const renderStep9 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepHeading}>Meet your Future Self</Text>
       <Text style={styles.stepSubtext}>
@@ -238,7 +370,7 @@ export default function SetupScreen() {
     </View>
   );
 
-  const renderStep5 = () => (
+  const renderStep10 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepHeading}>Your Cabinet</Text>
       <Text style={styles.stepSubtext}>
@@ -280,7 +412,7 @@ export default function SetupScreen() {
     </View>
   );
 
-  const renderStep6 = () => {
+  const renderStep11 = () => {
     const activeMemberNames = CABINET_MEMBERS.filter((m) =>
       activeMembers.includes(m.id)
     ).map((m) => m.name);
@@ -331,6 +463,11 @@ export default function SetupScreen() {
       case 4: return renderStep4();
       case 5: return renderStep5();
       case 6: return renderStep6();
+      case 7: return renderStep7();
+      case 8: return renderStep8();
+      case 9: return renderStep9();
+      case 10: return renderStep10();
+      case 11: return renderStep11();
       default: return null;
     }
   };
@@ -381,6 +518,15 @@ export default function SetupScreen() {
               {buttonLabel()}
             </Text>
           </TouchableOpacity>
+
+          {isOptionalStep() && (
+            <TouchableOpacity
+              style={styles.skipButton}
+              onPress={() => setStep(step + 1)}
+            >
+              <Text style={styles.skipButtonText}>Skip for now →</Text>
+            </TouchableOpacity>
+          )}
 
           {step > 1 && (
             <TouchableOpacity
@@ -636,5 +782,14 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#666',
     fontSize: 14,
+  },
+  skipButton: {
+    alignItems: 'center',
+    padding: 10,
+  },
+  skipButtonText: {
+    color: '#c9a84c',
+    fontSize: 14,
+    opacity: 0.7,
   },
 });
