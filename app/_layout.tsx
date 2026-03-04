@@ -20,7 +20,7 @@ export default function Layout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Agora',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home-outline" color={color} size={size} />
           ),
@@ -29,7 +29,7 @@ export default function Layout() {
       <Tabs.Screen
         name="morning"
         options={{
-          title: 'Aurora',
+          title: 'Morning',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="sunny-outline" color={color} size={size} />
           ),
@@ -38,7 +38,7 @@ export default function Layout() {
       <Tabs.Screen
         name="evening"
         options={{
-          title: 'Vesper',
+          title: 'Evening',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="moon-outline" color={color} size={size} />
           ),
@@ -47,7 +47,7 @@ export default function Layout() {
       <Tabs.Screen
         name="cabinet"
         options={{
-          title: 'Consilium',
+          title: 'Cabinet',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="mic-outline" color={color} size={size} />
           ),
@@ -56,7 +56,7 @@ export default function Layout() {
       <Tabs.Screen
         name="journal"
         options={{
-          title: 'Codex',
+          title: 'Journal',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="book-outline" color={color} size={size} />
           ),
@@ -65,7 +65,7 @@ export default function Layout() {
       <Tabs.Screen
         name="timer"
         options={{
-          title: 'Lectio',
+          title: 'Focus',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="library-outline" color={color} size={size} />
           ),
@@ -74,9 +74,9 @@ export default function Layout() {
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Virtus',
+          title: 'Progress',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" color={color} size={size} />
+            <Ionicons name="podium-outline" color={color} size={size} />
           ),
         }}
       />
