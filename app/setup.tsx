@@ -169,9 +169,7 @@ export default function SetupScreen() {
         you started.
       </Text>
       <Text style={styles.bodyText}>
-        This is not a productivity app. This is a commitment to excellence — the Greek ideal
-        of <Text style={styles.goldText}>arete</Text>: virtue, excellence, the fullest
-        expression of what you are capable of becoming.
+        This is not a productivity app. This is a commitment to excellence — the pursuit of virtue, the fullest expression of what you are capable of becoming.
       </Text>
     </View>
   );
