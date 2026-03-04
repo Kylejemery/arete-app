@@ -21,9 +21,9 @@ export function useSwipeNavigation(currentRoute: typeof TAB_ROUTES[number]) {
       onPanResponderRelease: (_, gestureState) => {
         const idx = currentIndexRef.current;
         if (gestureState.dx < -SWIPE_THRESHOLD && idx < TAB_ROUTES.length - 1) {
-          routerRef.current.push(TAB_ROUTES[idx + 1] as any);
+          routerRef.current.replace(TAB_ROUTES[idx + 1] as any);
         } else if (gestureState.dx > SWIPE_THRESHOLD && idx > 0) {
-          routerRef.current.push(TAB_ROUTES[idx - 1] as any);
+          routerRef.current.replace(TAB_ROUTES[idx - 1] as any);
         }
       },
     })
