@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
@@ -25,6 +26,7 @@ const MILESTONES = [
 ];
 
 export default function ProgressScreen() {
+  const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/progress');
   const [activeTab, setActiveTab] = useState<'overview' | 'reading'>('overview');
   const [streak, setStreak] = useState(0);
@@ -355,6 +357,17 @@ export default function ProgressScreen() {
               </View>
             </View>
 
+            {/* Weekly Review */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionTitle}>Weekly Review 📋</Text>
+              <Text style={styles.weeklyReviewDescription}>
+                Convene the Cabinet for an honest assessment of your week — what went well, what fell short, and what matters next.
+              </Text>
+              <TouchableOpacity style={styles.weeklyReviewButton} onPress={() => router.push('/weekly-review')}>
+                <Text style={styles.weeklyReviewButtonText}>View Weekly Review</Text>
+              </TouchableOpacity>
+            </View>
+
             {/* Calendar */}
             <View style={styles.sectionCard}>
               <View style={styles.calHeader}>
@@ -627,4 +640,12 @@ const styles = StyleSheet.create({
   modalCancelText: { color: '#888', fontSize: 15 },
   modalSave: { backgroundColor: '#c9a84c', borderRadius: 10, padding: 12, paddingHorizontal: 25 },
   modalSaveText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
+  weeklyReviewDescription: { color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 14 },
+  weeklyReviewButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  weeklyReviewButtonText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
 });
