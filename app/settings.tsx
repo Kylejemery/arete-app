@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    Linking,
     ScrollView,
     StyleSheet,
     Switch,
@@ -93,6 +94,8 @@ const FUTURE_KYLE_MESSAGES = [
   "Friday Kyle is tired. I know. I remember. Do the one hard thing anyway. — Future Kyle",
   "Saturdays were sacred. Family, training, reading. Do not waste this one. — Future Kyle",
 ];
+
+const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -428,6 +431,27 @@ export default function SettingsScreen() {
         {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute, '15')}
       </View>
 
+      {/* Privacy Policy */}
+      <TouchableOpacity
+        onPress={async () => {
+          try {
+            const supported = await Linking.canOpenURL(PRIVACY_URL);
+            if (supported) {
+              await Linking.openURL(PRIVACY_URL);
+            } else {
+              Alert.alert('Error', "Unable to open the Privacy Policy URL.");
+            }
+          } catch (err) {
+            console.error('Failed to open privacy URL', err);
+          }
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Open privacy policy (opens in browser)"
+        style={styles.privacyRow}
+      >
+        <Text style={styles.privacyText}>Privacy Policy</Text>
+      </TouchableOpacity>
+
       {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
         <Text style={styles.saveButtonText}>Save & Schedule Notifications</Text>
@@ -543,4 +567,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 15,
   },
+  privacyRow: { paddingVertical: 12, paddingHorizontal: 8, marginTop: 12 },
+  privacyText: { color: '#c9a84c', fontSize: 16 },
 });
