@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    Linking,
     ScrollView,
     StyleSheet,
     Switch,
@@ -21,6 +22,8 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
 
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
 const MORNING_MESSAGES = [
@@ -428,6 +431,27 @@ export default function SettingsScreen() {
         {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute, '15')}
       </View>
 
+      {/* Privacy Policy */}
+      <TouchableOpacity
+        onPress={async () => {
+          try {
+            const supported = await Linking.canOpenURL(PRIVACY_URL);
+            if (supported) {
+              await Linking.openURL(PRIVACY_URL);
+            } else {
+              console.warn("Can't open URL:", PRIVACY_URL);
+            }
+          } catch (err) {
+            console.error('Failed to open privacy URL', err);
+          }
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Open privacy policy (opens in browser)"
+        style={styles.privacyRow}
+      >
+        <Text style={styles.privacyText}>Privacy Policy</Text>
+      </TouchableOpacity>
+
       {/* Save Button */}
       <TouchableOpacity style={styles.saveButton} onPress={saveSettings}>
         <Text style={styles.saveButtonText}>Save & Schedule Notifications</Text>
@@ -543,4 +567,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 15,
   },
+  privacyRow: { paddingVertical: 12, paddingHorizontal: 8, marginTop: 12 },
+  privacyText: { color: '#c9a84c', fontSize: 16 },
 });
