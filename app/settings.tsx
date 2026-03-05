@@ -97,6 +97,8 @@ const FUTURE_KYLE_MESSAGES = [
   "Saturdays were sacred. Family, training, reading. Do not waste this one. — Future Kyle",
 ];
 
+const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
+
 export default function SettingsScreen() {
   const router = useRouter();
   const [morningEnabled, setMorningEnabled] = useState(true);
