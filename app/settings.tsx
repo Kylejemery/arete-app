@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
-    Linking,
     ScrollView,
     StyleSheet,
     Switch,
@@ -95,7 +94,6 @@ const FUTURE_KYLE_MESSAGES = [
   "Saturdays were sacred. Family, training, reading. Do not waste this one. — Future Kyle",
 ];
 
-const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -433,20 +431,9 @@ export default function SettingsScreen() {
 
       {/* Privacy Policy */}
       <TouchableOpacity
-        onPress={async () => {
-          try {
-            const supported = await Linking.canOpenURL(PRIVACY_URL);
-            if (supported) {
-              await Linking.openURL(PRIVACY_URL);
-            } else {
-              console.warn("Can't open URL:", PRIVACY_URL);
-            }
-          } catch (err) {
-            console.error('Failed to open privacy URL', err);
-          }
-        }}
+        onPress={() => router.push('/privacy' as any)}
         accessibilityRole="button"
-        accessibilityLabel="Open privacy policy (opens in browser)"
+        accessibilityLabel="Open privacy policy"
         style={styles.privacyRow}
       >
         <Text style={styles.privacyText}>Privacy Policy</Text>
