@@ -23,8 +23,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
-
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
 const MORNING_MESSAGES = [
   "The impediment to action advances action. What stands in the way becomes the way. Your morning awaits.",
