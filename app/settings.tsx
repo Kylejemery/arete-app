@@ -23,6 +23,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
+const PRIVACY_URL = 'https://kylejemery.github.io/arete-app/privacy.html';
+
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
 const MORNING_MESSAGES = [
   "The impediment to action advances action. What stands in the way becomes the way. Your morning awaits.",
@@ -439,7 +441,7 @@ export default function SettingsScreen() {
             if (supported) {
               await Linking.openURL(PRIVACY_URL);
             } else {
-              Alert.alert('Error', "Unable to open the Privacy Policy URL.");
+              console.warn("Can't open URL:", PRIVACY_URL);
             }
           } catch (err) {
             console.error('Failed to open privacy URL', err);
