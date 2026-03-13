@@ -49,6 +49,7 @@ export default function JournalScreen() {
   const [dialogueInput, setDialogueInput] = useState('');
   const [beliefLoading, setBeliefLoading] = useState(false);
   const [beliefError, setBeliefError] = useState<string | null>(null);
+  const [showAdjustInput, setShowAdjustInput] = useState(false);
   const [expandedBeliefIds, setExpandedBeliefIds] = useState<Set<string>>(new Set());
   const dialogueScrollRef = useRef<ScrollView>(null);
 
@@ -166,7 +167,10 @@ export default function JournalScreen() {
   };
 
   const updateBeliefEntry = async (updated: BeliefEntry) => {
-    const entries = beliefEntries.map(e => e.id === updated.id ? updated : e);
+    // Read fresh from storage to avoid stale-closure bug
+    const raw = await AsyncStorage.getItem('beliefEntries');
+    const current: BeliefEntry[] = raw ? JSON.parse(raw) : [];
+    const entries = current.map((e: BeliefEntry) => e.id === updated.id ? updated : e);
     await saveBeliefEntries(entries);
     if (activeBeliefEntry?.id === updated.id) setActiveBeliefEntry(updated);
   };
@@ -240,6 +244,7 @@ export default function JournalScreen() {
       };
 
       await updateBeliefEntry(finalEntry);
+      setShowAdjustInput(false);
       setTimeout(() => dialogueScrollRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (err) {
       setBeliefError((err as Error).message || 'The Cabinet is unavailable. Tap to retry.');
@@ -276,7 +281,14 @@ export default function JournalScreen() {
       updatedAt: Date.now(),
     };
     await updateBeliefEntry(encoded);
+    setShowAdjustInput(false);
     setActiveBeliefEntry(null);
+  };
+
+  const pushHarder = async () => {
+    if (!activeBeliefEntry || beliefLoading) return;
+    const challenge = "I want you to push harder on this belief. Hold it against the four cardinal virtues more rigorously — Wisdom, Justice, Courage, Temperance. Where does it fail? Where is it self-serving? Where is it borrowed rather than lived?";
+    await callCabinetForBelief(activeBeliefEntry, 3, challenge);
   };
 
   const deleteBeliefEntry = (id: string) => {
@@ -286,7 +298,10 @@ export default function JournalScreen() {
         text: 'Delete', style: 'destructive', onPress: async () => {
           const updated = beliefEntries.filter(e => e.id !== id);
           await saveBeliefEntries(updated);
-          if (activeBeliefEntry?.id === id) setActiveBeliefEntry(null);
+          if (activeBeliefEntry?.id === id) {
+            setShowAdjustInput(false);
+            setActiveBeliefEntry(null);
+          }
         }
       }
     ]);
@@ -609,32 +624,39 @@ export default function JournalScreen() {
                 )}
 
                 {/* Stage 2 or 3: refinement/iteration phase */}
-                {(activeBeliefEntry.stage === 2 || activeBeliefEntry.stage === 3) && (
-                  <>
-                    <View style={styles.beliefInputRow}>
-                      <TextInput
-                        style={styles.beliefTextInput}
-                        placeholder="Push back, adjust, or ask to iterate..."
-                        placeholderTextColor="#555"
-                        multiline
-                        value={dialogueInput}
-                        onChangeText={setDialogueInput}
-                      />
-                      <TouchableOpacity
-                        style={[styles.beliefSendButton, (!dialogueInput.trim() || beliefLoading) && styles.beliefSendButtonDisabled]}
-                        onPress={sendPushback}
-                        disabled={!dialogueInput.trim() || beliefLoading}
-                      >
-                        <Ionicons name="send" size={18} color={!dialogueInput.trim() || beliefLoading ? '#555' : '#1a1a2e'} />
-                      </TouchableOpacity>
-                    </View>
-                    {!beliefLoading && activeBeliefEntry.refinedStatement ? (
-                      <TouchableOpacity style={styles.encodeButton} onPress={encodeBelief}>
-                        <Ionicons name="lock-closed-outline" size={16} color="#1a1a2e" />
-                        <Text style={styles.encodeButtonText}>Encode this belief</Text>
+                {(activeBeliefEntry.stage === 2 || activeBeliefEntry.stage === 3) && !beliefLoading && (
+                  <View style={styles.actionPanel}>
+                    {activeBeliefEntry.refinedStatement ? (
+                      <TouchableOpacity style={[styles.actionButton, styles.actionButtonPrimary]} onPress={encodeBelief}>
+                        <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>🔒  This lands — encode it</Text>
                       </TouchableOpacity>
                     ) : null}
-                  </>
+                    <TouchableOpacity style={styles.actionButton} onPress={() => setShowAdjustInput(prev => !prev)}>
+                      <Text style={styles.actionButtonText}>✏️  Not quite — adjust it</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionButton} onPress={pushHarder}>
+                      <Text style={styles.actionButtonText}>⚔️  Push harder</Text>
+                    </TouchableOpacity>
+                    {showAdjustInput && (
+                      <View style={styles.beliefInputRow}>
+                        <TextInput
+                          style={styles.beliefTextInput}
+                          placeholder="Push back, adjust, or ask to iterate..."
+                          placeholderTextColor="#555"
+                          multiline
+                          value={dialogueInput}
+                          onChangeText={setDialogueInput}
+                        />
+                        <TouchableOpacity
+                          style={[styles.beliefSendButton, (!dialogueInput.trim() || beliefLoading) && styles.beliefSendButtonDisabled]}
+                          onPress={sendPushback}
+                          disabled={!dialogueInput.trim() || beliefLoading}
+                        >
+                          <Ionicons name="send" size={18} color={!dialogueInput.trim() || beliefLoading ? '#555' : '#1a1a2e'} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
                 )}
               </View>
             </KeyboardAvoidingView>
@@ -978,4 +1000,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   encodeButtonText: { color: '#1a1a2e', fontSize: 14, fontWeight: '700' },
+  actionPanel: {
+    gap: 8,
+  },
+  actionButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#16213e', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16,
+    borderWidth: 1, borderColor: '#c9a84c33',
+  },
+  actionButtonPrimary: {
+    backgroundColor: '#c9a84c', borderColor: '#c9a84c',
+  },
+  actionButtonText: {
+    color: '#c9a84c', fontSize: 14, fontWeight: '600', flex: 1,
+  },
+  actionButtonTextPrimary: {
+    color: '#1a1a2e',
+  },
 });
