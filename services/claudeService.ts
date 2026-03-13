@@ -176,7 +176,10 @@ Key principles:
 - Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.
 - Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.
 - Track patterns over time. Name them when you see them.
-- When counselors disagree, let them. That tension is valuable for ${userName}.`;
+- When counselors disagree, let them. That tension is valuable for ${userName}.
+- You have access to ${userName}'s encoded beliefs in the app context below. These are beliefs they have explicitly articulated, examined, and committed to through the Belief Journal. Reference them when relevant.
+- If ${userName}'s stated intentions, behavior, or excuses in this conversation appear to contradict one of their encoded beliefs, name it directly. Do not let the contradiction slide. A belief only has value if it is lived.
+- If a topic comes up where ${userName} seems to hold a half-formed, unexamined, or borrowed assumption, you may flag it: briefly note that this might be worth exploring in the Belief Journal. Do not overuse this — only when genuinely relevant.`;
 
   const cabinetIntro = `# The Cabinet of Invisible Counselors — ${userName}'s Cabinet
 
@@ -244,6 +247,7 @@ export async function gatherAppContext(): Promise<string> {
     booksReadRaw,
     todayReadingSecondsRaw,
     streakRaw,
+    beliefEntriesRaw,
   ] = await Promise.all([
     AsyncStorage.getItem('morningTasks'),
     AsyncStorage.getItem('eveningTasks'),
@@ -256,6 +260,7 @@ export async function gatherAppContext(): Promise<string> {
     AsyncStorage.getItem('booksRead'),
     AsyncStorage.getItem('todayReadingSeconds'),
     AsyncStorage.getItem('streak'),
+    AsyncStorage.getItem('beliefEntries'),
   ]);
 
   const userName = await getUserName();
@@ -395,6 +400,25 @@ export async function gatherAppContext(): Promise<string> {
     lines.push(`- Streak: ${isNaN(streak) ? 0 : streak} days`);
     lines.push(`- Total journal entries: ${journalCount}`);
     lines.push(`- Total quotes saved: ${quoteCount}`);
+  } catch { /* skip */ }
+
+  // Encoded beliefs
+  try {
+    if (beliefEntriesRaw) {
+      const allBeliefs: any[] = JSON.parse(beliefEntriesRaw);
+      const encoded = allBeliefs.filter((b: any) => b.stage === 'encoded' && b.encodedBelief);
+      if (encoded.length > 0) {
+        lines.push('');
+        lines.push('ENCODED BELIEFS (articulated and refined through the Belief Journal):');
+        lines.push('These are beliefs the user has explicitly examined, refined, and committed to. Reference them during check-ins. If their behavior or stated intentions contradict a belief, name it directly.');
+        encoded.forEach((b: any) => {
+          lines.push(`- ${b.encodedBelief}`);
+          if (b.virtueCheck && !b.virtueCheck.passed && b.virtueCheck.concern) {
+            lines.push(`  [Virtue concern noted: ${b.virtueCheck.concern}]`);
+          }
+        });
+      }
+    }
   } catch { /* skip */ }
 
   return lines.join('\n');
