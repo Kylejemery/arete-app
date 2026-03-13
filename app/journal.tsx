@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
   beliefCardRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8,
   },
-  beliefCardRowRight: { flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 'auto' },
+  beliefCardRowRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stageDot: { width: 10, height: 10, borderRadius: 5 },
   stageDot1: { backgroundColor: '#555' },
   stageDot2: { backgroundColor: '#c9a84c' },
