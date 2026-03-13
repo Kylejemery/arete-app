@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ThreadMessage, getContextWindow } from './threadService';
+import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -696,6 +696,94 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
   } catch (error) {
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
+  }
+}
+
+export async function sendCheckInToCabinet(
+  type: 'morning' | 'evening'
+): Promise<string> {
+  try {
+    const userName = await getUserName();
+
+    const [
+      morningTasksRaw,
+      eveningTasksRaw,
+      reflectionAnswerRaw,
+      stoicAnswerRaw,
+    ] = await Promise.all([
+      AsyncStorage.getItem('morningTasks'),
+      AsyncStorage.getItem('eveningTasks'),
+      AsyncStorage.getItem('reflectionAnswer'),
+      AsyncStorage.getItem('stoicAnswer'),
+    ]);
+
+    let userMessage: string;
+
+    if (type === 'morning') {
+      const morningTasks: { title: string; done: boolean }[] = morningTasksRaw
+        ? JSON.parse(morningTasksRaw)
+        : [];
+      const taskSummary = morningTasks.length > 0
+        ? morningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
+        : '(no tasks)';
+      const day = new Date().getDay();
+      const affirmations = [
+        "Confine yourself to the present. — Marcus Aurelius",
+        "Do not indulge in expectations — meet each moment. — Epictetus",
+        "It is not the man who has too little, but the man who craves more, that is poor. — Seneca",
+        "You have power over your mind, not outside events. — Marcus Aurelius",
+        "Seek not the good in external things; seek it in yourself. — Epictetus",
+        "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. — Epictetus",
+        "Begin at once to live, and count each separate day as a separate life. — Seneca",
+      ];
+      const affirmation = affirmations[day];
+      userMessage = `[Morning check-in] ${userName} has just completed his morning routine. Tasks: ${taskSummary}. Affirmation shown: '${affirmation}'. Speak to him briefly as he begins the day.`;
+    } else {
+      const eveningTasks: { title: string; done: boolean }[] = eveningTasksRaw
+        ? JSON.parse(eveningTasksRaw)
+        : [];
+      const taskSummary = eveningTasks.length > 0
+        ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
+        : '(no tasks)';
+      const reflection = reflectionAnswerRaw || '(not answered)';
+      const stoic = stoicAnswerRaw || '(not answered)';
+      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
+    }
+
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+
+    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Cabinet check-in error:', response.status, errorText);
+      return 'The Cabinet will speak when you return.';
+    }
+
+    const data = await response.json();
+    const assistantReply = data?.content?.[0]?.text;
+    if (typeof assistantReply === 'string' && assistantReply.length > 0) {
+      await appendMessages('cabinet', [
+        { role: 'user', content: userMessage, timestamp: Date.now() },
+        { role: 'assistant', content: assistantReply, timestamp: Date.now() },
+      ]);
+      return assistantReply;
+    }
+    return 'The Cabinet will speak when you return.';
+  } catch (error) {
+    console.error('Cabinet check-in failed:', error);
+    return 'The Cabinet will speak when you return.';
   }
 }
 
