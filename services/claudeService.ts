@@ -6,6 +6,31 @@ export interface Message {
   content: string;
 }
 
+export interface BeliefDialogueTurn {
+  role: 'user' | 'cabinet';
+  content: string;
+  timestamp: number;
+}
+
+export interface VirtueCheck {
+  passed: boolean;
+  concern: string | null;
+  virtue: 'wisdom' | 'justice' | 'courage' | 'temperance' | null;
+}
+
+export interface BeliefEntry {
+  id: string;
+  rawThought: string;
+  stage: 1 | 2 | 3 | 'encoded';
+  dialogue: BeliefDialogueTurn[];
+  refinedStatement: string;
+  encodedBelief: string;
+  virtueCheck: VirtueCheck | null;
+  createdAt: number;
+  updatedAt: number;
+  topic: string;
+}
+
 const MARCUS_PROFILE = `## Marcus Aurelius — Chair
 
 Marcus Aurelius was the Emperor of Rome from 161 to 180 AD and one of the greatest Stoic philosophers who ever lived. He ruled the most powerful empire in the world while simultaneously waging a private war against his own ego, his anger, his fatigue, and his tendency toward distraction. His *Meditations* — a private journal never intended for publication — is one of the most intimate and honest documents of self-examination ever written. He did not write it to impress anyone. He wrote it to hold himself to account.
@@ -283,6 +308,20 @@ export async function gatherAppContext(): Promise<string> {
         const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
         lines.push(`${e.date} — ${snippet}`);
       });
+    }
+  } catch { /* skip */ }
+
+  // Encoded beliefs — referenced during check-ins
+  try {
+    const beliefEntriesRaw = await AsyncStorage.getItem('beliefEntries');
+    const beliefEntries: BeliefEntry[] = beliefEntriesRaw ? JSON.parse(beliefEntriesRaw) : [];
+    const encodedBeliefs = beliefEntries.filter(b => b.stage === 'encoded');
+    lines.push('');
+    lines.push(`ENCODED BELIEFS (${encodedBeliefs.length}):`);
+    if (encodedBeliefs.length === 0) {
+      lines.push('(none yet)');
+    } else {
+      encodedBeliefs.forEach(b => lines.push(`[${b.topic}] ${b.encodedBelief}`));
     }
   } catch { /* skip */ }
 
@@ -724,4 +763,100 @@ export async function sendMessageToCounselor(
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
   }
+}
+
+async function buildBeliefJournalSystemPrompt(stage: 1 | 2 | 3): Promise<string> {
+  const today = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const userProfile = await gatherUserProfile();
+
+  const basePrompt = `You are the Cabinet of Invisible Counselors — specifically functioning as the Belief Journal facilitator.
+
+${userProfile}
+
+THE BELIEF JOURNAL:
+The user is working to articulate a half-formed belief, assumption, or value. Your role is NOT to validate or immediately refine it. Your role is Socratic — to help the user find out whether this belief is genuinely theirs, or something borrowed, performed, or unexamined.
+
+THE THREE CARDINAL RULES:
+1. In Stage 2: Ask questions only. Do not propose a refined version yet. Probe the assumptions. Ask what evidence they have. Ask whether they have lived this belief or merely agreed with it. Ask where it came from. Maximum 3 questions per response — focused, not scattered.
+2. When proposing the refined version: Write it clearly, sharply, in the user's own voice as you understand it from the dialogue. Variable length — aphoristic if it fits, longer if the idea requires it. Then ask: "Does this land? What needs to change?"
+3. The Stoic guardrail: At the point of encoding, check the belief against the four cardinal virtues — Wisdom, Justice, Courage, Temperance. If the belief conflicts with genuine virtue, name it. Not harshly — honestly. This journal is not a tool for self-justification.
+
+THE FORMAT OF FINAL ENCODED BELIEFS:
+Not length but clarity and retention. Sometimes a single sentence. Sometimes a paragraph. Always: clear, sharp, and easy to retain after reading.
+
+Today's date: ${today}`;
+
+  if (stage === 1) {
+    return basePrompt + `\n\nCURRENT TASK: The user has submitted their raw belief or has continued responding to your questions. This is the questioning phase — ask clarifying questions ONLY. Do NOT propose a refined version yet. Ask maximum 3 questions, focused and Socratic. Probe whether this belief is genuinely theirs or borrowed, performed, or unexamined.`;
+  } else if (stage === 2) {
+    return basePrompt + `\n\nCURRENT TASK: The user has engaged in dialogue and is now requesting a refined version of their belief. Based on the full dialogue, propose a clear, sharp refined statement in the user's own voice. Then ask "Does this land? What needs to change?" Also run the Stoic virtue check. Return the refined belief and virtue check using these exact tags at the end of your response:\n\n[REFINED_BELIEF]\n{the refined belief text}\n[/REFINED_BELIEF]\n\n[VIRTUE_CHECK]\n{"passed": true, "virtue": null, "concern": null}\n[/VIRTUE_CHECK]\n\n(Fill in the actual values — passed: true/false, virtue: null or one of "wisdom"/"justice"/"courage"/"temperance", concern: null or a brief explanation of the conflict.)`;
+  } else {
+    return basePrompt + `\n\nCURRENT TASK: Stage 3 — the user is pushing back or iterating on the proposed refined belief. Adjust the refined statement based on their feedback and dialogue. Re-run the Stoic virtue check. Return the updated refined belief and virtue check using these exact tags at the end of your response:\n\n[REFINED_BELIEF]\n{the refined belief text}\n[/REFINED_BELIEF]\n\n[VIRTUE_CHECK]\n{"passed": true, "virtue": null, "concern": null}\n[/VIRTUE_CHECK]\n\n(Fill in the actual values — passed: true/false, virtue: null or one of "wisdom"/"justice"/"courage"/"temperance", concern: null or a brief explanation of the conflict.)`;
+  }
+}
+
+export async function sendBeliefJournalMessage(
+  entry: BeliefEntry,
+  stage: 1 | 2 | 3
+): Promise<{ response: string; refinedStatement?: string; virtueCheck?: VirtueCheck }> {
+  const systemPrompt = await buildBeliefJournalSystemPrompt(stage);
+
+  // Build messages: raw thought as first user message, then dialogue turns
+  const messages: { role: 'user' | 'assistant'; content: string }[] = [
+    { role: 'user', content: entry.rawThought },
+    ...entry.dialogue.map(turn => ({
+      role: (turn.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
+      content: turn.content,
+    })),
+  ];
+
+  const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 1500,
+      system: systemPrompt,
+      messages,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('Backend/Claude API error:', response.status, errorText);
+    throw new Error(`The Cabinet is unavailable. (Error ${response.status})`);
+  }
+
+  const data = await response.json();
+  const rawContent = data?.content?.[0]?.text;
+  if (typeof rawContent !== 'string' || rawContent.length === 0) {
+    throw new Error('The Cabinet did not respond. Please try again.');
+  }
+
+  // Parse out the structured tags from the response
+  let displayContent = rawContent;
+  let refinedStatement: string | undefined;
+  let virtueCheck: VirtueCheck | undefined;
+
+  const refinedMatch = rawContent.match(/\[REFINED_BELIEF\]([\s\S]*?)\[\/REFINED_BELIEF\]/);
+  if (refinedMatch) {
+    refinedStatement = refinedMatch[1].trim();
+    displayContent = displayContent.replace(/\[REFINED_BELIEF\][\s\S]*?\[\/REFINED_BELIEF\]/, '').trim();
+  }
+
+  const virtueMatch = rawContent.match(/\[VIRTUE_CHECK\]([\s\S]*?)\[\/VIRTUE_CHECK\]/);
+  if (virtueMatch) {
+    try {
+      virtueCheck = JSON.parse(virtueMatch[1].trim()) as VirtueCheck;
+    } catch { /* skip malformed JSON */ }
+    displayContent = displayContent.replace(/\[VIRTUE_CHECK\][\s\S]*?\[\/VIRTUE_CHECK\]/, '').trim();
+  }
+
+  return { response: displayContent, refinedStatement, virtueCheck };
 }
