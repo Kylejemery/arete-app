@@ -67,6 +67,18 @@ export default function MorningScreen() {
       } else {
         if (savedTasks) setTasks(JSON.parse(savedTasks));
       }
+
+      // Restore today's Cabinet check-in response if it was already generated
+      const todayKey = `morningCheckinResponse_${today}`;
+      const savedResponse = await AsyncStorage.getItem(todayKey);
+      if (savedResponse) setCheckinResponse(savedResponse);
+
+      // Clean up check-in responses from previous days
+      const allKeys = await AsyncStorage.getAllKeys();
+      const staleKeys = allKeys.filter(
+        key => key.startsWith('morningCheckinResponse_') && key !== todayKey
+      );
+      if (staleKeys.length > 0) await AsyncStorage.multiRemove(staleKeys);
     } catch (e) {
       console.error(e);
     }
@@ -87,6 +99,9 @@ export default function MorningScreen() {
         const reply = await sendCheckInToCabinet('morning');
         setCheckinLoading(false);
         setCheckinResponse(reply);
+        if (reply) {
+          await AsyncStorage.setItem(`morningCheckinResponse_${today}`, reply);
+        }
       }
     }
   };
