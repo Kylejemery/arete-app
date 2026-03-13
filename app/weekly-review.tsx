@@ -117,57 +117,80 @@ export default function WeeklyReviewScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.title}>Weekly Review 📋</Text>
+        <Text style={styles.title}>Weekly Review</Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
+
+        {/* Generate / Regenerate button */}
+        <TouchableOpacity
+          style={[
+            currentReview ? styles.regenerateButtonTop : styles.generateButton,
+            loading && styles.buttonDisabled,
+          ]}
+          onPress={handleGenerate}
+          disabled={loading}
+        >
+          <Text style={currentReview ? styles.regenerateButtonTopText : styles.generateButtonText}>
+            {currentReview ? 'Regenerate' : "Generate This Week's Review"}
+          </Text>
+        </TouchableOpacity>
+
+        {loading && (
+          <Animated.Text style={[styles.loadingText, { opacity: pulseAnim }]}>
+            The Cabinet is convening…
+          </Animated.Text>
+        )}
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Generate card */}
-        <View style={styles.sectionCard}>
-          {loading ? (
-            <Animated.View style={[styles.loadingContainer, { opacity: pulseAnim }]}>
-              <Text style={styles.loadingText}>The Cabinet is in session...</Text>
-            </Animated.View>
-          ) : (
-            <>
-              <TouchableOpacity style={styles.generateButton} onPress={handleGenerate}>
-                <Text style={styles.generateButtonText}>Convene the Cabinet</Text>
-              </TouchableOpacity>
-              <Text style={styles.generateNote}>
-                The Cabinet will review your week and deliver their honest assessment.
-              </Text>
-            </>
-          )}
-
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
-        </View>
-
-        {/* Current review display */}
-        {currentReview && !loading && (
-          <View style={styles.reviewCard}>
-            <Text style={styles.reviewWeekLabel}>Week ending {currentReview.weekEnding}</Text>
-            <Text style={styles.reviewContent}>{currentReview.content}</Text>
-            <TouchableOpacity style={styles.regenerateButton} onPress={handleGenerate}>
-              <Text style={styles.regenerateButtonText}>Regenerate</Text>
+        {/* Error card */}
+        {error && !loading && (
+          <View style={styles.errorCard}>
+            <Text style={styles.errorCardText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleGenerate}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Past reviews */}
-        <View style={styles.pastSection}>
-          <Text style={styles.pastSectionTitle}>Past Reviews</Text>
+        {/* Current review card */}
+        {currentReview && !loading && (
+          <View style={styles.reviewCard}>
+            <Text style={styles.weekOfLabel}>WEEK OF</Text>
+            <Text style={styles.reviewWeekEnding}>{currentReview.weekEnding}</Text>
+            <Text style={styles.reviewSubtitle}>{subtitle}</Text>
+            <View style={styles.divider} />
+            <Text style={styles.reviewContent}>{currentReview.content}</Text>
+            <Text style={styles.generatedAt}>
+              Generated {new Date(currentReview.generatedAt).toLocaleDateString('en-US', {
+                month: 'short', day: 'numeric', year: 'numeric',
+              })}{' '}{new Date(currentReview.generatedAt).toLocaleTimeString('en-US', {
+                hour: 'numeric', minute: '2-digit',
+              })}
+            </Text>
+          </View>
+        )}
 
-          {pastReviews.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>
-                No past reviews yet. Convene the Cabinet at the end of your first week.
-              </Text>
-            </View>
-          ) : (
-            pastReviews.map((review) => (
+        {/* Empty state */}
+        {!currentReview && !loading && !error && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyIcon}>📜</Text>
+            <Text style={styles.emptyTitle}>No review yet this week.</Text>
+            <Text style={styles.emptySubtext}>
+              The Cabinet reviews a week's worth of data — routines, journal entries, reading, and reflections — and gives you an honest assessment.
+            </Text>
+            <TouchableOpacity style={styles.generateButton} onPress={handleGenerate}>
+              <Text style={styles.generateButtonText}>Generate This Week's Review</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Past reviews archive */}
+        {pastReviews.length > 1 && (
+          <View style={styles.pastSection}>
+            <Text style={styles.pastSectionTitle}>Past Reviews</Text>
+            {/* Skip index 0 — that's the current review shown above */}
+            {pastReviews.slice(1).map((review) => (
               <View key={review.id} style={styles.pastReviewCard}>
                 <TouchableOpacity
                   style={styles.pastReviewHeader}
@@ -182,9 +205,9 @@ export default function WeeklyReviewScreen() {
                   <Text style={styles.pastReviewContent}>{review.content}</Text>
                 )}
               </View>
-            ))
-          )}
-        </View>
+            ))}
+          </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -193,62 +216,85 @@ export default function WeeklyReviewScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
-  header: { paddingTop: 20, paddingHorizontal: 25, paddingBottom: 10 },
+  header: { paddingTop: 20, paddingHorizontal: 25, paddingBottom: 16 },
   backButton: { marginBottom: 10 },
   backText: { color: '#c9a84c', fontSize: 15 },
   title: { fontSize: 26, fontWeight: 'bold', color: '#c9a84c', marginBottom: 4 },
-  subtitle: { color: '#888', fontSize: 14, marginBottom: 5 },
+  subtitle: { color: '#888', fontSize: 14, marginBottom: 16 },
   scrollView: { flex: 1 },
-  content: { padding: 25, paddingTop: 10 },
-
-  sectionCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-  },
+  content: { padding: 25, paddingTop: 10, paddingBottom: 40 },
 
   generateButton: {
     backgroundColor: '#c9a84c',
     borderRadius: 12,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   generateButtonText: {
     color: '#1a1a2e',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
   },
-  generateNote: {
-    color: '#888',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
+
+  regenerateButtonTop: {
+    borderWidth: 1,
+    borderColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  regenerateButtonTopText: {
+    color: '#c9a84c',
+    fontSize: 15,
+    fontWeight: '600',
   },
 
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: 20,
+  buttonDisabled: {
+    opacity: 0.5,
   },
+
   loadingText: {
     color: '#c9a84c',
-    fontSize: 16,
+    fontSize: 14,
     fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 6,
   },
 
-  errorText: {
-    color: '#ff4444',
-    fontSize: 13,
-    marginTop: 12,
+  errorCard: {
+    backgroundColor: '#2a1a1a',
+    borderRadius: 14,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ff444433',
+  },
+  errorCardText: {
+    color: '#ff6666',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
     textAlign: 'center',
+  },
+  retryButton: {
+    borderWidth: 1,
+    borderColor: '#ff4444',
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    alignSelf: 'center',
+  },
+  retryButtonText: {
+    color: '#ff6666',
+    fontSize: 14,
+    fontWeight: '600',
   },
 
   reviewCard: {
     backgroundColor: '#16213e',
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
@@ -256,31 +302,68 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#c9a84c',
   },
-  reviewWeekLabel: {
-    color: '#888',
-    fontSize: 12,
-    marginBottom: 12,
+  weekOfLabel: {
+    color: '#c9a84c',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  reviewContent: {
+  reviewWeekEnding: {
     color: '#fff',
     fontSize: 15,
-    lineHeight: 24,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  reviewSubtitle: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 14,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#c9a84c44',
     marginBottom: 16,
   },
-  regenerateButton: {
-    alignSelf: 'flex-start',
-    borderWidth: 1,
-    borderColor: '#c9a84c',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+  reviewContent: {
+    color: '#e0e0e0',
+    fontSize: 15,
+    lineHeight: 26,
+    marginBottom: 16,
   },
-  regenerateButtonText: {
-    color: '#c9a84c',
-    fontSize: 13,
+  generatedAt: {
+    color: '#888',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+
+  emptyState: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    padding: 24,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c22',
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  emptyTitle: {
+    color: '#e0e0e0',
+    fontSize: 16,
     fontWeight: '600',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  emptySubtext: {
+    color: '#888',
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 20,
   },
 
   pastSection: {
@@ -291,19 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 12,
-  },
-  emptyState: {
-    backgroundColor: '#16213e',
-    borderRadius: 14,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-  },
-  emptyStateText: {
-    color: '#888',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
   },
   pastReviewCard: {
     backgroundColor: '#16213e',
@@ -331,7 +401,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   pastReviewContent: {
-    color: '#ccc',
+    color: '#e0e0e0',
     fontSize: 14,
     lineHeight: 22,
     padding: 16,
