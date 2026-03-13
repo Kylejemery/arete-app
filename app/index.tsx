@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
@@ -26,11 +26,13 @@ export default function HomeScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
 
-  useEffect(() => {
-    loadData();
-    setGreeting(getGreeting());
-    setQuote(getDailyQuote());
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      setGreeting(getGreeting());
+      setQuote(getDailyQuote());
+    }, [])
+  );
 
   const loadData = async () => {
     const name = await AsyncStorage.getItem('userName');
