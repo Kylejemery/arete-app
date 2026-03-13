@@ -33,6 +33,13 @@ const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   futureSelf: { name: 'Future Self', role: 'Years From Now' },
 };
 
+function mightSurfaceBelief(text: string): boolean {
+  const triggers = ['belief', 'assume', 'assumption', 'value', 'principle',
+    'half-formed', 'what do you believe', 'examine', 'conviction', 'what you actually believe'];
+  const lower = text.toLowerCase();
+  return triggers.some(t => lower.includes(t));
+}
+
 function timeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
   const minutes = Math.floor(diff / 60000);
@@ -54,6 +61,10 @@ export default function CabinetScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  // --- Belief Journal Integration ---
+  const [beliefSeedText, setBeliefSeedText] = useState<string | null>(null);
+  const [beliefSeedInput, setBeliefSeedInput] = useState('');
 
   // --- Counselors Tab State ---
   const [activeMembers, setActiveMembers] = useState<string[]>([]);
@@ -246,6 +257,18 @@ export default function CabinetScreen() {
                       <Text style={styles.cabinetLabel}>The Cabinet</Text>
                       <Text style={styles.cabinetText}>{msg.content}</Text>
                     </View>
+                    {mightSurfaceBelief(msg.content) && (
+                      <TouchableOpacity
+                        style={styles.sendToBeliefButton}
+                        onPress={() => {
+                          setBeliefSeedText(msg.content);
+                          setBeliefSeedInput(msg.content);
+                        }}
+                      >
+                        <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
+                        <Text style={styles.sendToBeliefText}>Explore in Belief Journal →</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 )
               )
@@ -326,6 +349,65 @@ export default function CabinetScreen() {
             );
           })}
         </ScrollView>
+      )}
+
+      {/* Belief Seed Modal */}
+      {beliefSeedText !== null && (
+        <View style={styles.beliefSeedModal}>
+          <View style={styles.beliefSeedCard}>
+            <Text style={styles.beliefSeedTitle}>Send to Belief Journal?</Text>
+            <Text style={styles.beliefSeedSubtitle}>
+              Edit the text below to capture just the belief or assumption you want to explore.
+            </Text>
+            <TextInput
+              style={styles.beliefSeedInput}
+              value={beliefSeedInput}
+              onChangeText={setBeliefSeedInput}
+              multiline
+              placeholder="Trim to the belief you want to examine..."
+              placeholderTextColor="#555"
+            />
+            <View style={styles.beliefSeedButtons}>
+              <TouchableOpacity
+                style={[styles.sendToBeliefButton, { marginTop: 0 }]}
+                onPress={() => {
+                  setBeliefSeedText(null);
+                  setBeliefSeedInput('');
+                }}
+              >
+                <Text style={styles.sendToBeliefText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sendToBeliefButton, { marginTop: 0, backgroundColor: '#c9a84c22', borderColor: '#c9a84c88' }]}
+                onPress={async () => {
+                  const rawThought = beliefSeedInput.trim();
+                  if (!rawThought) return;
+                  try {
+                    const existing = await AsyncStorage.getItem('beliefEntries');
+                    const entries: any[] = existing ? JSON.parse(existing) : [];
+                    const newEntry = {
+                      id: `belief_${Date.now()}`,
+                      rawThought,
+                      stage: 1,
+                      dialogue: [],
+                      topic: rawThought.slice(0, 60),
+                      createdAt: Date.now(),
+                      updatedAt: Date.now(),
+                    };
+                    entries.push(newEntry);
+                    await AsyncStorage.setItem('beliefEntries', JSON.stringify(entries));
+                  } catch { /* skip */ }
+                  setBeliefSeedText(null);
+                  setBeliefSeedInput('');
+                  router.push('/journal');
+                }}
+              >
+                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
+                <Text style={styles.sendToBeliefText}>Send to Belief Journal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -573,5 +655,38 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  sendToBeliefButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 8, alignSelf: 'flex-start',
+    paddingVertical: 5, paddingHorizontal: 10,
+    backgroundColor: '#c9a84c11', borderRadius: 8,
+    borderWidth: 1, borderColor: '#c9a84c33',
+  },
+  sendToBeliefText: {
+    color: '#c9a84c', fontSize: 12, fontWeight: '600',
+  },
+  beliefSeedModal: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#000000bb', justifyContent: 'center',
+    alignItems: 'center', padding: 24,
+  },
+  beliefSeedCard: {
+    backgroundColor: '#16213e', borderRadius: 16, padding: 20,
+    width: '100%', borderWidth: 1, borderColor: '#c9a84c44',
+  },
+  beliefSeedTitle: {
+    color: '#c9a84c', fontSize: 16, fontWeight: '700', marginBottom: 8,
+  },
+  beliefSeedSubtitle: {
+    color: '#888', fontSize: 13, marginBottom: 14, lineHeight: 20,
+  },
+  beliefSeedInput: {
+    backgroundColor: '#1a1a2e', borderRadius: 10, padding: 12,
+    color: '#fff', fontSize: 14, minHeight: 80, textAlignVertical: 'top',
+    borderWidth: 1, borderColor: '#c9a84c33', marginBottom: 16,
+  },
+  beliefSeedButtons: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 10,
   },
 });
