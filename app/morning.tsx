@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    ActivityIndicator,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -12,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
+import { sendCheckInToCabinet } from '../services/claudeService';
 
 const defaultTasks = [
   { id: '1', title: 'Eat Breakfast 🫙', done: false },
@@ -29,11 +32,14 @@ const affirmations = [
 ];
 
 export default function MorningScreen() {
+  const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/morning');
   const [tasks, setTasks] = useState(defaultTasks);
   const [newTask, setNewTask] = useState('');
   const [affirmation, setAffirmation] = useState('');
   const [showInput, setShowInput] = useState(false);
+  const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
+  const [checkinLoading, setCheckinLoading] = useState(false);
 
   useEffect(() => {
     loadTasks();
@@ -70,7 +76,19 @@ export default function MorningScreen() {
     await AsyncStorage.setItem('morningTasks', JSON.stringify(updatedTasks));
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await AsyncStorage.setItem('morningDone', allDone ? 'true' : 'false');
-    if (allDone) await updateStreak();
+    if (allDone) {
+      await updateStreak();
+      const today = new Date().toDateString();
+      const checkinDate = await AsyncStorage.getItem('morningCheckinDate');
+      if (checkinDate !== today) {
+        await AsyncStorage.setItem('morningCheckinDate', today);
+        setCheckinLoading(true);
+        setCheckinResponse(null);
+        const reply = await sendCheckInToCabinet('morning');
+        setCheckinLoading(false);
+        setCheckinResponse(reply);
+      }
+    }
   };
 
   const updateStreak = async () => {
@@ -205,6 +223,23 @@ export default function MorningScreen() {
             <Text style={styles.allDoneEmoji}>🏛️</Text>
             <Text style={styles.allDoneText}>Morning Complete</Text>
             <Text style={styles.allDoneSubtext}>The morning belongs to the disciplined.</Text>
+          </View>
+        )}
+
+        {/* Cabinet Check-in */}
+        {checkinLoading && (
+          <View style={styles.checkinLoadingContainer}>
+            <ActivityIndicator size="small" color="#c9a84c" />
+            <Text style={styles.checkinLoadingText}>The Cabinet is responding…</Text>
+          </View>
+        )}
+        {checkinResponse && !checkinLoading && (
+          <View style={styles.checkinCard}>
+            <Text style={styles.checkinLabel}>🏛️ The Cabinet</Text>
+            <Text style={styles.checkinResponse}>{checkinResponse}</Text>
+            <TouchableOpacity style={styles.checkinLink} onPress={() => router.push('/cabinet')}>
+              <Text style={styles.checkinLinkText}>View in Cabinet →</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -412,5 +447,46 @@ const styles = StyleSheet.create({
   allDoneSubtext: {
     color: '#fff',
     fontSize: 14,
+  },
+  checkinLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  checkinLoadingText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  checkinCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c55',
+  },
+  checkinLabel: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  checkinResponse: {
+    color: '#e0e0e0',
+    fontSize: 15,
+    lineHeight: 23,
+    marginBottom: 14,
+  },
+  checkinLink: {
+    alignSelf: 'flex-end',
+  },
+  checkinLinkText: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
