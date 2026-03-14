@@ -683,7 +683,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 1500,
+        max_tokens: 4000,
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
       }),
@@ -767,7 +767,7 @@ export async function sendCheckInToCabinet(
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 1500,
+        max_tokens: 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -941,7 +941,7 @@ export async function sendBeliefJournalMessage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-opus-4-5',
-      max_tokens: 1500,
+      max_tokens: 2000,
       system: systemPrompt,
       messages,
     }),
