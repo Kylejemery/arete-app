@@ -258,7 +258,7 @@ export default function ProgressScreen() {
               <View style={styles.statCard}>
                 <Ionicons name="reader-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{books.length}</Text>
-                <Text style={styles.statLabel}>Books{'\n'}Read</Text>
+                <Text style={styles.statLabel}>Books{'\n'}Finished</Text>
               </View>
             </View>
 
@@ -395,13 +395,15 @@ export default function ProgressScreen() {
 
         {activeTab === 'reading' && (
           <>
+            {/* Books Finished Hero */}
+            <View style={styles.booksHeroCard}>
+              <Text style={styles.booksHeroEmoji}>📚</Text>
+              <Text style={styles.booksHeroNumber}>{books.length}</Text>
+              <Text style={styles.booksHeroLabel}>Books Finished</Text>
+            </View>
+
             {/* Reading Stats */}
             <View style={styles.statsRow}>
-              <View style={styles.statCard}>
-                <Ionicons name="book-outline" size={22} color="#c9a84c" />
-                <Text style={styles.statNumber}>{books.length}</Text>
-                <Text style={styles.statLabel}>Books{'\n'}Finished</Text>
-              </View>
               <View style={styles.statCard}>
                 <Ionicons name="document-text-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{totalPages}</Text>
@@ -545,6 +547,18 @@ const styles = StyleSheet.create({
   streakIcon: { fontSize: 40, marginBottom: 5 },
   streakNumber: { fontSize: 64, fontWeight: 'bold', color: '#c9a84c', lineHeight: 70 },
   streakLabel: { color: '#fff', fontSize: 18, marginTop: 5 },
+  booksHeroCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  booksHeroEmoji: { fontSize: 36, marginBottom: 4 },
+  booksHeroNumber: { fontSize: 48, fontWeight: 'bold', color: '#c9a84c' },
+  booksHeroLabel: { color: '#888', fontSize: 14, marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   statCard: {
     flex: 1, backgroundColor: '#16213e', borderRadius: 12, padding: 14,
