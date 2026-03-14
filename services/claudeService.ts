@@ -249,6 +249,7 @@ export async function gatherAppContext(): Promise<string> {
     streakRaw,
     beliefEntriesRaw,
     readingStreakRaw,
+    unifiedEntriesRaw,
   ] = await Promise.all([
     AsyncStorage.getItem('morningTasks'),
     AsyncStorage.getItem('eveningTasks'),
@@ -263,6 +264,7 @@ export async function gatherAppContext(): Promise<string> {
     AsyncStorage.getItem('streak'),
     AsyncStorage.getItem('beliefEntries'),
     AsyncStorage.getItem('readingStreak'),
+    AsyncStorage.getItem('unifiedJournalEntries'),
   ]);
 
   const userName = await getUserName();
@@ -302,46 +304,87 @@ export async function gatherAppContext(): Promise<string> {
   lines.push(`Q: Stoic Journal`);
   lines.push(`A: ${stoicAnswerRaw || '(not yet answered)'}`);
 
-  // Recent journal entries
+  // Recent journal entries — prefer unifiedJournalEntries, fall back to journalEntries
   try {
-    const journalEntries: { text: string; date: string; time: string }[] = journalEntriesRaw ? JSON.parse(journalEntriesRaw) : [];
-    const recentJournal = journalEntries.slice(-3);
-    lines.push('');
-    lines.push('RECENT JOURNAL ENTRIES (last 3):');
-    if (recentJournal.length === 0) {
-      lines.push('(none yet)');
-    } else {
-      recentJournal.forEach((e) => {
-        const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
-        lines.push(`${e.date} — ${snippet}`);
+    const unifiedEntries: { type: string; content: string; createdAt: number }[] =
+      unifiedEntriesRaw ? JSON.parse(unifiedEntriesRaw) : [];
+    const unifiedReflections = unifiedEntries
+      .filter(e => e.type === 'reflection')
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 3);
+
+    if (unifiedReflections.length > 0) {
+      lines.push('');
+      lines.push('RECENT JOURNAL ENTRIES (last 3):');
+      unifiedReflections.forEach((e) => {
+        const snippet = e.content.length > 300 ? e.content.slice(0, 300) + '…' : e.content;
+        lines.push(`${new Date(e.createdAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — ${snippet}`);
       });
+    } else {
+      // Fallback to old key
+      const journalEntries: { text: string; date: string; time: string }[] = journalEntriesRaw ? JSON.parse(journalEntriesRaw) : [];
+      const recentJournal = journalEntries.slice(-3);
+      lines.push('');
+      lines.push('RECENT JOURNAL ENTRIES (last 3):');
+      if (recentJournal.length === 0) {
+        lines.push('(none yet)');
+      } else {
+        recentJournal.forEach((e) => {
+          const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
+          lines.push(`${e.date} — ${snippet}`);
+        });
+      }
     }
   } catch { /* skip */ }
 
-  // Encoded beliefs — referenced during check-ins
+  // Encoded beliefs — prefer unifiedJournalEntries, fall back to beliefEntries
   try {
-    const beliefEntriesRaw = await AsyncStorage.getItem('beliefEntries');
-    const beliefEntries: BeliefEntry[] = beliefEntriesRaw ? JSON.parse(beliefEntriesRaw) : [];
-    const encodedBeliefs = beliefEntries.filter(b => b.stage === 'encoded');
-    lines.push('');
-    lines.push(`ENCODED BELIEFS (${encodedBeliefs.length}):`);
-    if (encodedBeliefs.length === 0) {
-      lines.push('(none yet)');
+    const unifiedEntries: { type: string; beliefStage?: string | number; encodedBelief?: string; topic?: string; virtueCheck?: { passed: boolean; concern: string | null } }[] =
+      unifiedEntriesRaw ? JSON.parse(unifiedEntriesRaw) : [];
+    const unifiedEncoded = unifiedEntries.filter(e => e.type === 'belief' && e.beliefStage === 'encoded');
+
+    if (unifiedEncoded.length > 0) {
+      lines.push('');
+      lines.push(`ENCODED BELIEFS (${unifiedEncoded.length}):`);
+      unifiedEncoded.forEach(b => lines.push(`[${b.topic || 'Belief'}] ${b.encodedBelief}`));
     } else {
-      encodedBeliefs.forEach(b => lines.push(`[${b.topic}] ${b.encodedBelief}`));
+      // Fallback to already-fetched beliefEntriesRaw
+      const beliefEntries: BeliefEntry[] = beliefEntriesRaw ? JSON.parse(beliefEntriesRaw) : [];
+      const encodedBeliefs = beliefEntries.filter(b => b.stage === 'encoded');
+      lines.push('');
+      lines.push(`ENCODED BELIEFS (${encodedBeliefs.length}):`);
+      if (encodedBeliefs.length === 0) {
+        lines.push('(none yet)');
+      } else {
+        encodedBeliefs.forEach(b => lines.push(`[${b.topic}] ${b.encodedBelief}`));
+      }
     }
   } catch { /* skip */ }
 
-  // Commonplace quotes
+  // Commonplace quotes — prefer unifiedJournalEntries, fall back to commonplaceQuotes
   try {
-    const quotes: { quote: string; book: string; author: string }[] = commonplaceQuotesRaw ? JSON.parse(commonplaceQuotesRaw) : [];
-    const recentQuotes = quotes.slice(-5);
-    lines.push('');
-    lines.push('COMMONPLACE BOOK (last 5 quotes):');
-    if (recentQuotes.length === 0) {
-      lines.push('(none yet)');
+    const unifiedEntries: { type: string; content: string; bookTitle?: string; author?: string; createdAt: number }[] =
+      unifiedEntriesRaw ? JSON.parse(unifiedEntriesRaw) : [];
+    const unifiedQuotes = unifiedEntries
+      .filter(e => e.type === 'quote')
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 5);
+
+    if (unifiedQuotes.length > 0) {
+      lines.push('');
+      lines.push('COMMONPLACE BOOK (last 5 quotes):');
+      unifiedQuotes.forEach((q) => lines.push(`"${q.content}" — ${q.bookTitle || 'Unknown'} by ${q.author || 'Unknown'}`));
     } else {
-      recentQuotes.forEach((q) => lines.push(`"${q.quote}" — ${q.book} by ${q.author}`));
+      // Fallback to old key
+      const quotes: { quote: string; book: string; author: string }[] = commonplaceQuotesRaw ? JSON.parse(commonplaceQuotesRaw) : [];
+      const recentQuotes = quotes.slice(-5);
+      lines.push('');
+      lines.push('COMMONPLACE BOOK (last 5 quotes):');
+      if (recentQuotes.length === 0) {
+        lines.push('(none yet)');
+      } else {
+        recentQuotes.forEach((q) => lines.push(`"${q.quote}" — ${q.book} by ${q.author}`));
+      }
     }
   } catch { /* skip */ }
 
@@ -392,12 +435,20 @@ export async function gatherAppContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // Overall stats
+  // Overall stats — prefer unified counts, fall back to old keys
   try {
     const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
     const readingStreak = readingStreakRaw ? parseInt(readingStreakRaw, 10) : 0;
-    const journalCount = journalEntriesRaw ? (JSON.parse(journalEntriesRaw) as unknown[]).length : 0;
-    const quoteCount = commonplaceQuotesRaw ? (JSON.parse(commonplaceQuotesRaw) as unknown[]).length : 0;
+    let journalCount = 0;
+    let quoteCount = 0;
+    if (unifiedEntriesRaw) {
+      const unified: { type: string }[] = JSON.parse(unifiedEntriesRaw);
+      journalCount = unified.length;
+      quoteCount = unified.filter(e => e.type === 'quote').length;
+    } else {
+      journalCount = journalEntriesRaw ? (JSON.parse(journalEntriesRaw) as unknown[]).length : 0;
+      quoteCount = commonplaceQuotesRaw ? (JSON.parse(commonplaceQuotesRaw) as unknown[]).length : 0;
+    }
     lines.push('');
     lines.push('OVERALL STATS:');
     lines.push(`- Streak: ${isNaN(streak) ? 0 : streak} days`);
@@ -406,22 +457,28 @@ export async function gatherAppContext(): Promise<string> {
     lines.push(`- Total quotes saved: ${quoteCount}`);
   } catch { /* skip */ }
 
-  // Encoded beliefs
+  // Encoded beliefs for Cabinet reference — prefer unified, fall back to old key
   try {
-    if (beliefEntriesRaw) {
+    let encodedForCabinet: { encodedBelief?: string; virtueCheck?: { passed: boolean; concern: string | null } | null }[] = [];
+    if (unifiedEntriesRaw) {
+      const unified: { type: string; beliefStage?: string | number; encodedBelief?: string; virtueCheck?: { passed: boolean; concern: string | null } | null }[] =
+        JSON.parse(unifiedEntriesRaw);
+      encodedForCabinet = unified.filter(e => e.type === 'belief' && e.beliefStage === 'encoded' && e.encodedBelief);
+    } else if (beliefEntriesRaw) {
       const allBeliefs: any[] = JSON.parse(beliefEntriesRaw);
-      const encoded = allBeliefs.filter((b: any) => b.stage === 'encoded' && b.encodedBelief);
-      if (encoded.length > 0) {
-        lines.push('');
-        lines.push('ENCODED BELIEFS (articulated and refined through the Belief Journal):');
-        lines.push('These are beliefs the user has explicitly examined, refined, and committed to. Reference them during check-ins. If their behavior or stated intentions contradict a belief, name it directly.');
-        encoded.forEach((b: any) => {
-          lines.push(`- ${b.encodedBelief}`);
-          if (b.virtueCheck && !b.virtueCheck.passed && b.virtueCheck.concern) {
-            lines.push(`  [Virtue concern noted: ${b.virtueCheck.concern}]`);
-          }
-        });
-      }
+      encodedForCabinet = allBeliefs.filter((b: any) => b.stage === 'encoded' && b.encodedBelief)
+        .map((b: any) => ({ encodedBelief: b.encodedBelief, virtueCheck: b.virtueCheck }));
+    }
+    if (encodedForCabinet.length > 0) {
+      lines.push('');
+      lines.push('ENCODED BELIEFS (articulated and refined through the Belief Journal):');
+      lines.push('These are beliefs the user has explicitly examined, refined, and committed to. Reference them during check-ins. If their behavior or stated intentions contradict a belief, name it directly.');
+      encodedForCabinet.forEach((b) => {
+        lines.push(`- ${b.encodedBelief}`);
+        if (b.virtueCheck && !b.virtueCheck.passed && b.virtueCheck.concern) {
+          lines.push(`  [Virtue concern noted: ${b.virtueCheck.concern}]`);
+        }
+      });
     }
   } catch { /* skip */ }
 
