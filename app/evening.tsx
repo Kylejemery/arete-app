@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -60,15 +60,17 @@ export default function EveningScreen() {
   const reflectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    loadTasks();
-    loadPrompts();
-    loadAnswers();
-    return () => {
-      if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
-      if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
-    };
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadTasks();
+      loadPrompts();
+      loadAnswers();
+      return () => {
+        if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
+        if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
+      };
+    }, [])
+  );
 
   const loadPrompts = () => {
     const day = new Date().getDay();
@@ -85,6 +87,8 @@ export default function EveningScreen() {
       if (reflection) setReflectionAnswer(reflection);
       if (stoic) setStoicAnswer(stoic);
     }
+    const savedCheckin = await AsyncStorage.getItem(`eveningCheckinResponse_${today}`);
+    if (savedCheckin) setCheckinResponse(savedCheckin);
   };
 
   const saveReflection = async (text: string) => {
@@ -102,6 +106,9 @@ export default function EveningScreen() {
       const reply = await sendCheckInToCabinet('evening');
       setCheckinLoading(false);
       setCheckinResponse(reply);
+      if (reply) {
+        await AsyncStorage.setItem(`eveningCheckinResponse_${today}`, reply);
+      }
     }
   };
 
