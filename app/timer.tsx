@@ -153,6 +153,9 @@ export default function TimerScreen() {
     // Update pages log in progress screen
     await updatePagesLog(pagesRead);
 
+    // Update reading streak
+    await updateReadingStreak();
+
     // Update current book's current page
     const updatedBooks = currentBooks.map(b =>
       b.id === selectedBook.id ? { ...b, currentPage: endPageNum } : b
@@ -172,6 +175,25 @@ export default function TimerScreen() {
     } else {
       Alert.alert('Session Saved! 📖', `${pagesRead} pages • ${formatTimeReadable(duration)}`);
     }
+  };
+
+  const updateReadingStreak = async () => {
+    const lastReadingDate = await AsyncStorage.getItem('lastReadingStreakDate');
+    const today = new Date().toDateString();
+    if (lastReadingDate === today) return; // already counted today
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toDateString();
+
+    const saved = await AsyncStorage.getItem('readingStreak');
+    const current = saved ? parseInt(saved, 10) : 0;
+
+    // Continue streak if last session was yesterday, otherwise reset to 1
+    const newStreak = lastReadingDate === yesterdayStr ? current + 1 : 1;
+
+    await AsyncStorage.setItem('readingStreak', newStreak.toString());
+    await AsyncStorage.setItem('lastReadingStreakDate', today);
   };
 
   const updatePagesLog = async (pagesRead: number) => {
