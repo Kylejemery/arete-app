@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -62,6 +62,14 @@ export default function CabinetScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  // --- Search state ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // --- Know Thyself nudge state ---
+  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  const [dismissedKtNudge, setDismissedKtNudge] = useState(false);
+
   // --- Belief Journal Integration ---
   const [beliefSeedText, setBeliefSeedText] = useState<string | null>(null);
   const [beliefSeedInput, setBeliefSeedInput] = useState('');
@@ -71,6 +79,10 @@ export default function CabinetScreen() {
   const [threadSummaries, setThreadSummaries] = useState<
     { id: string; messageCount: number; lastUpdated: number }[]
   >([]);
+
+  // --- beliefContext deep-link param ---
+  const params = useLocalSearchParams<{ beliefContext?: string }>();
+  const consumedBeliefContextRef = useRef(false);
 
   // On mount: migrate old cabinetMessages → thread_cabinet, then load thread
   useEffect(() => {
@@ -120,6 +132,27 @@ export default function CabinetScreen() {
       setThreadSummaries(summaries);
     })();
   }, [activeTab]);
+
+  // Load Know Thyself completion status on focus
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const ktGoals = await AsyncStorage.getItem('kt_goals');
+        setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
+      })();
+    }, [])
+  );
+
+  // Consume beliefContext deep-link param
+  useEffect(() => {
+    const bc = params.beliefContext;
+    if (bc && !consumedBeliefContextRef.current) {
+      consumedBeliefContextRef.current = true;
+      setActiveTab('cabinet');
+      setInputText(String(bc));
+      router.setParams({ beliefContext: undefined });
+    }
+  }, [params.beliefContext, router]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -181,17 +214,32 @@ export default function CabinetScreen() {
           <Text style={styles.subtitle}>Your Council of Invisible Counselors</Text>
         </View>
         {activeTab === 'cabinet' && (
-          <TouchableOpacity
-            style={styles.newSessionButton}
-            onPress={handleNewSession}
-            disabled={messages.length === 0}
-          >
-            <Ionicons
-              name="refresh-outline"
-              size={20}
-              color={messages.length === 0 ? '#555' : '#c9a84c'}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.newSessionButton}
+              onPress={() => {
+                setShowSearch(prev => !prev);
+                if (showSearch) setSearchQuery('');
+              }}
+            >
+              <Ionicons
+                name={showSearch ? 'close-outline' : 'search-outline'}
+                size={20}
+                color="#c9a84c"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.newSessionButton}
+              onPress={handleNewSession}
+              disabled={messages.length === 0}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={20}
+                color={messages.length === 0 ? '#555' : '#c9a84c'}
+              />
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -214,6 +262,26 @@ export default function CabinetScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Search Bar */}
+      {activeTab === 'cabinet' && showSearch && (
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={16} color="#888" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search messages..."
+            placeholderTextColor="#555"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#888" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       {activeTab === 'cabinet' ? (
         <KeyboardAvoidingView
@@ -242,36 +310,80 @@ export default function CabinetScreen() {
                   <Text style={styles.counselorName}>Theodore Roosevelt</Text>
                   <Text style={styles.counselorName}>Future Kyle (Age 50)</Text>
                 </View>
+                {knowThyselfIncomplete && (
+                  <TouchableOpacity
+                    style={styles.ktEmptyBanner}
+                    onPress={() => router.push('/know-thyself' as any)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ktEmptyBannerText}>
+                      {"📖 Your counselors don't know you yet — complete your Know Thyself profile for more personal responses."}
+                    </Text>
+                    <Text style={styles.ktEmptyBannerLink}>Complete Now →</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ) : (
-              messages.map((msg, index) =>
-                msg.role === 'user' ? (
-                  <View key={index} style={styles.userMessageRow}>
-                    <View style={styles.userBubble}>
-                      <Text style={styles.userText}>{msg.content}</Text>
-                    </View>
+              <>
+                {knowThyselfIncomplete && !dismissedKtNudge && (
+                  <View style={styles.ktNudgeBanner}>
+                    <TouchableOpacity
+                      style={styles.ktNudgeContent}
+                      onPress={() => router.push('/know-thyself' as any)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.ktNudgeText}>
+                        {'💡 Tip: Complete your Know Thyself profile so the Cabinet can give you more personal responses. →'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setDismissedKtNudge(true)} style={styles.ktNudgeDismiss}>
+                      <Ionicons name="close" size={16} color="#888" />
+                    </TouchableOpacity>
                   </View>
-                ) : (
-                  <View key={index} style={styles.cabinetMessageRow}>
-                    <View style={styles.cabinetBubble}>
-                      <Text style={styles.cabinetLabel}>The Cabinet</Text>
-                      <Text style={styles.cabinetText}>{msg.content}</Text>
-                    </View>
-                    {mightSurfaceBelief(msg.content) && (
-                      <TouchableOpacity
-                        style={styles.sendToBeliefButton}
-                        onPress={() => {
-                          setBeliefSeedText(msg.content);
-                          setBeliefSeedInput(msg.content);
-                        }}
-                      >
-                        <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
-                        <Text style={styles.sendToBeliefText}>Explore in Belief Journal →</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )
-              )
+                )}
+                {(() => {
+                  const filteredMessages = searchQuery.length > 0
+                    ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+                    : messages;
+                  return (
+                    <>
+                      {searchQuery.length > 0 && (
+                        <Text style={styles.searchResultCount}>
+                          {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} for &lsquo;{searchQuery}&rsquo;
+                        </Text>
+                      )}
+                      {filteredMessages.map((msg, index) =>
+                        msg.role === 'user' ? (
+                          <View key={index} style={styles.userMessageRow}>
+                            <View style={styles.userBubble}>
+                              <Text style={styles.userText}>{msg.content}</Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View key={index} style={styles.cabinetMessageRow}>
+                            <View style={styles.cabinetBubble}>
+                              <Text style={styles.cabinetLabel}>The Cabinet</Text>
+                              <Text style={styles.cabinetText}>{msg.content}</Text>
+                            </View>
+                            {mightSurfaceBelief(msg.content) && (
+                              <TouchableOpacity
+                                style={styles.sendToBeliefButton}
+                                onPress={() => {
+                                  setBeliefSeedText(msg.content);
+                                  setBeliefSeedInput(msg.content);
+                                }}
+                              >
+                                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
+                                <Text style={styles.sendToBeliefText}>Explore in Belief Journal →</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )
+                      )}
+                    </>
+                  );
+                })()}
+              </>
             )}
 
             {isLoading && (
@@ -688,5 +800,76 @@ const styles = StyleSheet.create({
   },
   beliefSeedButtons: {
     flexDirection: 'row', justifyContent: 'flex-end', gap: 10,
+  },
+  // Header buttons row
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  // Search bar
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  searchResultCount: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  // Know Thyself banners
+  ktEmptyBanner: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    width: '100%',
+  },
+  ktEmptyBannerText: {
+    color: '#ccc',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  ktEmptyBannerLink: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ktNudgeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  ktNudgeContent: {
+    flex: 1,
+    padding: 12,
+  },
+  ktNudgeText: {
+    color: '#aaa',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  ktNudgeDismiss: {
+    padding: 12,
   },
 });

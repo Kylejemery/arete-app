@@ -108,7 +108,7 @@ export default function HomeScreen() {
             <Text style={styles.ktBannerTitle}>Complete Your Profile</Text>
           </View>
           <Text style={styles.ktBannerSubtitle}>
-            Your Cabinet needs to know you. Fill out Know Thyself to unlock the full power of your counselors.
+            {"The Cabinet's responses are generic until you tell them who you are. It takes 2 minutes."}
           </Text>
           <TouchableOpacity onPress={() => router.push('/know-thyself' as any)}>
             <Text style={styles.ktBannerLink}>Complete Now →</Text>
@@ -154,6 +154,10 @@ export default function HomeScreen() {
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/progress')}>
           <Ionicons name="podium-outline" size={24} color="#c9a84c" />
           <Text style={styles.actionText}>Progress</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/know-thyself' as any)}>
+          <Ionicons name="person-outline" size={24} color="#c9a84c" />
+          <Text style={styles.actionText}>Know Thyself</Text>
         </TouchableOpacity>
       </View>
 

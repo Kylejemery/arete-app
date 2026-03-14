@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    Platform,
     ScrollView,
     StyleSheet,
     Switch,
@@ -123,6 +124,14 @@ export default function SettingsScreen() {
   useEffect(() => {
     loadSettings();
     requestPermissions();
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#c9a84c',
+      });
+    }
   }, []);
 
   const requestPermissions = async () => {
@@ -187,15 +196,35 @@ export default function SettingsScreen() {
         futureKyleMinute,
       };
       await AsyncStorage.setItem('notificationSettings', JSON.stringify(settings));
-      await scheduleNotifications(settings);
-      Alert.alert('✅ Saved!', 'Your notification settings have been updated.');
+      const scheduled = await scheduleNotifications(settings);
+      if (scheduled) {
+        const enabledCount = [
+          morningEnabled,
+          eveningEnabled,
+          taskReminderEnabled,
+          workoutReminderEnabled,
+          readingReminderEnabled,
+          futureKyleEnabled,
+        ].filter(Boolean).length;
+        const scheduledCount = enabledCount * 7;
+        Alert.alert('✅ Saved!', `Your notification settings have been updated. ${scheduledCount} reminder${scheduledCount !== 1 ? 's' : ''} scheduled.`);
+      }
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Could not save settings.');
     }
   };
 
-  const scheduleNotifications = async (settings: any) => {
+  const scheduleNotifications = async (settings: any): Promise<boolean> => {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(
+        'Notifications Disabled',
+        'Please enable notifications in your phone settings to schedule reminders.',
+      );
+      return false;
+    }
+
     await Notifications.cancelAllScheduledNotificationsAsync();
 
     // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
@@ -283,6 +312,8 @@ export default function SettingsScreen() {
         parseInt(settings.futureKyleMinute),
       );
     }
+
+    return true;
   };
 
   const formatDisplayTime = (hour: string, minute: string) => {
