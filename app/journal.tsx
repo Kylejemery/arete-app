@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
     ActivityIndicator,
     Alert,
@@ -27,7 +28,10 @@ const journalPrompts = [
   "What would your future self want you to know today?",
 ];
 
+const MAX_BELIEF_CONTEXT_LENGTH = 200;
+
 export default function JournalScreen() {
+  const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/journal');
   const [activeTab, setActiveTab] = useState<'journal' | 'commonplace' | 'beliefs'>('journal');
   const [journalEntries, setJournalEntries] = useState<any[]>([]);
@@ -529,6 +533,17 @@ export default function JournalScreen() {
                   <Text style={styles.beliefBackText}>Back</Text>
                 </TouchableOpacity>
                 <Text style={styles.beliefDialogueTitle} numberOfLines={1}>{activeBeliefEntry.topic}</Text>
+                <TouchableOpacity
+                  style={styles.beliefBackButton}
+                  onPress={() => router.push({
+                    pathname: '/cabinet',
+                    params: {
+                      beliefContext: `[From Belief Journal] ${activeBeliefEntry.topic}: ${activeBeliefEntry.rawThought.slice(0, MAX_BELIEF_CONTEXT_LENGTH)}`,
+                    },
+                  } as any)}
+                >
+                  <Text style={styles.beliefBackText}>Ask Cabinet →</Text>
+                </TouchableOpacity>
               </View>
 
               <ScrollView
