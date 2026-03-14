@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
 import {
     Alert,
     KeyboardAvoidingView,
@@ -49,9 +49,11 @@ export default function ProgressScreen() {
   const [screenTimeLog, setScreenTimeLog] = useState<any[]>([]);
   const [todayScreenTime, setTodayScreenTime] = useState('');
 
-  useEffect(() => {
-    loadAllData();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadAllData();
+    }, [])
+  );
 
   const loadAllData = async () => {
     try {
