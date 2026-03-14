@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
-    ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -13,1172 +13,809 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
-import { BeliefEntry, BeliefDialogueTurn, sendBeliefJournalMessage } from '../services/claudeService';
 
-const journalPrompts = [
-  "What is on your mind today?",
-  "What are you grateful for right now?",
-  "What is one thing you want to accomplish today?",
-  "What has been challenging you lately?",
-  "What are you looking forward to?",
-  "What lesson did life teach you recently?",
-  "What would your future self want you to know today?",
-];
+const STORAGE_KEY = 'unifiedJournalEntries';
 
-const MAX_BELIEF_CONTEXT_LENGTH = 200;
+export interface UnifiedEntry {
+    id: string;
+    type: 'reflection' | 'quote' | 'belief' | 'idea';
+    content: string;
+    createdAt: number;
+    updatedAt: number;
+    bookTitle?: string;
+    author?: string;
+    rawInput?: string;
+    dialogueHistory?: { role: 'user' | 'cabinet'; content: string; timestamp: number }[];
+    encodedBelief?: string;
+    virtueConcern?: string | null;
+    hasVirtueConcern?: boolean;
+    beliefStage?: 1 | 2 | 3 | 'encoded';
+    refinedStatement?: string;
+    virtueCheck?: { passed: boolean; concern: string | null; virtue: string | null } | null;
+    topic?: string;
+}
+
+type FilterType = 'all' | 'reflection' | 'quote' | 'belief' | 'idea';
+
+const TYPE_LABELS: Record<string, string> = {
+    reflection: '📝 Reflection',
+    quote: '📖 Quote',
+    belief: '💡 Belief',
+    idea: '🧠 Idea',
+};
 
 export default function JournalScreen() {
-  const router = useRouter();
-  const swipeHandlers = useSwipeNavigation('/journal');
-  const [activeTab, setActiveTab] = useState<'journal' | 'commonplace' | 'beliefs'>('journal');
-  const [journalEntries, setJournalEntries] = useState<any[]>([]);
-  const [newEntry, setNewEntry] = useState('');
-  const [prompt, setPrompt] = useState('');
-  const [showJournalInput, setShowJournalInput] = useState(false);
-  const [quotes, setQuotes] = useState<any[]>([]);
-  const [newQuote, setNewQuote] = useState('');
-  const [newBook, setNewBook] = useState('');
-  const [newAuthor, setNewAuthor] = useState('');
-  const [showQuoteInput, setShowQuoteInput] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+    const router = useRouter();
+    const swipeHandlers = useSwipeNavigation('/journal');
 
-  // Beliefs tab state
-  const [beliefEntries, setBeliefEntries] = useState<BeliefEntry[]>([]);
-  const [activeBeliefEntry, setActiveBeliefEntry] = useState<BeliefEntry | null>(null);
-  const [beliefSubTab, setBeliefSubTab] = useState<'workshop' | 'canon'>('workshop');
-  const [rawThoughtInput, setRawThoughtInput] = useState('');
-  const [showRawThoughtInput, setShowRawThoughtInput] = useState(false);
-  const [dialogueInput, setDialogueInput] = useState('');
-  const [beliefLoading, setBeliefLoading] = useState(false);
-  const [beliefError, setBeliefError] = useState<string | null>(null);
-  const [showAdjustInput, setShowAdjustInput] = useState(false);
-  const [expandedBeliefIds, setExpandedBeliefIds] = useState<Set<string>>(new Set());
-  const dialogueScrollRef = useRef<ScrollView>(null);
+    const [entries, setEntries] = useState<UnifiedEntry[]>([]);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState<FilterType>('all');
 
-  useEffect(() => {
-    loadJournalEntries();
-    loadQuotes();
-    loadBeliefEntries();
-    setPrompt(getDailyPrompt());
-  }, []);
+    const [showTypeSelector, setShowTypeSelector] = useState(false);
 
-  const getDailyPrompt = () => {
-    const day = new Date().getDay();
-    return journalPrompts[day];
-  };
+    const [showInputForm, setShowInputForm] = useState(false);
+    const [inputType, setInputType] = useState<'reflection' | 'quote' | 'idea' | null>(null);
+    const [editingEntry, setEditingEntry] = useState<UnifiedEntry | null>(null);
+    const [textInput, setTextInput] = useState('');
+    const [quoteText, setQuoteText] = useState('');
+    const [quoteBook, setQuoteBook] = useState('');
+    const [quoteAuthor, setQuoteAuthor] = useState('');
 
-  const loadJournalEntries = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('journalEntries');
-      if (saved) setJournalEntries(JSON.parse(saved));
-    } catch (e) { console.error(e); }
-  };
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const [longPressEntry, setLongPressEntry] = useState<UnifiedEntry | null>(null);
+    const [viewingBeliefEntry, setViewingBeliefEntry] = useState<UnifiedEntry | null>(null);
+    const [showCanon, setShowCanon] = useState(false);
+    const [canonExpandedIds, setCanonExpandedIds] = useState<Set<string>>(new Set());
 
-  const loadQuotes = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('commonplaceQuotes');
-      if (saved) setQuotes(JSON.parse(saved));
-    } catch (e) { console.error(e); }
-  };
+    useFocusEffect(
+        useCallback(() => {
+            loadEntries();
+        }, [])
+    );
 
-  const addJournalEntry = async () => {
-    if (newEntry.trim()) {
-      const entry = {
-        id: Date.now().toString(),
-        text: newEntry.trim(),
-        date: new Date().toLocaleDateString('en-US', {
-          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-        }),
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        timestamp: Date.now(),
-      };
-      const updated = [entry, ...journalEntries];
-      setJournalEntries(updated);
-      await AsyncStorage.setItem('journalEntries', JSON.stringify(updated));
-      setNewEntry('');
-      setShowJournalInput(false);
-    }
-  };
-
-  const deleteJournalEntry = (id: string) => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          const updated = journalEntries.filter(e => e.id !== id);
-          setJournalEntries(updated);
-          await AsyncStorage.setItem('journalEntries', JSON.stringify(updated));
-        }
-      }
-    ]);
-  };
-
-  const addQuote = async () => {
-    if (newQuote.trim() && newBook.trim()) {
-      const quote = {
-        id: Date.now().toString(),
-        quote: newQuote.trim(),
-        book: newBook.trim(),
-        author: newAuthor.trim(),
-        date: new Date().toLocaleDateString('en-US', {
-          year: 'numeric', month: 'long', day: 'numeric'
-        }),
-        timestamp: Date.now(),
-      };
-      const updated = [quote, ...quotes];
-      setQuotes(updated);
-      await AsyncStorage.setItem('commonplaceQuotes', JSON.stringify(updated));
-      setNewQuote(''); setNewBook(''); setNewAuthor('');
-      setShowQuoteInput(false);
-    } else {
-      Alert.alert('Required', 'Please enter a quote and book title.');
-    }
-  };
-
-  const deleteQuote = (id: string) => {
-    Alert.alert('Delete Quote', 'Are you sure you want to delete this quote?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          const updated = quotes.filter(q => q.id !== id);
-          setQuotes(updated);
-          await AsyncStorage.setItem('commonplaceQuotes', JSON.stringify(updated));
-        }
-      }
-    ]);
-  };
-
-  const filteredQuotes = quotes.filter(q =>
-    q.quote.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.book.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    q.author.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  // ── Belief journal helpers ──────────────────────────────────────────────────
-
-  const loadBeliefEntries = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('beliefEntries');
-      if (saved) setBeliefEntries(JSON.parse(saved));
-    } catch (e) { console.error(e); }
-  };
-
-  const saveBeliefEntries = async (entries: BeliefEntry[]) => {
-    setBeliefEntries(entries);
-    await AsyncStorage.setItem('beliefEntries', JSON.stringify(entries));
-  };
-
-  const updateBeliefEntry = async (updated: BeliefEntry) => {
-    // Read fresh from storage to avoid stale-closure bug
-    const raw = await AsyncStorage.getItem('beliefEntries');
-    const current: BeliefEntry[] = raw ? JSON.parse(raw) : [];
-    const entries = current.map((e: BeliefEntry) => e.id === updated.id ? updated : e);
-    await saveBeliefEntries(entries);
-    if (activeBeliefEntry?.id === updated.id) setActiveBeliefEntry(updated);
-  };
-
-  const submitRawThought = async () => {
-    if (!rawThoughtInput.trim()) return;
-    const now = Date.now();
-    const topic = rawThoughtInput.trim().substring(0, 60);
-    const entry: BeliefEntry = {
-      id: now.toString(),
-      rawThought: rawThoughtInput.trim(),
-      stage: 1,
-      dialogue: [],
-      refinedStatement: '',
-      encodedBelief: '',
-      virtueCheck: null,
-      createdAt: now,
-      updatedAt: now,
-      topic,
+    const loadEntries = async () => {
+        try {
+            const saved = await AsyncStorage.getItem(STORAGE_KEY);
+            if (saved) setEntries(JSON.parse(saved));
+        } catch (e) { console.error(e); }
     };
-    const updated = [entry, ...beliefEntries];
-    await saveBeliefEntries(updated);
-    setRawThoughtInput('');
-    setShowRawThoughtInput(false);
-    setActiveBeliefEntry(entry);
-    setBeliefError(null);
-    // Immediately call the cabinet to begin Stage 2 (questions)
-    await callCabinetForBelief(entry, 1);
-  };
 
-  const callCabinetForBelief = async (entry: BeliefEntry, stage: 1 | 2 | 3, extraUserTurn?: string) => {
-    setBeliefLoading(true);
-    setBeliefError(null);
-    try {
-      // If there's an extra user turn (typed response), add it to entry before calling
-      let entryToSend = entry;
-      if (extraUserTurn) {
-        const userTurn: BeliefDialogueTurn = {
-          role: 'user',
-          content: extraUserTurn,
-          timestamp: Date.now(),
-        };
-        entryToSend = {
-          ...entry,
-          dialogue: [...entry.dialogue, userTurn],
-          updatedAt: Date.now(),
-        };
-        await updateBeliefEntry(entryToSend);
-      }
-
-      const result = await sendBeliefJournalMessage(entryToSend, stage);
-
-      const cabinetTurn: BeliefDialogueTurn = {
-        role: 'cabinet',
-        content: result.response,
-        timestamp: Date.now(),
-      };
-
-      const newStage: BeliefEntry['stage'] =
-        stage === 2 ? 2 :
-        stage === 3 ? 3 :
-        entryToSend.stage;
-
-      const finalEntry: BeliefEntry = {
-        ...entryToSend,
-        dialogue: [...entryToSend.dialogue, cabinetTurn],
-        stage: newStage,
-        refinedStatement: result.refinedStatement ?? entryToSend.refinedStatement,
-        virtueCheck: result.virtueCheck ?? entryToSend.virtueCheck,
-        updatedAt: Date.now(),
-      };
-
-      await updateBeliefEntry(finalEntry);
-      setShowAdjustInput(false);
-      setTimeout(() => dialogueScrollRef.current?.scrollToEnd({ animated: true }), 100);
-    } catch (err) {
-      setBeliefError((err as Error).message || 'The Cabinet is unavailable. Tap to retry.');
-    } finally {
-      setBeliefLoading(false);
-    }
-  };
-
-  const sendDialogueResponse = async () => {
-    if (!activeBeliefEntry || !dialogueInput.trim()) return;
-    const text = dialogueInput.trim();
-    setDialogueInput('');
-    await callCabinetForBelief(activeBeliefEntry, 1, text);
-  };
-
-  const proposeRefinement = async () => {
-    if (!activeBeliefEntry) return;
-    await callCabinetForBelief(activeBeliefEntry, 2);
-  };
-
-  const sendPushback = async () => {
-    if (!activeBeliefEntry || !dialogueInput.trim()) return;
-    const text = dialogueInput.trim();
-    setDialogueInput('');
-    await callCabinetForBelief(activeBeliefEntry, 3, text);
-  };
-
-  const encodeBelief = async () => {
-    if (!activeBeliefEntry) return;
-    const encoded: BeliefEntry = {
-      ...activeBeliefEntry,
-      stage: 'encoded',
-      encodedBelief: activeBeliefEntry.refinedStatement,
-      updatedAt: Date.now(),
+    const saveEntries = async (updated: UnifiedEntry[]) => {
+        setEntries(updated);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     };
-    await updateBeliefEntry(encoded);
-    setShowAdjustInput(false);
-    setActiveBeliefEntry(null);
-  };
 
-  const pushHarder = async () => {
-    if (!activeBeliefEntry || beliefLoading) return;
-    const challenge = "I want you to push harder on this belief. Hold it against the four cardinal virtues more rigorously — Wisdom, Justice, Courage, Temperance. Where does it fail? Where is it self-serving? Where is it borrowed rather than lived?";
-    await callCabinetForBelief(activeBeliefEntry, 3, challenge);
-  };
+    const filteredEntries = entries
+        .filter(e => activeFilter === 'all' || e.type === activeFilter)
+        .filter(e => {
+            if (!searchQuery.trim()) return true;
+            const q = searchQuery.toLowerCase();
+            const text = [e.content, e.bookTitle, e.author, e.topic, e.rawInput, e.encodedBelief]
+                .filter(Boolean).join(' ').toLowerCase();
+            return text.includes(q);
+        })
+        .sort((a, b) => b.createdAt - a.createdAt);
 
-  const deleteBeliefEntry = (id: string) => {
-    Alert.alert('Delete Belief', 'Are you sure you want to delete this belief entry?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive', onPress: async () => {
-          const updated = beliefEntries.filter(e => e.id !== id);
-          await saveBeliefEntries(updated);
-          if (activeBeliefEntry?.id === id) {
-            setShowAdjustInput(false);
-            setActiveBeliefEntry(null);
-          }
+    const canonEntries = entries
+        .filter(e => e.type === 'belief' && e.beliefStage === 'encoded')
+        .sort((a, b) => b.createdAt - a.createdAt);
+
+    const addEntry = async () => {
+        if (inputType === 'quote') {
+            if (!quoteText.trim() || !quoteBook.trim()) {
+                Alert.alert('Required', 'Please enter a quote and book title.');
+                return;
+            }
+            const entry: UnifiedEntry = {
+                id: Date.now().toString(),
+                type: 'quote',
+                content: quoteText.trim(),
+                bookTitle: quoteBook.trim(),
+                author: quoteAuthor.trim() || undefined,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+            await saveEntries([entry, ...entries]);
+            resetInputForm();
+            return;
         }
-      }
-    ]);
-  };
+        if (!textInput.trim()) return;
+        const entry: UnifiedEntry = {
+            id: Date.now().toString(),
+            type: inputType!,
+            content: textInput.trim(),
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        };
+        await saveEntries([entry, ...entries]);
+        resetInputForm();
+    };
 
-  const toggleExpandBelief = (id: string) => {
-    setExpandedBeliefIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
+    const updateEntry = async () => {
+        if (!editingEntry) return;
+        let updated: UnifiedEntry;
+        if (editingEntry.type === 'quote') {
+            if (!quoteText.trim() || !quoteBook.trim()) {
+                Alert.alert('Required', 'Please enter a quote and book title.');
+                return;
+            }
+            updated = {
+                ...editingEntry,
+                content: quoteText.trim(),
+                bookTitle: quoteBook.trim(),
+                author: quoteAuthor.trim() || undefined,
+                updatedAt: Date.now(),
+            };
+        } else {
+            if (!textInput.trim()) return;
+            updated = { ...editingEntry, content: textInput.trim(), updatedAt: Date.now() };
+        }
+        await saveEntries(entries.map(e => e.id === updated.id ? updated : e));
+        resetInputForm();
+    };
 
-  const inProgressEntries = beliefEntries.filter(e => e.stage !== 'encoded');
-  const encodedEntries = beliefEntries.filter(e => e.stage === 'encoded');
-  const sortedEncodedEntries = [...encodedEntries].sort((a, b) => b.updatedAt - a.updatedAt);
-  const canProposeRefinement = activeBeliefEntry
-    ? activeBeliefEntry.stage === 1 && activeBeliefEntry.dialogue.filter(t => t.role === 'user').length >= 1
-    : false;
+    const deleteEntry = (id: string) => {
+        Alert.alert('Delete this entry?', 'This cannot be undone.', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Delete', style: 'destructive', onPress: async () => {
+                    await saveEntries(entries.filter(e => e.id !== id));
+                    setLongPressEntry(null);
+                }
+            },
+        ]);
+    };
 
-  return (
-    <SafeAreaView style={styles.container} {...swipeHandlers}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    const resetInputForm = () => {
+        setShowInputForm(false);
+        setEditingEntry(null);
+        setTextInput('');
+        setQuoteText(''); setQuoteBook(''); setQuoteAuthor('');
+        setInputType(null);
+    };
 
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Journal 📓</Text>
-          <View style={styles.tabs}>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'journal' && styles.activeTab]}
-              onPress={() => setActiveTab('journal')}
-            >
-              <Text style={[styles.tabText, activeTab === 'journal' && styles.activeTabText]}>Journal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'commonplace' && styles.activeTab]}
-              onPress={() => setActiveTab('commonplace')}
-            >
-              <Text style={[styles.tabText, activeTab === 'commonplace' && styles.activeTabText]}>Commonplace</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, activeTab === 'beliefs' && styles.activeTab]}
-              onPress={() => { setActiveTab('beliefs'); setActiveBeliefEntry(null); }}
-            >
-              <Text style={[styles.tabText, activeTab === 'beliefs' && styles.activeTabText]}>Beliefs</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+    const openEdit = (entry: UnifiedEntry) => {
+        setLongPressEntry(null);
+        setEditingEntry(entry);
+        if (entry.type === 'quote') {
+            setQuoteText(entry.content);
+            setQuoteBook(entry.bookTitle || '');
+            setQuoteAuthor(entry.author || '');
+        } else {
+            setTextInput(entry.content);
+        }
+        setInputType(entry.type as 'reflection' | 'quote' | 'idea');
+        setShowInputForm(true);
+    };
 
-        {/* JOURNAL TAB */}
-        {activeTab === 'journal' && (
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.promptContainer}>
-              <Ionicons name="bulb-outline" size={18} color="#c9a84c" />
-              <Text style={styles.promptText}>"{prompt}"</Text>
-            </View>
+    const selectType = (type: 'reflection' | 'quote' | 'idea' | 'belief') => {
+        setShowTypeSelector(false);
+        if (type === 'belief') {
+            router.push('/belief-journal' as any);
+            return;
+        }
+        setInputType(type);
+        setEditingEntry(null);
+        setTextInput(''); setQuoteText(''); setQuoteBook(''); setQuoteAuthor('');
+        setShowInputForm(true);
+    };
 
-            {showJournalInput ? (
-              <View style={styles.inputCard}>
-                <Text style={styles.inputDate}>
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                  {' · '}
-                  {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-                <TextInput
-                  style={styles.journalInput}
-                  placeholder="Write your thoughts..."
-                  placeholderTextColor="#555"
-                  multiline
-                  autoFocus
-                  value={newEntry}
-                  onChangeText={setNewEntry}
-                />
-                <View style={styles.inputButtons}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowJournalInput(false); setNewEntry(''); }}>
-                    <Text style={styles.cancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={addJournalEntry}>
-                    <Text style={styles.saveText}>Save Entry</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.addButton} onPress={() => setShowJournalInput(true)}>
-                <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
-                <Text style={styles.addButtonText}>New Journal Entry</Text>
-              </TouchableOpacity>
-            )}
+    const formatDate = (ts: number) =>
+        new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
-            {journalEntries.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="book-outline" size={52} color="#c9a84c22" />
-                <Text style={styles.emptyText}>No entries yet.</Text>
-                <Text style={styles.emptySubtext}>Start writing your story!</Text>
-              </View>
-            ) : (
-              journalEntries.map(entry => (
-                <View key={entry.id} style={styles.entryCard}>
-                  <View style={styles.entryHeader}>
-                    <View>
-                      <Text style={styles.entryDate}>{entry.date}</Text>
-                      <Text style={styles.entryTime}>{entry.time}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => deleteJournalEntry(entry.id)}>
-                      <Ionicons name="trash-outline" size={18} color="#ff4444" />
+    const toggleExpand = (id: string) => {
+        setExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleCanonExpand = (id: string) => {
+        setCanonExpandedIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    if (showCanon) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.subScreenHeader}>
+                    <TouchableOpacity onPress={() => setShowCanon(false)} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={22} color="#c9a84c" />
                     </TouchableOpacity>
-                  </View>
-                  <Text style={styles.entryText}>{entry.text}</Text>
+                    <Text style={styles.subScreenTitle}>Canon 📜</Text>
+                    <View style={{ width: 40 }} />
                 </View>
-              ))
-            )}
-          </ScrollView>
-        )}
-
-        {/* COMMONPLACE TAB */}
-        {activeTab === 'commonplace' && (
-          <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            <View style={styles.searchContainer}>
-              <Ionicons name="search-outline" size={18} color="#888" />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search quotes, books, authors..."
-                placeholderTextColor="#555"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Ionicons name="close-circle" size={18} color="#888" />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {showQuoteInput ? (
-              <View style={styles.inputCard}>
-                <TextInput
-                  style={styles.quoteInput}
-                  placeholder="Enter quote..."
-                  placeholderTextColor="#555"
-                  multiline
-                  autoFocus
-                  value={newQuote}
-                  onChangeText={setNewQuote}
-                />
-                <TextInput
-                  style={styles.smallInput}
-                  placeholder="Book title *"
-                  placeholderTextColor="#555"
-                  value={newBook}
-                  onChangeText={setNewBook}
-                />
-                <TextInput
-                  style={styles.smallInput}
-                  placeholder="Author (optional)"
-                  placeholderTextColor="#555"
-                  value={newAuthor}
-                  onChangeText={setNewAuthor}
-                />
-                <View style={styles.inputButtons}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowQuoteInput(false); setNewQuote(''); setNewBook(''); setNewAuthor(''); }}>
-                    <Text style={styles.cancelText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={addQuote}>
-                    <Text style={styles.saveText}>Save Quote</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.addButton} onPress={() => setShowQuoteInput(true)}>
-                <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
-                <Text style={styles.addButtonText}>Add Quote</Text>
-              </TouchableOpacity>
-            )}
-
-            {quotes.length > 0 && (
-              <Text style={styles.countText}>
-                {filteredQuotes.length} {filteredQuotes.length === 1 ? 'quote' : 'quotes'}
-                {searchQuery ? ' found' : ' saved'}
-              </Text>
-            )}
-
-            {filteredQuotes.length === 0 && quotes.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="library-outline" size={52} color="#c9a84c22" />
-                <Text style={styles.emptyText}>No quotes yet.</Text>
-                <Text style={styles.emptySubtext}>Start building your commonplace notebook!</Text>
-              </View>
-            ) : filteredQuotes.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="search-outline" size={52} color="#c9a84c22" />
-                <Text style={styles.emptyText}>No results found.</Text>
-                <Text style={styles.emptySubtext}>Try a different search term.</Text>
-              </View>
-            ) : (
-              filteredQuotes.map(quote => (
-                <View key={quote.id} style={styles.quoteCard}>
-                  <View style={styles.quoteHeader}>
-                    <Ionicons name="chatbubble-outline" size={18} color="#c9a84c" />
-                    <TouchableOpacity onPress={() => deleteQuote(quote.id)}>
-                      <Ionicons name="trash-outline" size={18} color="#ff4444" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.quoteText}>"{quote.quote}"</Text>
-                  <View style={styles.quoteFooter}>
-                    <Text style={styles.quoteBook}>📖 {quote.book}</Text>
-                    {quote.author ? <Text style={styles.quoteAuthor}>— {quote.author}</Text> : null}
-                  </View>
-                  <Text style={styles.quoteDate}>{quote.date}</Text>
-                </View>
-              ))
-            )}
-          </ScrollView>
-        )}
-
-        {/* BELIEFS TAB */}
-        {activeTab === 'beliefs' && (
-          activeBeliefEntry ? (
-            /* ── Dialogue View ── */
-            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-              <View style={styles.beliefDialogueHeader}>
-                <TouchableOpacity onPress={() => setActiveBeliefEntry(null)} style={styles.beliefBackButton}>
-                  <Ionicons name="arrow-back" size={20} color="#c9a84c" />
-                  <Text style={styles.beliefBackText}>Back</Text>
-                </TouchableOpacity>
-                <Text style={styles.beliefDialogueTitle} numberOfLines={1}>{activeBeliefEntry.topic}</Text>
-                <TouchableOpacity
-                  style={styles.beliefBackButton}
-                  onPress={() => router.push({
-                    pathname: '/cabinet',
-                    params: {
-                      beliefContext: `[From Belief Journal] ${activeBeliefEntry.topic}: ${activeBeliefEntry.rawThought.slice(0, MAX_BELIEF_CONTEXT_LENGTH)}`,
-                    },
-                  } as any)}
-                >
-                  <Text style={styles.beliefBackText}>Ask Cabinet →</Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                ref={dialogueScrollRef}
-                style={styles.scrollView}
-                contentContainerStyle={styles.beliefDialogueContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Raw thought */}
-                <View style={styles.beliefRawThoughtCard}>
-                  <Text style={styles.beliefRawThoughtLabel}>Raw Thought</Text>
-                  <Text style={styles.beliefRawThoughtText}>{activeBeliefEntry.rawThought}</Text>
-                </View>
-
-                {/* Dialogue bubbles */}
-                {activeBeliefEntry.dialogue.map((turn, i) => (
-                  <View key={i} style={turn.role === 'cabinet' ? styles.cabinetBubble : styles.userBubble}>
-                    {turn.role === 'cabinet' && (
-                      <Text style={styles.bubbleRoleLabel}>The Cabinet</Text>
-                    )}
-                    <Text style={turn.role === 'cabinet' ? styles.cabinetBubbleText : styles.userBubbleText}>
-                      {turn.content}
-                    </Text>
-                  </View>
-                ))}
-
-                {/* Refined statement card (stage 2 or 3) */}
-                {(activeBeliefEntry.stage === 2 || activeBeliefEntry.stage === 3) && activeBeliefEntry.refinedStatement ? (
-                  <View style={styles.refinedStatementCard}>
-                    <Text style={styles.refinedStatementLabel}>Proposed Encoded Belief</Text>
-                    <Text style={styles.refinedStatementText}>{activeBeliefEntry.refinedStatement}</Text>
-                    {activeBeliefEntry.virtueCheck && !activeBeliefEntry.virtueCheck.passed && (
-                      <View style={styles.virtueConcernBadge}>
-                        <Ionicons name="warning-outline" size={16} color="#c9a84c" />
-                        <Text style={styles.virtueConcernText}>
-                          {activeBeliefEntry.virtueCheck.virtue ? activeBeliefEntry.virtueCheck.virtue.charAt(0).toUpperCase() + activeBeliefEntry.virtueCheck.virtue.slice(1) + ': ' : ''}
-                          {activeBeliefEntry.virtueCheck.concern}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                ) : null}
-
-                {/* Loading / error */}
-                {beliefLoading && (
-                  <View style={styles.cabinetBubble}>
-                    <ActivityIndicator color="#c9a84c" size="small" />
-                  </View>
-                )}
-                {beliefError && !beliefLoading && (
-                  <TouchableOpacity
-                    style={styles.beliefErrorCard}
-                    onPress={() => {
-                      const stage: 1 | 2 | 3 =
-                        activeBeliefEntry.stage === 2 ? 2 :
-                        activeBeliefEntry.stage === 3 ? 3 : 1;
-                      callCabinetForBelief(activeBeliefEntry, stage);
-                    }}
-                  >
-                    <Ionicons name="warning-outline" size={16} color="#ff4444" />
-                    <Text style={styles.beliefErrorText}>The Cabinet is unavailable. Tap to retry.</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-
-              {/* Input area */}
-              <View style={styles.beliefInputArea}>
-                {/* Stage 1: questions phase */}
-                {activeBeliefEntry.stage === 1 && (
-                  <>
-                    <View style={styles.beliefInputRow}>
-                      <TextInput
-                        style={styles.beliefTextInput}
-                        placeholder="Respond to the Cabinet..."
-                        placeholderTextColor="#555"
-                        multiline
-                        value={dialogueInput}
-                        onChangeText={setDialogueInput}
-                      />
-                      <TouchableOpacity
-                        style={[styles.beliefSendButton, (!dialogueInput.trim() || beliefLoading) && styles.beliefSendButtonDisabled]}
-                        onPress={sendDialogueResponse}
-                        disabled={!dialogueInput.trim() || beliefLoading}
-                      >
-                        <Ionicons name="send" size={18} color={!dialogueInput.trim() || beliefLoading ? '#555' : '#1a1a2e'} />
-                      </TouchableOpacity>
-                    </View>
-                    {canProposeRefinement && !beliefLoading && (
-                      <TouchableOpacity style={styles.proposeRefinementButton} onPress={proposeRefinement}>
-                        <Ionicons name="sparkles-outline" size={16} color="#1a1a2e" />
-                        <Text style={styles.proposeRefinementText}>Propose a refined version</Text>
-                      </TouchableOpacity>
-                    )}
-                  </>
-                )}
-
-                {/* Stage 2 or 3: refinement/iteration phase */}
-                {(activeBeliefEntry.stage === 2 || activeBeliefEntry.stage === 3) && !beliefLoading && (
-                  <View style={styles.actionPanel}>
-                    {activeBeliefEntry.refinedStatement ? (
-                      <TouchableOpacity style={[styles.actionButton, styles.actionButtonPrimary]} onPress={encodeBelief}>
-                        <Text style={[styles.actionButtonText, styles.actionButtonTextPrimary]}>🔒  This lands — encode it</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    <TouchableOpacity style={styles.actionButton} onPress={() => setShowAdjustInput(prev => !prev)}>
-                      <Text style={styles.actionButtonText}>✏️  Not quite — adjust it</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.actionButton} onPress={pushHarder}>
-                      <Text style={styles.actionButtonText}>⚔️  Push harder</Text>
-                    </TouchableOpacity>
-                    {showAdjustInput && (
-                      <View style={styles.beliefInputRow}>
-                        <TextInput
-                          style={styles.beliefTextInput}
-                          placeholder="Push back, adjust, or ask to iterate..."
-                          placeholderTextColor="#555"
-                          multiline
-                          value={dialogueInput}
-                          onChangeText={setDialogueInput}
-                        />
-                        <TouchableOpacity
-                          style={[styles.beliefSendButton, (!dialogueInput.trim() || beliefLoading) && styles.beliefSendButtonDisabled]}
-                          onPress={sendPushback}
-                          disabled={!dialogueInput.trim() || beliefLoading}
-                        >
-                          <Ionicons name="send" size={18} color={!dialogueInput.trim() || beliefLoading ? '#555' : '#1a1a2e'} />
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </KeyboardAvoidingView>
-          ) : (
-            /* ── List View (Workshop + Canon) ── */
-            <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-
-              {/* Sub-tab toggle */}
-              <View style={styles.subTabRow}>
-                <TouchableOpacity
-                  style={[styles.subTab, beliefSubTab === 'workshop' && styles.activeSubTab]}
-                  onPress={() => setBeliefSubTab('workshop')}
-                >
-                  <Text style={[styles.subTabText, beliefSubTab === 'workshop' && styles.activeSubTabText]}>Workshop</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.subTab, beliefSubTab === 'canon' && styles.activeSubTab]}
-                  onPress={() => setBeliefSubTab('canon')}
-                >
-                  <Text style={[styles.subTabText, beliefSubTab === 'canon' && styles.activeSubTabText]}>Canon</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* ── WORKSHOP SUB-VIEW ── */}
-              {beliefSubTab === 'workshop' && (
-                <>
-                  {/* New belief input */}
-                  {showRawThoughtInput ? (
-                    <View style={styles.inputCard}>
-                      <Text style={styles.beliefInputTitle}>Articulate a belief</Text>
-                      <TextInput
-                        style={styles.beliefRawInput}
-                        placeholder="Something you half-believe, assume, or value — write it raw. Unfiltered."
-                        placeholderTextColor="#555"
-                        multiline
-                        autoFocus
-                        value={rawThoughtInput}
-                        onChangeText={setRawThoughtInput}
-                      />
-                      <View style={styles.inputButtons}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={() => { setShowRawThoughtInput(false); setRawThoughtInput(''); }}>
-                          <Text style={styles.cancelText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.saveButton} onPress={submitRawThought} disabled={!rawThoughtInput.trim()}>
-                          <Text style={styles.saveText}>Submit to Cabinet</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <TouchableOpacity style={styles.addButton} onPress={() => setShowRawThoughtInput(true)}>
-                      <Ionicons name="add-circle-outline" size={22} color="#c9a84c" />
-                      <Text style={styles.addButtonText}>Articulate a belief</Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* In Progress section */}
-                  {inProgressEntries.length > 0 && (
-                    <>
-                      <Text style={styles.beliefSectionHeader}>In Progress</Text>
-                      {inProgressEntries.map(entry => (
-                        <View key={entry.id} style={styles.beliefInProgressCard}>
-                          <View style={styles.beliefCardRow}>
-                            <View style={[styles.stageDot, entry.stage === 1 ? styles.stageDot1 : entry.stage === 2 ? styles.stageDot2 : styles.stageDot3]} />
-                            <Text style={styles.beliefTopicText} numberOfLines={1}>{entry.topic}</Text>
-                            <TouchableOpacity onPress={() => deleteBeliefEntry(entry.id)} style={styles.beliefDeleteButton}>
-                              <Ionicons name="trash-outline" size={16} color="#ff4444" />
-                            </TouchableOpacity>
-                          </View>
-                          <Text style={styles.beliefRawSnippet} numberOfLines={2}>{entry.rawThought}</Text>
-                          <Text style={styles.beliefStageLabel}>
-                            {entry.stage === 1 ? 'Exploring questions' : entry.stage === 2 ? 'Refining belief' : 'Iterating'}
-                          </Text>
-                          <TouchableOpacity
-                            style={styles.continueButton}
-                            onPress={() => { setActiveBeliefEntry(entry); setBeliefError(null); }}
-                          >
-                            <Text style={styles.continueButtonText}>Continue</Text>
-                          </TouchableOpacity>
+                <Text style={styles.canonSubtitle}>Beliefs examined and encoded</Text>
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                    {canonEntries.length === 0 ? (
+                        <View style={styles.emptyContainer}>
+                            <Ionicons name="shield-checkmark-outline" size={52} color="#c9a84c22" />
+                            <Text style={styles.emptyText}>No encoded beliefs yet.</Text>
+                            <Text style={styles.emptySubtext}>Complete a belief dialogue to encode your first conviction.</Text>
                         </View>
-                      ))}
-                    </>
-                  )}
-
-                  {/* Encoded beliefs section */}
-                  {encodedEntries.length > 0 && (
-                    <>
-                      <Text style={styles.beliefSectionHeader}>Encoded Beliefs</Text>
-                      {encodedEntries.map(entry => {
-                        const isExpanded = expandedBeliefIds.has(entry.id);
+                    ) : canonEntries.map(entry => {
+                        const isExpanded = canonExpandedIds.has(entry.id);
                         const virtueOk = !entry.virtueCheck || entry.virtueCheck.passed;
                         return (
-                          <View key={entry.id} style={styles.encodedBeliefCard}>
-                            <TouchableOpacity onPress={() => toggleExpandBelief(entry.id)} activeOpacity={0.8}>
-                              <View style={styles.beliefCardRow}>
-                                <Text style={styles.encodedTopicText}>{entry.topic}</Text>
-                                <View style={styles.beliefCardRowRight}>
-                                  {virtueOk ? (
-                                    <Ionicons name="checkmark-circle" size={18} color="#4caf50" />
-                                  ) : (
-                                    <Ionicons name="warning" size={18} color="#c9a84c" />
-                                  )}
-                                  <TouchableOpacity onPress={() => deleteBeliefEntry(entry.id)}>
-                                    <Ionicons name="trash-outline" size={16} color="#ff4444" />
-                                  </TouchableOpacity>
+                            <View key={entry.id} style={styles.canonCard}>
+                                <View style={styles.canonCardTopRow}>
+                                    <Text style={styles.canonTopicLabel}>{entry.topic || 'Belief'}</Text>
+                                    {virtueOk
+                                        ? <Ionicons name="checkmark-circle" size={18} color="#4caf50" />
+                                        : <Ionicons name="warning" size={18} color="#c9a84c" />
+                                    }
                                 </View>
-                              </View>
-                              <Text style={styles.encodedBeliefText}>{entry.encodedBelief}</Text>
-                              <Text style={styles.beliefDateText}>
-                                {new Date(entry.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                              </Text>
-
-                              {/* Virtue concern */}
-                              {!virtueOk && entry.virtueCheck && (
-                                <View style={styles.virtueConcernBadge}>
-                                  <Ionicons name="warning-outline" size={14} color="#c9a84c" />
-                                  <Text style={styles.virtueConcernText}>
-                                    {entry.virtueCheck.virtue ? entry.virtueCheck.virtue.charAt(0).toUpperCase() + entry.virtueCheck.virtue.slice(1) + ': ' : ''}
-                                    {entry.virtueCheck.concern}
-                                  </Text>
-                                </View>
-                              )}
-
-                              {/* Expand/collapse dialogue history */}
-                              {isExpanded && (
-                                <View style={styles.dialogueHistoryContainer}>
-                                  <Text style={styles.dialogueHistoryLabel}>Dialogue History</Text>
-                                  <View style={styles.beliefRawThoughtCard}>
-                                    <Text style={styles.beliefRawThoughtLabel}>Raw Thought</Text>
-                                    <Text style={styles.beliefRawThoughtText}>{entry.rawThought}</Text>
-                                  </View>
-                                  {entry.dialogue.map((turn, i) => (
-                                    <View key={i} style={turn.role === 'cabinet' ? styles.cabinetBubble : styles.userBubble}>
-                                      {turn.role === 'cabinet' && (
-                                        <Text style={styles.bubbleRoleLabel}>The Cabinet</Text>
-                                      )}
-                                      <Text style={turn.role === 'cabinet' ? styles.cabinetBubbleText : styles.userBubbleText}>
-                                        {turn.content}
-                                      </Text>
+                                <Text style={styles.canonBeliefText}>{entry.encodedBelief || entry.content}</Text>
+                                <Text style={styles.canonDateText}>{formatDate(entry.createdAt)}</Text>
+                                {!virtueOk && entry.virtueCheck?.concern && (
+                                    <View style={styles.virtueConcernBadge}>
+                                        <Ionicons name="warning-outline" size={14} color="#c9a84c" />
+                                        <Text style={styles.virtueConcernText}>
+                                            {entry.virtueCheck.virtue
+                                                ? entry.virtueCheck.virtue.charAt(0).toUpperCase() + entry.virtueCheck.virtue.slice(1) + ': '
+                                                : ''}
+                                            {entry.virtueCheck.concern}
+                                        </Text>
                                     </View>
-                                  ))}
-                                </View>
-                              )}
-
-                              <View style={styles.expandRow}>
-                                <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color="#888" />
-                                <Text style={styles.expandText}>{isExpanded ? 'Hide dialogue' : 'View dialogue'}</Text>
-                              </View>
-                            </TouchableOpacity>
-                          </View>
+                                )}
+                                {isExpanded && (
+                                    <View style={styles.dialogueHistoryContainer}>
+                                        <Text style={styles.dialogueHistoryLabel}>Dialogue History</Text>
+                                        {entry.rawInput && (
+                                            <View style={styles.rawThoughtCard}>
+                                                <Text style={styles.rawThoughtLabel}>Raw Thought</Text>
+                                                <Text style={styles.rawThoughtText}>{entry.rawInput}</Text>
+                                            </View>
+                                        )}
+                                        {entry.dialogueHistory?.map((turn, i) => (
+                                            <View key={i} style={turn.role === 'cabinet' ? styles.cabinetBubble : styles.userBubble}>
+                                                {turn.role === 'cabinet' && <Text style={styles.bubbleRoleLabel}>The Cabinet</Text>}
+                                                <Text style={turn.role === 'cabinet' ? styles.cabinetBubbleText : styles.userBubbleText}>
+                                                    {turn.content}
+                                                </Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                                <TouchableOpacity style={styles.expandRow} onPress={() => toggleCanonExpand(entry.id)}>
+                                    <Text style={styles.expandText}>{isExpanded ? 'Hide dialogue' : 'View dialogue'}</Text>
+                                    <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-forward'} size={14} color="#888" />
+                                </TouchableOpacity>
+                            </View>
                         );
-                      })}
-                    </>
-                  )}
+                    })}
+                </ScrollView>
+            </SafeAreaView>
+        );
+    }
 
-                  {beliefEntries.length === 0 && (
-                    <View style={styles.emptyContainer}>
-                      <Ionicons name="bulb-outline" size={52} color="#c9a84c22" />
-                      <Text style={styles.emptyText}>No beliefs yet.</Text>
-                      <Text style={styles.emptySubtext}>Articulate a half-formed belief and let the Cabinet help you refine it.</Text>
-                    </View>
-                  )}
-                </>
-              )}
-
-              {/* ── CANON SUB-VIEW ── */}
-              {beliefSubTab === 'canon' && (
-                <>
-                  {/* Canon header */}
-                  <View style={styles.canonHeader}>
-                    <Text style={styles.canonTitle}>My Encoded Beliefs</Text>
-                    <Text style={styles.canonSubtitle}>Beliefs you have examined and committed to</Text>
-                  </View>
-
-                  {sortedEncodedEntries.length === 0 ? (
-                    <View style={styles.emptyContainer}>
-                      <Ionicons name="shield-checkmark-outline" size={52} color="#c9a84c22" />
-                      <Text style={styles.emptyText}>No encoded beliefs yet.</Text>
-                      <Text style={styles.emptySubtext}>Complete a belief dialogue in the Workshop to encode your first conviction.</Text>
-                    </View>
-                  ) : (
-                    sortedEncodedEntries.map(entry => {
-                      const isExpanded = expandedBeliefIds.has(entry.id);
-                      const virtueOk = !entry.virtueCheck || entry.virtueCheck.passed;
-                      return (
-                        <View key={entry.id} style={styles.canonCard}>
-                          {/* Status icon in top-right corner */}
-                          <View style={styles.canonCardTopRow}>
-                            <Text style={styles.canonTopicLabel}>{entry.topic}</Text>
-                            {virtueOk ? (
-                              <Ionicons name="checkmark-circle" size={18} color="#4caf50" />
-                            ) : (
-                              <Ionicons name="warning" size={18} color="#c9a84c" />
-                            )}
-                          </View>
-
-                          {/* Belief text — prominent */}
-                          <Text style={styles.canonBeliefText}>{entry.encodedBelief}</Text>
-
-                          {/* Date encoded */}
-                          <Text style={styles.canonDateText}>
-                            {new Date(entry.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                          </Text>
-
-                          {/* Virtue concern badge (only if failed) */}
-                          {!virtueOk && entry.virtueCheck && (
-                            <View style={styles.virtueConcernBadge}>
-                              <Ionicons name="warning-outline" size={14} color="#c9a84c" />
-                              <Text style={styles.virtueConcernText}>
-                                {entry.virtueCheck.virtue ? entry.virtueCheck.virtue.charAt(0).toUpperCase() + entry.virtueCheck.virtue.slice(1) + ': ' : ''}
-                                {entry.virtueCheck.concern}
-                              </Text>
-                            </View>
-                          )}
-
-                          {/* Dialogue expand/collapse */}
-                          {isExpanded && (
-                            <View style={styles.dialogueHistoryContainer}>
-                              <Text style={styles.dialogueHistoryLabel}>Dialogue History</Text>
-                              <View style={styles.beliefRawThoughtCard}>
-                                <Text style={styles.beliefRawThoughtLabel}>Raw Thought</Text>
-                                <Text style={styles.beliefRawThoughtText}>{entry.rawThought}</Text>
-                              </View>
-                              {entry.dialogue.map((turn, i) => (
-                                <View key={i} style={turn.role === 'cabinet' ? styles.cabinetBubble : styles.userBubble}>
-                                  {turn.role === 'cabinet' && (
-                                    <Text style={styles.bubbleRoleLabel}>The Cabinet</Text>
-                                  )}
-                                  <Text style={turn.role === 'cabinet' ? styles.cabinetBubbleText : styles.userBubbleText}>
-                                    {turn.content}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-
-                          <TouchableOpacity style={styles.expandRow} onPress={() => toggleExpandBelief(entry.id)}>
-                            <Text style={styles.expandText}>{isExpanded ? 'Hide dialogue ↑' : 'View dialogue →'}</Text>
-                            <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-forward'} size={14} color="#888" />
-                          </TouchableOpacity>
+    if (viewingBeliefEntry) {
+        const entry = viewingBeliefEntry;
+        const virtueOk = !entry.virtueCheck || entry.virtueCheck.passed;
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.subScreenHeader}>
+                    <TouchableOpacity onPress={() => setViewingBeliefEntry(null)} style={styles.backButton}>
+                        <Ionicons name="arrow-back" size={22} color="#c9a84c" />
+                    </TouchableOpacity>
+                    <Text style={styles.subScreenTitle} numberOfLines={1}>{entry.topic || 'Belief'}</Text>
+                    <View style={{ width: 40 }} />
+                </View>
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.dialogueViewContent} showsVerticalScrollIndicator={false}>
+                    {entry.rawInput && (
+                        <View style={styles.rawThoughtCard}>
+                            <Text style={styles.rawThoughtLabel}>Raw Thought</Text>
+                            <Text style={styles.rawThoughtText}>{entry.rawInput}</Text>
                         </View>
-                      );
-                    })
-                  )}
-                </>
-              )}
+                    )}
+                    {entry.dialogueHistory?.map((turn, i) => (
+                        <View key={i} style={turn.role === 'cabinet' ? styles.cabinetBubble : styles.userBubble}>
+                            {turn.role === 'cabinet' && <Text style={styles.bubbleRoleLabel}>The Cabinet</Text>}
+                            <Text style={turn.role === 'cabinet' ? styles.cabinetBubbleText : styles.userBubbleText}>
+                                {turn.content}
+                            </Text>
+                        </View>
+                    ))}
+                    {entry.encodedBelief && (
+                        <View style={styles.encodedBeliefCard}>
+                            <Text style={styles.encodedBeliefLabel}>Encoded Belief</Text>
+                            <Text style={styles.encodedBeliefText}>{entry.encodedBelief}</Text>
+                            {!virtueOk && entry.virtueCheck?.concern && (
+                                <View style={styles.virtueConcernBadge}>
+                                    <Ionicons name="warning-outline" size={14} color="#c9a84c" />
+                                    <Text style={styles.virtueConcernText}>
+                                        {entry.virtueCheck.virtue
+                                            ? entry.virtueCheck.virtue.charAt(0).toUpperCase() + entry.virtueCheck.virtue.slice(1) + ': '
+                                            : ''}
+                                        {entry.virtueCheck.concern}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+                </ScrollView>
+            </SafeAreaView>
+        );
+    }
+
+    if (showInputForm && inputType) {
+        const isEditing = !!editingEntry;
+        return (
+            <SafeAreaView style={styles.container}>
+                <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+                    <View style={styles.formHeader}>
+                        <TouchableOpacity onPress={resetInputForm} style={styles.backButton}>
+                            <Ionicons name="arrow-back" size={22} color="#c9a84c" />
+                        </TouchableOpacity>
+                        <Text style={styles.formTitle}>
+                            {isEditing ? 'Edit' : 'New'} {TYPE_LABELS[inputType]}
+                        </Text>
+                        <TouchableOpacity style={styles.saveButtonHeader} onPress={isEditing ? updateEntry : addEntry}>
+                            <Text style={styles.saveButtonHeaderText}>Save</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.content}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {inputType === 'quote' ? (
+                            <>
+                                <TextInput
+                                    style={styles.largeInput}
+                                    placeholder='"Enter quote..."'
+                                    placeholderTextColor="#555"
+                                    multiline
+                                    autoFocus
+                                    value={quoteText}
+                                    onChangeText={setQuoteText}
+                                    textAlignVertical="top"
+                                />
+                                <TextInput
+                                    style={styles.smallInput}
+                                    placeholder="Book title *"
+                                    placeholderTextColor="#555"
+                                    value={quoteBook}
+                                    onChangeText={setQuoteBook}
+                                />
+                                <TextInput
+                                    style={styles.smallInput}
+                                    placeholder="Author (optional)"
+                                    placeholderTextColor="#555"
+                                    value={quoteAuthor}
+                                    onChangeText={setQuoteAuthor}
+                                />
+                            </>
+                        ) : (
+                            <TextInput
+                                style={styles.largeInput}
+                                placeholder={inputType === 'reflection' ? "What's on your mind?" : "What seed do you want to keep?"}
+                                placeholderTextColor="#555"
+                                multiline
+                                autoFocus
+                                value={textInput}
+                                onChangeText={setTextInput}
+                                textAlignVertical="top"
+                            />
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView style={styles.container} {...swipeHandlers}>
+            <View style={styles.header}>
+                <View style={styles.headerRow}>
+                    <Text style={styles.title}>Journal 📓</Text>
+                    <TouchableOpacity onPress={() => setShowCanon(true)} style={styles.canonButton}>
+                        <Text style={styles.canonButtonText}>Canon 📜</Text>
+                    </TouchableOpacity>
+                </View>
+                <View style={styles.searchContainer}>
+                    <Ionicons name="search-outline" size={16} color="#888" />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search entries..."
+                        placeholderTextColor="#555"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                    />
+                    {searchQuery.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearchQuery('')}>
+                            <Ionicons name="close-circle" size={16} color="#888" />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.filterBar}
+                    contentContainerStyle={styles.filterBarContent}
+                >
+                    {(['all', 'reflection', 'quote', 'belief', 'idea'] as FilterType[]).map(f => (
+                        <TouchableOpacity
+                            key={f}
+                            style={[styles.filterChip, activeFilter === f && styles.filterChipActive]}
+                            onPress={() => setActiveFilter(prev => prev === f ? 'all' : f)}
+                        >
+                            <Text style={[styles.filterChipText, activeFilter === f && styles.filterChipTextActive]}>
+                                {f === 'all' ? 'All'
+                                    : f === 'reflection' ? '📝 Reflection'
+                                    : f === 'quote' ? '📖 Quote'
+                                    : f === 'belief' ? '💡 Belief'
+                                    : '🧠 Idea'}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+            </View>
+
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.feedContent}
+                showsVerticalScrollIndicator={false}
+            >
+                {filteredEntries.length === 0 ? (
+                    <View style={styles.emptyContainer}>
+                        <Ionicons name="book-outline" size={52} color="#c9a84c22" />
+                        <Text style={styles.emptyText}>No entries yet.</Text>
+                        <Text style={styles.emptySubtext}>Tap + to add your first entry.</Text>
+                    </View>
+                ) : filteredEntries.map(entry => {
+                    const isExpanded = expandedIds.has(entry.id);
+                    const isDraft = entry.type === 'belief' && entry.beliefStage !== 'encoded';
+                    const displayText = entry.type === 'belief'
+                        ? (entry.encodedBelief || entry.rawInput || entry.content)
+                        : entry.content;
+                    const preview = displayText && displayText.length > 120
+                        ? displayText.slice(0, 120) + '...'
+                        : displayText;
+
+                    return (
+                        <TouchableOpacity
+                            key={entry.id}
+                            activeOpacity={0.85}
+                            onPress={() => {
+                                if (entry.type === 'belief') {
+                                    if (isDraft) {
+                                        router.push({ pathname: '/belief-journal', params: { entryId: entry.id } } as any);
+                                    } else {
+                                        setViewingBeliefEntry(entry);
+                                    }
+                                } else {
+                                    toggleExpand(entry.id);
+                                }
+                            }}
+                            onLongPress={() => setLongPressEntry(entry)}
+                            delayLongPress={500}
+                        >
+                            <View style={[styles.entryCard, isDraft && styles.draftCard]}>
+                                <View style={styles.entryMeta}>
+                                    <Text style={styles.typeBadge}>{TYPE_LABELS[entry.type]}</Text>
+                                    <Text style={styles.entryDate}>{formatDate(entry.createdAt)}</Text>
+                                </View>
+                                {entry.type === 'quote' ? (
+                                    <>
+                                        <Text style={[styles.entryContent, isExpanded ? styles.entryContentFull : styles.entryContentPreview]}>
+                                            &quot;{entry.content}&quot;
+                                        </Text>
+                                        {isExpanded ? (
+                                            <View style={styles.quoteFooterRow}>
+                                                {entry.bookTitle && <Text style={styles.quoteBook}>📖 {entry.bookTitle}</Text>}
+                                                {entry.author && <Text style={styles.quoteAuthor}>— {entry.author}</Text>}
+                                            </View>
+                                        ) : (
+                                            entry.bookTitle ? <Text style={styles.quoteBookPreview}>📖 {entry.bookTitle}</Text> : null
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={[styles.entryContent, isExpanded ? styles.entryContentFull : styles.entryContentPreview]}>
+                                        {isExpanded ? displayText : preview}
+                                    </Text>
+                                )}
+                                {isDraft && (
+                                    <View style={styles.draftBadge}>
+                                        <Text style={styles.draftBadgeText}>Draft · Stage {entry.beliefStage}</Text>
+                                        <Text style={styles.continueText}>Tap to continue →</Text>
+                                    </View>
+                                )}
+                                {entry.type === 'belief' && entry.beliefStage === 'encoded'
+                                    && entry.virtueCheck && !entry.virtueCheck.passed && (
+                                    <View style={styles.virtueConcernBadge}>
+                                        <Ionicons name="warning-outline" size={13} color="#c9a84c" />
+                                        <Text style={styles.virtueConcernText} numberOfLines={2}>
+                                            {entry.virtueCheck.virtue
+                                                ? entry.virtueCheck.virtue.charAt(0).toUpperCase() + entry.virtueCheck.virtue.slice(1) + ': '
+                                                : ''}
+                                            {entry.virtueCheck.concern}
+                                        </Text>
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    );
+                })}
             </ScrollView>
-          )
-        )}
-      </KeyboardAvoidingView>
-    </SafeAreaView>
-  );
+
+            <TouchableOpacity style={styles.fab} onPress={() => setShowTypeSelector(true)}>
+                <Text style={styles.fabIcon}>+</Text>
+            </TouchableOpacity>
+
+            <Modal
+                visible={showTypeSelector}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowTypeSelector(false)}
+            >
+                <TouchableWithoutFeedback onPress={() => setShowTypeSelector(false)}>
+                    <View style={styles.modalOverlay}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.typeSelector}>
+                                <Text style={styles.typeSelectorTitle}>What are you adding?</Text>
+                                {(['reflection', 'quote', 'idea', 'belief'] as const).map(t => (
+                                    <TouchableOpacity
+                                        key={t}
+                                        style={styles.typeSelectorOption}
+                                        onPress={() => selectType(t)}
+                                    >
+                                        <Text style={styles.typeSelectorOptionText}>
+                                            {t === 'reflection' ? '📝 Reflection'
+                                                : t === 'quote' ? '📖 Quote'
+                                                : t === 'idea' ? '🧠 Idea'
+                                                : '💡 Belief'}
+                                        </Text>
+                                        <Text style={styles.typeSelectorOptionDesc}>
+                                            {t === 'reflection' ? 'Daily thoughts, free writing'
+                                                : t === 'quote' ? 'Passage from a book'
+                                                : t === 'idea' ? 'Seed for an essay or project'
+                                                : 'Refine a belief with the Cabinet'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowTypeSelector(false)}>
+                                    <Text style={styles.cancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+
+            <Modal
+                visible={!!longPressEntry}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setLongPressEntry(null)}
+            >
+                <TouchableWithoutFeedback onPress={() => setLongPressEntry(null)}>
+                    <View style={styles.modalOverlay}>
+                        <TouchableWithoutFeedback>
+                            <View style={styles.longPressMenu}>
+                                <Text style={styles.longPressMenuTitle} numberOfLines={2}>
+                                    {longPressEntry
+                                        ? (longPressEntry.content.slice(0, 60) + (longPressEntry.content.length > 60 ? '...' : ''))
+                                        : ''}
+                                </Text>
+                                {longPressEntry?.type !== 'belief' && (
+                                    <TouchableOpacity
+                                        style={styles.menuOption}
+                                        onPress={() => longPressEntry && openEdit(longPressEntry)}
+                                    >
+                                        <Ionicons name="pencil-outline" size={18} color="#c9a84c" />
+                                        <Text style={styles.menuOptionText}>Edit</Text>
+                                    </TouchableOpacity>
+                                )}
+                                <TouchableOpacity
+                                    style={[styles.menuOption, styles.menuOptionDestructive]}
+                                    onPress={() => longPressEntry && deleteEntry(longPressEntry.id)}
+                                >
+                                    <Ionicons name="trash-outline" size={18} color="#ff4444" />
+                                    <Text style={[styles.menuOptionText, styles.menuOptionTextDestructive]}>Delete</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.cancelButton} onPress={() => setLongPressEntry(null)}>
+                                    <Text style={styles.cancelText}>Cancel</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </TouchableWithoutFeedback>
+                    </View>
+                </TouchableWithoutFeedback>
+            </Modal>
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e' },
-  header: { paddingTop: 20, paddingHorizontal: 25, paddingBottom: 0 },
-  title: { fontSize: 26, fontWeight: 'bold', color: '#c9a84c', marginBottom: 18 },
-  tabs: {
-    flexDirection: 'row', backgroundColor: '#16213e',
-    borderRadius: 12, padding: 4, marginBottom: 5,
-  },
-  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
-  activeTab: { backgroundColor: '#c9a84c' },
-  tabText: { color: '#888', fontSize: 14, fontWeight: '600' },
-  activeTabText: { color: '#1a1a2e' },
-  scrollView: { flex: 1 },
-  content: { padding: 25, paddingTop: 15 },
-  promptContainer: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 16,
-    marginBottom: 18, flexDirection: 'row', alignItems: 'flex-start',
-    gap: 10, borderLeftWidth: 3, borderLeftColor: '#c9a84c',
-  },
-  promptText: { color: '#c9a84c', fontSize: 14, fontStyle: 'italic', flex: 1, lineHeight: 22 },
-  inputCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 16,
-    marginBottom: 18, borderWidth: 1, borderColor: '#c9a84c',
-  },
-  inputDate: { color: '#c9a84c', fontSize: 12, marginBottom: 10 },
-  journalInput: {
-    color: '#fff', fontSize: 15, minHeight: 120,
-    textAlignVertical: 'top', lineHeight: 24, marginBottom: 10,
-  },
-  quoteInput: {
-    color: '#fff', fontSize: 15, minHeight: 80,
-    textAlignVertical: 'top', lineHeight: 24, marginBottom: 10, fontStyle: 'italic',
-  },
-  smallInput: {
-    color: '#fff', fontSize: 14, borderTopWidth: 1,
-    borderTopColor: '#c9a84c22', paddingTop: 10, marginBottom: 8,
-  },
-  inputButtons: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 5 },
-  cancelButton: { padding: 10, paddingHorizontal: 18 },
-  cancelText: { color: '#888', fontSize: 14 },
-  saveButton: { backgroundColor: '#c9a84c', padding: 10, paddingHorizontal: 20, borderRadius: 10 },
-  saveText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 },
-  addButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, padding: 16,
-    borderRadius: 14, borderWidth: 1, borderColor: '#c9a84c44',
-    borderStyle: 'dashed', justifyContent: 'center', marginBottom: 18,
-  },
-  addButtonText: { color: '#c9a84c', fontSize: 15, fontWeight: '600' },
-  emptyContainer: { alignItems: 'center', paddingTop: 60, gap: 10 },
-  emptyText: { color: '#888', fontSize: 18, fontWeight: '600' },
-  emptySubtext: { color: '#555', fontSize: 14 },
-  entryCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
-    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c22',
-  },
-  entryHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  entryDate: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
-  entryTime: { color: '#888', fontSize: 11, marginTop: 2 },
-  entryText: { color: '#fff', fontSize: 15, lineHeight: 24 },
-  searchContainer: {
-    backgroundColor: '#16213e', borderRadius: 12, padding: 12,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginBottom: 18, borderWidth: 1, borderColor: '#c9a84c33',
-  },
-  searchInput: { flex: 1, color: '#fff', fontSize: 14 },
-  countText: { color: '#888', fontSize: 13, marginBottom: 14 },
-  quoteCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
-    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c22',
-    borderLeftWidth: 3, borderLeftColor: '#c9a84c',
-  },
-  quoteHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  quoteText: { color: '#fff', fontSize: 15, lineHeight: 24, fontStyle: 'italic', marginBottom: 12 },
-  quoteFooter: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 },
-  quoteBook: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
-  quoteAuthor: { color: '#888', fontSize: 13 },
-  quoteDate: { color: '#555', fontSize: 11 },
-
-  // ── Belief Journal Styles ──────────────────────────────────────────────────
-  beliefInputTitle: { color: '#c9a84c', fontSize: 15, fontWeight: '700', marginBottom: 10 },
-  beliefRawInput: {
-    color: '#fff', fontSize: 15, minHeight: 100,
-    textAlignVertical: 'top', lineHeight: 24, marginBottom: 10,
-  },
-  beliefSectionHeader: {
-    color: '#888', fontSize: 12, fontWeight: '700', letterSpacing: 1,
-    textTransform: 'uppercase', marginTop: 8, marginBottom: 10,
-  },
-  beliefInProgressCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 16,
-    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c33',
-  },
-  beliefCardRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8,
-  },
-  beliefCardRowRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  stageDot: { width: 10, height: 10, borderRadius: 5 },
-  stageDot1: { backgroundColor: '#555' },
-  stageDot2: { backgroundColor: '#c9a84c' },
-  stageDot3: { backgroundColor: '#f0c040' },
-  beliefTopicText: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
-  beliefRawSnippet: { color: '#888', fontSize: 13, lineHeight: 20, marginBottom: 8 },
-  beliefStageLabel: { color: '#555', fontSize: 11, marginBottom: 10 },
-  beliefDeleteButton: { padding: 4 },
-  continueButton: {
-    backgroundColor: '#c9a84c22', borderRadius: 10, paddingVertical: 8,
-    paddingHorizontal: 16, alignSelf: 'flex-start', borderWidth: 1, borderColor: '#c9a84c44',
-  },
-  continueButtonText: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
-  encodedBeliefCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
-    marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c33',
-    borderLeftWidth: 3, borderLeftColor: '#c9a84c',
-  },
-  encodedTopicText: {
-    color: '#c9a84c', fontSize: 15, fontWeight: '700', flex: 1,
-  },
-  encodedBeliefText: { color: '#fff', fontSize: 15, lineHeight: 24, marginVertical: 10 },
-  beliefDateText: { color: '#555', fontSize: 11, marginBottom: 8 },
-  virtueConcernBadge: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
-    backgroundColor: '#c9a84c11', borderRadius: 8, padding: 10, marginTop: 8,
-  },
-  virtueConcernText: { color: '#c9a84c', fontSize: 12, lineHeight: 18, flex: 1 },
-  expandRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
-  expandText: { color: '#888', fontSize: 12 },
-  dialogueHistoryContainer: { marginTop: 12, borderTopWidth: 1, borderTopColor: '#c9a84c22', paddingTop: 12 },
-  dialogueHistoryLabel: { color: '#888', fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10 },
-
-  // Dialogue view
-  beliefDialogueHeader: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#c9a84c22',
-    gap: 12,
-  },
-  beliefBackButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  beliefBackText: { color: '#c9a84c', fontSize: 14, fontWeight: '600' },
-  beliefDialogueTitle: { color: '#fff', fontSize: 15, fontWeight: '600', flex: 1 },
-  beliefDialogueContent: { padding: 20, paddingTop: 14, paddingBottom: 12 },
-  beliefRawThoughtCard: {
-    backgroundColor: '#16213e', borderRadius: 12, padding: 14,
-    marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#555',
-  },
-  beliefRawThoughtLabel: { color: '#555', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  beliefRawThoughtText: { color: '#ccc', fontSize: 14, lineHeight: 22 },
-  cabinetBubble: {
-    backgroundColor: '#16213e', borderRadius: 12, padding: 14,
-    marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#c9a84c',
-    maxWidth: '90%', alignSelf: 'flex-start',
-  },
-  bubbleRoleLabel: { color: '#c9a84c', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 },
-  cabinetBubbleText: { color: '#fff', fontSize: 14, lineHeight: 22 },
-  userBubble: {
-    backgroundColor: '#1e2a45', borderRadius: 12, padding: 14,
-    marginBottom: 12, maxWidth: '90%', alignSelf: 'flex-end',
-  },
-  userBubbleText: { color: '#fff', fontSize: 14, lineHeight: 22 },
-  refinedStatementCard: {
-    backgroundColor: '#1e2a45', borderRadius: 14, padding: 16,
-    marginVertical: 12, borderWidth: 1, borderColor: '#c9a84c66',
-  },
-  refinedStatementLabel: { color: '#c9a84c', fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-  refinedStatementText: { color: '#fff', fontSize: 15, lineHeight: 24 },
-  beliefErrorCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#ff444411', borderRadius: 10, padding: 12, marginVertical: 8,
-    borderWidth: 1, borderColor: '#ff444433',
-  },
-  beliefErrorText: { color: '#ff4444', fontSize: 13, flex: 1 },
-  beliefInputArea: {
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderTopWidth: 1, borderTopColor: '#c9a84c22',
-    backgroundColor: '#1a1a2e',
-  },
-  beliefInputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, marginBottom: 10 },
-  beliefTextInput: {
-    flex: 1, backgroundColor: '#16213e', borderRadius: 12, padding: 12,
-    color: '#fff', fontSize: 14, maxHeight: 100, minHeight: 44,
-    textAlignVertical: 'top', borderWidth: 1, borderColor: '#c9a84c33',
-  },
-  beliefSendButton: {
-    backgroundColor: '#c9a84c', borderRadius: 10, padding: 12, justifyContent: 'center', alignItems: 'center',
-  },
-  beliefSendButtonDisabled: { backgroundColor: '#16213e' },
-  proposeRefinementButton: {
-    backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-  },
-  proposeRefinementText: { color: '#1a1a2e', fontSize: 14, fontWeight: '700' },
-  encodeButton: {
-    backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-  },
-  encodeButtonText: { color: '#1a1a2e', fontSize: 14, fontWeight: '700' },
-  actionPanel: {
-    gap: 8,
-  },
-  actionButton: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#16213e', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16,
-    borderWidth: 1, borderColor: '#c9a84c33',
-  },
-  actionButtonPrimary: {
-    backgroundColor: '#c9a84c', borderColor: '#c9a84c',
-  },
-  actionButtonText: {
-    color: '#c9a84c', fontSize: 14, fontWeight: '600', flex: 1,
-  },
-  actionButtonTextPrimary: {
-    color: '#1a1a2e',
-  },
-
-  // ── Sub-tab toggle (Workshop / Canon) ────────────────────────────────────
-  subTabRow: {
-    flexDirection: 'row', backgroundColor: '#16213e',
-    borderRadius: 10, padding: 3, marginBottom: 18,
-  },
-  subTab: {
-    flex: 1, paddingVertical: 7, alignItems: 'center', borderRadius: 8,
-  },
-  activeSubTab: { backgroundColor: '#c9a84c33' },
-  subTabText: { color: '#555', fontSize: 13, fontWeight: '600' },
-  activeSubTabText: { color: '#c9a84c' },
-
-  // ── Canon view ────────────────────────────────────────────────────────────
-  canonHeader: {
-    alignItems: 'center', paddingVertical: 18, marginBottom: 8,
-  },
-  canonTitle: {
-    color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 6,
-  },
-  canonSubtitle: {
-    color: '#888', fontSize: 13, fontStyle: 'italic',
-  },
-  canonCard: {
-    backgroundColor: '#16213e', borderRadius: 14, padding: 18,
-    marginBottom: 16, borderWidth: 1, borderColor: '#c9a84c33',
-    borderLeftWidth: 3, borderLeftColor: '#c9a84c',
-  },
-  canonCardTopRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  canonTopicLabel: {
-    color: '#c9a84c', fontSize: 11, fontWeight: '700',
-    textTransform: 'uppercase', letterSpacing: 1, flex: 1,
-  },
-  canonBeliefText: {
-    color: '#fff', fontSize: 17, lineHeight: 28, fontWeight: '500',
-    marginBottom: 10,
-  },
-  canonDateText: {
-    color: '#555', fontSize: 11, marginBottom: 8,
-  },
+    container: { flex: 1, backgroundColor: '#1a1a2e' },
+    scrollView: { flex: 1 },
+    header: { paddingTop: 16, paddingHorizontal: 20, paddingBottom: 0 },
+    headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+    title: { fontSize: 26, fontWeight: 'bold', color: '#c9a84c' },
+    canonButton: {
+        backgroundColor: '#c9a84c22', borderRadius: 10,
+        paddingVertical: 6, paddingHorizontal: 12,
+        borderWidth: 1, borderColor: '#c9a84c44',
+    },
+    canonButtonText: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
+    searchContainer: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 10,
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        marginBottom: 10, borderWidth: 1, borderColor: '#c9a84c22',
+    },
+    searchInput: { flex: 1, color: '#fff', fontSize: 14 },
+    filterBar: { marginBottom: 6 },
+    filterBarContent: { paddingRight: 8, gap: 8, paddingBottom: 10 },
+    filterChip: {
+        paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20,
+        backgroundColor: '#16213e', borderWidth: 1, borderColor: '#c9a84c22',
+    },
+    filterChipActive: { backgroundColor: '#c9a84c33', borderColor: '#c9a84c' },
+    filterChipText: { color: '#888', fontSize: 13, fontWeight: '600' },
+    filterChipTextActive: { color: '#c9a84c' },
+    feedContent: { padding: 16, paddingTop: 10, paddingBottom: 100 },
+    emptyContainer: { alignItems: 'center', paddingTop: 60, gap: 10 },
+    emptyText: { color: '#888', fontSize: 18, fontWeight: '600' },
+    emptySubtext: { color: '#555', fontSize: 14, textAlign: 'center' },
+    entryCard: {
+        backgroundColor: '#16213e', borderRadius: 14, padding: 16,
+        marginBottom: 12, borderWidth: 1, borderColor: '#c9a84c22',
+    },
+    draftCard: { borderColor: '#c9a84c44', borderStyle: 'dashed' },
+    entryMeta: {
+        flexDirection: 'row', alignItems: 'center',
+        justifyContent: 'space-between', marginBottom: 8,
+    },
+    typeBadge: { color: '#c9a84c', fontSize: 12, fontWeight: '700' },
+    entryDate: { color: '#555', fontSize: 11 },
+    entryContent: { fontSize: 14, lineHeight: 22 },
+    entryContentPreview: { color: '#ccc' },
+    entryContentFull: { color: '#fff' },
+    quoteFooterRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8 },
+    quoteBook: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
+    quoteAuthor: { color: '#888', fontSize: 12 },
+    quoteBookPreview: { color: '#c9a84c88', fontSize: 12, marginTop: 4 },
+    draftBadge: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#c9a84c22',
+    },
+    draftBadgeText: { color: '#888', fontSize: 11 },
+    continueText: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
+    virtueConcernBadge: {
+        flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+        backgroundColor: '#c9a84c11', borderRadius: 8, padding: 8, marginTop: 8,
+    },
+    virtueConcernText: { color: '#c9a84c', fontSize: 12, lineHeight: 18, flex: 1 },
+    fab: {
+        position: 'absolute', bottom: 24, right: 24,
+        backgroundColor: '#c9a84c', width: 56, height: 56, borderRadius: 28,
+        alignItems: 'center', justifyContent: 'center',
+        elevation: 6,
+        shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 6,
+    },
+    fabIcon: { color: '#1a1a2e', fontSize: 28, fontWeight: 'bold', lineHeight: 34 },
+    modalOverlay: {
+        flex: 1, backgroundColor: '#000000aa',
+        justifyContent: 'flex-end',
+    },
+    typeSelector: {
+        backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        padding: 24, paddingBottom: 40, gap: 8,
+    },
+    typeSelectorTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 8 },
+    typeSelectorOption: {
+        backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16,
+        borderWidth: 1, borderColor: '#c9a84c22',
+    },
+    typeSelectorOptionText: { color: '#c9a84c', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+    typeSelectorOptionDesc: { color: '#888', fontSize: 13 },
+    cancelButton: { padding: 14, alignItems: 'center', marginTop: 4 },
+    cancelText: { color: '#888', fontSize: 15 },
+    longPressMenu: {
+        backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        padding: 20, paddingBottom: 40, gap: 4,
+    },
+    longPressMenuTitle: { color: '#888', fontSize: 13, marginBottom: 12, paddingHorizontal: 4 },
+    menuOption: {
+        flexDirection: 'row', alignItems: 'center', gap: 12,
+        padding: 16, borderRadius: 12, backgroundColor: '#1a1a2e',
+    },
+    menuOptionDestructive: { backgroundColor: '#ff444411' },
+    menuOptionText: { color: '#c9a84c', fontSize: 15, fontWeight: '600' },
+    menuOptionTextDestructive: { color: '#ff4444' },
+    subScreenHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 16, paddingVertical: 14,
+        borderBottomWidth: 1, borderBottomColor: '#c9a84c22',
+    },
+    backButton: { padding: 4, width: 40 },
+    subScreenTitle: { color: '#c9a84c', fontSize: 18, fontWeight: '700', flex: 1, textAlign: 'center' },
+    canonSubtitle: { color: '#888', fontSize: 13, fontStyle: 'italic', textAlign: 'center', paddingVertical: 8 },
+    formHeader: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+        paddingHorizontal: 16, paddingVertical: 14,
+        borderBottomWidth: 1, borderBottomColor: '#c9a84c22',
+    },
+    formTitle: { color: '#fff', fontSize: 16, fontWeight: '700', flex: 1, textAlign: 'center' },
+    saveButtonHeader: {
+        backgroundColor: '#c9a84c', borderRadius: 10,
+        paddingVertical: 8, paddingHorizontal: 16,
+    },
+    saveButtonHeaderText: { color: '#1a1a2e', fontWeight: '700', fontSize: 14 },
+    content: { padding: 20, paddingTop: 16, paddingBottom: 40 },
+    largeInput: {
+        backgroundColor: '#16213e', borderRadius: 14, padding: 16,
+        color: '#fff', fontSize: 15, minHeight: 180, lineHeight: 24,
+        borderWidth: 1, borderColor: '#c9a84c33', marginBottom: 12,
+    },
+    smallInput: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 14,
+        color: '#fff', fontSize: 14, borderWidth: 1, borderColor: '#c9a84c22', marginBottom: 10,
+    },
+    dialogueViewContent: { padding: 16, paddingBottom: 40 },
+    rawThoughtCard: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 14,
+        marginBottom: 16, borderLeftWidth: 3, borderLeftColor: '#555',
+    },
+    rawThoughtLabel: {
+        color: '#555', fontSize: 11, fontWeight: '700',
+        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6,
+    },
+    rawThoughtText: { color: '#ccc', fontSize: 14, lineHeight: 22 },
+    cabinetBubble: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 14,
+        marginBottom: 12, borderLeftWidth: 3, borderLeftColor: '#c9a84c',
+        maxWidth: '90%', alignSelf: 'flex-start',
+    },
+    bubbleRoleLabel: {
+        color: '#c9a84c', fontSize: 10, fontWeight: '700',
+        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6,
+    },
+    cabinetBubbleText: { color: '#fff', fontSize: 14, lineHeight: 22 },
+    userBubble: {
+        backgroundColor: '#1e2a45', borderRadius: 12, padding: 14,
+        marginBottom: 12, maxWidth: '90%', alignSelf: 'flex-end',
+    },
+    userBubbleText: { color: '#fff', fontSize: 14, lineHeight: 22 },
+    encodedBeliefCard: {
+        backgroundColor: '#1e2a45', borderRadius: 14, padding: 16,
+        marginTop: 12, borderWidth: 1, borderColor: '#c9a84c66',
+    },
+    encodedBeliefLabel: {
+        color: '#c9a84c', fontSize: 11, fontWeight: '700',
+        textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
+    },
+    encodedBeliefText: { color: '#fff', fontSize: 15, lineHeight: 24 },
+    canonCard: {
+        backgroundColor: '#16213e', borderRadius: 14, padding: 18,
+        marginBottom: 16, borderWidth: 1, borderColor: '#c9a84c33',
+        borderLeftWidth: 3, borderLeftColor: '#c9a84c',
+    },
+    canonCardTopRow: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10,
+    },
+    canonTopicLabel: {
+        color: '#c9a84c', fontSize: 11, fontWeight: '700',
+        textTransform: 'uppercase', letterSpacing: 1, flex: 1,
+    },
+    canonBeliefText: { color: '#fff', fontSize: 17, lineHeight: 28, fontWeight: '500', marginBottom: 10 },
+    canonDateText: { color: '#555', fontSize: 11, marginBottom: 8 },
+    dialogueHistoryContainer: {
+        marginTop: 12, borderTopWidth: 1, borderTopColor: '#c9a84c22', paddingTop: 12,
+    },
+    dialogueHistoryLabel: {
+        color: '#888', fontSize: 11, fontWeight: '700',
+        letterSpacing: 1, textTransform: 'uppercase', marginBottom: 10,
+    },
+    expandRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 },
+    expandText: { color: '#888', fontSize: 12 },
 });

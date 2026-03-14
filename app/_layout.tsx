@@ -108,6 +108,10 @@ export default function Layout() {
         name="privacy"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="belief-journal"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }
