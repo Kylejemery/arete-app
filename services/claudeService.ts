@@ -248,6 +248,7 @@ export async function gatherAppContext(): Promise<string> {
     todayReadingSecondsRaw,
     streakRaw,
     beliefEntriesRaw,
+    readingStreakRaw,
   ] = await Promise.all([
     AsyncStorage.getItem('morningTasks'),
     AsyncStorage.getItem('eveningTasks'),
@@ -261,6 +262,7 @@ export async function gatherAppContext(): Promise<string> {
     AsyncStorage.getItem('todayReadingSeconds'),
     AsyncStorage.getItem('streak'),
     AsyncStorage.getItem('beliefEntries'),
+    AsyncStorage.getItem('readingStreak'),
   ]);
 
   const userName = await getUserName();
@@ -393,11 +395,13 @@ export async function gatherAppContext(): Promise<string> {
   // Overall stats
   try {
     const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
+    const readingStreak = readingStreakRaw ? parseInt(readingStreakRaw, 10) : 0;
     const journalCount = journalEntriesRaw ? (JSON.parse(journalEntriesRaw) as unknown[]).length : 0;
     const quoteCount = commonplaceQuotesRaw ? (JSON.parse(commonplaceQuotesRaw) as unknown[]).length : 0;
     lines.push('');
     lines.push('OVERALL STATS:');
     lines.push(`- Streak: ${isNaN(streak) ? 0 : streak} days`);
+    lines.push(`- Reading streak: ${isNaN(readingStreak) ? 0 : readingStreak} days`);
     lines.push(`- Total journal entries: ${journalCount}`);
     lines.push(`- Total quotes saved: ${quoteCount}`);
   } catch { /* skip */ }
@@ -449,6 +453,7 @@ async function gatherWeeklyContext(): Promise<string> {
     booksReadRaw,
     commonplaceQuotesRaw,
     screenTimeLogRaw,
+    readingStreakRaw,
   ] = await Promise.all([
     AsyncStorage.getItem('streak'),
     AsyncStorage.getItem('calendarData'),
@@ -460,6 +465,7 @@ async function gatherWeeklyContext(): Promise<string> {
     AsyncStorage.getItem('booksRead'),
     AsyncStorage.getItem('commonplaceQuotes'),
     AsyncStorage.getItem('screenTimeLog'),
+    AsyncStorage.getItem('readingStreak'),
   ]);
 
   const userName = await getUserName();
@@ -473,8 +479,10 @@ async function gatherWeeklyContext(): Promise<string> {
   // Streak
   try {
     const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
+    const readingStreak = readingStreakRaw ? parseInt(readingStreakRaw, 10) : 0;
     lines.push('');
     lines.push(`CURRENT STREAK: ${isNaN(streak) ? 0 : streak} days`);
+    lines.push(`READING STREAK: ${isNaN(readingStreak) ? 0 : readingStreak} days`);
   } catch { /* skip */ }
 
   // Morning/Evening completion for the past 7 days

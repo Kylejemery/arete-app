@@ -43,6 +43,7 @@ export default function ProgressScreen() {
   const [newBookAuthor, setNewBookAuthor] = useState('');
   const [totalPages, setTotalPages] = useState(0);
   const [totalReadingSeconds, setTotalReadingSeconds] = useState(0);
+  const [readingStreak, setReadingStreak] = useState(0);
 
   // Screen time
   const [screenTimeGoal, setScreenTimeGoal] = useState(2);
@@ -82,6 +83,10 @@ export default function ProgressScreen() {
         setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
         setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
       }
+
+      // Reading streak
+      const savedReadingStreak = await AsyncStorage.getItem('readingStreak');
+      if (savedReadingStreak) setReadingStreak(parseInt(savedReadingStreak));
 
       // Screen time settings & log
       const today = new Date().toDateString();
@@ -402,6 +407,13 @@ export default function ProgressScreen() {
               <Text style={styles.booksHeroLabel}>Books Finished</Text>
             </View>
 
+            {/* Reading Streak */}
+            <View style={styles.readingStreakCard}>
+              <Text style={styles.readingStreakIcon}>📖🔥</Text>
+              <Text style={styles.readingStreakNumber}>{readingStreak}</Text>
+              <Text style={styles.readingStreakLabel}>Day Reading Streak</Text>
+            </View>
+
             {/* Reading Stats */}
             <View style={styles.statsRow}>
               <View style={styles.statCard}>
@@ -559,6 +571,18 @@ const styles = StyleSheet.create({
   booksHeroEmoji: { fontSize: 36, marginBottom: 4 },
   booksHeroNumber: { fontSize: 48, fontWeight: 'bold', color: '#c9a84c' },
   booksHeroLabel: { color: '#888', fontSize: 14, marginTop: 4 },
+  readingStreakCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  readingStreakIcon: { fontSize: 36, marginBottom: 4 },
+  readingStreakNumber: { fontSize: 48, fontWeight: 'bold', color: '#c9a84c' },
+  readingStreakLabel: { color: '#888', fontSize: 14, marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
   statCard: {
     flex: 1, backgroundColor: '#16213e', borderRadius: 12, padding: 14,
