@@ -36,8 +36,8 @@ export default function ProgressScreen() {
   const [calendarData, setCalendarData] = useState<any>({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [books, setBooks] = useState<any[]>([]);
-  const [pagesLog, setPagesLog] = useState<any[]>([]);
-  const [todayPages, setTodayPages] = useState('');
+  const [currentBooks, setCurrentBooks] = useState<any[]>([]);
+  const [readingSessions, setReadingSessions] = useState<any[]>([]);
   const [showBookModal, setShowBookModal] = useState(false);
   const [newBookTitle, setNewBookTitle] = useState('');
   const [newBookAuthor, setNewBookAuthor] = useState('');
@@ -68,28 +68,21 @@ export default function ProgressScreen() {
       buildWeekData(calData ? JSON.parse(calData) : {});
 
       const savedBooks = await AsyncStorage.getItem('booksRead');
-      const savedPages = await AsyncStorage.getItem('pagesLog');
+      const savedCurrentBooks = await AsyncStorage.getItem('currentBooks');
       if (savedBooks) setBooks(JSON.parse(savedBooks));
-      if (savedPages) {
-        const pages = JSON.parse(savedPages);
-        setPagesLog(pages);
-        setTotalPages(pages.reduce((sum: number, p: any) => sum + p.pages, 0));
-      }
+      if (savedCurrentBooks) setCurrentBooks(JSON.parse(savedCurrentBooks));
 
-      const today = new Date().toDateString();
-      const savedPagesLog = savedPages ? JSON.parse(savedPages) : [];
-      const todayLog = savedPagesLog.find((p: any) => p.date === today);
-      if (todayLog) setTodayPages(todayLog.pages.toString());
-
-      // Reading sessions total time
+      // Reading sessions — authoritative source for pages and history
       const savedSessions = await AsyncStorage.getItem('readingSessions');
       if (savedSessions) {
         const sessions = JSON.parse(savedSessions);
-        const total = sessions.reduce((sum: number, s: any) => sum + s.duration, 0);
-        setTotalReadingSeconds(total);
+        setReadingSessions(sessions);
+        setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
+        setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
       }
 
       // Screen time settings & log
+      const today = new Date().toDateString();
       const notifSettings = await AsyncStorage.getItem('notificationSettings');
       if (notifSettings) {
         const parsed = JSON.parse(notifSettings);
@@ -172,21 +165,6 @@ export default function ProgressScreen() {
       );
     }
     return cells;
-  };
-
-  const logPages = async () => {
-    const pages = parseInt(todayPages);
-    if (!pages || pages <= 0) { Alert.alert('Invalid', 'Please enter a valid number of pages.'); return; }
-    const today = new Date().toDateString();
-    const existing = pagesLog.filter((p: any) => p.date !== today);
-    const updated = [{
-      date: today, pages,
-      dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    }, ...existing];
-    setPagesLog(updated);
-    setTotalPages(updated.reduce((sum, p) => sum + p.pages, 0));
-    await AsyncStorage.setItem('pagesLog', JSON.stringify(updated));
-    Alert.alert('✅ Logged!', `${pages} pages logged for today!`);
   };
 
   const logScreenTime = async () => {
@@ -434,32 +412,41 @@ export default function ProgressScreen() {
               </View>
             </View>
 
-            {/* Log Pages */}
+            {/* Currently Reading */}
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>📖 Log Today's Pages</Text>
-              <View style={styles.pagesInputRow}>
-                <TextInput
-                  style={styles.pagesInput}
-                  placeholder="Pages read today..."
-                  placeholderTextColor="#555"
-                  keyboardType="number-pad"
-                  value={todayPages}
-                  onChangeText={setTodayPages}
-                />
-                <TouchableOpacity style={styles.logButton} onPress={logPages}>
-                  <Text style={styles.logButtonText}>Log</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.sectionTitle}>📖 Currently Reading</Text>
+              {currentBooks.length === 0 ? (
+                <Text style={styles.emptyText}>No books in progress. Start a session in the Timer!</Text>
+              ) : (
+                currentBooks.map((book, i) => (
+                  <View key={book.title + (book.author || '')} style={styles.currentBookRow}>
+                    <View style={styles.currentBookIcon}>
+                      <Ionicons name="book-outline" size={18} color="#c9a84c" />
+                    </View>
+                    <View style={styles.bookInfo}>
+                      <Text style={styles.bookTitle}>{book.title}</Text>
+                      {book.author ? <Text style={styles.bookAuthor}>by {book.author}</Text> : null}
+                      <Text style={styles.bookDate}>Page {book.currentPage}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
             </View>
 
-            {/* Pages History */}
-            {pagesLog.length > 0 && (
+            {/* Reading History */}
+            {readingSessions.length > 0 && (
               <View style={styles.sectionCard}>
-                <Text style={styles.sectionTitle}>📅 Pages History</Text>
-                {pagesLog.slice(0, 7).map((log, i) => (
-                  <View key={i} style={styles.pagesLogRow}>
-                    <Text style={styles.pagesLogDate}>{log.dateFormatted}</Text>
-                    <Text style={styles.pagesLogCount}>{log.pages} pages</Text>
+                <Text style={styles.sectionTitle}>📅 Reading History</Text>
+                {readingSessions.slice(0, 10).map((session, i) => (
+                  <View key={session.date + session.bookTitle + i} style={styles.sessionRow}>
+                    <View style={styles.sessionInfo}>
+                      <Text style={styles.sessionBook}>{session.bookTitle}</Text>
+                      <Text style={styles.sessionMeta}>{session.dateFormatted}</Text>
+                    </View>
+                    <View style={styles.sessionStats}>
+                      <Text style={styles.sessionPages}>pp. {session.startPage}→{session.endPage}</Text>
+                      <Text style={styles.sessionDuration}>{formatReadingTime(session.duration)}</Text>
+                    </View>
                   </View>
                 ))}
               </View>
@@ -648,4 +635,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weeklyReviewButtonText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
+  emptyText: { color: '#888', fontSize: 13, textAlign: 'center', paddingVertical: 10 },
+  currentBookRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#c9a84c11' },
+  currentBookIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#c9a84c22', alignItems: 'center', justifyContent: 'center' },
+  sessionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#c9a84c11' },
+  sessionInfo: { flex: 1, marginRight: 10 },
+  sessionBook: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  sessionMeta: { color: '#888', fontSize: 11, marginTop: 2 },
+  sessionStats: { alignItems: 'flex-end' },
+  sessionPages: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
+  sessionDuration: { color: '#888', fontSize: 11, marginTop: 2 },
 });
