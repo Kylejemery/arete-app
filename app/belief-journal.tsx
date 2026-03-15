@@ -109,7 +109,7 @@ export default function BeliefJournalScreen() {
     const updateCurrentEntry = async (updated: UnifiedEntry) => {
         setEntry(updated);
         try {
-            if (updated.id && !updated.id.startsWith('new_')) {
+            if (updated.id) {
                 await updateJournalEntry(updated.id, {
                     content: updated.content,
                     raw_input: updated.rawInput,
