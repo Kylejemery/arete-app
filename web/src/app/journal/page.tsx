@@ -142,6 +142,8 @@ export default function JournalPage() {
 
   // Load entries
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     async function load() {
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/login'); return; }
@@ -151,16 +153,19 @@ export default function JournalPage() {
       // Real-time subscription
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const channel = supabase.channel('journal-changes')
+        channel = supabase.channel('journal-changes')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries', filter: `user_id=eq.${user.id}` }, async () => {
             const fresh = await getJournalEntries();
             setEntries(fresh.map(dbToUnified));
           })
           .subscribe();
-        return () => { supabase.removeChannel(channel); };
       }
     }
     load();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [router]);
 
   // Persistence helpers
