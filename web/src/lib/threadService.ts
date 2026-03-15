@@ -1,4 +1,4 @@
-import { getItem, setItem, removeItem } from './storage';
+import { getThread, upsertThread } from './db';
 
 export interface ThreadMessage {
   role: 'user' | 'assistant';
@@ -16,24 +16,19 @@ export interface Thread {
 const MAX_STORED_MESSAGES = 200;
 export const CONTEXT_WINDOW_SIZE = 30;
 
-function storageKey(threadId: string): string {
-  return `thread_${threadId}`;
-}
-
-export function loadThread(threadId: string): Thread {
+export async function loadThread(threadId: string): Promise<Thread> {
   try {
-    const raw = getItem(storageKey(threadId));
-    if (raw) {
-      const parsed = JSON.parse(raw) as Thread;
-      if (parsed && Array.isArray(parsed.messages)) {
-        return parsed;
-      }
-    }
-  } catch { /* ignore corrupt data */ }
+    const messages = await getThread(threadId);
+    return {
+      id: threadId,
+      messages: messages as unknown as ThreadMessage[],
+      lastUpdated: Date.now(),
+    };
+  } catch { /* ignore errors */ }
   return { id: threadId, messages: [], lastUpdated: Date.now() };
 }
 
-export function saveThread(thread: Thread): void {
+export async function saveThread(thread: Thread): Promise<void> {
   const capped: Thread = {
     ...thread,
     messages:
@@ -43,40 +38,43 @@ export function saveThread(thread: Thread): void {
     lastUpdated: Date.now(),
   };
   try {
-    setItem(storageKey(thread.id), JSON.stringify(capped));
+    await upsertThread(thread.id, capped.messages as unknown as Parameters<typeof upsertThread>[1]);
   } catch { /* ignore storage errors silently */ }
 }
 
-export function appendMessages(
+export async function appendMessages(
   threadId: string,
   messages: ThreadMessage[]
-): Thread {
-  const thread = loadThread(threadId);
+): Promise<Thread> {
+  const thread = await loadThread(threadId);
   const updated: Thread = {
     ...thread,
     messages: [...thread.messages, ...messages],
     lastUpdated: Date.now(),
   };
-  saveThread(updated);
+  await saveThread(updated);
   return updated;
 }
 
-export function clearThread(threadId: string): void {
+export async function clearThread(threadId: string): Promise<void> {
   try {
-    removeItem(storageKey(threadId));
+    await upsertThread(threadId, []);
   } catch { /* ignore */ }
 }
 
-export function getAllThreadSummaries(): { id: string; messageCount: number; lastUpdated: number }[] {
+export async function getAllThreadSummaries(): Promise<{ id: string; messageCount: number; lastUpdated: number }[]> {
   const threadIds = ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf', 'cabinet'];
-  return threadIds.map((id) => {
-    const thread = loadThread(id);
-    return {
-      id,
-      messageCount: thread.messages.length,
-      lastUpdated: thread.lastUpdated,
-    };
-  });
+  const results = await Promise.all(
+    threadIds.map(async (id) => {
+      const thread = await loadThread(id);
+      return {
+        id,
+        messageCount: thread.messages.length,
+        lastUpdated: thread.lastUpdated,
+      };
+    })
+  );
+  return results;
 }
 
 /**

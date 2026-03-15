@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../services/claudeService';
+import { getUserSettings, createJournalEntry } from './lib/db';
 import {
   ThreadMessage,
   appendMessages,
@@ -84,31 +84,9 @@ export default function CabinetScreen() {
   const params = useLocalSearchParams<{ beliefContext?: string }>();
   const consumedBeliefContextRef = useRef(false);
 
-  // On mount: migrate old cabinetMessages → thread_cabinet, then load thread
+  // On mount: load thread
   useEffect(() => {
     (async () => {
-      // Migration: move old cabinetMessages to thread_cabinet if thread_cabinet is empty
-      const oldRaw = await AsyncStorage.getItem('cabinetMessages');
-      if (oldRaw) {
-        const existingThread = await loadThread('cabinet');
-        if (existingThread.messages.length === 0) {
-          try {
-            const oldMessages: { role: 'user' | 'assistant'; content: string }[] =
-              JSON.parse(oldRaw);
-            if (Array.isArray(oldMessages) && oldMessages.length > 0) {
-              const now = Date.now();
-              const migrated: ThreadMessage[] = oldMessages.map((m, i) => ({
-                role: m.role,
-                content: m.content,
-                timestamp: now - (oldMessages.length - i) * 1000,
-              }));
-              await appendMessages('cabinet', migrated);
-            }
-          } catch { /* ignore corrupt data */ }
-        }
-        await AsyncStorage.removeItem('cabinetMessages');
-      }
-
       // Load cabinet thread
       const thread = await loadThread('cabinet');
       setMessages(thread.messages);
@@ -119,14 +97,8 @@ export default function CabinetScreen() {
   useEffect(() => {
     if (activeTab !== 'counselors') return;
     (async () => {
-      const cabinetMembersRaw = await AsyncStorage.getItem('cabinetMembers');
-      let members = ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
-      try {
-        if (cabinetMembersRaw) {
-          const parsed = JSON.parse(cabinetMembersRaw);
-          if (Array.isArray(parsed) && parsed.length > 0) members = parsed;
-        }
-      } catch { /* use default */ }
+      const settings = await getUserSettings();
+      const members = settings?.cabinet_members ?? ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
       setActiveMembers(members);
       const summaries = await getAllThreadSummaries();
       setThreadSummaries(summaries);
@@ -137,8 +109,8 @@ export default function CabinetScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const ktGoals = await AsyncStorage.getItem('kt_goals');
-        setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
+        const settings = await getUserSettings();
+        setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
       })();
     }, [])
   );
@@ -495,19 +467,14 @@ export default function CabinetScreen() {
                   const rawThought = beliefSeedInput.trim();
                   if (!rawThought) return;
                   try {
-                    const existing = await AsyncStorage.getItem('beliefEntries');
-                    const entries: any[] = existing ? JSON.parse(existing) : [];
-                    const newEntry = {
-                      id: `belief_${Date.now()}`,
-                      rawThought,
-                      stage: 1,
-                      dialogue: [],
+                    await createJournalEntry({
+                      type: 'belief',
+                      content: rawThought,
+                      raw_input: rawThought,
+                      dialogue_history: [],
+                      belief_stage: 1 as any,
                       topic: rawThought.slice(0, 60),
-                      createdAt: Date.now(),
-                      updatedAt: Date.now(),
-                    };
-                    entries.push(newEntry);
-                    await AsyncStorage.setItem('beliefEntries', JSON.stringify(entries));
+                    });
                   } catch { /* skip */ }
                   setBeliefSeedText(null);
                   setBeliefSeedInput('');

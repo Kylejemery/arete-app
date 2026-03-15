@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -16,6 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
+import { getTodayCheckin, getJournalEntries, getReadingData, getCalendarData, upsertCalendarData, upsertReadingData } from './lib/db';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -60,80 +60,46 @@ export default function ProgressScreen() {
 
   const loadAllData = async () => {
     try {
-      const s = await AsyncStorage.getItem('streak');
-      if (s) setStreak(parseInt(s));
+      const checkin = await getTodayCheckin();
+      if (checkin) setStreak(checkin.streak ?? 0);
 
-      const journal = await AsyncStorage.getItem('journalEntries');
-      const quotes = await AsyncStorage.getItem('commonplaceQuotes');
-      if (journal) setJournalCount(JSON.parse(journal).length);
-      if (quotes) setQuoteCount(JSON.parse(quotes).length);
+      const journalEntries = await getJournalEntries();
+      setJournalCount(journalEntries.filter(e => e.type === 'reflection').length);
+      setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
+      const encoded = journalEntries.filter(e => e.type === 'belief' && e.belief_stage === 'encoded').length;
+      const inProgress = journalEntries.filter(e => e.type === 'belief' && e.belief_stage !== 'encoded').length;
+      setEncodedBeliefCount(encoded);
+      setInProgressBeliefCount(inProgress);
 
-      const calData = await AsyncStorage.getItem('calendarData');
-      if (calData) setCalendarData(JSON.parse(calData));
-      buildWeekData(calData ? JSON.parse(calData) : {});
+      const calData = await getCalendarData();
+      setCalendarData(calData);
+      buildWeekData(calData);
 
-      const savedBooks = await AsyncStorage.getItem('booksRead');
-      const savedCurrentBooks = await AsyncStorage.getItem('currentBooks');
-      if (savedBooks) setBooks(JSON.parse(savedBooks));
-      if (savedCurrentBooks) setCurrentBooks(JSON.parse(savedCurrentBooks));
-
-      // Reading sessions — authoritative source for pages and history
-      const savedSessions = await AsyncStorage.getItem('readingSessions');
-      if (savedSessions) {
-        const sessions = JSON.parse(savedSessions);
+      const readingData = await getReadingData();
+      if (readingData) {
+        setBooks(readingData.books_read ?? []);
+        setCurrentBooks(readingData.current_books ?? []);
+        const sessions = readingData.reading_sessions ?? [];
         setReadingSessions(sessions);
         setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
         setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
       }
 
-      // Reading streak
-      const savedReadingStreak = await AsyncStorage.getItem('readingStreak');
-      if (savedReadingStreak) setReadingStreak(parseInt(savedReadingStreak));
-
-      const savedBeliefs = await AsyncStorage.getItem('beliefEntries');
-      if (savedBeliefs) {
-        const beliefs = JSON.parse(savedBeliefs);
-        let encoded = 0;
-        let inProgress = 0;
-        for (const b of beliefs) {
-          if (b.stage === 'encoded') encoded++;
-          else inProgress++;
-        }
-        setEncodedBeliefCount(encoded);
-        setInProgressBeliefCount(inProgress);
-      }
-
-      // Screen time settings & log
-      const today = new Date().toDateString();
-      const notifSettings = await AsyncStorage.getItem('notificationSettings');
-      if (notifSettings) {
-        const parsed = JSON.parse(notifSettings);
-        setScreenTimeGoal(parseInt(parsed.screenTimeGoal) || 2);
-      }
-      const savedScreenLog = await AsyncStorage.getItem('screenTimeLog');
-      if (savedScreenLog) {
-        const log = JSON.parse(savedScreenLog);
-        setScreenTimeLog(log);
-        const todayScreen = log.find((l: any) => l.date === today);
-        if (todayScreen) setTodayScreenTime(todayScreen.hours.toString());
-      }
-
-      await updateTodayCalendar(calData ? JSON.parse(calData) : {});
+      await updateTodayCalendar(calData);
     } catch (e) {
       console.error(e);
     }
   };
 
   const updateTodayCalendar = async (existingData: any) => {
-    const today = new Date().toDateString();
-    const morningDone = await AsyncStorage.getItem('morningDone');
-    const eveningDone = await AsyncStorage.getItem('eveningDone');
+    const todayDate = new Date().toISOString().split('T')[0];
+    const checkin = await getTodayCheckin();
     const updated = {
       ...existingData,
-      [today]: { morning: morningDone === 'true', evening: eveningDone === 'true' }
+      [todayDate]: { morning: checkin?.morning_done ?? false, evening: checkin?.evening_done ?? false }
     };
     setCalendarData(updated);
-    await AsyncStorage.setItem('calendarData', JSON.stringify(updated));
+    await upsertCalendarData(updated);
     buildWeekData(updated);
   };
 
@@ -199,7 +165,6 @@ export default function ProgressScreen() {
       dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     }, ...existing];
     setScreenTimeLog(updated);
-    await AsyncStorage.setItem('screenTimeLog', JSON.stringify(updated));
     const status = hours <= screenTimeGoal ? '✅ Under goal!' : '⚠️ Over goal.';
     Alert.alert('Screen Time Logged!', `${hours}h logged. ${status}`);
   };
@@ -207,14 +172,13 @@ export default function ProgressScreen() {
   const addBook = async () => {
     if (!newBookTitle.trim()) { Alert.alert('Required', 'Please enter a book title.'); return; }
     const book = {
-      id: Date.now().toString(),
       title: newBookTitle.trim(),
       author: newBookAuthor.trim(),
       dateFinished: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
     };
     const updated = [book, ...books];
     setBooks(updated);
-    await AsyncStorage.setItem('booksRead', JSON.stringify(updated));
+    await upsertReadingData({ books_read: updated });
     setNewBookTitle(''); setNewBookAuthor('');
     setShowBookModal(false);
   };
@@ -224,9 +188,9 @@ export default function ProgressScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive', onPress: async () => {
-          const updated = books.filter(b => b.id !== id);
+          const updated = books.filter((b: any) => b.id !== id);
           setBooks(updated);
-          await AsyncStorage.setItem('booksRead', JSON.stringify(updated));
+          await upsertReadingData({ books_read: updated });
         }
       }
     ]);

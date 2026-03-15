@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setItem } from '@/lib/storage';
 import { COUNSELOR_LIST } from '@/lib/counselors';
@@ -12,6 +12,10 @@ const YEAR_OPTIONS = [5, 10, 15, 20];
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    router.replace('/login');
+  }, [router]);
 
   const [name, setName] = useState('');
   const [background, setBackground] = useState('');
