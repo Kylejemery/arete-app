@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { sendMessageToCounselor } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread } from '../services/threadService';
+import { getUserSettings } from './lib/db';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -41,8 +41,8 @@ export default function CounselorChatScreen() {
     // Always reset state when counselorId changes
     setMessages([]);
     if (counselorId === 'futureSelf') {
-      AsyncStorage.getItem('userName').then((name) => {
-        setCounselorName(name ? `${name}'s Future Self` : 'Future Self');
+      getUserSettings().then((settings) => {
+        setCounselorName(settings?.user_name ? `${settings.user_name}'s Future Self` : 'Future Self');
       });
     } else {
       setCounselorName(COUNSELOR_META[counselorId]?.name || counselorId);

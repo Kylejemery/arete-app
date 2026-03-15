@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import {
     Alert, KeyboardAvoidingView, Modal,
@@ -12,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
+import { getReadingData, upsertReadingData } from './lib/db';
 
 export default function TimerScreen() {
   const swipeHandlers = useSwipeNavigation('/timer');
@@ -51,21 +51,14 @@ export default function TimerScreen() {
 
   const loadData = async () => {
     try {
-      const savedBooks = await AsyncStorage.getItem('currentBooks');
-      const savedSessions = await AsyncStorage.getItem('readingSessions');
-      const savedTodaySeconds = await AsyncStorage.getItem('todayReadingSeconds');
-      const todayKey = new Date().toDateString();
-      const savedTodayKey = await AsyncStorage.getItem('todayReadingKey');
-
-      if (savedBooks) setCurrentBooks(JSON.parse(savedBooks));
-      if (savedSessions) setSessions(JSON.parse(savedSessions));
-
-      // Reset today's time if it's a new day
-      if (savedTodayKey === todayKey && savedTodaySeconds) {
-        setTodaySeconds(parseInt(savedTodaySeconds));
-      } else {
-        await AsyncStorage.setItem('todayReadingKey', todayKey);
-        await AsyncStorage.setItem('todayReadingSeconds', '0');
+      const readingData = await getReadingData();
+      if (readingData) {
+        setCurrentBooks(readingData.current_books ?? []);
+        setSessions(readingData.reading_sessions ?? []);
+        const todayDate = new Date().toISOString().split('T')[0];
+        if (readingData.today_reading_date === todayDate) {
+          setTodaySeconds(readingData.today_reading_seconds ?? 0);
+        }
       }
     } catch (e) {
       console.error(e);
@@ -143,18 +136,10 @@ export default function TimerScreen() {
 
     const updatedSessions = [session, ...sessions];
     setSessions(updatedSessions);
-    await AsyncStorage.setItem('readingSessions', JSON.stringify(updatedSessions));
 
     // Update today's total
     const newTodaySeconds = todaySeconds + duration;
     setTodaySeconds(newTodaySeconds);
-    await AsyncStorage.setItem('todayReadingSeconds', newTodaySeconds.toString());
-
-    // Update pages log in progress screen
-    await updatePagesLog(pagesRead);
-
-    // Update reading streak
-    await updateReadingStreak();
 
     // Update current book's current page
     const updatedBooks = currentBooks.map(b =>
@@ -162,7 +147,14 @@ export default function TimerScreen() {
     );
     setCurrentBooks(updatedBooks);
     setSelectedBook({ ...selectedBook, currentPage: endPageNum });
-    await AsyncStorage.setItem('currentBooks', JSON.stringify(updatedBooks));
+
+    const todayDate = new Date().toISOString().split('T')[0];
+    await upsertReadingData({
+      current_books: updatedBooks,
+      reading_sessions: updatedSessions,
+      today_reading_seconds: newTodaySeconds,
+      today_reading_date: todayDate,
+    });
 
     setSessionSeconds(0);
     setEndPage('');
@@ -177,63 +169,23 @@ export default function TimerScreen() {
     }
   };
 
-  const updateReadingStreak = async () => {
-    const lastReadingDate = await AsyncStorage.getItem('lastReadingStreakDate');
-    const today = new Date().toDateString();
-    if (lastReadingDate === today) return; // already counted today
-
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toDateString();
-
-    const saved = await AsyncStorage.getItem('readingStreak');
-    const current = saved ? parseInt(saved, 10) : 0;
-
-    // Continue streak if last session was yesterday, otherwise reset to 1
-    const newStreak = lastReadingDate === yesterdayStr ? current + 1 : 1;
-
-    await AsyncStorage.setItem('readingStreak', newStreak.toString());
-    await AsyncStorage.setItem('lastReadingStreakDate', today);
-  };
-
-  const updatePagesLog = async (pagesRead: number) => {
-    const today = new Date().toDateString();
-    const savedPages = await AsyncStorage.getItem('pagesLog');
-    const pagesLog = savedPages ? JSON.parse(savedPages) : [];
-    const existing = pagesLog.filter((p: any) => p.date !== today);
-    const todayLog = pagesLog.find((p: any) => p.date === today);
-    const updatedPages = (todayLog?.pages || 0) + pagesRead;
-    const updated = [{
-      date: today,
-      pages: updatedPages,
-      dateFormatted: new Date().toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
-      })
-    }, ...existing];
-    await AsyncStorage.setItem('pagesLog', JSON.stringify(updated));
-  };
-
   const markBookFinished = async () => {
     if (!finishedBook) return;
     setShowFinishModal(false);
 
-    // Add to books read in progress
-    const savedBooks = await AsyncStorage.getItem('booksRead');
-    const booksRead = savedBooks ? JSON.parse(savedBooks) : [];
+    const readingData = await getReadingData();
+    const booksRead = readingData?.books_read ?? [];
     const newBook = {
-      id: Date.now().toString(),
       title: finishedBook.title,
       author: finishedBook.author,
       dateFinished: new Date().toLocaleDateString('en-US', {
         month: 'long', day: 'numeric', year: 'numeric'
       }),
     };
-    await AsyncStorage.setItem('booksRead', JSON.stringify([newBook, ...booksRead]));
-
-    // Remove from current books
+    const updatedRead = [newBook, ...booksRead];
     const updatedCurrent = currentBooks.filter(b => b.id !== finishedBook.id);
     setCurrentBooks(updatedCurrent);
-    await AsyncStorage.setItem('currentBooks', JSON.stringify(updatedCurrent));
+    await upsertReadingData({ books_read: updatedRead, current_books: updatedCurrent });
     if (selectedBook?.id === finishedBook.id) setSelectedBook(null);
 
     Alert.alert('🎉 Congratulations!', `"${finishedBook.title}" has been moved to your finished books!`);
@@ -255,7 +207,7 @@ export default function TimerScreen() {
     };
     const updated = [...currentBooks, book];
     setCurrentBooks(updated);
-    await AsyncStorage.setItem('currentBooks', JSON.stringify(updated));
+    await upsertReadingData({ current_books: updated });
     setNewBookTitle('');
     setNewBookAuthor('');
     setNewBookStartPage('');
@@ -269,7 +221,7 @@ export default function TimerScreen() {
         text: 'Remove', style: 'destructive', onPress: async () => {
           const updated = currentBooks.filter(b => b.id !== id);
           setCurrentBooks(updated);
-          await AsyncStorage.setItem('currentBooks', JSON.stringify(updated));
+          await upsertReadingData({ current_books: updated });
           if (selectedBook?.id === id) setSelectedBook(null);
         }
       }

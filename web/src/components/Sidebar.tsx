@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 const navItems = [
   { href: '/', label: 'Home', emoji: '🏠' },
@@ -16,6 +17,12 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.replace('/login');
+  };
 
   return (
     <>
@@ -44,10 +51,16 @@ export default function Sidebar() {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-arete-border">
-          <Link href="/privacy" className="text-arete-muted text-xs hover:text-arete-text">
+        <div className="p-4 border-t border-arete-border space-y-2">
+          <Link href="/privacy" className="block text-arete-muted text-xs hover:text-arete-text">
             Privacy Policy
           </Link>
+          <button
+            onClick={handleSignOut}
+            className="text-red-400 text-xs hover:text-red-300 transition-colors"
+          >
+            Sign Out
+          </button>
         </div>
       </aside>
 

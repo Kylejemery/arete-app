@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '@/lib/storage';
+import { getUserSettings, upsertUserSettings } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
@@ -22,32 +22,37 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const settings = await getUserSettings();
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    setBackground(getItem('kt_background') || '');
-    setIdentity(getItem('kt_identity') || '');
-    setGoals(getItem('kt_goals') || '');
-    setStrengths(getItem('kt_strengths') || '');
-    setWeaknesses(getItem('kt_weaknesses') || '');
-    setPatterns(getItem('kt_patterns') || '');
-    setMajorEvents(getItem('kt_major_events') || '');
-    setFutureSelfYears(parseInt(getItem('futureSelfYears') || '10'));
-    setFutureSelfDescription(getItem('futureSelfDescription') || '');
-    setLoaded(true);
+      setBackground(settings.kt_background || '');
+      setIdentity(settings.kt_identity || '');
+      setGoals(settings.kt_goals || '');
+      setStrengths(settings.kt_strengths || '');
+      setWeaknesses(settings.kt_weaknesses || '');
+      setPatterns(settings.kt_patterns || '');
+      setMajorEvents(settings.kt_major_events || '');
+      setFutureSelfYears(settings.future_self_years ?? 10);
+      setFutureSelfDescription(settings.future_self_description || '');
+      setLoaded(true);
+    }
+    load();
   }, [router]);
 
-  const handleSave = () => {
-    setItem('kt_background', background.trim());
-    setItem('kt_identity', identity.trim());
-    setItem('kt_goals', goals.trim());
-    setItem('userGoals', goals.trim());
-    setItem('kt_strengths', strengths.trim());
-    setItem('kt_weaknesses', weaknesses.trim());
-    setItem('kt_patterns', patterns.trim());
-    setItem('kt_major_events', majorEvents.trim());
-    setItem('futureSelfYears', String(futureSelfYears));
-    setItem('futureSelfDescription', futureSelfDescription.trim());
+  const handleSave = async () => {
+    await upsertUserSettings({
+      kt_background: background.trim(),
+      kt_identity: identity.trim(),
+      kt_goals: goals.trim(),
+      user_goals: goals.trim(),
+      kt_strengths: strengths.trim(),
+      kt_weaknesses: weaknesses.trim(),
+      kt_patterns: patterns.trim(),
+      kt_major_events: majorEvents.trim(),
+      future_self_years: futureSelfYears,
+      future_self_description: futureSelfDescription.trim(),
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

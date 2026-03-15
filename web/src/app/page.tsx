@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getItem } from '@/lib/storage';
+import { getUserSettings, getTodayCheckin } from '@/lib/db';
 import { DAILY_QUOTES } from '@/lib/quotes';
 
 export default function HomePage() {
@@ -16,26 +16,20 @@ export default function HomePage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) {
-      router.replace('/onboarding');
-      return;
+    async function load() {
+      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      if (!settings?.user_name) {
+        router.replace('/login');
+        return;
+      }
+      setUserName(settings.user_name);
+      setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
+      setMorningDone(checkin?.morning_done === true);
+      setEveningDone(checkin?.evening_done === true);
+      setStreak(checkin?.streak ?? 0);
+      setLoaded(true);
     }
-    setUserName(name);
-
-    const ktGoals = getItem('kt_goals');
-    setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
-
-    // Check if morningDone/eveningDone are still valid for today
-    const todayKey = new Date().toDateString();
-    const morningDate = getItem('morningDoneDate');
-    const eveningDate = getItem('eveningDoneDate');
-    setMorningDone(getItem('morningDone') === 'true' && morningDate === todayKey);
-    setEveningDone(getItem('eveningDone') === 'true' && eveningDate === todayKey);
-
-    const savedStreak = getItem('streak');
-    setStreak(savedStreak ? parseInt(savedStreak) : 0);
-    setLoaded(true);
+    load();
   }, [router]);
 
   const getGreeting = () => {

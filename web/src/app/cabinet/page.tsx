@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem } from '@/lib/storage';
+import { getUserSettings } from '@/lib/db';
 import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
@@ -32,23 +32,24 @@ export default function CabinetPage() {
   const counselorEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const settings = await getUserSettings();
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    const ktGoals = getItem('kt_goals');
-    setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
+      setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
-    // Load cabinet thread
-    const thread = loadThread('cabinet');
-    setCabinetMessages(thread.messages);
+      // Load cabinet thread
+      const thread = await loadThread('cabinet');
+      setCabinetMessages(thread.messages);
 
-    // Load active members
-    const membersRaw = getItem('cabinetMembers');
-    if (membersRaw) {
-      try { setActiveMembers(JSON.parse(membersRaw)); } catch { setActiveMembers(COUNSELOR_LIST.map(c => c.id)); }
-    } else {
-      setActiveMembers(COUNSELOR_LIST.map(c => c.id));
+      // Load active members
+      if (Array.isArray(settings.cabinet_members) && settings.cabinet_members.length > 0) {
+        setActiveMembers(settings.cabinet_members);
+      } else {
+        setActiveMembers(COUNSELOR_LIST.map(c => c.id));
+      }
     }
+    load();
   }, [router]);
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export default function CabinetPage() {
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCabinetMessages(finalMessages);
-      saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
+      await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
     } catch {
       const errMsg: ThreadMessage = { role: 'assistant', content: 'The Cabinet is temporarily unavailable. Please try again.', timestamp: Date.now() };
       setCabinetMessages(prev => [...prev, errMsg]);
@@ -81,15 +82,15 @@ export default function CabinetPage() {
     }
   };
 
-  const handleClearCabinet = () => {
+  const handleClearCabinet = async () => {
     if (!confirm('Clear the entire Cabinet conversation? This cannot be undone.')) return;
-    clearThread('cabinet');
+    await clearThread('cabinet');
     setCabinetMessages([]);
   };
 
-  const handleSelectCounselor = (id: string) => {
+  const handleSelectCounselor = async (id: string) => {
     setSelectedCounselor(id);
-    const thread = loadThread(id);
+    const thread = await loadThread(id);
     setCounselorMessages(thread.messages);
   };
 
@@ -106,7 +107,7 @@ export default function CabinetPage() {
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
-      saveThread({ id: selectedCounselor, messages: finalMessages, lastUpdated: Date.now() });
+      await saveThread({ id: selectedCounselor, messages: finalMessages, lastUpdated: Date.now() });
     } catch {
       const errMsg: ThreadMessage = { role: 'assistant', content: 'Your counselor is temporarily unavailable. Please try again.', timestamp: Date.now() };
       setCounselorMessages(prev => [...prev, errMsg]);
@@ -260,7 +261,7 @@ export default function CabinetPage() {
                   <p className="text-arete-muted text-xs">{selectedCounselorMeta?.role}</p>
                 </div>
                 <button
-                  onClick={() => { clearThread(selectedCounselor); setCounselorMessages([]); }}
+                onClick={() => { clearThread(selectedCounselor).then(() => setCounselorMessages([])); }}
                   className="ml-auto text-arete-muted hover:text-red-400 text-xs"
                 >
                   Clear
