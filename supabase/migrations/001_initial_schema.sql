@@ -60,29 +60,21 @@ create policy "Users can insert own settings" on user_settings for insert with c
 create policy "Users can update own settings" on user_settings for update using (auth.uid() = user_id);
 
 -- ============================================================
--- daily_checkins
+-- check_ins
 -- ============================================================
-create table daily_checkins (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users on delete cascade not null,
-  date date not null,
-  morning_done boolean default false,
-  morning_tasks jsonb,
-  evening_done boolean default false,
-  evening_tasks jsonb,
-  reflection_answer text,
-  stoic_answer text,
-  streak integer default 0,
-  reading_streak integer default 0,
-  cabinet_morning_response text,
-  cabinet_evening_response text,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now(),
-  unique(user_id, date)
+create table check_ins (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  type text not null check (type in ('morning', 'evening')),
+  user_input text not null,
+  cabinet_response text not null,
+  check_in_date date not null default current_date,
+  created_at timestamptz default now()
 );
 
-alter table daily_checkins enable row level security;
-create policy "Users can manage own checkins" on daily_checkins for all using (auth.uid() = user_id);
+alter table check_ins enable row level security;
+create policy "Users can manage their own data" on check_ins
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ============================================================
 -- journal_entries
@@ -109,55 +101,110 @@ alter table journal_entries enable row level security;
 create policy "Users can manage own journal entries" on journal_entries for all using (auth.uid() = user_id);
 
 -- ============================================================
--- cabinet_threads
+-- books
 -- ============================================================
-create table cabinet_threads (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users on delete cascade not null,
-  thread_id text not null,
-  messages jsonb not null default '[]'::jsonb,
-  last_updated timestamptz default now(),
-  unique(user_id, thread_id)
-);
-
-alter table cabinet_threads enable row level security;
-create policy "Users can manage own threads" on cabinet_threads for all using (auth.uid() = user_id);
-
--- ============================================================
--- reading_data
--- ============================================================
-create table reading_data (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users on delete cascade not null unique,
-  current_books jsonb default '[]'::jsonb,
-  books_read jsonb default '[]'::jsonb,
-  reading_sessions jsonb default '[]'::jsonb,
-  today_reading_seconds integer default 0,
-  today_reading_date date,
+create table books (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  title text not null,
+  author text,
+  status text not null check (status in ('reading', 'finished', 'want_to_read')),
+  started_at date,
+  finished_at date,
+  notes text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
-alter table reading_data enable row level security;
-create policy "Users can manage own reading data" on reading_data for all using (auth.uid() = user_id);
+alter table books enable row level security;
+create policy "Users can manage their own data" on books
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ============================================================
--- calendar_data
+-- habits
 -- ============================================================
-create table calendar_data (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users on delete cascade not null unique,
-  data jsonb not null default '{}'::jsonb,
+create table habits (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  name text not null,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+alter table habits enable row level security;
+create policy "Users can manage their own data" on habits
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- habit_logs
+-- ============================================================
+create table habit_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  habit_id uuid references habits(id) on delete cascade not null,
+  logged_date date not null default current_date,
+  created_at timestamptz default now(),
+  unique(habit_id, logged_date)
+);
+
+alter table habit_logs enable row level security;
+create policy "Users can manage their own data" on habit_logs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- milestones
+-- ============================================================
+create table milestones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  title text not null,
+  description text,
+  achieved_at date,
+  is_achieved boolean default false,
+  created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
 
-alter table calendar_data enable row level security;
-create policy "Users can manage own calendar data" on calendar_data for all using (auth.uid() = user_id);
+alter table milestones enable row level security;
+create policy "Users can manage their own data" on milestones
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- weekly_reviews
+-- ============================================================
+create table weekly_reviews (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  week_start date not null,
+  week_end date not null,
+  generated_review text not null,
+  created_at timestamptz default now()
+);
+
+alter table weekly_reviews enable row level security;
+create policy "Users can manage their own data" on weekly_reviews
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
+-- sessions (app screen time tracking)
+-- ============================================================
+create table sessions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  duration_seconds integer
+);
+
+alter table sessions enable row level security;
+create policy "Users can manage their own data" on sessions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ============================================================
 -- Enable real-time
 -- ============================================================
 alter publication supabase_realtime add table journal_entries;
-alter publication supabase_realtime add table daily_checkins;
-alter publication supabase_realtime add table cabinet_threads;
+alter publication supabase_realtime add table check_ins;
 alter publication supabase_realtime add table user_settings;
+alter publication supabase_realtime add table habit_logs;
+alter publication supabase_realtime add table milestones;
