@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '@/lib/storage';
+import { getUserSettings, getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { AFFIRMATIONS, getDailyItem } from '@/lib/quotes';
 import PageHeader from '@/components/PageHeader';
@@ -28,36 +28,27 @@ export default function MorningPage() {
   const [loaded, setLoaded] = useState(false);
 
   const affirmation = getDailyItem(AFFIRMATIONS);
-  const today = new Date().toDateString();
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    // Load tasks, resetting done status each new day
-    const savedTasksRaw = getItem('morningTasks');
-    const savedDateRaw = getItem('morningTasksDate');
-
-    if (savedTasksRaw) {
-      const savedTasks: Task[] = JSON.parse(savedTasksRaw);
-      if (savedDateRaw !== today) {
-        // New day — reset done status
-        setTasks(savedTasks.map(t => ({ ...t, done: false })));
-      } else {
-        setTasks(savedTasks);
+      if (checkin?.morning_tasks && checkin.morning_tasks.length > 0) {
+        setTasks(checkin.morning_tasks as Task[]);
+      } else if (settings.morning_tasks && settings.morning_tasks.length > 0) {
+        setTasks((settings.morning_tasks as Task[]).map(t => ({ ...t, done: false })));
       }
+
+      setCheckInDone(checkin?.morning_done === true);
+      setLoaded(true);
     }
+    load();
+  }, [router]);
 
-    const doneDate = getItem('morningDoneDate');
-    const done = getItem('morningDone');
-    setCheckInDone(done === 'true' && doneDate === today);
-    setLoaded(true);
-  }, [router, today]);
-
-  const saveTasks = (updatedTasks: Task[]) => {
+  const saveTasks = async (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
-    setItem('morningTasks', JSON.stringify(updatedTasks));
-    setItem('morningTasksDate', today);
+    await upsertTodayCheckin({ morning_tasks: updatedTasks });
   };
 
   const toggleTask = (id: string) => {
@@ -80,8 +71,7 @@ export default function MorningPage() {
     try {
       const response = await sendCheckInToCabinet('morning');
       setCheckInResponse(response);
-      setItem('morningDone', 'true');
-      setItem('morningDoneDate', today);
+      await upsertTodayCheckin({ morning_done: true });
       setCheckInDone(true);
     } catch {
       setCheckInResponse('The Cabinet will speak when you return.');

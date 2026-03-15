@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { getUserSettings, upsertUserSettings } from './lib/db';
 
 export default function KnowThyselfScreen() {
   const router = useRouter();
@@ -32,54 +32,33 @@ export default function KnowThyselfScreen() {
   }, []);
 
   const loadProfile = async () => {
-    const [
-      bg,
-      id,
-      g,
-      str,
-      weak,
-      pat,
-      me,
-      fsy,
-      fsd,
-    ] = await Promise.all([
-      AsyncStorage.getItem('kt_background'),
-      AsyncStorage.getItem('kt_identity'),
-      AsyncStorage.getItem('kt_goals'),
-      AsyncStorage.getItem('kt_strengths'),
-      AsyncStorage.getItem('kt_weaknesses'),
-      AsyncStorage.getItem('kt_patterns'),
-      AsyncStorage.getItem('kt_major_events'),
-      AsyncStorage.getItem('futureSelfYears'),
-      AsyncStorage.getItem('futureSelfDescription'),
-    ]);
-    setBackground(bg || '');
-    setIdentity(id || '');
-    setGoals(g || '');
-    setStrengths(str || '');
-    setWeaknesses(weak || '');
-    setPatterns(pat || '');
-    setMajorEvents(me || '');
-    setFutureSelfYears(fsy || '');
-    setFutureSelfDescription(fsd || '');
+    const settings = await getUserSettings();
+    if (!settings) return;
+    setBackground(settings.kt_background || '');
+    setIdentity(settings.kt_identity || '');
+    setGoals(settings.kt_goals || '');
+    setStrengths(settings.kt_strengths || '');
+    setWeaknesses(settings.kt_weaknesses || '');
+    setPatterns(settings.kt_patterns || '');
+    setMajorEvents(settings.kt_major_events || '');
+    setFutureSelfYears(settings.future_self_years ? String(settings.future_self_years) : '');
+    setFutureSelfDescription(settings.future_self_description || '');
   };
 
   const saveProfile = async () => {
     try {
-      await Promise.all([
-        AsyncStorage.setItem('kt_background', background.trim()),
-        AsyncStorage.setItem('kt_identity', identity.trim()),
-        AsyncStorage.setItem('kt_goals', goals.trim()),
-        AsyncStorage.setItem('userGoals', goals.trim()),
-        AsyncStorage.setItem('kt_strengths', strengths.trim()),
-        AsyncStorage.setItem('kt_weaknesses', weaknesses.trim()),
-        AsyncStorage.setItem('kt_patterns', patterns.trim()),
-        AsyncStorage.setItem('kt_major_events', majorEvents.trim()),
-        AsyncStorage.setItem('futureSelfDescription', futureSelfDescription.trim()),
-        ...(futureSelfYears.trim()
-          ? [AsyncStorage.setItem('futureSelfYears', futureSelfYears.trim())]
-          : []),
-      ]);
+      await upsertUserSettings({
+        kt_background: background.trim(),
+        kt_identity: identity.trim(),
+        kt_goals: goals.trim(),
+        user_goals: goals.trim(),
+        kt_strengths: strengths.trim(),
+        kt_weaknesses: weaknesses.trim(),
+        kt_patterns: patterns.trim(),
+        kt_major_events: majorEvents.trim(),
+        future_self_description: futureSelfDescription.trim(),
+        ...(futureSelfYears.trim() ? { future_self_years: parseInt(futureSelfYears.trim()) } : {}),
+      });
       Alert.alert('✅ Profile Saved', 'Your Know Thyself profile has been updated. Changes take effect on your next session.');
     } catch (e) {
       console.error(e);

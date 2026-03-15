@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
@@ -16,8 +15,7 @@ import {
     View,
 } from 'react-native';
 import { BeliefEntry, BeliefDialogueTurn, sendBeliefJournalMessage } from '../services/claudeService';
-
-const STORAGE_KEY = 'unifiedJournalEntries';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from './lib/db';
 
 interface UnifiedEntry {
     id: string;
@@ -78,16 +76,28 @@ export default function BeliefJournalScreen() {
     useEffect(() => {
         const loadAndResume = async () => {
             try {
-                const saved = await AsyncStorage.getItem(STORAGE_KEY);
-                const parsed: UnifiedEntry[] = saved ? JSON.parse(saved) : [];
-
                 if (params.entryId) {
-                    const draft = parsed.find(e => e.id === params.entryId);
+                    const entries = await getJournalEntries();
+                    const draft = entries.find(e => e.id === params.entryId);
                     if (draft) {
-                        setEntry(draft);
+                        const mapped: UnifiedEntry = {
+                            id: draft.id,
+                            type: draft.type,
+                            content: draft.content,
+                            rawInput: draft.raw_input,
+                            dialogueHistory: draft.dialogue_history as any,
+                            beliefStage: draft.belief_stage as any,
+                            topic: draft.topic,
+                            createdAt: new Date(draft.created_at).getTime(),
+                            updatedAt: new Date(draft.updated_at).getTime(),
+                            encodedBelief: draft.encoded_belief,
+                            refinedStatement: draft.refined_statement,
+                            virtueCheck: draft.virtue_check as any,
+                        };
+                        setEntry(mapped);
                         setHasStarted(true);
-                        if (typeof draft.beliefStage === 'number') {
-                            setStage(draft.beliefStage as 1 | 2 | 3);
+                        if (typeof draft.belief_stage === 'number') {
+                            setStage(draft.belief_stage as 1 | 2 | 3);
                         }
                     }
                 }
@@ -99,16 +109,18 @@ export default function BeliefJournalScreen() {
     const updateCurrentEntry = async (updated: UnifiedEntry) => {
         setEntry(updated);
         try {
-            const saved = await AsyncStorage.getItem(STORAGE_KEY);
-            const current: UnifiedEntry[] = saved ? JSON.parse(saved) : [];
-            const existingIndex = current.findIndex(e => e.id === updated.id);
-            let newList: UnifiedEntry[];
-            if (existingIndex >= 0) {
-                newList = current.map(e => e.id === updated.id ? updated : e);
-            } else {
-                newList = [updated, ...current];
+            if (updated.id) {
+                await updateJournalEntry(updated.id, {
+                    content: updated.content,
+                    raw_input: updated.rawInput,
+                    dialogue_history: updated.dialogueHistory as any,
+                    encoded_belief: updated.encodedBelief,
+                    refined_statement: updated.refinedStatement,
+                    virtue_check: updated.virtueCheck as any,
+                    belief_stage: updated.beliefStage as any,
+                    topic: updated.topic,
+                });
             }
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newList));
         } catch (e) { console.error(e); }
     };
 
@@ -118,8 +130,21 @@ export default function BeliefJournalScreen() {
         if (!rawInput.trim() || loading) return;
         const now = Date.now();
         const topic = rawInput.trim().substring(0, 60);
+        // Create in Supabase first to get a real UUID
+        const created = await createJournalEntry({
+            type: 'belief',
+            content: rawInput.trim(),
+            raw_input: rawInput.trim(),
+            dialogue_history: [],
+            belief_stage: 1 as any,
+            topic,
+        });
+        if (!created) {
+            setError('Could not save entry. Please try again.');
+            return;
+        }
         const newEntry: UnifiedEntry = {
-            id: now.toString(),
+            id: created.id,
             type: 'belief',
             content: rawInput.trim(),
             rawInput: rawInput.trim(),
@@ -131,7 +156,7 @@ export default function BeliefJournalScreen() {
         };
         setHasStarted(true);
         setStage(1);
-        await updateCurrentEntry(newEntry);
+        setEntry(newEntry);
         await callCabinet(newEntry, 1);
     };
 
@@ -256,10 +281,7 @@ export default function BeliefJournalScreen() {
                     onPress: async () => {
                         if (entry) {
                             try {
-                                const saved = await AsyncStorage.getItem(STORAGE_KEY);
-                                const current: UnifiedEntry[] = saved ? JSON.parse(saved) : [];
-                                const filtered = current.filter(e => e.id !== entry.id);
-                                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+                                await deleteJournalEntry(entry.id);
                             } catch (e) { console.error(e); }
                         }
                         router.back();

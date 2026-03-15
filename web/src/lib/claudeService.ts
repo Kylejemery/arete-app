@@ -1,4 +1,4 @@
-import { getItem } from './storage';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 
@@ -34,49 +34,37 @@ export interface BeliefEntry {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
-function getUserName(): string {
-  return getItem('userName') || 'the user';
-}
+export async function gatherUserProfile(): Promise<string> {
+  const settings = await getUserSettings();
 
-export function gatherUserProfile(): string {
-  const kt_background = getItem('kt_background');
-  const kt_identity = getItem('kt_identity');
-  const kt_goals = getItem('kt_goals');
-  const kt_strengths = getItem('kt_strengths');
-  const kt_weaknesses = getItem('kt_weaknesses');
-  const kt_patterns = getItem('kt_patterns');
-  const kt_major_events = getItem('kt_major_events');
-  const futureSelfYearsRaw = getItem('futureSelfYears');
-  const futureSelfDescriptionRaw = getItem('futureSelfDescription');
-
-  const userName = getUserName();
+  const userName = settings?.user_name || 'the user';
   const lines: string[] = [];
 
   lines.push(`=== WHO ${userName.toUpperCase()} IS — PERMANENT PROFILE ===`);
   lines.push('');
   lines.push('BACKGROUND & LIFE STORY:');
-  lines.push(kt_background || '(not yet provided)');
+  lines.push(settings?.kt_background || '(not yet provided)');
   lines.push('');
   lines.push('PROFESSIONAL IDENTITY & PURSUITS:');
-  lines.push(kt_identity || '(not yet provided)');
+  lines.push(settings?.kt_identity || '(not yet provided)');
   lines.push('');
   lines.push('GOALS:');
-  lines.push(kt_goals || '(not yet provided)');
+  lines.push(settings?.kt_goals || '(not yet provided)');
   lines.push('');
   lines.push('STRENGTHS:');
-  lines.push(kt_strengths || '(not yet provided)');
+  lines.push(settings?.kt_strengths || '(not yet provided)');
   lines.push('');
   lines.push('WEAKNESSES:');
-  lines.push(kt_weaknesses || '(not yet provided)');
+  lines.push(settings?.kt_weaknesses || '(not yet provided)');
   lines.push('');
   lines.push('PATTERNS & FAILURE MODES:');
-  lines.push(kt_patterns || '(not yet provided)');
+  lines.push(settings?.kt_patterns || '(not yet provided)');
   lines.push('');
   lines.push('MAJOR LIFE EVENTS & DEFINING MOMENTS:');
-  lines.push(kt_major_events || '(not yet provided)');
+  lines.push(settings?.kt_major_events || '(not yet provided)');
   lines.push('');
-  lines.push(`FUTURE SELF (${futureSelfYearsRaw || '10'} years from now):`);
-  lines.push(futureSelfDescriptionRaw || '(not yet described)');
+  lines.push(`FUTURE SELF (${settings?.future_self_years ?? 10} years from now):`);
+  lines.push(settings?.future_self_description || '(not yet described)');
 
   return lines.join('\n');
 }
@@ -89,7 +77,7 @@ function formatReadingTime(seconds: number): string {
   return mins > 0 ? `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes` : `${hours} hour${hours > 1 ? 's' : ''}`;
 }
 
-export function gatherAppContext(): string {
+export async function gatherAppContext(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -97,29 +85,21 @@ export function gatherAppContext(): string {
     day: 'numeric',
   });
 
-  const morningTasksRaw = getItem('morningTasks');
-  const eveningTasksRaw = getItem('eveningTasks');
-  const reflectionAnswerRaw = getItem('reflectionAnswer');
-  const stoicAnswerRaw = getItem('stoicAnswer');
-  const journalEntriesRaw = getItem('journalEntries');
-  const commonplaceQuotesRaw = getItem('commonplaceQuotes');
-  const readingSessionsRaw = getItem('readingSessions');
-  const currentBooksRaw = getItem('currentBooks');
-  const booksReadRaw = getItem('booksRead');
-  const todayReadingSecondsRaw = getItem('todayReadingSeconds');
-  const streakRaw = getItem('streak');
-  const beliefEntriesRaw = getItem('beliefEntries');
-  const readingStreakRaw = getItem('readingStreak');
-  const unifiedEntriesRaw = getItem('unifiedJournalEntries');
+  const [checkin, readingData, journalEntries, settings] = await Promise.all([
+    getTodayCheckin(),
+    getReadingData(),
+    getJournalEntries(),
+    getUserSettings(),
+  ]);
 
-  const userName = getUserName();
+  const userName = settings?.user_name || 'the user';
 
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S CURRENT APP DATA (as of ${today}) ===`);
 
   // Morning routine
   try {
-    const morningTasks: { title: string; done: boolean }[] = morningTasksRaw ? JSON.parse(morningTasksRaw) : [];
+    const morningTasks = checkin?.morning_tasks || [];
     if (morningTasks.length > 0) {
       lines.push('');
       lines.push('MORNING ROUTINE:');
@@ -129,7 +109,7 @@ export function gatherAppContext(): string {
 
   // Evening tasks
   try {
-    const eveningTasks: { title: string; done: boolean }[] = eveningTasksRaw ? JSON.parse(eveningTasksRaw) : [];
+    const eveningTasks = checkin?.evening_tasks || [];
     if (eveningTasks.length > 0) {
       lines.push('');
       lines.push('EVENING TASKS:');
@@ -140,90 +120,65 @@ export function gatherAppContext(): string {
   // Evening reflection
   lines.push('');
   lines.push('EVENING REFLECTION:');
-  lines.push(`A: ${reflectionAnswerRaw || '(not yet answered)'}`);
+  lines.push(`A: ${checkin?.reflection_answer || '(not yet answered)'}`);
 
   // Stoic journal
   lines.push('');
   lines.push('STOIC JOURNAL:');
-  lines.push(`A: ${stoicAnswerRaw || '(not yet answered)'}`);
+  lines.push(`A: ${checkin?.stoic_answer || '(not yet answered)'}`);
 
   // Recent journal entries
   try {
-    const unifiedEntries: { type: string; content: string; createdAt: number }[] =
-      unifiedEntriesRaw ? JSON.parse(unifiedEntriesRaw) : [];
-    const unifiedReflections = unifiedEntries
+    const reflections = journalEntries
       .filter(e => e.type === 'reflection')
-      .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, 3);
 
-    if (unifiedReflections.length > 0) {
-      lines.push('');
-      lines.push('RECENT JOURNAL ENTRIES (last 3):');
-      unifiedReflections.forEach((e) => {
-        const snippet = e.content.length > 300 ? e.content.slice(0, 300) + '…' : e.content;
-        lines.push(`${new Date(e.createdAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — ${snippet}`);
-      });
+    lines.push('');
+    lines.push('RECENT JOURNAL ENTRIES (last 3):');
+    if (reflections.length === 0) {
+      lines.push('(none yet)');
     } else {
-      const journalEntries: { text: string; date: string }[] = journalEntriesRaw ? JSON.parse(journalEntriesRaw) : [];
-      const recentJournal = journalEntries.slice(-3);
-      lines.push('');
-      lines.push('RECENT JOURNAL ENTRIES (last 3):');
-      if (recentJournal.length === 0) {
-        lines.push('(none yet)');
-      } else {
-        recentJournal.forEach((e) => {
-          const snippet = e.text.length > 300 ? e.text.slice(0, 300) + '…' : e.text;
-          lines.push(`${e.date} — ${snippet}`);
-        });
-      }
+      reflections.forEach((e) => {
+        const snippet = e.content.length > 300 ? e.content.slice(0, 300) + '…' : e.content;
+        lines.push(`${new Date(e.created_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — ${snippet}`);
+      });
     }
   } catch { /* skip */ }
 
   // Encoded beliefs
   try {
-    const unifiedEntries: { type: string; beliefStage?: string | number; encodedBelief?: string; topic?: string; virtueCheck?: { passed: boolean; concern: string | null } }[] =
-      unifiedEntriesRaw ? JSON.parse(unifiedEntriesRaw) : [];
-    const unifiedEncoded = unifiedEntries.filter(e => e.type === 'belief' && e.beliefStage === 'encoded');
-
-    if (unifiedEncoded.length > 0) {
-      lines.push('');
-      lines.push(`ENCODED BELIEFS (${unifiedEncoded.length}):`);
-      unifiedEncoded.forEach(b => lines.push(`[${b.topic || 'Belief'}] ${b.encodedBelief}`));
+    const encodedBeliefs = journalEntries.filter(e => e.type === 'belief' && e.belief_stage === 'encoded');
+    lines.push('');
+    lines.push(`ENCODED BELIEFS (${encodedBeliefs.length}):`);
+    if (encodedBeliefs.length === 0) {
+      lines.push('(none yet)');
     } else {
-      const beliefEntries: BeliefEntry[] = beliefEntriesRaw ? JSON.parse(beliefEntriesRaw) : [];
-      const encodedBeliefs = beliefEntries.filter(b => b.stage === 'encoded');
-      lines.push('');
-      lines.push(`ENCODED BELIEFS (${encodedBeliefs.length}):`);
-      if (encodedBeliefs.length === 0) {
-        lines.push('(none yet)');
-      } else {
-        encodedBeliefs.forEach(b => lines.push(`[${b.topic}] ${b.encodedBelief}`));
-      }
+      encodedBeliefs.forEach(b => lines.push(`[${b.topic || 'Belief'}] ${b.encoded_belief || b.content}`));
     }
   } catch { /* skip */ }
 
   // Currently reading
   try {
-    const currentBooks: { title: string; author: string; currentPage: number }[] = currentBooksRaw ? JSON.parse(currentBooksRaw) : [];
+    const currentBooks = readingData?.current_books || [];
     lines.push('');
     lines.push('READING — CURRENTLY READING:');
     if (currentBooks.length === 0) {
       lines.push('(none yet)');
     } else {
-      currentBooks.forEach((b) => lines.push(`- ${b.title} by ${b.author} (currently on page ${b.currentPage})`));
+      currentBooks.forEach((b) => lines.push(`- ${b.title} by ${b.author} (currently on page ${b.currentPage ?? 0})`));
     }
   } catch { /* skip */ }
 
   // Today's reading time
   try {
-    const readingSeconds = todayReadingSecondsRaw ? parseInt(todayReadingSecondsRaw, 10) : 0;
+    const readingSeconds = readingData?.today_reading_seconds ?? 0;
     lines.push('');
-    lines.push(`TODAY'S READING TIME: ${formatReadingTime(isNaN(readingSeconds) ? 0 : readingSeconds)}`);
+    lines.push(`TODAY'S READING TIME: ${formatReadingTime(readingSeconds)}`);
   } catch { /* skip */ }
 
   // Recent reading sessions
   try {
-    const sessions: { bookTitle: string; pagesRead: number; duration: number; dateFormatted: string }[] = readingSessionsRaw ? JSON.parse(readingSessionsRaw) : [];
+    const sessions = readingData?.reading_sessions || [];
     const recentSessions = sessions.slice(-5);
     lines.push('');
     lines.push('RECENT READING SESSIONS (last 5):');
@@ -239,34 +194,26 @@ export function gatherAppContext(): string {
 
   // Books finished
   try {
-    const booksRead: { title: string; author: string; dateFinished: string }[] = booksReadRaw ? JSON.parse(booksReadRaw) : [];
+    const booksRead = readingData?.books_read || [];
     lines.push('');
     lines.push(`BOOKS FINISHED (${booksRead.length}):`);
     if (booksRead.length === 0) {
       lines.push('(none yet)');
     } else {
-      booksRead.forEach((b) => lines.push(`- ${b.title} by ${b.author} (finished ${b.dateFinished})`));
+      booksRead.forEach((b) => lines.push(`- ${b.title} by ${b.author} (finished ${b.dateFinished || ''})`));
     }
   } catch { /* skip */ }
 
   // Overall stats
   try {
-    const streak = streakRaw ? parseInt(streakRaw, 10) : 0;
-    const readingStreak = readingStreakRaw ? parseInt(readingStreakRaw, 10) : 0;
-    let journalCount = 0;
-    let quoteCount = 0;
-    if (unifiedEntriesRaw) {
-      const unified: { type: string }[] = JSON.parse(unifiedEntriesRaw);
-      journalCount = unified.length;
-      quoteCount = unified.filter(e => e.type === 'quote').length;
-    } else {
-      journalCount = journalEntriesRaw ? (JSON.parse(journalEntriesRaw) as unknown[]).length : 0;
-      quoteCount = commonplaceQuotesRaw ? (JSON.parse(commonplaceQuotesRaw) as unknown[]).length : 0;
-    }
+    const streak = checkin?.streak ?? 0;
+    const readingStreak = checkin?.reading_streak ?? 0;
+    const journalCount = journalEntries.length;
+    const quoteCount = journalEntries.filter(e => e.type === 'quote').length;
     lines.push('');
     lines.push('OVERALL STATS:');
-    lines.push(`- Streak: ${isNaN(streak) ? 0 : streak} days`);
-    lines.push(`- Reading streak: ${isNaN(readingStreak) ? 0 : readingStreak} days`);
+    lines.push(`- Streak: ${streak} days`);
+    lines.push(`- Reading streak: ${readingStreak} days`);
     lines.push(`- Total journal entries: ${journalCount}`);
     lines.push(`- Total quotes saved: ${quoteCount}`);
   } catch { /* skip */ }
@@ -274,7 +221,7 @@ export function gatherAppContext(): string {
   return lines.join('\n');
 }
 
-export function buildSystemPrompt(): string {
+export async function buildSystemPrompt(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -282,25 +229,16 @@ export function buildSystemPrompt(): string {
     day: 'numeric',
   });
 
-  const userGoalsRaw = getItem('userGoals');
-  const futureSelfYearsRaw = getItem('futureSelfYears');
-  const futureSelfDescriptionRaw = getItem('futureSelfDescription');
-  const cabinetMembersRaw = getItem('cabinetMembers');
-
-  const userName = getUserName();
-  const userGoals = userGoalsRaw || '(not yet specified)';
-  const futureSelfYears = futureSelfYearsRaw || '10';
-  const futureSelfDescription = futureSelfDescriptionRaw || '(not yet described)';
+  const settings = await getUserSettings();
+  const userName = settings?.user_name || 'the user';
+  const userGoals = settings?.user_goals || '(not yet specified)';
+  const futureSelfYears = settings?.future_self_years ?? 10;
+  const futureSelfDescription = settings?.future_self_description || '(not yet described)';
 
   let activeMembers: string[] = ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
-  try {
-    if (cabinetMembersRaw) {
-      const parsed = JSON.parse(cabinetMembersRaw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        activeMembers = parsed;
-      }
-    }
-  } catch { /* use default */ }
+  if (Array.isArray(settings?.cabinet_members) && settings.cabinet_members.length > 0) {
+    activeMembers = settings.cabinet_members;
+  }
 
   const instructions = `As ${userName}'s Cabinet of Invisible Counselors, your task is to help guide ${userName} through their daily life — providing accountability, coaching, philosophical grounding, tough love, and genuine support as the situation demands.
 
@@ -348,10 +286,11 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
     profileSections.push(futureSelfProfile);
   }
 
-  return `${instructions}\n\n---\n\n${cabinetIntro}\n\n---\n\n${profileSections.join('\n\n---\n\n')}\n\n---\n\n${gatherUserProfile()}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
+  const userProfile = await gatherUserProfile();
+  return `${instructions}\n\n---\n\n${cabinetIntro}\n\n---\n\n${profileSections.join('\n\n---\n\n')}\n\n---\n\n${userProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
 }
 
-function buildCounselorSystemPrompt(counselorId: string): string {
+async function buildCounselorSystemPrompt(counselorId: string): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -359,12 +298,10 @@ function buildCounselorSystemPrompt(counselorId: string): string {
     day: 'numeric',
   });
 
-  const futureSelfYearsRaw = getItem('futureSelfYears');
-  const futureSelfDescriptionRaw = getItem('futureSelfDescription');
-
-  const userName = getUserName();
-  const futureSelfYears = futureSelfYearsRaw || '10';
-  const futureSelfDescription = futureSelfDescriptionRaw || '(not yet described)';
+  const settings = await getUserSettings();
+  const userName = settings?.user_name || 'the user';
+  const futureSelfYears = settings?.future_self_years ?? 10;
+  const futureSelfDescription = settings?.future_self_description || '(not yet described)';
 
   let counselorProfile: string;
   let counselorName: string;
@@ -391,7 +328,8 @@ Their communication style is warm, wise, and unhurried.`;
     counselorName = nameMap[counselorId] || counselorId;
   }
 
-  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${gatherUserProfile()}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate.\n- Use Socratic questioning.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
+  const userProfile = await gatherUserProfile();
+  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${userProfile}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate.\n- Use Socratic questioning.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
 export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
@@ -399,7 +337,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = buildSystemPrompt() + '\n\n---\n\n' + gatherAppContext();
+    const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
+    const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -433,17 +372,13 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
 
 export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<string> {
   try {
-    const userName = getUserName();
-
-    const morningTasksRaw = getItem('morningTasks');
-    const eveningTasksRaw = getItem('eveningTasks');
-    const reflectionAnswerRaw = getItem('reflectionAnswer');
-    const stoicAnswerRaw = getItem('stoicAnswer');
+    const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+    const userName = settings?.user_name || 'the user';
 
     let userMessage: string;
 
     if (type === 'morning') {
-      const morningTasks: { title: string; done: boolean }[] = morningTasksRaw ? JSON.parse(morningTasksRaw) : [];
+      const morningTasks = checkin?.morning_tasks || [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -460,16 +395,17 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
       const affirmation = affirmations[day];
       userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}. Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
     } else {
-      const eveningTasks: { title: string; done: boolean }[] = eveningTasksRaw ? JSON.parse(eveningTasksRaw) : [];
+      const eveningTasks = checkin?.evening_tasks || [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = reflectionAnswerRaw || '(not answered)';
-      const stoic = stoicAnswerRaw || '(not answered)';
+      const reflection = checkin?.reflection_answer || '(not answered)';
+      const stoic = checkin?.stoic_answer || '(not answered)';
       userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
     }
 
-    const systemPrompt = buildSystemPrompt() + '\n\n---\n\n' + gatherAppContext();
+    const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
+    const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
 
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
@@ -489,7 +425,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
     const data = await response.json();
     const assistantReply = data?.content?.[0]?.text;
     if (typeof assistantReply === 'string' && assistantReply.length > 0) {
-      appendMessages('cabinet', [
+      await appendMessages('cabinet', [
         { role: 'user', content: userMessage, timestamp: Date.now() },
         { role: 'assistant', content: assistantReply, timestamp: Date.now() },
       ]);
@@ -510,7 +446,8 @@ export async function sendMessageToCounselor(
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = buildCounselorSystemPrompt(counselorId) + '\n\n---\n\n' + gatherAppContext();
+    const [systemBase, appContext] = await Promise.all([buildCounselorSystemPrompt(counselorId), gatherAppContext()]);
+    const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -542,7 +479,7 @@ export async function sendMessageToCounselor(
   }
 }
 
-function buildBeliefJournalSystemPrompt(stage: 1 | 2 | 3): string {
+async function buildBeliefJournalSystemPrompt(stage: 1 | 2 | 3): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -550,7 +487,7 @@ function buildBeliefJournalSystemPrompt(stage: 1 | 2 | 3): string {
     day: 'numeric',
   });
 
-  const userProfile = gatherUserProfile();
+  const userProfile = await gatherUserProfile();
 
   const basePrompt = `You are the Cabinet of Invisible Counselors — specifically functioning as the Belief Journal facilitator.
 
@@ -579,7 +516,7 @@ export async function sendBeliefJournalMessage(
   entry: BeliefEntry,
   stage: 1 | 2 | 3
 ): Promise<{ response: string; refinedStatement?: string; virtueCheck?: VirtueCheck }> {
-  const systemPrompt = buildBeliefJournalSystemPrompt(stage);
+  const systemPrompt = await buildBeliefJournalSystemPrompt(stage);
 
   const messages: { role: 'user' | 'assistant'; content: string }[] = [
     { role: 'user', content: entry.rawThought },

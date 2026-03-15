@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '@/lib/storage';
+import { getUserSettings, getReadingData, upsertReadingData } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 
 interface Book {
@@ -49,14 +49,14 @@ export default function FocusPage() {
   const readingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const [settings, readingData] = await Promise.all([getUserSettings(), getReadingData()]);
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    const booksRaw = getItem('currentBooks');
-    if (booksRaw) { try { setCurrentBooks(JSON.parse(booksRaw)); } catch {} }
-
-    const sessionsRaw = getItem('readingSessions');
-    if (sessionsRaw) { try { setReadingSessions(JSON.parse(sessionsRaw)); } catch {} }
+      setCurrentBooks((readingData?.current_books || []) as Book[]);
+      setReadingSessions((readingData?.reading_sessions || []) as ReadingSession[]);
+    }
+    load();
   }, [router]);
 
   // Pomodoro timer logic
@@ -108,33 +108,34 @@ export default function FocusPage() {
     return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   };
 
-  const addBook = () => {
+  const addBook = async () => {
     if (!newTitle.trim()) return;
     const book: Book = { id: Date.now().toString(), title: newTitle.trim(), author: newAuthor.trim() || 'Unknown', currentPage: 0 };
     const updated = [...currentBooks, book];
     setCurrentBooks(updated);
-    setItem('currentBooks', JSON.stringify(updated));
+    await upsertReadingData({ current_books: updated });
     setNewTitle(''); setNewAuthor('');
     setShowAddBook(false);
   };
 
-  const removeBook = (id: string) => {
+  const removeBook = async (id: string) => {
     const updated = currentBooks.filter(b => b.id !== id);
     setCurrentBooks(updated);
-    setItem('currentBooks', JSON.stringify(updated));
+    await upsertReadingData({ current_books: updated });
   };
 
-  const finishBook = (id: string) => {
+  const finishBook = async (id: string) => {
     const book = currentBooks.find(b => b.id === id);
     if (!book) return;
-    const booksReadRaw = getItem('booksRead');
-    const booksRead = booksReadRaw ? JSON.parse(booksReadRaw) : [];
+    const data = await getReadingData();
+    const booksRead = data?.books_read || [];
     booksRead.push({ ...book, dateFinished: new Date().toLocaleDateString() });
-    setItem('booksRead', JSON.stringify(booksRead));
-    removeBook(id);
+    const updatedBooks = currentBooks.filter(b => b.id !== id);
+    setCurrentBooks(updatedBooks);
+    await upsertReadingData({ current_books: updatedBooks, books_read: booksRead });
   };
 
-  const logSession = () => {
+  const logSession = async () => {
     const book = currentBooks.find(b => b.id === logBookId);
     if (!book || !logStartPage || !logEndPage) return;
     const pagesRead = Math.max(0, parseInt(logEndPage) - parseInt(logStartPage));
@@ -149,14 +150,13 @@ export default function FocusPage() {
       date: new Date().toISOString(),
       dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
-    const updated = [...readingSessions, session];
-    setReadingSessions(updated);
-    setItem('readingSessions', JSON.stringify(updated));
+    const updatedSessions = [...readingSessions, session];
+    setReadingSessions(updatedSessions);
 
-    // Update current page
     const updatedBooks = currentBooks.map(b => b.id === logBookId ? { ...b, currentPage: parseInt(logEndPage) } : b);
     setCurrentBooks(updatedBooks);
-    setItem('currentBooks', JSON.stringify(updatedBooks));
+
+    await upsertReadingData({ reading_sessions: updatedSessions, current_books: updatedBooks });
 
     setLogBookId(''); setLogStartPage(''); setLogEndPage(''); setLogMinutes('');
     setReadingSeconds(0); setReadingTimerRunning(false);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem } from '@/lib/storage';
+import { getUserSettings, getTodayCheckin, getReadingData, getCalendarData, getJournalEntries } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 
 type Tab = 'overview' | 'reading';
@@ -42,54 +42,34 @@ export default function ProgressPage() {
   const [readingStreak, setReadingStreak] = useState(0);
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const [settings, checkin, readingData, calData, journalEntries] = await Promise.all([
+        getUserSettings(),
+        getTodayCheckin(),
+        getReadingData(),
+        getCalendarData(),
+        getJournalEntries(),
+      ]);
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    const streakRaw = getItem('streak');
-    setStreak(streakRaw ? parseInt(streakRaw) : 0);
+      setStreak(checkin?.streak ?? 0);
+      setCalendarData(calData as CalendarData);
 
-    const calRaw = getItem('calendarData');
-    if (calRaw) { try { setCalendarData(JSON.parse(calRaw)); } catch {} }
+      setJournalCount(journalEntries.length);
+      setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
 
-    // Journal/quote counts
-    const unifiedRaw = getItem('unifiedJournalEntries');
-    if (unifiedRaw) {
-      try {
-        const unified: { type: string }[] = JSON.parse(unifiedRaw);
-        setJournalCount(unified.length);
-        setQuoteCount(unified.filter(e => e.type === 'quote').length);
-      } catch {}
-    } else {
-      const journalRaw = getItem('journalEntries');
-      const quotesRaw = getItem('commonplaceQuotes');
-      if (journalRaw) { try { setJournalCount(JSON.parse(journalRaw).length); } catch {} }
-      if (quotesRaw) { try { setQuoteCount(JSON.parse(quotesRaw).length); } catch {} }
+      const beliefs = journalEntries.filter(e => e.type === 'belief');
+      setBeliefCounts({
+        encoded: beliefs.filter(b => b.belief_stage === 'encoded').length,
+        inProgress: beliefs.filter(b => b.belief_stage !== 'encoded').length,
+      });
+
+      setBooksRead(readingData?.books_read || []);
+      setCurrentBooks(readingData?.current_books || []);
+      setReadingSessions(readingData?.reading_sessions || []);
+      setReadingStreak(checkin?.reading_streak ?? 0);
     }
-
-    // Belief counts
-    const beliefRaw = getItem('beliefEntries');
-    if (beliefRaw) {
-      try {
-        const beliefs: { stage: string | number }[] = JSON.parse(beliefRaw);
-        setBeliefCounts({
-          encoded: beliefs.filter(b => b.stage === 'encoded').length,
-          inProgress: beliefs.filter(b => b.stage !== 'encoded').length,
-        });
-      } catch {}
-    }
-
-    // Reading
-    const booksReadRaw = getItem('booksRead');
-    if (booksReadRaw) { try { setBooksRead(JSON.parse(booksReadRaw)); } catch {} }
-
-    const currentBooksRaw = getItem('currentBooks');
-    if (currentBooksRaw) { try { setCurrentBooks(JSON.parse(currentBooksRaw)); } catch {} }
-
-    const sessionsRaw = getItem('readingSessions');
-    if (sessionsRaw) { try { setReadingSessions(JSON.parse(sessionsRaw)); } catch {} }
-
-    const readingStreakRaw = getItem('readingStreak');
-    setReadingStreak(readingStreakRaw ? parseInt(readingStreakRaw) : 0);
+    load();
   }, [router]);
 
   const getMilestone = (s: number) => {

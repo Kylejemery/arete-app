@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { upsertUserSettings } from './lib/db';
 
 const TOTAL_STEPS = 11;
 const OPTIONAL_STEPS = [3, 4, 6, 7, 8];
@@ -122,18 +122,20 @@ export default function SetupScreen() {
   };
 
   const handleCommit = async () => {
-    await AsyncStorage.setItem('userName', name.trim());
-    await AsyncStorage.setItem('userGoals', goals.trim());
-    await AsyncStorage.setItem('kt_background', background.trim());
-    await AsyncStorage.setItem('kt_identity', identity.trim());
-    await AsyncStorage.setItem('kt_goals', goals.trim());
-    await AsyncStorage.setItem('kt_strengths', strengths.trim());
-    await AsyncStorage.setItem('kt_weaknesses', weaknesses.trim());
-    await AsyncStorage.setItem('kt_patterns', patterns.trim());
-    await AsyncStorage.setItem('kt_major_events', majorEvents.trim());
-    await AsyncStorage.setItem('futureSelfYears', String(futureSelfYears));
-    await AsyncStorage.setItem('futureSelfDescription', futureSelfDescription.trim());
-    await AsyncStorage.setItem('cabinetMembers', JSON.stringify(activeMembers));
+    await upsertUserSettings({
+      user_name: name.trim(),
+      user_goals: goals.trim(),
+      kt_background: background.trim(),
+      kt_identity: identity.trim(),
+      kt_goals: goals.trim(),
+      kt_strengths: strengths.trim(),
+      kt_weaknesses: weaknesses.trim(),
+      kt_patterns: patterns.trim(),
+      kt_major_events: majorEvents.trim(),
+      future_self_years: futureSelfYears,
+      future_self_description: futureSelfDescription.trim(),
+      cabinet_members: activeMembers,
+    });
     router.replace('/');
   };
 

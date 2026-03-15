@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getThread, upsertThread } from '../app/lib/db';
 
 export interface ThreadMessage {
   role: 'user' | 'assistant';
@@ -16,20 +16,15 @@ export interface Thread {
 const MAX_STORED_MESSAGES = 200;
 export const CONTEXT_WINDOW_SIZE = 30;
 
-function storageKey(threadId: string): string {
-  return `thread_${threadId}`;
-}
-
 export async function loadThread(threadId: string): Promise<Thread> {
   try {
-    const raw = await AsyncStorage.getItem(storageKey(threadId));
-    if (raw) {
-      const parsed = JSON.parse(raw) as Thread;
-      if (parsed && Array.isArray(parsed.messages)) {
-        return parsed;
-      }
-    }
-  } catch { /* ignore corrupt data */ }
+    const messages = await getThread(threadId);
+    return {
+      id: threadId,
+      messages: messages as unknown as ThreadMessage[],
+      lastUpdated: Date.now(),
+    };
+  } catch { /* ignore errors */ }
   return { id: threadId, messages: [], lastUpdated: Date.now() };
 }
 
@@ -43,7 +38,7 @@ export async function saveThread(thread: Thread): Promise<void> {
     lastUpdated: Date.now(),
   };
   try {
-    await AsyncStorage.setItem(storageKey(thread.id), JSON.stringify(capped));
+    await upsertThread(thread.id, capped.messages as any);
   } catch { /* ignore storage errors silently */ }
 }
 
@@ -63,7 +58,7 @@ export async function appendMessages(
 
 export async function clearThread(threadId: string): Promise<void> {
   try {
-    await AsyncStorage.removeItem(storageKey(threadId));
+    await upsertThread(threadId, []);
   } catch { /* ignore */ }
 }
 
