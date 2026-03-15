@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../services/claudeService';
+import { getTodayCheckin, upsertTodayCheckin } from './lib/db';
 
 const defaultTasks = [
   { id: '1', title: 'Eat Breakfast 🫙', done: false },
@@ -55,67 +55,53 @@ export default function MorningScreen() {
 
   const loadTasks = async () => {
     try {
-      const savedTasks = await AsyncStorage.getItem('morningTasks');
-      const lastReset = await AsyncStorage.getItem('morningLastReset');
-      const today = new Date().toDateString();
-      if (lastReset !== today) {
-        const resetTasks = savedTasks
-          ? JSON.parse(savedTasks).map((t: any) => ({ ...t, done: false }))
-          : defaultTasks;
-        setTasks(resetTasks);
-        await AsyncStorage.setItem('morningTasks', JSON.stringify(resetTasks));
-        await AsyncStorage.setItem('morningLastReset', today);
-        await AsyncStorage.setItem('morningDone', 'false');
+      const checkin = await getTodayCheckin();
+      if (checkin?.morning_tasks && checkin.morning_tasks.length > 0) {
+        // Today's tasks exist — reset done state
+        const todayDate = new Date().toISOString().split('T')[0];
+        const checkinDate = checkin.date;
+        if (checkinDate === todayDate) {
+          setTasks(checkin.morning_tasks as any[]);
+        } else {
+          const resetTasks = checkin.morning_tasks.map((t: any) => ({ ...t, done: false }));
+          setTasks(resetTasks);
+          await upsertTodayCheckin({ morning_tasks: resetTasks, morning_done: false });
+        }
       } else {
-        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        setTasks(defaultTasks);
       }
-
-      // Restore today's Cabinet check-in response if it was already generated
-      const todayKey = `morningCheckinResponse_${today}`;
-      const savedResponse = await AsyncStorage.getItem(todayKey);
-      if (savedResponse) setCheckinResponse(savedResponse);
-
-      // Clean up check-in responses from previous days
-      const allKeys = await AsyncStorage.getAllKeys();
-      const staleKeys = allKeys.filter(
-        key => key.startsWith('morningCheckinResponse_') && key !== todayKey
-      );
-      if (staleKeys.length > 0) await AsyncStorage.multiRemove(staleKeys);
+      if (checkin?.cabinet_morning_response) {
+        setCheckinResponse(checkin.cabinet_morning_response);
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
   const saveTasks = async (updatedTasks: any[]) => {
-    await AsyncStorage.setItem('morningTasks', JSON.stringify(updatedTasks));
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
-    await AsyncStorage.setItem('morningDone', allDone ? 'true' : 'false');
+    await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
     if (allDone) {
       await updateStreak();
-      const today = new Date().toDateString();
-      const checkinDate = await AsyncStorage.getItem('morningCheckinDate');
-      if (checkinDate !== today) {
-        await AsyncStorage.setItem('morningCheckinDate', today);
+      const checkin = await getTodayCheckin();
+      if (!checkin?.cabinet_morning_response) {
         setCheckinLoading(true);
         setCheckinResponse(null);
         const reply = await sendCheckInToCabinet('morning');
         setCheckinLoading(false);
         setCheckinResponse(reply);
         if (reply) {
-          await AsyncStorage.setItem(`morningCheckinResponse_${today}`, reply);
+          await upsertTodayCheckin({ cabinet_morning_response: reply });
         }
       }
     }
   };
 
   const updateStreak = async () => {
-    const lastStreak = await AsyncStorage.getItem('lastStreakDate');
-    const today = new Date().toDateString();
-    if (lastStreak !== today) {
-      const streak = await AsyncStorage.getItem('streak');
-      const newStreak = streak ? parseInt(streak) + 1 : 1;
-      await AsyncStorage.setItem('streak', newStreak.toString());
-      await AsyncStorage.setItem('lastStreakDate', today);
+    const checkin = await getTodayCheckin();
+    const currentStreak = checkin?.streak ?? 0;
+    if (!checkin?.morning_done) {
+      await upsertTodayCheckin({ streak: currentStreak + 1 });
     }
   };
 

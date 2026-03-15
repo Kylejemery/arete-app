@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { supabase } from './lib/supabase';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -475,6 +476,26 @@ export default function SettingsScreen() {
         <Text style={styles.saveButtonText}>Save & Schedule Notifications</Text>
       </TouchableOpacity>
 
+      {/* Sign Out */}
+      <TouchableOpacity
+        style={styles.signOutButton}
+        onPress={() => {
+          Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Sign Out',
+              style: 'destructive',
+              onPress: async () => {
+                await supabase.auth.signOut();
+                router.replace('/(auth)/login' as any);
+              },
+            },
+          ]);
+        }}
+      >
+        <Text style={styles.signOutText}>Sign Out</Text>
+      </TouchableOpacity>
+
       <Text style={styles.footer}>
         Note: Notifications work on physical devices. They may not appear in web/simulator.
       </Text>
@@ -587,4 +608,18 @@ const styles = StyleSheet.create({
   },
   privacyRow: { paddingVertical: 12, paddingHorizontal: 8, marginTop: 12 },
   privacyText: { color: '#c9a84c', fontSize: 16 },
+  signOutButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ff444455',
+  },
+  signOutText: {
+    color: '#ff6666',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
 });

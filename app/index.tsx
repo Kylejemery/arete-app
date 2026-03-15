@@ -1,9 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
+import { getUserSettings, getTodayCheckin } from './lib/db';
 
 const dailyQuotes = [
   { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
@@ -35,23 +35,18 @@ export default function HomeScreen() {
   );
 
   const loadData = async () => {
-    const name = await AsyncStorage.getItem('userName');
-    if (!name) {
+    const settings = await getUserSettings();
+    if (!settings?.user_name) {
       router.replace('/setup' as any);
       return;
     }
-    setUserName(name);
+    setUserName(settings.user_name);
+    setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
-    const ktGoals = await AsyncStorage.getItem('kt_goals');
-    setKnowThyselfIncomplete(!ktGoals || ktGoals.trim().length === 0);
-
-    const morning = await AsyncStorage.getItem('morningDone');
-    const evening = await AsyncStorage.getItem('eveningDone');
-    const savedStreak = await AsyncStorage.getItem('streak');
-
-    setMorningDone(morning === 'true');
-    setEveningDone(evening === 'true');
-    setStreak(savedStreak ? parseInt(savedStreak) : 0);
+    const checkin = await getTodayCheckin();
+    setMorningDone(checkin?.morning_done ?? false);
+    setEveningDone(checkin?.evening_done ?? false);
+    setStreak(checkin?.streak ?? 0);
   };
 
   const getGreeting = () => {

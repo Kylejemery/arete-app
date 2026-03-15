@@ -2,12 +2,49 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '@/lib/storage';
+import { getUserSettings, getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
+import type { JournalEntry } from '@/lib/types';
 import { sendBeliefJournalMessage } from '@/lib/claudeService';
 import type { BeliefEntry, BeliefDialogueTurn } from '@/lib/claudeService';
 import PageHeader from '@/components/PageHeader';
 
-const STORAGE_KEY = 'unifiedJournalEntries';
+function dbToUnified(e: JournalEntry): UnifiedEntry {
+  return {
+    id: e.id,
+    type: e.type,
+    content: e.content,
+    createdAt: new Date(e.created_at).getTime(),
+    updatedAt: new Date(e.updated_at).getTime(),
+    bookTitle: e.book_title,
+    author: e.author,
+    rawInput: e.raw_input,
+    dialogueHistory: e.dialogue_history as UnifiedEntry['dialogueHistory'],
+    encodedBelief: e.encoded_belief,
+    virtueConcern: e.virtue_check?.concern,
+    hasVirtueConcern: !!(e.virtue_check && !e.virtue_check.passed),
+    beliefStage: e.belief_stage,
+    refinedStatement: e.refined_statement,
+    virtueCheck: e.virtue_check as UnifiedEntry['virtueCheck'],
+    topic: e.topic,
+  };
+}
+
+function unifiedToDbPayload(e: UnifiedEntry): Omit<JournalEntry, 'id' | 'user_id' | 'created_at' | 'updated_at'> {
+  return {
+    type: e.type,
+    content: e.content,
+    book_title: e.bookTitle,
+    author: e.author,
+    raw_input: e.rawInput,
+    dialogue_history: e.dialogueHistory as JournalEntry['dialogue_history'],
+    encoded_belief: e.encodedBelief,
+    refined_statement: e.refinedStatement,
+    virtue_check: e.virtueCheck as JournalEntry['virtue_check'],
+    belief_stage: e.beliefStage,
+    topic: e.topic,
+  };
+}
 
 export interface UnifiedEntry {
   id: string;
@@ -105,27 +142,49 @@ export default function JournalPage() {
 
   // Load entries
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
-    const saved = getItem(STORAGE_KEY);
-    if (saved) { try { setEntries(JSON.parse(saved)); } catch {} }
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
+    async function load() {
+      const settings = await getUserSettings();
+      if (!settings?.user_name) { router.replace('/login'); return; }
+      const dbEntries = await getJournalEntries();
+      setEntries(dbEntries.map(dbToUnified));
+
+      // Real-time subscription
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        channel = supabase.channel('journal-changes')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries', filter: `user_id=eq.${user.id}` }, async () => {
+            const fresh = await getJournalEntries();
+            setEntries(fresh.map(dbToUnified));
+          })
+          .subscribe();
+      }
+    }
+    load();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [router]);
 
-  // Persistence
-  const saveEntries = (updated: UnifiedEntry[]) => {
-    setEntries(updated);
-    setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
-
-  const upsertEntry = (updated: UnifiedEntry) => {
-    setEntries(prev => {
-      const idx = prev.findIndex(e => e.id === updated.id);
-      const next = idx >= 0
-        ? prev.map(e => e.id === updated.id ? updated : e)
-        : [updated, ...prev];
-      setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  // Persistence helpers
+  const upsertEntry = async (updated: UnifiedEntry): Promise<UnifiedEntry> => {
+    const exists = entries.find(e => e.id === updated.id);
+    if (!exists) {
+      const created = await createJournalEntry(unifiedToDbPayload(updated));
+      if (created) {
+        const asUnified = dbToUnified(created);
+        setEntries(prev => [asUnified, ...prev]);
+        return asUnified;
+      }
+      setEntries(prev => [updated, ...prev]);
+      return updated;
+    } else {
+      await updateJournalEntry(updated.id, unifiedToDbPayload(updated));
+      setEntries(prev => prev.map(e => e.id === updated.id ? updated : e));
+      return updated;
+    }
   };
 
   // Computed
@@ -145,38 +204,34 @@ export default function JournalPage() {
     .sort((a, b) => b.createdAt - a.createdAt);
 
   // CRUD
-  const addEntry = () => {
+  const addEntry = async () => {
     if (inputType === 'quote') {
       if (!quoteText.trim() || !quoteBook.trim()) {
         alert('Please enter a quote and book title.');
         return;
       }
-      const entry: UnifiedEntry = {
-        id: Date.now().toString(),
+      const payload: Omit<JournalEntry, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
         type: 'quote',
         content: quoteText.trim(),
-        bookTitle: quoteBook.trim(),
+        book_title: quoteBook.trim(),
         author: quoteAuthor.trim() || undefined,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
       };
-      saveEntries([entry, ...entries]);
+      const created = await createJournalEntry(payload);
+      if (created) setEntries(prev => [dbToUnified(created), ...prev]);
       resetInputForm();
       return;
     }
     if (!textInput.trim()) return;
-    const entry: UnifiedEntry = {
-      id: Date.now().toString(),
+    const payload: Omit<JournalEntry, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
       type: inputType!,
       content: textInput.trim(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
     };
-    saveEntries([entry, ...entries]);
+    const created = await createJournalEntry(payload);
+    if (created) setEntries(prev => [dbToUnified(created), ...prev]);
     resetInputForm();
   };
 
-  const updateEntry = () => {
+  const updateEntry = async () => {
     if (!editingEntry) return;
     let updated: UnifiedEntry;
     if (editingEntry.type === 'quote') {
@@ -195,13 +250,15 @@ export default function JournalPage() {
       if (!textInput.trim()) return;
       updated = { ...editingEntry, content: textInput.trim(), updatedAt: Date.now() };
     }
-    saveEntries(entries.map(e => e.id === updated.id ? updated : e));
+    await updateJournalEntry(updated.id, unifiedToDbPayload(updated));
+    setEntries(prev => prev.map(e => e.id === updated.id ? updated : e));
     resetInputForm();
   };
 
-  const deleteEntry = (id: string) => {
+  const deleteEntry = async (id: string) => {
     if (!confirm('Delete this entry? This cannot be undone.')) return;
-    saveEntries(entries.filter(e => e.id !== id));
+    await deleteJournalEntry(id);
+    setEntries(prev => prev.filter(e => e.id !== id));
     setMenuEntryId(null);
     if (viewingBeliefEntry?.id === id) setViewingBeliefEntry(null);
   };
@@ -277,7 +334,7 @@ export default function JournalPage() {
           dialogueHistory: [...(currentEntry.dialogueHistory || []), userTurn],
           updatedAt: Date.now(),
         };
-        upsertEntry(entryToSend);
+        entryToSend = await upsertEntry(entryToSend);
         setBeliefEntry(entryToSend);
       }
 
@@ -296,9 +353,9 @@ export default function JournalPage() {
         updatedAt: Date.now(),
       };
 
+      const savedEntry = await upsertEntry(finalEntry);
       setBeliefStageNum(newStage);
-      setBeliefEntry(finalEntry);
-      upsertEntry(finalEntry);
+      setBeliefEntry(savedEntry);
       setTimeout(() => beliefScrollRef.current?.scrollTo({ top: beliefScrollRef.current.scrollHeight, behavior: 'smooth' }), 100);
     } catch (err) {
       setBeliefError(err instanceof Error ? err.message : 'The Cabinet is unavailable. Please try again.');
@@ -322,10 +379,10 @@ export default function JournalPage() {
       createdAt: now,
       updatedAt: now,
     };
-    setBeliefEntry(newEntry);
     setBeliefStageNum(1);
-    upsertEntry(newEntry);
-    await callCabinet(newEntry, 1);
+    const savedEntry = await upsertEntry(newEntry);
+    setBeliefEntry(savedEntry);
+    await callCabinet(savedEntry, 1);
   };
 
   const sendDialogueResponse = async () => {
@@ -340,7 +397,7 @@ export default function JournalPage() {
     await callCabinet(beliefEntry, 2);
   };
 
-  const encodeBelief = () => {
+  const encodeBelief = async () => {
     if (!beliefEntry) return;
     const encodedText = beliefEntry.refinedStatement || beliefEntry.content;
     const finalEntry: UnifiedEntry = {
@@ -353,7 +410,7 @@ export default function JournalPage() {
       updatedAt: Date.now(),
     };
     setBeliefEntry(finalEntry);
-    upsertEntry(finalEntry);
+    await upsertEntry(finalEntry);
   };
 
   const openDraftBelief = (entry: UnifiedEntry) => {

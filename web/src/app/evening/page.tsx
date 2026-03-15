@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getItem, setItem } from '@/lib/storage';
+import { getUserSettings, getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
 import PageHeader from '@/components/PageHeader';
@@ -31,36 +31,29 @@ export default function EveningPage() {
 
   const reflectionPrompt = getDailyItem(REFLECTION_PROMPTS);
   const stoicPrompt = getDailyItem(STOIC_PROMPTS);
-  const today = new Date().toDateString();
 
   useEffect(() => {
-    const name = getItem('userName');
-    if (!name) { router.replace('/onboarding'); return; }
+    async function load() {
+      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      if (!settings?.user_name) { router.replace('/login'); return; }
 
-    const savedTasksRaw = getItem('eveningTasks');
-    const savedDateRaw = getItem('eveningTasksDate');
-    if (savedTasksRaw) {
-      const savedTasks: Task[] = JSON.parse(savedTasksRaw);
-      if (savedDateRaw !== today) {
-        setTasks(savedTasks.map(t => ({ ...t, done: false })));
-      } else {
-        setTasks(savedTasks);
+      if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
+        setTasks(checkin.evening_tasks as Task[]);
+      } else if (settings.evening_tasks && settings.evening_tasks.length > 0) {
+        setTasks((settings.evening_tasks as Task[]).map(t => ({ ...t, done: false })));
       }
+
+      setReflectionAnswer(checkin?.reflection_answer || '');
+      setStoicAnswer(checkin?.stoic_answer || '');
+      setCheckInDone(checkin?.evening_done === true);
+      setLoaded(true);
     }
+    load();
+  }, [router]);
 
-    setReflectionAnswer(getItem('reflectionAnswer') || '');
-    setStoicAnswer(getItem('stoicAnswer') || '');
-
-    const doneDate = getItem('eveningDoneDate');
-    const done = getItem('eveningDone');
-    setCheckInDone(done === 'true' && doneDate === today);
-    setLoaded(true);
-  }, [router, today]);
-
-  const saveTasks = (updatedTasks: Task[]) => {
+  const saveTasks = async (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
-    setItem('eveningTasks', JSON.stringify(updatedTasks));
-    setItem('eveningTasksDate', today);
+    await upsertTodayCheckin({ evening_tasks: updatedTasks });
   };
 
   const toggleTask = (id: string) => {
@@ -79,14 +72,12 @@ export default function EveningPage() {
   };
 
   const handleCheckIn = async () => {
-    setItem('reflectionAnswer', reflectionAnswer);
-    setItem('stoicAnswer', stoicAnswer);
+    await upsertTodayCheckin({ reflection_answer: reflectionAnswer, stoic_answer: stoicAnswer });
     setIsLoading(true);
     try {
       const response = await sendCheckInToCabinet('evening');
       setCheckInResponse(response);
-      setItem('eveningDone', 'true');
-      setItem('eveningDoneDate', today);
+      await upsertTodayCheckin({ evening_done: true });
       setCheckInDone(true);
     } catch {
       setCheckInResponse('The Cabinet will speak when you return.');
@@ -113,7 +104,7 @@ export default function EveningPage() {
           placeholder="Your answer..."
           value={reflectionAnswer}
           onChange={e => setReflectionAnswer(e.target.value)}
-          onBlur={() => setItem('reflectionAnswer', reflectionAnswer)}
+          onBlur={() => upsertTodayCheckin({ reflection_answer: reflectionAnswer })}
         />
       </div>
 
@@ -127,7 +118,7 @@ export default function EveningPage() {
           placeholder="Your answer..."
           value={stoicAnswer}
           onChange={e => setStoicAnswer(e.target.value)}
-          onBlur={() => setItem('stoicAnswer', stoicAnswer)}
+          onBlur={() => upsertTodayCheckin({ stoic_answer: stoicAnswer })}
         />
       </div>
 

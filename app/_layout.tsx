@@ -1,7 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { supabase } from './lib/supabase';
 
 export default function Layout() {
+  const router = useRouter();
+  const segments = useSegments();
+  const [sessionChecked, setSessionChecked] = useState(false);
+
+  useEffect(() => {
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.replace('/(auth)/login' as any);
+      }
+      setSessionChecked(true);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const inAuthGroup = segments[0] === '(auth)';
+      if (!session && !inAuthGroup) {
+        router.replace('/(auth)/login' as any);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (!sessionChecked) return null;
+
   return (
     <Tabs
       screenOptions={{
@@ -79,6 +107,10 @@ export default function Layout() {
             <Ionicons name="trophy-outline" color={color} size={size} />
           ),
         }}
+      />
+      <Tabs.Screen
+        name="(auth)"
+        options={{ href: null }}
       />
       <Tabs.Screen
         name="setup"

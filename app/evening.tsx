@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../services/claudeService';
+import { getTodayCheckin, upsertTodayCheckin } from './lib/db';
 
 const defaultTasks = [
   { id: '1', title: 'Plan Tomorrow 📜', done: false },
@@ -79,42 +79,32 @@ export default function EveningScreen() {
   };
 
   const loadAnswers = async () => {
-    const today = new Date().toDateString();
-    const savedDate = await AsyncStorage.getItem('eveningAnswerDate');
-    if (savedDate === today) {
-      const reflection = await AsyncStorage.getItem('reflectionAnswer');
-      const stoic = await AsyncStorage.getItem('stoicAnswer');
-      if (reflection) setReflectionAnswer(reflection);
-      if (stoic) setStoicAnswer(stoic);
-    }
-    const savedCheckin = await AsyncStorage.getItem(`eveningCheckinResponse_${today}`);
-    if (savedCheckin) setCheckinResponse(savedCheckin);
+    const checkin = await getTodayCheckin();
+    if (checkin?.reflection_answer) setReflectionAnswer(checkin.reflection_answer);
+    if (checkin?.stoic_answer) setStoicAnswer(checkin.stoic_answer);
+    if (checkin?.cabinet_evening_response) setCheckinResponse(checkin.cabinet_evening_response);
   };
 
   const saveReflection = async (text: string) => {
-    await AsyncStorage.setItem('reflectionAnswer', text);
-    await AsyncStorage.setItem('eveningAnswerDate', new Date().toDateString());
+    await upsertTodayCheckin({ reflection_answer: text });
     setReflectionSaved(true);
     if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
     reflectionTimerRef.current = setTimeout(() => setReflectionSaved(false), 2000);
-    const today = new Date().toDateString();
-    const checkinDate = await AsyncStorage.getItem('eveningCheckinDate');
-    if (checkinDate !== today) {
-      await AsyncStorage.setItem('eveningCheckinDate', today);
+    const checkin = await getTodayCheckin();
+    if (!checkin?.cabinet_evening_response) {
       setCheckinLoading(true);
       setCheckinResponse(null);
       const reply = await sendCheckInToCabinet('evening');
       setCheckinLoading(false);
       setCheckinResponse(reply);
       if (reply) {
-        await AsyncStorage.setItem(`eveningCheckinResponse_${today}`, reply);
+        await upsertTodayCheckin({ cabinet_evening_response: reply });
       }
     }
   };
 
   const saveStoic = async (text: string) => {
-    await AsyncStorage.setItem('stoicAnswer', text);
-    await AsyncStorage.setItem('eveningAnswerDate', new Date().toDateString());
+    await upsertTodayCheckin({ stoic_answer: text });
     setStoicSaved(true);
     if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
     stoicTimerRef.current = setTimeout(() => setStoicSaved(false), 2000);
@@ -122,19 +112,18 @@ export default function EveningScreen() {
 
   const loadTasks = async () => {
     try {
-      const savedTasks = await AsyncStorage.getItem('eveningTasks');
-      const lastReset = await AsyncStorage.getItem('eveningLastReset');
-      const today = new Date().toDateString();
-      if (lastReset !== today) {
-        const resetTasks = savedTasks
-          ? JSON.parse(savedTasks).map((t: any) => ({ ...t, done: false }))
-          : defaultTasks;
-        setTasks(resetTasks);
-        await AsyncStorage.setItem('eveningTasks', JSON.stringify(resetTasks));
-        await AsyncStorage.setItem('eveningLastReset', today);
-        await AsyncStorage.setItem('eveningDone', 'false');
+      const checkin = await getTodayCheckin();
+      if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
+        const todayDate = new Date().toISOString().split('T')[0];
+        if (checkin.date === todayDate) {
+          setTasks(checkin.evening_tasks as any[]);
+        } else {
+          const resetTasks = checkin.evening_tasks.map((t: any) => ({ ...t, done: false }));
+          setTasks(resetTasks);
+          await upsertTodayCheckin({ evening_tasks: resetTasks, evening_done: false });
+        }
       } else {
-        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        setTasks(defaultTasks);
       }
     } catch (e) {
       console.error(e);
@@ -142,9 +131,8 @@ export default function EveningScreen() {
   };
 
   const saveTasks = async (updatedTasks: any[]) => {
-    await AsyncStorage.setItem('eveningTasks', JSON.stringify(updatedTasks));
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
-    await AsyncStorage.setItem('eveningDone', allDone ? 'true' : 'false');
+    await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
   };
 
   const toggleTask = async (id: string) => {

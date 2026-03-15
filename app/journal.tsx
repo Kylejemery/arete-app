@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
@@ -17,8 +16,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
-
-const STORAGE_KEY = 'unifiedJournalEntries';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from './lib/db';
 
 export interface UnifiedEntry {
     id: string;
@@ -80,14 +78,31 @@ export default function JournalScreen() {
 
     const loadEntries = async () => {
         try {
-            const saved = await AsyncStorage.getItem(STORAGE_KEY);
-            if (saved) setEntries(JSON.parse(saved));
+            const dbEntries = await getJournalEntries();
+            const mapped: UnifiedEntry[] = dbEntries.map(e => ({
+                id: e.id,
+                type: e.type,
+                content: e.content,
+                createdAt: new Date(e.created_at).getTime(),
+                updatedAt: new Date(e.updated_at).getTime(),
+                bookTitle: e.book_title,
+                author: e.author,
+                rawInput: e.raw_input,
+                dialogueHistory: e.dialogue_history as any,
+                encodedBelief: e.encoded_belief,
+                virtueConcern: e.virtue_check?.concern ?? null,
+                hasVirtueConcern: e.virtue_check ? !e.virtue_check.passed : false,
+                beliefStage: e.belief_stage as any,
+                refinedStatement: e.refined_statement,
+                virtueCheck: e.virtue_check as any,
+                topic: e.topic,
+            }));
+            setEntries(mapped);
         } catch (e) { console.error(e); }
     };
 
     const saveEntries = async (updated: UnifiedEntry[]) => {
         setEntries(updated);
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     };
 
     const filteredEntries = entries
@@ -111,51 +126,71 @@ export default function JournalScreen() {
                 Alert.alert('Required', 'Please enter a quote and book title.');
                 return;
             }
-            const entry: UnifiedEntry = {
-                id: Date.now().toString(),
+            const created = await createJournalEntry({
                 type: 'quote',
                 content: quoteText.trim(),
-                bookTitle: quoteBook.trim(),
+                book_title: quoteBook.trim(),
                 author: quoteAuthor.trim() || undefined,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-            };
-            await saveEntries([entry, ...entries]);
+            });
+            if (created) {
+                const entry: UnifiedEntry = {
+                    id: created.id,
+                    type: 'quote',
+                    content: created.content,
+                    bookTitle: created.book_title,
+                    author: created.author,
+                    createdAt: new Date(created.created_at).getTime(),
+                    updatedAt: new Date(created.updated_at).getTime(),
+                };
+                setEntries([entry, ...entries]);
+            }
             resetInputForm();
             return;
         }
         if (!textInput.trim()) return;
-        const entry: UnifiedEntry = {
-            id: Date.now().toString(),
+        const created = await createJournalEntry({
             type: inputType!,
             content: textInput.trim(),
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-        };
-        await saveEntries([entry, ...entries]);
+        });
+        if (created) {
+            const entry: UnifiedEntry = {
+                id: created.id,
+                type: created.type,
+                content: created.content,
+                createdAt: new Date(created.created_at).getTime(),
+                updatedAt: new Date(created.updated_at).getTime(),
+            };
+            setEntries([entry, ...entries]);
+        }
         resetInputForm();
     };
 
     const updateEntry = async () => {
         if (!editingEntry) return;
-        let updated: UnifiedEntry;
         if (editingEntry.type === 'quote') {
             if (!quoteText.trim() || !quoteBook.trim()) {
                 Alert.alert('Required', 'Please enter a quote and book title.');
                 return;
             }
-            updated = {
+            await updateJournalEntry(editingEntry.id, {
+                content: quoteText.trim(),
+                book_title: quoteBook.trim(),
+                author: quoteAuthor.trim() || undefined,
+            });
+            const updated: UnifiedEntry = {
                 ...editingEntry,
                 content: quoteText.trim(),
                 bookTitle: quoteBook.trim(),
                 author: quoteAuthor.trim() || undefined,
                 updatedAt: Date.now(),
             };
+            setEntries(entries.map(e => e.id === updated.id ? updated : e));
         } else {
             if (!textInput.trim()) return;
-            updated = { ...editingEntry, content: textInput.trim(), updatedAt: Date.now() };
+            await updateJournalEntry(editingEntry.id, { content: textInput.trim() });
+            const updated: UnifiedEntry = { ...editingEntry, content: textInput.trim(), updatedAt: Date.now() };
+            setEntries(entries.map(e => e.id === updated.id ? updated : e));
         }
-        await saveEntries(entries.map(e => e.id === updated.id ? updated : e));
         resetInputForm();
     };
 
@@ -164,7 +199,8 @@ export default function JournalScreen() {
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Delete', style: 'destructive', onPress: async () => {
-                    await saveEntries(entries.filter(e => e.id !== id));
+                    await deleteJournalEntry(id);
+                    setEntries(entries.filter(e => e.id !== id));
                     setLongPressEntry(null);
                 }
             },
