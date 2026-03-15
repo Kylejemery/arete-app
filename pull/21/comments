@@ -1,0 +1,127 @@
+## Corrections Required — Please Apply Before Proceeding
+
+Two corrections are needed. Apply both before continuing with any further implementation.
+
+---
+
+### Correction 1 — Table Names Must Match the Spec Exactly
+
+Your proposed migration uses different table names than the spec. Use the spec's exact names — other specs will reference these names and inconsistency will cause problems later.
+
+Replace:
+- `daily_checkins` → `check_ins`
+- `cabinet_threads` → the spec does not have this table — cabinet/counselor threads are stored in AsyncStorage/localStorage locally and are NOT migrated to Supabase in this spec. Remove this table entirely.
+- `reading_data` → `books` (the spec's table stores books in progress and completed — see schema in the spec)
+- `calendar_data` → **does not exist in the spec**. Do not create it.
+
+The correct full table list from the spec is:
+`profiles`, `journal_entries`, `beliefs`, `check_ins`, `books`, `habits`, `habit_logs`, `milestones`, `weekly_reviews`, `sessions`
+
+Also note: the `user_settings` table you proposed is fine as an addition (the spec doesn't prescribe a settings table, but one is needed). Keep it. Just make sure the other table names match the spec exactly.
+
+---
+
+### Correction 2 — Missing Tables (Spec Was Truncated)
+
+Add all five of these tables to `supabase/migrations/001_initial_schema.sql`:
+
+```sql
+-- habits
+create table habits (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  name text not null,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+-- habit_logs
+create table habit_logs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  habit_id uuid references habits(id) on delete cascade not null,
+  logged_date date not null default current_date,
+  created_at timestamptz default now(),
+  unique(habit_id, logged_date)
+);
+
+-- milestones
+create table milestones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  title text not null,
+  description text,
+  achieved_at date,
+  is_achieved boolean default false,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- weekly_reviews
+create table weekly_reviews (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  week_start date not null,
+  week_end date not null,
+  generated_review text not null,
+  created_at timestamptz default now()
+);
+
+-- sessions (app screen time, not device screen time)
+create table sessions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  duration_seconds integer
+);
+```
+
+RLS — add the same policy pattern to all five new tables:
+
+```sql
+alter table habits enable row level security;
+alter table habit_logs enable row level security;
+alter table milestones enable row level security;
+alter table weekly_reviews enable row level security;
+alter table sessions enable row level security;
+
+create policy "Users can manage their own data" on habits
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can manage their own data" on habit_logs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can manage their own data" on milestones
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can manage their own data" on weekly_reviews
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create policy "Users can manage their own data" on sessions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+```
+
+Enable real-time on these additional tables:
+```sql
+alter publication supabase_realtime add table habit_logs;
+alter publication supabase_realtime add table milestones;
+```
+
+Also note: the six default habits (`meditation`, `boxing`, `running`, `cold shower`, `stretching`, `reading`) are seeded **in the app on first login**, not in the database migration. Handle this in the mobile and web setup/onboarding flows.
+
+---
+
+### Critical Note — `gatherAppContext()` Migration
+
+When migrating `services/claudeService.ts`, the `gatherAppContext()` function currently reads from 14+ AsyncStorage keys and assembles the full context string passed to Claude on every cabinet and check-in request. This is the most important function in the codebase — if it produces incorrect or empty context, the cabinet's responses will be degraded and it won't be immediately obvious why.
+
+Migrate this function carefully:
+1. It must remain async
+2. It must read from Supabase (using the authenticated user's data) instead of AsyncStorage
+3. Its output format (the plain-text context string) must not change — Claude depends on the exact formatting
+4. Explicitly verify it returns correct data after migration before proceeding to the next phase
+
+--- 
+
+Resume the build in the original spec order. Apply both corrections to the migration file first, then continue from where you left off.
