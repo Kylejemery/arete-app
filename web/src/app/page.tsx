@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getTodayCheckin } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES } from '@/lib/quotes';
 
 export default function HomePage() {
@@ -17,9 +18,14 @@ export default function HomePage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.replace('/login');
+        return;
+      }
       const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
       if (!settings?.user_name) {
-        router.replace('/login');
+        router.replace('/setup');
         return;
       }
       setUserName(settings.user_name);
