@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
+import { getUserSettings, getLatestCheckIn, createCheckIn } from '@/lib/db';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
 import PageHeader from '@/components/PageHeader';
@@ -34,26 +34,62 @@ export default function EveningPage() {
 
   useEffect(() => {
     async function load() {
-      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/login'); return; }
 
-      if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
-        setTasks(checkin.evening_tasks as Task[]);
-      } else if (settings.evening_tasks && settings.evening_tasks.length > 0) {
-        setTasks((settings.evening_tasks as Task[]).map(t => ({ ...t, done: false })));
+      // Load tasks from localStorage, fall back to settings defaults, then DEFAULT_TASKS
+      if (typeof window !== 'undefined') {
+        const storedTasks = localStorage.getItem('arete_evening_tasks');
+        if (storedTasks) {
+          try {
+            setTasks(JSON.parse(storedTasks));
+          } catch {
+            setTasks(settings.evening_tasks?.length > 0
+              ? (settings.evening_tasks as Task[]).map(t => ({ ...t, done: false }))
+              : DEFAULT_TASKS);
+          }
+        } else if (settings.evening_tasks && settings.evening_tasks.length > 0) {
+          setTasks((settings.evening_tasks as Task[]).map(t => ({ ...t, done: false })));
+        }
+
+        const storedReflection = localStorage.getItem('arete_reflection_answer');
+        if (storedReflection) setReflectionAnswer(storedReflection);
+
+        const storedStoic = localStorage.getItem('arete_stoic_answer');
+        if (storedStoic) setStoicAnswer(storedStoic);
       }
 
-      setReflectionAnswer(checkin?.reflection_answer || '');
-      setStoicAnswer(checkin?.stoic_answer || '');
-      setCheckInDone(checkin?.evening_done === true);
+      // Check if evening check-in already done today
+      const latestCheckIn = await getLatestCheckIn('evening');
+      if (latestCheckIn) {
+        setCheckInDone(true);
+        setCheckInResponse(latestCheckIn.cabinet_response);
+      }
+
       setLoaded(true);
     }
     load();
   }, [router]);
 
-  const saveTasks = async (updatedTasks: Task[]) => {
+  const saveTasks = (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
-    await upsertTodayCheckin({ evening_tasks: updatedTasks });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arete_evening_tasks', JSON.stringify(updatedTasks));
+    }
+  };
+
+  const saveReflection = (value: string) => {
+    setReflectionAnswer(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arete_reflection_answer', value);
+    }
+  };
+
+  const saveStoic = (value: string) => {
+    setStoicAnswer(value);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arete_stoic_answer', value);
+    }
   };
 
   const toggleTask = (id: string) => {
@@ -72,12 +108,13 @@ export default function EveningPage() {
   };
 
   const handleCheckIn = async () => {
-    await upsertTodayCheckin({ reflection_answer: reflectionAnswer, stoic_answer: stoicAnswer });
     setIsLoading(true);
     try {
+      const taskSummary = tasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ');
+      const userInput = `Reflection: ${reflectionAnswer || '(not answered)'}. Stoic: ${stoicAnswer || '(not answered)'}. Evening tasks: ${taskSummary}`;
       const response = await sendCheckInToCabinet('evening');
+      await createCheckIn('evening', userInput, response);
       setCheckInResponse(response);
-      await upsertTodayCheckin({ evening_done: true });
       setCheckInDone(true);
     } catch {
       setCheckInResponse('The Cabinet will speak when you return.');
@@ -103,8 +140,7 @@ export default function EveningPage() {
           rows={4}
           placeholder="Your answer..."
           value={reflectionAnswer}
-          onChange={e => setReflectionAnswer(e.target.value)}
-          onBlur={() => upsertTodayCheckin({ reflection_answer: reflectionAnswer })}
+          onChange={e => saveReflection(e.target.value)}
         />
       </div>
 
@@ -117,8 +153,7 @@ export default function EveningPage() {
           rows={4}
           placeholder="Your answer..."
           value={stoicAnswer}
-          onChange={e => setStoicAnswer(e.target.value)}
-          onBlur={() => upsertTodayCheckin({ stoic_answer: stoicAnswer })}
+          onChange={e => saveStoic(e.target.value)}
         />
       </div>
 

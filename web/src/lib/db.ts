@@ -1,7 +1,6 @@
 import { supabase } from './supabase'
 import type {
   UserSettings,
-  DailyCheckin,
   JournalEntry,
   ThreadMessage,
   ReadingData,
@@ -66,48 +65,49 @@ export async function upsertUserSettings(data: Partial<Omit<UserSettings, 'id' |
 }
 
 // ----------------------------------------------------------------
-// DAILY CHECKINS
+// CHECK-INS (spec-aligned)
 // ----------------------------------------------------------------
 
-export async function getTodayCheckin(): Promise<DailyCheckin | null> {
+export async function getLatestCheckIn(type: 'morning' | 'evening', date?: string): Promise<{ id: string; user_input: string; cabinet_response: string; check_in_date: string; created_at: string } | null> {
   const userId = await getUserId()
   if (!userId) return null
+  const targetDate = date ?? today()
   try {
     const { data, error } = await supabase
       .from('check_ins')
-      .select('*')
+      .select('id, user_input, cabinet_response, check_in_date, created_at')
       .eq('user_id', userId)
-      .eq('check_in_date', today())
+      .eq('type', type)
+      .eq('check_in_date', targetDate)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle()
-
     if (error) {
-      console.error('getTodayCheckin error:', error)
+      console.error('getLatestCheckIn error:', error)
       return null
     }
-
     return data ?? null
   } catch (e) {
-    console.error('getTodayCheckin exception:', e)
+    console.error('getLatestCheckIn exception:', e)
     return null
   }
 }
 
-export async function upsertTodayCheckin(data: Partial<Omit<DailyCheckin, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+export async function hasCheckInToday(type: 'morning' | 'evening'): Promise<boolean> {
+  const result = await getLatestCheckIn(type)
+  return result !== null
+}
+
+export async function createCheckIn(type: 'morning' | 'evening', userInput: string, cabinetResponse: string): Promise<void> {
   const userId = await getUserId()
   if (!userId) return
   try {
-    // NOTE: check_ins schema uses `check_in_date` (date) not `date`.
-    // Also the spec indicates check_ins has different columns, so this upsert may still fail
-    // until the database schema is aligned with `DailyCheckin`.
     const { error } = await supabase
       .from('check_ins')
-      .upsert(
-        { ...data, user_id: userId, check_in_date: today() as any, updated_at: new Date().toISOString() } as any,
-        { onConflict: 'user_id,check_in_date' }
-      )
-    if (error) console.error('upsertTodayCheckin error:', error)
+      .insert({ user_id: userId, type, user_input: userInput, cabinet_response: cabinetResponse, check_in_date: today() })
+    if (error) console.error('createCheckIn error:', error)
   } catch (e) {
-    console.error('upsertTodayCheckin exception:', e)
+    console.error('createCheckIn exception:', e)
   }
 }
 
@@ -279,8 +279,8 @@ export async function getCalendarData(): Promise<Record<string, CalendarDay>> {
       .select('data')
       .eq('user_id', userId)
       .single()
-    if (error && error.code !== 'PGRST116') {
-      console.error('getCalendarData error:', error)
+    if (error) {
+      // Silently return empty if table doesn't exist or row not found
       return {}
     }
     return data?.data ?? {}

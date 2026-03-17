@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
+import { getUserSettings, getLatestCheckIn, createCheckIn } from '@/lib/db';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { AFFIRMATIONS, getDailyItem } from '@/lib/quotes';
 import PageHeader from '@/components/PageHeader';
@@ -31,24 +31,42 @@ export default function MorningPage() {
 
   useEffect(() => {
     async function load() {
-      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/login'); return; }
 
-      if (checkin?.morning_tasks && checkin.morning_tasks.length > 0) {
-        setTasks(checkin.morning_tasks as Task[]);
-      } else if (settings.morning_tasks && settings.morning_tasks.length > 0) {
-        setTasks((settings.morning_tasks as Task[]).map(t => ({ ...t, done: false })));
+      // Load tasks from localStorage, fall back to settings defaults, then DEFAULT_TASKS
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('arete_morning_tasks');
+        if (stored) {
+          try {
+            setTasks(JSON.parse(stored));
+          } catch {
+            setTasks(settings.morning_tasks?.length > 0
+              ? (settings.morning_tasks as Task[]).map(t => ({ ...t, done: false }))
+              : DEFAULT_TASKS);
+          }
+        } else if (settings.morning_tasks && settings.morning_tasks.length > 0) {
+          setTasks((settings.morning_tasks as Task[]).map(t => ({ ...t, done: false })));
+        }
       }
 
-      setCheckInDone(checkin?.morning_done === true);
+      // Check if morning check-in already done today
+      const latestCheckIn = await getLatestCheckIn('morning');
+      if (latestCheckIn) {
+        setCheckInDone(true);
+        setCheckInResponse(latestCheckIn.cabinet_response);
+      }
+
       setLoaded(true);
     }
     load();
   }, [router]);
 
-  const saveTasks = async (updatedTasks: Task[]) => {
+  const saveTasks = (updatedTasks: Task[]) => {
     setTasks(updatedTasks);
-    await upsertTodayCheckin({ morning_tasks: updatedTasks });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('arete_morning_tasks', JSON.stringify(updatedTasks));
+    }
   };
 
   const toggleTask = (id: string) => {
@@ -69,9 +87,11 @@ export default function MorningPage() {
   const handleCheckIn = async () => {
     setIsLoading(true);
     try {
+      const taskSummary = tasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ');
+      const userInput = `Morning tasks: ${taskSummary}`;
       const response = await sendCheckInToCabinet('morning');
+      await createCheckIn('morning', userInput, response);
       setCheckInResponse(response);
-      await upsertTodayCheckin({ morning_done: true });
       setCheckInDone(true);
     } catch {
       setCheckInResponse('The Cabinet will speak when you return.');
