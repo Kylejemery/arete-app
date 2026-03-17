@@ -145,16 +145,17 @@ export default function JournalPage() {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     async function load() {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { router.replace('/login'); return; }
       const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
       const dbEntries = await getJournalEntries();
       setEntries(dbEntries.map(dbToUnified));
 
       // Real-time subscription
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (authUser) {
         channel = supabase.channel('journal-changes')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries', filter: `user_id=eq.${user.id}` }, async () => {
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'journal_entries', filter: `user_id=eq.${authUser.id}` }, async () => {
             const fresh = await getJournalEntries();
             setEntries(fresh.map(dbToUnified));
           })

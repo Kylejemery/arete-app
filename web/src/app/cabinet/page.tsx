@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
@@ -33,8 +34,10 @@ export default function CabinetPage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 

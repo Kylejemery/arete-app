@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, getReadingData, upsertReadingData } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
 
 interface Book {
@@ -50,8 +51,10 @@ export default function FocusPage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return; }
       const [settings, readingData] = await Promise.all([getUserSettings(), getReadingData()]);
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setCurrentBooks((readingData?.current_books || []) as Book[]);
       setReadingSessions((readingData?.reading_sessions || []) as ReadingSession[]);
