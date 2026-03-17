@@ -1,4 +1,4 @@
-import { getThread, upsertThread } from '../app/lib/db';
+import { getThread, upsertThread } from '../lib/db';
 
 export interface ThreadMessage {
   role: 'user' | 'assistant';
