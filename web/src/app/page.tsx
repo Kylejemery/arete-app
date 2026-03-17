@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getTodayCheckin } from '@/lib/db';
+import { getUserSettings, hasCheckInToday } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES } from '@/lib/quotes';
 
@@ -12,7 +12,6 @@ export default function HomePage() {
   const [userName, setUserName] = useState('');
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
-  const [streak, setStreak] = useState(0);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -23,16 +22,19 @@ export default function HomePage() {
         router.replace('/login');
         return;
       }
-      const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+      const [settings, morningDoneToday, eveningDoneToday] = await Promise.all([
+        getUserSettings(),
+        hasCheckInToday('morning'),
+        hasCheckInToday('evening'),
+      ]);
       if (!settings?.user_name) {
         router.replace('/setup');
         return;
       }
       setUserName(settings.user_name);
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
-      setMorningDone(checkin?.morning_done === true);
-      setEveningDone(checkin?.evening_done === true);
-      setStreak(checkin?.streak ?? 0);
+      setMorningDone(morningDoneToday);
+      setEveningDone(eveningDoneToday);
       setLoaded(true);
     }
     load();
@@ -75,15 +77,6 @@ export default function HomePage() {
         <div>
           <p className="text-arete-gold italic text-sm leading-relaxed">&ldquo;{quote.text}&rdquo;</p>
           <p className="text-arete-muted text-xs italic mt-2">— {quote.author}</p>
-        </div>
-      </div>
-
-      {/* Streak */}
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-6 flex items-center gap-4">
-        <span className="text-3xl">🏆</span>
-        <div>
-          <span className="text-arete-gold text-4xl font-bold">{streak}</span>
-          <span className="text-arete-text text-lg ml-2">Days of Discipline 🕯️</span>
         </div>
       </div>
 
