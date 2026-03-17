@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getTodayCheckin, getJournalEntries, getReadingData, getCalendarData, upsertCalendarData, upsertReadingData } from '../lib/db';
+import { getTodayCheckin, getJournalEntries, getReadingData, getCalendarData, upsertCalendarData, upsertReadingData } from '@/lib/db';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },

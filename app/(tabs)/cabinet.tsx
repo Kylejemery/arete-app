@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../../services/claudeService';
-import { getUserSettings, createJournalEntry } from '../lib/db';
+import { getUserSettings, createJournalEntry } from '@/lib/db';
 import {
   ThreadMessage,
   appendMessages,

@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 import { BeliefEntry, BeliefDialogueTurn, sendBeliefJournalMessage } from '../services/claudeService';
-import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from './lib/db';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
 
 interface UnifiedEntry {
     id: string;

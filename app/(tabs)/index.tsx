@@ -3,7 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin } from '../lib/db';
+import { getUserSettings, getTodayCheckin } from '@/lib/db';
 
 const dailyQuotes = [
   { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
