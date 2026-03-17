@@ -76,7 +76,7 @@ export default function SetupPage() {
                 value={userName}
                 onChange={e => setUserName(e.target.value)}
                 placeholder="e.g. Marcus"
-                className="w-full bg-arete-bg border border-arete-gold/20 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
+                className="w-full bg-arete-bg border border-arete-gold/20 rounded-xl px-4 py-3 text-white caret-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors autofill:bg-arete-bg autofill:[color:white] autofill:shadow-[inset_0_0_0px_1000px_#1a1a2e]"
                 required
               />
             </div>

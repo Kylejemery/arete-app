@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, upsertUserSettings } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
@@ -23,8 +24,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setBackground(settings.kt_background || '');
       setIdentity(settings.kt_identity || '');
