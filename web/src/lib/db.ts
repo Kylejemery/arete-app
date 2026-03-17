@@ -24,39 +24,6 @@ function today(): string {
   return new Date().toISOString().split('T')[0]
 }
 
-function canUseLocalStorage(): boolean {
-  try {
-    return typeof window !== 'undefined' && !!window.localStorage
-  } catch {
-    return false
-  }
-}
-
-function safeGetItem<T>(key: string): T | null {
-  if (!canUseLocalStorage()) return null
-  try {
-    const raw = localStorage.getItem(key)
-    return raw ? (JSON.parse(raw) as T) : null
-  } catch {
-    return null
-  }
-}
-
-function safeSetItem(key: string, value: unknown): void {
-  if (!canUseLocalStorage()) return
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-  } catch {
-    // storage full or unavailable — fail silently
-  }
-}
-
-async function getLocalKey(namespace: string): Promise<string | null> {
-  const userId = await getUserId()
-  if (!userId) return null
-  return `arete:${namespace}:${userId}`
-}
-
 // ----------------------------------------------------------------
 // USER SETTINGS
 // ----------------------------------------------------------------
@@ -224,51 +191,122 @@ export async function deleteJournalEntry(id: string): Promise<void> {
 }
 
 // ----------------------------------------------------------------
-// CABINET THREADS (localStorage — not in Supabase schema)
+// CABINET THREADS (cabinet_threads table)
 // ----------------------------------------------------------------
 
 export async function getThread(threadId: string): Promise<ThreadMessage[]> {
-  const key = await getLocalKey(`thread:${threadId}`)
-  if (!key) return []
-  const data = safeGetItem<{ messages: ThreadMessage[] }>(key)
-  return data?.messages ?? []
+  const userId = await getUserId()
+  if (!userId) return []
+  try {
+    const { data, error } = await supabase
+      .from('cabinet_threads')
+      .select('messages')
+      .eq('user_id', userId)
+      .eq('thread_id', threadId)
+      .single()
+    if (error && error.code !== 'PGRST116') {
+      console.error('getThread error:', error)
+      return []
+    }
+    return data?.messages ?? []
+  } catch (e) {
+    console.error('getThread exception:', e)
+    return []
+  }
 }
 
 export async function upsertThread(threadId: string, messages: ThreadMessage[]): Promise<void> {
-  const key = await getLocalKey(`thread:${threadId}`)
-  if (!key) return
-  safeSetItem(key, { messages, lastUpdated: Date.now() })
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('cabinet_threads')
+      .upsert(
+        { user_id: userId, thread_id: threadId, messages, last_updated: new Date().toISOString() },
+        { onConflict: 'user_id,thread_id' }
+      )
+    if (error) console.error('upsertThread error:', error)
+  } catch (e) {
+    console.error('upsertThread exception:', e)
+  }
 }
 
 // ----------------------------------------------------------------
-// READING DATA (localStorage — table mismatch with Supabase schema)
+// READING DATA (reading_data table)
 // ----------------------------------------------------------------
 
 export async function getReadingData(): Promise<ReadingData | null> {
-  const key = await getLocalKey('reading')
-  if (!key) return null
-  return safeGetItem<ReadingData>(key)
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('reading_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    if (error && error.code !== 'PGRST116') {
+      console.error('getReadingData error:', error)
+      return null
+    }
+    return data ?? null
+  } catch (e) {
+    console.error('getReadingData exception:', e)
+    return null
+  }
 }
 
 export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
-  const key = await getLocalKey('reading')
-  if (!key) return
-  const existing = safeGetItem<Record<string, unknown>>(key) ?? {}
-  safeSetItem(key, { ...existing, ...data, updated_at: new Date().toISOString() })
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('reading_data')
+      .upsert(
+        { ...data, user_id: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('upsertReadingData error:', error)
+  } catch (e) {
+    console.error('upsertReadingData exception:', e)
+  }
 }
 
 // ----------------------------------------------------------------
-// CALENDAR DATA (localStorage — table does not exist in spec)
+// CALENDAR DATA (calendar_data table)
 // ----------------------------------------------------------------
 
 export async function getCalendarData(): Promise<Record<string, CalendarDay>> {
-  const key = await getLocalKey('calendar')
-  if (!key) return {}
-  return safeGetItem<Record<string, CalendarDay>>(key) ?? {}
+  const userId = await getUserId()
+  if (!userId) return {}
+  try {
+    const { data, error } = await supabase
+      .from('calendar_data')
+      .select('data')
+      .eq('user_id', userId)
+      .single()
+    if (error && error.code !== 'PGRST116') {
+      console.error('getCalendarData error:', error)
+      return {}
+    }
+    return data?.data ?? {}
+  } catch (e) {
+    console.error('getCalendarData exception:', e)
+    return {}
+  }
 }
 
 export async function upsertCalendarData(calendarData: Record<string, CalendarDay>): Promise<void> {
-  const key = await getLocalKey('calendar')
-  if (!key) return
-  safeSetItem(key, calendarData)
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('calendar_data')
+      .upsert(
+        { user_id: userId, data: calendarData, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('upsertCalendarData error:', error)
+  } catch (e) {
+    console.error('upsertCalendarData exception:', e)
+  }
 }
