@@ -1,5 +1,6 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { supabase } from '@/lib/supabase';
 
 export default function RootLayout() {
@@ -9,7 +10,9 @@ export default function RootLayout() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+      if (session) {
+        router.replace('/(tabs)/' as any);
+      } else {
         router.replace('/(auth)/login' as any);
       }
       setSessionChecked(true);
@@ -25,7 +28,11 @@ export default function RootLayout() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (!sessionChecked) return null;
+  // Show a dark background while the session check is in progress
+  // so the screen is never white on first load
+  if (!sessionChecked) {
+    return <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />;
+  }
 
   return <Slot />;
 }
