@@ -74,15 +74,17 @@ export async function getTodayCheckin(): Promise<DailyCheckin | null> {
   if (!userId) return null
   try {
     const { data, error } = await supabase
-      .from('daily_checkins')
+      .from('check_ins')
       .select('*')
       .eq('user_id', userId)
-      .eq('date', today())
-      .single()
-    if (error && error.code !== 'PGRST116') {
+      .eq('check_in_date', today())
+      .maybeSingle()
+
+    if (error) {
       console.error('getTodayCheckin error:', error)
       return null
     }
+
     return data ?? null
   } catch (e) {
     console.error('getTodayCheckin exception:', e)
@@ -94,11 +96,14 @@ export async function upsertTodayCheckin(data: Partial<Omit<DailyCheckin, 'id' |
   const userId = await getUserId()
   if (!userId) return
   try {
+    // NOTE: check_ins schema uses `check_in_date` (date) not `date`.
+    // Also the spec indicates check_ins has different columns, so this upsert may still fail
+    // until the database schema is aligned with `DailyCheckin`.
     const { error } = await supabase
-      .from('daily_checkins')
+      .from('check_ins')
       .upsert(
-        { ...data, user_id: userId, date: today(), updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,date' }
+        { ...data, user_id: userId, check_in_date: today() as any, updated_at: new Date().toISOString() } as any,
+        { onConflict: 'user_id,check_in_date' }
       )
     if (error) console.error('upsertTodayCheckin error:', error)
   } catch (e) {
