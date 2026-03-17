@@ -1,37 +1,34 @@
-import { Slot, useRouter, useSegments } from 'expo-router';
+import { Redirect, Slot } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 export default function RootLayout() {
-  const router = useRouter();
-  const segments = useSegments();
-  const [sessionChecked, setSessionChecked] = useState(false);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
+    // Get the initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.replace('/(tabs)/' as any);
-      } else {
-        router.replace('/(auth)/login' as any);
-      }
-      setSessionChecked(true);
+      setSession(session);
     });
 
+    // Listen for auth state changes (sign in / sign out)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      const inAuthGroup = segments[0] === '(auth)';
-      if (!session && !inAuthGroup) {
-        router.replace('/(auth)/login' as any);
-      }
+      setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  // Show a dark background while the session check is in progress
-  // so the screen is never white on first load
-  if (!sessionChecked) {
+  // Still checking — show dark background, never white
+  if (session === undefined) {
     return <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />;
+  }
+
+  // Not authenticated — redirect to login
+  if (!session) {
+    return <Redirect href="/(auth)/login" />;
   }
 
   return <Slot />;
