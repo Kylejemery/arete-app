@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, getLatestCheckIn, createCheckIn } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { AFFIRMATIONS, getDailyItem } from '@/lib/quotes';
 import PageHeader from '@/components/PageHeader';
@@ -31,8 +32,10 @@ export default function MorningPage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
 
       // Load tasks from localStorage, fall back to settings defaults, then DEFAULT_TASKS
       if (typeof window !== 'undefined') {

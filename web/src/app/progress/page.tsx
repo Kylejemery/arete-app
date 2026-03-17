@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, hasCheckInToday, getReadingData, getCalendarData, getJournalEntries } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
 
 type Tab = 'overview' | 'reading';
@@ -43,6 +44,8 @@ export default function ProgressPage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.replace('/login'); return; }
       const [settings, morningDoneToday, eveningDoneToday, readingData, calData, journalEntries] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
@@ -51,7 +54,7 @@ export default function ProgressPage() {
         getCalendarData(),
         getJournalEntries(),
       ]);
-      if (!settings?.user_name) { router.replace('/login'); return; }
+      if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setStreak(0);
 
