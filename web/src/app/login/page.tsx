@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Mode = 'signin' | 'signup'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,7 +32,8 @@ export default function LoginPage() {
       if (authError) {
         setError(authError.message)
       } else {
-        router.replace('/')
+        const redirectTo = searchParams.get('redirectTo') || '/'
+        router.replace(redirectTo)
       }
     } catch {
       setError('An unexpected error occurred. Please try again.')
@@ -124,7 +126,7 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
+              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
               required
             />
           </div>
@@ -138,7 +140,7 @@ export default function LoginPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
+              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
               required
             />
           </div>
@@ -153,7 +155,7 @@ export default function LoginPage() {
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
+                className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors"
                 required
               />
             </div>
@@ -192,5 +194,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-arete-bg" />}>
+      <LoginForm />
+    </Suspense>
   )
 }
