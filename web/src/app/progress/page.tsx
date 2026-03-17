@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getTodayCheckin, getReadingData, getCalendarData, getJournalEntries } from '@/lib/db';
+import { getUserSettings, hasCheckInToday, getReadingData, getCalendarData, getJournalEntries } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 
 type Tab = 'overview' | 'reading';
@@ -43,17 +43,17 @@ export default function ProgressPage() {
 
   useEffect(() => {
     async function load() {
-      const [settings, checkin, readingData, calData, journalEntries] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, readingData, calData, journalEntries] = await Promise.all([
         getUserSettings(),
-        getTodayCheckin(),
+        hasCheckInToday('morning'),
+        hasCheckInToday('evening'),
         getReadingData(),
         getCalendarData(),
         getJournalEntries(),
       ]);
       if (!settings?.user_name) { router.replace('/login'); return; }
 
-      setStreak(checkin?.streak ?? 0);
-      setCalendarData(calData as CalendarData);
+      setStreak(0);
 
       setJournalCount(journalEntries.length);
       setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
@@ -67,7 +67,15 @@ export default function ProgressPage() {
       setBooksRead(readingData?.books_read || []);
       setCurrentBooks(readingData?.current_books || []);
       setReadingSessions(readingData?.reading_sessions || []);
-      setReadingStreak(checkin?.reading_streak ?? 0);
+      setReadingStreak(0);
+
+      // Merge today's check-in status into calendar data
+      const todayKey = new Date().toDateString();
+      const mergedCalData = {
+        ...calData,
+        [todayKey]: { morning: morningDoneToday, evening: eveningDoneToday },
+      };
+      setCalendarData(mergedCalData as CalendarData);
     }
     load();
   }, [router]);

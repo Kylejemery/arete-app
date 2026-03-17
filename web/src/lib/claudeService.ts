@@ -1,4 +1,4 @@
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData } from './db';
+import { getUserSettings, getLatestCheckIn, getJournalEntries, getReadingData } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 
@@ -85,8 +85,9 @@ export async function gatherAppContext(): Promise<string> {
     day: 'numeric',
   });
 
-  const [checkin, readingData, journalEntries, settings] = await Promise.all([
-    getTodayCheckin(),
+  const [morningCheckIn, eveningCheckIn, readingData, journalEntries, settings] = await Promise.all([
+    getLatestCheckIn('morning'),
+    getLatestCheckIn('evening'),
     getReadingData(),
     getJournalEntries(),
     getUserSettings(),
@@ -97,35 +98,39 @@ export async function gatherAppContext(): Promise<string> {
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S CURRENT APP DATA (as of ${today}) ===`);
 
-  // Morning routine
+  // Morning routine (from localStorage when available)
   try {
-    const morningTasks = checkin?.morning_tasks || [];
+    const storedMorningTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_morning_tasks') : null;
+    const morningTasks = storedMorningTasks ? JSON.parse(storedMorningTasks) : [];
     if (morningTasks.length > 0) {
       lines.push('');
       lines.push('MORNING ROUTINE:');
-      morningTasks.forEach((t) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+      morningTasks.forEach((t: { title: string; done: boolean }) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
     }
   } catch { /* skip */ }
 
-  // Evening tasks
+  // Evening tasks (from localStorage when available)
   try {
-    const eveningTasks = checkin?.evening_tasks || [];
+    const storedEveningTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_evening_tasks') : null;
+    const eveningTasks = storedEveningTasks ? JSON.parse(storedEveningTasks) : [];
     if (eveningTasks.length > 0) {
       lines.push('');
       lines.push('EVENING TASKS:');
-      eveningTasks.forEach((t) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+      eveningTasks.forEach((t: { title: string; done: boolean }) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
     }
   } catch { /* skip */ }
 
-  // Evening reflection
+  // Evening reflection (from localStorage)
+  const reflectionAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_reflection_answer') : null;
   lines.push('');
   lines.push('EVENING REFLECTION:');
-  lines.push(`A: ${checkin?.reflection_answer || '(not yet answered)'}`);
+  lines.push(`A: ${reflectionAnswer || '(not yet answered)'}`);
 
-  // Stoic journal
+  // Stoic journal (from localStorage)
+  const stoicAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_stoic_answer') : null;
   lines.push('');
   lines.push('STOIC JOURNAL:');
-  lines.push(`A: ${checkin?.stoic_answer || '(not yet answered)'}`);
+  lines.push(`A: ${stoicAnswer || '(not yet answered)'}`);
 
   // Recent journal entries
   try {
@@ -206,14 +211,14 @@ export async function gatherAppContext(): Promise<string> {
 
   // Overall stats
   try {
-    const streak = checkin?.streak ?? 0;
-    const readingStreak = checkin?.reading_streak ?? 0;
+    const morningDone = morningCheckIn !== null;
+    const eveningDone = eveningCheckIn !== null;
     const journalCount = journalEntries.length;
     const quoteCount = journalEntries.filter(e => e.type === 'quote').length;
     lines.push('');
     lines.push('OVERALL STATS:');
-    lines.push(`- Streak: ${streak} days`);
-    lines.push(`- Reading streak: ${readingStreak} days`);
+    lines.push(`- Morning check-in today: ${morningDone ? 'Done' : 'Not done'}`);
+    lines.push(`- Evening check-in today: ${eveningDone ? 'Done' : 'Not done'}`);
     lines.push(`- Total journal entries: ${journalCount}`);
     lines.push(`- Total quotes saved: ${quoteCount}`);
   } catch { /* skip */ }
@@ -372,13 +377,14 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
 
 export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<string> {
   try {
-    const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
+    const settings = await getUserSettings();
     const userName = settings?.user_name || 'the user';
 
     let userMessage: string;
 
     if (type === 'morning') {
-      const morningTasks = checkin?.morning_tasks || [];
+      const storedTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_morning_tasks') : null;
+      const morningTasks: { title: string; done: boolean }[] = storedTasks ? JSON.parse(storedTasks) : [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -395,12 +401,13 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
       const affirmation = affirmations[day];
       userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}. Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
     } else {
-      const eveningTasks = checkin?.evening_tasks || [];
+      const storedTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_evening_tasks') : null;
+      const eveningTasks: { title: string; done: boolean }[] = storedTasks ? JSON.parse(storedTasks) : [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = checkin?.reflection_answer || '(not answered)';
-      const stoic = checkin?.stoic_answer || '(not answered)';
+      const reflection = (typeof window !== 'undefined' ? localStorage.getItem('arete_reflection_answer') : null) || '(not answered)';
+      const stoic = (typeof window !== 'undefined' ? localStorage.getItem('arete_stoic_answer') : null) || '(not answered)';
       userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
     }
 
