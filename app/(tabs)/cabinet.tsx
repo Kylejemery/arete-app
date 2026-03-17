@@ -1,0 +1,842 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { sendMessageToCabinet } from '../../services/claudeService';
+import { getUserSettings, createJournalEntry } from '../lib/db';
+import {
+  ThreadMessage,
+  appendMessages,
+  clearThread,
+  getAllThreadSummaries,
+  loadThread,
+} from '../../services/threadService';
+
+const COUNSELOR_META: Record<string, { name: string; role: string }> = {
+  marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
+  epictetus: { name: 'Epictetus', role: 'Philosopher & Former Slave' },
+  goggins: { name: 'David Goggins', role: 'Navy SEAL & Endurance Athlete' },
+  roosevelt: { name: 'Theodore Roosevelt', role: '26th President & Adventurer' },
+  futureSelf: { name: 'Future Self', role: 'Years From Now' },
+};
+
+function mightSurfaceBelief(text: string): boolean {
+  const triggers = ['belief', 'assume', 'assumption', 'value', 'principle',
+    'half-formed', 'what do you believe', 'examine', 'conviction', 'what you actually believe'];
+  const lower = text.toLowerCase();
+  return triggers.some(t => lower.includes(t));
+}
+
+function timeAgo(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export default function CabinetScreen() {
+  const router = useRouter();
+  const swipeHandlers = useSwipeNavigation('/cabinet');
+  const [activeTab, setActiveTab] = useState<'cabinet' | 'counselors'>('cabinet');
+
+  // --- Cabinet (Group) Tab State ---
+  const [messages, setMessages] = useState<ThreadMessage[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // --- Search state ---
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // --- Know Thyself nudge state ---
+  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  const [dismissedKtNudge, setDismissedKtNudge] = useState(false);
+
+  // --- Belief Journal Integration ---
+  const [beliefSeedText, setBeliefSeedText] = useState<string | null>(null);
+  const [beliefSeedInput, setBeliefSeedInput] = useState('');
+
+  // --- Counselors Tab State ---
+  const [activeMembers, setActiveMembers] = useState<string[]>([]);
+  const [threadSummaries, setThreadSummaries] = useState<
+    { id: string; messageCount: number; lastUpdated: number }[]
+  >([]);
+
+  // --- beliefContext deep-link param ---
+  const params = useLocalSearchParams<{ beliefContext?: string }>();
+  const consumedBeliefContextRef = useRef(false);
+
+  // On mount: load thread
+  useEffect(() => {
+    (async () => {
+      // Load cabinet thread
+      const thread = await loadThread('cabinet');
+      setMessages(thread.messages);
+    })();
+  }, []);
+
+  // Load counselors tab data when switching to it
+  useEffect(() => {
+    if (activeTab !== 'counselors') return;
+    (async () => {
+      const settings = await getUserSettings();
+      const members = settings?.cabinet_members ?? ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
+      setActiveMembers(members);
+      const summaries = await getAllThreadSummaries();
+      setThreadSummaries(summaries);
+    })();
+  }, [activeTab]);
+
+  // Load Know Thyself completion status on focus
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const settings = await getUserSettings();
+        setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
+      })();
+    }, [])
+  );
+
+  // Consume beliefContext deep-link param
+  useEffect(() => {
+    const bc = params.beliefContext;
+    if (bc && !consumedBeliefContextRef.current) {
+      consumedBeliefContextRef.current = true;
+      setActiveTab('cabinet');
+      setInputText(String(bc));
+      router.setParams({ beliefContext: undefined });
+    }
+  }, [params.beliefContext, router]);
+
+  const handleSend = async () => {
+    const text = inputText.trim();
+    if (!text || isLoading) return;
+
+    const userMessage: ThreadMessage = {
+      role: 'user',
+      content: text,
+      timestamp: Date.now(),
+    };
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
+    setInputText('');
+    setIsLoading(true);
+
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+
+    const reply = await sendMessageToCabinet(updatedMessages);
+
+    const assistantMessage: ThreadMessage = {
+      role: 'assistant',
+      content: reply,
+      timestamp: Date.now(),
+    };
+    const finalMessages = [...updatedMessages, assistantMessage];
+    setMessages(finalMessages);
+    setIsLoading(false);
+
+    await appendMessages('cabinet', [userMessage, assistantMessage]);
+
+    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+  };
+
+  const handleNewSession = () => {
+    if (messages.length === 0) return;
+    Alert.alert(
+      'New Session',
+      'Clear the conversation and start a new session with the Cabinet?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'New Session',
+          style: 'destructive',
+          onPress: () => {
+            setMessages([]);
+            clearThread('cabinet');
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} {...swipeHandlers}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerText}>
+          <Text style={styles.title}>The Cabinet</Text>
+          <Text style={styles.subtitle}>Your Council of Invisible Counselors</Text>
+        </View>
+        {activeTab === 'cabinet' && (
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.newSessionButton}
+              onPress={() => {
+                setShowSearch(prev => !prev);
+                if (showSearch) setSearchQuery('');
+              }}
+            >
+              <Ionicons
+                name={showSearch ? 'close-outline' : 'search-outline'}
+                size={20}
+                color="#c9a84c"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.newSessionButton}
+              onPress={handleNewSession}
+              disabled={messages.length === 0}
+            >
+              <Ionicons
+                name="refresh-outline"
+                size={20}
+                color={messages.length === 0 ? '#555' : '#c9a84c'}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Tab Bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'cabinet' && styles.tabActive]}
+          onPress={() => setActiveTab('cabinet')}
+        >
+          <Text style={[styles.tabText, activeTab === 'cabinet' && styles.tabTextActive]}>
+            Cabinet
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'counselors' && styles.tabActive]}
+          onPress={() => setActiveTab('counselors')}
+        >
+          <Text style={[styles.tabText, activeTab === 'counselors' && styles.tabTextActive]}>
+            Counselors
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Bar */}
+      {activeTab === 'cabinet' && showSearch && (
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={16} color="#888" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search messages..."
+            placeholderTextColor="#555"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#888" />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {activeTab === 'cabinet' ? (
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          {/* Messages */}
+          <ScrollView
+            ref={scrollViewRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          >
+            {messages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={56} color="#c9a84c44" />
+                <Text style={styles.emptyQuote}>
+                  &ldquo;Bring your questions, struggles, and victories to the Cabinet.&rdquo;
+                </Text>
+                <View style={styles.counselorList}>
+                  <Text style={styles.counselorName}>Marcus Aurelius — Chair</Text>
+                  <Text style={styles.counselorName}>Epictetus</Text>
+                  <Text style={styles.counselorName}>David Goggins</Text>
+                  <Text style={styles.counselorName}>Theodore Roosevelt</Text>
+                  <Text style={styles.counselorName}>Future Kyle (Age 50)</Text>
+                </View>
+                {knowThyselfIncomplete && (
+                  <TouchableOpacity
+                    style={styles.ktEmptyBanner}
+                    onPress={() => router.push('/know-thyself' as any)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.ktEmptyBannerText}>
+                      {"📖 Your counselors don't know you yet — complete your Know Thyself profile for more personal responses."}
+                    </Text>
+                    <Text style={styles.ktEmptyBannerLink}>Complete Now →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <>
+                {knowThyselfIncomplete && !dismissedKtNudge && (
+                  <View style={styles.ktNudgeBanner}>
+                    <TouchableOpacity
+                      style={styles.ktNudgeContent}
+                      onPress={() => router.push('/know-thyself' as any)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.ktNudgeText}>
+                        {'💡 Tip: Complete your Know Thyself profile so the Cabinet can give you more personal responses. →'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setDismissedKtNudge(true)} style={styles.ktNudgeDismiss}>
+                      <Ionicons name="close" size={16} color="#888" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {(() => {
+                  const filteredMessages = searchQuery.length > 0
+                    ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+                    : messages;
+                  return (
+                    <>
+                      {searchQuery.length > 0 && (
+                        <Text style={styles.searchResultCount}>
+                          {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} for &lsquo;{searchQuery}&rsquo;
+                        </Text>
+                      )}
+                      {filteredMessages.map((msg, index) =>
+                        msg.role === 'user' ? (
+                          <View key={index} style={styles.userMessageRow}>
+                            <View style={styles.userBubble}>
+                              <Text style={styles.userText}>{msg.content}</Text>
+                            </View>
+                          </View>
+                        ) : (
+                          <View key={index} style={styles.cabinetMessageRow}>
+                            <View style={styles.cabinetBubble}>
+                              <Text style={styles.cabinetLabel}>The Cabinet</Text>
+                              <Text style={styles.cabinetText}>{msg.content}</Text>
+                            </View>
+                            {mightSurfaceBelief(msg.content) && (
+                              <TouchableOpacity
+                                style={styles.sendToBeliefButton}
+                                onPress={() => {
+                                  setBeliefSeedText(msg.content);
+                                  setBeliefSeedInput(msg.content);
+                                }}
+                              >
+                                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
+                                <Text style={styles.sendToBeliefText}>Explore in Belief Journal →</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        )
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            )}
+
+            {isLoading && (
+              <View style={styles.cabinetMessageRow}>
+                <View style={styles.cabinetBubble}>
+                  <Text style={styles.cabinetLabel}>The Cabinet</Text>
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#c9a84c" />
+                    <Text style={styles.loadingText}>The Cabinet is convening...</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Input Bar */}
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Speak to the Cabinet..."
+              placeholderTextColor="#555"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={2000}
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+              onPress={handleSend}
+              disabled={!inputText.trim() || isLoading}
+            >
+              <Ionicons
+                name="send"
+                size={18}
+                color={!inputText.trim() || isLoading ? '#555' : '#1a1a2e'}
+              />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      ) : (
+        /* Counselors Tab */
+        <ScrollView style={styles.counselorsScroll} contentContainerStyle={styles.counselorsContent}>
+          {activeMembers.map((memberId) => {
+            const meta = COUNSELOR_META[memberId];
+            if (!meta) return null;
+            const summary = threadSummaries.find((s) => s.id === memberId);
+            const hasMessages = summary && summary.messageCount > 0;
+            return (
+              <TouchableOpacity
+                key={memberId}
+                style={styles.counselorCard}
+                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: memberId } })}
+              >
+                <View style={styles.counselorCardIcon}>
+                  <Ionicons name="person-outline" size={28} color="#c9a84c" />
+                </View>
+                <View style={styles.counselorCardInfo}>
+                  <Text style={styles.counselorCardName}>{meta.name}</Text>
+                  <Text style={styles.counselorCardRole}>{meta.role}</Text>
+                  {hasMessages && summary && (
+                    <Text style={styles.counselorCardActivity}>
+                      Last active {timeAgo(summary.lastUpdated)}
+                    </Text>
+                  )}
+                </View>
+                {hasMessages && summary && (
+                  <View style={styles.messageBadge}>
+                    <Text style={styles.messageBadgeText}>{summary.messageCount}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={18} color="#555" />
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Belief Seed Modal */}
+      {beliefSeedText !== null && (
+        <View style={styles.beliefSeedModal}>
+          <View style={styles.beliefSeedCard}>
+            <Text style={styles.beliefSeedTitle}>Send to Belief Journal?</Text>
+            <Text style={styles.beliefSeedSubtitle}>
+              Edit the text below to capture just the belief or assumption you want to explore.
+            </Text>
+            <TextInput
+              style={styles.beliefSeedInput}
+              value={beliefSeedInput}
+              onChangeText={setBeliefSeedInput}
+              multiline
+              placeholder="Trim to the belief you want to examine..."
+              placeholderTextColor="#555"
+            />
+            <View style={styles.beliefSeedButtons}>
+              <TouchableOpacity
+                style={[styles.sendToBeliefButton, { marginTop: 0 }]}
+                onPress={() => {
+                  setBeliefSeedText(null);
+                  setBeliefSeedInput('');
+                }}
+              >
+                <Text style={styles.sendToBeliefText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sendToBeliefButton, { marginTop: 0, backgroundColor: '#c9a84c22', borderColor: '#c9a84c88' }]}
+                onPress={async () => {
+                  const rawThought = beliefSeedInput.trim();
+                  if (!rawThought) return;
+                  try {
+                    await createJournalEntry({
+                      type: 'belief',
+                      content: rawThought,
+                      raw_input: rawThought,
+                      dialogue_history: [],
+                      belief_stage: 1 as any,
+                      topic: rawThought.slice(0, 60),
+                    });
+                  } catch { /* skip */ }
+                  setBeliefSeedText(null);
+                  setBeliefSeedInput('');
+                  router.push('/journal');
+                }}
+              >
+                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
+                <Text style={styles.sendToBeliefText}>Send to Belief Journal</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+  },
+  flex: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#c9a84c',
+  },
+  subtitle: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
+  },
+  newSessionButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  // Tab bar
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#16213e',
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  tabActive: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#c9a84c',
+  },
+  tabText: {
+    color: '#888',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#c9a84c',
+  },
+  // Cabinet (group) tab
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: 16,
+    paddingBottom: 8,
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 60,
+    gap: 16,
+  },
+  emptyQuote: {
+    color: '#888',
+    fontSize: 15,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  counselorList: {
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  counselorName: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  userMessageRow: {
+    alignItems: 'flex-end',
+    marginBottom: 12,
+  },
+  userBubble: {
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    borderWidth: 1,
+    borderColor: '#c9a84c',
+    borderRadius: 16,
+    borderBottomRightRadius: 4,
+    padding: 14,
+    maxWidth: '80%',
+  },
+  userText: {
+    color: '#fff',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  cabinetMessageRow: {
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  cabinetBubble: {
+    backgroundColor: '#16213e',
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    padding: 14,
+    maxWidth: '85%',
+  },
+  cabinetLabel: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  cabinetText: {
+    color: '#e0e0e0',
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  loadingText: {
+    color: '#888',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: 12,
+    paddingBottom: 16,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c9a84c22',
+    gap: 10,
+  },
+  textInput: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    color: '#fff',
+    fontSize: 15,
+    maxHeight: 120,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  sendButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#16213e',
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  // Counselors tab
+  counselorsScroll: {
+    flex: 1,
+  },
+  counselorsContent: {
+    padding: 16,
+    gap: 12,
+  },
+  counselorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#c9a84c22',
+    padding: 16,
+    gap: 12,
+  },
+  counselorCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(201, 168, 76, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  counselorCardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  counselorCardName: {
+    color: '#e0e0e0',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  counselorCardRole: {
+    color: '#888',
+    fontSize: 13,
+  },
+  counselorCardActivity: {
+    color: '#c9a84c88',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  messageBadge: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  messageBadgeText: {
+    color: '#1a1a2e',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  sendToBeliefButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 8, alignSelf: 'flex-start',
+    paddingVertical: 5, paddingHorizontal: 10,
+    backgroundColor: '#c9a84c11', borderRadius: 8,
+    borderWidth: 1, borderColor: '#c9a84c33',
+  },
+  sendToBeliefText: {
+    color: '#c9a84c', fontSize: 12, fontWeight: '600',
+  },
+  beliefSeedModal: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#000000bb', justifyContent: 'center',
+    alignItems: 'center', padding: 24,
+  },
+  beliefSeedCard: {
+    backgroundColor: '#16213e', borderRadius: 16, padding: 20,
+    width: '100%', borderWidth: 1, borderColor: '#c9a84c44',
+  },
+  beliefSeedTitle: {
+    color: '#c9a84c', fontSize: 16, fontWeight: '700', marginBottom: 8,
+  },
+  beliefSeedSubtitle: {
+    color: '#888', fontSize: 13, marginBottom: 14, lineHeight: 20,
+  },
+  beliefSeedInput: {
+    backgroundColor: '#1a1a2e', borderRadius: 10, padding: 12,
+    color: '#fff', fontSize: 14, minHeight: 80, textAlignVertical: 'top',
+    borderWidth: 1, borderColor: '#c9a84c33', marginBottom: 16,
+  },
+  beliefSeedButtons: {
+    flexDirection: 'row', justifyContent: 'flex-end', gap: 10,
+  },
+  // Header buttons row
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  // Search bar
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 14,
+    paddingVertical: 0,
+  },
+  searchResultCount: {
+    color: '#888',
+    fontSize: 13,
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  // Know Thyself banners
+  ktEmptyBanner: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    width: '100%',
+  },
+  ktEmptyBannerText: {
+    color: '#ccc',
+    fontSize: 13,
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  ktEmptyBannerLink: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  ktNudgeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  ktNudgeContent: {
+    flex: 1,
+    padding: 12,
+  },
+  ktNudgeText: {
+    color: '#aaa',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  ktNudgeDismiss: {
+    padding: 12,
+  },
+});
