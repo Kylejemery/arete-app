@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { sendMessageToCounselor } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread } from '../services/threadService';
-import { getUserSettings } from './lib/db';
+import { getUserSettings } from '@/lib/db';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },

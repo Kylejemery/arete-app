@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { upsertUserSettings } from './lib/db';
+import { upsertUserSettings } from '@/lib/db';
 
 const TOTAL_STEPS = 11;
 const OPTIONAL_STEPS = [3, 4, 6, 7, 8];

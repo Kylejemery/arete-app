@@ -11,7 +11,7 @@ import {
     View
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getReadingData, upsertReadingData } from '../lib/db';
+import { getReadingData, upsertReadingData } from '@/lib/db';
 
 export default function TimerScreen() {
   const swipeHandlers = useSwipeNavigation('/timer');

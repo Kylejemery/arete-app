@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getUserSettings, upsertUserSettings } from './lib/db';
+import { getUserSettings, upsertUserSettings } from '@/lib/db';
 
 export default function KnowThyselfScreen() {
   const router = useRouter();

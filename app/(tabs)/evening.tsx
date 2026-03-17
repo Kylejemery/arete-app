@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
-import { getTodayCheckin, upsertTodayCheckin } from '../lib/db';
+import { getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
 
 const defaultTasks = [
   { id: '1', title: 'Plan Tomorrow 📜', done: false },
