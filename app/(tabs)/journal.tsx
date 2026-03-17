@@ -16,7 +16,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '../lib/db';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
 
 export interface UnifiedEntry {
     id: string;

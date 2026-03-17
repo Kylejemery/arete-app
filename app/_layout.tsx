@@ -1,6 +1,6 @@
 import { Slot, useRouter, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { supabase } from './lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export default function RootLayout() {
   const router = useRouter();
