@@ -4,7 +4,6 @@ import type {
   JournalEntry,
   ThreadMessage,
   ReadingData,
-  CalendarDay,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -199,7 +198,7 @@ export async function getThread(threadId: string): Promise<ThreadMessage[]> {
   if (!userId) return []
   try {
     const { data, error } = await supabase
-      .from('cabinet_threads')
+      .from('beliefs')
       .select('messages')
       .eq('user_id', userId)
       .eq('thread_id', threadId)
@@ -220,7 +219,7 @@ export async function upsertThread(threadId: string, messages: ThreadMessage[]):
   if (!userId) return
   try {
     const { error } = await supabase
-      .from('cabinet_threads')
+      .from('beliefs')
       .upsert(
         { user_id: userId, thread_id: threadId, messages, last_updated: new Date().toISOString() },
         { onConflict: 'user_id,thread_id' }
@@ -240,7 +239,7 @@ export async function getReadingData(): Promise<ReadingData | null> {
   if (!userId) return null
   try {
     const { data, error } = await supabase
-      .from('reading_data')
+      .from('books')
       .select('*')
       .eq('user_id', userId)
       .single()
@@ -260,7 +259,7 @@ export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | '
   if (!userId) return
   try {
     const { error } = await supabase
-      .from('reading_data')
+      .from('books')
       .upsert(
         { ...data, user_id: userId, updated_at: new Date().toISOString() },
         { onConflict: 'user_id' }
@@ -268,45 +267,5 @@ export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | '
     if (error) console.error('upsertReadingData error:', error)
   } catch (e) {
     console.error('upsertReadingData exception:', e)
-  }
-}
-
-// ----------------------------------------------------------------
-// CALENDAR DATA (calendar_data table)
-// ----------------------------------------------------------------
-
-export async function getCalendarData(): Promise<Record<string, CalendarDay>> {
-  const userId = await getUserId()
-  if (!userId) return {}
-  try {
-    const { data, error } = await supabase
-      .from('calendar_data')
-      .select('data')
-      .eq('user_id', userId)
-      .single()
-    if (error && error.code !== 'PGRST116') {
-      console.error('getCalendarData error:', error)
-      return {}
-    }
-    return data?.data ?? {}
-  } catch (e) {
-    console.error('getCalendarData exception:', e)
-    return {}
-  }
-}
-
-export async function upsertCalendarData(calendarData: Record<string, CalendarDay>): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) return
-  try {
-    const { error } = await supabase
-      .from('calendar_data')
-      .upsert(
-        { user_id: userId, data: calendarData, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' }
-      )
-    if (error) console.error('upsertCalendarData error:', error)
-  } catch (e) {
-    console.error('upsertCalendarData exception:', e)
   }
 }
