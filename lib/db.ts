@@ -180,82 +180,39 @@ export async function deleteJournalEntry(id: string): Promise<void> {
 }
 
 // ----------------------------------------------------------------
-// CABINET THREADS
+// CABINET THREADS (local-only — not stored in Supabase)
 // ----------------------------------------------------------------
 
-export async function getThread(threadId: string): Promise<ThreadMessage[]> {
-  const userId = await getUserId()
-  if (!userId) return []
-  try {
-    const { data, error } = await supabase
-      .from('beliefs')
-      .select('messages')
-      .eq('user_id', userId)
-      .eq('thread_id', threadId)
-      .single()
-    if (error && error.code !== 'PGRST116') {
-      console.error('getThread error:', error)
-      return []
-    }
-    return data?.messages ?? []
-  } catch (e) {
-    console.error('getThread exception:', e)
-    return []
-  }
+export async function getThread(_threadId: string): Promise<ThreadMessage[]> {
+  return []
 }
 
-export async function upsertThread(threadId: string, messages: ThreadMessage[]): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) return
-  try {
-    const { error } = await supabase
-      .from('beliefs')
-      .upsert(
-        { user_id: userId, thread_id: threadId, messages, last_updated: new Date().toISOString() },
-        { onConflict: 'user_id,thread_id' }
-      )
-    if (error) console.error('upsertThread error:', error)
-  } catch (e) {
-    console.error('upsertThread exception:', e)
-  }
+export async function upsertThread(_threadId: string, _messages: ThreadMessage[]): Promise<void> {
+  // no-op: threads are stored locally, not in Supabase
 }
 
 // ----------------------------------------------------------------
-// READING DATA
+// READING DATA (not stored in Supabase — stub)
 // ----------------------------------------------------------------
 
 export async function getReadingData(): Promise<ReadingData | null> {
-  const userId = await getUserId()
-  if (!userId) return null
-  try {
-    const { data, error } = await supabase
-      .from('books')
-      .select('*')
-      .eq('user_id', userId)
-      .single()
-    if (error && error.code !== 'PGRST116') {
-      console.error('getReadingData error:', error)
-      return null
-    }
-    return data ?? null
-  } catch (e) {
-    console.error('getReadingData exception:', e)
-    return null
-  }
+  console.warn('getReadingData: reading_data table does not exist in Supabase')
+  return null
 }
 
-export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
-  const userId = await getUserId()
-  if (!userId) return
-  try {
-    const { error } = await supabase
-      .from('books')
-      .upsert(
-        { ...data, user_id: userId, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id' }
-      )
-    if (error) console.error('upsertReadingData error:', error)
-  } catch (e) {
-    console.error('upsertReadingData exception:', e)
-  }
+export async function upsertReadingData(_data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  // no-op: reading_data table does not exist in Supabase
+}
+
+// ----------------------------------------------------------------
+// CALENDAR DATA (not stored in Supabase — stub)
+// ----------------------------------------------------------------
+
+export async function getCalendarData(): Promise<Record<string, { morning: boolean; evening: boolean }>> {
+  console.warn('getCalendarData: calendar_data table does not exist in Supabase')
+  return {}
+}
+
+export async function upsertCalendarData(_data: Record<string, { morning: boolean; evening: boolean }>): Promise<void> {
+  // no-op: calendar_data table does not exist in Supabase
 }

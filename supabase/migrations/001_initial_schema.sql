@@ -201,6 +201,26 @@ create policy "Users can manage their own data" on sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- ============================================================
+-- beliefs
+-- ============================================================
+create table beliefs (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references profiles(id) on delete cascade not null,
+  raw_input text not null,
+  dialogue_history jsonb not null default '[]',
+  encoded_belief text not null,
+  has_virtue_concern boolean default false,
+  virtue_concern text,
+  encoded_at timestamptz default now(),
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+alter table beliefs enable row level security;
+create policy "Users can manage their own data" on beliefs
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- ============================================================
 -- Enable real-time
 -- ============================================================
 alter publication supabase_realtime add table journal_entries;

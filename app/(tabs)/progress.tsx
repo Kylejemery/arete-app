@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getTodayCheckin, getJournalEntries, getReadingData, getCalendarData, upsertCalendarData, upsertReadingData } from '@/lib/db';
+import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData } from '@/lib/db';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -71,7 +71,7 @@ export default function ProgressScreen() {
       setEncodedBeliefCount(encoded);
       setInProgressBeliefCount(inProgress);
 
-      const calData = await getCalendarData();
+      const calData = {};
       setCalendarData(calData);
       buildWeekData(calData);
 
@@ -99,7 +99,6 @@ export default function ProgressScreen() {
       [todayDate]: { morning: checkin?.morning_done ?? false, evening: checkin?.evening_done ?? false }
     };
     setCalendarData(updated);
-    await upsertCalendarData(updated);
     buildWeekData(updated);
   };
 
