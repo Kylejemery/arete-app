@@ -34,17 +34,16 @@ export default function RootLayout() {
     };
   }, []);
 
-  // Once session is known, hide the splash screen
-  useEffect(() => {
-    if (session !== undefined) {
-      SplashScreen.hideAsync().catch(() => {});
-    }
-  }, [session]);
 
   // Still loading — splash is showing, but render dark background as safety net
-  if (session === undefined) {
-    return <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />;
-  }
+ if (session === undefined) {
+  return (
+    <View 
+      style={{ flex: 1, backgroundColor: '#1a1a2e' }}
+      onLayout={() => SplashScreen.hideAsync().catch(() => {})}
+    />
+  );
+}
 
   // Not authenticated
   if (!session) {
