@@ -76,7 +76,7 @@ export async function getTodayCheckin(): Promise<DailyCheckin | null> {
       .from('check_ins')
       .select('*')
       .eq('user_id', userId)
-      .eq('date', today())
+      .eq('check_in_date', today())
       .single()
     if (error && error.code !== 'PGRST116') {
       console.error('getTodayCheckin error:', error)
@@ -96,8 +96,8 @@ export async function upsertTodayCheckin(data: Partial<Omit<DailyCheckin, 'id' |
     const { error } = await supabase
       .from('check_ins')
       .upsert(
-        { ...data, user_id: userId, date: today(), updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,date' }
+        { ...data, user_id: userId, check_in_date: today(), updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,check_in_date' }
       )
     if (error) console.error('upsertTodayCheckin error:', error)
   } catch (e) {
@@ -259,4 +259,3 @@ export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | '
     console.error('upsertReadingData exception:', e)
   }
 }
-
