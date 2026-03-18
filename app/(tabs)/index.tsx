@@ -35,8 +35,11 @@ export default function HomeScreen() {
   );
 
   const loadData = async () => {
+    console.log('loadData started');
     const settings = await getUserSettings();
+    console.log('getUserSettings result:', settings);
     if (!settings?.user_name) {
+      console.log('Redirecting to setup');
       router.replace('/(onboarding)/setup');
       return;
     }
