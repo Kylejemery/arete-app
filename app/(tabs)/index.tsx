@@ -37,7 +37,7 @@ export default function HomeScreen() {
   const loadData = async () => {
     const settings = await getUserSettings();
     if (!settings?.user_name) {
-      router.replace('/setup' as any);
+      router.replace('/(onboarding)/setup');
       return;
     }
     setUserName(settings.user_name);
