@@ -180,15 +180,107 @@ export async function deleteJournalEntry(id: string): Promise<void> {
 }
 
 // ----------------------------------------------------------------
-// CABINET THREADS (local-only — not stored in Supabase)
+// BELIEFS
 // ----------------------------------------------------------------
 
-export async function getThread(_threadId: string): Promise<ThreadMessage[]> {
+export async function saveBelief(belief: {
+  raw_input: string;
+  dialogue_history: any[];
+  encoded_belief: string;
+  has_virtue_concern: boolean;
+  virtue_concern?: string;
+}) {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('beliefs')
+    .insert({ ...belief, user_id: userId })
+    .select()
+    .single();
+  if (error) console.error('saveBelief error:', error);
+  return data;
+}
+
+export async function getBeliefs() {
+  const userId = await getUserId();
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('beliefs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('encoded_at', { ascending: false });
+  if (error) console.error('getBeliefs error:', error);
+  return data ?? [];
+}
+
+// ----------------------------------------------------------------
+// CABINET CONVERSATIONS
+// ----------------------------------------------------------------
+
+export async function saveCabinetConversation(messages: any[]) {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const today = new Date().toISOString().split('T')[0];
+  const { data: existing } = await supabase
+    .from('cabinet_conversations')
+    .select('id')
+    .eq('user_id', userId)
+    .gte('created_at', today)
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('cabinet_conversations')
+      .update({ messages, updated_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) console.error('saveCabinetConversation error:', error);
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from('cabinet_conversations')
+      .insert({ user_id: userId, messages })
+      .select()
+      .single();
+    if (error) console.error('saveCabinetConversation error:', error);
+    return data;
+  }
+}
+
+export async function getCabinetConversation() {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('cabinet_conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) console.error('getCabinetConversation error:', error);
+  return data;
+}
+
+// ----------------------------------------------------------------
+// CABINET THREADS
+// ----------------------------------------------------------------
+
+export async function getThread(threadId: string): Promise<ThreadMessage[]> {
+  if (threadId === 'cabinet') {
+    const data = await getCabinetConversation();
+    return (data?.messages ?? []) as ThreadMessage[];
+  }
   return []
 }
 
-export async function upsertThread(_threadId: string, _messages: ThreadMessage[]): Promise<void> {
-  // no-op: threads are stored locally, not in Supabase
+export async function upsertThread(threadId: string, messages: ThreadMessage[]): Promise<void> {
+  if (threadId === 'cabinet') {
+    await saveCabinetConversation(messages);
+    return;
+  }
+  // no-op: other threads are stored locally, not in Supabase
 }
 
 // ----------------------------------------------------------------
