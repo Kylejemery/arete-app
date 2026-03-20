@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getDevPremiumOverride } from './devMode'
 import type {
   UserSettings,
   JournalEntry,
@@ -405,6 +406,10 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 
 // Check if current user is premium
 export async function getIsPremium(): Promise<boolean> {
+  // Dev mode override
+  const devOverride = getDevPremiumOverride();
+  if (devOverride !== null) return devOverride;
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
   const { data, error } = await supabase

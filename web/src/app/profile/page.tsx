@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, upsertUserSettings } from '@/lib/db';
+import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
 import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
 
@@ -21,6 +22,7 @@ export default function ProfilePage() {
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [simulatingFree, setSimulatingFree] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +40,7 @@ export default function ProfilePage() {
       setMajorEvents(settings.kt_major_events || '');
       setFutureSelfYears(settings.future_self_years ?? 10);
       setFutureSelfDescription(settings.future_self_description || '');
+      setSimulatingFree(getDevPremiumOverride() === false);
       setLoaded(true);
     }
     load();
@@ -135,6 +138,44 @@ export default function ProfilePage() {
           {saved ? '✓ Profile Saved' : 'Save Profile'}
         </button>
       </div>
+
+      {process.env.NEXT_PUBLIC_DEV_MODE === 'true' && (
+        <div className="mt-8 border-2 border-red-500 rounded-lg p-5">
+          <p className="text-red-400 text-xs font-bold tracking-widest uppercase mb-1">DEV ONLY</p>
+          <p className="text-arete-text font-semibold mb-4">Developer Tools</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-arete-text text-sm">Simulate free tier</p>
+              <p className="text-arete-muted text-xs">Overrides getIsPremium() in memory. Resets on reload.</p>
+            </div>
+            <button
+              onClick={() => {
+                const current = getDevPremiumOverride();
+                // Toggle: null/true → simulate free (false), false → back to real DB (null)
+                if (current === false) {
+                  setDevPremiumOverride(null);
+                  setSimulatingFree(false);
+                } else {
+                  setDevPremiumOverride(false);
+                  setSimulatingFree(true);
+                }
+              }}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+                simulatingFree
+                  ? 'bg-red-500 text-white'
+                  : 'bg-arete-surface border border-arete-border text-arete-muted'
+              }`}
+            >
+              {simulatingFree ? 'Free Tier Active' : 'Simulate Free Tier'}
+            </button>
+          </div>
+          {simulatingFree && (
+            <p className="text-red-400 text-xs mt-3">
+              ⚠ Premium is currently overridden to FALSE. Reload the page to reset.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
