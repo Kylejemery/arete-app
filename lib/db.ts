@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { getDevPremiumOverride } from './devMode'
 import type {
   UserSettings,
   DailyCheckin,
@@ -307,4 +308,28 @@ export async function getCalendarData(): Promise<Record<string, { morning: boole
 
 export async function upsertCalendarData(_data: Record<string, { morning: boolean; evening: boolean }>): Promise<void> {
   // no-op: calendar_data table does not exist in Supabase
+}
+
+// ----------------------------------------------------------------
+// PREMIUM STATUS
+// ----------------------------------------------------------------
+
+export async function getIsPremium(): Promise<boolean> {
+  // Dev mode override
+  const devOverride = getDevPremiumOverride();
+  if (devOverride !== null) return devOverride;
+
+  const userId = await getUserId();
+  if (!userId) return false;
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', userId)
+      .single();
+    if (error) return false;
+    return data?.is_premium ?? false;
+  } catch {
+    return false;
+  }
 }
