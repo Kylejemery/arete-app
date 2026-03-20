@@ -5,6 +5,9 @@ import type {
   ThreadMessage,
   ReadingData,
   Counselor,
+  CabinetConversation,
+  ConversationMessage,
+  Belief,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -196,7 +199,7 @@ export async function deleteJournalEntry(id: string): Promise<void> {
 
 export async function saveBelief(belief: {
   raw_input: string;
-  dialogue_history: any[];
+  dialogue_history: { role: 'user' | 'cabinet'; content: string; timestamp: number }[];
   encoded_belief: string;
   has_virtue_concern: boolean;
   virtue_concern?: string;
@@ -212,7 +215,7 @@ export async function saveBelief(belief: {
   return data;
 }
 
-export async function getBeliefs() {
+export async function getLegacyBeliefs() {
   const userId = await getUserId();
   if (!userId) return [];
   const { data, error } = await supabase
@@ -228,7 +231,7 @@ export async function getBeliefs() {
 // CABINET CONVERSATIONS
 // ----------------------------------------------------------------
 
-export async function saveCabinetConversation(messages: any[]) {
+export async function saveCabinetConversation(messages: ThreadMessage[]) {
   const userId = await getUserId();
   if (!userId) return null;
 
@@ -411,4 +414,110 @@ export async function getIsPremium(): Promise<boolean> {
     .single();
   if (error) return false;
   return data?.is_premium ?? false;
+}
+
+// ----------------------------------------------------------------
+// CABINET CONVERSATIONS (new structured API)
+// ----------------------------------------------------------------
+
+export async function getConversations(userId: string): Promise<CabinetConversation[]> {
+  const { data, error } = await supabase
+    .from('cabinet_conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('getConversations error:', error);
+    return [];
+  }
+  return (data ?? []) as CabinetConversation[];
+}
+
+export async function getConversation(id: string): Promise<CabinetConversation | null> {
+  const { data, error } = await supabase
+    .from('cabinet_conversations')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) {
+    console.error('getConversation error:', error);
+    return null;
+  }
+  return data as CabinetConversation;
+}
+
+export async function createConversation(counselorSlugs: string[]): Promise<CabinetConversation> {
+  const userId = await getUserId();
+  if (!userId) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('cabinet_conversations')
+    .insert({ user_id: userId, counselor_slugs: counselorSlugs, messages: [] })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as CabinetConversation;
+}
+
+export async function appendMessage(conversationId: string, message: ConversationMessage): Promise<void> {
+  // Fetch current messages, append, update
+  const conversation = await getConversation(conversationId);
+  if (!conversation) throw new Error('Conversation not found');
+  const updatedMessages = [...conversation.messages, message];
+  const { error } = await supabase
+    .from('cabinet_conversations')
+    .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
+    .eq('id', conversationId);
+  if (error) throw error;
+}
+
+// ----------------------------------------------------------------
+// BELIEFS
+// ----------------------------------------------------------------
+
+export async function getBeliefs(userId: string): Promise<Belief[]> {
+  const { data, error } = await supabase
+    .from('beliefs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+  if (error) {
+    console.error('getBeliefs error:', error);
+    return [];
+  }
+  return (data ?? []) as Belief[];
+}
+
+export async function createBelief(content: string, category: string): Promise<Belief> {
+  const userId = await getUserId();
+  if (!userId) throw new Error('Not authenticated');
+  const { data, error } = await supabase
+    .from('beliefs')
+    .insert({ user_id: userId, content, category, encoded: false })
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Belief;
+}
+
+export async function updateBelief(id: string, updates: Partial<Belief>): Promise<Belief> {
+  const { data, error } = await supabase
+    .from('beliefs')
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as Belief;
+}
+
+export async function deleteBelief(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('beliefs')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+export async function encodeBelief(id: string): Promise<Belief> {
+  return updateBelief(id, { encoded: true });
 }
