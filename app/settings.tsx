@@ -14,6 +14,7 @@ import {
     View
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -122,6 +123,8 @@ export default function SettingsScreen() {
   const [futureKyleHour, setFutureKyleHour] = useState('15');
   const [futureKyleMinute, setFutureKyleMinute] = useState('00');
 
+  const [simulatingFree, setSimulatingFree] = useState(false);
+
   useEffect(() => {
     loadSettings();
     requestPermissions();
@@ -169,6 +172,7 @@ export default function SettingsScreen() {
         setFutureKyleHour(parsed.futureKyleHour ?? '15');
         setFutureKyleMinute(parsed.futureKyleMinute ?? '00');
       }
+      setSimulatingFree(getDevPremiumOverride() === false);
     } catch (e) {
       console.error(e);
     }
@@ -499,6 +503,32 @@ export default function SettingsScreen() {
       <Text style={styles.footer}>
         Note: Notifications work on physical devices. They may not appear in web/simulator.
       </Text>
+
+      {/* DEV TOOLS — only visible when EXPO_PUBLIC_DEV_MODE=true */}
+      {process.env.EXPO_PUBLIC_DEV_MODE === 'true' && (
+        <View style={styles.devSection}>
+          <Text style={styles.devLabel}>DEV ONLY</Text>
+          <Text style={styles.sectionTitle}>Developer Tools</Text>
+          <View style={styles.devRow}>
+            <View style={styles.devTextGroup}>
+              <Text style={styles.devRowTitle}>Simulate free tier</Text>
+              <Text style={styles.devRowSubtitle}>Overrides isPremium in memory. Resets on restart.</Text>
+            </View>
+            <Switch
+              value={simulatingFree}
+              onValueChange={(val) => {
+                setSimulatingFree(val);
+                setDevPremiumOverride(val ? false : null);
+              }}
+              trackColor={{ false: '#2a3a5c', true: '#ef4444' }}
+              thumbColor={simulatingFree ? '#ffffff' : '#9aa0a6'}
+            />
+          </View>
+          {simulatingFree && (
+            <Text style={styles.devWarning}>⚠ Premium overridden to FALSE. Restart app to reset.</Text>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -621,5 +651,52 @@ const styles = StyleSheet.create({
     color: '#ff6666',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  sectionTitle: {
+    color: '#e6eef8',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  devSection: {
+    marginTop: 32,
+    borderWidth: 2,
+    borderColor: '#ef4444',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  devLabel: {
+    color: '#ef4444',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  devRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  devTextGroup: {
+    flex: 1,
+    marginRight: 12,
+  },
+  devRowTitle: {
+    color: '#e6eef8',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  devRowSubtitle: {
+    color: '#9aa0a6',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  devWarning: {
+    color: '#ef4444',
+    fontSize: 11,
+    marginTop: 10,
   },
 });
