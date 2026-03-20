@@ -242,7 +242,7 @@ export default function CabinetPage() {
       )}
 
       {tab === 'counselors' && (
-        <div className="flex flex-col flex-1 px-6 md:px-8 overflow-hidden">
+        <div className="flex flex-col flex-1 px-6 md:px-8 overflow-y-auto">
           {!selectedCounselor ? (
             // Counselor list
             <div className="space-y-3">
