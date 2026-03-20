@@ -106,3 +106,19 @@ export interface CalendarDay {
   morning: boolean;
   evening: boolean;
 }
+
+export interface Counselor {
+  slug: string;
+  name: string;
+  category: 'stoics' | 'warriors' | 'athletes' | 'builders' | 'writers' | 'spiritual';
+  dates: string | null;
+  description: string;
+  bio: string;
+  philosophy: string;
+  communication_style: string;
+  challenge_level: 'direct' | 'firm' | 'gentle';
+  quotes: string[];
+  is_default: boolean;
+  sort_order: number;
+  created_at: string;
+}

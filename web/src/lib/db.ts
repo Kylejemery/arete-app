@@ -4,6 +4,7 @@ import type {
   JournalEntry,
   ThreadMessage,
   ReadingData,
+  Counselor,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -317,4 +318,97 @@ export async function getCalendarData(): Promise<Record<string, { morning: boole
 
 export async function upsertCalendarData(_data: Record<string, { morning: boolean; evening: boolean }>): Promise<void> {
   // no-op: calendar_data table does not exist in Supabase
+}
+
+// ----------------------------------------------------------------
+// COUNSELORS
+// ----------------------------------------------------------------
+
+const FUTURE_SELF_SLUG = 'futureSelf';
+
+// Default cabinet slugs — matches is_default=true counselors in the DB
+const DEFAULT_CABINET_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevelt'];
+
+// Fetch all counselors from the database
+export async function getCounselors(): Promise<Counselor[]> {
+  const { data, error } = await supabase
+    .from('counselors')
+    .select('*')
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.error('getCounselors error:', error);
+    return [];
+  }
+  return (data ?? []) as Counselor[];
+}
+
+// Fetch counselors by category
+export async function getCounselorsByCategory(category: string): Promise<Counselor[]> {
+  const { data, error } = await supabase
+    .from('counselors')
+    .select('*')
+    .eq('category', category)
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.error('getCounselorsByCategory error:', error);
+    return [];
+  }
+  return (data ?? []) as Counselor[];
+}
+
+// Fetch counselors by an array of slugs (the user's current cabinet)
+export async function getCounselorsBySlugs(slugs: string[]): Promise<Counselor[]> {
+  if (slugs.length === 0) return [];
+  const { data, error } = await supabase
+    .from('counselors')
+    .select('*')
+    .in('slug', slugs);
+  if (error) {
+    console.error('getCounselorsBySlugs error:', error);
+    return [];
+  }
+  return (data ?? []) as Counselor[];
+}
+
+// Fetch the user's current cabinet as full Counselor objects
+// (Reads from user_settings.cabinet_members, filters out 'futureSelf' which is handled separately)
+export async function getUserCabinet(): Promise<Counselor[]> {
+  const settings = await getUserSettings();
+  const members: string[] = settings?.cabinet_members ?? DEFAULT_CABINET_SLUGS;
+  const counselorSlugs = members.filter(m => m !== FUTURE_SELF_SLUG);
+  return getCounselorsBySlugs(counselorSlugs);
+}
+
+// Save the user's cabinet selection (writes slugs back to cabinet_members)
+// futureSelf is always appended automatically
+export async function saveCabinetSelection(slugs: string[]): Promise<void> {
+  const members = [...slugs.filter(s => s !== FUTURE_SELF_SLUG), FUTURE_SELF_SLUG];
+  await upsertUserSettings({ cabinet_members: members });
+}
+
+// Fetch the default cabinet (is_default = true counselors)
+export async function getDefaultCabinet(): Promise<Counselor[]> {
+  const { data, error } = await supabase
+    .from('counselors')
+    .select('*')
+    .eq('is_default', true)
+    .order('sort_order', { ascending: true });
+  if (error) {
+    console.error('getDefaultCabinet error:', error);
+    return [];
+  }
+  return (data ?? []) as Counselor[];
+}
+
+// Check if current user is premium
+export async function getIsPremium(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('is_premium')
+    .eq('id', user.id)
+    .single();
+  if (error) return false;
+  return data?.is_premium ?? false;
 }
