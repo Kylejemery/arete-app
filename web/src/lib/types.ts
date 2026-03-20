@@ -122,3 +122,28 @@ export interface Counselor {
   sort_order: number;
   created_at: string;
 }
+
+export interface CabinetConversation {
+  id: string;
+  user_id: string;
+  counselor_slugs: string[];
+  messages: ConversationMessage[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConversationMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface Belief {
+  id: string;
+  user_id: string;
+  content: string;
+  category: string;
+  encoded: boolean;
+  created_at: string;
+  updated_at: string;
+}
