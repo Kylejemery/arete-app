@@ -9,6 +9,7 @@ import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
 import PageHeader from '@/components/PageHeader';
+import CabinetPreview from '@/components/CabinetPreview';
 
 type Tab = 'cabinet' | 'counselors';
 
@@ -132,6 +133,10 @@ export default function CabinetPage() {
     <div className="min-h-screen bg-arete-bg flex flex-col" style={{ height: '100dvh' }}>
       <div className="p-6 md:p-8 pb-2">
         <PageHeader title="Cabinet" subtitle="Your Council of Invisible Counselors" />
+
+        <div className="mb-4">
+          <CabinetPreview />
+        </div>
 
         {/* Tabs */}
         <div className="flex border-b border-arete-border mb-4">
