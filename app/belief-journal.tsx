@@ -15,7 +15,7 @@ import {
     View,
 } from 'react-native';
 import { BeliefEntry, BeliefDialogueTurn, sendBeliefJournalMessage } from '../services/claudeService';
-import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, saveBelief } from '@/lib/db';
 
 interface UnifiedEntry {
     id: string;
@@ -254,6 +254,13 @@ export default function BeliefJournalScreen() {
             updatedAt: Date.now(),
         };
         await updateCurrentEntry(finalEntry);
+        await saveBelief({
+            raw_input: finalEntry.rawInput || finalEntry.content,
+            dialogue_history: finalEntry.dialogueHistory || [],
+            encoded_belief: encodedText,
+            has_virtue_concern: !!finalEntry.hasVirtueConcern,
+            virtue_concern: finalEntry.virtueConcern || undefined,
+        });
         router.replace('/journal' as any);
     };
 

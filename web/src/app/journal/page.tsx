@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
+import { getUserSettings, getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, saveBelief } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { JournalEntry } from '@/lib/types';
 import { sendBeliefJournalMessage } from '@/lib/claudeService';
@@ -412,6 +412,13 @@ export default function JournalPage() {
     };
     setBeliefEntry(finalEntry);
     await upsertEntry(finalEntry);
+    await saveBelief({
+      raw_input: finalEntry.rawInput || finalEntry.content,
+      dialogue_history: finalEntry.dialogueHistory || [],
+      encoded_belief: encodedText,
+      has_virtue_concern: !!finalEntry.hasVirtueConcern,
+      virtue_concern: finalEntry.virtueConcern || undefined,
+    });
   };
 
   const openDraftBelief = (entry: UnifiedEntry) => {
