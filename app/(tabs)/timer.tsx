@@ -44,10 +44,45 @@ export default function TimerScreen() {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finishedBook, setFinishedBook] = useState<any>(null);
 
+  // Pomodoro
+  const [pomodoroMode, setPomodoroMode] = useState<'work' | 'break'>('work');
+  const [pomodoroTimeLeft, setPomodoroTimeLeft] = useState(25 * 60);
+  const [pomodoroRunning, setPomodoroRunning] = useState(false);
+  const [pomodoroSessions, setPomodoroSessions] = useState(0);
+  const pomodoroRef = useRef<any>(null);
+
   useEffect(() => {
     loadData();
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      clearInterval(intervalRef.current);
+      if (pomodoroRef.current) clearInterval(pomodoroRef.current);
+    };
   }, []);
+
+  useEffect(() => {
+    if (pomodoroRunning) {
+      pomodoroRef.current = setInterval(() => {
+        setPomodoroTimeLeft(t => {
+          if (t <= 1) {
+            clearInterval(pomodoroRef.current);
+            setPomodoroRunning(false);
+            if (pomodoroMode === 'work') {
+              setPomodoroSessions(s => s + 1);
+              setPomodoroMode('break');
+              return 5 * 60;
+            } else {
+              setPomodoroMode('work');
+              return 25 * 60;
+            }
+          }
+          return t - 1;
+        });
+      }, 1000);
+    } else {
+      if (pomodoroRef.current) clearInterval(pomodoroRef.current);
+    }
+    return () => { if (pomodoroRef.current) clearInterval(pomodoroRef.current); };
+  }, [pomodoroRunning, pomodoroMode]);
 
   const loadData = async () => {
     try {
@@ -76,6 +111,11 @@ export default function TimerScreen() {
     const m = Math.floor((seconds % 3600) / 60);
     if (h > 0) return `${h}h ${m}m`;
     return `${m}m`;
+  };
+
+  const resetPomodoro = () => {
+    setPomodoroRunning(false);
+    setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
   };
 
   const handleStartPress = () => {
@@ -232,7 +272,7 @@ export default function TimerScreen() {
     <View style={styles.container} {...swipeHandlers}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Reading Timer ⏱️</Text>
+        <Text style={styles.title}>Focus ⏱️</Text>
         <View style={styles.tabs}>
           <TouchableOpacity
             style={[styles.tab, activeTab === 'timer' && styles.activeTab]}
@@ -254,6 +294,49 @@ export default function TimerScreen() {
         {/* TIMER TAB */}
         {activeTab === 'timer' && (
           <>
+            {/* Pomodoro Timer */}
+            <View style={styles.pomodoroCard}>
+              {/* Mode Toggle */}
+              <View style={styles.pomodoroModes}>
+                {(['work', 'break'] as const).map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    style={[styles.pomodoroModeBtn, pomodoroMode === m && styles.pomodoroModeBtnActive]}
+                    onPress={() => {
+                      setPomodoroMode(m);
+                      setPomodoroTimeLeft(m === 'work' ? 25 * 60 : 5 * 60);
+                      setPomodoroRunning(false);
+                    }}
+                  >
+                    <Text style={[styles.pomodoroModeTxt, pomodoroMode === m && styles.pomodoroModeTxtActive]}>
+                      {m === 'work' ? '25 min Work' : '5 min Break'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Countdown */}
+              <Text style={styles.pomodoroDisplay}>{formatTime(pomodoroTimeLeft)}</Text>
+
+              {/* Buttons */}
+              <View style={styles.pomodoroButtons}>
+                <TouchableOpacity
+                  style={styles.pomodoroStartBtn}
+                  onPress={() => setPomodoroRunning(r => !r)}
+                >
+                  <Text style={styles.pomodoroStartTxt}>{pomodoroRunning ? 'Pause' : 'Start'}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.pomodoroResetBtn} onPress={resetPomodoro}>
+                  <Text style={styles.pomodoroResetTxt}>Reset</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Sessions */}
+              <Text style={styles.pomodoroSessions}>
+                Sessions completed today: <Text style={styles.pomodoroSessionsCount}>{pomodoroSessions}</Text>
+              </Text>
+            </View>
+
             {/* Today's Stats */}
             <View style={styles.todayCard}>
               <Ionicons name="time-outline" size={22} color="#c9a84c" />
@@ -803,5 +886,79 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  pomodoroCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c',
+    gap: 16,
+  },
+  pomodoroModes: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pomodoroModeBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  pomodoroModeBtnActive: {
+    backgroundColor: '#c9a84c',
+    borderColor: '#c9a84c',
+  },
+  pomodoroModeTxt: {
+    color: '#888',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  pomodoroModeTxtActive: {
+    color: '#1a1a2e',
+  },
+  pomodoroDisplay: {
+    fontSize: 72,
+    fontWeight: 'bold',
+    color: '#c9a84c',
+    letterSpacing: 4,
+    fontVariant: ['tabular-nums'],
+  },
+  pomodoroButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  pomodoroStartBtn: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+  },
+  pomodoroStartTxt: {
+    color: '#1a1a2e',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  pomodoroResetBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  pomodoroResetTxt: {
+    color: '#888',
+    fontSize: 15,
+  },
+  pomodoroSessions: {
+    color: '#888',
+    fontSize: 13,
+  },
+  pomodoroSessionsCount: {
+    color: '#c9a84c',
+    fontWeight: 'bold',
   },
 });
