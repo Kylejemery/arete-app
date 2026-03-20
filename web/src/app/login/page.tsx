@@ -126,7 +126,7 @@ function LoginForm() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white caret-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors autofill:bg-arete-card autofill:[color:white] autofill:shadow-[inset_0_0_0px_1000px_#16213e]"
+              className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
               required
             />
           </div>
@@ -140,7 +140,7 @@ function LoginForm() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white caret-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors autofill:bg-arete-card autofill:[color:white] autofill:shadow-[inset_0_0_0px_1000px_#16213e]"
+              className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
               required
             />
           </div>
@@ -155,7 +155,7 @@ function LoginForm() {
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-arete-card border border-arete-gold/20 rounded-xl px-4 py-3 text-white caret-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors autofill:bg-arete-card autofill:[color:white] autofill:shadow-[inset_0_0_0px_1000px_#16213e]"
+                className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
                 required
               />
             </div>
