@@ -8,7 +8,7 @@ export interface ThreadMessage {
 }
 
 export interface Thread {
-  id: string; // 'marcus' | 'epictetus' | 'goggins' | 'roosevelt' | 'futureSelf' | 'cabinet'
+  id: string; // 'marcus-aurelius' | 'epictetus' | 'david-goggins' | 'theodore-roosevelt' | 'futureSelf' | 'cabinet'
   messages: ThreadMessage[];
   lastUpdated: number;
 }
@@ -63,7 +63,7 @@ export async function clearThread(threadId: string): Promise<void> {
 }
 
 export async function getAllThreadSummaries(): Promise<{ id: string; messageCount: number; lastUpdated: number }[]> {
-  const threadIds = ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf', 'cabinet'];
+  const threadIds = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt', 'futureSelf', 'cabinet'];
   const results = await Promise.all(
     threadIds.map(async (id) => {
       const thread = await loadThread(id);

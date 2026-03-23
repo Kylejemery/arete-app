@@ -7,8 +7,8 @@ export interface CounselorMeta {
 }
 
 export const COUNSELOR_META: Record<string, CounselorMeta> = {
-  marcus: {
-    id: 'marcus',
+  'marcus-aurelius': {
+    id: 'marcus-aurelius',
     name: 'Marcus Aurelius',
     role: 'Chair — always present',
     description: 'Emperor, philosopher, Stoic. The anchor of the Cabinet.',
@@ -21,15 +21,15 @@ export const COUNSELOR_META: Record<string, CounselorMeta> = {
     description: 'Slave turned philosopher. Master of what is and is not in your control.',
     locked: false,
   },
-  goggins: {
-    id: 'goggins',
+  'david-goggins': {
+    id: 'david-goggins',
     name: 'David Goggins',
     role: 'Counselor',
     description: 'Navy SEAL, ultramarathon runner. The voice that refuses your excuses.',
     locked: false,
   },
-  roosevelt: {
-    id: 'roosevelt',
+  'theodore-roosevelt': {
+    id: 'theodore-roosevelt',
     name: 'Theodore Roosevelt',
     role: 'Counselor',
     description: 'Statesman, naturalist, boxer. The man who chose the strenuous life.',
@@ -45,10 +45,10 @@ export const COUNSELOR_META: Record<string, CounselorMeta> = {
 };
 
 export const COUNSELOR_LIST: CounselorMeta[] = [
-  COUNSELOR_META.marcus,
+  COUNSELOR_META['marcus-aurelius'],
   COUNSELOR_META.epictetus,
-  COUNSELOR_META.goggins,
-  COUNSELOR_META.roosevelt,
+  COUNSELOR_META['david-goggins'],
+  COUNSELOR_META['theodore-roosevelt'],
   COUNSELOR_META.futureSelf,
 ];
 
@@ -135,8 +135,8 @@ Theodore Roosevelt was the 26th President of the United States, serving from 190
 - *"We must dare to be great; and we must realize that greatness is the fruit of toil and sacrifice and high courage."*`;
 
 export const COUNSELOR_PROFILE_MAP: Record<string, string> = {
-  marcus: MARCUS_PROFILE,
+  'marcus-aurelius': MARCUS_PROFILE,
   epictetus: EPICTETUS_PROFILE,
-  goggins: GOGGINS_PROFILE,
-  roosevelt: ROOSEVELT_PROFILE,
+  'david-goggins': GOGGINS_PROFILE,
+  'theodore-roosevelt': ROOSEVELT_PROFILE,
 };
