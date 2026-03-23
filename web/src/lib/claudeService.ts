@@ -240,7 +240,7 @@ export async function buildSystemPrompt(): Promise<string> {
   const futureSelfYears = settings?.future_self_years ?? 10;
   const futureSelfDescription = settings?.future_self_description || '(not yet described)';
 
-  let activeMembers: string[] = ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
+  let activeMembers: string[] = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt', 'futureSelf'];
   if (Array.isArray(settings?.cabinet_members) && settings.cabinet_members.length > 0) {
     activeMembers = settings.cabinet_members;
   }
@@ -325,10 +325,10 @@ Their communication style is warm, wise, and unhurried.`;
   } else {
     counselorProfile = COUNSELOR_PROFILE_MAP[counselorId] || '(Unknown counselor)';
     const nameMap: Record<string, string> = {
-      marcus: 'Marcus Aurelius',
+      'marcus-aurelius': 'Marcus Aurelius',
       epictetus: 'Epictetus',
-      goggins: 'David Goggins',
-      roosevelt: 'Theodore Roosevelt',
+      'david-goggins': 'David Goggins',
+      'theodore-roosevelt': 'Theodore Roosevelt',
     };
     counselorName = nameMap[counselorId] || counselorId;
   }
