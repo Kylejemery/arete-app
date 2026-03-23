@@ -245,7 +245,7 @@ export default function CabinetPage() {
         <div className="flex flex-col flex-1 px-6 md:px-8 overflow-y-auto">
           {!selectedCounselor ? (
             // Counselor list
-            <div className="space-y-3">
+            <div className="space-y-3 overflow-y-auto flex-1">
               <p className="text-arete-muted text-sm mb-4">Choose a counselor for a private session.</p>
               {activeCounselors.map(counselor => (
                 <button
