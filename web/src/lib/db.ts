@@ -331,7 +331,7 @@ export async function upsertCalendarData(_data: Record<string, { morning: boolea
 const FUTURE_SELF_SLUG = 'futureSelf';
 
 // Default cabinet slugs — matches is_default=true counselors in the DB
-const DEFAULT_CABINET_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevelt'];
+const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
 
 // Fetch all counselors from the database
 export async function getCounselors(): Promise<Counselor[]> {
