@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
@@ -360,7 +361,12 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>⚙️ Settings</Text>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color="#c9a84c" />
+        </TouchableOpacity>
+        <Text style={styles.title}>⚙️ Settings</Text>
+      </View>
 
       <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/know-thyself' as any)}>
         <Text style={styles.profileButtonText}>📖 Edit Your Know Thyself Profile</Text>
@@ -540,13 +546,21 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 25,
-    paddingTop: 60,
+    paddingTop: 20,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 4,
+    marginRight: 10,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#c9a84c',
-    marginBottom: 25,
   },
   card: {
     backgroundColor: '#16213e',
