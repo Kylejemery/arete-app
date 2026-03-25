@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
     Alert,
     Platform,
+    SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
@@ -360,7 +361,8 @@ export default function SettingsScreen() {
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color="#c9a84c" />
@@ -536,6 +538,7 @@ export default function SettingsScreen() {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

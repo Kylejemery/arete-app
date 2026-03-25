@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings } from '@/lib/db';
+import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
@@ -29,6 +29,7 @@ export default function CabinetPage() {
   const [counselorInput, setCounselorInput] = useState('');
   const [counselorLoading, setCounselorLoading] = useState(false);
   const [activeMembers, setActiveMembers] = useState<string[]>([]);
+  const [cabinetCounselors, setCabinetCounselors] = useState<{ id: string; name: string; role: string; description: string }[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const counselorEndRef = useRef<HTMLDivElement>(null);
@@ -51,6 +52,19 @@ export default function CabinetPage() {
         setActiveMembers(settings.cabinet_members);
       } else {
         setActiveMembers(COUNSELOR_LIST.map(c => c.id));
+      }
+
+      // Load cabinet counselors from Supabase
+      const fetched = await getUserCabinet();
+      if (fetched.length > 0) {
+        setCabinetCounselors(fetched.map(c => ({
+          id: c.slug,
+          name: c.name,
+          role: c.category ?? 'Counselor',
+          description: c.description ?? '',
+        })));
+      } else {
+        setCabinetCounselors(COUNSELOR_LIST.map(c => ({ id: c.id, name: c.name, role: c.role, description: c.description })));
       }
     }
     load();
@@ -124,8 +138,10 @@ export default function CabinetPage() {
     ? cabinetMessages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
     : cabinetMessages;
 
-  const activeCounselors = COUNSELOR_LIST.filter(c => activeMembers.includes(c.id));
-  const selectedCounselorMeta = COUNSELOR_LIST.find(c => c.id === selectedCounselor);
+  const activeCounselors = cabinetCounselors.length > 0
+    ? cabinetCounselors
+    : COUNSELOR_LIST.filter(c => activeMembers.includes(c.id));
+  const selectedCounselorMeta = activeCounselors.find(c => c.id === selectedCounselor);
 
   const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm resize-none";
 
