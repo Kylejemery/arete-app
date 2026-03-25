@@ -280,13 +280,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionButton: {
-    backgroundColor: '#16213e',
+    backgroundColor: '#1a2540',
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
     width: '47%',
     borderWidth: 1,
-    borderColor: '#c9a84c33',
+    borderColor: '#c9a84c44',
     gap: 8,
   },
   actionText: {

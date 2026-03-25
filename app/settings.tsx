@@ -1,16 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     Alert,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -126,6 +127,12 @@ export default function SettingsScreen() {
   const [futureKyleMinute, setFutureKyleMinute] = useState('00');
 
   const [simulatingFree, setSimulatingFree] = useState(false);
+  const [activePicker, setActivePicker] = useState<{
+    setHour: (v: string) => void;
+    setMinute: (v: string) => void;
+    hour: string;
+    minute: string;
+  } | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -335,33 +342,65 @@ export default function SettingsScreen() {
     setHour: (v: string) => void,
     minute: string,
     setMinute: (v: string) => void,
-    hourPlaceholder: string,
   ) => (
-    <>
+    <TouchableOpacity
+      style={styles.timePickerButton}
+      onPress={() => setActivePicker({ setHour, setMinute, hour, minute })}
+      activeOpacity={0.7}
+    >
       <Text style={styles.previewText}>{formatDisplayTime(hour, minute)}</Text>
-      <Text style={styles.label}>Hour (0–23)</Text>
-      <TextInput
-        style={styles.input}
-        value={hour}
-        onChangeText={setHour}
-        keyboardType="number-pad"
-        placeholder={hourPlaceholder}
-        placeholderTextColor="#555"
-      />
-      <Text style={styles.label}>Minute</Text>
-      <TextInput
-        style={styles.input}
-        value={minute}
-        onChangeText={setMinute}
-        keyboardType="number-pad"
-        placeholder="00"
-        placeholderTextColor="#555"
-      />
-    </>
+      <Ionicons name="chevron-down" size={18} color="#c9a84c" style={{ marginLeft: 6 }} />
+    </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Native time picker modal */}
+      {activePicker && (
+        <Modal
+          transparent
+          animationType="slide"
+          visible={!!activePicker}
+          onRequestClose={() => setActivePicker(null)}
+        >
+          <TouchableOpacity
+            style={styles.pickerOverlay}
+            activeOpacity={1}
+            onPress={() => setActivePicker(null)}
+          >
+            <View style={styles.pickerSheet}>
+              <View style={styles.pickerSheetHandle} />
+              <DateTimePicker
+                value={(() => {
+                  const d = new Date();
+                  d.setHours(parseInt(activePicker.hour) || 0, parseInt(activePicker.minute) || 0, 0, 0);
+                  return d;
+                })()}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                textColor="#fff"
+                onChange={(_event, date) => {
+                  if (date) {
+                    activePicker.setHour(String(date.getHours()));
+                    activePicker.setMinute(String(date.getMinutes()).padStart(2, '0'));
+                  }
+                  if (Platform.OS === 'android') {
+                    setActivePicker(null);
+                  }
+                }}
+              />
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={styles.pickerDoneButton}
+                  onPress={() => setActivePicker(null)}
+                >
+                  <Text style={styles.pickerDoneText}>Done</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
       <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -388,7 +427,7 @@ export default function SettingsScreen() {
         <Text style={styles.cardSubtitle}>
           {'"Begin at once to live, and count each separate day as a separate life."'}
         </Text>
-        {morningEnabled && renderTimeInputs(morningHour, setMorningHour, morningMinute, setMorningMinute, '7')}
+        {morningEnabled && renderTimeInputs(morningHour, setMorningHour, morningMinute, setMorningMinute)}
       </View>
 
       {/* Evening Check-In */}
@@ -403,7 +442,7 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={styles.cardSubtitle}>{'"Confine yourself to the present."'}</Text>
-        {eveningEnabled && renderTimeInputs(eveningHour, setEveningHour, eveningMinute, setEveningMinute, '20')}
+        {eveningEnabled && renderTimeInputs(eveningHour, setEveningHour, eveningMinute, setEveningMinute)}
       </View>
 
       {/* Midday Task Reminder */}
@@ -420,7 +459,7 @@ export default function SettingsScreen() {
         <Text style={styles.cardSubtitle}>
           {'"Your counselors rotate midday — keeping you on task."'}
         </Text>
-        {taskReminderEnabled && renderTimeInputs(taskReminderHour, setTaskReminderHour, taskReminderMinute, setTaskReminderMinute, '12')}
+        {taskReminderEnabled && renderTimeInputs(taskReminderHour, setTaskReminderHour, taskReminderMinute, setTaskReminderMinute)}
       </View>
 
       {/* Goggins — Workout Reminder */}
@@ -435,7 +474,7 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={styles.cardSubtitle}>{'"Stop making excuses and get after it."'}</Text>
-        {workoutReminderEnabled && renderTimeInputs(workoutReminderHour, setWorkoutReminderHour, workoutReminderMinute, setWorkoutReminderMinute, '6')}
+        {workoutReminderEnabled && renderTimeInputs(workoutReminderHour, setWorkoutReminderHour, workoutReminderMinute, setWorkoutReminderMinute)}
       </View>
 
       {/* Marcus — Reading Reminder */}
@@ -452,7 +491,7 @@ export default function SettingsScreen() {
         <Text style={styles.cardSubtitle}>
           {'"The impediment to reading? There is none. Only the choice."'}
         </Text>
-        {readingReminderEnabled && renderTimeInputs(readingReminderHour, setReadingReminderHour, readingReminderMinute, setReadingReminderMinute, '21')}
+        {readingReminderEnabled && renderTimeInputs(readingReminderHour, setReadingReminderHour, readingReminderMinute, setReadingReminderMinute)}
       </View>
 
       {/* Future Kyle — Daily Check-In */}
@@ -470,7 +509,7 @@ export default function SettingsScreen() {
           {"\"Is what you're doing right now something I would recognize? — Future Kyle\""}{'\n'}
           <Text style={styles.hintInline}>Off by default — opt in when ready.</Text>
         </Text>
-        {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute, '15')}
+        {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute)}
       </View>
 
       {/* Privacy Policy */}
@@ -595,20 +634,52 @@ const styles = StyleSheet.create({
     color: '#c9a84c',
     fontSize: 22,
     fontWeight: 'bold',
+    textDecorationLine: 'underline',
+    textDecorationColor: '#c9a84c66',
+  },
+  timePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#16213e',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  pickerSheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#c9a84c55',
+    borderRadius: 2,
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  pickerDoneButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    marginTop: 8,
+  },
+  pickerDoneText: {
+    color: '#1a1a2e',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   label: {
     color: '#888',
     fontSize: 12,
     marginTop: 5,
-  },
-  input: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    padding: 12,
-    color: '#fff',
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
   },
   hint: {
     color: '#888',
