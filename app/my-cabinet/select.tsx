@@ -127,7 +127,7 @@ export default function CabinetSelectScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/cabinet' as any)} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/my-cabinet' as any)} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color="#c9a84c" />
         </TouchableOpacity>
         <Text style={styles.title}>Counselor Library</Text>

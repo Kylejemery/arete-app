@@ -312,7 +312,7 @@ export default function EveningScreen() {
             <View style={styles.checkinCard}>
               <Text style={styles.checkinLabel}>🌙 The Cabinet</Text>
               <Text style={styles.checkinResponse}>{checkinResponse}</Text>
-              <TouchableOpacity style={styles.checkinLink} onPress={() => router.push('/cabinet')}>
+              <TouchableOpacity style={styles.checkinLink} onPress={() => router.push('/(tabs)/cabinet' as any)}>
                 <Text style={styles.checkinLinkText}>View in Cabinet →</Text>
               </TouchableOpacity>
             </View>

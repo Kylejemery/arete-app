@@ -40,7 +40,7 @@ export default function CabinetIndexScreen() {
 
   const handleCustomize = () => {
     if (isPremium) {
-      router.push('/cabinet/select' as any);
+      router.push('/my-cabinet/select' as any);
     } else {
       setShowPaywall(true);
     }
