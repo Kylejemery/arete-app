@@ -44,6 +44,14 @@ function timeAgo(timestamp: number): string {
   return `${days}d ago`;
 }
 
+function getInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+}
+
 export default function CabinetScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/cabinet');
@@ -414,7 +422,7 @@ export default function CabinetScreen() {
                 onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug } })}
               >
                 <View style={styles.counselorCardIcon}>
-                  <Ionicons name="person-outline" size={28} color="#c9a84c" />
+                  <Text style={styles.counselorInitials}>{getInitials(counselor.name)}</Text>
                 </View>
                 <View style={styles.counselorCardInfo}>
                   <Text style={styles.counselorCardName}>{counselor.name}</Text>
@@ -712,11 +720,16 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(201, 168, 76, 0.1)',
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#c9a84c33',
+  },
+  counselorInitials: {
+    color: '#c9a84c',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   counselorCardInfo: {
     flex: 1,
