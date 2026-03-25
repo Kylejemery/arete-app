@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
@@ -49,8 +50,8 @@ export default function CabinetIndexScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>←</Text>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/cabinet' as any)} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={22} color="#c9a84c" />
         </TouchableOpacity>
         <Text style={styles.title}>My Cabinet</Text>
         <View style={styles.backButton} />
@@ -141,10 +142,8 @@ const styles = StyleSheet.create({
   },
   backButton: {
     width: 36,
-  },
-  backText: {
-    color: '#c9a84c',
-    fontSize: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 22,
