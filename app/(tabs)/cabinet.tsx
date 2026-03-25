@@ -398,7 +398,7 @@ export default function CabinetScreen() {
           {/* Customize Cabinet button */}
           <TouchableOpacity
             style={styles.customizeCabinetButton}
-            onPress={() => router.push('/cabinet' as any)}
+            onPress={() => router.push('/my-cabinet' as any)}
             activeOpacity={0.8}
           >
             <Text style={styles.customizeCabinetText}>✦ Customize Cabinet</Text>
