@@ -16,7 +16,8 @@ import {
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../../services/claudeService';
-import { getUserSettings, createJournalEntry } from '@/lib/db';
+import { getUserSettings, createJournalEntry, getUserCabinet } from '@/lib/db';
+import type { Counselor } from '@/lib/types';
 import {
   ThreadMessage,
   appendMessages,
@@ -24,14 +25,6 @@ import {
   getAllThreadSummaries,
   loadThread,
 } from '../../services/threadService';
-
-const COUNSELOR_META: Record<string, { name: string; role: string }> = {
-  marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
-  epictetus: { name: 'Epictetus', role: 'Philosopher & Former Slave' },
-  goggins: { name: 'David Goggins', role: 'Navy SEAL & Endurance Athlete' },
-  roosevelt: { name: 'Theodore Roosevelt', role: '26th President & Adventurer' },
-  futureSelf: { name: 'Future Self', role: 'Years From Now' },
-};
 
 function mightSurfaceBelief(text: string): boolean {
   const triggers = ['belief', 'assume', 'assumption', 'value', 'principle',
@@ -75,7 +68,7 @@ export default function CabinetScreen() {
   const [beliefSeedInput, setBeliefSeedInput] = useState('');
 
   // --- Counselors Tab State ---
-  const [activeMembers, setActiveMembers] = useState<string[]>([]);
+  const [cabinetCounselors, setCabinetCounselors] = useState<Counselor[]>([]);
   const [threadSummaries, setThreadSummaries] = useState<
     { id: string; messageCount: number; lastUpdated: number }[]
   >([]);
@@ -93,26 +86,28 @@ export default function CabinetScreen() {
     })();
   }, []);
 
+  const loadCounselorsData = useCallback(async () => {
+    const cabinet = await getUserCabinet();
+    setCabinetCounselors(cabinet);
+    const summaries = await getAllThreadSummaries();
+    setThreadSummaries(summaries);
+  }, []);
+
   // Load counselors tab data when switching to it
   useEffect(() => {
     if (activeTab !== 'counselors') return;
-    (async () => {
-      const settings = await getUserSettings();
-      const members = settings?.cabinet_members ?? ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
-      setActiveMembers(members);
-      const summaries = await getAllThreadSummaries();
-      setThreadSummaries(summaries);
-    })();
-  }, [activeTab]);
+    loadCounselorsData();
+  }, [activeTab, loadCounselorsData]);
 
-  // Load Know Thyself completion status on focus
+  // Load Know Thyself completion status on focus; also refresh counselors data
   useFocusEffect(
     useCallback(() => {
       (async () => {
         const settings = await getUserSettings();
         setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
+        await loadCounselorsData();
       })();
-    }, [])
+    }, [loadCounselorsData])
   );
 
   // Consume beliefContext deep-link param
@@ -409,23 +404,21 @@ export default function CabinetScreen() {
             <Text style={styles.customizeCabinetText}>✦ Customize Cabinet</Text>
           </TouchableOpacity>
 
-          {activeMembers.map((memberId) => {
-            const meta = COUNSELOR_META[memberId];
-            if (!meta) return null;
-            const summary = threadSummaries.find((s) => s.id === memberId);
+          {cabinetCounselors.map((counselor) => {
+            const summary = threadSummaries.find((s) => s.id === counselor.slug);
             const hasMessages = summary && summary.messageCount > 0;
             return (
               <TouchableOpacity
-                key={memberId}
+                key={counselor.slug}
                 style={styles.counselorCard}
-                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: memberId } })}
+                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug } })}
               >
                 <View style={styles.counselorCardIcon}>
                   <Ionicons name="person-outline" size={28} color="#c9a84c" />
                 </View>
                 <View style={styles.counselorCardInfo}>
-                  <Text style={styles.counselorCardName}>{meta.name}</Text>
-                  <Text style={styles.counselorCardRole}>{meta.role}</Text>
+                  <Text style={styles.counselorCardName}>{counselor.name}</Text>
+                  <Text style={styles.counselorCardRole}>{counselor.category ?? 'Counselor'}</Text>
                   {hasMessages && summary && (
                     <Text style={styles.counselorCardActivity}>
                       Last active {timeAgo(summary.lastUpdated)}
