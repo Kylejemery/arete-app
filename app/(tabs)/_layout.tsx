@@ -15,6 +15,7 @@ export default function TabsLayout() {
           height: 60,
         },
         headerShown: false,
+        animation: 'shift',
       }}
     >
       <Tabs.Screen

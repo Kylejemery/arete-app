@@ -59,7 +59,7 @@ export default function MorningScreen() {
       if (checkin?.morning_tasks && checkin.morning_tasks.length > 0) {
         // Today's tasks exist — reset done state
         const todayDate = new Date().toISOString().split('T')[0];
-        const checkinDate = checkin.date;
+        const checkinDate = checkin.check_in_date;
         if (checkinDate === todayDate) {
           setTasks(checkin.morning_tasks as any[]);
         } else {
