@@ -115,7 +115,7 @@ export default function EveningScreen() {
       const checkin = await getTodayCheckin();
       if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
         const todayDate = new Date().toISOString().split('T')[0];
-        if (checkin.date === todayDate) {
+        if (checkin.check_in_date === todayDate) {
           setTasks(checkin.evening_tasks as any[]);
         } else {
           const resetTasks = checkin.evening_tasks.map((t: any) => ({ ...t, done: false }));
