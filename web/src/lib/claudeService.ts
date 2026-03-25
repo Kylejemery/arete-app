@@ -1,4 +1,4 @@
-import { getUserSettings, getLatestCheckIn, getJournalEntries, getReadingData } from './db';
+import { getUserSettings, getLatestCheckIn, getJournalEntries, getReadingData, getCounselorsBySlugs } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 
@@ -226,6 +226,21 @@ export async function gatherAppContext(): Promise<string> {
   return lines.join('\n');
 }
 
+function buildDynamicCounselorProfile(c: { name: string; bio?: string; description?: string; philosophy?: string; communication_style?: string; challenge_level?: string; quotes?: string[] }): string {
+  const quotes = Array.isArray(c.quotes) && c.quotes.length > 0
+    ? c.quotes.map((q: string) => `- *"${q}"*`).join('\n')
+    : '';
+  return `## ${c.name}
+
+${c.bio || c.description || ''}
+
+**Core philosophy:** ${c.philosophy || '(not specified)'}
+
+**Communication style:** ${c.communication_style || '(not specified)'}
+
+**Challenge level:** ${c.challenge_level || '(not specified)'}${quotes ? `\n\n**Representative quotes:**\n${quotes}` : ''}`;
+}
+
 export async function buildSystemPrompt(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -271,11 +286,24 @@ Your job is to roleplay the members of this cabinet for ${userName}, engaging wi
 **Marcus Aurelius serves as the Chair of the cabinet.** He is always present. Other counselors join as appropriate.`;
 
   const profileSections: string[] = [];
+  const missingSlugs: string[] = [];
   for (const memberId of activeMembers) {
     if (memberId === 'futureSelf') continue;
     if (COUNSELOR_PROFILE_MAP[memberId]) {
       profileSections.push(COUNSELOR_PROFILE_MAP[memberId]);
+    } else {
+      missingSlugs.push(memberId);
     }
+  }
+
+  // Fetch dynamic profiles from Supabase for counselors not in the hardcoded map
+  if (missingSlugs.length > 0) {
+    try {
+      const dynamicCounselors = await getCounselorsBySlugs(missingSlugs);
+      for (const c of dynamicCounselors) {
+        profileSections.push(buildDynamicCounselorProfile(c));
+      }
+    } catch { /* skip — fallback to available profiles */ }
   }
 
   if (activeMembers.includes('futureSelf')) {
@@ -323,7 +351,18 @@ Future Self's role is unique. They do not advise from the outside — they advis
 
 Their communication style is warm, wise, and unhurried.`;
   } else {
-    counselorProfile = COUNSELOR_PROFILE_MAP[counselorId] || '(Unknown counselor)';
+    const hardcodedProfile = COUNSELOR_PROFILE_MAP[counselorId];
+    if (hardcodedProfile) {
+      counselorProfile = hardcodedProfile;
+    } else {
+      // Fetch dynamic profile from Supabase for non-default counselors
+      try {
+        const [fetched] = await getCounselorsBySlugs([counselorId]);
+        counselorProfile = fetched ? buildDynamicCounselorProfile(fetched) : '(Unknown counselor)';
+      } catch {
+        counselorProfile = '(Unknown counselor)';
+      }
+    }
     const nameMap: Record<string, string> = {
       'marcus-aurelius': 'Marcus Aurelius',
       epictetus: 'Epictetus',

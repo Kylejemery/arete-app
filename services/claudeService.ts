@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs } from '../lib/db';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -114,11 +114,26 @@ Theodore Roosevelt was the 26th President of the United States, serving from 190
 - *"We must dare to be great; and we must realize that greatness is the fruit of toil and sacrifice and high courage."*`;
 
 const COUNSELOR_PROFILE_MAP: Record<string, string> = {
-  marcus: MARCUS_PROFILE,
+  'marcus-aurelius': MARCUS_PROFILE,
   epictetus: EPICTETUS_PROFILE,
-  goggins: GOGGINS_PROFILE,
-  roosevelt: ROOSEVELT_PROFILE,
+  'david-goggins': GOGGINS_PROFILE,
+  'theodore-roosevelt': ROOSEVELT_PROFILE,
 };
+
+function buildDynamicCounselorProfile(c: { name: string; bio?: string; description?: string; philosophy?: string; communication_style?: string; challenge_level?: string; quotes?: string[] }): string {
+  const quotes = Array.isArray(c.quotes) && c.quotes.length > 0
+    ? c.quotes.map((q: string) => `- *"${q}"*`).join('\n')
+    : '';
+  return `## ${c.name}
+
+${c.bio || c.description || ''}
+
+**Core philosophy:** ${c.philosophy || '(not specified)'}
+
+**Communication style:** ${c.communication_style || '(not specified)'}
+
+**Challenge level:** ${c.challenge_level || '(not specified)'}${quotes ? `\n\n**Representative quotes:**\n${quotes}` : ''}`;
+}
 
 async function getUserName(): Promise<string> {
   const settings = await getUserSettings();
@@ -173,7 +188,7 @@ async function buildSystemPrompt(): Promise<string> {
   const userGoals = settings?.user_goals || '(not yet specified)';
   const futureSelfYears = settings?.future_self_years || 10;
   const futureSelfDescription = settings?.future_self_description || '(not yet described)';
-  const activeMembers: string[] = settings?.cabinet_members ?? ['marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf'];
+  const activeMembers: string[] = settings?.cabinet_members ?? ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt', 'futureSelf'];
 
   const instructions = `As ${userName}'s Cabinet of Invisible Counselors, your task is to help guide ${userName} through their daily life — providing accountability, coaching, philosophical grounding, tough love, and genuine support as the situation demands.
 
@@ -206,11 +221,24 @@ As they respond to ${userName}, feel free to have them engage with one another. 
 **Marcus Aurelius serves as the Chair of the cabinet.** He is always present. Other counselors join as appropriate.`;
 
   const profileSections: string[] = [];
+  const missingSlugs: string[] = [];
   for (const memberId of activeMembers) {
     if (memberId === 'futureSelf') continue; // handled separately below
     if (COUNSELOR_PROFILE_MAP[memberId]) {
       profileSections.push(COUNSELOR_PROFILE_MAP[memberId]);
+    } else {
+      missingSlugs.push(memberId);
     }
+  }
+
+  // Fetch dynamic profiles from Supabase for counselors not in the hardcoded map
+  if (missingSlugs.length > 0) {
+    try {
+      const dynamicCounselors = await getCounselorsBySlugs(missingSlugs);
+      for (const c of dynamicCounselors) {
+        profileSections.push(buildDynamicCounselorProfile(c));
+      }
+    } catch { /* skip — fallback to available profiles */ }
   }
 
   if (activeMembers.includes('futureSelf')) {
