@@ -400,6 +400,15 @@ export default function CabinetScreen() {
       ) : (
         /* Counselors Tab */
         <ScrollView style={styles.counselorsScroll} contentContainerStyle={styles.counselorsContent}>
+          {/* Customize Cabinet button */}
+          <TouchableOpacity
+            style={styles.customizeCabinetButton}
+            onPress={() => router.push('/cabinet' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.customizeCabinetText}>✦ Customize Cabinet</Text>
+          </TouchableOpacity>
+
           {activeMembers.map((memberId) => {
             const meta = COUNSELOR_META[memberId];
             if (!meta) return null;
@@ -682,6 +691,19 @@ const styles = StyleSheet.create({
   counselorsContent: {
     padding: 16,
     gap: 12,
+  },
+  customizeCabinetButton: {
+    backgroundColor: '#16213e',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+    alignItems: 'center',
+  },
+  customizeCabinetText: {
+    color: '#c9a84c',
+    fontSize: 15,
+    fontWeight: '700',
   },
   counselorCard: {
     flexDirection: 'row',
