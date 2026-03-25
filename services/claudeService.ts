@@ -622,7 +622,8 @@ The week has ended. Give me your honest assessment.`;
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    try { errorText = await response.text(); } catch { /* ignore */ }
     console.error('Backend/Claude API error:', response.status, errorText);
     throw new Error(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
   }
@@ -658,7 +659,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText = '';
+      try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Backend/Claude API error:', response.status, errorText);
       return `The Cabinet is temporarily unavailable. (Error ${response.status})`;
     }
@@ -727,7 +729,8 @@ export async function sendCheckInToCabinet(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText = '';
+      try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Cabinet check-in error:', response.status, errorText);
       return 'The Cabinet will speak when you return.';
     }
@@ -814,7 +817,8 @@ export async function sendMessageToCounselor(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      let errorText = '';
+      try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Backend/Claude API error:', response.status, errorText);
       return `Your counselor is temporarily unavailable. (Error ${response.status})`;
     }
@@ -894,7 +898,8 @@ export async function sendBeliefJournalMessage(
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
+    let errorText = '';
+    try { errorText = await response.text(); } catch { /* ignore */ }
     console.error('Backend/Claude API error:', response.status, errorText);
     throw new Error(`The Cabinet is unavailable. (Error ${response.status})`);
   }
