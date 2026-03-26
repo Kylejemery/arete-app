@@ -1,6 +1,7 @@
 import { Slot } from 'expo-router';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import * as SplashScreen from 'expo-splash-screen';
@@ -42,16 +43,20 @@ export default function RootLayout() {
 
   if (session === undefined) {
     return (
-      <View
-        style={{ flex: 1, backgroundColor: '#1a1a2e' }}
-        onLayout={() => SplashScreen.hideAsync().catch(() => {})}
-      />
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View
+          style={{ flex: 1, backgroundColor: '#1a1a2e' }}
+          onLayout={() => SplashScreen.hideAsync().catch(() => {})}
+        />
+      </GestureHandlerRootView>
     );
   }
 
   return (
-    <SessionContext.Provider value={session}>
-      <Slot />
-    </SessionContext.Provider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionContext.Provider value={session}>
+        <Slot />
+      </SessionContext.Provider>
+    </GestureHandlerRootView>
   );
 }
