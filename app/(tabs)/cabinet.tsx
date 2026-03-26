@@ -61,6 +61,8 @@ export default function CabinetScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
 
   // --- Search state ---
@@ -85,20 +87,34 @@ export default function CabinetScreen() {
   const params = useLocalSearchParams<{ beliefContext?: string }>();
   const consumedBeliefContextRef = useRef(false);
 
-  // On mount: load thread
-  useEffect(() => {
-    (async () => {
-      // Load cabinet thread
+  const loadInitialThread = async () => {
+    setError(null);
+    setInitialLoading(true);
+    try {
       const thread = await loadThread('cabinet');
       setMessages(thread.messages);
-    })();
+    } catch (err) {
+      console.error('[Cabinet] Failed to load thread:', err);
+      setError('Failed to load conversation. Please try again.');
+    } finally {
+      setInitialLoading(false);
+    }
+  };
+
+  // On mount: load thread
+  useEffect(() => {
+    loadInitialThread();
   }, []);
 
   const loadCounselorsData = useCallback(async () => {
-    const cabinet = await getUserCabinet();
-    setCabinetCounselors(cabinet);
-    const summaries = await getAllThreadSummaries();
-    setThreadSummaries(summaries);
+    try {
+      const cabinet = await getUserCabinet();
+      setCabinetCounselors(cabinet);
+      const summaries = await getAllThreadSummaries();
+      setThreadSummaries(summaries);
+    } catch (err) {
+      console.warn('[Cabinet] Failed to refresh counselors:', err);
+    }
   }, []);
 
   // Load counselors tab data when switching to it
@@ -111,8 +127,12 @@ export default function CabinetScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const settings = await getUserSettings();
-        setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
+        try {
+          const settings = await getUserSettings();
+          setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
+        } catch (err) {
+          console.warn('[Cabinet] Failed to load KT settings:', err);
+        }
         await loadCounselorsData();
       })();
     }, [loadCounselorsData])
@@ -182,6 +202,24 @@ export default function CabinetScreen() {
 
   return (
     <SafeAreaView style={styles.container} {...swipeHandlers}>
+      {/* Initial loading state — prevents blank screen on first mount */}
+      {initialLoading ? (
+        <View style={styles.centeredFill}>
+          <ActivityIndicator size="large" color="#c9a84c" />
+        </View>
+      ) : error ? (
+        <View style={styles.centeredFill}>
+          <Ionicons name="alert-circle-outline" size={48} color="#c9a84c" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadInitialThread}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerText}>
@@ -498,6 +536,8 @@ export default function CabinetScreen() {
           </View>
         </View>
       )}
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -506,6 +546,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',
+  },
+  centeredFill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    backgroundColor: '#1a1a2e',
+  },
+  errorText: {
+    color: '#888',
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  retryButton: {
+    backgroundColor: '#c9a84c22',
+    borderWidth: 1,
+    borderColor: '#c9a84c88',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+  },
+  retryButtonText: {
+    color: '#c9a84c',
+    fontSize: 15,
+    fontWeight: '600',
   },
   flex: {
     flex: 1,
