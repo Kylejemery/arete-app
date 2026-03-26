@@ -6,7 +6,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../../services/claudeService';
 import { getUserSettings, createJournalEntry, getUserCabinet } from '@/lib/db';
@@ -54,8 +54,10 @@ function getInitials(name: string): string {
 
 export default function CabinetScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const swipeHandlers = useSwipeNavigation('/cabinet');
   const [activeTab, setActiveTab] = useState<'cabinet' | 'counselors'>('cabinet');
+  const mountedRef = useRef(false);
 
   // --- Cabinet (Group) Tab State ---
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
@@ -91,8 +93,10 @@ export default function CabinetScreen() {
     setError(null);
     setInitialLoading(true);
     try {
+      console.log('[Cabinet] Mount: loading initial thread...');
       const thread = await loadThread('cabinet');
       setMessages(thread.messages);
+      console.log('[Cabinet] Thread loaded:', thread.messages.length, 'messages');
     } catch (err) {
       console.error('[Cabinet] Failed to load thread:', err);
       setError('Failed to load conversation. Please try again.');
@@ -124,8 +128,14 @@ export default function CabinetScreen() {
   }, [activeTab, loadCounselorsData]);
 
   // Load Know Thyself completion status on focus; also refresh counselors data
+  // Skip the very first focus (handled by mount useEffect above)
   useFocusEffect(
     useCallback(() => {
+      if (!mountedRef.current) {
+        mountedRef.current = true;
+        return;
+      }
+      console.log('[Cabinet] useFocusEffect: refreshing data...');
       (async () => {
         try {
           const settings = await getUserSettings();
@@ -134,6 +144,7 @@ export default function CabinetScreen() {
           console.warn('[Cabinet] Failed to load KT settings:', err);
         }
         await loadCounselorsData();
+        console.log('[Cabinet] Focus refresh complete');
       })();
     }, [loadCounselorsData])
   );
@@ -201,7 +212,7 @@ export default function CabinetScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} {...swipeHandlers}>
+    <View style={[styles.container, { paddingTop: insets.top }]} {...swipeHandlers}>
       {/* Initial loading state — prevents blank screen on first mount */}
       {initialLoading ? (
         <View style={styles.centeredFill}>
@@ -538,7 +549,7 @@ export default function CabinetScreen() {
       )}
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
