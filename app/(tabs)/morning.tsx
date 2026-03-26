@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import {
     Alert,
     ActivityIndicator,
@@ -12,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
 import { getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
@@ -40,6 +41,7 @@ export default function MorningScreen() {
   const [showInput, setShowInput] = useState(false);
   const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   useFocusEffect(
     useCallback(() => {
@@ -135,6 +137,18 @@ export default function MorningScreen() {
     ]);
   };
 
+  const renderRightActions = (taskId: string) => (
+    <TouchableOpacity
+      style={styles.swipeDeleteAction}
+      onPress={() => {
+        swipeableRefs.current[taskId]?.close();
+        deleteTask(taskId);
+      }}
+    >
+      <Ionicons name="trash-outline" size={22} color="#c9a84cb3" />
+    </TouchableOpacity>
+  );
+
   const completedCount = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -171,7 +185,12 @@ export default function MorningScreen() {
         {/* Tasks */}
         <View style={styles.tasksContainer}>
           {tasks.map(task => (
-            <View key={task.id} style={styles.taskRow}>
+            <Swipeable
+              key={task.id}
+              ref={(ref) => { swipeableRefs.current[task.id] = ref; }}
+              renderRightActions={() => renderRightActions(task.id)}
+              overshootRight={false}
+            >
               <TouchableOpacity
                 style={[styles.taskCard, task.done && styles.taskCardDone]}
                 onPress={() => toggleTask(task.id)}
@@ -186,10 +205,7 @@ export default function MorningScreen() {
                   {task.title}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteButton} onPress={() => deleteTask(task.id)}>
-                <Ionicons name="trash-outline" size={20} color="#ff4444" />
-              </TouchableOpacity>
-            </View>
+            </Swipeable>
           ))}
         </View>
 
@@ -321,7 +337,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   progressBarBackground: {
-    backgroundColor: '#16213e',
+    backgroundColor: '#0d1526',
     borderRadius: 10,
     height: 12,
     overflow: 'hidden',
@@ -334,11 +350,6 @@ const styles = StyleSheet.create({
   tasksContainer: {
     gap: 12,
     marginBottom: 20,
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
   },
   taskCard: {
     flex: 1,
@@ -365,12 +376,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textDecorationLine: 'line-through',
   },
-  deleteButton: {
-    padding: 10,
-    backgroundColor: '#16213e',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ff444433',
+  swipeDeleteAction: {
+    backgroundColor: '#1e2d4a',
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    marginLeft: 8,
   },
   inputContainer: {
     backgroundColor: '#16213e',
