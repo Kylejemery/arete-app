@@ -15,9 +15,10 @@ export default function TabsLayout() {
           height: 60,
         },
         headerShown: false,
-        animation: 'fade',
+        animation: 'none',
         lazy: false,
         sceneContainerStyle: { backgroundColor: '#1a1a2e' },
+        contentStyle: { backgroundColor: '#1a1a2e' },
       }}
     >
       <Tabs.Screen
