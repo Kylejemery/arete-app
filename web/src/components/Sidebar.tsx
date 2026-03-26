@@ -13,6 +13,7 @@ const navItems = [
   { href: '/focus', label: 'Focus', emoji: '⏱️' },
   { href: '/progress', label: 'Progress', emoji: '🏆' },
   { href: '/profile', label: 'Know Thyself', emoji: '👤' },
+  { href: '/markets', label: 'Markets', emoji: '🔍' },
   { href: '/settings', label: 'Settings', emoji: '⚙️' },
 ];
 
