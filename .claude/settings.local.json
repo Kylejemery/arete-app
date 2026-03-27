@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/Hattie/arete-app -name *.sql -o -name *migrations* -type f)",
+      "Bash(grep -E \"\\\\.\\(sql|md\\)$\")"
+    ]
+  }
+}

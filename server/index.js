@@ -73,6 +73,53 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Onboarding agent endpoint — supports tools for structured profile generation
+app.post('/api/onboard', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { system, messages, tools, max_tokens, model } = req.body;
+
+  if (!system || !messages) {
+    return res.status(400).json({ error: 'Missing required fields: system and messages' });
+  }
+
+  if (!Array.isArray(messages)) {
+    return res.status(400).json({ error: 'messages must be an array' });
+  }
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: model || 'claude-opus-4-5',
+        max_tokens: max_tokens || 2000,
+        system,
+        messages,
+        ...(tools && tools.length > 0 ? { tools } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (onboard):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    return res.json(data);
+  } catch (error) {
+    console.error('Failed to reach Claude API (onboard):', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {
