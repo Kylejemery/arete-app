@@ -39,6 +39,12 @@ export interface UserSettings {
   kt_major_events: string | null;
   future_self_years: number;
   future_self_description: string | null;
+  kt_life_situation: string | null;
+  feedback_preference: string | null;
+  app_usage_intent: string | null;
+  accountability_style: string | null;
+  recommended_readings: { title: string; author: string; reason: string }[] | null;
+  archetype: string | null;
   cabinet_members: string[];
   morning_tasks: Task[];
   evening_tasks: Task[];
