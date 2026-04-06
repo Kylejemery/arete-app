@@ -120,7 +120,7 @@ export default function CounselorChatScreen() {
             if (router.canGoBack()) {
               router.back();
             } else {
-              router.replace('/cabinet' as any);
+              router.replace('/(tabs)/cabinet' as any);
             }
           }}
         >
