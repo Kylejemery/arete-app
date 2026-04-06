@@ -269,12 +269,59 @@ export async function getCabinetConversation() {
 // CABINET THREADS
 // ----------------------------------------------------------------
 
+export async function getCounselorConversation(counselorId: string) {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('cabinet_conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .contains('counselor_slugs', [counselorId])
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) console.error('getCounselorConversation error:', error);
+  return data;
+}
+
+export async function saveCounselorConversation(counselorId: string, messages: any[]) {
+  const userId = await getUserId();
+  if (!userId) return null;
+
+  const { data: existing } = await supabase
+    .from('cabinet_conversations')
+    .select('id')
+    .eq('user_id', userId)
+    .contains('counselor_slugs', [counselorId])
+    .maybeSingle();
+
+  if (existing) {
+    const { data, error } = await supabase
+      .from('cabinet_conversations')
+      .update({ messages, updated_at: new Date().toISOString() })
+      .eq('id', existing.id)
+      .select()
+      .single();
+    if (error) console.error('saveCounselorConversation error:', error);
+    return data;
+  } else {
+    const { data, error } = await supabase
+      .from('cabinet_conversations')
+      .insert({ user_id: userId, counselor_slugs: [counselorId], messages })
+      .select()
+      .single();
+    if (error) console.error('saveCounselorConversation error:', error);
+    return data;
+  }
+}
+
 export async function getThread(threadId: string): Promise<ThreadMessage[]> {
   if (threadId === 'cabinet') {
     const data = await getCabinetConversation();
     return (data?.messages ?? []) as ThreadMessage[];
   }
-  return []
+  const data = await getCounselorConversation(threadId);
+  return (data?.messages ?? []) as ThreadMessage[];
 }
 
 export async function upsertThread(threadId: string, messages: ThreadMessage[]): Promise<void> {
@@ -282,7 +329,7 @@ export async function upsertThread(threadId: string, messages: ThreadMessage[]):
     await saveCabinetConversation(messages);
     return;
   }
-  // no-op: other threads are stored locally, not in Supabase
+  await saveCounselorConversation(threadId, messages);
 }
 
 // ----------------------------------------------------------------
