@@ -116,13 +116,7 @@ export default function CounselorChatScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => {
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/(tabs)/cabinet' as any);
-            }
-          }}
+          onPress={() => router.replace('/(tabs)/cabinet' as any)}
         >
           <Ionicons name="chevron-back" size={24} color="#c9a84c" />
         </TouchableOpacity>
