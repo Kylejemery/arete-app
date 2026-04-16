@@ -1,0 +1,26 @@
+{
+  "cli": {
+    "version": ">= 16.3.1"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal"
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "kemery9585@gmail.com",
+        "ascAppId": "6762371595",
+        "appleTeamId": "VAAKMM3C9G"
+      }
+    }
+  }
+}
