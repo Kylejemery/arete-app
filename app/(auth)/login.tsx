@@ -81,6 +81,7 @@ export default function LoginScreen() {
   };
 
   const handleSubmit = () => {
+    console.log('API URL:', process.env.EXPO_PUBLIC_API_BASE_URL);
     if (mode === 'signin') {
       handleSignIn();
     } else {
