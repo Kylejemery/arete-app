@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { getUserSettings, upsertUserSettings } from '@/lib/db';
 import { setKnowThyselfComplete } from '@/lib/onboardingAgent';
+import { triggerScrollGeneration } from '@/lib/scrolls';
 
 export default function OnboardingConfirmScreen() {
   const router = useRouter();
@@ -64,6 +65,15 @@ export default function OnboardingConfirmScreen() {
         accountability_style: accountabilityStyle.trim(),
       });
       await setKnowThyselfComplete();
+      // Fire-and-forget: generate scrolls in the background, don't block navigation
+      const settings = await getUserSettings();
+      if (settings && goals.trim()) {
+        triggerScrollGeneration(
+          settings.user_id,
+          settings.user_name ?? null,
+          goals.trim()
+        ).catch(console.error);
+      }
       router.replace('/(tabs)/' as any);
     } catch (e) {
       console.error('[OnboardingConfirm] Error:', e);
