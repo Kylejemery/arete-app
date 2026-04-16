@@ -1,88 +1,62 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Slot } from 'expo-router';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
+import * as SplashScreen from 'expo-splash-screen';
 
-export default function Layout() {
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const SessionContext = createContext<Session | null | undefined>(undefined);
+SessionContext.displayName = 'SessionContext';
+
+export function useSession() {
+  return useContext(SessionContext);
+}
+
+export default function RootLayout() {
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setSession(null);
+    }, 3000);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(timeout);
+      setSession(session);
+    }).catch(() => {
+      clearTimeout(timeout);
+      setSession(null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (session === undefined) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View
+          style={{ flex: 1, backgroundColor: '#1a1a2e' }}
+          onLayout={() => SplashScreen.hideAsync().catch(() => {})}
+        />
+      </GestureHandlerRootView>
+    );
+  }
+
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#c9a84c',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          backgroundColor: '#1a1a2e',
-          borderTopWidth: 0,
-          elevation: 10,
-          paddingBottom: 5,
-          height: 60,
-        },
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="morning"
-        options={{
-          title: 'Morning',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sunny-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="evening"
-        options={{
-          title: 'Evening',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="moon-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="journal"
-        options={{
-          title: 'Journal',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="book-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="timer"
-        options={{
-          title: 'Read',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="timer-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="progress"
-        options={{
-          title: 'Progress',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="bar-chart-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="setup"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="home"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{ href: null }}
-      />
-    </Tabs>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SessionContext.Provider value={session}>
+        <Slot />
+      </SessionContext.Provider>
+    </GestureHandlerRootView>
   );
 }
