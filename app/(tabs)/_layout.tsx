@@ -76,6 +76,15 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="scrolls"
+        options={{
+          title: 'Scrolls',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="newspaper-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="progress"
         options={{
           title: 'Progress',
