@@ -46,3 +46,5 @@ app-example
 
 # Google Play service account key (contains sensitive credentials — never commit)
 google-play-service-account.json
+
+.claude/worktrees/
