@@ -176,6 +176,8 @@ Requirements:
 - Separate paragraphs with a blank line
 - 4–6 paragraphs total
 
+Where you make empirical claims about health, neuroscience, parenting, behavior change, or any scientific topic, cite the specific study, researcher, or institution behind the claim. Format citations inline and naturally — for example: 'A 2016 meta-analysis in JAMA found...' or 'Researcher Brené Brown's work on shame resilience shows...' Never use footnotes or numbered references. The scroll should read as authoritative, well-researched prose — not an academic paper, but not unsourced either. If you use web search to find current research, integrate what you find naturally into the counselor's voice.
+
 You must respond with ONLY valid JSON in exactly this format, nothing else:
 {"title": "<evocative title, 5–12 words>", "body": "<full article text, paragraphs separated by \\n\\n>"}`;
 
@@ -186,11 +188,18 @@ You must respond with ONLY valid JSON in exactly this format, nothing else:
         'Content-Type': 'application/json',
         'x-api-key': CLAUDE_API_KEY,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 1800,
         system: systemPrompt,
+        tools: [
+          {
+            type: 'web_search_20250305',
+            name: 'web_search',
+          },
+        ],
         messages: [
           {
             role: 'user',
