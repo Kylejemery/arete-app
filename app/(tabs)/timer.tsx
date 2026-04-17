@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
-    Alert, KeyboardAvoidingView, Modal,
+    Alert, AppState, AppStateStatus, KeyboardAvoidingView, Modal,
     Platform,
     ScrollView,
     StyleSheet,
@@ -27,6 +27,7 @@ export default function TimerScreen() {
 
   // Timer
   const [isRunning, setIsRunning] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [todaySeconds, setTodaySeconds] = useState(0);
   const [startPage, setStartPage] = useState('');
@@ -36,6 +37,7 @@ export default function TimerScreen() {
   const [sessionStartPage, setSessionStartPage] = useState(0);
   const intervalRef = useRef<any>(null);
   const sessionStartTime = useRef<number>(0);
+  const backgroundTimeRef = useRef<number | null>(null);
 
   // History
   const [sessions, setSessions] = useState<any[]>([]);
@@ -58,6 +60,19 @@ export default function TimerScreen() {
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'background' || nextState === 'inactive') {
+        backgroundTimeRef.current = Date.now();
+      } else if (nextState === 'active' && backgroundTimeRef.current && isRunning) {
+        const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
+        setSessionSeconds(prev => prev + elapsed);
+        backgroundTimeRef.current = null;
+      }
+    });
+    return () => subscription.remove();
+  }, [isRunning]);
 
   useEffect(() => {
     if (pomodoroRunning) {
@@ -136,6 +151,19 @@ export default function TimerScreen() {
     setSessionSeconds(0);
     sessionStartTime.current = Date.now();
     setIsRunning(true);
+    setIsPaused(false);
+    intervalRef.current = setInterval(() => {
+      setSessionSeconds(prev => prev + 1);
+    }, 1000);
+  };
+
+  const handlePausePress = () => {
+    clearInterval(intervalRef.current);
+    setIsPaused(true);
+  };
+
+  const handleResumePress = () => {
+    setIsPaused(false);
     intervalRef.current = setInterval(() => {
       setSessionSeconds(prev => prev + 1);
     }, 1000);
@@ -144,6 +172,7 @@ export default function TimerScreen() {
   const handleStopPress = () => {
     clearInterval(intervalRef.current);
     setIsRunning(false);
+    setIsPaused(false);
     setShowEndPageModal(true);
   };
 
@@ -358,19 +387,29 @@ export default function TimerScreen() {
               {!selectedBook && (
                 <Text style={styles.timerBookLabel}>Select a book below to start</Text>
               )}
-              <TouchableOpacity
-                style={[styles.timerButton, isRunning && styles.timerButtonStop]}
-                onPress={isRunning ? handleStopPress : handleStartPress}
-              >
-                <Ionicons
-                  name={isRunning ? 'stop' : 'play'}
-                  size={32}
-                  color="#1a1a2e"
-                />
-                <Text style={styles.timerButtonText}>
-                  {isRunning ? 'Stop' : 'Start'}
-                </Text>
-              </TouchableOpacity>
+              {!isRunning && !isPaused ? (
+                <TouchableOpacity style={styles.timerButton} onPress={handleStartPress}>
+                  <Ionicons name="play" size={32} color="#1a1a2e" />
+                  <Text style={styles.timerButtonText}>Start</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.timerButtonRow}>
+                  <TouchableOpacity
+                    style={[styles.timerButton, styles.timerButtonPause]}
+                    onPress={isPaused ? handleResumePress : handlePausePress}
+                  >
+                    <Ionicons name={isPaused ? 'play' : 'pause'} size={28} color="#1a1a2e" />
+                    <Text style={styles.timerButtonText}>{isPaused ? 'Resume' : 'Pause'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.timerButton, styles.timerButtonStop]}
+                    onPress={handleStopPress}
+                  >
+                    <Ionicons name="stop" size={28} color="#1a1a2e" />
+                    <Text style={styles.timerButtonText}>Stop</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             {/* Currently Reading */}
@@ -701,6 +740,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 2,
     marginTop: 5,
+  },
+  timerButtonRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginTop: 5,
+  },
+  timerButtonPause: {
+    backgroundColor: '#c9a84c',
   },
   timerButtonStop: {
     backgroundColor: '#ff4444',
