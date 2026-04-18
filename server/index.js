@@ -257,7 +257,8 @@ app.post('/api/resources/fetch', async (req, res) => {
     .join('\n');
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Step 1: web search — let Claude find resources freely, no JSON constraint
+    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -267,52 +268,71 @@ app.post('/api/resources/fetch', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
+        max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: `You are a research assistant helping a user find high-quality resources related to their personal development goals.
-
-For each goal provided, find 2-3 genuinely useful resources — a mix of articles, research pieces, and books.
-
-Requirements:
-- Prioritize credible sources: peer-reviewed research, established publications, reputable authors
-- Include at least one book recommendation per goal where relevant
-- Each resource must have a real, working URL
-- Write a 1-2 sentence summary explaining why this resource is relevant to the specific goal
-- Do not include generic self-help listicles or low-quality content
-
-Respond ONLY with a JSON array. No preamble, no markdown, no backticks. Format:
-[
-  {
-    "goal": "goal title",
-    "title": "resource title",
-    "url": "https://...",
-    "type": "article" | "book" | "research",
-    "summary": "why this is relevant"
-  }
-]
-IMPORTANT: Your entire response must be a valid JSON array starting with [ and ending with ]. No text before or after. No explanation. No apology. If you cannot find resources, return an empty array [].`,
+        system: `You are a research assistant. The user has personal development goals. Search the web and find 2-3 high-quality resources per goal — a mix of articles, research, and books. Prioritize credible sources: peer-reviewed research, established publications, reputable authors. Include at least one book per goal where relevant. For each resource note the title, URL, type (article/book/research), which goal it addresses, and a one-sentence explanation of why it is relevant.`,
         messages: [
           { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
         ],
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error (resources/fetch):', response.status, errorText);
-      return res.status(response.status).json({ error: errorText });
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error('Claude API error (resources/fetch step 1):', searchResponse.status, errorText);
+      return res.status(searchResponse.status).json({ error: errorText });
     }
 
-    const data = await response.json();
-    const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+    const searchData = await searchResponse.json();
+    const searchText = searchData.content?.find((b) => b.type === 'text')?.text || '';
+
+    // Step 2: convert findings to strict JSON — no web search, no beta header
+    const formatResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        system: `You convert research findings into a strict JSON array. Output ONLY the JSON array — no preamble, no markdown, no backticks, no explanation. If a field is unknown use an empty string. Format:
+[
+  {
+    "goal": "goal title",
+    "title": "resource title",
+    "url": "https://...",
+    "type": "article|book|research",
+    "summary": "1 sentence why relevant"
+  }
+]`,
+        messages: [
+          {
+            role: 'user',
+            content: `Convert these research findings into the JSON array format:\n\n${searchText}`,
+          },
+        ],
+      }),
+    });
+
+    if (!formatResponse.ok) {
+      const errorText = await formatResponse.text();
+      console.error('Claude API error (resources/fetch step 2):', formatResponse.status, errorText);
+      return res.status(formatResponse.status).json({ error: errorText });
+    }
+
+    const formatData = await formatResponse.json();
+    const rawText = formatData.content?.find((b) => b.type === 'text')?.text || '';
     const clean = rawText.replace(/```json|```/g, '').trim();
- try {
-  const resources = JSON.parse(clean)
-  res.json({ resources })
-} catch (parseErr) {
-  console.error('JSON parse failed. Raw response:', clean)
-  res.status(500).json({ error: 'Failed to parse resources response' })
-}
+
+    try {
+      const resources = JSON.parse(clean);
+      res.json({ resources });
+    } catch (parseErr) {
+      console.error('JSON parse failed. Raw response:', clean);
+      res.status(500).json({ error: 'Failed to parse resources response' });
+    }
   } catch (err) {
     console.error('Resources fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch resources' });
