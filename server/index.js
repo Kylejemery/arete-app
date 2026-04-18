@@ -267,7 +267,7 @@ app.post('/api/resources/fetch', async (req, res) => {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-5',
-        max_tokens: 2000,
+        max_tokens: 1000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: `You are a research assistant helping a user find high-quality resources related to their personal development goals.
 
