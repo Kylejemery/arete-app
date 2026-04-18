@@ -3,20 +3,12 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin, getGoals } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getGoals, getRandomCabinetQuote } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
-const dailyQuotes = [
-  { text: "Waste no more time arguing about what a good man should be. Be one.", author: "Marcus Aurelius" },
-  { text: "He who fears death will never do anything worthy of a living man.", author: "Seneca" },
-  { text: "You have power over your mind, not outside events. Realise this, and you will find strength.", author: "Marcus Aurelius" },
-  { text: "Difficulties strengthen the mind, as labour does the body.", author: "Seneca" },
-  { text: "First, say to yourself what you would be; then do what you have to do.", author: "Epictetus" },
-  { text: "The secret of change is to focus all of your energy not on fighting the old, but on building the new.", author: "Socrates" },
-  { text: "Excellence is not a gift, but a skill that takes practice.", author: "Plato" },
-];
+const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
 
 interface Resource {
   goal: string;
@@ -29,7 +21,7 @@ interface Resource {
 export default function HomeScreen() {
   const [userName, setUserName] = useState('');
   const [greeting, setGreeting] = useState<{ salutation: string; subtitle: string }>({ salutation: '', subtitle: '' });
-  const [quote, setQuote] = useState<{ text: string; author: string }>({ text: '', author: '' });
+  const [quote, setQuote] = useState<{ text: string; author: string } | null>(null);
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
@@ -47,7 +39,7 @@ export default function HomeScreen() {
     useCallback(() => {
       loadData();
       setGreeting(getGreeting());
-      setQuote(getDailyQuote());
+      loadQuote();
     }, [])
   );
 
@@ -116,9 +108,18 @@ export default function HomeScreen() {
     return { salutation: 'Good evening,', subtitle: 'Reflect on this day' };
   };
 
-  const getDailyQuote = () => {
-    const day = new Date().getDay();
-    return dailyQuotes[day];
+  const loadQuote = async () => {
+    try {
+      const settings = await getUserSettings();
+      const members: string[] = settings?.cabinet_members ?? DEFAULT_CABINET_SLUGS;
+      const cabinetSlugs = members.filter(s => s !== 'futureSelf');
+      const result = await getRandomCabinetQuote(cabinetSlugs);
+      if (result) {
+        setQuote({ text: result.quote, author: result.counselor });
+      }
+    } catch (e) {
+      console.error('loadQuote error:', e);
+    }
   };
 
   // Group resources by goal
@@ -166,6 +167,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Daily Quote */}
+      {quote && (
       <View style={styles.quoteContainer}>
         <Ionicons name="flame-outline" size={20} color="#c9a84c" />
         <View style={{ flex: 1 }}>
@@ -173,6 +175,7 @@ export default function HomeScreen() {
           <Text style={styles.quoteAttribution}>— {quote.author}</Text>
         </View>
       </View>
+      )}
 
       {/* Streak */}
       <View style={styles.streakContainer}>

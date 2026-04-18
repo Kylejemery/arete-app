@@ -416,6 +416,23 @@ export async function saveCabinetSelection(slugs: string[]): Promise<void> {
   await upsertUserSettings({ cabinet_members: members })
 }
 
+export async function getRandomCabinetQuote(
+  cabinetSlugs: string[]
+): Promise<{ quote: string; counselor: string } | null> {
+  if (cabinetSlugs.length === 0) return null
+  const { data, error } = await supabase
+    .from('counselors')
+    .select('name, quotes')
+    .in('slug', cabinetSlugs)
+  if (error) throw error
+
+  const allQuotes = (data ?? []).flatMap(c =>
+    (c.quotes as string[]).map(q => ({ quote: q, counselor: c.name }))
+  )
+  if (allQuotes.length === 0) return null
+  return allQuotes[Math.floor(Math.random() * allQuotes.length)]
+}
+
 export async function getDefaultCabinet(): Promise<Counselor[]> {
   const { data, error } = await supabase
     .from('counselors')
