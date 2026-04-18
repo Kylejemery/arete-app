@@ -258,6 +258,20 @@ export default function JournalScreen() {
     };
 
     // ── Goals functions ──────────────────────────────────────────────────────
+
+    /** Normalise partial date input to YYYY-MM-DD so Supabase doesn't reject it.
+     *  "2027"       → "2027-01-01"
+     *  "2027-06"    → "2027-06-01"
+     *  "2027-06-15" → "2027-06-15"
+     */
+    const normalizeTargetDate = (raw: string): string | undefined => {
+        const s = raw.trim();
+        if (!s) return undefined;
+        if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+        if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
+        return s;
+    };
+
     const loadGoals = async () => {
         setGoalsLoading(true);
         try {
@@ -311,7 +325,7 @@ export default function JournalScreen() {
                 user_id: userId,
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
-                target_date: newTargetDate.trim() || undefined,
+                target_date: normalizeTargetDate(newTargetDate),
                 source: 'user',
                 completed: false,
             });
