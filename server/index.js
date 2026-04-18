@@ -266,7 +266,7 @@ app.post('/api/resources/fetch', async (req, res) => {
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 1000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
         system: `You are a research assistant helping a user find high-quality resources related to their personal development goals.
@@ -289,7 +289,8 @@ Respond ONLY with a JSON array. No preamble, no markdown, no backticks. Format:
     "type": "article" | "book" | "research",
     "summary": "why this is relevant"
   }
-]`,
+]
+IMPORTANT: Your entire response must be a valid JSON array starting with [ and ending with ]. No text before or after. No explanation. No apology. If you cannot find resources, return an empty array [].`,
         messages: [
           { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
         ],
@@ -305,8 +306,13 @@ Respond ONLY with a JSON array. No preamble, no markdown, no backticks. Format:
     const data = await response.json();
     const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
     const clean = rawText.replace(/```json|```/g, '').trim();
-    const resources = JSON.parse(clean);
-    res.json({ resources });
+ try {
+  const resources = JSON.parse(clean)
+  res.json({ resources })
+} catch (parseErr) {
+  console.error('JSON parse failed. Raw response:', clean)
+  res.status(500).json({ error: 'Failed to parse resources response' })
+}
   } catch (err) {
     console.error('Resources fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch resources' });
