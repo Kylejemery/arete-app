@@ -12,9 +12,29 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getUserSettings, upsertUserSettings } from '@/lib/db';
+import { getUserSettings, upsertUserSettings, getGoals, upsertGoal } from '@/lib/db';
 import { setKnowThyselfComplete } from '@/lib/onboardingAgent';
 import { triggerScrollGeneration } from '@/lib/scrolls';
+
+async function seedOnboardingGoals(userId: string, goalsText: string) {
+  if (!goalsText.trim()) return;
+  try {
+    const existing = await getGoals(userId);
+    if (existing.some(g => g.source === 'onboarding')) return;
+    const lines = goalsText.split('\n').map(l => l.trim()).filter(Boolean);
+    const titles = lines.length > 0 ? lines : [goalsText.trim()];
+    for (const title of titles) {
+      await upsertGoal({
+        user_id: userId,
+        title: title.slice(0, 200),
+        source: 'onboarding',
+        completed: false,
+      });
+    }
+  } catch (e) {
+    console.error('[seedOnboardingGoals] Error:', e);
+  }
+}
 
 export default function OnboardingConfirmScreen() {
   const router = useRouter();
@@ -65,7 +85,7 @@ export default function OnboardingConfirmScreen() {
         accountability_style: accountabilityStyle.trim(),
       });
       await setKnowThyselfComplete();
-      // Fire-and-forget: generate scrolls in the background, don't block navigation
+      // Fire-and-forget: generate scrolls and seed goals in the background
       const settings = await getUserSettings();
       if (settings && goals.trim()) {
         triggerScrollGeneration(
@@ -73,6 +93,7 @@ export default function OnboardingConfirmScreen() {
           settings.user_name ?? null,
           goals.trim()
         ).catch(console.error);
+        seedOnboardingGoals(settings.user_id, goals.trim()).catch(console.error);
       }
       router.replace('/(tabs)/' as any);
     } catch (e) {

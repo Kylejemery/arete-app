@@ -1,5 +1,6 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals } from '../lib/db';
+import { supabase } from '../lib/supabase';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -254,7 +255,22 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
     profileSections.push(futureSelfProfile);
   }
 
-  return `${instructions}\n\n---\n\n${cabinetIntro}\n\n---\n\n${profileSections.join('\n\n---\n\n')}\n\n---\n\n${await gatherUserProfile()}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
+  // Fetch active goals and append to user profile section
+  let goalsText = '';
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const goals = await getGoals(user.id);
+      const activeGoals = goals.filter(g => !g.completed);
+      if (activeGoals.length > 0) {
+        goalsText = `\n\nUser's current goals:\n${activeGoals.map(g =>
+          `- ${g.title}${g.description ? ': ' + g.description : ''}${g.target_date ? ' (target: ' + g.target_date + ')' : ''}`
+        ).join('\n')}`;
+      }
+    }
+  } catch { /* skip — goals are supplemental context */ }
+
+  return `${instructions}\n\n---\n\n${cabinetIntro}\n\n---\n\n${profileSections.join('\n\n---\n\n')}\n\n---\n\n${await gatherUserProfile()}${goalsText}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with their Cabinet of Invisible Counselors.`;
 }
 
 function formatReadingTime(seconds: number): string {

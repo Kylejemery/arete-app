@@ -113,6 +113,19 @@ export interface CalendarDay {
   evening: boolean;
 }
 
+export interface Goal {
+  id: string
+  user_id: string
+  title: string
+  description?: string
+  target_date?: string
+  completed: boolean
+  completed_at?: string
+  source: 'onboarding' | 'user'
+  created_at: string
+  updated_at: string
+}
+
 export interface Counselor {
   id: string;
   name: string;

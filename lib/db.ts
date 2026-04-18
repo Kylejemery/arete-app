@@ -7,6 +7,7 @@ import type {
   ThreadMessage,
   ReadingData,
   Counselor,
+  Goal,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -450,4 +451,47 @@ export async function getIsPremium(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+// ----------------------------------------------------------------
+// GOALS
+// ----------------------------------------------------------------
+
+export async function getGoals(userId: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data
+}
+
+export async function upsertGoal(goal: Partial<Goal> & { user_id: string }): Promise<Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .upsert(goal)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function completeGoal(goalId: string): Promise<Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .update({ completed: true, completed_at: new Date().toISOString() })
+    .eq('id', goalId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteGoal(goalId: string): Promise<void> {
+  const { error } = await supabase
+    .from('goals')
+    .delete()
+    .eq('id', goalId)
+  if (error) throw error
 }
