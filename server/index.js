@@ -239,6 +239,80 @@ You must respond with ONLY valid JSON in exactly this format, nothing else:
   }
 });
 
+// ─── Resource feed ────────────────────────────────────────────────────────────
+
+app.post('/api/resources/fetch', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { goals } = req.body;
+
+  if (!goals || goals.length === 0) {
+    return res.json({ resources: [] });
+  }
+
+  const goalsText = goals
+    .map(g => `- ${g.title}${g.description ? ': ' + g.description : ''}`)
+    .join('\n');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 2000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        system: `You are a research assistant helping a user find high-quality resources related to their personal development goals.
+
+For each goal provided, find 2-3 genuinely useful resources — a mix of articles, research pieces, and books.
+
+Requirements:
+- Prioritize credible sources: peer-reviewed research, established publications, reputable authors
+- Include at least one book recommendation per goal where relevant
+- Each resource must have a real, working URL
+- Write a 1-2 sentence summary explaining why this resource is relevant to the specific goal
+- Do not include generic self-help listicles or low-quality content
+
+Respond ONLY with a JSON array. No preamble, no markdown, no backticks. Format:
+[
+  {
+    "goal": "goal title",
+    "title": "resource title",
+    "url": "https://...",
+    "type": "article" | "book" | "research",
+    "summary": "why this is relevant"
+  }
+]`,
+        messages: [
+          { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (resources/fetch):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+    const clean = rawText.replace(/```json|```/g, '').trim();
+    const resources = JSON.parse(clean);
+    res.json({ resources });
+  } catch (err) {
+    console.error('Resources fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch resources' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {
