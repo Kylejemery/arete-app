@@ -286,6 +286,11 @@ app.post('/api/resources/fetch', async (req, res) => {
     const searchData = await searchResponse.json();
     const searchText = searchData.content?.find((b) => b.type === 'text')?.text || '';
 
+if (!searchText || searchText.length < 50) {
+  console.error('Step 1 returned no useful content:', searchText)
+  return res.status(500).json({ error: 'Failed to fetch resources' })
+}
+
     // Step 2: convert findings to strict JSON — no web search, no beta header
     const formatResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -310,7 +315,7 @@ app.post('/api/resources/fetch', async (req, res) => {
         messages: [
           {
             role: 'user',
-            content: `Convert these research findings into the JSON array format:\n\n${searchText}`,
+            content: `Goals:\n${goalsText}\n\nResearch findings:\n${searchText}\n\nConvert to JSON array.`
           },
         ],
       }),
