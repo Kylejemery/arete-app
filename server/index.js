@@ -270,7 +270,7 @@ app.post('/api/resources/fetch', async (req, res) => {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: `You are a research assistant. The user has personal development goals. Search the web and find 2-3 high-quality resources per goal — a mix of articles, research, and books. Prioritize credible sources: peer-reviewed research, established publications, reputable authors. Include at least one book per goal where relevant. For each resource note the title, URL, type (article/book/research), which goal it addresses, and a one-sentence explanation of why it is relevant.`,
+        system: `You are a research assistant. The user has personal development goals. For each goal, search the web and find 2-3 high-quality resources that are DIRECTLY and SPECIFICALLY about that goal. Every resource must be clearly relevant — do not include tangentially related books or articles. Prioritize: recently published articles (last 3 years), peer-reviewed research, and well-known books with a direct Amazon or Goodreads URL. For books, always use the Amazon product page URL or Goodreads URL — never a generic publisher or bookstore homepage. For articles, only include URLs that go directly to the specific article, not a homepage or category page. Verify each resource is specifically about the goal before including it.`,
         messages: [
           { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
         ],
@@ -302,7 +302,7 @@ if (!searchText || searchText.length < 50) {
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 2000,
-        system: `You convert research findings into a strict JSON array. Output ONLY the JSON array — no preamble, no markdown, no backticks, no explanation. If a field is unknown use an empty string. Format:
+        system: `You convert research findings into a strict JSON array. Output ONLY the JSON array — no preamble, no markdown, no backticks, no explanation. Rules: (1) Every URL must point directly to the specific article or book page — never a homepage, category page, or search page. (2) For books use Amazon or Goodreads URLs only. (3) If a resource does not have a direct, specific URL, omit it entirely. (4) If a resource is not clearly relevant to its stated goal, omit it. If a field is unknown use an empty string. Format:
 [
   {
     "goal": "goal title",
