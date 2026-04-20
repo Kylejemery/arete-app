@@ -176,7 +176,7 @@ Requirements:
 - Separate paragraphs with a blank line
 - 4–6 paragraphs total
 
-Where you make empirical claims about health, neuroscience, parenting, behavior change, or any scientific topic, cite the specific study, researcher, or institution behind the claim. Format citations inline and naturally — for example: 'A 2016 meta-analysis in JAMA found...' or 'Researcher Brené Brown's work on shame resilience shows...' Never use footnotes or numbered references. The scroll should read as authoritative, well-researched prose — not an academic paper, but not unsourced either. If you use web search to find current research, integrate what you find naturally into the counselor's voice.
+Where you make empirical claims about health, neuroscience, parenting, behavior change, or any scientific topic, cite the specific study, researcher, or institution behind the claim. Format citations inline and naturally as plain prose — for example: 'A 2016 meta-analysis in JAMA found...' or 'Researcher Brené Brown's work on shame resilience shows...' Never use footnotes, numbered references, or any XML tags. Do not use <cite>, <source>, or any other markup. All citations must be plain text woven naturally into the sentence. The scroll should read as authoritative, well-researched prose — not an academic paper, but not unsourced either. If you use web search to find current research, integrate what you find naturally into the counselor's voice.
 
 You must respond with ONLY valid JSON in exactly this format, nothing else:
 {"title": "<evocative title, 5–12 words>", "body": "<full article text, paragraphs separated by \\n\\n>"}`;
@@ -332,7 +332,32 @@ if (!searchText || searchText.length < 50) {
     const clean = rawText.replace(/```json|```/g, '').trim();
 
     try {
-      const resources = JSON.parse(clean);
+      const parsed = JSON.parse(clean);
+
+      // Step 3: validate URLs — drop any that return 404 or fail
+      const validated = await Promise.allSettled(
+        parsed.map(async (r) => {
+          if (!r.url || !r.url.startsWith('http')) return null;
+          try {
+            const check = await fetch(r.url, {
+              method: 'HEAD',
+              signal: AbortSignal.timeout(4000),
+              headers: { 'User-Agent': 'Mozilla/5.0' },
+            });
+            // Accept any 2xx or 3xx — only drop hard 404s and 410s
+            if (check.status === 404 || check.status === 410) return null;
+            return r;
+          } catch {
+            // Timeout or network error — keep it, don't penalise slow servers
+            return r;
+          }
+        })
+      );
+
+      const resources = validated
+        .filter(r => r.status === 'fulfilled' && r.value !== null)
+        .map(r => r.value);
+
       res.json({ resources });
     } catch (parseErr) {
       console.error('JSON parse failed. Raw response:', clean);
