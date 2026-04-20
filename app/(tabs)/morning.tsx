@@ -15,7 +15,7 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
-import { getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
+import { getTodayCheckin, upsertTodayCheckin, incrementStreak } from '@/lib/db';
 
 const defaultTasks = [
   { id: '1', title: 'Eat Breakfast 🫙', done: false },
@@ -100,11 +100,7 @@ export default function MorningScreen() {
   };
 
   const updateStreak = async () => {
-    const checkin = await getTodayCheckin();
-    const currentStreak = checkin?.streak ?? 0;
-    if (!checkin?.morning_done) {
-      await upsertTodayCheckin({ streak: currentStreak + 1 });
-    }
+    await incrementStreak();
   };
 
   const toggleTask = async (id: string) => {

@@ -71,6 +71,35 @@ export async function upsertUserSettings(data: Partial<Omit<UserSettings, 'id' |
 // DAILY CHECKINS
 // ----------------------------------------------------------------
 
+export async function incrementStreak(): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    // Already counted today — bail out to avoid double-incrementing
+    const todayRow = await getTodayCheckin()
+    if ((todayRow?.streak ?? 0) > 0) return
+
+    // Look at yesterday's row to carry the streak forward
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const yDate = d.toISOString().split('T')[0]
+
+    const { data: yRow } = await supabase
+      .from('check_ins')
+      .select('streak, morning_done, evening_done')
+      .eq('user_id', userId)
+      .eq('check_in_date', yDate)
+      .maybeSingle()
+
+    // Carry forward only if yesterday had at least one routine completed
+    const yesterdayCompleted = yRow?.morning_done || yRow?.evening_done
+    const newStreak = (yesterdayCompleted ? (yRow?.streak ?? 0) : 0) + 1
+    await upsertTodayCheckin({ streak: newStreak })
+  } catch (e) {
+    console.error('incrementStreak error:', e)
+  }
+}
+
 export async function getTodayCheckin(): Promise<DailyCheckin | null> {
   const userId = await getUserId()
   if (!userId) return null

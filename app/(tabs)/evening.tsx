@@ -17,7 +17,7 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
-import { getTodayCheckin, upsertTodayCheckin } from '@/lib/db';
+import { getTodayCheckin, upsertTodayCheckin, incrementStreak } from '@/lib/db';
 
 const defaultTasks = [
   { id: '1', title: 'Plan Tomorrow 📜', done: false },
@@ -135,6 +135,7 @@ export default function EveningScreen() {
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
+    if (allDone) await incrementStreak();
   };
 
   const toggleTask = async (id: string) => {
