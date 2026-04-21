@@ -445,6 +445,32 @@ export async function saveCabinetSelection(slugs: string[]): Promise<void> {
   await upsertUserSettings({ cabinet_members: members })
 }
 
+export async function getKnowThyselfProfile(): Promise<{
+  user_name: string | null;
+  kt_background: string | null;
+  kt_goals: string | null;
+  kt_strengths: string | null;
+  kt_weaknesses: string | null;
+  kt_patterns: string | null;
+  kt_major_events: string | null;
+  future_self_description: string | null;
+  archetype: string | null;
+} | null> {
+  const settings = await getUserSettings();
+  if (!settings) return null;
+  return {
+    user_name: settings.user_name,
+    kt_background: settings.kt_background,
+    kt_goals: settings.kt_goals,
+    kt_strengths: settings.kt_strengths,
+    kt_weaknesses: settings.kt_weaknesses,
+    kt_patterns: settings.kt_patterns,
+    kt_major_events: settings.kt_major_events,
+    future_self_description: settings.future_self_description,
+    archetype: settings.archetype,
+  };
+}
+
 export async function getRandomCabinetQuote(
   cabinetSlugs: string[]
 ): Promise<{ quote: string; counselor: string } | null> {

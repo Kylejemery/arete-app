@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile } from '../lib/db';
 import { supabase } from '../lib/supabase';
 
 export interface Message {
@@ -819,7 +819,9 @@ export async function sendMessageToCounselor(
     const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const userProfile = await getKnowThyselfProfile();
+
+    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -829,6 +831,8 @@ export async function sendMessageToCounselor(
         max_tokens: 1500,
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        userProfile,
+        counselorSlug: counselorId,
       }),
     });
 
