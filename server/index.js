@@ -73,32 +73,12 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// ─── Counselor chat — injects Know Thyself profile block ────────────────────
-
-function buildProfileInjection(userProfile) {
-  if (!userProfile) return '';
-  const p = userProfile;
-  return `[KNOW THYSELF PROFILE]
-Name: ${p.user_name || '(not set)'}
-Background: ${p.kt_background || '(not yet provided)'}
-Goals: ${p.kt_goals || '(not yet provided)'}
-Strengths: ${p.kt_strengths || '(not yet provided)'}
-Weaknesses and patterns: ${p.kt_weaknesses || '(not yet provided)'}
-Known failure modes: ${p.kt_patterns || '(not yet provided)'}
-Major life events: ${p.kt_major_events || '(not yet provided)'}
-Future self vision: ${p.future_self_description || '(not yet described)'}
-Archetype: ${p.archetype || '(not yet set)'}
-
-You know this person. Reference their specific goals, patterns, and life context naturally in conversation — not by reciting this list, but by demonstrating that you have been paying attention. When you notice a pattern from their profile playing out in the conversation, name it. When their stated goal is relevant, connect it. Speak as someone who has read their file and cares about the outcome.
-[END PROFILE]`;
-}
-
 app.post('/api/chat/counselor', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  const { system, messages, userProfile, counselorSlug, max_tokens, model } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug } = req.body;
 
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
@@ -108,8 +88,25 @@ app.post('/api/chat/counselor', async (req, res) => {
     return res.status(400).json({ error: 'messages must be an array' });
   }
 
-  const profileBlock = buildProfileInjection(userProfile);
-  const fullSystem = profileBlock ? `${profileBlock}\n\n---\n\n${system}` : system;
+  // Build the Know Thyself injection block
+  let profileBlock = '';
+  if (userProfile && typeof userProfile === 'object') {
+    const name = userProfile.user_name || 'the user';
+    profileBlock = `\n\n[KNOW THYSELF — ${name.toUpperCase()}]
+You know this person. The following is their self-reported profile. Do not recite it back to them. Instead, demonstrate through your responses that you have been paying attention. When you notice a pattern from their profile playing out in the conversation, name it directly. When their stated goals are relevant, connect them. When their known weaknesses or failure modes appear in what they are describing, call it by name — with care, but without softening.
+
+Background: ${userProfile.kt_background || '(not provided)'}
+Professional identity: ${userProfile.kt_identity || '(not provided)'}
+Goals: ${userProfile.kt_goals || '(not provided)'}
+Strengths: ${userProfile.kt_strengths || '(not provided)'}
+Weaknesses: ${userProfile.kt_weaknesses || '(not provided)'}
+Known patterns and failure modes: ${userProfile.kt_patterns || '(not provided)'}
+Major life events: ${userProfile.kt_major_events || '(not provided)'}
+Future self vision: ${userProfile.future_self_description || '(not provided)'}
+[END KNOW THYSELF]`;
+  }
+
+  const enrichedSystem = system + profileBlock;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -122,14 +119,14 @@ app.post('/api/chat/counselor', async (req, res) => {
       body: JSON.stringify({
         model: model || 'claude-opus-4-5',
         max_tokens: max_tokens || 1500,
-        system: fullSystem,
+        system: enrichedSystem,
         messages,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Claude API error (chat/counselor${counselorSlug ? '/' + counselorSlug : ''}):`, response.status, errorText);
+      console.error('Claude API error (chat/counselor):', response.status, errorText);
       return res.status(response.status).json({ error: errorText });
     }
 

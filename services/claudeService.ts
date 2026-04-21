@@ -149,6 +149,8 @@ async function gatherUserProfile(): Promise<string> {
 
   lines.push(`=== WHO ${userName.toUpperCase()} IS — PERMANENT PROFILE ===`);
   lines.push('');
+  lines.push('INSTRUCTION: You know this person. Do not recite this profile back to them. Demonstrate through your responses that you have been paying attention. When a pattern from this profile appears in the conversation, name it. When their goals are relevant, connect them explicitly. When their known weaknesses or failure modes are playing out in what they are describing, call it by name — with care, not cruelty, but without softening or omission.');
+  lines.push('');
   lines.push('BACKGROUND & LIFE STORY:');
   lines.push(settings?.kt_background || '(not yet provided)');
   lines.push('');

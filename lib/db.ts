@@ -445,29 +445,20 @@ export async function saveCabinetSelection(slugs: string[]): Promise<void> {
   await upsertUserSettings({ cabinet_members: members })
 }
 
-export async function getKnowThyselfProfile(): Promise<{
-  user_name: string | null;
-  kt_background: string | null;
-  kt_goals: string | null;
-  kt_strengths: string | null;
-  kt_weaknesses: string | null;
-  kt_patterns: string | null;
-  kt_major_events: string | null;
-  future_self_description: string | null;
-  archetype: string | null;
-} | null> {
+export async function getKnowThyselfProfile(): Promise<Record<string, string | null>> {
   const settings = await getUserSettings();
-  if (!settings) return null;
+  if (!settings) return {};
   return {
-    user_name: settings.user_name,
-    kt_background: settings.kt_background,
-    kt_goals: settings.kt_goals,
-    kt_strengths: settings.kt_strengths,
-    kt_weaknesses: settings.kt_weaknesses,
-    kt_patterns: settings.kt_patterns,
-    kt_major_events: settings.kt_major_events,
-    future_self_description: settings.future_self_description,
-    archetype: settings.archetype,
+    user_name: settings.user_name ?? null,
+    kt_background: settings.kt_background ?? null,
+    kt_identity: settings.kt_identity ?? null,
+    kt_goals: settings.kt_goals ?? null,
+    kt_strengths: settings.kt_strengths ?? null,
+    kt_weaknesses: settings.kt_weaknesses ?? null,
+    kt_patterns: settings.kt_patterns ?? null,
+    kt_major_events: settings.kt_major_events ?? null,
+    future_self_description: settings.future_self_description ?? null,
+    future_self_years: settings.future_self_years ? String(settings.future_self_years) : null,
   };
 }
 
