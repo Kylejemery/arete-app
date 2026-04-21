@@ -1,0 +1,253 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776791787271,
+  "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete\\.claude\\worktrees\\condescending-keller-49d25c",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "19.1.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.1.0",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run start",
+    "scripts": {
+      "start": "expo start",
+      "reset-project": "node ./scripts/reset-project.js",
+      "android": "expo start --android",
+      "ios": "expo start --ios",
+      "web": "expo start --web",
+      "lint": "expo lint"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "app",
+      "assets",
+      "components",
+      "docs",
+      "lib"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "app": {
+      "path": "app",
+      "purpose": "Application code",
+      "fileCount": 15,
+      "lastAccessed": 1776791787028,
+      "keyFiles": [
+        "belief-journal.tsx",
+        "counselor-chat.tsx",
+        "evening.tsx",
+        "home.tsx",
+        "index.tsx"
+      ]
+    },
+    "assets": {
+      "path": "assets",
+      "purpose": "Static assets",
+      "fileCount": 0,
+      "lastAccessed": 1776791787029,
+      "keyFiles": []
+    },
+    "components": {
+      "path": "components",
+      "purpose": "UI components",
+      "fileCount": 7,
+      "lastAccessed": 1776791787088,
+      "keyFiles": [
+        "CabinetPreview.tsx",
+        "CounselorCard.tsx",
+        "EveningScreen.js",
+        "HomeScreen.js",
+        "JournalScreen.js"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1776791787090,
+      "keyFiles": [
+        "index.html",
+        "privacy.html"
+      ]
+    },
+    "hooks": {
+      "path": "hooks",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1776791787092,
+      "keyFiles": [
+        "useSwipeNavigation.ts"
+      ]
+    },
+    "lib": {
+      "path": "lib",
+      "purpose": "Library code",
+      "fileCount": 6,
+      "lastAccessed": 1776791787094,
+      "keyFiles": [
+        "db.ts",
+        "devMode.ts",
+        "onboardingAgent.ts",
+        "scrolls.ts",
+        "supabase.ts"
+      ]
+    },
+    "pull": {
+      "path": "pull",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1776791787095,
+      "keyFiles": []
+    },
+    "server": {
+      "path": "server",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1776791787096,
+      "keyFiles": [
+        "index.js",
+        "package-lock.json",
+        "package.json",
+        "README.md"
+      ]
+    },
+    "services": {
+      "path": "services",
+      "purpose": "Business logic services",
+      "fileCount": 2,
+      "lastAccessed": 1776791787097,
+      "keyFiles": [
+        "claudeService.ts",
+        "threadService.ts"
+      ]
+    },
+    "supabase": {
+      "path": "supabase",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1776791787097,
+      "keyFiles": []
+    },
+    "types": {
+      "path": "types",
+      "purpose": "Type definitions",
+      "fileCount": 1,
+      "lastAccessed": 1776791787098,
+      "keyFiles": [
+        "onboarding.ts"
+      ]
+    },
+    "web": {
+      "path": "web",
+      "purpose": null,
+      "fileCount": 11,
+      "lastAccessed": 1776791787099,
+      "keyFiles": [
+        "eslint.config.mjs",
+        "next.config.ts",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.js"
+      ]
+    },
+    "supabase\\migrations": {
+      "path": "supabase\\migrations",
+      "purpose": "Database migrations",
+      "fileCount": 6,
+      "lastAccessed": 1776791787104,
+      "keyFiles": [
+        "001_initial_schema.sql",
+        "20260320000000_custom_cabinet.sql",
+        "20260320000001_seed_counselors.sql"
+      ]
+    },
+    "web\\src": {
+      "path": "web\\src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1776791787105,
+      "keyFiles": [
+        "middleware.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "services\\claudeService.ts",
+      "accessCount": 6,
+      "lastAccessed": 1776791923364,
+      "type": "file"
+    },
+    {
+      "path": "app\\counselor-chat.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1776794307864,
+      "type": "file"
+    },
+    {
+      "path": "lib\\db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1776791839579,
+      "type": "file"
+    },
+    {
+      "path": "server\\index.js",
+      "accessCount": 1,
+      "lastAccessed": 1776791855904,
+      "type": "file"
+    },
+    {
+      "path": "app\\(tabs)\\cabinet.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776794289760,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

@@ -75,8 +75,9 @@ export default function CabinetScreen() {
   >([]);
 
   // --- beliefContext deep-link param ---
-  const params = useLocalSearchParams<{ beliefContext?: string }>();
+  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string }>();
   const consumedBeliefContextRef = useRef(false);
+  const consumedCabinetContextRef = useRef(false);
 
   const loadInitialThread = async () => {
     setError(null);
@@ -148,6 +149,52 @@ export default function CabinetScreen() {
       router.setParams({ beliefContext: undefined });
     }
   }, [params.beliefContext, router]);
+
+  useEffect(() => {
+    const cc = params.cabinetContext;
+    if (cc && !consumedCabinetContextRef.current) {
+      consumedCabinetContextRef.current = true;
+      setActiveTab('cabinet');
+      router.setParams({ cabinetContext: undefined });
+
+      try {
+        const { counselorName, topic, counselorLastResponse } = JSON.parse(String(cc));
+
+        const handoffMessage = counselorLastResponse
+          ? `[Escalated from private session with ${counselorName}]\n\nI was discussing with ${counselorName}: "${topic}"\n\n${counselorName}'s perspective so far: "${counselorLastResponse}"\n\nI'd like the full Cabinet to weigh in.`
+          : `[Escalated from private session with ${counselorName}]\n\nI was discussing with ${counselorName}: "${topic}"\n\nI'd like the full Cabinet to weigh in.`;
+
+        // Show the message then auto-send after a short delay
+        setInputText(handoffMessage);
+        setTimeout(() => {
+          setInputText('');
+          const userMessage: ThreadMessage = {
+            role: 'user',
+            content: handoffMessage,
+            timestamp: Date.now(),
+          };
+          setMessages(prev => {
+            const updated = [...prev, userMessage];
+            setIsLoading(true);
+            appendMessages('cabinet', [userMessage]);
+            sendMessageToCabinet(updated).then(reply => {
+              const assistantMessage: ThreadMessage = {
+                role: 'assistant',
+                content: reply,
+                timestamp: Date.now(),
+              };
+              setMessages(u => [...u, assistantMessage]);
+              setIsLoading(false);
+              appendMessages('cabinet', [assistantMessage]);
+            });
+            return updated;
+          });
+        }, 600);
+      } catch (e) {
+        console.warn('Failed to parse cabinetContext:', e);
+      }
+    }
+  }, [params.cabinetContext, router]);
 
   const handleSend = async () => {
     const text = inputText.trim();

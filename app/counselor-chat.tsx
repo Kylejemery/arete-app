@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -108,6 +108,30 @@ export default function CounselorChatScreen() {
     );
   };
 
+  const handleBringToCabinet = useCallback(() => {
+    // Find the last user message and last assistant message
+    const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+    const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant');
+
+    if (!lastUserMsg) return;
+
+    const counselorDisplayName = counselorName || counselorId;
+    const truncatedResponse = lastAssistantMsg
+      ? lastAssistantMsg.content.slice(0, 200) + (lastAssistantMsg.content.length > 200 ? '...' : '')
+      : null;
+
+    const cabinetContext = JSON.stringify({
+      counselorName: counselorDisplayName,
+      topic: lastUserMsg.content,
+      counselorLastResponse: truncatedResponse,
+    });
+
+    router.push({
+      pathname: '/(tabs)/cabinet',
+      params: { cabinetContext },
+    });
+  }, [messages, counselorId, counselorName, router]);
+
   const meta = COUNSELOR_META[counselorId];
 
   return (
@@ -189,6 +213,17 @@ export default function CounselorChatScreen() {
             </View>
           )}
         </ScrollView>
+
+        {messages.length >= 2 && (
+          <TouchableOpacity
+            style={styles.bringToCabinetButton}
+            onPress={handleBringToCabinet}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="people-outline" size={16} color="#c9a84c" />
+            <Text style={styles.bringToCabinetText}>Bring to the Cabinet →</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Input Bar */}
         <View style={styles.inputBar}>
@@ -375,5 +410,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#16213e',
     borderWidth: 1,
     borderColor: '#555',
+  },
+  bringToCabinetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c9a84c22',
+  },
+  bringToCabinetText: {
+    color: '#c9a84c',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

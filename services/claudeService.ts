@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory } from '../lib/db';
 import { supabase } from '../lib/supabase';
 
 export interface Message {
@@ -778,6 +778,7 @@ async function buildCounselorSystemPrompt(counselorId: string): Promise<string> 
   });
 
   const settings = await getUserSettings();
+  const memory = await getConversationMemory(counselorId);
   const userName = settings?.user_name || 'the user';
   const futureSelfYears = settings?.future_self_years || 10;
   const futureSelfDescription = settings?.future_self_description || '(not yet described)';
@@ -807,7 +808,11 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
     counselorName = nameMap[counselorId] || counselorId;
   }
 
-  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${await gatherUserProfile()}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.\n- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
+  const memoryBlock = memory
+    ? `\n\n[MEMORY — PREVIOUS SESSIONS]\n${memory}\n\nYou remember this. Open the conversation with awareness of where things stood. If the user made a commitment last time, ask about it. If a pattern was identified, watch for it. Do not recite this memory back to them — demonstrate it.\n[END MEMORY]`
+    : '';
+
+  return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${await gatherUserProfile()}${memoryBlock}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.\n- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
 export async function sendMessageToCounselor(
@@ -848,6 +853,36 @@ export async function sendMessageToCounselor(
     const data = await response.json();
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
+      // Fire background memory summarization — only if conversation is substantial
+      if (messages.length >= 4) {
+        const settings = await getUserSettings();
+        const userName = settings?.user_name || 'the user';
+        const nameMap: Record<string, string> = {
+          'marcus-aurelius': 'Marcus Aurelius',
+          'epictetus': 'Epictetus',
+          'david-goggins': 'David Goggins',
+          'theodore-roosevelt': 'Theodore Roosevelt',
+          'futureSelf': 'Future Self',
+        };
+        const counselorName = nameMap[counselorId] || counselorId;
+        fetch(`${API_BASE_URL}/api/memory/summarize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            counselorSlug: counselorId,
+            counselorName,
+            userName,
+            messages: [...messages, { role: 'assistant', content, timestamp: Date.now() }],
+          }),
+        })
+          .then(r => r.json())
+          .then(async ({ summary }) => {
+            if (summary) {
+              await saveConversationMemory(counselorId, summary);
+            }
+          })
+          .catch(e => console.warn('Background memory summarization failed:', e));
+      }
       return content;
     }
     return 'No response received. Please try again.';

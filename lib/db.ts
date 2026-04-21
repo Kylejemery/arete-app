@@ -558,3 +558,44 @@ export async function deleteGoal(goalId: string): Promise<void> {
     .eq('id', goalId)
   if (error) throw error
 }
+
+// ----------------------------------------------------------------
+// CONVERSATION MEMORY
+// ----------------------------------------------------------------
+
+export async function getConversationMemory(counselorSlug: string): Promise<string | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
+  try {
+    const { data, error } = await supabase
+      .from('conversation_memory')
+      .select('summary')
+      .eq('user_id', userId)
+      .eq('counselor_slug', counselorSlug)
+      .maybeSingle();
+    if (error) {
+      console.error('getConversationMemory error:', error);
+      return null;
+    }
+    return data?.summary ?? null;
+  } catch (e) {
+    console.error('getConversationMemory exception:', e);
+    return null;
+  }
+}
+
+export async function saveConversationMemory(counselorSlug: string, summary: string): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) return;
+  try {
+    const { error } = await supabase
+      .from('conversation_memory')
+      .upsert(
+        { user_id: userId, counselor_slug: counselorSlug, summary, last_updated: new Date().toISOString() },
+        { onConflict: 'user_id,counselor_slug' }
+      );
+    if (error) console.error('saveConversationMemory error:', error);
+  } catch (e) {
+    console.error('saveConversationMemory exception:', e);
+  }
+}

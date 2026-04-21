@@ -138,6 +138,73 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   }
 });
 
+// ─── Conversation memory summarization ───────────────────────────────────────
+
+app.post('/api/memory/summarize', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { counselorSlug, counselorName, userName, messages } = req.body;
+
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.json({ summary: null });
+  }
+
+  // Only use last 20 messages
+  const recentMessages = messages.slice(-20);
+
+  const conversationText = recentMessages
+    .map(m => `${m.role === 'user' ? userName || 'User' : counselorName || 'Counselor'}: ${m.content}`)
+    .join('\n\n');
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: `You are a memory system for a personal development app. Generate a concise, useful memory summary of a conversation between a user and their counselor.
+
+The summary must capture:
+1. The main topic or struggle the user brought to this conversation
+2. Any patterns or tendencies the counselor identified
+3. Any specific commitments or intentions the user expressed
+4. Any unresolved questions worth returning to
+
+Write 3-5 sentences in third person. Be specific — use the user's actual words and situations where possible. Do not be generic. This summary will be injected into the next conversation so the counselor can open with genuine continuity.
+
+Good example: "Kyle discussed his tendency to avoid difficult conversations at work, particularly with his manager about the RTI layoffs. Marcus identified an all-or-nothing pattern in how Kyle frames career decisions. Kyle committed to drafting one honest email this week. The question of whether fear or wisdom is driving his caution remains unresolved."
+
+Bad example: "The user discussed personal development topics and received philosophical guidance from the counselor."
+
+Return only the summary text — no preamble, no labels, no formatting.`,
+        messages: [
+          { role: 'user', content: `Summarize this conversation:\n\n${conversationText}` }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (memory/summarize):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const summary = data.content?.find(b => b.type === 'text')?.text || null;
+    return res.json({ summary });
+  } catch (error) {
+    console.error('Failed to generate memory summary:', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
 // Onboarding agent endpoint — supports tools for structured profile generation
 app.post('/api/onboard', async (req, res) => {
   if (!CLAUDE_API_KEY) {
