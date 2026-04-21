@@ -410,7 +410,7 @@ For each goal, find 2 resources — a mix of articles and books. Rules:
 - For articles, only use the exact URL returned by your search
 - Every resource must be directly relevant to the specific goal
 
-After searching, respond with ONLY a valid JSON array, no preamble, no markdown, no backticks:
+After searching, respond with ONLY a valid JSON array. No preamble, no explanation, no markdown fences. Start your response with [ and end with ].
 [
   {
     "goal": "goal title here",
@@ -442,10 +442,13 @@ If you cannot find a good resource for a goal, omit it rather than inventing a U
       return res.json({ resources: [] });
     }
 
-    const clean = rawText.replace(/```json|```/g, '').trim();
-
     try {
-      const parsed = JSON.parse(clean);
+      const jsonMatch = rawText.match(/\[[\s\S]*\]/);
+      if (!jsonMatch) {
+        console.error('JSON parse failed. Raw response:', rawText.substring(0, 200));
+        return res.status(500).json({ error: 'Failed to parse resources response' });
+      }
+      const parsed = JSON.parse(jsonMatch[0]);
 
       // Validate URLs — drop 404s and 410s
       const validated = await Promise.allSettled(
