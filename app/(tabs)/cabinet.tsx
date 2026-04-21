@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet } from '../../services/claudeService';
-import { getUserSettings, createJournalEntry, getUserCabinet } from '@/lib/db';
+import { getUserSettings, getUserCabinet } from '@/lib/db';
 import type { Counselor } from '@/lib/types';
 import {
   ThreadMessage,
@@ -25,13 +25,6 @@ import {
   getAllThreadSummaries,
   loadThread,
 } from '../../services/threadService';
-
-function mightSurfaceBelief(text: string): boolean {
-  const triggers = ['belief', 'assume', 'assumption', 'value', 'principle',
-    'half-formed', 'what do you believe', 'examine', 'conviction', 'what you actually believe'];
-  const lower = text.toLowerCase();
-  return triggers.some(t => lower.includes(t));
-}
 
 function timeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -74,10 +67,6 @@ export default function CabinetScreen() {
   // --- Know Thyself nudge state ---
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const [dismissedKtNudge, setDismissedKtNudge] = useState(false);
-
-  // --- Belief Journal Integration ---
-  const [beliefSeedText, setBeliefSeedText] = useState<string | null>(null);
-  const [beliefSeedInput, setBeliefSeedInput] = useState('');
 
   // --- Counselors Tab State ---
   const [cabinetCounselors, setCabinetCounselors] = useState<Counselor[]>([]);
@@ -389,18 +378,6 @@ export default function CabinetScreen() {
                               <Text style={styles.cabinetLabel}>The Cabinet</Text>
                               <Text style={styles.cabinetText}>{msg.content}</Text>
                             </View>
-                            {mightSurfaceBelief(msg.content) && (
-                              <TouchableOpacity
-                                style={styles.sendToBeliefButton}
-                                onPress={() => {
-                                  setBeliefSeedText(msg.content);
-                                  setBeliefSeedInput(msg.content);
-                                }}
-                              >
-                                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
-                                <Text style={styles.sendToBeliefText}>Explore in Belief Journal →</Text>
-                              </TouchableOpacity>
-                            )}
                           </View>
                         )
                       )}
@@ -494,59 +471,6 @@ export default function CabinetScreen() {
         </ScrollView>
       )}
 
-      {/* Belief Seed Modal */}
-      {beliefSeedText !== null && (
-        <View style={styles.beliefSeedModal}>
-          <View style={styles.beliefSeedCard}>
-            <Text style={styles.beliefSeedTitle}>Send to Belief Journal?</Text>
-            <Text style={styles.beliefSeedSubtitle}>
-              Edit the text below to capture just the belief or assumption you want to explore.
-            </Text>
-            <TextInput
-              style={styles.beliefSeedInput}
-              value={beliefSeedInput}
-              onChangeText={setBeliefSeedInput}
-              multiline
-              placeholder="Trim to the belief you want to examine..."
-              placeholderTextColor="#555"
-            />
-            <View style={styles.beliefSeedButtons}>
-              <TouchableOpacity
-                style={[styles.sendToBeliefButton, { marginTop: 0 }]}
-                onPress={() => {
-                  setBeliefSeedText(null);
-                  setBeliefSeedInput('');
-                }}
-              >
-                <Text style={styles.sendToBeliefText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sendToBeliefButton, { marginTop: 0, backgroundColor: '#c9a84c22', borderColor: '#c9a84c88' }]}
-                onPress={async () => {
-                  const rawThought = beliefSeedInput.trim();
-                  if (!rawThought) return;
-                  try {
-                    await createJournalEntry({
-                      type: 'belief',
-                      content: rawThought,
-                      raw_input: rawThought,
-                      dialogue_history: [],
-                      belief_stage: 1 as any,
-                      topic: rawThought.slice(0, 60),
-                    });
-                  } catch { /* skip */ }
-                  setBeliefSeedText(null);
-                  setBeliefSeedInput('');
-                  router.push('/journal');
-                }}
-              >
-                <Ionicons name="bulb-outline" size={14} color="#c9a84c" />
-                <Text style={styles.sendToBeliefText}>Send to Belief Journal</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
         </>
       )}
     </View>
