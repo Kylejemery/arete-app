@@ -363,16 +363,43 @@ export async function upsertThread(threadId: string, messages: ThreadMessage[]):
 }
 
 // ----------------------------------------------------------------
-// READING DATA (not stored in Supabase — stub)
+// READING DATA
 // ----------------------------------------------------------------
 
 export async function getReadingData(): Promise<ReadingData | null> {
-  console.warn('getReadingData: reading_data table does not exist in Supabase')
-  return null
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('reading_data')
+      .select('*')
+      .eq('user_id', userId)
+      .single()
+    if (error && error.code !== 'PGRST116') {
+      console.error('getReadingData error:', error)
+      return null
+    }
+    return data ?? null
+  } catch (e) {
+    console.error('getReadingData exception:', e)
+    return null
+  }
 }
 
-export async function upsertReadingData(_data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
-  // no-op: reading_data table does not exist in Supabase
+export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('reading_data')
+      .upsert(
+        { ...data, user_id: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('upsertReadingData error:', error)
+  } catch (e) {
+    console.error('upsertReadingData exception:', e)
+  }
 }
 
 // ----------------------------------------------------------------
