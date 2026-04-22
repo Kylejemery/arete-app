@@ -389,8 +389,8 @@ app.post('/api/resources/fetch', async (req, res) => {
     .join('\n');
 
   try {
-    // Single step: Sonnet with web search, returns JSON directly
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Call 1 — Search: web search enabled, free-form response
+    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -399,43 +399,56 @@ app.post('/api/resources/fetch', async (req, res) => {
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: `You are a research assistant. Search the web to find high-quality resources for personal development goals.
-
-For each goal, find 2 resources — a mix of articles and books. Rules:
-- Only include URLs you have actually retrieved via web search — never invent or guess URLs
-- For books, use Amazon or Goodreads URLs only
-- For articles, only use the exact URL returned by your search
-- Every resource must be directly relevant to the specific goal
-
-After searching, respond with ONLY a valid JSON array. No preamble, no explanation, no markdown fences. Start your response with [ and end with ].
-[
-  {
-    "goal": "goal title here",
-    "title": "resource title",
-    "url": "https://exact-url-from-search",
-    "type": "article|book|research",
-    "summary": "one sentence why relevant"
-  }
-]
-
-If you cannot find a good resource for a goal, omit it rather than inventing a URL.`,
+        system: 'You are a research assistant. Search for high-quality resources on the given topics. For each topic find 1-2 articles and 1 book. Include the exact URLs you find.',
         messages: [
-          { role: 'user', content: `Search for resources for these goals and return JSON:\n${goalsText}` },
+          { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
         ],
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error (resources/fetch):', response.status, errorText);
-      return res.status(response.status).json({ error: errorText });
+    if (!searchResponse.ok) {
+      const errorText = await searchResponse.text();
+      console.error('Claude API error (resources/fetch search):', searchResponse.status, errorText);
+      return res.status(searchResponse.status).json({ error: errorText });
     }
 
-    const data = await response.json();
-    const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+    const searchData = await searchResponse.json();
+    const searchFindings = searchData.content?.find((b) => b.type === 'text')?.text || '';
+
+    if (!searchFindings || searchFindings.length < 10) {
+      console.error('Resources fetch: search call returned no text');
+      return res.json({ resources: [] });
+    }
+
+    // Call 2 — Format: no tools, forced JSON output
+    const formatResponse = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        system: 'You are a JSON formatter. Convert the research findings into a JSON array. Respond with ONLY valid JSON. No explanation. No markdown. Start with [ and end with ].',
+        messages: [
+          { role: 'user', content: `Convert these research findings into a JSON array with fields: goal, title, url, type ('article'|'book'|'research'), summary.\n\nResearch findings:\n${searchFindings}` },
+        ],
+      }),
+    });
+
+    if (!formatResponse.ok) {
+      const errorText = await formatResponse.text();
+      console.error('Claude API error (resources/fetch format):', formatResponse.status, errorText);
+      return res.status(formatResponse.status).json({ error: errorText });
+    }
+
+    const formatData = await formatResponse.json();
+    const rawText = formatData.content?.find((b) => b.type === 'text')?.text || '';
 
     if (!rawText || rawText.length < 10) {
       console.error('Resources fetch returned no text content');
