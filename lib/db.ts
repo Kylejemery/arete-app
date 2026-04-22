@@ -588,6 +588,81 @@ export async function deleteGoal(goalId: string): Promise<void> {
 }
 
 // ----------------------------------------------------------------
+// ROUTINE TEMPLATES
+// ----------------------------------------------------------------
+
+export type RoutineTemplate = {
+  id: string
+  user_id: string
+  type: 'morning' | 'evening'
+  title: string
+  emoji: string | null
+  sort_order: number
+  created_at: string
+}
+
+export async function getRoutineTemplates(type: 'morning' | 'evening'): Promise<RoutineTemplate[]> {
+  const userId = await getUserId()
+  if (!userId) return []
+  try {
+    const { data, error } = await supabase
+      .from('routine_templates')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .order('sort_order', { ascending: true })
+    if (error) {
+      console.error('getRoutineTemplates error:', error)
+      return []
+    }
+    return data ?? []
+  } catch (e) {
+    console.error('getRoutineTemplates exception:', e)
+    return []
+  }
+}
+
+export async function addRoutineTemplate(
+  type: 'morning' | 'evening',
+  title: string,
+  emoji?: string,
+  sortOrder?: number
+): Promise<RoutineTemplate | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('routine_templates')
+      .insert({ user_id: userId, type, title, emoji: emoji ?? null, sort_order: sortOrder ?? 0 })
+      .select()
+      .single()
+    if (error) {
+      console.error('addRoutineTemplate error:', error)
+      return null
+    }
+    return data
+  } catch (e) {
+    console.error('addRoutineTemplate exception:', e)
+    return null
+  }
+}
+
+export async function deleteRoutineTemplate(id: string): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('routine_templates')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+    if (error) console.error('deleteRoutineTemplate error:', error)
+  } catch (e) {
+    console.error('deleteRoutineTemplate exception:', e)
+  }
+}
+
+// ----------------------------------------------------------------
 // CONVERSATION MEMORY
 // ----------------------------------------------------------------
 

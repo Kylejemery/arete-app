@@ -5,6 +5,7 @@ import {
     ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     SafeAreaView,
     ScrollView,
@@ -17,12 +18,15 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
-import { getTodayCheckin, upsertTodayCheckin, incrementStreak } from '@/lib/db';
-
-const defaultTasks = [
-  { id: '1', title: 'Plan Tomorrow 📜', done: false },
-  { id: '2', title: 'Reflect on Your Day 👁️', done: false },
-];
+import {
+  getTodayCheckin,
+  upsertTodayCheckin,
+  incrementStreak,
+  getRoutineTemplates,
+  addRoutineTemplate,
+  deleteRoutineTemplate,
+  type RoutineTemplate,
+} from '@/lib/db';
 
 const reflectionPrompts = [
   "What was your biggest win today?",
@@ -44,10 +48,24 @@ const stoicPrompts = [
   "What are you grateful for that you usually take for granted? As Epictetus taught, count your blessings.",
 ];
 
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function templateToTask(t: RoutineTemplate) {
+  return {
+    id: t.id,
+    title: t.emoji ? `${t.emoji} ${t.title}` : t.title,
+    done: false,
+  };
+}
+
 export default function EveningScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/evening');
-  const [tasks, setTasks] = useState(defaultTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
   const [newTask, setNewTask] = useState('');
   const [showInput, setShowInput] = useState(false);
   const [reflectionPrompt, setReflectionPrompt] = useState('');
@@ -58,6 +76,9 @@ export default function EveningScreen() {
   const [stoicSaved, setStoicSaved] = useState(false);
   const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
   const [checkinLoading, setCheckinLoading] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskEmoji, setNewTaskEmoji] = useState('');
   const reflectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -114,18 +135,25 @@ export default function EveningScreen() {
 
   const loadTasks = async () => {
     try {
+      let tmpl = await getRoutineTemplates('evening');
+      if (tmpl.length === 0) {
+        await addRoutineTemplate('evening', 'Plan Tomorrow', '📜', 0);
+        await addRoutineTemplate('evening', 'Reflect on Your Day', '👁️', 1);
+        tmpl = await getRoutineTemplates('evening');
+      }
+      setTemplates(tmpl);
+
       const checkin = await getTodayCheckin();
       if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
-        const todayDate = new Date().toISOString().split('T')[0];
-        if (checkin.check_in_date === todayDate) {
+        if (checkin.check_in_date === localToday()) {
           setTasks(checkin.evening_tasks as any[]);
         } else {
-          const resetTasks = checkin.evening_tasks.map((t: any) => ({ ...t, done: false }));
-          setTasks(resetTasks);
-          await upsertTodayCheckin({ evening_tasks: resetTasks, evening_done: false });
+          const freshTasks = tmpl.map(templateToTask);
+          setTasks(freshTasks);
+          await upsertTodayCheckin({ evening_tasks: freshTasks, evening_done: false });
         }
       } else {
-        setTasks(defaultTasks);
+        setTasks(tmpl.map(templateToTask));
       }
     } catch (e) {
       console.error(e);
@@ -168,6 +196,21 @@ export default function EveningScreen() {
     ]);
   };
 
+  const handleDeleteTemplate = async (id: string) => {
+    await deleteRoutineTemplate(id);
+    setTemplates(prev => prev.filter(t => t.id !== id));
+  };
+
+  const handleAddTemplate = async () => {
+    if (!newTaskTitle.trim()) return;
+    const added = await addRoutineTemplate('evening', newTaskTitle.trim(), newTaskEmoji.trim() || undefined, templates.length);
+    if (added) {
+      setTemplates(prev => [...prev, added]);
+      setNewTaskTitle('');
+      setNewTaskEmoji('');
+    }
+  };
+
   const renderRightActions = (taskId: string) => (
     <TouchableOpacity
       style={styles.swipeDeleteAction}
@@ -195,8 +238,13 @@ export default function EveningScreen() {
           {/* Header */}
           <View style={styles.headerRow}>
             <Text style={styles.title}>Evening Routine 🌙</Text>
-            <View style={styles.badgeRow}>
-              <Text style={styles.badge}>{completedCount}/{totalCount}</Text>
+            <View style={styles.headerRight}>
+              <View style={styles.badgeRow}>
+                <Text style={styles.badge}>{completedCount}/{totalCount}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowEditModal(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="pencil-outline" size={18} color="#c9a84c88" />
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -337,6 +385,61 @@ export default function EveningScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Edit Routine Modal */}
+      <Modal
+        visible={showEditModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowEditModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Evening Routine</Text>
+              <TouchableOpacity onPress={() => setShowEditModal(false)}>
+                <Ionicons name="close" size={24} color="#c9a84c" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
+              {templates.map(t => (
+                <View key={t.id} style={styles.modalTemplateRow}>
+                  <Text style={styles.modalTemplateText}>
+                    {t.emoji ? `${t.emoji} ${t.title}` : t.title}
+                  </Text>
+                  <TouchableOpacity onPress={() => handleDeleteTemplate(t.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={20} color="#c9a84c88" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalAddRow}>
+              <TextInput
+                style={styles.modalEmojiInput}
+                placeholder="😊"
+                placeholderTextColor="#555"
+                value={newTaskEmoji}
+                onChangeText={setNewTaskEmoji}
+                maxLength={2}
+              />
+              <TextInput
+                style={styles.modalTitleInput}
+                placeholder="Task name..."
+                placeholderTextColor="#555"
+                value={newTaskTitle}
+                onChangeText={setNewTaskTitle}
+                onSubmitEditing={handleAddTemplate}
+                returnKeyType="done"
+              />
+              <TouchableOpacity style={styles.modalAddButton} onPress={handleAddTemplate}>
+                <Ionicons name="add" size={22} color="#1a1a2e" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -360,6 +463,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: 'bold',
     color: '#c9a84c',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   badgeRow: {
     backgroundColor: '#c9a84c22',
@@ -610,5 +718,79 @@ const styles = StyleSheet.create({
     color: '#c9a84c',
     fontSize: 14,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: '#000000aa',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#16213e',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    color: '#c9a84c',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalList: {
+    flexGrow: 0,
+    marginBottom: 16,
+  },
+  modalTemplateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c22',
+  },
+  modalTemplateText: {
+    color: '#fff',
+    fontSize: 15,
+    flex: 1,
+  },
+  modalAddRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 8,
+  },
+  modalEmojiInput: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 10,
+    padding: 12,
+    color: '#fff',
+    fontSize: 16,
+    width: 52,
+    textAlign: 'center',
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  modalTitleInput: {
+    flex: 1,
+    backgroundColor: '#1a1a2e',
+    borderRadius: 10,
+    padding: 12,
+    color: '#fff',
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  modalAddButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 10,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
