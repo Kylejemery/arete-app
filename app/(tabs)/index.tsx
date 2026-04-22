@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin, getGoals, getRandomCabinetQuote } from '@/lib/db';
-import { supabase } from '@/lib/supabase';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote } from '@/lib/db';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -13,17 +12,7 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
-
 const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
-
-interface Resource {
-  goal: string;
-  title: string;
-  url: string;
-  type: 'article' | 'book' | 'research';
-  summary: string;
-}
 
 export default function HomeScreen() {
   const [userName, setUserName] = useState('');
@@ -34,12 +23,6 @@ export default function HomeScreen() {
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
-
-  // Resource feed
-  const [resources, setResources] = useState<Resource[]>([]);
-  const [resourcesLoading, setResourcesLoading] = useState(false);
-  const [activeGoalsCount, setActiveGoalsCount] = useState(0);
-  const resourcesLoadedRef = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -64,46 +47,6 @@ export default function HomeScreen() {
     setMorningDone(checkin?.morning_done ?? false);
     setEveningDone(checkin?.evening_done ?? false);
     setStreak(checkin?.streak ?? 0);
-
-    // Load resources only on first focus
-    if (!resourcesLoadedRef.current) {
-      fetchResources();
-    }
-  };
-
-  const fetchResources = async (force = false) => {
-    if (resourcesLoadedRef.current && !force) return;
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const goals = await getGoals(user.id);
-      const active = goals.filter(g => !g.completed);
-      setActiveGoalsCount(active.length);
-      if (active.length === 0) {
-        resourcesLoadedRef.current = true;
-        return;
-      }
-      setResourcesLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/resources/fetch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ goals: active }),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      setResources(data.resources ?? []);
-      resourcesLoadedRef.current = true;
-    } catch (e) {
-      console.error('fetchResources error:', e);
-    } finally {
-      setResourcesLoading(false);
-    }
-  };
-
-  const handleRefresh = () => {
-    resourcesLoadedRef.current = false;
-    setResources([]);
-    fetchResources(true);
   };
 
   const loadQuote = async () => {
@@ -118,32 +61,6 @@ export default function HomeScreen() {
     } catch (e) {
       console.error('loadQuote error:', e);
     }
-  };
-
-  // Group resources by goal
-  const groupedResources = resources.reduce<Record<string, Resource[]>>((acc, r) => {
-    const key = r.goal || 'Resources';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(r);
-    return acc;
-  }, {});
-
-  const typeBadgeStyle = (type: Resource['type']) => {
-    if (type === 'book') return styles.badgeBook;
-    if (type === 'research') return styles.badgeResearch;
-    return styles.badgeArticle;
-  };
-
-  const typeBadgeTextStyle = (type: Resource['type']) => {
-    if (type === 'book') return styles.badgeBookText;
-    if (type === 'research') return styles.badgeResearchText;
-    return styles.badgeArticleText;
-  };
-
-  const typeLabel = (type: Resource['type']) => {
-    if (type === 'book') return 'Book';
-    if (type === 'research') return 'Research';
-    return 'Article';
   };
 
   return (
@@ -217,61 +134,6 @@ export default function HomeScreen() {
           {eveningDone && <Ionicons name="checkmark-circle" size={20} color="#1a1a2e" />}
         </TouchableOpacity>
       </View>
-
-      {/* Resource Feed */}
-      <View style={styles.resourceFeedHeader}>
-        <Text style={styles.sectionTitle}>Resources for Your Goals</Text>
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh} disabled={resourcesLoading}>
-          <Ionicons name="refresh-outline" size={15} color={resourcesLoading ? '#555' : '#c9a84c'} />
-          <Text style={[styles.refreshText, resourcesLoading && styles.refreshTextDisabled]}>Refresh</Text>
-        </TouchableOpacity>
-      </View>
-
-      {resourcesLoading && (
-        <View style={styles.resourceLoadingCard}>
-          <Ionicons name="search-outline" size={20} color="#c9a84c" />
-          <Text style={styles.resourceLoadingText}>Finding resources for your goals...</Text>
-        </View>
-      )}
-
-      {!resourcesLoading && activeGoalsCount === 0 && (
-        <View style={styles.resourceEmptyCard}>
-          <Text style={styles.resourceEmptyText}>Add goals to see curated resources here.</Text>
-        </View>
-      )}
-
-      {!resourcesLoading && activeGoalsCount > 0 && resources.length === 0 && resourcesLoadedRef.current && (
-        <View style={styles.resourceEmptyCard}>
-          <Text style={styles.resourceEmptyText}>No resources found. Tap Refresh to try again.</Text>
-        </View>
-      )}
-
-      {!resourcesLoading && Object.entries(groupedResources).map(([goal, items]) => (
-        <View key={goal} style={styles.resourceGroup}>
-          <Text style={styles.resourceGoalLabel}>{goal}</Text>
-          {items.map((r, i) => (
-            <View key={i} style={styles.resourceCard}>
-              <View style={styles.resourceCardTop}>
-                <View style={[styles.typeBadge, typeBadgeStyle(r.type)]}>
-                  <Text style={[styles.typeBadgeText, typeBadgeTextStyle(r.type)]}>
-                    {typeLabel(r.type)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.resourceTitle}>{r.title}</Text>
-              {r.summary ? (
-                <Text style={styles.resourceSummary}>{r.summary}</Text>
-              ) : null}
-              <TouchableOpacity
-                style={styles.viewLink}
-                onPress={() => r.url && Linking.openURL(r.url)}
-              >
-                <Text style={styles.viewLinkText}>View →</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      ))}
 
     </ScrollView>
   );
@@ -417,135 +279,6 @@ const styles = StyleSheet.create({
   ktBannerLink: {
     color: '#c9a84c',
     fontSize: 14,
-    fontWeight: '600',
-  },
-  // Resource Feed
-  resourceFeedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#16213e',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-  },
-  refreshText: {
-    color: '#c9a84c',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  refreshTextDisabled: {
-    color: '#555',
-  },
-  resourceLoadingCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-    marginBottom: 12,
-  },
-  resourceLoadingText: {
-    color: '#888',
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  resourceEmptyCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  resourceEmptyText: {
-    color: '#555',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  resourceGroup: {
-    marginBottom: 20,
-  },
-  resourceGoalLabel: {
-    color: '#c9a84c',
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 10,
-  },
-  resourceCard: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#c9a84c22',
-    gap: 8,
-  },
-  resourceCardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  typeBadge: {
-    borderRadius: 6,
-    paddingVertical: 3,
-    paddingHorizontal: 9,
-  },
-  badgeBook: {
-    backgroundColor: '#c9a84c22',
-    borderWidth: 1,
-    borderColor: '#c9a84c55',
-  },
-  badgeArticle: {
-    backgroundColor: '#1e3a5f',
-    borderWidth: 1,
-    borderColor: '#4a90d944',
-  },
-  badgeResearch: {
-    backgroundColor: '#1a3a2a',
-    borderWidth: 1,
-    borderColor: '#4caf5044',
-  },
-  typeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  badgeBookText: { color: '#c9a84c' },
-  badgeArticleText: { color: '#4a90d9' },
-  badgeResearchText: { color: '#4caf50' },
-  resourceTitle: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  resourceSummary: {
-    color: '#888',
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  viewLink: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-  },
-  viewLinkText: {
-    color: '#c9a84c',
-    fontSize: 13,
     fontWeight: '600',
   },
 });

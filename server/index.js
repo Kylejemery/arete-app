@@ -43,6 +43,9 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'max_tokens must be a positive integer' });
   }
 
+  const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
+  const enrichedSystem = system + resourceInstruction;
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -50,12 +53,14 @@ app.post('/api/chat', async (req, res) => {
         'Content-Type': 'application/json',
         'x-api-key': CLAUDE_API_KEY,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
         model: model || 'claude-opus-4-5',
         max_tokens: max_tokens || 1500,
-        system,
+        system: enrichedSystem,
         messages,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       }),
     });
 
@@ -66,6 +71,10 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const data = await response.json();
+    if (data.content && Array.isArray(data.content)) {
+      const textBlocks = data.content.filter(b => b.type === 'text');
+      if (textBlocks.length > 0) data.content = textBlocks;
+    }
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API:', error);
@@ -106,7 +115,8 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 [END KNOW THYSELF]`;
   }
 
-  const enrichedSystem = system + profileBlock;
+  const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
+  const enrichedSystem = system + profileBlock + resourceInstruction;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -115,12 +125,14 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
         'Content-Type': 'application/json',
         'x-api-key': CLAUDE_API_KEY,
         'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
         model: model || 'claude-opus-4-5',
         max_tokens: max_tokens || 1500,
         system: enrichedSystem,
         messages,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       }),
     });
 
@@ -131,6 +143,10 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     }
 
     const data = await response.json();
+    if (data.content && Array.isArray(data.content)) {
+      const textBlocks = data.content.filter(b => b.type === 'text');
+      if (textBlocks.length > 0) data.content = textBlocks;
+    }
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API (chat/counselor):', error);
@@ -309,6 +325,8 @@ Requirements:
 - 4–6 paragraphs total
 
 Where you make empirical claims about health, neuroscience, parenting, behavior change, or any scientific topic, cite the specific study, researcher, or institution behind the claim. Format citations inline and naturally as plain prose — for example: 'A 2016 meta-analysis in JAMA found...' or 'Researcher Brené Brown's work on shame resilience shows...' Never use footnotes, numbered references, or any XML tags. Do not use <cite>, <source>, or any other markup. All citations must be plain text woven naturally into the sentence. The scroll should read as authoritative, well-researched prose — not an academic paper, but not unsourced either. If you use web search to find current research, integrate what you find naturally into the counselor's voice.
+
+Where relevant, include 1-2 specific external resources (books or articles) that support the scroll's argument. Search for them to confirm they exist. Embed them naturally as hyperlinks in the prose — do not add a references section at the end.
 
 You must respond with ONLY valid JSON in exactly this format, nothing else:
 {"title": "<evocative title, 5–12 words>", "body": "<full article text, paragraphs separated by \\n\\n>"}`;
