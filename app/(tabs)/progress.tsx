@@ -44,8 +44,6 @@ export default function ProgressScreen() {
   const [totalPages, setTotalPages] = useState(0);
   const [totalReadingSeconds, setTotalReadingSeconds] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
-  const [encodedBeliefCount, setEncodedBeliefCount] = useState(0);
-  const [inProgressBeliefCount, setInProgressBeliefCount] = useState(0);
 
   // Screen time
   const [screenTimeGoal, setScreenTimeGoal] = useState(2);
@@ -66,10 +64,6 @@ export default function ProgressScreen() {
       const journalEntries = await getJournalEntries();
       setJournalCount(journalEntries.filter(e => e.type === 'reflection').length);
       setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
-      const encoded = journalEntries.filter(e => e.type === 'belief' && e.belief_stage === 'encoded').length;
-      const inProgress = journalEntries.filter(e => e.type === 'belief' && e.belief_stage !== 'encoded').length;
-      setEncodedBeliefCount(encoded);
-      setInProgressBeliefCount(inProgress);
 
       const calData = {};
       setCalendarData(calData);
@@ -245,27 +239,6 @@ export default function ProgressScreen() {
               </View>
             </View>
 
-            {/* Beliefs */}
-            <View style={styles.sectionCard}>
-              <Text style={styles.sectionTitle}>🧠 Belief Journal</Text>
-              <View style={styles.beliefStatsRow}>
-                <View style={styles.beliefStatItem}>
-                  <Text style={styles.beliefStatNumber}>{encodedBeliefCount}</Text>
-                  <Text style={styles.beliefStatLabel}>Encoded</Text>
-                </View>
-                <View style={styles.beliefStatDivider} />
-                <View style={styles.beliefStatItem}>
-                  <Text style={styles.beliefStatNumber}>{inProgressBeliefCount}</Text>
-                  <Text style={styles.beliefStatLabel}>In Progress</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={styles.beliefJournalLink}
-                onPress={() => router.push('/journal')}
-              >
-                <Text style={styles.beliefJournalLinkText}>View Belief Journal →</Text>
-              </TouchableOpacity>
-            </View>
 
             {/* Screen Time Card */}
             <View style={styles.sectionCard}>
@@ -685,39 +658,5 @@ const styles = StyleSheet.create({
   sessionStats: { alignItems: 'flex-end' },
   sessionPages: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
   sessionDuration: { color: '#888', fontSize: 11, marginTop: 2 },
-  beliefStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    gap: 0,
-  },
-  beliefStatItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  beliefStatNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#c9a84c',
-  },
-  beliefStatLabel: {
-    color: '#888',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  beliefStatDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: '#c9a84c22',
-  },
-  beliefJournalLink: {
-    alignItems: 'center',
-    paddingTop: 4,
-  },
-  beliefJournalLinkText: {
-    color: '#c9a84c',
-    fontSize: 14,
-  },
+
 });
