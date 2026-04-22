@@ -1,7 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter, usePathname } from 'expo-router';
+import { useEffect } from 'react';
+import { AppState } from 'react-native';
+
+function getRoutineTab(): string | null {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return '/morning';
+  if (hour >= 17) return '/evening';
+  return null;
+}
 
 export default function TabsLayout() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const checkTimeAndNavigate = () => {
+      const target = getRoutineTab();
+      if (!target) return;
+      if (pathname !== target) router.navigate(target as any);
+    };
+
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') checkTimeAndNavigate();
+    });
+    checkTimeAndNavigate();
+    return () => sub.remove();
+  }, [pathname]);
+
   return (
     <Tabs
       screenOptions={{

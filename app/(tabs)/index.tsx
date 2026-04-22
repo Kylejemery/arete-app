@@ -6,6 +6,13 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getUserSettings, getTodayCheckin, getGoals, getRandomCabinetQuote } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
 const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
@@ -20,7 +27,6 @@ interface Resource {
 
 export default function HomeScreen() {
   const [userName, setUserName] = useState('');
-  const [greeting, setGreeting] = useState<{ salutation: string; subtitle: string }>({ salutation: '', subtitle: '' });
   const [quote, setQuote] = useState<{ text: string; author: string } | null>(null);
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
@@ -38,7 +44,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-      setGreeting(getGreeting());
       loadQuote();
     }, [])
   );
@@ -101,13 +106,6 @@ export default function HomeScreen() {
     fetchResources(true);
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return { salutation: 'Good morning,', subtitle: 'Rise and pursue virtue' };
-    if (hour < 18) return { salutation: 'Keep going,', subtitle: 'Continue with excellence' };
-    return { salutation: 'Good evening,', subtitle: 'Reflect on this day' };
-  };
-
   const loadQuote = async () => {
     try {
       const settings = await getUserSettings();
@@ -154,8 +152,7 @@ export default function HomeScreen() {
       {/* Top Bar with Settings */}
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.greeting}>{greeting.salutation}</Text>
-          <Text style={styles.greetingSubtitle}>{greeting.subtitle}</Text>
+          <Text style={styles.greeting}>{getGreeting()}, {userName.split(' ')[0]}</Text>
           <Text style={styles.name}>{userName} ⚔️</Text>
         </View>
         <TouchableOpacity
