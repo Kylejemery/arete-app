@@ -28,16 +28,6 @@ import {
   type RoutineTemplate,
 } from '@/lib/db';
 
-const reflectionPrompts = [
-  "What was your biggest win today?",
-  "What are you most grateful for today?",
-  "What made you smile today?",
-  "What challenge did you overcome today?",
-  "Who did you positively impact today?",
-  "What progress did you make towards your goals?",
-  "What moment are you most proud of today?",
-];
-
 const stoicPrompts = [
   "What could you have done better today? What would Epictetus say?",
   "Did you act in line with your values today? Would Marcus Aurelius approve?",
@@ -68,18 +58,14 @@ export default function EveningScreen() {
   const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
   const [newTask, setNewTask] = useState('');
   const [showInput, setShowInput] = useState(false);
-  const [reflectionPrompt, setReflectionPrompt] = useState('');
   const [stoicPrompt, setStoicPrompt] = useState('');
-  const [reflectionAnswer, setReflectionAnswer] = useState('');
   const [stoicAnswer, setStoicAnswer] = useState('');
-  const [reflectionSaved, setReflectionSaved] = useState(false);
   const [stoicSaved, setStoicSaved] = useState(false);
   const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
-  const reflectionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
@@ -89,7 +75,6 @@ export default function EveningScreen() {
       loadPrompts();
       loadAnswers();
       return () => {
-        if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
         if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
       };
     }, [])
@@ -97,33 +82,13 @@ export default function EveningScreen() {
 
   const loadPrompts = () => {
     const day = new Date().getDay();
-    setReflectionPrompt(reflectionPrompts[day]);
     setStoicPrompt(stoicPrompts[day]);
   };
 
   const loadAnswers = async () => {
     const checkin = await getTodayCheckin();
-    if (checkin?.reflection_answer) setReflectionAnswer(checkin.reflection_answer);
     if (checkin?.stoic_answer) setStoicAnswer(checkin.stoic_answer);
     if (checkin?.cabinet_evening_response) setCheckinResponse(checkin.cabinet_evening_response);
-  };
-
-  const saveReflection = async (text: string) => {
-    await upsertTodayCheckin({ reflection_answer: text });
-    setReflectionSaved(true);
-    if (reflectionTimerRef.current) clearTimeout(reflectionTimerRef.current);
-    reflectionTimerRef.current = setTimeout(() => setReflectionSaved(false), 2000);
-    const checkin = await getTodayCheckin();
-    if (!checkin?.cabinet_evening_response) {
-      setCheckinLoading(true);
-      setCheckinResponse(null);
-      const reply = await sendCheckInToCabinet('evening');
-      setCheckinLoading(false);
-      setCheckinResponse(reply);
-      if (reply) {
-        await upsertTodayCheckin({ cabinet_evening_response: reply });
-      }
-    }
   };
 
   const saveStoic = async (text: string) => {
@@ -312,28 +277,6 @@ export default function EveningScreen() {
               <Text style={styles.addButtonText}>Add Discipline</Text>
             </TouchableOpacity>
           )}
-
-          {/* Reflection Prompt */}
-          <View style={styles.promptContainer}>
-            <View style={styles.promptHeader}>
-              <Ionicons name="heart-outline" size={20} color="#c9a84c" />
-              <Text style={styles.promptTitle}>Evening Reflection</Text>
-            </View>
-            <Text style={styles.promptQuestion}>{reflectionPrompt}</Text>
-            <TextInput
-              style={styles.promptInput}
-              placeholder="Write your thoughts..."
-              placeholderTextColor="#555"
-              multiline
-              numberOfLines={4}
-              value={reflectionAnswer}
-              onChangeText={setReflectionAnswer}
-              onBlur={() => saveReflection(reflectionAnswer)}
-            />
-            <TouchableOpacity style={styles.saveButton} onPress={() => saveReflection(reflectionAnswer)}>
-              <Text style={styles.saveButtonText}>{reflectionSaved ? '✓ Saved' : 'Save'}</Text>
-            </TouchableOpacity>
-          </View>
 
           {/* Stoic Prompt */}
           <View style={styles.promptContainer}>
