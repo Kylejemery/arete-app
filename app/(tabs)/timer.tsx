@@ -10,6 +10,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
 
@@ -38,6 +39,8 @@ export default function TimerScreen() {
   const intervalRef = useRef<any>(null);
   const sessionStartTime = useRef<number>(0);
   const backgroundTimeRef = useRef<number | null>(null);
+  const pauseStartRef = useRef<number>(0);
+  const pausedDurationRef = useRef<number>(0);
 
   // History
   const [sessions, setSessions] = useState<any[]>([]);
@@ -52,9 +55,11 @@ export default function TimerScreen() {
   const [pomodoroRunning, setPomodoroRunning] = useState(false);
   const [pomodoroSessions, setPomodoroSessions] = useState(0);
   const pomodoroRef = useRef<any>(null);
+  const pomodoroEndTimeRef = useRef<number>(0);
 
   useEffect(() => {
     loadData();
+    Notifications.requestPermissionsAsync();
     return () => {
       clearInterval(intervalRef.current);
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
@@ -63,35 +68,50 @@ export default function TimerScreen() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
-      if (nextState === 'background' || nextState === 'inactive') {
-        backgroundTimeRef.current = Date.now();
-      } else if (nextState === 'active' && backgroundTimeRef.current && isRunning) {
-        const elapsed = Math.floor((Date.now() - backgroundTimeRef.current) / 1000);
-        setSessionSeconds(prev => prev + elapsed);
-        backgroundTimeRef.current = null;
+      if (nextState === 'active') {
+        if (isRunning && !isPaused) {
+          setSessionSeconds(Math.floor((Date.now() - sessionStartTime.current - pausedDurationRef.current) / 1000));
+        }
+        if (pomodoroRunning) {
+          const remaining = Math.max(0, Math.floor((pomodoroEndTimeRef.current - Date.now()) / 1000));
+          setPomodoroTimeLeft(remaining);
+          if (remaining === 0) {
+            clearInterval(pomodoroRef.current);
+            setPomodoroRunning(false);
+            Notifications.cancelAllScheduledNotificationsAsync();
+            if (pomodoroMode === 'work') {
+              setPomodoroSessions(s => s + 1);
+              setPomodoroMode('break');
+              setPomodoroTimeLeft(5 * 60);
+            } else {
+              setPomodoroMode('work');
+              setPomodoroTimeLeft(25 * 60);
+            }
+          }
+        }
       }
     });
     return () => subscription.remove();
-  }, [isRunning]);
+  }, [isRunning, isPaused, pomodoroRunning, pomodoroMode]);
 
   useEffect(() => {
     if (pomodoroRunning) {
       pomodoroRef.current = setInterval(() => {
-        setPomodoroTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(pomodoroRef.current);
-            setPomodoroRunning(false);
-            if (pomodoroMode === 'work') {
-              setPomodoroSessions(s => s + 1);
-              setPomodoroMode('break');
-              return 5 * 60;
-            } else {
-              setPomodoroMode('work');
-              return 25 * 60;
-            }
+        const remaining = Math.max(0, Math.floor((pomodoroEndTimeRef.current - Date.now()) / 1000));
+        setPomodoroTimeLeft(remaining);
+        if (remaining === 0) {
+          clearInterval(pomodoroRef.current);
+          setPomodoroRunning(false);
+          Notifications.cancelAllScheduledNotificationsAsync();
+          if (pomodoroMode === 'work') {
+            setPomodoroSessions(s => s + 1);
+            setPomodoroMode('break');
+            setPomodoroTimeLeft(5 * 60);
+          } else {
+            setPomodoroMode('work');
+            setPomodoroTimeLeft(25 * 60);
           }
-          return t - 1;
-        });
+        }
       }, 1000);
     } else {
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
@@ -128,8 +148,17 @@ export default function TimerScreen() {
     return `${m}m`;
   };
 
+  const scheduleTimerNotification = async (durationMs: number, label: string) => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    await Notifications.scheduleNotificationAsync({
+      content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
+      trigger: { seconds: Math.floor(durationMs / 1000) },
+    });
+  };
+
   const resetPomodoro = () => {
     setPomodoroRunning(false);
+    Notifications.cancelAllScheduledNotificationsAsync();
     setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
   };
 
@@ -150,22 +179,25 @@ export default function TimerScreen() {
     setShowStartPageModal(false);
     setSessionSeconds(0);
     sessionStartTime.current = Date.now();
+    pausedDurationRef.current = 0;
     setIsRunning(true);
     setIsPaused(false);
     intervalRef.current = setInterval(() => {
-      setSessionSeconds(prev => prev + 1);
+      setSessionSeconds(Math.floor((Date.now() - sessionStartTime.current - pausedDurationRef.current) / 1000));
     }, 1000);
   };
 
   const handlePausePress = () => {
     clearInterval(intervalRef.current);
+    pauseStartRef.current = Date.now();
     setIsPaused(true);
   };
 
   const handleResumePress = () => {
+    pausedDurationRef.current += Date.now() - pauseStartRef.current;
     setIsPaused(false);
     intervalRef.current = setInterval(() => {
-      setSessionSeconds(prev => prev + 1);
+      setSessionSeconds(Math.floor((Date.now() - sessionStartTime.current - pausedDurationRef.current) / 1000));
     }, 1000);
   };
 
@@ -332,6 +364,7 @@ export default function TimerScreen() {
                     key={m}
                     style={[styles.pomodoroModeBtn, pomodoroMode === m && styles.pomodoroModeBtnActive]}
                     onPress={() => {
+                      Notifications.cancelAllScheduledNotificationsAsync();
                       setPomodoroMode(m);
                       setPomodoroTimeLeft(m === 'work' ? 25 * 60 : 5 * 60);
                       setPomodoroRunning(false);
@@ -351,7 +384,15 @@ export default function TimerScreen() {
               <View style={styles.pomodoroButtons}>
                 <TouchableOpacity
                   style={styles.pomodoroStartBtn}
-                  onPress={() => setPomodoroRunning(r => !r)}
+                  onPress={() => {
+                    if (!pomodoroRunning) {
+                      pomodoroEndTimeRef.current = Date.now() + pomodoroTimeLeft * 1000;
+                      scheduleTimerNotification(pomodoroTimeLeft * 1000, pomodoroMode === 'work' ? 'Focus' : 'Break');
+                    } else {
+                      Notifications.cancelAllScheduledNotificationsAsync();
+                    }
+                    setPomodoroRunning(r => !r);
+                  }}
                 >
                   <Text style={styles.pomodoroStartTxt}>{pomodoroRunning ? 'Pause' : 'Start'}</Text>
                 </TouchableOpacity>
