@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs, useRouter, usePathname } from 'expo-router';
-import { useEffect } from 'react';
+import { Tabs, useRouter } from 'expo-router';
+import { useEffect, useRef } from 'react';
 
 function getRoutineTab(): string | null {
   const hour = new Date().getHours();
@@ -11,17 +11,15 @@ function getRoutineTab(): string | null {
 
 export default function TabsLayout() {
   const router = useRouter();
-  const pathname = usePathname();
+  const hasNavigated = useRef(false);
 
   useEffect(() => {
-    const checkTimeAndNavigate = () => {
-      const target = getRoutineTab();
-      if (!target) return;
-      if (pathname !== target) router.navigate(target as any);
-    };
-
-    if (pathname === '/' || pathname === '') checkTimeAndNavigate();
-  }, [pathname]);
+    if (hasNavigated.current) return;
+    const target = getRoutineTab();
+    if (!target) return;
+    hasNavigated.current = true;
+    router.navigate(target as any);
+  }, []);
 
   return (
     <Tabs
