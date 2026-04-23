@@ -2,6 +2,20 @@ import { supabase } from './supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
+const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs = 5000): Promise<Response | null> => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } catch (err) {
+    console.error('fetchWithTimeout failed:', url, err);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+};
+
 export interface Scroll {
   id: string;
   user_id: string;
@@ -99,7 +113,7 @@ export async function triggerScrollGeneration(
 
   for (const goal of targets) {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/scrolls/generate`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/scrolls/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -109,8 +123,8 @@ export async function triggerScrollGeneration(
         }),
       });
 
-      if (!response.ok) {
-        console.error('Scroll generation failed for goal:', goal, response.status);
+      if (!response || !response.ok) {
+        console.error('Scroll generation failed for goal:', goal, response?.status);
         continue;
       }
 

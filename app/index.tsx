@@ -9,18 +9,21 @@ export default function IndexRedirect() {
 
   useEffect(() => {
     if (!session) return;
+    const timeout = setTimeout(() => setKnowThyselfComplete(false), 5000);
     supabase
       .from('profiles')
       .select('know_thyself_complete')
       .eq('id', session.user.id)
       .single()
       .then(({ data }) => {
+        clearTimeout(timeout);
         setKnowThyselfComplete(data?.know_thyself_complete ?? false);
       })
       .catch(() => {
-        // If the column doesn't exist yet, default to false so new users hit onboarding
+        clearTimeout(timeout);
         setKnowThyselfComplete(false);
       });
+    return () => clearTimeout(timeout);
   }, [session]);
 
   if (session === undefined) {
