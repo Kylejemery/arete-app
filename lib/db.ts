@@ -83,7 +83,7 @@ export async function incrementStreak(): Promise<void> {
     // Look at yesterday's row to carry the streak forward
     const d = new Date()
     d.setDate(d.getDate() - 1)
-    const yDate = d.toISOString().split('T')[0]
+    const yDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
     const { data: yRow } = await supabase
       .from('check_ins')
