@@ -27,7 +27,7 @@ const COUNSELOR_META: Record<string, { name: string; role: string }> = {
 };
 
 export default function CounselorChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, initialMessage } = useLocalSearchParams<{ id: string; initialMessage?: string }>();
   const router = useRouter();
   const counselorId = id || 'marcus';
 
@@ -36,9 +36,10 @@ export default function CounselorChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [counselorName, setCounselorName] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
+  const hasSentInitialRef = useRef(false);
 
   useEffect(() => {
-    // Always reset state when counselorId changes
+    hasSentInitialRef.current = false;
     setMessages([]);
     if (counselorId === 'futureSelf') {
       getUserSettings().then((settings) => {
@@ -47,9 +48,23 @@ export default function CounselorChatScreen() {
     } else {
       setCounselorName(COUNSELOR_META[counselorId]?.name || counselorId);
     }
-    // Load thread
-    loadThread(counselorId).then((thread) => {
+    loadThread(counselorId).then(async (thread) => {
       setMessages(thread.messages);
+      if (initialMessage && !hasSentInitialRef.current) {
+        hasSentInitialRef.current = true;
+        const userMessage: ThreadMessage = { role: 'user', content: initialMessage, timestamp: Date.now() };
+        const updatedMessages = [...thread.messages, userMessage];
+        setMessages(updatedMessages);
+        setIsLoading(true);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+        const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+        const assistantMessage: ThreadMessage = { role: 'assistant', content: reply, timestamp: Date.now(), counselorId };
+        const finalMessages = [...updatedMessages, assistantMessage];
+        setMessages(finalMessages);
+        setIsLoading(false);
+        await appendMessages(counselorId, [userMessage, assistantMessage]);
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      }
     });
   }, [counselorId]);
 

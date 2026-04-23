@@ -21,6 +21,35 @@ function getPrimaryCTA(): { label: string; route: string } {
 
 const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
 
+const DAILY_PROMPTS = [
+  { counselorSlug: 'marcus-aurelius', counselorName: 'Marcus Aurelius', prompt: 'What is the one thing you are avoiding today, and why?' },
+  { counselorSlug: 'epictetus', counselorName: 'Epictetus', prompt: 'What are you treating as necessary that is actually just comfortable?' },
+  { counselorSlug: 'david-goggins', counselorName: 'David Goggins', prompt: 'What are you comfortable with that you should not be?' },
+  { counselorSlug: 'theodore-roosevelt', counselorName: 'Theodore Roosevelt', prompt: 'What bold thing have you been putting off, and what is the real reason?' },
+  { counselorSlug: 'marcus-aurelius', counselorName: 'Marcus Aurelius', prompt: 'Where did you act from fear instead of reason this week?' },
+  { counselorSlug: 'epictetus', counselorName: 'Epictetus', prompt: 'Name one opinion you are holding that is making you miserable.' },
+  { counselorSlug: 'david-goggins', counselorName: 'David Goggins', prompt: 'When did you stop short of your actual limit this week?' },
+  { counselorSlug: 'theodore-roosevelt', counselorName: 'Theodore Roosevelt', prompt: 'What would you attempt if you were certain you would not fail?' },
+  { counselorSlug: 'marcus-aurelius', counselorName: 'Marcus Aurelius', prompt: 'What external thing are you depending on for your peace today?' },
+  { counselorSlug: 'epictetus', counselorName: 'Epictetus', prompt: 'Is the thing troubling you in your control, or not? Act accordingly.' },
+  { counselorSlug: 'david-goggins', counselorName: 'David Goggins', prompt: 'Name one thing you did today that Future You would respect.' },
+  { counselorSlug: 'theodore-roosevelt', counselorName: 'Theodore Roosevelt', prompt: 'Are you in the arena, or watching from the stands?' },
+  { counselorSlug: 'marcus-aurelius', counselorName: 'Marcus Aurelius', prompt: 'How much of your suffering today was in the event itself, and how much in your judgment of it?' },
+  { counselorSlug: 'epictetus', counselorName: 'Epictetus', prompt: 'What role are you playing right now — and are you playing it well?' },
+];
+
+const SLUG_TO_CHAT_ID: Record<string, string> = {
+  'marcus-aurelius': 'marcus',
+  'epictetus': 'epictetus',
+  'david-goggins': 'goggins',
+  'theodore-roosevelt': 'roosevelt',
+};
+
+function getDailyPrompt() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+  return DAILY_PROMPTS[dayOfYear % DAILY_PROMPTS.length];
+}
+
 export default function HomeScreen() {
   const [userName, setUserName] = useState('');
   const [quote, setQuote] = useState<{ text: string; author: string } | null>(null);
@@ -163,6 +192,26 @@ export default function HomeScreen() {
         </View>
         <Ionicons name="flame" size={32} color="#c9a84c" />
       </View>
+
+      {/* Daily Counselor Prompt */}
+      {(() => {
+        const dp = getDailyPrompt();
+        const chatId = SLUG_TO_CHAT_ID[dp.counselorSlug] ?? dp.counselorSlug;
+        return (
+          <TouchableOpacity
+            style={styles.promptCard}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: '/counselor-chat', params: { id: chatId, initialMessage: dp.prompt } } as any)}
+          >
+            <View style={styles.promptBody}>
+              <Text style={styles.promptLabel}>TODAY'S QUESTION</Text>
+              <Text style={styles.promptText}>{dp.prompt}</Text>
+              <Text style={styles.promptAttribution}>— {dp.counselorName}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#c9a84c" />
+          </TouchableOpacity>
+        );
+      })()}
 
     </ScrollView>
   );
@@ -348,5 +397,40 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 3,
     fontStyle: 'italic',
+  },
+  promptCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: '#c9a84c',
+    padding: 20,
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  promptBody: {
+    flex: 1,
+    gap: 6,
+  },
+  promptLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#c9a84c88',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  promptText: {
+    color: '#fff',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  promptAttribution: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
   },
 });
