@@ -77,6 +77,7 @@ export interface JournalEntry {
   content: string;
   book_title?: string;
   author?: string;
+  source?: string;
   raw_input?: string;
   dialogue_history?: { role: 'user' | 'cabinet'; content: string; timestamp: number }[];
   encoded_belief?: string;

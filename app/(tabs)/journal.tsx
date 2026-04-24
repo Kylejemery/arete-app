@@ -17,9 +17,9 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, getGoals, upsertGoal, completeGoal } from '@/lib/db';
+import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, getGoals, upsertGoal, completeGoal, getReadingData } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import type { Goal } from '@/lib/types';
+import type { Goal, Book } from '@/lib/types';
 
 export interface UnifiedEntry {
     id: string;
@@ -29,6 +29,7 @@ export interface UnifiedEntry {
     updatedAt: number;
     bookTitle?: string;
     author?: string;
+    source?: string;
     rawInput?: string;
     dialogueHistory?: { role: 'user' | 'cabinet'; content: string; timestamp: number }[];
     encodedBelief?: string;
@@ -65,8 +66,10 @@ export default function JournalScreen() {
     const [editingEntry, setEditingEntry] = useState<UnifiedEntry | null>(null);
     const [textInput, setTextInput] = useState('');
     const [quoteText, setQuoteText] = useState('');
-    const [quoteBook, setQuoteBook] = useState('');
-    const [quoteAuthor, setQuoteAuthor] = useState('');
+    const [quoteSource, setQuoteSource] = useState('');
+    const [quoteSourceMode, setQuoteSourceMode] = useState<'dropdown' | 'custom'>('dropdown');
+    const [bookOptions, setBookOptions] = useState<Book[]>([]);
+    const [showSourcePicker, setShowSourcePicker] = useState(false);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [longPressEntry, setLongPressEntry] = useState<UnifiedEntry | null>(null);
 
@@ -87,6 +90,7 @@ export default function JournalScreen() {
         useCallback(() => {
             loadEntries();
             loadGoals();
+            loadBooks();
         }, [])
     );
 
@@ -104,6 +108,7 @@ export default function JournalScreen() {
                     updatedAt: new Date(e.updated_at).getTime(),
                     bookTitle: e.book_title,
                     author: e.author,
+                    source: e.source,
                     rawInput: e.raw_input,
                     dialogueHistory: e.dialogue_history as any,
                     encodedBelief: e.encoded_belief,
@@ -118,12 +123,21 @@ export default function JournalScreen() {
         } catch (e) { console.error(e); }
     };
 
+    const loadBooks = async () => {
+        try {
+            const data = await getReadingData();
+            if (data) {
+                setBookOptions([...(data.current_books || []), ...(data.books_read || [])]);
+            }
+        } catch (e) { console.error(e); }
+    };
+
     const filteredEntries = entries
         .filter(e => activeFilter === 'all' || e.type === activeFilter)
         .filter(e => {
             if (!searchQuery.trim()) return true;
             const q = searchQuery.toLowerCase();
-            const text = [e.content, e.bookTitle, e.author, e.topic, e.rawInput]
+            const text = [e.content, e.bookTitle, e.author, e.source, e.topic, e.rawInput]
                 .filter(Boolean).join(' ').toLowerCase();
             return text.includes(q);
         })
@@ -131,23 +145,21 @@ export default function JournalScreen() {
 
     const addEntry = async () => {
         if (inputType === 'quote') {
-            if (!quoteText.trim() || !quoteBook.trim()) {
-                Alert.alert('Required', 'Please enter a quote and book title.');
+            if (!quoteText.trim()) {
+                Alert.alert('Required', 'Please enter a quote.');
                 return;
             }
             const created = await createJournalEntry({
                 type: 'quote',
                 content: quoteText.trim(),
-                book_title: quoteBook.trim(),
-                author: quoteAuthor.trim() || undefined,
+                source: quoteSource.trim() || undefined,
             });
             if (created) {
                 const entry: UnifiedEntry = {
                     id: created.id,
                     type: 'quote',
                     content: created.content,
-                    bookTitle: created.book_title,
-                    author: created.author,
+                    source: created.source,
                     createdAt: new Date(created.created_at).getTime(),
                     updatedAt: new Date(created.updated_at).getTime(),
                 };
@@ -177,20 +189,18 @@ export default function JournalScreen() {
     const updateEntry = async () => {
         if (!editingEntry) return;
         if (editingEntry.type === 'quote') {
-            if (!quoteText.trim() || !quoteBook.trim()) {
-                Alert.alert('Required', 'Please enter a quote and book title.');
+            if (!quoteText.trim()) {
+                Alert.alert('Required', 'Please enter a quote.');
                 return;
             }
             await updateJournalEntry(editingEntry.id, {
                 content: quoteText.trim(),
-                book_title: quoteBook.trim(),
-                author: quoteAuthor.trim() || undefined,
+                source: quoteSource.trim() || undefined,
             });
             const updated: UnifiedEntry = {
                 ...editingEntry,
                 content: quoteText.trim(),
-                bookTitle: quoteBook.trim(),
-                author: quoteAuthor.trim() || undefined,
+                source: quoteSource.trim() || undefined,
                 updatedAt: Date.now(),
             };
             setEntries(entries.map(e => e.id === updated.id ? updated : e));
@@ -220,7 +230,7 @@ export default function JournalScreen() {
         setShowInputForm(false);
         setEditingEntry(null);
         setTextInput('');
-        setQuoteText(''); setQuoteBook(''); setQuoteAuthor('');
+        setQuoteText(''); setQuoteSource(''); setQuoteSourceMode('dropdown');
         setInputType(null);
     };
 
@@ -229,8 +239,10 @@ export default function JournalScreen() {
         setEditingEntry(entry);
         if (entry.type === 'quote') {
             setQuoteText(entry.content);
-            setQuoteBook(entry.bookTitle || '');
-            setQuoteAuthor(entry.author || '');
+            const src = entry.source || '';
+            const isCustom = !!src && !bookOptions.some(b => `${b.title} — ${b.author}` === src);
+            setQuoteSource(src);
+            setQuoteSourceMode(isCustom ? 'custom' : 'dropdown');
         } else {
             setTextInput(entry.content);
         }
@@ -242,7 +254,7 @@ export default function JournalScreen() {
         setShowTypeSelector(false);
         setInputType(type);
         setEditingEntry(null);
-        setTextInput(''); setQuoteText(''); setQuoteBook(''); setQuoteAuthor('');
+        setTextInput(''); setQuoteText(''); setQuoteSource(''); setQuoteSourceMode('dropdown');
         setShowInputForm(true);
     };
 
@@ -405,20 +417,34 @@ export default function JournalScreen() {
                                     onChangeText={setQuoteText}
                                     textAlignVertical="top"
                                 />
-                                <TextInput
-                                    style={styles.smallInput}
-                                    placeholder="Book title *"
-                                    placeholderTextColor="#555"
-                                    value={quoteBook}
-                                    onChangeText={setQuoteBook}
-                                />
-                                <TextInput
-                                    style={styles.smallInput}
-                                    placeholder="Author (optional)"
-                                    placeholderTextColor="#555"
-                                    value={quoteAuthor}
-                                    onChangeText={setQuoteAuthor}
-                                />
+                                <Text style={styles.sourceLabel}>Source</Text>
+                                {quoteSourceMode === 'custom' ? (
+                                    <View>
+                                        <TextInput
+                                            style={styles.smallInput}
+                                            placeholder="Article, podcast, person..."
+                                            placeholderTextColor="#555"
+                                            value={quoteSource}
+                                            onChangeText={setQuoteSource}
+                                        />
+                                        <TouchableOpacity
+                                            style={styles.backToListLink}
+                                            onPress={() => { setQuoteSourceMode('dropdown'); setQuoteSource(''); }}
+                                        >
+                                            <Text style={styles.backToListText}>← Back to list</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : (
+                                    <TouchableOpacity
+                                        style={styles.sourceButton}
+                                        onPress={() => setShowSourcePicker(true)}
+                                    >
+                                        <Text style={quoteSource ? styles.sourceButtonValueText : styles.sourceButtonPlaceholderText} numberOfLines={1}>
+                                            {quoteSource || 'Select or enter source (optional)'}
+                                        </Text>
+                                        <Ionicons name="chevron-down" size={16} color="#888" />
+                                    </TouchableOpacity>
+                                )}
                             </>
                         ) : (
                             <TextInput
@@ -434,6 +460,62 @@ export default function JournalScreen() {
                         )}
                     </ScrollView>
                 </KeyboardAvoidingView>
+
+                {/* Source picker modal */}
+                <Modal
+                    visible={showSourcePicker}
+                    transparent
+                    animationType="slide"
+                    onRequestClose={() => setShowSourcePicker(false)}
+                >
+                    <TouchableWithoutFeedback onPress={() => setShowSourcePicker(false)}>
+                        <View style={styles.modalOverlay}>
+                            <TouchableWithoutFeedback>
+                                <View style={styles.sourcePickerSheet}>
+                                    <Text style={styles.typeSelectorTitle}>Select Source</Text>
+                                    <ScrollView showsVerticalScrollIndicator={false}>
+                                        <TouchableOpacity
+                                            style={styles.sourcePickerOption}
+                                            onPress={() => { setQuoteSource(''); setShowSourcePicker(false); }}
+                                        >
+                                            <Text style={styles.sourcePickerOptionText}>None</Text>
+                                        </TouchableOpacity>
+                                        {bookOptions.map((book, i) => (
+                                            <TouchableOpacity
+                                                key={i}
+                                                style={[
+                                                    styles.sourcePickerOption,
+                                                    quoteSource === `${book.title} — ${book.author}` && styles.sourcePickerOptionActive,
+                                                ]}
+                                                onPress={() => {
+                                                    setQuoteSource(`${book.title} — ${book.author}`);
+                                                    setQuoteSourceMode('dropdown');
+                                                    setShowSourcePicker(false);
+                                                }}
+                                            >
+                                                <Text style={styles.sourcePickerBookTitle}>{book.title}</Text>
+                                                <Text style={styles.sourcePickerBookAuthor}>{book.author}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                        <TouchableOpacity
+                                            style={[styles.sourcePickerOption, styles.sourcePickerCustomOption]}
+                                            onPress={() => {
+                                                setQuoteSourceMode('custom');
+                                                setQuoteSource('');
+                                                setShowSourcePicker(false);
+                                            }}
+                                        >
+                                            <Text style={styles.sourcePickerCustomText}>Enter custom source...</Text>
+                                        </TouchableOpacity>
+                                    </ScrollView>
+                                    <TouchableOpacity style={styles.cancelButton} onPress={() => setShowSourcePicker(false)}>
+                                        <Text style={styles.cancelText}>Cancel</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </View>
+                    </TouchableWithoutFeedback>
+                </Modal>
             </SafeAreaView>
         );
     }
@@ -556,11 +638,21 @@ export default function JournalScreen() {
                                             </Text>
                                             {isExpanded ? (
                                                 <View style={styles.quoteFooterRow}>
-                                                    {entry.bookTitle && <Text style={styles.quoteBook}>📖 {entry.bookTitle}</Text>}
-                                                    {entry.author && <Text style={styles.quoteAuthor}>— {entry.author}</Text>}
+                                                    {entry.source ? (
+                                                        <Text style={styles.quoteAuthor}>— {entry.source}</Text>
+                                                    ) : (
+                                                        <>
+                                                            {entry.bookTitle && <Text style={styles.quoteBook}>📖 {entry.bookTitle}</Text>}
+                                                            {entry.author && <Text style={styles.quoteAuthor}>— {entry.author}</Text>}
+                                                        </>
+                                                    )}
                                                 </View>
                                             ) : (
-                                                entry.bookTitle ? <Text style={styles.quoteBookPreview}>📖 {entry.bookTitle}</Text> : null
+                                                (entry.source || entry.bookTitle) ? (
+                                                    <Text style={styles.quoteBookPreview}>
+                                                        {entry.source ? `— ${entry.source}` : `📖 ${entry.bookTitle}`}
+                                                    </Text>
+                                                ) : null
                                             )}
                                         </>
                                     ) : (
@@ -1061,4 +1153,32 @@ const styles = StyleSheet.create({
         backgroundColor: '#16213e', borderRadius: 12, padding: 14,
         color: '#fff', fontSize: 14, borderWidth: 1, borderColor: '#c9a84c22', marginBottom: 10,
     },
+
+    // ── Source field ─────────────────────────────────────────────────────────
+    sourceLabel: { color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 6, marginTop: 2 },
+    sourceButton: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 14,
+        borderWidth: 1, borderColor: '#c9a84c22', marginBottom: 10,
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    },
+    sourceButtonPlaceholderText: { color: '#555', fontSize: 14, flex: 1 },
+    sourceButtonValueText: { color: '#fff', fontSize: 14, flex: 1 },
+    backToListLink: { marginBottom: 10, marginTop: -4 },
+    backToListText: { color: '#c9a84c', fontSize: 13 },
+
+    // ── Source picker sheet ───────────────────────────────────────────────────
+    sourcePickerSheet: {
+        backgroundColor: '#16213e', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        padding: 24, paddingBottom: 40, maxHeight: '70%',
+    },
+    sourcePickerOption: {
+        paddingVertical: 12, paddingHorizontal: 4,
+        borderBottomWidth: 1, borderBottomColor: '#c9a84c11',
+    },
+    sourcePickerOptionActive: { backgroundColor: '#c9a84c11', borderRadius: 8 },
+    sourcePickerOptionText: { color: '#888', fontSize: 15 },
+    sourcePickerBookTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+    sourcePickerBookAuthor: { color: '#888', fontSize: 12, marginTop: 2 },
+    sourcePickerCustomOption: { marginTop: 4 },
+    sourcePickerCustomText: { color: '#c9a84c', fontSize: 14, fontWeight: '600' },
 });
