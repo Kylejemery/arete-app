@@ -152,7 +152,7 @@ export default function TimerScreen() {
     await Notifications.cancelAllScheduledNotificationsAsync();
     await Notifications.scheduleNotificationAsync({
       content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
-      trigger: { seconds: Math.floor(durationMs / 1000) },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.floor(durationMs / 1000), repeats: false },
     });
   };
 
