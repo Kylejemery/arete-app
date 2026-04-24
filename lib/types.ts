@@ -123,6 +123,7 @@ export interface Goal {
   completed: boolean
   completed_at?: string
   source: 'onboarding' | 'user'
+  category?: string
   created_at: string
   updated_at: string
 }

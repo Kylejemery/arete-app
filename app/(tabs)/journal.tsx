@@ -49,6 +49,33 @@ const TYPE_LABELS: Record<string, string> = {
     idea: '🧠 Idea',
 };
 
+const GOAL_CATEGORIES = ['GENERAL', 'PHYSICAL', 'BEHAVIORAL', 'HEALTH', 'FINANCIAL', 'MENTAL', 'CAREER', 'RELATIONSHIPS'] as const;
+
+const CATEGORY_COLORS: Record<string, string> = {
+    GENERAL: '#c9a84c',
+    PHYSICAL: '#4a6fa5',
+    BEHAVIORAL: '#7b5ea7',
+    HEALTH: '#4caf50',
+    FINANCIAL: '#26a69a',
+    MENTAL: '#9c27b0',
+    CAREER: '#e87040',
+    RELATIONSHIPS: '#e84077',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+    active: '#c9a84c',
+    in_progress: '#4a6fa5',
+    achieved: '#4caf50',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+    active: 'ACTIVE',
+    in_progress: 'IN PROGRESS',
+    achieved: 'ACHIEVED',
+};
+
+type GoalStatus = 'active' | 'in_progress' | 'achieved';
+
 export default function JournalScreen() {
     const router = useRouter();
     const swipeHandlers = useSwipeNavigation('/journal');
@@ -82,9 +109,11 @@ export default function JournalScreen() {
     const [newTitle, setNewTitle] = useState('');
     const [newDescription, setNewDescription] = useState('');
     const [newTargetDate, setNewTargetDate] = useState('');
+    const [newCategory, setNewCategory] = useState<string>('GENERAL');
     const [saving, setSaving] = useState(false);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const toastOpacity = useRef(new Animated.Value(0)).current;
+    const [goalStatuses, setGoalStatuses] = useState<Record<string, GoalStatus>>({});
 
     useFocusEffect(
         useCallback(() => {
@@ -271,11 +300,6 @@ export default function JournalScreen() {
 
     // ── Goals functions ──────────────────────────────────────────────────────
 
-    /** Normalise partial date input to YYYY-MM-DD so Supabase doesn't reject it.
-     *  "2027"       → "2027-01-01"
-     *  "2027-06"    → "2027-06-01"
-     *  "2027-06-15" → "2027-06-15"
-     */
     const normalizeTargetDate = (raw: string): string | undefined => {
         const s = raw.trim();
         if (!s) return undefined;
@@ -329,6 +353,15 @@ export default function JournalScreen() {
         );
     };
 
+    const cycleStatus = (goal: Goal) => {
+        const current = goalStatuses[goal.id] || 'active';
+        if (current === 'active') {
+            setGoalStatuses(prev => ({ ...prev, [goal.id]: 'in_progress' }));
+        } else if (current === 'in_progress') {
+            handleComplete(goal);
+        }
+    };
+
     const handleAdd = async () => {
         if (!newTitle.trim() || !userId) return;
         setSaving(true);
@@ -338,6 +371,7 @@ export default function JournalScreen() {
                 title: newTitle.trim(),
                 description: newDescription.trim() || undefined,
                 target_date: normalizeTargetDate(newTargetDate),
+                category: newCategory,
                 source: 'user',
                 completed: false,
             });
@@ -346,6 +380,7 @@ export default function JournalScreen() {
             setNewTitle('');
             setNewDescription('');
             setNewTargetDate('');
+            setNewCategory('GENERAL');
         } catch (e) {
             console.error('upsertGoal error:', e);
         } finally {
@@ -358,6 +393,7 @@ export default function JournalScreen() {
         setNewTitle('');
         setNewDescription('');
         setNewTargetDate('');
+        setNewCategory('GENERAL');
     };
 
     const formatTargetDate = (dateStr: string) => {
@@ -540,7 +576,7 @@ export default function JournalScreen() {
                         onPress={() => setActiveTab('goals')}
                     >
                         <Text style={[styles.tabButtonText, activeTab === 'goals' && styles.tabButtonTextActive]}>
-                            🎯 Goals
+                            Goals
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -687,26 +723,43 @@ export default function JournalScreen() {
                     {activeGoals.length > 0 && (
                         <>
                             <Text style={styles.sectionLabel}>Active</Text>
-                            {activeGoals.map(goal => (
-                                <View key={goal.id} style={styles.goalCard}>
-                                    <View style={styles.goalCardBody}>
-                                        <Text style={styles.goalTitle}>{goal.title}</Text>
-                                        {goal.description ? (
-                                            <Text style={styles.goalDescription}>{goal.description}</Text>
-                                        ) : null}
-                                        {goal.target_date ? (
-                                            <Text style={styles.goalDate}>By {formatTargetDate(goal.target_date)}</Text>
-                                        ) : null}
-                                    </View>
-                                    <TouchableOpacity
-                                        style={styles.checkButton}
-                                        onPress={() => handleComplete(goal)}
-                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            {activeGoals.map(goal => {
+                                const category = (goal.category?.toUpperCase() || 'GENERAL');
+                                const accentColor = CATEGORY_COLORS[category] || CATEGORY_COLORS.GENERAL;
+                                const status = goalStatuses[goal.id] || 'active';
+                                const statusColor = STATUS_COLORS[status];
+                                return (
+                                    <View
+                                        key={goal.id}
+                                        style={[styles.goalCard, { borderLeftColor: accentColor, borderLeftWidth: 3 }]}
                                     >
-                                        <Ionicons name="checkmark-circle-outline" size={30} color="#c9a84c" />
-                                    </TouchableOpacity>
-                                </View>
-                            ))}
+                                        <View style={styles.goalCardBody}>
+                                            <Text style={[styles.goalCategoryLabel, { color: accentColor }]}>
+                                                {category}
+                                            </Text>
+                                            <Text style={styles.goalTitle}>{goal.title}</Text>
+                                            {goal.description ? (
+                                                <Text style={styles.goalDescription}>{goal.description}</Text>
+                                            ) : null}
+                                            {goal.target_date ? (
+                                                <Text style={styles.goalDate}>By {formatTargetDate(goal.target_date)}</Text>
+                                            ) : null}
+                                        </View>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.statusPill,
+                                                { backgroundColor: statusColor + '22', borderColor: statusColor + '88' },
+                                            ]}
+                                            onPress={() => cycleStatus(goal)}
+                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                        >
+                                            <Text style={[styles.statusPillText, { color: statusColor }]}>
+                                                {STATUS_LABELS[status]}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
                         </>
                     )}
 
@@ -726,22 +779,29 @@ export default function JournalScreen() {
                                 />
                             </TouchableOpacity>
 
-                            {showCompleted && completedGoals.map(goal => (
-                                <View key={goal.id} style={[styles.goalCard, styles.goalCardCompleted]}>
-                                    <View style={styles.goalCardBody}>
-                                        <Text style={[styles.goalTitle, styles.goalTitleCompleted]}>{goal.title}</Text>
-                                        {goal.description ? (
-                                            <Text style={styles.goalDescription}>{goal.description}</Text>
-                                        ) : null}
-                                        {goal.completed_at ? (
-                                            <Text style={styles.goalCompletedDate}>
-                                                Completed {formatCompletedDate(goal.completed_at)}
+                            {showCompleted && completedGoals.map(goal => {
+                                const category = (goal.category?.toUpperCase() || 'GENERAL');
+                                const accentColor = CATEGORY_COLORS[category] || CATEGORY_COLORS.GENERAL;
+                                return (
+                                    <View key={goal.id} style={[styles.goalCard, styles.goalCardCompleted, { borderLeftColor: accentColor + '66', borderLeftWidth: 3 }]}>
+                                        <View style={styles.goalCardBody}>
+                                            <Text style={[styles.goalCategoryLabel, { color: accentColor + '99' }]}>
+                                                {category}
                                             </Text>
-                                        ) : null}
+                                            <Text style={[styles.goalTitle, styles.goalTitleCompleted]}>{goal.title}</Text>
+                                            {goal.description ? (
+                                                <Text style={styles.goalDescription}>{goal.description}</Text>
+                                            ) : null}
+                                            {goal.completed_at ? (
+                                                <Text style={styles.goalCompletedDate}>
+                                                    Completed {formatCompletedDate(goal.completed_at)}
+                                                </Text>
+                                            ) : null}
+                                        </View>
+                                        <Ionicons name="checkmark-circle" size={28} color="#4caf5088" />
                                     </View>
-                                    <Ionicons name="checkmark-circle" size={28} color="#4caf5088" />
-                                </View>
-                            ))}
+                                );
+                            })}
                         </>
                     )}
                 </ScrollView>
@@ -880,6 +940,32 @@ export default function JournalScreen() {
                                         onChangeText={setNewTargetDate}
                                         keyboardType="numbers-and-punctuation"
                                     />
+                                    <Text style={styles.categoryPickerLabel}>Category</Text>
+                                    <ScrollView
+                                        horizontal
+                                        showsHorizontalScrollIndicator={false}
+                                        contentContainerStyle={styles.categoryPickerRow}
+                                    >
+                                        {GOAL_CATEGORIES.map(cat => {
+                                            const color = CATEGORY_COLORS[cat];
+                                            const isSelected = newCategory === cat;
+                                            return (
+                                                <TouchableOpacity
+                                                    key={cat}
+                                                    style={[
+                                                        styles.categoryChip,
+                                                        { borderColor: color + (isSelected ? 'cc' : '55') },
+                                                        isSelected && { backgroundColor: color + '22' },
+                                                    ]}
+                                                    onPress={() => setNewCategory(cat)}
+                                                >
+                                                    <Text style={[styles.categoryChipText, { color: isSelected ? color : '#666' }]}>
+                                                        {cat}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            );
+                                        })}
+                                    </ScrollView>
                                     <TouchableOpacity
                                         style={[
                                             styles.saveButton,
@@ -959,18 +1045,16 @@ const styles = StyleSheet.create({
 
     // Goals header extras
     goalsSubHeader: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
         marginBottom: 10,
     },
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 6,
         backgroundColor: '#c9a84c',
         borderRadius: 10,
-        paddingVertical: 8,
-        paddingHorizontal: 14,
+        paddingVertical: 10,
     },
     addButtonText: { color: '#1a1a2e', fontWeight: '700', fontSize: 13 },
 
@@ -1028,18 +1112,40 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        overflow: 'hidden',
     },
     goalCardCompleted: {
         borderColor: '#4caf5022',
         opacity: 0.7,
     },
     goalCardBody: { flex: 1, gap: 4 },
+    goalCategoryLabel: {
+        fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        marginBottom: 2,
+    },
     goalTitle: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 22 },
     goalTitleCompleted: { color: '#888', textDecorationLine: 'line-through' },
     goalDescription: { color: '#888', fontSize: 13, lineHeight: 20 },
     goalDate: { color: '#c9a84c', fontSize: 12, marginTop: 2 },
     goalCompletedDate: { color: '#555', fontSize: 12, marginTop: 2 },
-    checkButton: { padding: 2 },
+    statusPill: {
+        borderRadius: 20,
+        borderWidth: 1,
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 80,
+    },
+    statusPillText: {
+        fontSize: 10,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+        textAlign: 'center',
+    },
     completedToggle: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -1120,6 +1226,31 @@ const styles = StyleSheet.create({
         borderColor: '#c9a84c33',
     },
     modalInputMultiline: { minHeight: 80, textAlignVertical: 'top' },
+    categoryPickerLabel: {
+        color: '#888',
+        fontSize: 12,
+        fontWeight: '600',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 2,
+    },
+    categoryPickerRow: {
+        flexDirection: 'row',
+        gap: 8,
+        paddingVertical: 4,
+    },
+    categoryChip: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        backgroundColor: 'transparent',
+    },
+    categoryChipText: {
+        fontSize: 11,
+        fontWeight: '700',
+        letterSpacing: 0.5,
+    },
     saveButton: {
         backgroundColor: '#c9a84c',
         borderRadius: 12,
