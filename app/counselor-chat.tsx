@@ -338,7 +338,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   userMessageRow: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   userBubble: {
@@ -356,6 +358,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   counselorMessageRow: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
