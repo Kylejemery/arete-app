@@ -1,10 +1,10 @@
+import { supabase } from '@/lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { supabase } from '@/lib/supabase';
-import type { Session } from '@supabase/supabase-js';
-import * as SplashScreen from 'expo-splash-screen';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -41,16 +41,19 @@ export default function RootLayout() {
     };
   }, []);
 
-  if (session === undefined) {
-    return (
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View
-          style={{ flex: 1, backgroundColor: '#1a1a2e' }}
-          onLayout={() => SplashScreen.hideAsync().catch(() => {})}
-        />
-      </GestureHandlerRootView>
-    );
+ useEffect(() => {
+  if (session !== undefined) {
+    SplashScreen.hideAsync().catch(() => {});
   }
+}, [session]);
+
+if (session === undefined) {
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
+    </GestureHandlerRootView>
+  );
+}
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
