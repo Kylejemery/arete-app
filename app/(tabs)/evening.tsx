@@ -66,6 +66,7 @@ export default function EveningScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
+  const [eveningStreakCounted, setEveningStreakCounted] = useState(false);
   const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
@@ -120,6 +121,9 @@ export default function EveningScreen() {
       } else {
         setTasks(tmpl.map(templateToTask));
       }
+
+      // If evening was already marked done today, treat it as already counted
+      setEveningStreakCounted(checkin?.check_in_date === localToday() && (checkin?.evening_done ?? false));
     } catch (e) {
       console.error(e);
     }
@@ -128,7 +132,10 @@ export default function EveningScreen() {
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
-    if (allDone) await incrementStreak();
+    if (allDone && !eveningStreakCounted) {
+      setEveningStreakCounted(true);
+      await incrementStreak();
+    }
   };
 
   const toggleTask = async (id: string) => {
