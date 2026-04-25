@@ -76,9 +76,28 @@ export async function incrementStreak(): Promise<void> {
   const userId = await getUserId()
   if (!userId) return
   try {
-    // Count only items completed today — never carry over yesterday's total
     const todayRow = await getTodayCheckin()
-    const newStreak = (todayRow?.streak ?? 0) + 1
+
+    // A full day requires BOTH morning and evening completed
+    if (!todayRow?.morning_done || !todayRow?.evening_done) return
+
+    // Already incremented today — bail out
+    if ((todayRow?.streak ?? 0) > 0) return
+
+    // Carry streak forward only if yesterday was also fully completed (both routines)
+    const d = new Date()
+    d.setDate(d.getDate() - 1)
+    const yDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+    const { data: yRow } = await supabase
+      .from('check_ins')
+      .select('streak, morning_done, evening_done')
+      .eq('user_id', userId)
+      .eq('check_in_date', yDate)
+      .maybeSingle()
+
+    const yesterdayFullyCompleted = yRow?.morning_done && yRow?.evening_done
+    const newStreak = (yesterdayFullyCompleted ? (yRow?.streak ?? 0) : 0) + 1
     await upsertTodayCheckin({ streak: newStreak })
   } catch (e) {
     console.error('incrementStreak error:', e)

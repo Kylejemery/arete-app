@@ -61,7 +61,6 @@ export default function MorningScreen() {
   const [showInput, setShowInput] = useState(false);
   const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
   const [checkinLoading, setCheckinLoading] = useState(false);
-  const [morningStreakCounted, setMorningStreakCounted] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
@@ -103,9 +102,6 @@ export default function MorningScreen() {
         setTasks(tmpl.map(templateToTask));
       }
 
-      // If morning was already marked done today, treat it as already counted
-      setMorningStreakCounted(checkin?.check_in_date === localToday() && (checkin?.morning_done ?? false));
-
       if (checkin?.cabinet_morning_response) {
         setCheckinResponse(checkin.cabinet_morning_response);
       }
@@ -117,8 +113,7 @@ export default function MorningScreen() {
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
-    if (allDone && !morningStreakCounted) {
-      setMorningStreakCounted(true);
+    if (allDone) {
       await updateStreak();
       const checkin = await getTodayCheckin();
       if (!checkin?.cabinet_morning_response) {
