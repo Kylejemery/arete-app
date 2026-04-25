@@ -292,6 +292,7 @@ export async function getCabinetConversation() {
     .from('cabinet_conversations')
     .select('*')
     .eq('user_id', userId)
+    .is('counselor_slugs', null)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -27,14 +28,21 @@ const COUNSELOR_META: Record<string, { name: string; role: string }> = {
 };
 
 export default function CounselorChatScreen() {
-  const { id, initialMessage } = useLocalSearchParams<{ id: string; initialMessage?: string }>();
+  const { id, initialMessage, name: nameParam, role: roleParam } = useLocalSearchParams<{
+    id: string;
+    initialMessage?: string;
+    name?: string;
+    role?: string;
+  }>();
   const router = useRouter();
   const counselorId = id || 'marcus';
 
+  const metaEntry = COUNSELOR_META[counselorId];
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [counselorName, setCounselorName] = useState('');
+  const [counselorName, setCounselorName] = useState(nameParam || metaEntry?.name || counselorId);
+  const [counselorRole, setCounselorRole] = useState<string | undefined>(roleParam || metaEntry?.role);
   const scrollViewRef = useRef<ScrollView>(null);
   const hasSentInitialRef = useRef(false);
 
@@ -42,11 +50,15 @@ export default function CounselorChatScreen() {
     hasSentInitialRef.current = false;
     setMessages([]);
     if (counselorId === 'futureSelf') {
+      setCounselorName('Future Self');
+      setCounselorRole('Years From Now');
       getUserSettings().then((settings) => {
-        setCounselorName(settings?.user_name ? `${settings.user_name}'s Future Self` : 'Future Self');
+        if (settings?.user_name) setCounselorName(`${settings.user_name}'s Future Self`);
       });
     } else {
-      setCounselorName(COUNSELOR_META[counselorId]?.name || counselorId);
+      const meta = COUNSELOR_META[counselorId];
+      setCounselorName(nameParam || meta?.name || counselorId);
+      setCounselorRole(roleParam || meta?.role);
     }
     loadThread(counselorId).then(async (thread) => {
       setMessages(thread.messages);
@@ -67,6 +79,14 @@ export default function CounselorChatScreen() {
       }
     });
   }, [counselorId]);
+
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      router.replace('/(tabs)/cabinet' as any);
+      return true;
+    });
+    return () => sub.remove();
+  }, [router]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -147,8 +167,6 @@ export default function CounselorChatScreen() {
     });
   }, [messages, counselorId, counselorName, router]);
 
-  const meta = COUNSELOR_META[counselorId];
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -161,7 +179,7 @@ export default function CounselorChatScreen() {
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.title}>{counselorName}</Text>
-          {meta && <Text style={styles.subtitle}>{meta.role}</Text>}
+          {counselorRole && <Text style={styles.subtitle}>{counselorRole}</Text>}
         </View>
         <TouchableOpacity
           style={styles.newSessionButton}
@@ -195,7 +213,7 @@ export default function CounselorChatScreen() {
               <Text style={styles.emptyQuote}>
                 &ldquo;Begin your private conversation with {counselorName}.&rdquo;
               </Text>
-              {meta && <Text style={styles.emptyRole}>{meta.role}</Text>}
+              {counselorRole && <Text style={styles.emptyRole}>{counselorRole}</Text>}
             </View>
           ) : (
             messages.map((msg, index) =>
