@@ -492,7 +492,7 @@ export default function CabinetScreen() {
               <TouchableOpacity
                 key={counselor.slug}
                 style={styles.counselorCard}
-                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug } })}
+                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug, name: counselor.name, role: counselor.one_line } })}
               >
                 <View style={styles.counselorCardIcon}>
                   <Text style={styles.counselorInitials}>{getInitials(counselor.name)}</Text>
