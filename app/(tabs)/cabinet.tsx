@@ -24,6 +24,7 @@ import {
   clearThread,
   getAllThreadSummaries,
   loadThread,
+  normalizeCounselorId,
 } from '../../services/threadService';
 
 function timeAgo(timestamp: number): string {
@@ -486,7 +487,7 @@ export default function CabinetScreen() {
           </TouchableOpacity>
 
           {cabinetCounselors.map((counselor) => {
-            const summary = threadSummaries.find((s) => s.id === counselor.slug);
+            const summary = threadSummaries.find((s) => s.id === normalizeCounselorId(counselor.slug));
             const hasMessages = summary && summary.messageCount > 0;
             return (
               <TouchableOpacity

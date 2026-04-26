@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { sendMessageToCounselor } from '../services/claudeService';
-import { ThreadMessage, appendMessages, clearThread, loadThread } from '../services/threadService';
+import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import { getUserSettings } from '@/lib/db';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
@@ -35,7 +35,7 @@ export default function CounselorChatScreen() {
     role?: string;
   }>();
   const router = useRouter();
-  const counselorId = id || 'marcus';
+  const counselorId = normalizeCounselorId(id || 'marcus');
 
   const metaEntry = COUNSELOR_META[counselorId];
   const [messages, setMessages] = useState<ThreadMessage[]>([]);

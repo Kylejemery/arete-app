@@ -1,5 +1,21 @@
 import { getThread, upsertThread } from '../lib/db';
 
+/**
+ * Maps long DB counselor slugs → the canonical short thread IDs used throughout the app.
+ * Every entry point that receives a counselor ID should call normalizeCounselorId()
+ * before using it as a thread key, so there is always exactly one thread per counselor.
+ */
+const COUNSELOR_SLUG_TO_ID: Record<string, string> = {
+  'marcus-aurelius': 'marcus',
+  'david-goggins': 'goggins',
+  'theodore-roosevelt': 'roosevelt',
+  'future-self': 'futureSelf',
+};
+
+export function normalizeCounselorId(slug: string): string {
+  return COUNSELOR_SLUG_TO_ID[slug] ?? slug;
+}
+
 export interface ThreadMessage {
   role: 'user' | 'assistant';
   content: string;
