@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -55,6 +56,7 @@ export default function MorningScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/morning');
   const [tasks, setTasks] = useState<any[]>([]);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
   const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
   const [newTask, setNewTask] = useState('');
   const [affirmation, setAffirmation] = useState('');
@@ -79,6 +81,14 @@ export default function MorningScreen() {
   };
 
   const loadTasks = async () => {
+    // Step 1: paint from cache immediately
+    try {
+      const cached = await AsyncStorage.getItem('arete:morning_tasks');
+      if (cached) setTasks(JSON.parse(cached));
+      setCacheLoaded(true);
+    } catch {}
+
+    // Step 2: fresh fetch
     try {
       let tmpl = await getRoutineTemplates('morning');
       if (tmpl.length === 0) {
@@ -90,29 +100,38 @@ export default function MorningScreen() {
       setTemplates(tmpl);
 
       const checkin = await getTodayCheckin();
+      let freshTasks: any[];
       if (checkin?.morning_tasks && checkin.morning_tasks.length > 0) {
         if (checkin.check_in_date === localToday()) {
-          setTasks(checkin.morning_tasks as any[]);
+          freshTasks = checkin.morning_tasks as any[];
         } else {
-          const freshTasks = tmpl.map(templateToTask);
-          setTasks(freshTasks);
+          freshTasks = tmpl.map(templateToTask);
           await upsertTodayCheckin({ morning_tasks: freshTasks, morning_done: false });
         }
       } else {
-        setTasks(tmpl.map(templateToTask));
+        freshTasks = tmpl.map(templateToTask);
       }
+      setTasks(freshTasks);
+      setCacheLoaded(true);
 
       if (checkin?.cabinet_morning_response) {
         setCheckinResponse(checkin.cabinet_morning_response);
       }
+
+      // Step 3: write cache
+      try {
+        await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify(freshTasks));
+      } catch {}
     } catch (e) {
       console.error(e);
+      setCacheLoaded(true); // don't leave skeleton stuck on error
     }
   };
 
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
+    try { await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify(updatedTasks)); } catch {}
     if (allDone) {
       await updateStreak();
       const checkin = await getTodayCheckin();
@@ -230,29 +249,33 @@ export default function MorningScreen() {
 
         {/* Tasks */}
         <View style={styles.tasksContainer}>
-          {tasks.map(task => (
-            <Swipeable
-              key={task.id}
-              ref={(ref) => { swipeableRefs.current[task.id] = ref; }}
-              renderRightActions={() => renderRightActions(task.id)}
-              overshootRight={false}
-            >
-              <TouchableOpacity
-                style={[styles.taskCard, task.done && styles.taskCardDone]}
-                onPress={() => toggleTask(task.id)}
-                activeOpacity={0.8}
+          {!cacheLoaded ? (
+            [0, 1, 2].map(i => <View key={i} style={styles.taskSkeleton} />)
+          ) : (
+            tasks.map(task => (
+              <Swipeable
+                key={task.id}
+                ref={(ref) => { swipeableRefs.current[task.id] = ref; }}
+                renderRightActions={() => renderRightActions(task.id)}
+                overshootRight={false}
               >
-                <Ionicons
-                  name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={26}
-                  color={task.done ? '#1a1a2e' : '#c9a84c'}
-                />
-                <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
-                  {task.title}
-                </Text>
-              </TouchableOpacity>
-            </Swipeable>
-          ))}
+                <TouchableOpacity
+                  style={[styles.taskCard, task.done && styles.taskCardDone]}
+                  onPress={() => toggleTask(task.id)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
+                    size={26}
+                    color={task.done ? '#1a1a2e' : '#c9a84c'}
+                  />
+                  <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
+                    {task.title}
+                  </Text>
+                </TouchableOpacity>
+              </Swipeable>
+            ))
+          )}
         </View>
 
         {/* Add Task */}
@@ -458,6 +481,12 @@ const styles = StyleSheet.create({
   tasksContainer: {
     gap: 12,
     marginBottom: 20,
+  },
+  taskSkeleton: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    height: 62,
+    opacity: 0.4,
   },
   taskCard: {
     flex: 1,

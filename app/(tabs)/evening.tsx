@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -55,6 +56,7 @@ export default function EveningScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/evening');
   const [tasks, setTasks] = useState<any[]>([]);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
   const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
   const [newTask, setNewTask] = useState('');
   const [showInput, setShowInput] = useState(false);
@@ -99,6 +101,14 @@ export default function EveningScreen() {
   };
 
   const loadTasks = async () => {
+    // Step 1: paint from cache immediately
+    try {
+      const cached = await AsyncStorage.getItem('arete:evening_tasks');
+      if (cached) setTasks(JSON.parse(cached));
+      setCacheLoaded(true);
+    } catch {}
+
+    // Step 2: fresh fetch
     try {
       let tmpl = await getRoutineTemplates('evening');
       if (tmpl.length === 0) {
@@ -109,26 +119,34 @@ export default function EveningScreen() {
       setTemplates(tmpl);
 
       const checkin = await getTodayCheckin();
+      let freshTasks: any[];
       if (checkin?.evening_tasks && checkin.evening_tasks.length > 0) {
         if (checkin.check_in_date === localToday()) {
-          setTasks(checkin.evening_tasks as any[]);
+          freshTasks = checkin.evening_tasks as any[];
         } else {
-          const freshTasks = tmpl.map(templateToTask);
-          setTasks(freshTasks);
+          freshTasks = tmpl.map(templateToTask);
           await upsertTodayCheckin({ evening_tasks: freshTasks, evening_done: false });
         }
       } else {
-        setTasks(tmpl.map(templateToTask));
+        freshTasks = tmpl.map(templateToTask);
       }
+      setTasks(freshTasks);
+      setCacheLoaded(true);
 
+      // Step 3: write cache
+      try {
+        await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify(freshTasks));
+      } catch {}
     } catch (e) {
       console.error(e);
+      setCacheLoaded(true); // don't leave skeleton stuck on error
     }
   };
 
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
+    try { await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify(updatedTasks)); } catch {}
     if (allDone) await incrementStreak();
   };
 
@@ -227,29 +245,33 @@ export default function EveningScreen() {
 
           {/* Tasks */}
           <View style={styles.tasksContainer}>
-            {tasks.map(task => (
-              <Swipeable
-                key={task.id}
-                ref={(ref) => { swipeableRefs.current[task.id] = ref; }}
-                renderRightActions={() => renderRightActions(task.id)}
-                overshootRight={false}
-              >
-                <TouchableOpacity
-                  style={[styles.taskCard, task.done && styles.taskCardDone]}
-                  onPress={() => toggleTask(task.id)}
-                  activeOpacity={0.8}
+            {!cacheLoaded ? (
+              [0, 1, 2].map(i => <View key={i} style={styles.taskSkeleton} />)
+            ) : (
+              tasks.map(task => (
+                <Swipeable
+                  key={task.id}
+                  ref={(ref) => { swipeableRefs.current[task.id] = ref; }}
+                  renderRightActions={() => renderRightActions(task.id)}
+                  overshootRight={false}
                 >
-                  <Ionicons
-                    name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
-                    size={26}
-                    color={task.done ? '#1a1a2e' : '#c9a84c'}
-                  />
-                  <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
-                    {task.title}
-                  </Text>
-                </TouchableOpacity>
-              </Swipeable>
-            ))}
+                  <TouchableOpacity
+                    style={[styles.taskCard, task.done && styles.taskCardDone]}
+                    onPress={() => toggleTask(task.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={task.done ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={26}
+                      color={task.done ? '#1a1a2e' : '#c9a84c'}
+                    />
+                    <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
+                      {task.title}
+                    </Text>
+                  </TouchableOpacity>
+                </Swipeable>
+              ))
+            )}
           </View>
 
           {/* Add Task */}
@@ -460,6 +482,12 @@ const styles = StyleSheet.create({
   tasksContainer: {
     gap: 12,
     marginBottom: 20,
+  },
+  taskSkeleton: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    height: 62,
+    opacity: 0.4,
   },
   taskCard: {
     flex: 1,

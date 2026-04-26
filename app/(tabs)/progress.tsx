@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
@@ -57,9 +58,19 @@ export default function ProgressScreen() {
   );
 
   const loadAllData = async () => {
+    // Restore cached streak immediately to avoid flash of 0
+    try {
+      const cached = await AsyncStorage.getItem('arete:progress_streak');
+      if (cached) setStreak(JSON.parse(cached).streak ?? 0);
+    } catch {}
+
     try {
       const checkin = await getTodayCheckin();
-      if (checkin) setStreak(checkin.streak ?? 0);
+      if (checkin) {
+        const freshStreak = checkin.streak ?? 0;
+        setStreak(freshStreak);
+        try { await AsyncStorage.setItem('arete:progress_streak', JSON.stringify({ streak: freshStreak })); } catch {}
+      }
 
       const journalEntries = await getJournalEntries();
       setJournalCount(journalEntries.filter(e => e.type === 'reflection').length);

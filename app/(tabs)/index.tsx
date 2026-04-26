@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -50,6 +51,7 @@ export default function HomeScreen() {
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
 
@@ -61,11 +63,21 @@ export default function HomeScreen() {
   );
 
   const loadData = async () => {
-    console.log('loadData started');
+    // Step 1: paint from cache immediately so no flash of zero
+    try {
+      const cached = await AsyncStorage.getItem('arete:home_stats');
+      if (cached) {
+        const c = JSON.parse(cached);
+        setStreak(c.streak ?? 0);
+        setMorningDone(c.morningDone ?? false);
+        setEveningDone(c.eveningDone ?? false);
+      }
+      setCacheLoaded(true);
+    } catch {}
+
+    // Step 2: fresh fetch
     const settings = await getUserSettings();
-    console.log('getUserSettings result:', settings);
     if (!settings?.user_name) {
-      console.log('Redirecting to setup');
       router.replace('/(onboarding)/setup');
       return;
     }
@@ -73,9 +85,22 @@ export default function HomeScreen() {
     setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
     const checkin = await getTodayCheckin();
-    setMorningDone(checkin?.morning_done ?? false);
-    setEveningDone(checkin?.evening_done ?? false);
-    setStreak(checkin?.streak ?? 0);
+    const freshStreak = checkin?.streak ?? 0;
+    const freshMorning = checkin?.morning_done ?? false;
+    const freshEvening = checkin?.evening_done ?? false;
+    setStreak(freshStreak);
+    setMorningDone(freshMorning);
+    setEveningDone(freshEvening);
+    setCacheLoaded(true);
+
+    // Step 3: write cache for next load
+    try {
+      await AsyncStorage.setItem('arete:home_stats', JSON.stringify({
+        streak: freshStreak,
+        morningDone: freshMorning,
+        eveningDone: freshEvening,
+      }));
+    } catch {}
   };
 
   const loadQuote = async () => {
@@ -177,14 +202,18 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* Streak Card */}
-      <View style={styles.streakCard}>
-        <Text style={styles.streakCount}>{streak}</Text>
-        <View style={styles.streakMeta}>
-          <Text style={styles.streakLabel}>Days of Discipline</Text>
-          <Text style={styles.streakSub}>Keep the chain unbroken.</Text>
+      {!cacheLoaded ? (
+        <View style={styles.streakSkeleton} />
+      ) : (
+        <View style={styles.streakCard}>
+          <Text style={styles.streakCount}>{streak}</Text>
+          <View style={styles.streakMeta}>
+            <Text style={styles.streakLabel}>Days of Discipline</Text>
+            <Text style={styles.streakSub}>Keep the chain unbroken.</Text>
+          </View>
+          <Ionicons name="flame" size={32} color="#c9a84c" />
         </View>
-        <Ionicons name="flame" size={32} color="#c9a84c" />
-      </View>
+      )}
 
       {/* Daily Counselor Prompt */}
       {(() => {
@@ -359,6 +388,13 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  streakSkeleton: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    height: 104,
+    opacity: 0.4,
+    marginBottom: 0,
   },
   streakCard: {
     backgroundColor: '#16213e',
