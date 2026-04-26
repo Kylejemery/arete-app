@@ -14,6 +14,15 @@ import * as Notifications from 'expo-notifications';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
 
+/** Returns today's date as a local YYYY-MM-DD string (not UTC). */
+function getLocalDateString(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export default function TimerScreen() {
   const swipeHandlers = useSwipeNavigation('/timer');
   const [activeTab, setActiveTab] = useState<'timer' | 'history'>('timer');
@@ -125,7 +134,7 @@ export default function TimerScreen() {
       if (readingData) {
         setCurrentBooks(readingData.current_books ?? []);
         setSessions(readingData.reading_sessions ?? []);
-        const todayDate = new Date().toISOString().split('T')[0];
+        const todayDate = getLocalDateString();
         if (readingData.today_reading_date === todayDate) {
           setTodaySeconds(readingData.today_reading_seconds ?? 0);
         }
@@ -249,7 +258,7 @@ export default function TimerScreen() {
     setCurrentBooks(updatedBooks);
     setSelectedBook({ ...selectedBook, currentPage: endPageNum });
 
-    const todayDate = new Date().toISOString().split('T')[0];
+    const todayDate = getLocalDateString();
     await upsertReadingData({
       current_books: updatedBooks,
       reading_sessions: updatedSessions,
@@ -408,13 +417,29 @@ export default function TimerScreen() {
             </View>
 
             {/* Today's Stats */}
-            <View style={styles.todayCard}>
-              <Ionicons name="time-outline" size={22} color="#c9a84c" />
-              <View>
-                <Text style={styles.todayLabel}>Today's Reading Time</Text>
-                <Text style={styles.todayTime}>{formatTimeReadable(todaySeconds)}</Text>
-              </View>
-            </View>
+            {(() => {
+              const todayStr = new Date().toDateString();
+              const todayPages = sessions
+                .filter(s => s.date === todayStr)
+                .reduce((sum, s) => sum + (s.pagesRead || 0), 0);
+              const todayMinutes = todaySeconds / 60;
+              const pagesPerHour = todayPages > 0 && todayMinutes > 0
+                ? Math.round((todayPages / todayMinutes) * 60)
+                : null;
+              const timeLabel = formatTimeReadable(todaySeconds);
+              const statLine = pagesPerHour != null
+                ? `${timeLabel} today · ${pagesPerHour} pg/hr`
+                : timeLabel;
+              return (
+                <View style={styles.todayCard}>
+                  <Ionicons name="time-outline" size={22} color="#c9a84c" />
+                  <View>
+                    <Text style={styles.todayLabel}>Today's Reading Time</Text>
+                    <Text style={styles.todayTime}>{statLine}</Text>
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* Timer Display */}
             <View style={styles.timerCard}>
