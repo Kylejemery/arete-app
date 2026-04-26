@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Linking,
   NativeScrollEvent,
   NativeSyntheticEvent,
   SafeAreaView,
@@ -109,6 +110,28 @@ export default function ScrollDetail() {
 
   const readCount = scroll?.read_count ?? 0;
 
+  const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+  const renderParagraph = (text: string, i: number) => {
+    const parts = text.split(URL_REGEX);
+    const hasLinks = parts.some(p => /^https?:\/\//.test(p));
+    if (!hasLinks) {
+      return <Text key={i} style={styles.body} selectable>{text}</Text>;
+    }
+    return (
+      <Text key={i} style={styles.body} selectable>
+        {parts.map((part, j) =>
+          /^https?:\/\//.test(part) ? (
+            <Text key={j} style={styles.link} onPress={() => Linking.openURL(part)}>
+              {part}
+            </Text>
+          ) : (
+            part
+          )
+        )}
+      </Text>
+    );
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -155,17 +178,15 @@ export default function ScrollDetail() {
         onScroll={handleScroll}
         scrollEventThrottle={200}
       >
-        <Text style={styles.counselorLabel}>{COUNSELOR_LABELS[scroll.counselor]}</Text>
-        <Text style={styles.title}>{scroll.title}</Text>
-        <Text style={styles.byline}>
+        <Text style={styles.counselorLabel} selectable>{COUNSELOR_LABELS[scroll.counselor]}</Text>
+        <Text style={styles.title} selectable>{scroll.title}</Text>
+        <Text style={styles.byline} selectable>
           Written for you by {COUNSELOR_LABELS[scroll.counselor]}
         </Text>
 
         <View style={styles.divider} />
 
-        {scroll.body.split('\n\n').map((paragraph, i) => (
-          <Text key={i} style={styles.body}>{paragraph}</Text>
-        ))}
+        {scroll.body.split('\n\n').map((paragraph, i) => renderParagraph(paragraph, i))}
 
         <View style={styles.readFooter}>
           {readCount > 0 ? (
@@ -240,6 +261,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 30,
     marginBottom: 20,
+  },
+  link: {
+    color: '#c9a84c',
+    textDecorationLine: 'underline',
   },
   readFooter: {
     marginTop: 24,
