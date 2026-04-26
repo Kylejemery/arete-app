@@ -417,14 +417,14 @@ export default function CabinetScreen() {
                         msg.role === 'user' ? (
                           <View key={index} style={styles.userMessageRow}>
                             <View style={styles.userBubble}>
-                              <Text style={styles.userText}>{msg.content}</Text>
+                              <Text style={styles.userText} selectable>{msg.content}</Text>
                             </View>
                           </View>
                         ) : (
                           <View key={index} style={styles.cabinetMessageRow}>
                             <View style={styles.cabinetBubble}>
                               <Text style={styles.cabinetLabel}>The Cabinet</Text>
-                              <Text style={styles.cabinetText}>{msg.content}</Text>
+                              <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                             </View>
                           </View>
                         )

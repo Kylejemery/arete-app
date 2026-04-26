@@ -220,14 +220,14 @@ export default function CounselorChatScreen() {
               msg.role === 'user' ? (
                 <View key={index} style={styles.userMessageRow}>
                   <View style={styles.userBubble}>
-                    <Text style={styles.userText}>{msg.content}</Text>
+                    <Text style={styles.userText} selectable>{msg.content}</Text>
                   </View>
                 </View>
               ) : (
                 <View key={index} style={styles.counselorMessageRow}>
                   <View style={styles.counselorBubble}>
                     <Text style={styles.counselorLabel}>{counselorName}</Text>
-                    <Text style={styles.counselorText}>{msg.content}</Text>
+                    <Text style={styles.counselorText} selectable>{msg.content}</Text>
                   </View>
                 </View>
               )
