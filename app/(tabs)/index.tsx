@@ -38,13 +38,6 @@ const DAILY_PROMPTS = [
   { counselorSlug: 'epictetus', counselorName: 'Epictetus', prompt: 'What role are you playing right now — and are you playing it well?' },
 ];
 
-const SLUG_TO_CHAT_ID: Record<string, string> = {
-  'marcus-aurelius': 'marcus',
-  'epictetus': 'epictetus',
-  'david-goggins': 'goggins',
-  'theodore-roosevelt': 'roosevelt',
-};
-
 function getDailyPrompt() {
   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
   return DAILY_PROMPTS[dayOfYear % DAILY_PROMPTS.length];
@@ -196,12 +189,11 @@ export default function HomeScreen() {
       {/* Daily Counselor Prompt */}
       {(() => {
         const dp = getDailyPrompt();
-        const chatId = SLUG_TO_CHAT_ID[dp.counselorSlug] ?? dp.counselorSlug;
         return (
           <TouchableOpacity
             style={styles.promptCard}
             activeOpacity={0.8}
-            onPress={() => router.push({ pathname: '/counselor-chat', params: { id: chatId, initialMessage: dp.prompt } } as any)}
+            onPress={() => router.push({ pathname: '/counselor-chat', params: { id: dp.counselorSlug, initialMessage: dp.prompt } } as any)}
           >
             <View style={styles.promptBody}>
               <Text style={styles.promptLabel}>TODAY'S QUESTION</Text>
