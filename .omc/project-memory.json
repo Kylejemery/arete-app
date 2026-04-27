@@ -257,14 +257,20 @@
   "hotPaths": [
     {
       "path": "app\\counselor-chat.tsx",
-      "accessCount": 17,
-      "lastAccessed": 1777298391015,
+      "accessCount": 19,
+      "lastAccessed": 1777317291031,
       "type": "file"
     },
     {
       "path": "app\\(tabs)\\cabinet.tsx",
-      "accessCount": 13,
-      "lastAccessed": 1777298234871,
+      "accessCount": 15,
+      "lastAccessed": 1777317291540,
+      "type": "file"
+    },
+    {
+      "path": "app\\(tabs)\\timer.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1777317796283,
       "type": "file"
     },
     {
@@ -274,9 +280,15 @@
       "type": "file"
     },
     {
+      "path": "app\\settings.tsx",
+      "accessCount": 12,
+      "lastAccessed": 1777317797088,
+      "type": "file"
+    },
+    {
       "path": "app\\(tabs)\\evening.tsx",
-      "accessCount": 10,
-      "lastAccessed": 1777315584961,
+      "accessCount": 11,
+      "lastAccessed": 1777317116953,
       "type": "file"
     },
     {
@@ -298,6 +310,12 @@
       "type": "directory"
     },
     {
+      "path": "app\\(tabs)\\morning.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1777317795056,
+      "type": "file"
+    },
+    {
       "path": "app\\(tabs)\\progress.tsx",
       "accessCount": 6,
       "lastAccessed": 1777300057061,
@@ -307,12 +325,6 @@
       "path": "components\\CounselorCard.tsx",
       "accessCount": 5,
       "lastAccessed": 1777298484788,
-      "type": "file"
-    },
-    {
-      "path": "app\\(tabs)\\timer.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1777316271746,
       "type": "file"
     },
     {
@@ -328,6 +340,12 @@
       "type": "file"
     },
     {
+      "path": "app\\(tabs)\\journal.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777317136406,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\001_initial_schema.sql",
       "accessCount": 2,
       "lastAccessed": 1777297631156,
@@ -337,12 +355,6 @@
       "path": "supabase\\migrations\\20260320000001_seed_counselors.sql",
       "accessCount": 2,
       "lastAccessed": 1777297774766,
-      "type": "file"
-    },
-    {
-      "path": "app\\(tabs)\\journal.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1777315559088,
       "type": "file"
     },
     {

@@ -215,7 +215,8 @@ export default function MorningScreen() {
 
   return (
     <SafeAreaView style={styles.container} {...swipeHandlers}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
         {/* Header */}
         <View style={styles.headerRow}>
@@ -331,7 +332,8 @@ export default function MorningScreen() {
           </View>
         )}
 
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Edit Routine Modal */}
       <Modal

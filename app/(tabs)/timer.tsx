@@ -69,6 +69,7 @@ export default function TimerScreen() {
   const [pomodoroSessions, setPomodoroSessions] = useState(0);
   const pomodoroRef = useRef<any>(null);
   const pomodoroEndTimeRef = useRef<number>(0);
+  const pomodoroModeRef = useRef<'work' | 'break'>('work');
 
   useFocusEffect(
     useCallback(() => {
@@ -83,6 +84,8 @@ export default function TimerScreen() {
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
     };
   }, []);
+
+  useEffect(() => { pomodoroModeRef.current = pomodoroMode; }, [pomodoroMode]);
 
   // Persist session count whenever it increments
   useEffect(() => {
@@ -106,7 +109,7 @@ export default function TimerScreen() {
             clearInterval(pomodoroRef.current);
             setPomodoroRunning(false);
             Notifications.cancelAllScheduledNotificationsAsync();
-            if (pomodoroMode === 'work') {
+            if (pomodoroModeRef.current === 'work') {
               setPomodoroSessions(s => s + 1);
               setPomodoroMode('break');
               setPomodoroTimeLeft(5 * 60);
@@ -130,7 +133,7 @@ export default function TimerScreen() {
           clearInterval(pomodoroRef.current);
           setPomodoroRunning(false);
           Notifications.cancelAllScheduledNotificationsAsync();
-          if (pomodoroMode === 'work') {
+          if (pomodoroModeRef.current === 'work') {
             setPomodoroSessions(s => s + 1);
             setPomodoroMode('break');
             setPomodoroTimeLeft(5 * 60);
@@ -194,6 +197,15 @@ export default function TimerScreen() {
     setPomodoroRunning(false);
     Notifications.cancelAllScheduledNotificationsAsync();
     setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
+  };
+
+  const handlePomodoroManualDone = () => {
+    clearInterval(pomodoroRef.current);
+    setPomodoroRunning(false);
+    Notifications.cancelAllScheduledNotificationsAsync();
+    setPomodoroSessions(s => s + 1);
+    setPomodoroMode('break');
+    setPomodoroTimeLeft(5 * 60);
   };
 
   const handleStartPress = () => {
@@ -433,6 +445,11 @@ export default function TimerScreen() {
                 <TouchableOpacity style={styles.pomodoroResetBtn} onPress={resetPomodoro}>
                   <Text style={styles.pomodoroResetTxt}>Reset</Text>
                 </TouchableOpacity>
+                {pomodoroRunning && pomodoroMode === 'work' && (
+                  <TouchableOpacity style={styles.pomodoroDoneBtn} onPress={handlePomodoroManualDone}>
+                    <Text style={styles.pomodoroDoneTxt}>✓ Done</Text>
+                  </TouchableOpacity>
+                )}
               </View>
 
               {/* Sessions */}
@@ -1090,6 +1107,19 @@ const styles = StyleSheet.create({
   pomodoroResetTxt: {
     color: '#888',
     fontSize: 15,
+  },
+  pomodoroDoneBtn: {
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: '#4caf5088',
+    backgroundColor: '#4caf5011',
+  },
+  pomodoroDoneTxt: {
+    color: '#4caf50',
+    fontSize: 15,
+    fontWeight: '600',
   },
   pomodoroSessions: {
     color: '#888',

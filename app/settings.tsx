@@ -180,6 +180,7 @@ export default function SettingsScreen() {
         setFutureKyleEnabled(parsed.futureKyleEnabled ?? false);
         setFutureKyleHour(parsed.futureKyleHour ?? '15');
         setFutureKyleMinute(parsed.futureKyleMinute ?? '00');
+        scheduleNotifications(parsed, true).catch(() => {});
       }
       setSimulatingFree(getDevPremiumOverride() === false);
     } catch (e) {
@@ -229,13 +230,33 @@ export default function SettingsScreen() {
     }
   };
 
-  const scheduleNotifications = async (settings: any): Promise<boolean> => {
+  const buildCurrentSettings = (overrides: Record<string, any> = {}) => ({
+    morningEnabled, morningHour, morningMinute,
+    eveningEnabled, eveningHour, eveningMinute,
+    taskReminderEnabled, taskReminderHour, taskReminderMinute,
+    workoutReminderEnabled, workoutReminderHour, workoutReminderMinute,
+    readingReminderEnabled, readingReminderHour, readingReminderMinute,
+    futureKyleEnabled, futureKyleHour, futureKyleMinute,
+    ...overrides,
+  });
+
+  const persistAndReschedule = async (overrides: Record<string, any> = {}) => {
+    const settings = buildCurrentSettings(overrides);
+    try {
+      await AsyncStorage.setItem('notificationSettings', JSON.stringify(settings));
+      await scheduleNotifications(settings, true);
+    } catch {}
+  };
+
+  const scheduleNotifications = async (settings: any, silent = false): Promise<boolean> => {
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(
-        'Notifications Disabled',
-        'Please enable notifications in your phone settings to schedule reminders.',
-      );
+      if (!silent) {
+        Alert.alert(
+          'Notifications Disabled',
+          'Please enable notifications in your phone settings to schedule reminders.',
+        );
+      }
       return false;
     }
 
@@ -267,20 +288,20 @@ export default function SettingsScreen() {
       }
     };
 
-    // Morning check-in — Marcus Aurelius chairs every morning
+    // Morning check-in
     if (settings.morningEnabled) {
       await scheduleWeekly(
-        () => 'Marcus Aurelius — Chair',
+        () => 'Marcus Aurelius — Morning Check-In',
         (day) => MORNING_MESSAGES[day],
         parseInt(settings.morningHour),
         parseInt(settings.morningMinute),
       );
     }
 
-    // Evening check-in — Marcus Aurelius
+    // Evening check-in
     if (settings.eveningEnabled) {
       await scheduleWeekly(
-        () => 'Marcus Aurelius — Chair',
+        () => 'Marcus Aurelius — Evening Check-In',
         (day) => EVENING_MESSAGES[day],
         parseInt(settings.eveningHour),
         parseInt(settings.eveningMinute),
@@ -300,7 +321,7 @@ export default function SettingsScreen() {
     // Goggins — workout reminder
     if (settings.workoutReminderEnabled) {
       await scheduleWeekly(
-        () => 'David Goggins',
+        () => 'David Goggins — Workout Reminder',
         (day) => WORKOUT_MESSAGES[day],
         parseInt(settings.workoutReminderHour),
         parseInt(settings.workoutReminderMinute),
@@ -419,7 +440,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>☀️ Marcus Aurelius — Morning Check-In</Text>
           <Switch
             value={morningEnabled}
-            onValueChange={setMorningEnabled}
+            onValueChange={(val) => { setMorningEnabled(val); persistAndReschedule({ morningEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
@@ -436,7 +457,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>🌙 Marcus Aurelius — Evening Check-In</Text>
           <Switch
             value={eveningEnabled}
-            onValueChange={setEveningEnabled}
+            onValueChange={(val) => { setEveningEnabled(val); persistAndReschedule({ eveningEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
@@ -451,7 +472,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>📋 Midday Task Reminder</Text>
           <Switch
             value={taskReminderEnabled}
-            onValueChange={setTaskReminderEnabled}
+            onValueChange={(val) => { setTaskReminderEnabled(val); persistAndReschedule({ taskReminderEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
@@ -468,7 +489,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>💪 David Goggins — Workout Reminder</Text>
           <Switch
             value={workoutReminderEnabled}
-            onValueChange={setWorkoutReminderEnabled}
+            onValueChange={(val) => { setWorkoutReminderEnabled(val); persistAndReschedule({ workoutReminderEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
@@ -483,7 +504,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>📖 Marcus Aurelius — Reading Reminder</Text>
           <Switch
             value={readingReminderEnabled}
-            onValueChange={setReadingReminderEnabled}
+            onValueChange={(val) => { setReadingReminderEnabled(val); persistAndReschedule({ readingReminderEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
@@ -500,7 +521,7 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>🔮 Future Kyle — Daily Check-In</Text>
           <Switch
             value={futureKyleEnabled}
-            onValueChange={setFutureKyleEnabled}
+            onValueChange={(val) => { setFutureKyleEnabled(val); persistAndReschedule({ futureKyleEnabled: val }); }}
             trackColor={{ false: '#333', true: '#c9a84c' }}
             thumbColor="#fff"
           />
