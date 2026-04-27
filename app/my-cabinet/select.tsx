@@ -14,9 +14,9 @@ import {
 } from 'react-native';
 import CabinetPreview from '@/components/CabinetPreview';
 import CounselorCard from '@/components/CounselorCard';
-import { FUTURE_SELF_SLUG, getCounselors, getIsPremium, getUserCabinet, saveCabinetSelection } from '@/lib/db';
+import { FUTURE_SELF_SLUG, FREE_COUNSELOR_SLUGS, getCounselors, getSubscriptionTier, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import type { Counselor } from '@/lib/types';
+import type { Counselor, SubscriptionTier } from '@/lib/types';
 
 const CATEGORIES = [
   { label: 'All', value: 'all' },
@@ -35,7 +35,8 @@ export default function CabinetSelectScreen() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
+  const [tier, setTier] = useState<SubscriptionTier>('arete');
+  const [showLockedUpgrade, setShowLockedUpgrade] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useFocusEffect(
@@ -51,28 +52,35 @@ export default function CabinetSelectScreen() {
           return;
         }
 
-        const [allCounselors, cabinet, premium] = await Promise.all([
+        const [allCounselors, cabinet, userTier] = await Promise.all([
           getCounselors(),
           getUserCabinet(),
-          getIsPremium(),
+          getSubscriptionTier(),
         ]);
 
         if (!active) return;
 
         setCounselors(allCounselors);
-        setSelectedSlugs(cabinet.map(c => c.slug));
-
-        if (!premium) {
-          setShowPaywall(true);
-        }
-
+        setTier(userTier);
+        // For free users, selection starts with only the allowed free counselors
+        const allowedSlugs = userTier === 'free'
+          ? cabinet.map(c => c.slug).filter(s => (FREE_COUNSELOR_SLUGS as readonly string[]).includes(s))
+          : cabinet.map(c => c.slug);
+        setSelectedSlugs(allowedSlugs);
         setLoading(false);
       })();
       return () => { active = false; };
     }, [router])
   );
 
+  const isLockedForTier = (slug: string) =>
+    tier === 'free' && !(FREE_COUNSELOR_SLUGS as readonly string[]).includes(slug);
+
   const handleToggle = (slug: string) => {
+    if (isLockedForTier(slug)) {
+      setShowLockedUpgrade(true);
+      return;
+    }
     setSelectedSlugs(prev => {
       if (prev.includes(slug)) {
         return prev.filter(s => s !== slug);
@@ -186,7 +194,8 @@ export default function CabinetSelectScreen() {
               <CounselorCard
                 counselor={item}
                 isSelected={selectedSlugs.includes(item.slug)}
-                isDisabled={selectedSlugs.length >= 5 && !selectedSlugs.includes(item.slug)}
+                isDisabled={selectedSlugs.length >= 5 && !selectedSlugs.includes(item.slug) && !isLockedForTier(item.slug)}
+                isLocked={isLockedForTier(item.slug)}
                 onToggle={handleToggle}
               />
             )}
@@ -202,29 +211,28 @@ export default function CabinetSelectScreen() {
         </>
       )}
 
-      {/* Paywall Modal */}
+      {/* Locked Counselor Upgrade Modal */}
       <Modal
-        visible={showPaywall}
+        visible={showLockedUpgrade}
         transparent
         animationType="fade"
-        onRequestClose={() => { setShowPaywall(false); router.back(); }}
+        onRequestClose={() => setShowLockedUpgrade(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalPanel}>
-            <Text style={styles.modalTitle}>Custom Cabinet</Text>
-            <Text style={styles.modalSubtitle}>Custom Cabinet is a Premium feature</Text>
+            <Text style={styles.modalTitle}>Counselor Locked</Text>
             <Text style={styles.modalBody}>
-              Choose from 23 counselors across 6 categories to build your ideal advisory board.
+              Upgrade to Arete to unlock all 23 counselors across 6 categories and build your ideal advisory board.
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => setShowPaywall(false)}
+              onPress={() => setShowLockedUpgrade(false)}
               activeOpacity={0.8}
             >
-              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => { setShowPaywall(false); router.back(); }}
+              onPress={() => setShowLockedUpgrade(false)}
               style={styles.maybeLaterButton}
             >
               <Text style={styles.maybeLaterText}>Maybe Later</Text>

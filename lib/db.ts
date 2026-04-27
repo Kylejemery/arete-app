@@ -8,6 +8,7 @@ import type {
   ReadingData,
   Counselor,
   Goal,
+  SubscriptionTier,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -25,6 +26,12 @@ async function getUserId(): Promise<string | null> {
 
 function today(): string {
   const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function yesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
@@ -72,33 +79,88 @@ export async function upsertUserSettings(data: Partial<Omit<UserSettings, 'id' |
 // DAILY CHECKINS
 // ----------------------------------------------------------------
 
+export async function getProfileStreak(): Promise<number> {
+  const userId = await getUserId()
+  if (!userId) return 0
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('streak')
+      .eq('id', userId)
+      .single()
+    if (error) return 0
+    return data?.streak ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Called on app load. If the last completed day was more than 1 day ago,
+ * a full day was missed — reset the streak to 0.
+ * Does NOT touch morning_done / evening_done on check_ins.
+ */
+export async function checkAndResetStreakIfMissed(): Promise<number> {
+  const userId = await getUserId()
+  if (!userId) return 0
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('streak, streak_last_incremented_date')
+      .eq('id', userId)
+      .single()
+    if (error || !data) return 0
+
+    const lastDate: string | null = data.streak_last_incremented_date
+    const yDate = yesterday()
+
+    // If never incremented, nothing to reset
+    if (!lastDate) return data.streak ?? 0
+
+    // If last increment was before yesterday, a full day was missed — reset
+    if (lastDate < yDate) {
+      await supabase
+        .from('profiles')
+        .update({ streak: 0 })
+        .eq('id', userId)
+      return 0
+    }
+
+    return data.streak ?? 0
+  } catch {
+    return 0
+  }
+}
+
 export async function incrementStreak(): Promise<void> {
   const userId = await getUserId()
   if (!userId) return
   try {
-    const todayRow = await getTodayCheckin()
+    const todayCheckin = await getTodayCheckin()
 
-    // A full day requires BOTH morning and evening completed
-    if (!todayRow?.morning_done || !todayRow?.evening_done) return
+    // Both routines must be complete
+    if (!todayCheckin?.morning_done || !todayCheckin?.evening_done) return
+
+    const todayStr = today()
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('streak, streak_last_incremented_date')
+      .eq('id', userId)
+      .single()
+
+    if (error) return
 
     // Already incremented today — bail out
-    if ((todayRow?.streak ?? 0) > 0) return
+    if (profile?.streak_last_incremented_date === todayStr) return
 
-    // Carry streak forward only if yesterday was also fully completed (both routines)
-    const d = new Date()
-    d.setDate(d.getDate() - 1)
-    const yDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    // Streak continues only if yesterday was the last completed day
+    const streakContinues = profile?.streak_last_incremented_date === yesterday()
+    const newStreak = streakContinues ? (profile.streak ?? 0) + 1 : 1
 
-    const { data: yRow } = await supabase
-      .from('check_ins')
-      .select('streak, morning_done, evening_done')
-      .eq('user_id', userId)
-      .eq('check_in_date', yDate)
-      .maybeSingle()
-
-    const yesterdayFullyCompleted = yRow?.morning_done && yRow?.evening_done
-    const newStreak = (yesterdayFullyCompleted ? (yRow?.streak ?? 0) : 0) + 1
-    await upsertTodayCheckin({ streak: newStreak })
+    await supabase
+      .from('profiles')
+      .update({ streak: newStreak, streak_last_incremented_date: todayStr })
+      .eq('id', userId)
   } catch (e) {
     console.error('incrementStreak error:', e)
   }
@@ -501,9 +563,13 @@ export async function getCounselorsBySlugs(slugs: string[]): Promise<Counselor[]
 }
 
 export async function getUserCabinet(): Promise<Counselor[]> {
-  const settings = await getUserSettings()
+  const [settings, tier] = await Promise.all([getUserSettings(), getSubscriptionTier()])
   const members: string[] = settings?.cabinet_members ?? DEFAULT_CABINET_SLUGS
-  const counselorSlugs = members.filter(m => m !== FUTURE_SELF_SLUG)
+  let counselorSlugs = members.filter(m => m !== FUTURE_SELF_SLUG)
+  if (tier === 'free') {
+    counselorSlugs = counselorSlugs.filter(s => (FREE_COUNSELOR_SLUGS as readonly string[]).includes(s))
+    if (counselorSlugs.length === 0) counselorSlugs = [...FREE_COUNSELOR_SLUGS]
+  }
   return getCounselorsBySlugs(counselorSlugs)
 }
 
@@ -557,6 +623,84 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
     return []
   }
   return (data ?? []) as Counselor[]
+}
+
+// ----------------------------------------------------------------
+// SUBSCRIPTION TIER
+// ----------------------------------------------------------------
+
+export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins'] as const;
+
+export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
+  free: 3,
+  arete: 50,
+  pro: null,
+};
+
+export const MAX_TOKENS_BY_TIER: Record<SubscriptionTier, number> = {
+  free: 400,
+  arete: 600,
+  pro: 1000,
+};
+
+export async function getSubscriptionTier(): Promise<SubscriptionTier> {
+  const userId = await getUserId();
+  if (!userId) return 'free';
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('subscription_tier')
+      .eq('id', userId)
+      .single();
+    if (error) return 'free';
+    return (data?.subscription_tier as SubscriptionTier) ?? 'free';
+  } catch {
+    return 'free';
+  }
+}
+
+export interface MessageLimitStatus {
+  allowed: boolean;
+  tier: SubscriptionTier;
+  used: number;
+  limit: number | null;
+}
+
+export async function checkAndIncrementMessageCount(): Promise<MessageLimitStatus> {
+  const userId = await getUserId();
+  if (!userId) return { allowed: false, tier: 'free', used: 0, limit: 3 };
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('subscription_tier, daily_message_count, message_count_date')
+    .eq('id', userId)
+    .single();
+
+  if (error || !data) return { allowed: false, tier: 'free', used: 0, limit: 3 };
+
+  const tier = (data.subscription_tier as SubscriptionTier) ?? 'free';
+  const limit = MESSAGE_LIMITS[tier];
+
+  // Pro tier: unlimited — no counting needed
+  if (limit === null) {
+    return { allowed: true, tier, used: 0, limit: null };
+  }
+
+  const todayStr = today();
+  const isToday = data.message_count_date === todayStr;
+  const currentCount = isToday ? (data.daily_message_count ?? 0) : 0;
+
+  if (currentCount >= limit) {
+    return { allowed: false, tier, used: currentCount, limit };
+  }
+
+  const newCount = currentCount + 1;
+  await supabase
+    .from('profiles')
+    .update({ daily_message_count: newCount, message_count_date: todayStr })
+    .eq('id', userId);
+
+  return { allowed: true, tier, used: newCount, limit };
 }
 
 // ----------------------------------------------------------------

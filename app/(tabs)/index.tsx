@@ -1,12 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin, getRandomCabinetQuote } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed } from '@/lib/db';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
+
+const QUOTE_CACHE_KEY = 'home_quote_cache';
+
+function getSlotKey(): string {
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const slot = now.getHours() < 18 ? 'morning' : 'evening';
+  return `${dateStr}-${slot}`;
+}
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -60,7 +69,6 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       loadData();
-      loadQuote();
     }, [])
   );
 
@@ -86,8 +94,10 @@ export default function HomeScreen() {
     setUserName(settings.user_name);
     setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
-    const checkin = await getTodayCheckin();
-    const freshStreak = checkin?.streak ?? 0;
+    const [checkin, freshStreak] = await Promise.all([
+      getTodayCheckin(),
+      checkAndResetStreakIfMissed(),
+    ]);
     const freshMorning = checkin?.morning_done ?? false;
     const freshEvening = checkin?.evening_done ?? false;
     setStreak(freshStreak);
@@ -109,19 +119,33 @@ export default function HomeScreen() {
     prefetchDailyQuestion(normalizeCounselorId(dp.counselorSlug), dp.prompt).catch(() => {});
   };
 
-  const loadQuote = async () => {
-    try {
-      const settings = await getUserSettings();
-      const members: string[] = settings?.cabinet_members ?? DEFAULT_CABINET_SLUGS;
-      const cabinetSlugs = members.filter(s => s !== 'futureSelf');
-      const result = await getRandomCabinetQuote(cabinetSlugs);
-      if (result) {
-        setQuote({ text: result.quote, author: result.counselor });
+  useEffect(() => {
+    (async () => {
+      try {
+        const slotKey = getSlotKey();
+        const cached = await AsyncStorage.getItem(QUOTE_CACHE_KEY);
+        if (cached) {
+          const { slot, quote } = JSON.parse(cached);
+          if (slot === slotKey) {
+            setQuote(quote);
+            return;
+          }
+        }
+        // New slot — fetch a fresh quote and cache it
+        const settings = await getUserSettings();
+        const members: string[] = settings?.cabinet_members ?? DEFAULT_CABINET_SLUGS;
+        const cabinetSlugs = members.filter(s => s !== 'futureSelf');
+        const result = await getRandomCabinetQuote(cabinetSlugs);
+        if (result) {
+          const q = { text: result.quote, author: result.counselor };
+          setQuote(q);
+          await AsyncStorage.setItem(QUOTE_CACHE_KEY, JSON.stringify({ slot: slotKey, quote: q }));
+        }
+      } catch (e) {
+        console.error('loadQuote error:', e);
       }
-    } catch (e) {
-      console.error('loadQuote error:', e);
-    }
-  };
+    })();
+  }, []);
 
   const cta = getPrimaryCTA();
 

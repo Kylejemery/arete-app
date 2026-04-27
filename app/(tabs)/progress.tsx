@@ -16,7 +16,7 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData } from '@/lib/db';
+import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed } from '@/lib/db';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -65,12 +65,9 @@ export default function ProgressScreen() {
     } catch {}
 
     try {
-      const checkin = await getTodayCheckin();
-      if (checkin) {
-        const freshStreak = checkin.streak ?? 0;
-        setStreak(freshStreak);
-        try { await AsyncStorage.setItem('arete:progress_streak', JSON.stringify({ streak: freshStreak })); } catch {}
-      }
+      const freshStreak = await checkAndResetStreakIfMissed();
+      setStreak(freshStreak);
+      try { await AsyncStorage.setItem('arete:progress_streak', JSON.stringify({ streak: freshStreak })); } catch {}
 
       const journalEntries = await getJournalEntries();
       setJournalCount(journalEntries.filter(e => e.type === 'reflection').length);

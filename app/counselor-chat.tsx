@@ -6,6 +6,7 @@ import {
   Alert,
   BackHandler,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   SafeAreaView,
   ScrollView,
@@ -15,9 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
-import { getUserSettings, getDailyQuestionCache } from '@/lib/db';
+import { getUserSettings, getDailyQuestionCache, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
+import type { SubscriptionTier } from '@/lib/types';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -45,6 +47,8 @@ export default function CounselorChatScreen() {
   const [counselorRole, setCounselorRole] = useState<string | undefined>(roleParam || metaEntry?.role);
   const scrollViewRef = useRef<ScrollView>(null);
   const hasSentInitialRef = useRef(false);
+  const [limitModal, setLimitModal] = useState<{ tier: SubscriptionTier; limit: number } | null>(null);
+  const [accessBlocked, setAccessBlocked] = useState(false);
 
   useEffect(() => {
     hasSentInitialRef.current = false;
@@ -60,6 +64,13 @@ export default function CounselorChatScreen() {
       setCounselorName(nameParam || meta?.name || counselorId);
       setCounselorRole(roleParam || meta?.role);
     }
+    // Free tier: block access to non-free counselors
+    getSubscriptionTier().then(tier => {
+      if (tier === 'free' && !(FREE_COUNSELOR_SLUGS as readonly string[]).includes(counselorId)) {
+        setAccessBlocked(true);
+      }
+    });
+
     loadThread(counselorId).then(async (thread) => {
       setMessages(thread.messages);
       if (initialMessage && !hasSentInitialRef.current) {
@@ -112,23 +123,28 @@ export default function CounselorChatScreen() {
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
-    const reply = await sendMessageToCounselor(counselorId, updatedMessages);
-
-    const assistantMessage: ThreadMessage = {
-      role: 'assistant',
-      content: reply,
-      timestamp: Date.now(),
-      counselorId,
-    };
-
-    const finalMessages = [...updatedMessages, assistantMessage];
-    setMessages(finalMessages);
-    setIsLoading(false);
-
-    // Persist via appendMessages (load fresh + append both new messages)
-    await appendMessages(counselorId, [userMessage, assistantMessage]);
-
-    setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    try {
+      const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+      const assistantMessage: ThreadMessage = {
+        role: 'assistant',
+        content: reply,
+        timestamp: Date.now(),
+        counselorId,
+      };
+      const finalMessages = [...updatedMessages, assistantMessage];
+      setMessages(finalMessages);
+      await appendMessages(counselorId, [userMessage, assistantMessage]);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (e) {
+      if (e instanceof MessageLimitError) {
+        setMessages(prev => prev.slice(0, -1));
+        setLimitModal({ tier: e.tier, limit: e.limit });
+      } else {
+        setMessages(prev => prev.slice(0, -1));
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleNewSession = () => {
@@ -291,6 +307,79 @@ export default function CounselorChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Access blocked overlay for free tier */}
+      {accessBlocked && (
+        <View style={styles.accessBlockedOverlay}>
+          <View style={styles.accessBlockedPanel}>
+            <Text style={styles.accessBlockedTitle}>Counselor Locked</Text>
+            <Text style={styles.accessBlockedBody}>
+              Free members have access to Marcus Aurelius, Epictetus, and David Goggins. Upgrade to Arete to unlock all 23 counselors.
+            </Text>
+            <TouchableOpacity
+              style={styles.accessUpgradeButton}
+              onPress={() => router.replace('/(tabs)/cabinet' as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.accessUpgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.replace('/(tabs)/cabinet' as any)}
+              style={styles.accessDismissButton}
+            >
+              <Text style={styles.accessDismissText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Message Limit Modal */}
+      <Modal
+        visible={!!limitModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLimitModal(null)}
+      >
+        <View style={styles.limitModalOverlay}>
+          <View style={styles.limitModalPanel}>
+            {limitModal?.tier === 'free' ? (
+              <>
+                <Text style={styles.limitModalTitle}>Daily Limit Reached</Text>
+                <Text style={styles.limitModalBody}>
+                  Free members get {limitModal.limit} counselor messages per day. Upgrade to Arete for 50 messages daily and all 23 counselors.
+                </Text>
+                <TouchableOpacity
+                  style={styles.limitUpgradeButton}
+                  onPress={() => setLimitModal(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.limitUpgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setLimitModal(null)} style={styles.limitDismissButton}>
+                  <Text style={styles.limitDismissText}>Maybe Later</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.limitModalTitle}>Daily Limit Reached</Text>
+                <Text style={styles.limitModalBody}>
+                  You've used all {limitModal?.limit} messages for today. Your limit resets at midnight. See you tomorrow.
+                </Text>
+                <TouchableOpacity
+                  style={styles.limitUpgradeButton}
+                  onPress={() => setLimitModal(null)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.limitUpgradeButtonText}>Upgrade to Arete Pro — Unlimited</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setLimitModal(null)} style={styles.limitDismissButton}>
+                  <Text style={styles.limitDismissText}>Got it</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -469,5 +558,104 @@ const styles = StyleSheet.create({
     color: '#c9a84c',
     fontSize: 13,
     fontWeight: '600',
+  },
+  accessBlockedOverlay: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: '#1a1a2eee',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  accessBlockedPanel: {
+    backgroundColor: '#16213e',
+    borderRadius: 18,
+    padding: 24,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  accessBlockedTitle: {
+    color: '#c9a84c',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  accessBlockedBody: {
+    color: '#ccc',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  accessUpgradeButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  accessUpgradeButtonText: {
+    color: '#1a1a2e',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  accessDismissButton: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  accessDismissText: {
+    color: '#888',
+    fontSize: 14,
+  },
+  limitModalOverlay: {
+    flex: 1,
+    backgroundColor: '#000000cc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  limitModalPanel: {
+    backgroundColor: '#16213e',
+    borderRadius: 18,
+    padding: 24,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  limitModalTitle: {
+    color: '#c9a84c',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  limitModalBody: {
+    color: '#ccc',
+    fontSize: 15,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  limitUpgradeButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  limitUpgradeButtonText: {
+    color: '#1a1a2e',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  limitDismissButton: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  limitDismissText: {
+    color: '#888',
+    fontSize: 14,
   },
 });

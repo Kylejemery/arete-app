@@ -142,3 +142,5 @@ export interface Counselor {
   is_default?: boolean;
   sort_order?: number;
 }
+
+export type SubscriptionTier = 'free' | 'arete' | 'pro';

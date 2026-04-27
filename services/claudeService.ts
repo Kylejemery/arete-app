@@ -1,5 +1,17 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
+import type { SubscriptionTier } from '../lib/types';
+
+export class MessageLimitError extends Error {
+  constructor(
+    public readonly tier: SubscriptionTier,
+    public readonly used: number,
+    public readonly limit: number
+  ) {
+    super('Message limit reached');
+    this.name = 'MessageLimitError';
+  }
+}
 import { supabase } from '../lib/supabase';
 
 export interface Message {
@@ -656,6 +668,11 @@ The week has ended. Give me your honest assessment.`;
 
 export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
   try {
+    const limitStatus = await checkAndIncrementMessageCount();
+    if (!limitStatus.allowed) {
+      throw new MessageLimitError(limitStatus.tier, limitStatus.used, limitStatus.limit!);
+    }
+
     // Apply context window trimming
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
@@ -670,7 +687,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 4000,
+        max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
       }),
@@ -690,6 +707,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     }
     return 'The Cabinet did not respond. Please try again.';
   } catch (error) {
+    if (error instanceof MessageLimitError) throw error;
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
   }
@@ -820,6 +838,11 @@ export async function sendMessageToCounselor(
   messages: ThreadMessage[]
 ): Promise<string> {
   try {
+    const limitStatus = await checkAndIncrementMessageCount();
+    if (!limitStatus.allowed) {
+      throw new MessageLimitError(limitStatus.tier, limitStatus.used, limitStatus.limit!);
+    }
+
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
@@ -835,7 +858,7 @@ export async function sendMessageToCounselor(
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 1500,
+        max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         userProfile,
@@ -887,6 +910,7 @@ export async function sendMessageToCounselor(
     }
     return 'No response received. Please try again.';
   } catch (error) {
+    if (error instanceof MessageLimitError) throw error;
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
   }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { Counselor } from '@/lib/types';
 
 interface CounselorCardProps {
@@ -7,6 +8,7 @@ interface CounselorCardProps {
   isSelected: boolean;
   isDisabled: boolean;
   isFutureSelf?: boolean;
+  isLocked?: boolean;
   onToggle: (slug: string) => void;
 }
 
@@ -30,6 +32,7 @@ export default function CounselorCard({
   isSelected,
   isDisabled,
   isFutureSelf = false,
+  isLocked = false,
   onToggle,
 }: CounselorCardProps) {
   const categoryColor = CATEGORY_COLORS[counselor.category] ?? { bg: 'rgba(201,168,76,0.2)', text: '#c9a84c' };
@@ -39,11 +42,12 @@ export default function CounselorCard({
     styles.card,
     isSelected && styles.cardSelected,
     isFutureSelf && styles.cardFutureSelf,
-    isDisabled && !isSelected && styles.cardDisabled,
+    (isDisabled && !isSelected) && styles.cardDisabled,
+    isLocked && styles.cardLocked,
   ];
 
   const handlePress = () => {
-    if (!isFutureSelf && !isDisabled) {
+    if (!isFutureSelf) {
       onToggle(counselor.slug);
     }
   };
@@ -78,8 +82,15 @@ export default function CounselorCard({
         <Text style={styles.alwaysPresent}>Always Present</Text>
       )}
 
-      {isSelected && !isFutureSelf && (
+      {isSelected && !isFutureSelf && !isLocked && (
         <Text style={styles.checkmark}>✓</Text>
+      )}
+
+      {isLocked && (
+        <View style={styles.lockBadge}>
+          <Ionicons name="lock-closed" size={12} color="#888" />
+          <Text style={styles.lockText}>Arete</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -104,6 +115,27 @@ const styles = StyleSheet.create({
   },
   cardDisabled: {
     opacity: 0.4,
+  },
+  cardLocked: {
+    opacity: 0.55,
+    borderColor: '#333',
+  },
+  lockBadge: {
+    position: 'absolute',
+    bottom: 10,
+    right: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#222',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  lockText: {
+    color: '#888',
+    fontSize: 11,
+    fontWeight: '600',
   },
   badgeRow: {
     flexDirection: 'row',
