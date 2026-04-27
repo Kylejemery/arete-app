@@ -30,7 +30,7 @@ export interface Thread {
 }
 
 const MAX_STORED_MESSAGES = 200;
-export const CONTEXT_WINDOW_SIZE = 30;
+export const CONTEXT_WINDOW_SIZE = 15;
 
 export async function loadThread(threadId: string): Promise<Thread> {
   try {

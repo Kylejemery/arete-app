@@ -142,6 +142,41 @@ export async function upsertTodayCheckin(data: Partial<Omit<DailyCheckin, 'id' |
 }
 
 // ----------------------------------------------------------------
+// DAILY QUESTION CACHE
+// ----------------------------------------------------------------
+
+export async function getDailyQuestionCache(): Promise<{ counselorSlug: string; response: string } | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('daily_question_counselor, daily_question_response')
+      .eq('user_id', userId)
+      .eq('check_in_date', today())
+      .maybeSingle()
+    if (error) {
+      console.error('getDailyQuestionCache error:', error)
+      return null
+    }
+    if (data?.daily_question_counselor && data?.daily_question_response) {
+      return { counselorSlug: data.daily_question_counselor, response: data.daily_question_response }
+    }
+    return null
+  } catch (e) {
+    console.error('getDailyQuestionCache exception:', e)
+    return null
+  }
+}
+
+export async function saveDailyQuestionCache(counselorSlug: string, response: string): Promise<void> {
+  await upsertTodayCheckin({
+    daily_question_counselor: counselorSlug,
+    daily_question_response: response,
+  })
+}
+
+// ----------------------------------------------------------------
 // JOURNAL ENTRIES
 // ----------------------------------------------------------------
 

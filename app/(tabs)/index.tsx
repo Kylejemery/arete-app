@@ -5,6 +5,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote } from '@/lib/db';
+import { normalizeCounselorId } from '../../services/threadService';
+import { prefetchDailyQuestion } from '../../services/claudeService';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -101,6 +103,10 @@ export default function HomeScreen() {
         eveningDone: freshEvening,
       }));
     } catch {}
+
+    // Step 4: pre-generate today's question response in the background
+    const dp = getDailyPrompt();
+    prefetchDailyQuestion(normalizeCounselorId(dp.counselorSlug), dp.prompt).catch(() => {});
   };
 
   const loadQuote = async () => {

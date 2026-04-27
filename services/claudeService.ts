@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache } from '../lib/db';
 import { supabase } from '../lib/supabase';
 
 export interface Message {
@@ -740,7 +740,7 @@ export async function sendCheckInToCabinet(
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
-        max_tokens: 2000,
+        max_tokens: 350,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),
@@ -890,6 +890,41 @@ export async function sendMessageToCounselor(
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
   }
+}
+
+/**
+ * Pre-generates today's counselor question response at app open and caches it in
+ * Supabase so the counselor-chat screen can serve it instantly without an API call.
+ * Fire-and-forget — never throws.
+ */
+export async function prefetchDailyQuestion(counselorId: string, question: string): Promise<void> {
+  try {
+    // Already cached for this counselor today? Nothing to do.
+    const existing = await getDailyQuestionCache();
+    if (existing && existing.counselorSlug === counselorId) return;
+
+    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
+
+    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question }],
+        counselorSlug: counselorId,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const content = data?.content?.[0]?.text;
+    if (typeof content === 'string' && content.length > 0) {
+      await saveDailyQuestionCache(counselorId, content);
+    }
+  } catch { /* silent — best-effort prefetch */ }
 }
 
 async function buildBeliefJournalSystemPrompt(stage: 1 | 2 | 3): Promise<string> {

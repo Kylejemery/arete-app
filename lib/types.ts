@@ -66,6 +66,8 @@ export interface DailyCheckin {
   reading_streak: number;
   cabinet_morning_response: string | null;
   cabinet_evening_response: string | null;
+  daily_question_counselor?: string | null;
+  daily_question_response?: string | null;
   created_at?: string;
   updated_at?: string;
 }

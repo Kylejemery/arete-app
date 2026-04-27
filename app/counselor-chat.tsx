@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { sendMessageToCounselor } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
-import { getUserSettings } from '@/lib/db';
+import { getUserSettings, getDailyQuestionCache } from '@/lib/db';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -69,7 +69,14 @@ export default function CounselorChatScreen() {
         setMessages(updatedMessages);
         setIsLoading(true);
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-        const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+        // Serve from daily question cache if this is a fresh thread (first visit today)
+        let reply: string;
+        const cachedQuestion = thread.messages.length === 0 ? await getDailyQuestionCache() : null;
+        if (cachedQuestion && cachedQuestion.counselorSlug === counselorId) {
+          reply = cachedQuestion.response;
+        } else {
+          reply = await sendMessageToCounselor(counselorId, updatedMessages);
+        }
         const assistantMessage: ThreadMessage = { role: 'assistant', content: reply, timestamp: Date.now(), counselorId };
         const finalMessages = [...updatedMessages, assistantMessage];
         setMessages(finalMessages);
