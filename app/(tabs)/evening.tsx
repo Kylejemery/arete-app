@@ -5,6 +5,8 @@ import { useCallback, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
+    Keyboard,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -26,6 +28,7 @@ import {
   getRoutineTemplates,
   addRoutineTemplate,
   deleteRoutineTemplate,
+  createJournalEntry,
   type RoutineTemplate,
 } from '@/lib/db';
 
@@ -68,7 +71,8 @@ export default function EveningScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
-  const stoicTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stoicFadeAnim = useRef(new Animated.Value(0)).current;
+  const stoicJournalCreated = useRef(false);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   useFocusEffect(
@@ -76,9 +80,6 @@ export default function EveningScreen() {
       loadTasks();
       loadPrompts();
       loadAnswers();
-      return () => {
-        if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
-      };
     }, [])
   );
 
@@ -89,15 +90,35 @@ export default function EveningScreen() {
 
   const loadAnswers = async () => {
     const checkin = await getTodayCheckin();
-    if (checkin?.stoic_answer) setStoicAnswer(checkin.stoic_answer);
+    if (checkin?.stoic_answer) {
+      setStoicAnswer(checkin.stoic_answer);
+      setStoicSaved(true);
+      stoicJournalCreated.current = true;
+      stoicFadeAnim.setValue(1);
+    }
     if (checkin?.cabinet_evening_response) setCheckinResponse(checkin.cabinet_evening_response);
   };
 
   const saveStoic = async (text: string) => {
+    if (!text.trim()) return;
+    Keyboard.dismiss();
     await upsertTodayCheckin({ stoic_answer: text });
+    if (!stoicJournalCreated.current) {
+      stoicJournalCreated.current = true;
+      await createJournalEntry({
+        type: 'reflection',
+        content: text.trim(),
+        source: 'evening_reflection',
+        raw_input: stoicPrompt,
+      });
+    }
+    stoicFadeAnim.setValue(0);
     setStoicSaved(true);
-    if (stoicTimerRef.current) clearTimeout(stoicTimerRef.current);
-    stoicTimerRef.current = setTimeout(() => setStoicSaved(false), 2000);
+    Animated.timing(stoicFadeAnim, {
+      toValue: 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
   };
 
   const loadTasks = async () => {
@@ -217,7 +238,7 @@ export default function EveningScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
           {/* Header */}
           <View style={styles.headerRow}>
@@ -308,19 +329,37 @@ export default function EveningScreen() {
               <Text style={styles.promptTitle}>Stoic Journal</Text>
             </View>
             <Text style={styles.promptQuestion}>{stoicPrompt}</Text>
-            <TextInput
-              style={styles.promptInput}
-              placeholder="Write your thoughts..."
-              placeholderTextColor="#555"
-              multiline
-              numberOfLines={4}
-              value={stoicAnswer}
-              onChangeText={setStoicAnswer}
-              onBlur={() => saveStoic(stoicAnswer)}
-            />
-            <TouchableOpacity style={styles.saveButton} onPress={() => saveStoic(stoicAnswer)}>
-              <Text style={styles.saveButtonText}>{stoicSaved ? '✓ Saved' : 'Save'}</Text>
-            </TouchableOpacity>
+            {stoicSaved ? (
+              <Animated.View style={[styles.stoicSavedCard, { opacity: stoicFadeAnim }]}>
+                <View style={styles.stoicSavedHeader}>
+                  <Ionicons name="checkmark-circle" size={16} color="#c9a84c" />
+                  <Text style={styles.stoicSavedLabel}>Saved</Text>
+                  <TouchableOpacity
+                    onPress={() => { setStoicSaved(false); stoicFadeAnim.setValue(0); }}
+                    style={styles.stoicEditButton}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="pencil-outline" size={15} color="#c9a84c88" />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.stoicSavedText}>{stoicAnswer}</Text>
+              </Animated.View>
+            ) : (
+              <>
+                <TextInput
+                  style={styles.promptInput}
+                  placeholder="Write your thoughts..."
+                  placeholderTextColor="#555"
+                  multiline
+                  numberOfLines={4}
+                  value={stoicAnswer}
+                  onChangeText={setStoicAnswer}
+                />
+                <TouchableOpacity style={styles.saveButton} onPress={() => saveStoic(stoicAnswer)}>
+                  <Text style={styles.saveButtonText}>Save</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
           {/* All Done */}
@@ -629,6 +668,33 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  stoicSavedCard: {
+    backgroundColor: '#1a1a2e',
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  stoicSavedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  stoicSavedLabel: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
+  },
+  stoicEditButton: {
+    padding: 2,
+  },
+  stoicSavedText: {
+    color: '#ccc',
+    fontSize: 14,
+    lineHeight: 22,
   },
   allDoneContainer: {
     backgroundColor: '#16213e',

@@ -692,9 +692,14 @@ export default function JournalScreen() {
                                             )}
                                         </>
                                     ) : (
-                                        <Text style={[styles.entryContent, isExpanded ? styles.entryContentFull : styles.entryContentPreview]}>
-                                            {isExpanded ? displayText : preview}
-                                        </Text>
+                                        <>
+                                            {entry.source === 'evening_reflection' && entry.rawInput && (
+                                                <Text style={styles.entryPrompt}>{entry.rawInput}</Text>
+                                            )}
+                                            <Text style={[styles.entryContent, isExpanded ? styles.entryContentFull : styles.entryContentPreview]}>
+                                                {isExpanded ? displayText : preview}
+                                            </Text>
+                                        </>
                                     )}
                                 </View>
                             </TouchableOpacity>
@@ -1080,6 +1085,7 @@ const styles = StyleSheet.create({
     quoteBook: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
     quoteAuthor: { color: '#888', fontSize: 12 },
     quoteBookPreview: { color: '#c9a84c88', fontSize: 12, marginTop: 4 },
+    entryPrompt: { color: '#888', fontSize: 13, fontStyle: 'italic', marginBottom: 6, lineHeight: 20 },
 
     // FAB
     fab: {

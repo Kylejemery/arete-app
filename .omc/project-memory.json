@@ -268,6 +268,18 @@
       "type": "file"
     },
     {
+      "path": "lib\\db.ts",
+      "accessCount": 12,
+      "lastAccessed": 1777315603468,
+      "type": "file"
+    },
+    {
+      "path": "app\\(tabs)\\evening.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1777315584961,
+      "type": "file"
+    },
+    {
       "path": "app\\my-cabinet\\select.tsx",
       "accessCount": 9,
       "lastAccessed": 1777298556888,
@@ -277,12 +289,6 @@
       "path": "services\\claudeService.ts",
       "accessCount": 9,
       "lastAccessed": 1777299353525,
-      "type": "file"
-    },
-    {
-      "path": "lib\\db.ts",
-      "accessCount": 9,
-      "lastAccessed": 1777299591955,
       "type": "file"
     },
     {
@@ -304,6 +310,24 @@
       "type": "file"
     },
     {
+      "path": "app\\(tabs)\\timer.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1777316271746,
+      "type": "file"
+    },
+    {
+      "path": "app",
+      "accessCount": 4,
+      "lastAccessed": 1777316174496,
+      "type": "directory"
+    },
+    {
+      "path": "lib\\types.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777315623205,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\001_initial_schema.sql",
       "accessCount": 2,
       "lastAccessed": 1777297631156,
@@ -316,16 +340,10 @@
       "type": "file"
     },
     {
-      "path": "lib\\types.ts",
+      "path": "app\\(tabs)\\journal.tsx",
       "accessCount": 2,
-      "lastAccessed": 1777297811118,
+      "lastAccessed": 1777315559088,
       "type": "file"
-    },
-    {
-      "path": "app",
-      "accessCount": 2,
-      "lastAccessed": 1777300065682,
-      "type": "directory"
     },
     {
       "path": "supabase\\migrations\\20260427000000_subscription_tiers.sql",
@@ -344,6 +362,12 @@
       "accessCount": 1,
       "lastAccessed": 1777299290489,
       "type": "file"
+    },
+    {
+      "path": "lib",
+      "accessCount": 1,
+      "lastAccessed": 1777315612746,
+      "type": "directory"
     }
   ],
   "userDirectives": []

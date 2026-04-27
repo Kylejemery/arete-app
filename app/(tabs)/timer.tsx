@@ -1,5 +1,7 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert, AppState, AppStateStatus, KeyboardAvoidingView, Modal,
     Platform,
@@ -13,6 +15,8 @@ import {
 import * as Notifications from 'expo-notifications';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
+
+const POMODORO_SESSIONS_KEY = 'arete:pomodoro_sessions';
 
 /** Returns today's date as a local YYYY-MM-DD string (not UTC). */
 function getLocalDateString(): string {
@@ -66,14 +70,28 @@ export default function TimerScreen() {
   const pomodoroRef = useRef<any>(null);
   const pomodoroEndTimeRef = useRef<number>(0);
 
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
+
   useEffect(() => {
-    loadData();
     Notifications.requestPermissionsAsync();
     return () => {
       clearInterval(intervalRef.current);
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
     };
   }, []);
+
+  // Persist session count whenever it increments
+  useEffect(() => {
+    if (pomodoroSessions === 0) return;
+    AsyncStorage.setItem(
+      POMODORO_SESSIONS_KEY,
+      JSON.stringify({ date: getLocalDateString(), count: pomodoroSessions })
+    ).catch(() => {});
+  }, [pomodoroSessions]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState: AppStateStatus) => {
@@ -130,7 +148,10 @@ export default function TimerScreen() {
 
   const loadData = async () => {
     try {
-      const readingData = await getReadingData();
+      const [readingData, storedSessions] = await Promise.all([
+        getReadingData(),
+        AsyncStorage.getItem(POMODORO_SESSIONS_KEY),
+      ]);
       if (readingData) {
         setCurrentBooks(readingData.current_books ?? []);
         setSessions(readingData.reading_sessions ?? []);
@@ -138,6 +159,10 @@ export default function TimerScreen() {
         if (readingData.today_reading_date === todayDate) {
           setTodaySeconds(readingData.today_reading_seconds ?? 0);
         }
+      }
+      if (storedSessions) {
+        const { date, count } = JSON.parse(storedSessions);
+        setPomodoroSessions(date === getLocalDateString() ? count : 0);
       }
     } catch (e) {
       console.error(e);
