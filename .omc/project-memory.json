@@ -268,6 +268,12 @@
       "type": "file"
     },
     {
+      "path": "app\\scrolls\\[id].tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777391718541,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260417000001_goals.sql",
       "accessCount": 1,
       "lastAccessed": 1777384075084,
@@ -277,6 +283,18 @@
       "path": "supabase\\migrations\\20260428000000_goals_add_category.sql",
       "accessCount": 1,
       "lastAccessed": 1777384085046,
+      "type": "file"
+    },
+    {
+      "path": "lib\\scrolls.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777391446439,
+      "type": "file"
+    },
+    {
+      "path": "app\\(tabs)\\scrolls.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777391456430,
       "type": "file"
     }
   ],

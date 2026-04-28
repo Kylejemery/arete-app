@@ -5,7 +5,8 @@
       "Bash(grep -E \"\\\\.\\(sql|md\\)$\")",
       "Bash(xargs grep *)",
       "mcp__a6244408-a83e-4651-9b5f-92c59c412136__list_projects",
-      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__apply_migration"
+      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__apply_migration",
+      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__execute_sql"
     ]
   }
 }

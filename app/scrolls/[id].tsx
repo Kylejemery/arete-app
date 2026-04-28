@@ -110,7 +110,16 @@ export default function ScrollDetail() {
 
   const readCount = scroll?.read_count ?? 0;
 
-  const URL_REGEX = /(https?:\/\/[^\s]+)/g;
+  // Exclude trailing punctuation that prose/markdown wraps URLs with: ) , . > "
+  const URL_REGEX = /(https?:\/\/[^\s)"',.<>]+)/g;
+
+  const normalizeUrl = (url: string): string => {
+    // Convert any Amazon product URL to the stable /dp/ASIN form
+    const asin = url.match(/amazon\.com(?:\/[^/]+)*\/dp\/([A-Z0-9]{10})/i)?.[1];
+    if (asin) return `https://www.amazon.com/dp/${asin}`;
+    return url;
+  };
+
   const renderParagraph = (text: string, i: number) => {
     const parts = text.split(URL_REGEX);
     const hasLinks = parts.some(p => /^https?:\/\//.test(p));
@@ -121,7 +130,7 @@ export default function ScrollDetail() {
       <Text key={i} style={styles.body} selectable>
         {parts.map((part, j) =>
           /^https?:\/\//.test(part) ? (
-            <Text key={j} style={styles.link} onPress={() => Linking.openURL(part)}>
+            <Text key={j} style={styles.link} onPress={() => Linking.openURL(normalizeUrl(part))}>
               {part}
             </Text>
           ) : (
