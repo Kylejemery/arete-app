@@ -274,6 +274,12 @@
       "type": "file"
     },
     {
+      "path": "app\\(tabs)\\cabinet.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777393621593,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260417000001_goals.sql",
       "accessCount": 1,
       "lastAccessed": 1777384075084,
@@ -295,6 +301,12 @@
       "path": "app\\(tabs)\\scrolls.tsx",
       "accessCount": 1,
       "lastAccessed": 1777391456430,
+      "type": "file"
+    },
+    {
+      "path": "app\\(tabs)\\morning.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777393592159,
       "type": "file"
     }
   ],

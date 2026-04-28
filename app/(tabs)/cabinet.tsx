@@ -81,9 +81,10 @@ export default function CabinetScreen() {
   const [limitModal, setLimitModal] = useState<{ tier: SubscriptionTier; limit: number } | null>(null);
 
   // --- beliefContext deep-link param ---
-  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string }>();
+  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
   const consumedBeliefContextRef = useRef(false);
   const consumedCabinetContextRef = useRef(false);
+  const consumedMorningMessageRef = useRef(false);
 
   const loadInitialThread = async () => {
     setError(null);
@@ -201,6 +202,27 @@ export default function CabinetScreen() {
       }
     }
   }, [params.cabinetContext, router]);
+
+  // Consume morningMessage param — renders the Cabinet's morning response as an assistant bubble
+  // without re-sending to the API. Waits for initialLoading to finish so it appends after
+  // existing history, not before.
+  useEffect(() => {
+    if (initialLoading) return;
+    const mm = params.morningMessage;
+    if (mm && !consumedMorningMessageRef.current) {
+      consumedMorningMessageRef.current = true;
+      setActiveTab('cabinet');
+      router.setParams({ morningMessage: undefined });
+      const assistantMessage: ThreadMessage = {
+        role: 'assistant',
+        content: String(mm),
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMessage]);
+      appendMessages('cabinet', [assistantMessage]);
+      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+    }
+  }, [params.morningMessage, initialLoading, router]);
 
   const handleSend = async () => {
     const text = inputText.trim();
