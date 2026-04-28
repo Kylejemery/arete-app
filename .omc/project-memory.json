@@ -280,6 +280,30 @@
       "type": "file"
     },
     {
+      "path": "docs\\index.html",
+      "accessCount": 3,
+      "lastAccessed": 1777407743176,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\middleware.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777407743636,
+      "type": "file"
+    },
+    {
+      "path": "web\\.env.example",
+      "accessCount": 2,
+      "lastAccessed": 1777407522025,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\lib\\db.ts",
+      "accessCount": 2,
+      "lastAccessed": 1777407655428,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260417000001_goals.sql",
       "accessCount": 1,
       "lastAccessed": 1777384075084,
@@ -307,6 +331,48 @@
       "path": "app\\(tabs)\\morning.tsx",
       "accessCount": 1,
       "lastAccessed": 1777393592159,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\20260422000000_add_routine_templates.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777407241623,
+      "type": "file"
+    },
+    {
+      "path": "web\\tailwind.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777407426774,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\20260421000000_add_reading_data.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777407491185,
+      "type": "file"
+    },
+    {
+      "path": "web",
+      "accessCount": 1,
+      "lastAccessed": 1777407512005,
+      "type": "directory"
+    },
+    {
+      "path": "web\\src\\lib",
+      "accessCount": 1,
+      "lastAccessed": 1777407598049,
+      "type": "directory"
+    },
+    {
+      "path": "web\\src\\lib\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777407609378,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations\\20260428000002_add_calendar_data.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777407675116,
       "type": "file"
     }
   ],

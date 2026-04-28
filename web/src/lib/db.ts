@@ -299,29 +299,83 @@ export async function upsertThread(threadId: string, messages: ThreadMessage[]):
 }
 
 // ----------------------------------------------------------------
-// READING DATA (not stored in Supabase — stub)
+// READING DATA
 // ----------------------------------------------------------------
 
 export async function getReadingData(): Promise<ReadingData | null> {
-  console.warn('getReadingData: reading_data table does not exist in Supabase')
-  return null
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('reading_data')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) {
+      console.error('getReadingData error:', error)
+      return null
+    }
+    return data ?? null
+  } catch (e) {
+    console.error('getReadingData exception:', e)
+    return null
+  }
 }
 
-export async function upsertReadingData(_data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
-  // no-op: reading_data table does not exist in Supabase
+export async function upsertReadingData(data: Partial<Omit<ReadingData, 'id' | 'user_id' | 'created_at' | 'updated_at'>>): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('reading_data')
+      .upsert(
+        { ...data, user_id: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('upsertReadingData error:', error)
+  } catch (e) {
+    console.error('upsertReadingData exception:', e)
+  }
 }
 
 // ----------------------------------------------------------------
-// CALENDAR DATA (not stored in Supabase — stub)
+// CALENDAR DATA
 // ----------------------------------------------------------------
 
 export async function getCalendarData(): Promise<Record<string, { morning: boolean; evening: boolean }>> {
-  console.warn('getCalendarData: calendar_data table does not exist in Supabase')
-  return {}
+  const userId = await getUserId()
+  if (!userId) return {}
+  try {
+    const { data, error } = await supabase
+      .from('calendar_data')
+      .select('data')
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) {
+      console.error('getCalendarData error:', error)
+      return {}
+    }
+    return (data?.data as Record<string, { morning: boolean; evening: boolean }>) ?? {}
+  } catch (e) {
+    console.error('getCalendarData exception:', e)
+    return {}
+  }
 }
 
-export async function upsertCalendarData(_data: Record<string, { morning: boolean; evening: boolean }>): Promise<void> {
-  // no-op: calendar_data table does not exist in Supabase
+export async function upsertCalendarData(calendarData: Record<string, { morning: boolean; evening: boolean }>): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('calendar_data')
+      .upsert(
+        { data: calendarData, user_id: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('upsertCalendarData error:', error)
+  } catch (e) {
+    console.error('upsertCalendarData exception:', e)
+  }
 }
 
 // ----------------------------------------------------------------
