@@ -262,6 +262,12 @@
       "type": "file"
     },
     {
+      "path": "app\\counselor-chat.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777387978264,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260417000001_goals.sql",
       "accessCount": 1,
       "lastAccessed": 1777384075084,

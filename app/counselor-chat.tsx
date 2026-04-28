@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { sendMessageToCounselor, MessageLimitError } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
-import { getUserSettings, getDailyQuestionCache, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
+import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
 import type { SubscriptionTier } from '@/lib/types';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
@@ -75,24 +75,15 @@ export default function CounselorChatScreen() {
       setMessages(thread.messages);
       if (initialMessage && !hasSentInitialRef.current) {
         hasSentInitialRef.current = true;
-        const userMessage: ThreadMessage = { role: 'user', content: initialMessage, timestamp: Date.now() };
-        const updatedMessages = [...thread.messages, userMessage];
+        const counselorQuestion: ThreadMessage = {
+          role: 'assistant',
+          content: initialMessage,
+          timestamp: Date.now(),
+          counselorId,
+        };
+        const updatedMessages = [...thread.messages, counselorQuestion];
         setMessages(updatedMessages);
-        setIsLoading(true);
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-        // Serve from daily question cache if this is a fresh thread (first visit today)
-        let reply: string;
-        const cachedQuestion = thread.messages.length === 0 ? await getDailyQuestionCache() : null;
-        if (cachedQuestion && cachedQuestion.counselorSlug === counselorId) {
-          reply = cachedQuestion.response;
-        } else {
-          reply = await sendMessageToCounselor(counselorId, updatedMessages);
-        }
-        const assistantMessage: ThreadMessage = { role: 'assistant', content: reply, timestamp: Date.now(), counselorId };
-        const finalMessages = [...updatedMessages, assistantMessage];
-        setMessages(finalMessages);
-        setIsLoading(false);
-        await appendMessages(counselorId, [userMessage, assistantMessage]);
+        await appendMessages(counselorId, [counselorQuestion]);
         setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
       }
     });
