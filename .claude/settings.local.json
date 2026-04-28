@@ -3,7 +3,9 @@
     "allow": [
       "Bash(find /c/Users/Hattie/arete-app -name *.sql -o -name *migrations* -type f)",
       "Bash(grep -E \"\\\\.\\(sql|md\\)$\")",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__list_projects",
+      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__apply_migration"
     ]
   }
 }
