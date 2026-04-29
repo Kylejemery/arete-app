@@ -193,21 +193,22 @@ function chunkMeditations(text, meta) {
 function chunkDiscourses(text, meta) {
   const chunks = [];
   const lines = text.split('\n');
-
-  let currentBook = '';
-  let currentChapter = null;
+  let currentSection = null;
   let buffer = [];
   let chunkIndex = 0;
 
-  const bookRe = /^BOOK\s+([IVXLC\d]+)/i;
-  const chapterRe = /^CHAPTER\s+([IVXLC\d]+)[.\s—]*(.*)/i;
+  // Gutenberg "Selection from the Discourses" format:
+  // "ALL CAPS TITLE.—First sentence of text continues on same line"
+  // Only match lines with the em-dash (—, –, or --) separator — this is present on
+  // every real section heading and absent on TOC/intro lines.
+  const inlineSectionRe = /^([A-Z][A-Z\s,;'()]{5,}[.?!])\s*[—–-]{1,2}\s*(.*)/;
 
   function flush() {
-    const txt = buffer.join('\n').trim();
-    if (txt && currentChapter) {
+    const txt = buffer.join(' ').replace(/\s+/g, ' ').trim();
+    if (txt && currentSection) {
       chunks.push({
         ...meta,
-        section_label: currentChapter,
+        section_label: currentSection,
         chunk_index: chunkIndex++,
         chunk_text: txt,
         word_count: countWords(txt),
@@ -217,27 +218,16 @@ function chunkDiscourses(text, meta) {
   }
 
   for (const line of lines) {
-    const bookMatch = line.match(bookRe);
-    if (bookMatch) {
+    const trimmed = line.trim();
+    const inlineMatch = trimmed.match(inlineSectionRe);
+    if (inlineMatch) {
       flush();
-      currentBook = `Book ${bookMatch[1]}`;
-      currentChapter = null;
+      currentSection = inlineMatch[1].replace(/\.$/, '').trim();
+      if (inlineMatch[2]) buffer.push(inlineMatch[2]);
       continue;
     }
-
-    const chapMatch = line.match(chapterRe);
-    if (chapMatch) {
-      flush();
-      const chapNum = chapMatch[1];
-      const chapTitle = chapMatch[2].trim();
-      currentChapter = currentBook
-        ? `${currentBook}, Ch. ${chapNum}${chapTitle ? ' — ' + chapTitle : ''}`
-        : `Chapter ${chapNum}${chapTitle ? ' — ' + chapTitle : ''}`;
-      continue;
-    }
-
-    if (currentChapter) {
-      buffer.push(line);
+    if (currentSection && trimmed) {
+      buffer.push(trimmed);
     }
   }
   flush();
@@ -245,49 +235,51 @@ function chunkDiscourses(text, meta) {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy: Enchiridion — numbered chapters like "1." or "1 "
+// Strategy: Enchiridion — standalone Roman numeral chapter markers
+// Gutenberg/Liberal Arts edition uses bare Roman numerals on their own lines.
 // ---------------------------------------------------------------------------
 function chunkEnchiridion(text, meta) {
-  const chunks = [];
-
-  // Split on numbered chapter headings: standalone number at start of line
-  // e.g. "\n\n1\n\n" or "1." followed by content
-  const chapterRe = /\n\s*(\d+)[.\s]*\n/g;
-
+  const lines = text.split('\n');
   const parts = [];
-  let lastIndex = 0;
-  let lastNum = null;
-  let match;
+  let currentNum = null;
+  let buffer = [];
 
-  while ((match = chapterRe.exec(text)) !== null) {
-    if (lastNum !== null) {
-      parts.push({ num: lastNum, text: text.slice(lastIndex, match.index).trim() });
+  // Standalone Roman numeral: "I", "XIV", etc. — whole trimmed line, no other text
+  const romanRe = /^[IVXLC]+$/;
+
+  function flush() {
+    const txt = buffer.join(' ').replace(/\s+/g, ' ').trim();
+    if (txt && currentNum !== null) {
+      parts.push({ num: currentNum, text: txt });
     }
-    lastNum = match[1];
-    lastIndex = match.index + match[0].length;
-  }
-  if (lastNum !== null) {
-    parts.push({ num: lastNum, text: text.slice(lastIndex).trim() });
+    buffer = [];
   }
 
-  // Fallback: if we got very few parts, use paragraph strategy
-  if (parts.length < 10) {
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (romanRe.test(trimmed) && trimmed.length >= 1 && trimmed.length <= 8) {
+      flush();
+      currentNum = romanToInt(trimmed);
+      continue;
+    }
+    if (currentNum !== null && trimmed) {
+      buffer.push(trimmed);
+    }
+  }
+  flush();
+
+  if (parts.length < 5) {
     return chunkByParagraph(text, meta);
   }
 
   let chunkIndex = 0;
-  for (const part of parts) {
-    const txt = part.text;
-    if (!txt) continue;
-    chunks.push({
-      ...meta,
-      section_label: `Chapter ${part.num}`,
-      chunk_index: chunkIndex++,
-      chunk_text: txt,
-      word_count: countWords(txt),
-    });
-  }
-  return chunks;
+  return parts.map(p => ({
+    ...meta,
+    section_label: `Chapter ${p.num}`,
+    chunk_index: chunkIndex++,
+    chunk_text: p.text,
+    word_count: countWords(p.text),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -483,6 +475,13 @@ function chunkRaw(rawText, strategy, baseMeta) {
     case 'paragraph':
     default:               chunks = chunkByParagraph(text, meta);
   }
+
+  // Fallback: if the primary strategy produced nothing, use paragraph chunking
+  if (chunks.length === 0) {
+    console.warn(`  [chunker] Strategy "${strategy}" produced 0 chunks — falling back to paragraphs`);
+    chunks = chunkByParagraph(text, meta);
+  }
+
   return applyOversizeGuard(chunks);
 }
 

@@ -9,6 +9,20 @@ const { uploadChunks } = require('./uploader');
 
 const TEXTS_DIR = path.join(__dirname, 'texts');
 
+// Fix common Windows-1252/Latin-1 mojibake that appears in Gutenberg UTF-8 files
+function fixEncoding(text) {
+  return text
+    .replace(/â€™/g, "'")   // right single quote / apostrophe
+    .replace(/â€œ/g, '"')   // left double quote
+    .replace(/â€\x9d/g, '"') // right double quote
+    .replace(/â€"/g, '—')   // em dash
+    .replace(/â€"/g, '–')   // en dash
+    .replace(/â€¦/g, '…')   // ellipsis
+    .replace(/Ã©/g, 'é')
+    .replace(/Ã /g, 'à')
+    .replace(/Ã¨/g, 'è');
+}
+
 const MANIFEST = [
   { slug: 'marcus-aurelius', strategy: 'meditations',  file: 'marcus-meditations.txt' },
   { slug: 'epictetus',       strategy: 'discourses',   files: ['epictetus-discourses.txt', 'epictetus-enchiridion.txt'] },
@@ -33,7 +47,7 @@ async function ingestOne(entry) {
       console.warn(`  Skipping file not found: ${filepath}`);
       continue;
     }
-    const raw = fs.readFileSync(filepath, 'utf8');
+    const raw = fixEncoding(fs.readFileSync(filepath, 'utf8'));
     const title = sourceTitle(file);
     const fileChunks = chunkRaw(raw, entry.strategy, { author: entry.slug, work: title });
     // Re-index so chunk_index is globally unique across all files for this counselor
