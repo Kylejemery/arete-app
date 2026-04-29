@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"node --check C:/Users/kjemery/Arete/Arete/academy/corpus-ingestion/ingest.js && grep -n \\\"entry\\\\.work\\\\|rawChunks\\\" C:/Users/kjemery/Arete/Arete/academy/corpus-ingestion/ingest.js && echo...",
+  "error": "Exit code 1\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!",
+  "timestamp": "2026-04-29T17:13:11.761Z",
+  "retry_count": 1
+}

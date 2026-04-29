@@ -387,6 +387,62 @@ function chunkByParagraph(text, meta) {
 }
 
 // ---------------------------------------------------------------------------
+// Oversize guard — splits any chunk whose text exceeds maxChars.
+// Splits on sentence boundaries (". ") first; falls back to hard char split.
+// Re-indexes all chunks sequentially after splitting.
+// ---------------------------------------------------------------------------
+function splitOversizedChunk(text, maxChars = 24000) {
+  if (text.length <= maxChars) return [text];
+
+  const pieces = [];
+  // Split on sentence boundaries
+  const sentences = text.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [text];
+  let current = '';
+
+  for (const sentence of sentences) {
+    if (current.length + sentence.length > maxChars) {
+      if (current) pieces.push(current.trim());
+      // Single sentence larger than maxChars — hard split
+      if (sentence.length > maxChars) {
+        for (let i = 0; i < sentence.length; i += maxChars) {
+          pieces.push(sentence.slice(i, i + maxChars).trim());
+        }
+        current = '';
+      } else {
+        current = sentence;
+      }
+    } else {
+      current += sentence;
+    }
+  }
+  if (current.trim()) pieces.push(current.trim());
+  return pieces;
+}
+
+function applyOversizeGuard(chunks, maxChars = 24000) {
+  const result = [];
+  let globalIndex = 0;
+
+  for (const chunk of chunks) {
+    const pieces = splitOversizedChunk(chunk.chunk_text, maxChars);
+    if (pieces.length === 1) {
+      result.push({ ...chunk, chunk_index: globalIndex++ });
+    } else {
+      for (let i = 0; i < pieces.length; i++) {
+        result.push({
+          ...chunk,
+          chunk_text:    pieces[i],
+          word_count:    countWords(pieces[i]),
+          section_label: pieces.length > 1 ? `${chunk.section_label} (${i + 1}/${pieces.length})` : chunk.section_label,
+          chunk_index:   globalIndex++,
+        });
+      }
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 function chunkFile(filename, rawText) {
@@ -397,13 +453,15 @@ function chunkFile(filename, rawText) {
 
   const text = stripGutenbergBoilerplate(rawText);
 
+  let chunks;
   switch (meta.strategy) {
-    case 'meditations':    return chunkMeditations(text, meta);
-    case 'discourses':     return chunkDiscourses(text, meta);
-    case 'enchiridion':    return chunkEnchiridion(text, meta);
-    case 'seneca-letters': return chunkSenecaLetters(text, meta);
-    default:               return chunkByParagraph(text, meta);
+    case 'meditations':    chunks = chunkMeditations(text, meta); break;
+    case 'discourses':     chunks = chunkDiscourses(text, meta); break;
+    case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
+    case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
+    default:               chunks = chunkByParagraph(text, meta);
   }
+  return applyOversizeGuard(chunks);
 }
 
 /**
@@ -414,19 +472,21 @@ function chunkRaw(rawText, strategy, baseMeta) {
   const text = stripGutenbergBoilerplate(rawText);
   const meta = { translator: '', source_url: '', text_type: 'primary', ...baseMeta };
 
+  let chunks;
   switch (strategy) {
-    case 'meditations':  return chunkMeditations(text, meta);
-    case 'discourses':   return chunkDiscourses(text, meta);
-    case 'enchiridion':  return chunkEnchiridion(text, meta);
+    case 'meditations':    chunks = chunkMeditations(text, meta); break;
+    case 'discourses':     chunks = chunkDiscourses(text, meta); break;
+    case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'letters':
-    case 'seneca-letters': return chunkSenecaLetters(text, meta);
+    case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
     case 'paragraphs':
     case 'paragraph':
-    default:             return chunkByParagraph(text, meta);
+    default:               chunks = chunkByParagraph(text, meta);
   }
+  return applyOversizeGuard(chunks);
 }
 
-module.exports = { chunkFile, chunkRaw, TEXT_METADATA };
+module.exports = { chunkFile, chunkRaw, splitOversizedChunk, TEXT_METADATA };
 
 // ---------------------------------------------------------------------------
 // CLI test: node chunker.js — prints first 3 chunks of Meditations

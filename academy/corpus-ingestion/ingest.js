@@ -15,23 +15,42 @@ const MANIFEST = [
   { slug: 'seneca',          strategy: 'letters',      files: ['seneca-letters.txt', 'seneca-shortness.txt'] },
 ];
 
-async function ingestOne(entry) {
-  const filepath = path.join(TEXTS_DIR, entry.file);
+function sourceTitle(filename) {
+  return path.basename(filename, '.txt');
+}
 
-  if (!fs.existsSync(filepath)) {
-    console.warn(`  Skipping ${entry.slug} — file not found: ${filepath}`);
+async function ingestOne(entry) {
+  // Normalize to always work with an array of files
+  const files = entry.files || [entry.file];
+
+  // 1. Chunk all files, combining results with a global chunk_index
+  let allRawChunks = [];
+  let globalIndex = 0;
+
+  for (const file of files) {
+    const filepath = path.join(TEXTS_DIR, file);
+    if (!fs.existsSync(filepath)) {
+      console.warn(`  Skipping file not found: ${filepath}`);
+      continue;
+    }
+    const raw = fs.readFileSync(filepath, 'utf8');
+    const title = sourceTitle(file);
+    const fileChunks = chunkRaw(raw, entry.strategy, { author: entry.slug, work: title });
+    // Re-index so chunk_index is globally unique across all files for this counselor
+    const reindexed = fileChunks.map(c => ({ ...c, chunk_index: globalIndex++, source_title: title }));
+    console.log(`  Chunked "${title}" into ${fileChunks.length} chunks`);
+    allRawChunks = allRawChunks.concat(reindexed);
+  }
+
+  if (allRawChunks.length === 0) {
+    console.warn(`  No chunks produced for ${entry.slug} — all files missing?`);
     return null;
   }
 
-  // 1. Chunk
-  const raw = fs.readFileSync(filepath, 'utf8');
-  const rawChunks = chunkRaw(raw, entry.strategy, { author: entry.slug, work: entry.work });
-  console.log(`  Chunked "${entry.work}" into ${rawChunks.length} chunks`);
-
   // 2. Shape chunks for embedder: add counselor_slug, strategy, map chunk_text -> text
-  const shaped = rawChunks.map(c => ({
+  const shaped = allRawChunks.map(c => ({
     counselor_slug: entry.slug,
-    source_title:   entry.work,
+    source_title:   c.source_title,
     chunk_index:    c.chunk_index,
     strategy:       entry.strategy,
     text:           c.chunk_text,
@@ -51,7 +70,7 @@ async function ingestOne(entry) {
   const { uploaded, skipped, errors } = await uploadChunks(embedded);
   console.log(`  Done. ${uploaded} uploaded, ${skipped} skipped, ${errors} errors`);
 
-  return { slug: entry.slug, total: rawChunks.length, uploaded, errors };
+  return { slug: entry.slug, total: allRawChunks.length, uploaded, errors };
 }
 
 async function main() {
