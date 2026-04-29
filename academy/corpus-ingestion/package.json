@@ -1,0 +1,16 @@
+{
+  "name": "arete-corpus-ingestion",
+  "version": "1.0.0",
+  "description": "RAG corpus ingestion pipeline for Arete Academy",
+  "main": "ingest.js",
+  "type": "commonjs",
+  "scripts": {
+    "ingest": "node ingest.js",
+    "chunk-test": "node chunker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.4.1",
+    "openai": "^4.28.0"
+  }
+}
