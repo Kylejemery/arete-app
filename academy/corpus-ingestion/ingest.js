@@ -10,12 +10,9 @@ const { uploadChunks } = require('./uploader');
 const TEXTS_DIR = path.join(__dirname, 'texts');
 
 const MANIFEST = [
-  { slug: 'marcus-aurelius',    strategy: 'meditations', file: 'marcus-aurelius.txt',    work: 'Meditations' },
-  { slug: 'epictetus',          strategy: 'discourses',  file: 'epictetus.txt',           work: 'Discourses' },
-  { slug: 'seneca',             strategy: 'letters',     file: 'seneca.txt',              work: 'Letters to Lucilius' },
-  { slug: 'theodore-roosevelt', strategy: 'paragraphs',  file: 'theodore-roosevelt.txt',  work: 'Selected Writings' },
-  { slug: 'viktor-frankl',      strategy: 'paragraphs',  file: 'viktor-frankl.txt',       work: "Man's Search for Meaning" },
-  { slug: 'david-goggins',      strategy: 'paragraphs',  file: 'david-goggins.txt',       work: "Can't Hurt Me" },
+  { slug: 'marcus-aurelius', strategy: 'meditations',  file: 'marcus-meditations.txt' },
+  { slug: 'epictetus',       strategy: 'discourses',   files: ['epictetus-discourses.txt', 'epictetus-enchiridion.txt'] },
+  { slug: 'seneca',          strategy: 'letters',      files: ['seneca-letters.txt', 'seneca-shortness.txt'] },
 ];
 
 async function ingestOne(entry) {
