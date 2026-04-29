@@ -406,7 +406,27 @@ function chunkFile(filename, rawText) {
   }
 }
 
-module.exports = { chunkFile, TEXT_METADATA };
+/**
+ * chunkRaw — used by ingest.js when strategy comes from the manifest,
+ * not from TEXT_METADATA. baseMeta should contain at minimum: author, work.
+ */
+function chunkRaw(rawText, strategy, baseMeta) {
+  const text = stripGutenbergBoilerplate(rawText);
+  const meta = { translator: '', source_url: '', text_type: 'primary', ...baseMeta };
+
+  switch (strategy) {
+    case 'meditations':  return chunkMeditations(text, meta);
+    case 'discourses':   return chunkDiscourses(text, meta);
+    case 'enchiridion':  return chunkEnchiridion(text, meta);
+    case 'letters':
+    case 'seneca-letters': return chunkSenecaLetters(text, meta);
+    case 'paragraphs':
+    case 'paragraph':
+    default:             return chunkByParagraph(text, meta);
+  }
+}
+
+module.exports = { chunkFile, chunkRaw, TEXT_METADATA };
 
 // ---------------------------------------------------------------------------
 // CLI test: node chunker.js — prints first 3 chunks of Meditations

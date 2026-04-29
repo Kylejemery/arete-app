@@ -266,6 +266,30 @@
       "accessCount": 1,
       "lastAccessed": 1777479297002,
       "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\chunker.js",
+      "accessCount": 1,
+      "lastAccessed": 1777481553436,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\embedder.js",
+      "accessCount": 1,
+      "lastAccessed": 1777481565250,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\uploader.js",
+      "accessCount": 1,
+      "lastAccessed": 1777481570440,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\ingest.js",
+      "accessCount": 1,
+      "lastAccessed": 1777481583517,
+      "type": "file"
     }
   ],
   "userDirectives": []
