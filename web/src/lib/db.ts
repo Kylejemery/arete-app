@@ -703,6 +703,7 @@ export async function getScrolls(userId: string): Promise<Scroll[]> {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
   if (error) { console.error('getScrolls error:', error); return [] }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data ?? []).map((row: any) => ({
     ...row,
     read_count: row.scroll_reads?.[0]?.read_count ?? 0,
