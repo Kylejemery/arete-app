@@ -33,7 +33,9 @@ function LoginForm() {
         setError(authError.message)
       } else {
         const redirectTo = searchParams.get('redirectTo') || '/'
-        router.replace(redirectTo)
+        // Full reload so the fresh Supabase session cookie is included in the
+        // next server request before the middleware auth check runs.
+        window.location.href = redirectTo
       }
     } catch {
       setError('An unexpected error occurred. Please try again.')

@@ -256,6 +256,36 @@
   },
   "hotPaths": [
     {
+      "path": "academy\\corpus-ingestion\\chunker.js",
+      "accessCount": 4,
+      "lastAccessed": 1777482683110,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\ingest.js",
+      "accessCount": 4,
+      "lastAccessed": 1777482692183,
+      "type": "file"
+    },
+    {
+      "path": "server\\index.js",
+      "accessCount": 3,
+      "lastAccessed": 1777494590744,
+      "type": "file"
+    },
+    {
+      "path": "app\\onboarding\\index.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777516552061,
+      "type": "file"
+    },
+    {
+      "path": "server\\package.json",
+      "accessCount": 2,
+      "lastAccessed": 1777494560666,
+      "type": "file"
+    },
+    {
       "path": "academy\\corpus-ingestion\\package.json",
       "accessCount": 1,
       "lastAccessed": 1777479292722,
@@ -265,12 +295,6 @@
       "path": "academy\\corpus-ingestion\\.env.example",
       "accessCount": 1,
       "lastAccessed": 1777479297002,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\chunker.js",
-      "accessCount": 1,
-      "lastAccessed": 1777481553436,
       "type": "file"
     },
     {
@@ -286,9 +310,39 @@
       "type": "file"
     },
     {
-      "path": "academy\\corpus-ingestion\\ingest.js",
+      "path": "web\\src\\middleware.ts",
       "accessCount": 1,
-      "lastAccessed": 1777481583517,
+      "lastAccessed": 1777556725198,
+      "type": "file"
+    },
+    {
+      "path": "web\\vercel.json",
+      "accessCount": 1,
+      "lastAccessed": 1777556749056,
+      "type": "file"
+    },
+    {
+      "path": "docs\\index.html",
+      "accessCount": 1,
+      "lastAccessed": 1777556760264,
+      "type": "file"
+    },
+    {
+      "path": "web\\.env.example",
+      "accessCount": 1,
+      "lastAccessed": 1777557167028,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\lib\\supabase.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777561495452,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777561584005,
       "type": "file"
     }
   ],

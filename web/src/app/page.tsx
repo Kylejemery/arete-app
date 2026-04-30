@@ -19,7 +19,7 @@ export default function HomePage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.replace('/login');
+        router.replace('/login?redirectTo=/');
         return;
       }
       const [settings, morningDoneToday, eveningDoneToday] = await Promise.all([

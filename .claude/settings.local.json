@@ -7,7 +7,21 @@
       "mcp__a6244408-a83e-4651-9b5f-92c59c412136__list_projects",
       "mcp__a6244408-a83e-4651-9b5f-92c59c412136__apply_migration",
       "mcp__a6244408-a83e-4651-9b5f-92c59c412136__execute_sql",
-      "Bash(git -C /c/Users/kjemery/Arete/Arete config --get-all remote.origin.url)"
+      "Bash(git -C /c/Users/kjemery/Arete/Arete config --get-all remote.origin.url)",
+      "Bash(node -e ' *)",
+      "Bash(curl -L -o seneca-letters.txt \"https://www.gutenberg.org/files/900/900-0.txt\")",
+      "WebSearch",
+      "Bash(curl -sL \"https://www.gutenberg.org/files/59025/59025-0.txt\" -o seneca-letters.txt)",
+      "Bash(curl -sL \"https://www.gutenberg.org/files/3794/3794-0.txt\" -o seneca-letters.txt)",
+      "WebFetch(domain:www.gutenberg.org)",
+      "Bash(curl -sL \"https://www.gutenberg.org/files/56075/56075-0.txt\" -o seneca-letters.txt)",
+      "Bash(curl -sL \"https://www.gutenberg.org/files/64576/64576-0.txt\" -o seneca-shortness.txt)",
+      "Bash(node _test_chunks.js)",
+      "Bash(npm install *)",
+      "Bash(node --check C:/Users/kjemery/Arete/Arete/server/index.js)",
+      "Bash(node --check C:/Users/kjemery/Arete/Arete/app/onboarding/index.tsx)",
+      "Bash(vercel --version)",
+      "Bash(vercel whoami *)"
     ]
   }
 }
