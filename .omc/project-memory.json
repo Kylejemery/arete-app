@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1777479217310,
+  "lastScanned": 1777568443623,
   "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete",
   "techStack": {
     "languages": [
@@ -73,11 +73,18 @@
   },
   "customNotes": [],
   "directoryMap": {
+    "academy": {
+      "path": "academy",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1777568443383,
+      "keyFiles": []
+    },
     "app": {
       "path": "app",
       "purpose": "Application code",
       "fileCount": 15,
-      "lastAccessed": 1777479217093,
+      "lastAccessed": 1777568443384,
       "keyFiles": [
         "belief-journal.tsx",
         "counselor-chat.tsx",
@@ -90,21 +97,21 @@
       "path": "app-example",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777479217094,
+      "lastAccessed": 1777568443443,
       "keyFiles": []
     },
     "assets": {
       "path": "assets",
       "purpose": "Static assets",
       "fileCount": 0,
-      "lastAccessed": 1777479217153,
+      "lastAccessed": 1777568443445,
       "keyFiles": []
     },
     "components": {
       "path": "components",
       "purpose": "UI components",
       "fileCount": 7,
-      "lastAccessed": 1777479217154,
+      "lastAccessed": 1777568443445,
       "keyFiles": [
         "CabinetPreview.tsx",
         "CounselorCard.tsx",
@@ -117,7 +124,7 @@
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 2,
-      "lastAccessed": 1777479217154,
+      "lastAccessed": 1777568443446,
       "keyFiles": [
         "index.html",
         "privacy.html"
@@ -127,7 +134,7 @@
       "path": "hooks",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1777479217155,
+      "lastAccessed": 1777568443446,
       "keyFiles": [
         "useSwipeNavigation.ts"
       ]
@@ -136,7 +143,7 @@
       "path": "lib",
       "purpose": "Library code",
       "fileCount": 6,
-      "lastAccessed": 1777479217155,
+      "lastAccessed": 1777568443447,
       "keyFiles": [
         "db.ts",
         "devMode.ts",
@@ -149,14 +156,14 @@
       "path": "pull",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777479217156,
+      "lastAccessed": 1777568443448,
       "keyFiles": []
     },
     "server": {
       "path": "server",
       "purpose": null,
       "fileCount": 6,
-      "lastAccessed": 1777479217156,
+      "lastAccessed": 1777568443449,
       "keyFiles": [
         "index.js",
         "package-lock.json",
@@ -168,7 +175,7 @@
       "path": "services",
       "purpose": "Business logic services",
       "fileCount": 2,
-      "lastAccessed": 1777479217157,
+      "lastAccessed": 1777568443450,
       "keyFiles": [
         "claudeService.ts",
         "threadService.ts"
@@ -178,14 +185,14 @@
       "path": "supabase",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777479217157,
+      "lastAccessed": 1777568443450,
       "keyFiles": []
     },
     "types": {
       "path": "types",
       "purpose": "Type definitions",
       "fileCount": 1,
-      "lastAccessed": 1777479217158,
+      "lastAccessed": 1777568443451,
       "keyFiles": [
         "onboarding.ts"
       ]
@@ -193,8 +200,8 @@
     "web": {
       "path": "web",
       "purpose": null,
-      "fileCount": 11,
-      "lastAccessed": 1777479217158,
+      "fileCount": 12,
+      "lastAccessed": 1777568443452,
       "keyFiles": [
         "eslint.config.mjs",
         "next.config.ts",
@@ -207,7 +214,7 @@
       "path": "app-example\\app",
       "purpose": "Application code",
       "fileCount": 2,
-      "lastAccessed": 1777479217160,
+      "lastAccessed": 1777568443454,
       "keyFiles": [
         "modal.tsx",
         "_layout.tsx"
@@ -217,7 +224,7 @@
       "path": "app-example\\components",
       "purpose": "UI components",
       "fileCount": 6,
-      "lastAccessed": 1777479217160,
+      "lastAccessed": 1777568443454,
       "keyFiles": [
         "external-link.tsx",
         "haptic-tab.tsx",
@@ -228,16 +235,23 @@
       "path": "app-example\\scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 1,
-      "lastAccessed": 1777479217161,
+      "lastAccessed": 1777568443455,
       "keyFiles": [
         "reset-project.js"
       ]
+    },
+    "server\\node_modules": {
+      "path": "server\\node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 1,
+      "lastAccessed": 1777568443460,
+      "keyFiles": []
     },
     "supabase\\migrations": {
       "path": "supabase\\migrations",
       "purpose": "Database migrations",
       "fileCount": 14,
-      "lastAccessed": 1777479217163,
+      "lastAccessed": 1777568443461,
       "keyFiles": [
         "001_initial_schema.sql",
         "20260320000000_custom_cabinet.sql",
@@ -248,157 +262,12 @@
       "path": "web\\src",
       "purpose": "Source code",
       "fileCount": 1,
-      "lastAccessed": 1777479217164,
+      "lastAccessed": 1777568443462,
       "keyFiles": [
         "middleware.ts"
       ]
     }
   },
-  "hotPaths": [
-    {
-      "path": "academy\\corpus-ingestion\\chunker.js",
-      "accessCount": 4,
-      "lastAccessed": 1777482683110,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\ingest.js",
-      "accessCount": 4,
-      "lastAccessed": 1777482692183,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\lib\\db.ts",
-      "accessCount": 4,
-      "lastAccessed": 1777566887574,
-      "type": "file"
-    },
-    {
-      "path": "server\\index.js",
-      "accessCount": 3,
-      "lastAccessed": 1777494590744,
-      "type": "file"
-    },
-    {
-      "path": "app\\onboarding\\index.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1777516552061,
-      "type": "file"
-    },
-    {
-      "path": "server\\package.json",
-      "accessCount": 2,
-      "lastAccessed": 1777494560666,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\morning\\page.tsx",
-      "accessCount": 2,
-      "lastAccessed": 1777564503667,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\package.json",
-      "accessCount": 1,
-      "lastAccessed": 1777479292722,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\.env.example",
-      "accessCount": 1,
-      "lastAccessed": 1777479297002,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\embedder.js",
-      "accessCount": 1,
-      "lastAccessed": 1777481565250,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\uploader.js",
-      "accessCount": 1,
-      "lastAccessed": 1777481570440,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\middleware.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777556725198,
-      "type": "file"
-    },
-    {
-      "path": "web\\vercel.json",
-      "accessCount": 1,
-      "lastAccessed": 1777556749056,
-      "type": "file"
-    },
-    {
-      "path": "docs\\index.html",
-      "accessCount": 1,
-      "lastAccessed": 1777556760264,
-      "type": "file"
-    },
-    {
-      "path": "web\\.env.example",
-      "accessCount": 1,
-      "lastAccessed": 1777557167028,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\lib\\supabase.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777561495452,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777561584005,
-      "type": "file"
-    },
-    {
-      "path": "lib\\types.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777564240603,
-      "type": "directory"
-    },
-    {
-      "path": "web\\src\\lib\\types.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777564416990,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\evening\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777564535453,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\scrolls\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777564568289,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\goals\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777564593067,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\components\\Sidebar.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777564625885,
-      "type": "file"
-    },
-    {
-      "path": "web\\src\\app\\journal\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777564688710,
-      "type": "file"
-    }
-  ],
+  "hotPaths": [],
   "userDirectives": []
 }

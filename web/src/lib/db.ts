@@ -584,6 +584,26 @@ export async function encodeBelief(id: string): Promise<Belief> {
 }
 
 // ----------------------------------------------------------------
+// PROFILE STREAK
+// ----------------------------------------------------------------
+
+export async function getProfileStreak(): Promise<number> {
+  const userId = await getUserId()
+  if (!userId) return 0
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('streak')
+      .eq('id', userId)
+      .single()
+    if (error) return 0
+    return data?.streak ?? 0
+  } catch {
+    return 0
+  }
+}
+
+// ----------------------------------------------------------------
 // ROUTINE TEMPLATES
 // ----------------------------------------------------------------
 
