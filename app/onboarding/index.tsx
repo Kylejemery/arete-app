@@ -102,8 +102,13 @@ export default function OnboardingAgentScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Arete</Text>
-        <Text style={styles.subtitle}>Your onboarding guide</Text>
+        <View>
+          <Text style={styles.title}>Arete</Text>
+          <Text style={styles.subtitle}>Your onboarding guide</Text>
+        </View>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)' as any)}>
+          <Text style={styles.skipLink}>Skip for now</Text>
+        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -188,11 +193,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#c9a84c22',
+  },
+  skipLink: {
+    fontSize: 13,
+    color: '#666',
   },
   title: {
     fontSize: 26,

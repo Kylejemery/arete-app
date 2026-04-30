@@ -1,11 +1,54 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 console.log('Key starts with:', CLAUDE_API_KEY?.slice(0, 15));
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+// ---------------------------------------------------------------------------
+// RAG helpers
+// ---------------------------------------------------------------------------
+
+async function embedQuery(text) {
+  const response = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
+  });
+  const data = await response.json();
+  return data.data[0].embedding;
+}
+
+const RAG_ENABLED_SLUGS = ['marcus-aurelius', 'epictetus', 'seneca'];
+
+async function retrieveChunks(userMessage, counselorSlug, k = 3) {
+  if (!RAG_ENABLED_SLUGS.includes(counselorSlug)) return [];
+  if (!process.env.OPENAI_API_KEY) return [];
+  try {
+    const embedding = await embedQuery(userMessage);
+    const { data, error } = await supabase.rpc('match_source_chunks', {
+      query_embedding: embedding,
+      match_counselor_slug: counselorSlug,
+      match_count: k,
+    });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error('RAG retrieval error:', err.message);
+    return [];
+  }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -115,8 +158,19 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 [END KNOW THYSELF]`;
   }
 
+  // RAG: retrieve relevant source text chunks (silent on failure)
+  const lastUserMessage = messages[messages.length - 1]?.content || '';
+  const ragChunks = await retrieveChunks(lastUserMessage, counselorSlug);
+
+  let ragContext = '';
+  if (ragChunks.length > 0) {
+    ragContext = `\n\n[RELEVANT SOURCE TEXTS]\nThe following passages from this counselor's actual writings are relevant to the current conversation. Draw on them naturally in your response — do not quote them verbatim or cite them explicitly, but let them inform your thinking and voice:\n\n` +
+      ragChunks.map((c, i) => `${i + 1}. (${c.source_title})\n${c.content}`).join('\n\n') +
+      `\n[END SOURCE TEXTS]`;
+  }
+
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + profileBlock + resourceInstruction;
+  const enrichedSystem = system + profileBlock + ragContext + resourceInstruction;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
