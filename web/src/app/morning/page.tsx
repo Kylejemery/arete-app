@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getLatestCheckIn, createCheckIn } from '@/lib/db';
+import { getUserSettings, getLatestCheckIn, createCheckIn, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { AFFIRMATIONS, getDailyItem } from '@/lib/quotes';
@@ -15,13 +15,16 @@ interface Task {
 }
 
 const DEFAULT_TASKS: Task[] = [
-  { id: '1', title: 'Eat Breakfast 🫙', done: false },
-  { id: '2', title: 'Meditate 🌿', done: false },
+  { id: 'default-1', title: 'Eat Breakfast 🫙', done: false },
+  { id: 'default-2', title: 'Meditate 🌿', done: false },
 ];
+
+const DONE_STORAGE_KEY = 'arete_morning_done_ids';
 
 export default function MorningPage() {
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>(DEFAULT_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [usingDefaults, setUsingDefaults] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [checkInResponse, setCheckInResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,28 +35,32 @@ export default function MorningPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      // Load tasks from localStorage, fall back to settings defaults, then DEFAULT_TASKS
-      if (typeof window !== 'undefined') {
-        const stored = localStorage.getItem('arete_morning_tasks');
-        if (stored) {
-          try {
-            setTasks(JSON.parse(stored));
-          } catch {
-            setTasks(settings.morning_tasks?.length > 0
-              ? (settings.morning_tasks as Task[]).map(t => ({ ...t, done: false }))
-              : DEFAULT_TASKS);
-          }
-        } else if (settings.morning_tasks && settings.morning_tasks.length > 0) {
-          setTasks((settings.morning_tasks as Task[]).map(t => ({ ...t, done: false })));
-        }
+      const templates = await getRoutineTemplates('morning');
+      const storedDoneIds: string[] = JSON.parse(
+        typeof window !== 'undefined' ? localStorage.getItem(DONE_STORAGE_KEY) || '[]' : '[]'
+      );
+
+      if (templates.length > 0) {
+        setTasks(templates.map(t => ({
+          id: t.id,
+          title: t.emoji ? `${t.title} ${t.emoji}` : t.title,
+          done: storedDoneIds.includes(t.id),
+        })));
+        setUsingDefaults(false);
+      } else {
+        // Fall back to settings or hardcoded defaults — not synced, just local
+        const fallback = settings.morning_tasks?.length > 0
+          ? (settings.morning_tasks as Task[]).map(t => ({ ...t, done: false }))
+          : DEFAULT_TASKS;
+        setTasks(fallback);
+        setUsingDefaults(true);
       }
 
-      // Check if morning check-in already done today
       const latestCheckIn = await getLatestCheckIn('morning');
       if (latestCheckIn) {
         setCheckInDone(true);
@@ -65,26 +72,41 @@ export default function MorningPage() {
     load();
   }, [router]);
 
-  const saveTasks = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
+  const persistDone = (updatedTasks: Task[]) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('arete_morning_tasks', JSON.stringify(updatedTasks));
+      const doneIds = updatedTasks.filter(t => t.done).map(t => t.id);
+      localStorage.setItem(DONE_STORAGE_KEY, JSON.stringify(doneIds));
     }
   };
 
   const toggleTask = (id: string) => {
-    saveTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    setTasks(updated);
+    persistDone(updated);
   };
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!newTaskTitle.trim()) return;
-    const newTask: Task = { id: Date.now().toString(), title: newTaskTitle.trim(), done: false };
-    saveTasks([...tasks, newTask]);
     setNewTaskTitle('');
+
+    if (usingDefaults) {
+      // No templates in DB yet — add locally
+      const newTask: Task = { id: Date.now().toString(), title: newTaskTitle.trim(), done: false };
+      setTasks(prev => [...prev, newTask]);
+      return;
+    }
+
+    const template = await addRoutineTemplate('morning', newTaskTitle.trim(), undefined, tasks.length);
+    if (template) {
+      setTasks(prev => [...prev, { id: template.id, title: template.title, done: false }]);
+    }
   };
 
-  const removeTask = (id: string) => {
-    saveTasks(tasks.filter(t => t.id !== id));
+  const removeTask = async (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    if (!usingDefaults) {
+      await deleteRoutineTemplate(id);
+    }
   };
 
   const handleCheckIn = async () => {
@@ -112,12 +134,10 @@ export default function MorningPage() {
     <div className="min-h-screen bg-arete-bg p-6 md:p-8">
       <PageHeader title="Morning Routine" subtitle="Begin the day with intention" />
 
-      {/* Affirmation */}
       <div className="bg-arete-surface rounded-lg border-l-4 border-arete-gold p-5 mb-6">
         <p className="text-arete-gold text-sm italic leading-relaxed">&ldquo;{affirmation}&rdquo;</p>
       </div>
 
-      {/* Progress Bar */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <span className="text-arete-muted text-sm">{completedCount}/{tasks.length} tasks complete</span>
@@ -128,7 +148,6 @@ export default function MorningPage() {
         </div>
       </div>
 
-      {/* Task List */}
       <div className="bg-arete-surface rounded-lg border border-arete-border p-4 mb-6">
         <h3 className="text-arete-gold font-semibold mb-3">Morning Tasks</h3>
         <div className="space-y-2">
@@ -152,8 +171,6 @@ export default function MorningPage() {
             </div>
           ))}
         </div>
-
-        {/* Add Task */}
         <div className="flex gap-2 mt-4">
           <input
             className="bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm"
@@ -168,7 +185,6 @@ export default function MorningPage() {
         </div>
       </div>
 
-      {/* Check-in Button */}
       {checkInDone ? (
         <div className="bg-arete-surface rounded-lg border border-arete-gold p-4 mb-6">
           <p className="text-arete-gold font-semibold mb-1">✓ Morning Check-in Complete</p>
@@ -184,7 +200,6 @@ export default function MorningPage() {
         </button>
       )}
 
-      {/* Cabinet Response */}
       {checkInResponse && (
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-gold font-semibold text-sm mb-3">Your Cabinet speaks:</p>

@@ -280,9 +280,21 @@
       "type": "file"
     },
     {
+      "path": "web\\src\\lib\\db.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777564450049,
+      "type": "file"
+    },
+    {
       "path": "server\\package.json",
       "accessCount": 2,
       "lastAccessed": 1777494560666,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\morning\\page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777564503667,
       "type": "file"
     },
     {
@@ -343,6 +355,48 @@
       "path": "web\\src\\app\\page.tsx",
       "accessCount": 1,
       "lastAccessed": 1777561584005,
+      "type": "file"
+    },
+    {
+      "path": "lib\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777564240603,
+      "type": "directory"
+    },
+    {
+      "path": "web\\src\\lib\\types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777564416990,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\evening\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777564535453,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\scrolls\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777564568289,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\goals\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777564593067,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\components\\Sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777564625885,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\journal\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777564688710,
       "type": "file"
     }
   ],

@@ -147,3 +147,30 @@ export interface Belief {
   created_at: string;
   updated_at: string;
 }
+
+export interface Goal {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  target_date?: string;
+  completed: boolean;
+  completed_at?: string;
+  source: 'onboarding' | 'user';
+  category?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Scroll {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  counselor: 'marcus' | 'epictetus' | 'seneca';
+  goal_source: string | null;
+  request_type: 'auto' | 'requested';
+  created_at: string;
+  read_count?: number;
+  last_read_at?: string | null;
+}

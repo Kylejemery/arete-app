@@ -9,6 +9,8 @@ import type {
   CabinetConversation,
   ConversationMessage,
   Belief,
+  Goal,
+  Scroll,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -579,4 +581,132 @@ export async function deleteBelief(id: string): Promise<void> {
 
 export async function encodeBelief(id: string): Promise<Belief> {
   return updateBelief(id, { encoded: true });
+}
+
+// ----------------------------------------------------------------
+// ROUTINE TEMPLATES
+// ----------------------------------------------------------------
+
+export type RoutineTemplate = {
+  id: string
+  user_id: string
+  type: 'morning' | 'evening'
+  title: string
+  emoji: string | null
+  sort_order: number
+  created_at: string
+}
+
+export async function getRoutineTemplates(type: 'morning' | 'evening'): Promise<RoutineTemplate[]> {
+  const userId = await getUserId()
+  if (!userId) return []
+  try {
+    const { data, error } = await supabase
+      .from('routine_templates')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .order('sort_order', { ascending: true })
+    if (error) { console.error('getRoutineTemplates error:', error); return [] }
+    return data ?? []
+  } catch (e) {
+    console.error('getRoutineTemplates exception:', e)
+    return []
+  }
+}
+
+export async function addRoutineTemplate(
+  type: 'morning' | 'evening',
+  title: string,
+  emoji?: string,
+  sortOrder?: number
+): Promise<RoutineTemplate | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('routine_templates')
+      .insert({ user_id: userId, type, title, emoji: emoji ?? null, sort_order: sortOrder ?? 0 })
+      .select()
+      .single()
+    if (error) { console.error('addRoutineTemplate error:', error); return null }
+    return data
+  } catch (e) {
+    console.error('addRoutineTemplate exception:', e)
+    return null
+  }
+}
+
+export async function deleteRoutineTemplate(id: string): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('routine_templates')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+    if (error) console.error('deleteRoutineTemplate error:', error)
+  } catch (e) {
+    console.error('deleteRoutineTemplate exception:', e)
+  }
+}
+
+// ----------------------------------------------------------------
+// GOALS
+// ----------------------------------------------------------------
+
+export async function getGoals(userId: string): Promise<Goal[]> {
+  const { data, error } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true })
+  if (error) { console.error('getGoals error:', error); return [] }
+  return data ?? []
+}
+
+export async function upsertGoal(goal: Partial<Goal> & { user_id: string }): Promise<Goal> {
+  const { data, error } = await supabase
+    .from('goals')
+    .upsert(goal)
+    .select()
+    .single()
+  if (error) throw error
+  return data as Goal
+}
+
+export async function completeGoal(goalId: string): Promise<void> {
+  const { error } = await supabase
+    .from('goals')
+    .update({ completed: true, completed_at: new Date().toISOString() })
+    .eq('id', goalId)
+  if (error) throw error
+}
+
+export async function deleteGoal(goalId: string): Promise<void> {
+  const { error } = await supabase
+    .from('goals')
+    .delete()
+    .eq('id', goalId)
+  if (error) throw error
+}
+
+// ----------------------------------------------------------------
+// SCROLLS
+// ----------------------------------------------------------------
+
+export async function getScrolls(userId: string): Promise<Scroll[]> {
+  const { data, error } = await supabase
+    .from('scrolls')
+    .select('*, scroll_reads (read_count, last_read_at)')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  if (error) { console.error('getScrolls error:', error); return [] }
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    read_count: row.scroll_reads?.[0]?.read_count ?? 0,
+    last_read_at: row.scroll_reads?.[0]?.last_read_at ?? null,
+    scroll_reads: undefined,
+  }))
 }

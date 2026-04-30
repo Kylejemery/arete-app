@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getLatestCheckIn, createCheckIn } from '@/lib/db';
+import { getUserSettings, getLatestCheckIn, createCheckIn, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
@@ -15,13 +15,16 @@ interface Task {
 }
 
 const DEFAULT_TASKS: Task[] = [
-  { id: '1', title: 'Plan Tomorrow 📜', done: false },
-  { id: '2', title: 'Reflect on Your Day 👁️', done: false },
+  { id: 'default-1', title: 'Plan Tomorrow 📜', done: false },
+  { id: 'default-2', title: 'Reflect on Your Day 👁️', done: false },
 ];
+
+const DONE_STORAGE_KEY = 'arete_evening_done_ids';
 
 export default function EveningPage() {
   const router = useRouter();
-  const [tasks, setTasks] = useState<Task[]>(DEFAULT_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [usingDefaults, setUsingDefaults] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [reflectionAnswer, setReflectionAnswer] = useState('');
   const [stoicAnswer, setStoicAnswer] = useState('');
@@ -35,34 +38,38 @@ export default function EveningPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      // Load tasks from localStorage, fall back to settings defaults, then DEFAULT_TASKS
-      if (typeof window !== 'undefined') {
-        const storedTasks = localStorage.getItem('arete_evening_tasks');
-        if (storedTasks) {
-          try {
-            setTasks(JSON.parse(storedTasks));
-          } catch {
-            setTasks(settings.evening_tasks?.length > 0
-              ? (settings.evening_tasks as Task[]).map(t => ({ ...t, done: false }))
-              : DEFAULT_TASKS);
-          }
-        } else if (settings.evening_tasks && settings.evening_tasks.length > 0) {
-          setTasks((settings.evening_tasks as Task[]).map(t => ({ ...t, done: false })));
-        }
+      const templates = await getRoutineTemplates('evening');
+      const storedDoneIds: string[] = JSON.parse(
+        typeof window !== 'undefined' ? localStorage.getItem(DONE_STORAGE_KEY) || '[]' : '[]'
+      );
 
+      if (templates.length > 0) {
+        setTasks(templates.map(t => ({
+          id: t.id,
+          title: t.emoji ? `${t.title} ${t.emoji}` : t.title,
+          done: storedDoneIds.includes(t.id),
+        })));
+        setUsingDefaults(false);
+      } else {
+        const fallback = settings.evening_tasks?.length > 0
+          ? (settings.evening_tasks as Task[]).map(t => ({ ...t, done: false }))
+          : DEFAULT_TASKS;
+        setTasks(fallback);
+        setUsingDefaults(true);
+      }
+
+      if (typeof window !== 'undefined') {
         const storedReflection = localStorage.getItem('arete_reflection_answer');
         if (storedReflection) setReflectionAnswer(storedReflection);
-
         const storedStoic = localStorage.getItem('arete_stoic_answer');
         if (storedStoic) setStoicAnswer(storedStoic);
       }
 
-      // Check if evening check-in already done today
       const latestCheckIn = await getLatestCheckIn('evening');
       if (latestCheckIn) {
         setCheckInDone(true);
@@ -74,40 +81,50 @@ export default function EveningPage() {
     load();
   }, [router]);
 
-  const saveTasks = (updatedTasks: Task[]) => {
-    setTasks(updatedTasks);
+  const persistDone = (updatedTasks: Task[]) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('arete_evening_tasks', JSON.stringify(updatedTasks));
+      const doneIds = updatedTasks.filter(t => t.done).map(t => t.id);
+      localStorage.setItem(DONE_STORAGE_KEY, JSON.stringify(doneIds));
     }
   };
 
   const saveReflection = (value: string) => {
     setReflectionAnswer(value);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('arete_reflection_answer', value);
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('arete_reflection_answer', value);
   };
 
   const saveStoic = (value: string) => {
     setStoicAnswer(value);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('arete_stoic_answer', value);
-    }
+    if (typeof window !== 'undefined') localStorage.setItem('arete_stoic_answer', value);
   };
 
   const toggleTask = (id: string) => {
-    saveTasks(tasks.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+    setTasks(updated);
+    persistDone(updated);
   };
 
-  const addTask = () => {
+  const addTask = async () => {
     if (!newTaskTitle.trim()) return;
-    const newTask: Task = { id: Date.now().toString(), title: newTaskTitle.trim(), done: false };
-    saveTasks([...tasks, newTask]);
     setNewTaskTitle('');
+
+    if (usingDefaults) {
+      const newTask: Task = { id: Date.now().toString(), title: newTaskTitle.trim(), done: false };
+      setTasks(prev => [...prev, newTask]);
+      return;
+    }
+
+    const template = await addRoutineTemplate('evening', newTaskTitle.trim(), undefined, tasks.length);
+    if (template) {
+      setTasks(prev => [...prev, { id: template.id, title: template.title, done: false }]);
+    }
   };
 
-  const removeTask = (id: string) => {
-    saveTasks(tasks.filter(t => t.id !== id));
+  const removeTask = async (id: string) => {
+    setTasks(prev => prev.filter(t => t.id !== id));
+    if (!usingDefaults) {
+      await deleteRoutineTemplate(id);
+    }
   };
 
   const handleCheckIn = async () => {
@@ -128,13 +145,12 @@ export default function EveningPage() {
 
   if (!loaded) return null;
 
-  const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none w-full";
+  const inputClass = 'bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none w-full';
 
   return (
     <div className="min-h-screen bg-arete-bg p-6 md:p-8">
       <PageHeader title="Evening Debrief" subtitle="Close the day with reflection" />
 
-      {/* Reflection Prompt */}
       <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-4">
         <p className="text-arete-gold font-semibold text-sm mb-2">Evening Reflection</p>
         <p className="text-arete-text text-sm mb-3 italic">{reflectionPrompt}</p>
@@ -147,7 +163,6 @@ export default function EveningPage() {
         />
       </div>
 
-      {/* Stoic Prompt */}
       <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-6">
         <p className="text-arete-gold font-semibold text-sm mb-2">Stoic Journal</p>
         <p className="text-arete-text text-sm mb-3 italic">{stoicPrompt}</p>
@@ -160,7 +175,6 @@ export default function EveningPage() {
         />
       </div>
 
-      {/* Tasks */}
       <div className="bg-arete-surface rounded-lg border border-arete-border p-4 mb-6">
         <h3 className="text-arete-gold font-semibold mb-3">Evening Tasks</h3>
         <div className="space-y-2">
@@ -189,7 +203,6 @@ export default function EveningPage() {
         </div>
       </div>
 
-      {/* Check-in */}
       {checkInDone ? (
         <div className="bg-arete-surface rounded-lg border border-arete-gold p-4 mb-6">
           <p className="text-arete-gold font-semibold mb-1">✓ Evening Check-in Complete</p>
@@ -205,7 +218,6 @@ export default function EveningPage() {
         </button>
       )}
 
-      {/* Cabinet Response */}
       {checkInResponse && (
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-gold font-semibold text-sm mb-3">Your Cabinet speaks:</p>

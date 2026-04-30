@@ -10,6 +10,8 @@ const navItems = [
   { href: '/evening', label: 'Evening', emoji: '🌙' },
   { href: '/cabinet', label: 'Cabinet', emoji: '🎙️' },
   { href: '/journal', label: 'Journal', emoji: '📖' },
+  { href: '/goals', label: 'Goals', emoji: '🎯' },
+  { href: '/scrolls', label: 'Scrolls', emoji: '📜' },
   { href: '/focus', label: 'Focus', emoji: '⏱️' },
   { href: '/progress', label: 'Progress', emoji: '🏆' },
   { href: '/profile', label: 'Know Thyself', emoji: '👤' },
