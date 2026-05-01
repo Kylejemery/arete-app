@@ -22,7 +22,8 @@
       "Bash(node --check C:/Users/kjemery/Arete/Arete/app/onboarding/index.tsx)",
       "Bash(vercel --version)",
       "Bash(vercel whoami *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(npx expo *)"
     ]
   }
 }

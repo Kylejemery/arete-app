@@ -76,6 +76,8 @@ export default function CabinetSelectScreen() {
   const isLockedForTier = (slug: string) =>
     tier === 'free' && !(FREE_COUNSELOR_SLUGS as readonly string[]).includes(slug);
 
+  const maxCounselors = tier === 'free' ? 3 : 5;
+
   const handleToggle = (slug: string) => {
     if (isLockedForTier(slug)) {
       setShowLockedUpgrade(true);
@@ -85,7 +87,7 @@ export default function CabinetSelectScreen() {
       if (prev.includes(slug)) {
         return prev.filter(s => s !== slug);
       }
-      if (prev.length >= 5) return prev;
+      if (prev.length >= maxCounselors) return prev;
       return [...prev, slug];
     });
   };
@@ -173,7 +175,7 @@ export default function CabinetSelectScreen() {
           {/* Selection counter */}
           <View style={styles.counterRow}>
             <Text style={styles.counterText}>
-              {selectedSlugs.length} of 5 selected
+              {selectedSlugs.length} of {maxCounselors} selected
             </Text>
             {selectedSlugs.length < 3 && (
               <Text style={styles.counterHint}>Select at least 3</Text>
@@ -194,7 +196,7 @@ export default function CabinetSelectScreen() {
               <CounselorCard
                 counselor={item}
                 isSelected={selectedSlugs.includes(item.slug)}
-                isDisabled={selectedSlugs.length >= 5 && !selectedSlugs.includes(item.slug) && !isLockedForTier(item.slug)}
+                isDisabled={selectedSlugs.length >= maxCounselors && !selectedSlugs.includes(item.slug) && !isLockedForTier(item.slug)}
                 isLocked={isLockedForTier(item.slug)}
                 onToggle={handleToggle}
               />
@@ -226,7 +228,7 @@ export default function CabinetSelectScreen() {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => setShowLockedUpgrade(false)}
+              onPress={() => { setShowLockedUpgrade(false); router.push('/paywall' as any); }}
               activeOpacity={0.8}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>

@@ -132,6 +132,10 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   const { system, messages, max_tokens, model, userProfile, counselorSlug } = req.body;
 
+  const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
+  const tier = req.headers['x-subscription-tier'];
+  const serverMaxTokens = TIER_MAX_TOKENS[tier] || max_tokens || 1500;
+
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
   }
@@ -183,7 +187,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
       },
       body: JSON.stringify({
         model: model || 'claude-opus-4-5',
-        max_tokens: max_tokens || 1500,
+        max_tokens: serverMaxTokens,
         system: enrichedSystem,
         messages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],

@@ -5,7 +5,6 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -17,7 +16,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet, MessageLimitError } from '../../services/claudeService';
-import type { SubscriptionTier } from '../../lib/types';
 import { getUserSettings, getUserCabinet } from '@/lib/db';
 import type { Counselor } from '@/lib/types';
 import {
@@ -76,9 +74,6 @@ export default function CabinetScreen() {
   const [threadSummaries, setThreadSummaries] = useState<
     { id: string; messageCount: number; lastUpdated: number }[]
   >([]);
-
-  // --- Message limit modal state ---
-  const [limitModal, setLimitModal] = useState<{ tier: SubscriptionTier; limit: number } | null>(null);
 
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
@@ -252,11 +247,9 @@ export default function CabinetScreen() {
       await appendMessages('cabinet', [userMessage, assistantMessage]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      setMessages(prev => prev.slice(0, -1));
       if (e instanceof MessageLimitError) {
-        setMessages(prev => prev.slice(0, -1));
-        setLimitModal({ tier: e.tier, limit: e.limit });
-      } else {
-        setMessages(prev => prev.slice(0, -1));
+        router.push('/paywall' as any);
       }
     } finally {
       setIsLoading(false);
@@ -556,53 +549,6 @@ export default function CabinetScreen() {
         </>
       )}
 
-      {/* Message Limit Modal */}
-      <Modal
-        visible={!!limitModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setLimitModal(null)}
-      >
-        <View style={styles.limitModalOverlay}>
-          <View style={styles.limitModalPanel}>
-            {limitModal?.tier === 'free' ? (
-              <>
-                <Text style={styles.limitModalTitle}>Daily Limit Reached</Text>
-                <Text style={styles.limitModalBody}>
-                  Free members get {limitModal.limit} Cabinet messages per day. Upgrade to Arete for 50 messages daily and access to all 23 counselors.
-                </Text>
-                <TouchableOpacity
-                  style={styles.limitUpgradeButton}
-                  onPress={() => setLimitModal(null)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.limitUpgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setLimitModal(null)} style={styles.limitDismissButton}>
-                  <Text style={styles.limitDismissText}>Maybe Later</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.limitModalTitle}>Daily Limit Reached</Text>
-                <Text style={styles.limitModalBody}>
-                  You've used all {limitModal?.limit} Cabinet messages for today. Your limit resets at midnight. Keep the momentum going tomorrow.
-                </Text>
-                <TouchableOpacity
-                  style={styles.limitUpgradeButton}
-                  onPress={() => setLimitModal(null)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.limitUpgradeButtonText}>Upgrade to Arete Pro — Unlimited</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setLimitModal(null)} style={styles.limitDismissButton}>
-                  <Text style={styles.limitDismissText}>Got it</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -1000,54 +946,5 @@ const styles = StyleSheet.create({
   },
   ktNudgeDismiss: {
     padding: 12,
-  },
-  limitModalOverlay: {
-    flex: 1,
-    backgroundColor: '#000000cc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  limitModalPanel: {
-    backgroundColor: '#16213e',
-    borderRadius: 18,
-    padding: 24,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#c9a84c44',
-  },
-  limitModalTitle: {
-    color: '#c9a84c',
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  limitModalBody: {
-    color: '#ccc',
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  limitUpgradeButton: {
-    backgroundColor: '#c9a84c',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  limitUpgradeButtonText: {
-    color: '#1a1a2e',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  limitDismissButton: {
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  limitDismissText: {
-    color: '#888',
-    fontSize: 14,
   },
 });

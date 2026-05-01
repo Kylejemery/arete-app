@@ -3,8 +3,9 @@ import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Purchases from 'react-native-purchases';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -46,6 +47,13 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
   }
 }, [session]);
+
+  useEffect(() => {
+    if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: 'test_KRYvwVDwEnViqpbQCLELxQXATDV' });
+      console.log('RevenueCat initialized');
+    }
+  }, []);
 
 if (session === undefined) {
   return (

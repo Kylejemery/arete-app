@@ -684,6 +684,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-subscription-tier': limitStatus.tier,
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
@@ -855,6 +856,7 @@ export async function sendMessageToCounselor(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-subscription-tier': limitStatus.tier,
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',

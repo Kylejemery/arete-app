@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed } from '@/lib/db';
+import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
 
@@ -65,6 +66,11 @@ export default function HomeScreen() {
   const [cacheLoaded, setCacheLoaded] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
+  const { tier } = useSubscription();
+
+  useEffect(() => {
+    console.log('[useSubscription] tier:', tier);
+  }, [tier]);
 
   useFocusEffect(
     useCallback(() => {
