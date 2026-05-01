@@ -568,6 +568,120 @@ app.post('/api/resources/fetch', async (req, res) => {
   }
 });
 
+// ─── Academy Seminar ─────────────────────────────────────────────────────────
+
+const ACADEMY_RAG_SLUGS = ['marcus-aurelius', 'epictetus', 'seneca'];
+
+const COURSE_TO_SLUG = {
+  'phil-701': ['epictetus', 'marcus-aurelius'],
+  'phil-702': ['marcus-aurelius'],
+  'phil-703': ['epictetus'],
+  'phil-704': ['seneca'],
+};
+
+async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
+  if (!process.env.OPENAI_API_KEY) return [];
+  const slugs = COURSE_TO_SLUG[courseId] ?? ACADEMY_RAG_SLUGS;
+  try {
+    const embedding = await embedQuery(userMessage);
+    const results = await Promise.all(
+      slugs.map(slug =>
+        supabase.rpc('match_source_chunks', {
+          query_embedding: embedding,
+          match_counselor_slug: slug,
+          match_count: Math.ceil(k / slugs.length),
+        })
+      )
+    );
+    return results.flatMap(r => r.data ?? []).slice(0, k);
+  } catch (err) {
+    console.error('Academy RAG retrieval error:', err.message);
+    return [];
+  }
+}
+
+app.post('/api/academy/seminar', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { courseId, agentId, sessionId, systemPrompt, messages } = req.body;
+
+  if (!systemPrompt || !messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'Missing required fields: systemPrompt and messages' });
+  }
+
+  // RAG: retrieve relevant passages from the course corpus
+  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
+  const ragChunks = await retrieveAcademyChunks(lastUserMessage, courseId);
+
+  let ragContext = '';
+  if (ragChunks.length > 0) {
+    ragContext =
+      `\n\n[RELEVANT SOURCE TEXTS]\nThe following passages from the assigned corpus are directly relevant to the current seminar exchange. Use them to ground your questioning in the actual text — cite them when pressing a claim or surfacing a contradiction:\n\n` +
+      ragChunks.map((c, i) => `${i + 1}. (${c.source_title})\n${c.content}`).join('\n\n') +
+      `\n[END SOURCE TEXTS]`;
+  }
+
+  const enrichedSystem = systemPrompt + ragContext;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        max_tokens: 1200,
+        system: enrichedSystem,
+        messages,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (academy/seminar):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+
+    // Persist updated session if sessionId provided
+    if (sessionId) {
+      const assistantText = data.content?.find(b => b.type === 'text')?.text ?? '';
+      if (assistantText) {
+        const { data: session } = await supabase
+          .from('academy_sessions')
+          .select('messages')
+          .eq('id', sessionId)
+          .single();
+        if (session) {
+          const updatedMessages = [
+            ...(session.messages ?? []),
+            { role: 'assistant', content: assistantText, timestamp: Date.now() },
+          ];
+          await supabase
+            .from('academy_sessions')
+            .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
+            .eq('id', sessionId);
+        }
+      }
+    }
+
+    if (data.content && Array.isArray(data.content)) {
+      const textBlocks = data.content.filter(b => b.type === 'text');
+      if (textBlocks.length > 0) data.content = textBlocks;
+    }
+    return res.json(data);
+  } catch (error) {
+    console.error('Failed to reach Claude API (academy/seminar):', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {

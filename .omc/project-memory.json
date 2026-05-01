@@ -268,6 +268,205 @@
       ]
     }
   },
-  "hotPaths": [],
+  "hotPaths": [
+    {
+      "path": "server\\index.js",
+      "accessCount": 4,
+      "lastAccessed": 1777637983289,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1777579079376,
+      "type": "directory"
+    },
+    {
+      "path": "web\\src\\components\\Sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579155372,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\package.json",
+      "accessCount": 1,
+      "lastAccessed": 1777579228449,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\next.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579234224,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1777579240880,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\tailwind.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579246810,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\postcss.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1777579251672,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\.env.example",
+      "accessCount": 1,
+      "lastAccessed": 1777579256138,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\types\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579276954,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\supabase.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579280298,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\agents.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579306182,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\retrieval.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579309554,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777579321798,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579383139,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\navigation\\Topbar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579388612,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\ui\\Card.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579393599,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\ui\\Button.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579398431,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\seminar\\ChatMessage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579403798,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\seminar\\AgentSelector.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777579407770,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\globals.css",
+      "accessCount": 1,
+      "lastAccessed": 1777637642539,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637646902,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\middleware.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777637651708,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(auth)\\login\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637664017,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(auth)\\signup\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637676405,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637755495,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637762857,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637783499,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\courses\\[courseId]\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637851919,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\library\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637872380,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\papers\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637896495,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(dashboard)\\profile\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777637915148,
+      "type": "file"
+    },
+    {
+      "path": "academy\\supabase\\migrations\\001_academy_tables.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777637953065,
+      "type": "file"
+    }
+  ],
   "userDirectives": []
 }
