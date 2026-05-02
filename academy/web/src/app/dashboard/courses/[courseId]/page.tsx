@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -53,15 +53,10 @@ export default function SeminarPage() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
-
       const enroll = await getEnrollment();
       setEnrollment(enroll);
-
       const sess = await getOrCreateSession(courseId, agentId);
-      if (sess) {
-        setSession(sess);
-        setMessages(sess.messages);
-      }
+      if (sess) { setSession(sess); setMessages(sess.messages); }
       setInitializing(false);
     }
     init();
@@ -83,47 +78,31 @@ export default function SeminarPage() {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session) return;
-
     const userMsg: SeminarMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
-
     await appendSeminarMessage(session.id, userMsg).catch(console.error);
-
     try {
       const courseInfo = COURSE_INFO[courseId] ?? { assignedText: courseId, excerpt: '' };
       const systemPrompt = SYSTEM_PROMPTS[agentId]
         .replace('{course_id}', courseId)
         .replace('{assigned_text}', courseInfo.assignedText)
         .replace('{tier}', enrollment?.tier ?? 'auditor');
-
       const res = await fetch(`${API_BASE}/api/academy/seminar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          courseId,
-          agentId,
-          sessionId: session.id,
-          systemPrompt,
-          messages: newMessages.map(m => ({ role: m.role, content: m.content })),
-        }),
+        body: JSON.stringify({ courseId, agentId, sessionId: session.id, systemPrompt,
+          messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
-
       const data = await res.json();
       const responseText = data.content?.[0]?.text ?? data.response ?? 'The seminar room is temporarily unavailable.';
       const assistantMsg: SeminarMessage = { role: 'assistant', content: responseText, timestamp: Date.now() };
-
       setMessages(prev => [...prev, assistantMsg]);
       await appendSeminarMessage(session.id, assistantMsg).catch(console.error);
     } catch {
-      const errMsg: SeminarMessage = {
-        role: 'assistant',
-        content: 'The seminar room is temporarily unavailable. Please try again.',
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, errMsg]);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'The seminar room is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
     } finally {
       setIsLoading(false);
     }
@@ -133,17 +112,14 @@ export default function SeminarPage() {
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
 
-  if (initializing) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-academy-muted italic text-sm">Preparing the seminar room...</p>
-      </div>
-    );
-  }
+  if (initializing) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <p className="text-academy-muted italic text-sm">Preparing the seminar room...</p>
+    </div>
+  );
 
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 0px)' }}>
-      {/* Header */}
       <div className="flex-shrink-0 mb-4">
         <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-text text-sm mb-3 inline-block transition-colors">
           ← Course Catalog
@@ -153,24 +129,17 @@ export default function SeminarPage() {
             <h1 className="font-serif text-2xl text-academy-text">{courseInfo.title}</h1>
             <p className="text-academy-muted text-sm mt-0.5">{courseInfo.assignedText}</p>
           </div>
-          <Link
-            href="/dashboard/papers"
-            className="border border-academy-border text-academy-muted text-sm px-4 py-2 rounded-lg hover:border-academy-gold hover:text-academy-text transition-all whitespace-nowrap"
-          >
+          <Link href="/dashboard/papers" className="border border-academy-border text-academy-muted text-sm px-4 py-2 rounded-lg hover:border-academy-gold hover:text-academy-text transition-all whitespace-nowrap">
             ✒️ Submit Paper
           </Link>
         </div>
-
-        {/* Agent Selector */}
         <div className="mt-4">
           <p className="text-academy-muted text-xs uppercase tracking-wider mb-2">Proctor</p>
           <AgentSelector selectedId={agentId} tier={tier} onChange={handleAgentChange} />
         </div>
       </div>
 
-      {/* Main: chat + reading panel */}
       <div className="flex gap-6 flex-1 min-h-0">
-        {/* Chat */}
         <div className="flex flex-col flex-1 min-h-0 bg-academy-surface border border-academy-border rounded-xl overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-5">
             {messages.length === 0 && !isLoading && (
@@ -188,8 +157,6 @@ export default function SeminarPage() {
             {isLoading && <TypingIndicator agentName={agent?.name ?? 'Proctor'} />}
             <div ref={messagesEndRef} />
           </div>
-
-          {/* Input */}
           <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-3">
             <textarea
               className="flex-1 bg-academy-bg border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
@@ -197,29 +164,20 @@ export default function SeminarPage() {
               placeholder="Make a claim about the text..."
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
-              }}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
             />
-            <button
-              onClick={handleSend}
-              disabled={isLoading || !input.trim()}
-              className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-5 py-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed self-end text-sm"
-            >
+            <button onClick={handleSend} disabled={isLoading || !input.trim()}
+              className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-5 py-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed self-end text-sm">
               Submit
             </button>
           </div>
         </div>
-
-        {/* Reading context panel — desktop only */}
         <div className="hidden lg:flex flex-col w-72 flex-shrink-0">
           <div className="bg-academy-card border border-academy-border rounded-xl p-5 mb-4">
             <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">Assigned Text</p>
             <p className="text-academy-text text-sm font-semibold mb-1">{courseInfo.assignedText}</p>
             {courseInfo.excerpt && (
-              <p className="text-academy-muted text-xs leading-relaxed italic mt-3 border-l-2 border-academy-gold/40 pl-3">
-                {courseInfo.excerpt}
-              </p>
+              <p className="text-academy-muted text-xs leading-relaxed italic mt-3 border-l-2 border-academy-gold/40 pl-3">{courseInfo.excerpt}</p>
             )}
           </div>
           <div className="bg-academy-card border border-academy-border rounded-xl p-5">

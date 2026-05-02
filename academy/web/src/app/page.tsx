@@ -1,252 +1,174 @@
-import Link from 'next/link';
-import { AGENTS } from '@/lib/agents';
+﻿import Link from 'next/link'
 
-const TIERS = [
-  {
-    id: 'auditor',
-    name: 'Auditor',
-    price: '$19',
-    description: 'Begin your studies. Access the core seminar and primary texts.',
-    features: [
-      'PHIL 701: Introduction to Stoicism',
-      'Socratic Proctor access',
-      'RAG-powered text retrieval',
-      'Unlimited seminar sessions',
-      'Paper drafting',
-    ],
-    cta: 'Start Auditing Free',
-    href: '/signup',
-    featured: false,
-  },
-  {
-    id: 'scholar',
-    name: 'Scholar',
-    price: '$39',
-    description: 'Full curriculum access with three specialized agents.',
-    features: [
-      'All Auditor features',
-      'Full course catalog (4 courses)',
-      'The Archivist agent',
-      'The Examiner agent',
-      'Paper submission & grading',
-      'Library corpus browser',
-    ],
-    cta: 'Enroll as Scholar',
-    href: '/signup',
-    featured: true,
-  },
-  {
-    id: 'fellow',
-    name: 'Fellow',
-    price: '$79',
-    description: 'The complete doctoral experience. All six agents. Priority access.',
-    features: [
-      'All Scholar features',
-      'All six agents',
-      'The Dialectician',
-      'The Rhetorician',
-      'The Chronologist',
-      'Priority response time',
-    ],
-    cta: 'Become a Fellow',
-    href: '/signup',
-    featured: false,
-  },
-];
+const CURRICULUM = [
+  { code: 'PHIL 701', title: 'The Meditations of Marcus Aurelius',     year: 'Year I'   },
+  { code: 'PHIL 702', title: 'Epictetus: Discourses & Enchiridion',    year: 'Year II'  },
+  { code: 'PHIL 703', title: 'Seneca: Letters, Essays & Tragedies',    year: 'Year III' },
+  { code: 'PHIL 704', title: 'The Early Stoics: Zeno to Chrysippus',   year: 'Year IV'  },
+  { code: 'PHIL 705', title: 'Stoic Synthesis: Dissertation & Defense',year: 'Year V'   },
+]
+
+const AGENTS = [
+  { name: 'The Socratic Proctor',     role: 'Seminar facilitator. Asks the questions you avoid.' },
+  { name: 'The Historian',            role: 'Classical context. Rome, Athens, the Stoa.' },
+  { name: 'The Translator',           role: 'Original Greek and Latin. Nothing lost.' },
+  { name: 'The Devil\'s Advocate',   role: 'Challenges every assumption you hold.' },
+  { name: 'The Dissertation Advisor', role: 'Long-form guidance on scholarly argument.' },
+  { name: 'The Librarian',            role: 'Navigates 800,000 words of primary corpus.' },
+]
+
+const CORPUS = [
+  { author: 'Marcus Aurelius', works: 'Meditations (complete)' },
+  { author: 'Epictetus',       works: 'Discourses, Enchiridion, Fragments' },
+  { author: 'Seneca',          works: 'Letters, Moral Essays, Tragedies' },
+  { author: 'Cicero',          works: 'De Finibus, Tusculan Disputations' },
+  { author: 'Diogenes Laërtius', works: 'Lives of the Eminent Philosophers' },
+  { author: 'Musonius Rufus',  works: 'Lectures & Fragments' },
+]
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-academy-bg">
+    <div className="min-h-screen bg-navy">
+
       {/* Nav */}
-      <nav className="border-b border-academy-border px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
+      <nav className="border-b border-navy-border px-8 py-5 flex items-center justify-between">
         <div>
-          <p className="text-academy-muted text-xs tracking-[0.3em] uppercase leading-none">Arete</p>
-          <h1 className="font-serif text-academy-gold text-xl tracking-wide leading-tight">Academy</h1>
+          <span className="font-serif text-gold text-xl tracking-[0.2em] uppercase">Arete</span>
+          <span className="text-gold/40 mx-3">|</span>
+          <span className="font-serif text-cream/60 text-sm tracking-[0.15em] uppercase">Academy</span>
         </div>
         <div className="flex items-center gap-6">
-          <Link href="/login" className="text-academy-muted text-sm hover:text-academy-text transition-colors">
+          <Link href="/login" className="text-cream/50 text-sm hover:text-gold transition-colors tracking-wider">
             Sign In
           </Link>
-          <Link
-            href="/signup"
-            className="bg-academy-gold text-academy-bg text-sm font-semibold px-4 py-2 rounded-lg hover:opacity-90 transition-opacity"
-          >
-            Start Free
+          <Link href="/waitlist" className="btn-primary text-xs">
+            Apply
           </Link>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="max-w-4xl mx-auto px-6 pt-24 pb-20 text-center">
-        <p className="text-academy-gold text-xs tracking-[0.4em] uppercase mb-6">
-          PhD in Stoic Philosophy
+      <section className="flex flex-col items-center justify-center text-center px-6 py-32 md:py-44">
+        <div className="gold-rule mb-10" />
+
+        <p className="font-serif text-gold/70 text-sm tracking-[0.3em] uppercase mb-6">
+          Seneca · Epistulae Morales
         </p>
-        <h2 className="font-serif text-6xl md:text-7xl text-academy-text leading-tight mb-6">
-          Study Philosophy Like<br />
-          <span className="text-academy-gold italic">Your Life Depends On It</span>
-        </h2>
-        <p className="text-academy-muted text-lg italic mb-10 leading-relaxed">
-          &ldquo;Learn like a spy in the enemy camp.&rdquo;<br />
-          <span className="text-sm not-italic">— Seneca, <em>Letters to Lucilius</em></span>
+
+        <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl text-cream leading-tight max-w-4xl mb-6">
+          &ldquo;Learn Like a Spy<br className="hidden md:block" /> in the Enemy Camp&rdquo;
+        </h1>
+
+        <div className="gold-rule my-8" />
+
+        <p className="text-cream/70 text-lg md:text-xl max-w-2xl leading-relaxed mb-4 font-light">
+          The world&rsquo;s first AI-proctored doctoral program
+          in Stoic Philosophy.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/signup"
-            className="bg-academy-gold text-academy-bg font-semibold px-8 py-4 rounded-lg text-base hover:opacity-90 transition-opacity"
-          >
-            Start Auditing Free — 14 Days
-          </Link>
-          <Link
-            href="#program"
-            className="border border-academy-border text-academy-muted px-8 py-4 rounded-lg text-base hover:border-academy-gold hover:text-academy-text transition-all"
-          >
-            Learn About the Program
-          </Link>
-        </div>
+        <p className="text-cream/40 text-sm max-w-xl leading-relaxed mb-14">
+          Five years. Six AI specialists. 800,000 words of primary text.
+          A genuine education in the philosophy that built empires.
+        </p>
+
+        <Link href="/waitlist" className="btn-primary">
+          Apply for Early Access
+        </Link>
       </section>
 
-      {/* Divider quote */}
-      <div className="border-y border-academy-border py-10 px-6">
-        <p className="text-center text-academy-muted text-sm italic max-w-2xl mx-auto leading-relaxed">
-          &ldquo;Retire into yourself as much as you can. Associate with people who are likely to improve you.
-          Welcome those who you are capable of improving. The process is mutual.&rdquo;
-        </p>
-        <p className="text-center text-academy-gold text-xs mt-3">— Seneca</p>
-      </div>
+      {/* Three Columns */}
+      <section className="border-t border-navy-border px-6 py-20 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-0 md:divide-x divide-navy-border">
 
-      {/* Program description */}
-      <section id="program" className="max-w-4xl mx-auto px-6 py-20">
-        <div className="grid md:grid-cols-2 gap-12 items-start">
-          <div>
-            <p className="text-academy-gold text-xs tracking-[0.3em] uppercase mb-3">The Program</p>
-            <h3 className="font-serif text-4xl text-academy-text mb-5 leading-tight">
-              A Rigorous Curriculum.<br />No Softening.
-            </h3>
-            <p className="text-academy-muted text-sm leading-relaxed mb-4">
-              Arete Academy offers the world&apos;s first AI-proctored doctoral curriculum in Stoic Philosophy.
-              Every session is a Socratic seminar — your AI proctors do not lecture, explain, or reassure.
-              They question.
+          {/* Column 1: Curriculum */}
+          <div className="px-6 md:px-10 pb-12 md:pb-0">
+            <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">I.</p>
+            <h2 className="font-serif text-2xl text-cream mb-6">The Curriculum</h2>
+            <p className="text-cream/40 text-sm leading-relaxed mb-8">
+              A structured five-year PhD modelled on classical doctoral programs.
+              Each course builds on the last.
             </p>
-            <p className="text-academy-muted text-sm leading-relaxed">
-              The program runs four courses, each built around primary texts. You read Marcus Aurelius,
-              Epictetus, and Seneca in depth — not summaries. You write papers. You defend positions.
-              You are examined.
-            </p>
-          </div>
-          <div className="space-y-3">
-            {[
-              { code: 'PHIL 701', title: 'Introduction to Stoic Philosophy', term: 'Core' },
-              { code: 'PHIL 702', title: 'The Meditations of Marcus Aurelius', term: 'Year 1' },
-              { code: 'PHIL 703', title: 'Epictetus and the Discipline of Desire', term: 'Year 1' },
-              { code: 'PHIL 704', title: "Seneca's Letters and the Art of Dying Well", term: 'Year 2' },
-            ].map(course => (
-              <div key={course.code} className="bg-academy-card border border-academy-border rounded-lg px-5 py-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-academy-gold text-xs font-semibold tracking-wider">{course.code}</span>
-                  <span className="text-academy-muted text-xs">{course.term}</span>
-                </div>
-                <p className="text-academy-text text-sm font-medium">{course.title}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Agents */}
-      <section className="bg-academy-surface border-y border-academy-border py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <p className="text-academy-gold text-xs tracking-[0.3em] uppercase mb-3 text-center">Your Faculty</p>
-          <h3 className="font-serif text-4xl text-academy-text mb-3 text-center">Six Specialized Agents</h3>
-          <p className="text-academy-muted text-sm text-center mb-12 max-w-xl mx-auto">
-            Each agent is built for a specific pedagogical function. They are not assistants.
-            They are examiners.
-          </p>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {AGENTS.map(agent => (
-              <div key={agent.id} className="bg-academy-card border border-academy-border rounded-lg p-5">
-                <div className="flex items-center gap-3 mb-3">
-                  <span className="text-2xl">{agent.emoji}</span>
-                  <div>
-                    <p className="text-academy-text font-semibold text-sm">{agent.name}</p>
-                    <p className="text-academy-gold text-xs">{agent.role}</p>
+            <ul className="space-y-5">
+              {CURRICULUM.map((c) => (
+                <li key={c.code} className="flex gap-4">
+                  <div className="shrink-0 pt-0.5">
+                    <span className="text-gold/40 text-xs font-mono">{c.year}</span>
                   </div>
-                </div>
-                <p className="text-academy-muted text-xs leading-relaxed">{agent.description}</p>
-                <div className="mt-3 pt-3 border-t border-academy-border">
-                  <span className="text-xs text-academy-muted">
-                    Available to:{' '}
-                    <span className="text-academy-text capitalize">{agent.minTier}s</span> and above
-                  </span>
-                </div>
-              </div>
-            ))}
+                  <div>
+                    <p className="text-gold text-xs tracking-widest uppercase">{c.code}</p>
+                    <p className="text-cream/70 text-sm mt-0.5">{c.title}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
+
+          {/* Column 2: Agents */}
+          <div className="px-6 md:px-10 py-12 md:py-0 border-t border-b md:border-0 border-navy-border">
+            <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">II.</p>
+            <h2 className="font-serif text-2xl text-cream mb-6">The Agents</h2>
+            <p className="text-cream/40 text-sm leading-relaxed mb-8">
+              Six AI specialists attend every seminar. Each one
+              trained on a different function of the ancient academy.
+            </p>
+            <ul className="space-y-5">
+              {AGENTS.map((a) => (
+                <li key={a.name}>
+                  <p className="text-cream/80 text-sm font-medium">{a.name}</p>
+                  <p className="text-cream/40 text-xs mt-0.5 leading-relaxed">{a.role}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Column 3: Corpus */}
+          <div className="px-6 md:px-10 pt-12 md:pt-0">
+            <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">III.</p>
+            <h2 className="font-serif text-2xl text-cream mb-6">The Corpus</h2>
+            <p className="text-cream/40 text-sm leading-relaxed mb-8">
+              Every seminar is grounded in primary texts. No secondary
+              summaries. No paraphrases. The originals, in full.
+            </p>
+            <ul className="space-y-5">
+              {CORPUS.map((c) => (
+                <li key={c.author}>
+                  <p className="text-cream/80 text-sm font-medium">{c.author}</p>
+                  <p className="text-cream/40 text-xs mt-0.5">{c.works}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="max-w-5xl mx-auto px-6 py-20">
-        <p className="text-academy-gold text-xs tracking-[0.3em] uppercase mb-3 text-center">Tuition</p>
-        <h3 className="font-serif text-4xl text-academy-text mb-3 text-center">Choose Your Standing</h3>
-        <p className="text-academy-muted text-sm text-center mb-12">
-          14-day free trial on all plans. Cancel anytime.
+      {/* CTA Banner */}
+      <section className="border-t border-navy-border text-center px-6 py-24">
+        <div className="gold-rule mb-10" />
+        <h2 className="font-serif text-3xl md:text-4xl text-cream mb-4">
+          The first cohort is forming now.
+        </h2>
+        <p className="text-cream/40 text-sm mb-10 max-w-md mx-auto">
+          Applications are reviewed manually. Tell us why you want to study Stoicism.
         </p>
-
-        <div className="grid md:grid-cols-3 gap-6">
-          {TIERS.map(tier => (
-            <div
-              key={tier.id}
-              className={`rounded-xl border p-7 flex flex-col ${
-                tier.featured
-                  ? 'border-academy-gold bg-academy-card'
-                  : 'border-academy-border bg-academy-surface'
-              }`}
-            >
-              {tier.featured && (
-                <p className="text-academy-gold text-xs tracking-widest uppercase mb-3">Most Popular</p>
-              )}
-              <h4 className="font-serif text-2xl text-academy-text mb-1">{tier.name}</h4>
-              <div className="mb-4">
-                <span className="text-4xl font-bold text-academy-gold">{tier.price}</span>
-                <span className="text-academy-muted text-sm">/month</span>
-              </div>
-              <p className="text-academy-muted text-sm mb-6 leading-relaxed">{tier.description}</p>
-              <ul className="space-y-2 mb-8 flex-1">
-                {tier.features.map(f => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-academy-muted">
-                    <span className="text-academy-gold mt-0.5 flex-shrink-0">✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href={tier.href}
-                className={`block text-center font-semibold py-3 rounded-lg transition-opacity hover:opacity-90 ${
-                  tier.featured
-                    ? 'bg-academy-gold text-academy-bg'
-                    : 'border border-academy-border text-academy-text hover:border-academy-gold'
-                }`}
-              >
-                {tier.cta}
-              </Link>
-            </div>
-          ))}
-        </div>
+        <Link href="/waitlist" className="btn-primary">
+          Apply for Early Access
+        </Link>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-academy-border px-6 py-10">
-        <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <p className="font-serif text-academy-gold text-lg">Arete Academy</p>
-            <p className="text-academy-muted text-xs mt-1">A division of Arete</p>
-          </div>
-          <div className="flex gap-6 text-xs text-academy-muted">
-            <Link href="/login" className="hover:text-academy-text transition-colors">Sign In</Link>
-            <a href="https://areteapp.com" className="hover:text-academy-text transition-colors">Arete App</a>
-          </div>
-        </div>
+      <footer className="border-t border-navy-border px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-cream/30 text-xs tracking-widest uppercase">
+        <span className="font-serif text-gold/50 text-sm tracking-[0.2em]">Arete Academy</span>
+        <a
+          href="https://pursuearete.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:text-gold transition-colors"
+        >
+          pursuearete.com
+        </a>
+        <span>&copy; {new Date().getFullYear()} Arete</span>
       </footer>
+
     </div>
-  );
+  )
 }

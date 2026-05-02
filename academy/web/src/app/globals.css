@@ -1,22 +1,41 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@400;500;600&display=swap');
-
-@tailwind base;
+﻿@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, sans-serif;
-    background-color: #0a0e23;
-    color: #e8e4d8;
+    scroll-behavior: smooth;
   }
-
-  h1, h2, h3, h4 {
-    font-family: 'Cormorant Garamond', Caladea, Georgia, serif;
+  body {
+    background-color: #0A1628;
+    color: #E8D9B0;
+  }
+  ::selection {
+    background-color: #C9A84C;
+    color: #0A1628;
   }
 }
 
-@layer utilities {
-  .scrollbar-hide::-webkit-scrollbar { display: none; }
-  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+@layer components {
+  .gold-rule {
+    @apply w-16 h-px bg-gold mx-auto;
+  }
+  .card-academic {
+    @apply bg-navy-card border border-navy-border rounded-sm p-6;
+  }
+  .btn-primary {
+    @apply bg-gold text-navy font-semibold tracking-widest uppercase text-sm px-8 py-3
+           hover:bg-parchment transition-colors duration-200;
+  }
+  .btn-ghost {
+    @apply border border-gold text-gold font-semibold tracking-widest uppercase text-sm px-8 py-3
+           hover:bg-gold hover:text-navy transition-colors duration-200;
+  }
+  .input-academic {
+    @apply w-full bg-navy-light border border-navy-border px-4 py-3 text-cream
+           placeholder-gold/30 focus:outline-none focus:border-gold transition-colors;
+  }
+  .label-academic {
+    @apply block text-gold/70 text-xs uppercase tracking-widest mb-2;
+  }
 }

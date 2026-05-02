@@ -358,6 +358,18 @@
       "accessCount": 1,
       "lastAccessed": 1777729645369,
       "type": "file"
+    },
+    {
+      "path": "web\\src\\lib\\supabase.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777761196405,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\middleware.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777761197498,
+      "type": "file"
     }
   ],
   "userDirectives": []

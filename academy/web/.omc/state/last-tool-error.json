@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"find \\\"C:/Users/kjemery/Arete/Arete/academy/web/src\\\" -type f | sort && echo \\\"---\\\" && ls \\\"C:/Users/kjemery/Arete/Arete/academy/web/\\\"*.{json,ts,js} && echo \\\"---\\\" && ls \\\"C:/Users/kjem...",
+  "error": "Exit code 2\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!\nC:/Users/kjemery/Arete/Arete/academy/web/src/app/(auth)/login/page.tsx\nC:/Users/kjemery/Arete/Arete/academy/web/src/app/(auth)/signup/page.tsx\nC:/Users/kjemery/Arete/Arete/academy/web/src/app/(dashboard)/courses/[courseId]/page.tsx\nC:/Users/kjemery/Arete/Arete/academy/web/src/app/(dashboard)/courses/page.tsx\nC:/Users/kjemery/Arete/Arete/academy/web/sr...",
+  "timestamp": "2026-05-02T22:48:29.152Z",
+  "retry_count": 1
+}
