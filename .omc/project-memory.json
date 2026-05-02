@@ -336,6 +336,12 @@
       "type": "file"
     },
     {
+      "path": "app\\my-cabinet\\index.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777764184488,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260501000001_add_tier_to_profiles.sql",
       "accessCount": 1,
       "lastAccessed": 1777664500536,

@@ -110,7 +110,7 @@ export default function CabinetIndexScreen() {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => setShowPaywall(false)}
+              onPress={() => { setShowPaywall(false); router.push('/paywall' as any); }}
               activeOpacity={0.8}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
