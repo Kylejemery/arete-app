@@ -354,9 +354,9 @@
       "type": "file"
     },
     {
-      "path": "academy\\corpus-ingestion\\test-retrieval.js",
+      "path": "supabase\\migrations\\20260502000000_match_academy_chunks.sql",
       "accessCount": 1,
-      "lastAccessed": 1777729645369,
+      "lastAccessed": 1777729605880,
       "type": "file"
     }
   ],

@@ -23,7 +23,11 @@
       "Bash(vercel --version)",
       "Bash(vercel whoami *)",
       "Bash(npx tsc *)",
-      "Bash(npx expo *)"
+      "Bash(npx expo *)",
+      "Bash(node --check retrieval.js)",
+      "Bash(node --check test-retrieval.js)",
+      "Bash(node --check academy/corpus-ingestion/retrieval.js)",
+      "Bash(node --check academy/corpus-ingestion/test-retrieval.js)"
     ]
   }
 }
