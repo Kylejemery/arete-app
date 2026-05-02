@@ -50,7 +50,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: 'test_KRYvwVDwEnViqpbQCLELxQXATDV' });
+      Purchases.configure({ apiKey: 'appl_BOqigtoHGcsODcjxfsTPwWgqnOK' });
       console.log('RevenueCat initialized');
     }
   }, []);

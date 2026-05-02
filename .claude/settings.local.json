@@ -27,7 +27,10 @@
       "Bash(node --check retrieval.js)",
       "Bash(node --check test-retrieval.js)",
       "Bash(node --check academy/corpus-ingestion/retrieval.js)",
-      "Bash(node --check academy/corpus-ingestion/test-retrieval.js)"
+      "Bash(node --check academy/corpus-ingestion/test-retrieval.js)",
+      "Bash(git pull *)",
+      "Bash(git stash *)",
+      "Bash(git push *)"
     ]
   }
 }
