@@ -81,11 +81,17 @@ export default function MorningScreen() {
   };
 
   const loadTasks = async () => {
-    // Step 1: paint from cache immediately
+    // Step 1: paint from cache only if it's from today (avoids stale crossed-off items)
     try {
       const cached = await AsyncStorage.getItem('arete:morning_tasks');
-      if (cached) setTasks(JSON.parse(cached));
-      setCacheLoaded(true);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (!Array.isArray(parsed) && parsed.date === localToday()) {
+          setTasks(parsed.tasks);
+          setCacheLoaded(true);
+        }
+        // Old array format or different day: skip — skeleton stays until Step 2
+      }
     } catch {}
 
     // Step 2: fresh fetch
@@ -118,9 +124,9 @@ export default function MorningScreen() {
         setCheckinResponse(checkin.cabinet_morning_response);
       }
 
-      // Step 3: write cache
+      // Step 3: write date-stamped cache
       try {
-        await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify(freshTasks));
+        await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify({ date: localToday(), tasks: freshTasks }));
       } catch {}
     } catch (e) {
       console.error(e);
@@ -131,7 +137,7 @@ export default function MorningScreen() {
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
-    try { await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify(updatedTasks)); } catch {}
+    try { await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
     if (allDone) {
       await updateStreak();
       const checkin = await getTodayCheckin();

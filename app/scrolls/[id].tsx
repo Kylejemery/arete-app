@@ -110,8 +110,8 @@ export default function ScrollDetail() {
 
   const readCount = scroll?.read_count ?? 0;
 
-  // Exclude trailing punctuation that prose/markdown wraps URLs with: ) , . > "
-  const URL_REGEX = /(https?:\/\/[^\s)"',.<>]+)/g;
+  // Match full URLs; trailing punctuation stripped separately in render
+  const URL_REGEX = /(https?:\/\/[^\s<>"'()]+)/g;
 
   const normalizeUrl = (url: string): string => {
     // Convert any Amazon product URL to the stable /dp/ASIN form
@@ -128,15 +128,20 @@ export default function ScrollDetail() {
     }
     return (
       <Text key={i} style={styles.body} selectable>
-        {parts.map((part, j) =>
-          /^https?:\/\//.test(part) ? (
-            <Text key={j} style={styles.link} onPress={() => Linking.openURL(normalizeUrl(part))}>
-              {part}
+        {parts.map((part, j) => {
+          if (!/^https?:\/\//.test(part)) return part;
+          // Strip trailing punctuation that prose wraps URLs with
+          const cleanUrl = part.replace(/[.,;:)]+$/, '');
+          const trailing = part.slice(cleanUrl.length);
+          return (
+            <Text key={j}>
+              <Text style={styles.link} onPress={() => Linking.openURL(normalizeUrl(cleanUrl))}>
+                {cleanUrl}
+              </Text>
+              {trailing}
             </Text>
-          ) : (
-            part
-          )
-        )}
+          );
+        })}
       </Text>
     );
   };
@@ -145,7 +150,7 @@ export default function ScrollDetail() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/scrolls' as any)} style={styles.backButton}>
             <Ionicons name="arrow-back" size={22} color="#c9a84c" />
           </TouchableOpacity>
         </View>
@@ -160,7 +165,7 @@ export default function ScrollDetail() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/scrolls' as any)} style={styles.backButton}>
             <Ionicons name="arrow-back" size={22} color="#c9a84c" />
           </TouchableOpacity>
         </View>
@@ -174,7 +179,7 @@ export default function ScrollDetail() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)/scrolls' as any)} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color="#c9a84c" />
         </TouchableOpacity>
         <View style={{ width: 40 }} />
