@@ -294,10 +294,22 @@
   },
   "hotPaths": [
     {
+      "path": "app\\(tabs)\\progress.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1777767654208,
+      "type": "file"
+    },
+    {
       "path": "app/my-cabinet/index.tsx",
       "accessCount": 1,
       "lastAccessed": 1777765602003,
       "type": "directory"
+    },
+    {
+      "path": "app\\(tabs)\\timer.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777767414463,
+      "type": "file"
     }
   ],
   "userDirectives": []

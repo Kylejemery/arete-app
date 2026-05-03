@@ -44,6 +44,7 @@ export default function ProgressScreen() {
   const [newBookAuthor, setNewBookAuthor] = useState('');
   const [totalPages, setTotalPages] = useState(0);
   const [totalReadingSeconds, setTotalReadingSeconds] = useState(0);
+  const [todayReadingSeconds, setTodayReadingSeconds] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
 
   // Screen time
@@ -85,6 +86,15 @@ export default function ProgressScreen() {
         setReadingSessions(sessions);
         setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
         setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
+
+        // Today's reading time — same field the Focus tab writes to
+        const d = new Date();
+        const todayDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (readingData.today_reading_date === todayDate) {
+          setTodayReadingSeconds(readingData.today_reading_seconds ?? 0);
+        } else {
+          setTodayReadingSeconds(0);
+        }
       }
 
       await updateTodayCalendar(calData);
@@ -122,6 +132,7 @@ export default function ProgressScreen() {
   };
 
   const formatReadingTime = (seconds: number) => {
+    if (seconds < 60) return '0m';
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     if (h > 0) return `${h}h ${m}m`;
@@ -244,6 +255,11 @@ export default function ProgressScreen() {
                 <Ionicons name="reader-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{books.length}</Text>
                 <Text style={styles.statLabel}>Books{'\n'}Finished</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Ionicons name="time-outline" size={22} color="#c9a84c" />
+                <Text style={styles.statNumber}>{formatReadingTime(todayReadingSeconds)}</Text>
+                <Text style={styles.statLabel}>Read{'\n'}Today</Text>
               </View>
             </View>
 
@@ -406,6 +422,11 @@ export default function ProgressScreen() {
                 <Ionicons name="time-outline" size={22} color="#c9a84c" />
                 <Text style={styles.statNumber}>{formatReadingTime(totalReadingSeconds)}</Text>
                 <Text style={styles.statLabel}>Total{'\n'}Time</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Ionicons name="sunny-outline" size={22} color="#c9a84c" />
+                <Text style={styles.statNumber}>{formatReadingTime(todayReadingSeconds)}</Text>
+                <Text style={styles.statLabel}>Read{'\n'}Today</Text>
               </View>
             </View>
 
