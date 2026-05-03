@@ -1,3 +1,32 @@
+export interface Task {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
+export interface DailyCheckin {
+  id: string;
+  user_id: string;
+  check_in_date: string;
+  morning_done: boolean;
+  morning_tasks: Task[] | null;
+  evening_done: boolean;
+  evening_tasks: Task[] | null;
+  cabinet_morning_response: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface RoutineTemplate {
+  id: string;
+  user_id: string;
+  type: 'morning' | 'evening';
+  title: string;
+  emoji: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 export type Tier = 'auditor' | 'scholar' | 'fellow';
 
 export type AgentId =

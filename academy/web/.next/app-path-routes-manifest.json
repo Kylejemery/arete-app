@@ -1,14 +1,15 @@
 {
   "/_not-found/page": "/_not-found",
-  "/(auth)/signup/page": "/signup",
   "/(auth)/login/page": "/login",
   "/courses/phil-701/page": "/courses/phil-701",
-  "/page": "/",
+  "/(auth)/signup/page": "/signup",
   "/waitlist/page": "/waitlist",
+  "/page": "/",
   "/dashboard/courses/[courseId]/page": "/dashboard/courses/[courseId]",
+  "/dashboard/courses/page": "/dashboard/courses",
   "/dashboard/library/page": "/dashboard/library",
   "/dashboard/page": "/dashboard",
+  "/dashboard/morning/page": "/dashboard/morning",
   "/dashboard/profile/page": "/dashboard/profile",
-  "/dashboard/courses/page": "/dashboard/courses",
   "/dashboard/papers/page": "/dashboard/papers"
 }

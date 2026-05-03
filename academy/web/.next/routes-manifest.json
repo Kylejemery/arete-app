@@ -66,6 +66,12 @@
       "namedRegex": "^/dashboard/library(?:/)?$"
     },
     {
+      "page": "/dashboard/morning",
+      "regex": "^/dashboard/morning(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/morning(?:/)?$"
+    },
+    {
       "page": "/dashboard/papers",
       "regex": "^/dashboard/papers(?:/)?$",
       "routeKeys": {},

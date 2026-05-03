@@ -300,9 +300,33 @@
       "type": "file"
     },
     {
+      "path": "academy\\web\\src\\lib\\db.ts",
+      "accessCount": 7,
+      "lastAccessed": 1777770460869,
+      "type": "file"
+    },
+    {
       "path": "server\\index.js",
       "accessCount": 4,
       "lastAccessed": 1777768268822,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\types\\index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1777770416293,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src",
+      "accessCount": 2,
+      "lastAccessed": 1777769970127,
+      "type": "directory"
+    },
+    {
+      "path": "academy\\web\\src\\app\\courses\\phil-701\\page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777769989431,
       "type": "file"
     },
     {
@@ -318,21 +342,9 @@
       "type": "file"
     },
     {
-      "path": "academy\\web\\src\\lib\\db.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777768162173,
-      "type": "file"
-    },
-    {
       "path": "academy\\web\\src\\lib\\agents.ts",
       "accessCount": 1,
       "lastAccessed": 1777768162939,
-      "type": "file"
-    },
-    {
-      "path": "academy\\web\\src\\types\\index.ts",
-      "accessCount": 1,
-      "lastAccessed": 1777768163822,
       "type": "file"
     },
     {
@@ -378,12 +390,6 @@
       "type": "file"
     },
     {
-      "path": "academy\\web\\src\\app\\courses\\phil-701\\page.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777768731807,
-      "type": "file"
-    },
-    {
       "path": "academy\\web\\src\\app\\page.tsx",
       "accessCount": 1,
       "lastAccessed": 1777768910240,
@@ -394,6 +400,54 @@
       "accessCount": 1,
       "lastAccessed": 1777768910541,
       "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\navigation\\Sidebar.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777770029193,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\supabase.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777770030161,
+      "type": "file"
+    },
+    {
+      "path": "app\\morning.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777770125550,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1777770129929,
+      "type": "directory"
+    },
+    {
+      "path": "supabase\\migrations\\20260426000001_daily_question_cache.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777770199406,
+      "type": "file"
+    },
+    {
+      "path": "supabase\\migrations",
+      "accessCount": 1,
+      "lastAccessed": 1777770209725,
+      "type": "directory"
+    },
+    {
+      "path": "supabase\\migrations\\20260426000000_security_fixes.sql",
+      "accessCount": 1,
+      "lastAccessed": 1777770220891,
+      "type": "file"
+    },
+    {
+      "path": "lib\\db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777770334747,
+      "type": "directory"
     }
   ],
   "userDirectives": []

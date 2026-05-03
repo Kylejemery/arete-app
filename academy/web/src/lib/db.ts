@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
-import type { Enrollment, SeminarSession, SeminarMessage, Paper, AgentId } from '@/types';
+import type { Enrollment, SeminarSession, SeminarMessage, Paper, AgentId, DailyCheckin, RoutineTemplate, Task } from '@/types';
+
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 async function getUserId(): Promise<string | null> {
   try {
@@ -135,3 +140,57 @@ export async function upsertPaper(paper: Partial<Paper> & { course_id: string })
   if (error) { console.error('upsertPaper error:', error); return null; }
   return data as Paper;
 }
+
+// ----------------------------------------------------------------
+// CHECK-INS
+// ----------------------------------------------------------------
+
+export async function getTodayCheckin(): Promise<DailyCheckin | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('check_ins')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('check_in_date', localToday())
+    .single();
+  if (error && error.code !== 'PGRST116') {
+    console.error('getTodayCheckin error:', error);
+    return null;
+  }
+  return (data as DailyCheckin) ?? null;
+}
+
+export async function upsertTodayCheckin(
+  data: Partial<Omit<DailyCheckin, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+): Promise<void> {
+  const userId = await getUserId();
+  if (!userId) return;
+  const { error } = await supabase
+    .from('check_ins')
+    .upsert(
+      { ...data, user_id: userId, check_in_date: localToday(), updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,check_in_date' }
+    );
+  if (error) console.error('upsertTodayCheckin error:', error);
+}
+
+// ----------------------------------------------------------------
+// ROUTINE TEMPLATES
+// ----------------------------------------------------------------
+
+export async function getRoutineTemplates(type: 'morning' | 'evening'): Promise<RoutineTemplate[]> {
+  const userId = await getUserId();
+  if (!userId) return [];
+  const { data, error } = await supabase
+    .from('routine_templates')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('type', type)
+    .order('sort_order', { ascending: true });
+  if (error) { console.error('getRoutineTemplates error:', error); return []; }
+  return (data as RoutineTemplate[]) ?? [];
+}
+
+// Re-export Task so callers can import from '@/lib/db' if needed
+export type { Task };
