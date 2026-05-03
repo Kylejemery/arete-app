@@ -1,0 +1,14 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/(auth)/signup/page": "/signup",
+  "/(auth)/login/page": "/login",
+  "/courses/phil-701/page": "/courses/phil-701",
+  "/page": "/",
+  "/waitlist/page": "/waitlist",
+  "/dashboard/courses/[courseId]/page": "/dashboard/courses/[courseId]",
+  "/dashboard/library/page": "/dashboard/library",
+  "/dashboard/page": "/dashboard",
+  "/dashboard/profile/page": "/dashboard/profile",
+  "/dashboard/courses/page": "/dashboard/courses",
+  "/dashboard/papers/page": "/dashboard/papers"
+}

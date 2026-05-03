@@ -300,6 +300,12 @@
       "type": "file"
     },
     {
+      "path": "server\\index.js",
+      "accessCount": 4,
+      "lastAccessed": 1777768268822,
+      "type": "file"
+    },
+    {
       "path": "app/my-cabinet/index.tsx",
       "accessCount": 1,
       "lastAccessed": 1777765602003,
@@ -309,6 +315,84 @@
       "path": "app\\(tabs)\\timer.tsx",
       "accessCount": 1,
       "lastAccessed": 1777767414463,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\db.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777768162173,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\agents.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777768162939,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\types\\index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777768163822,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\seminar\\ChatMessage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777768172263,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1777768187002,
+      "type": "file"
+    },
+    {
+      "path": "server\\package.json",
+      "accessCount": 1,
+      "lastAccessed": 1777768214279,
+      "type": "file"
+    },
+    {
+      "path": "server\\.env.example",
+      "accessCount": 1,
+      "lastAccessed": 1777768223414,
+      "type": "file"
+    },
+    {
+      "path": ".env.example",
+      "accessCount": 1,
+      "lastAccessed": 1777768223757,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\dashboard\\courses\\[courseId]\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777768320361,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\middleware.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777768321707,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\courses\\phil-701\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777768731807,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777768910240,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(auth)\\login\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777768910541,
       "type": "file"
     }
   ],

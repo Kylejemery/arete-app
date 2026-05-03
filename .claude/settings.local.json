@@ -30,7 +30,8 @@
       "Bash(node --check academy/corpus-ingestion/test-retrieval.js)",
       "Bash(git pull *)",
       "Bash(git stash *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "PowerShell(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\academy\\\\web\\\\src\\\\app\\\\courses\\\\phil-701\")"
     ]
   }
 }
