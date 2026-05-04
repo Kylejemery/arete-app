@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
-import { getOrCreateSession, appendSeminarMessage } from '@/lib/db';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
+import { appendSeminarMessage, getOrCreateSession } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import type { SeminarMessage, SeminarSession } from '@/types';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const COURSE_ID = 'phil-701';
