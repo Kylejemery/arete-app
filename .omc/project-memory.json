@@ -294,21 +294,21 @@
   },
   "hotPaths": [
     {
-      "path": "server\\index.js",
-      "accessCount": 15,
-      "lastAccessed": 1777922413633,
+      "path": "app\\(tabs)\\cabinet.tsx",
+      "accessCount": 21,
+      "lastAccessed": 1777934733324,
       "type": "file"
     },
     {
-      "path": "app\\(tabs)\\cabinet.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1777909875302,
+      "path": "server\\index.js",
+      "accessCount": 17,
+      "lastAccessed": 1777934415008,
       "type": "file"
     },
     {
       "path": "services\\claudeService.ts",
-      "accessCount": 10,
-      "lastAccessed": 1777904379489,
+      "accessCount": 14,
+      "lastAccessed": 1777934380309,
       "type": "file"
     },
     {
@@ -327,6 +327,12 @@
       "path": "app\\(tabs)\\morning.tsx",
       "accessCount": 6,
       "lastAccessed": 1777908876682,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\app\\page.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1777935022148,
       "type": "file"
     },
     {

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, hasCheckInToday, getDailyQuestionCache, getProfileStreak } from '@/lib/db';
+import { getUserSettings, hasCheckInToday, getProfileStreak } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES } from '@/lib/quotes';
 
@@ -44,12 +44,11 @@ export default function HomePage() {
         router.replace('/login?redirectTo=/');
         return;
       }
-      const [settings, morningDoneToday, eveningDoneToday, streakVal, questionCache] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, streakVal] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
         getProfileStreak(),
-        getDailyQuestionCache(),
       ]);
       if (!settings?.user_name) {
         router.replace('/setup');
@@ -60,7 +59,7 @@ export default function HomePage() {
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
       setStreak(streakVal);
-      setDailyQuestion(questionCache);
+      setDailyQuestion(null);
       setLoaded(true);
     }
     load();

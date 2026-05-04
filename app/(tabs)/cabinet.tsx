@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { sendMessageToCabinet, MessageLimitError } from '../../services/claudeService';
+import { sendMessageToCabinet, MessageLimitError, DailyLimitError } from '../../services/claudeService';
 import { getUserSettings, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -84,6 +84,7 @@ export default function CabinetScreen() {
 
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
 
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
@@ -284,7 +285,9 @@ export default function CabinetScreen() {
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
       setMessages(prev => prev.slice(0, -1));
-      if (e instanceof MessageLimitError) {
+      if (e instanceof DailyLimitError) {
+        setDailyLimitReached(true);
+      } else if (e instanceof MessageLimitError) {
         router.push('/paywall' as any);
       }
     } finally {
@@ -517,37 +520,59 @@ export default function CabinetScreen() {
           </ScrollView>
 
           {/* Input Bar */}
-          <View style={styles.inputBar}>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Speak to the Cabinet..."
-              placeholderTextColor="#555"
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-              maxLength={2000}
-              onSubmitEditing={handleSend}
-              blurOnSubmit={false}
-            />
-            <TouchableOpacity
-              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
-              onPress={handleSend}
-              disabled={!inputText.trim() || isLoading}
-            >
-              <Ionicons
-                name="send"
-                size={18}
-                color={!inputText.trim() || isLoading ? '#555' : '#1a1a2e'}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {tier === 'free' && maxMessages !== null && (
-            <View style={styles.limitCounter}>
-              <Text style={styles.limitCounterText}>
-                {Math.max(0, maxMessages - messageCount)} messages remaining today
+          {dailyLimitReached ? (
+            <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
+              <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
+                You've reached your 10 free messages for today.
               </Text>
+              <Text style={{ color: '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
+                Upgrade to Premium for unlimited access.
+              </Text>
+              <TouchableOpacity
+                style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
+                onPress={() => router.push('/paywall' as any)}
+                activeOpacity={0.8}
+              >
+                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Upgrade to Premium →</Text>
+              </TouchableOpacity>
+              <Text style={{ color: '#555', textAlign: 'center', marginTop: 8, fontSize: 12 }}>Resets at midnight</Text>
             </View>
+          ) : (
+            <>
+              <View style={styles.inputBar}>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Speak to the Cabinet..."
+                  placeholderTextColor="#555"
+                  value={inputText}
+                  onChangeText={setInputText}
+                  multiline
+                  maxLength={2000}
+                  onSubmitEditing={handleSend}
+                  blurOnSubmit={false}
+                  editable={!dailyLimitReached}
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, (!inputText.trim() || isLoading || dailyLimitReached) && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={!inputText.trim() || isLoading || dailyLimitReached}
+                >
+                  <Ionicons
+                    name="send"
+                    size={18}
+                    color={!inputText.trim() || isLoading || dailyLimitReached ? '#555' : '#1a1a2e'}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {tier === 'free' && maxMessages !== null && (
+                <View style={styles.limitCounter}>
+                  <Text style={styles.limitCounterText}>
+                    {Math.max(0, maxMessages - messageCount)} messages remaining today
+                  </Text>
+                </View>
+              )}
+            </>
           )}
         </KeyboardAvoidingView>
       ) : (

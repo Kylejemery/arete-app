@@ -124,7 +124,7 @@ app.post('/api/chat', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  const { system, messages, max_tokens, model, tzOffsetMinutes } = req.body;
+  const { system, messages, max_tokens, model, tzOffsetMinutes, user_id } = req.body;
 
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
@@ -142,10 +142,41 @@ app.post('/api/chat', async (req, res) => {
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
   const enrichedSystem = system + dateTimeLine + resourceInstruction;
 
+  // Daily message limit check for free-tier users
+  let is_premium = null;
+  let dailyCount = null;
+  if (user_id) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_premium')
+      .eq('id', user_id)
+      .single();
+    is_premium = profile?.is_premium ?? false;
+    if (!is_premium) {
+      const todayUTC = new Date();
+      todayUTC.setUTCHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from('cabinet_conversations')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user_id)
+        .eq('role', 'user')
+        .gte('created_at', todayUTC.toISOString());
+      dailyCount = count ?? 0;
+      if (dailyCount >= 10) {
+        return res.status(403).json({
+          error: 'daily_limit_reached',
+          message: "You've reached your 10 free messages for today.",
+          count: 10,
+          is_premium: false,
+        });
+      }
+    }
+  }
+
   try {
     const truncatedMessages = truncateMessages(messages);
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
-    console.log(`[/api/chat] messages: ${messages.length} → ${truncatedMessages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
+    console.log(`[/api/chat] messages: ${messages.length} → ${truncatedMessages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'} | user: ${user_id} | is_premium: ${is_premium} | daily_msgs: ${dailyCount}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {

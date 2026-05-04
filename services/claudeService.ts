@@ -12,6 +12,13 @@ export class MessageLimitError extends Error {
     this.name = 'MessageLimitError';
   }
 }
+
+export class DailyLimitError extends Error {
+  constructor() {
+    super('daily_limit_reached');
+    this.name = 'DailyLimitError';
+  }
+}
 import { supabase } from '../lib/supabase';
 
 export interface Message {
@@ -638,6 +645,7 @@ Voice: measured, honest, grounded in Stoic philosophy. No cheerleading. No empty
 
 The week has ended. Give me your honest assessment.`;
 
+  const { data: { user: _wrUser } } = await supabase.auth.getUser();
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: {
@@ -649,6 +657,7 @@ The week has ended. Give me your honest assessment.`;
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
       tzOffsetMinutes: new Date().getTimezoneOffset(),
+      user_id: _wrUser?.id ?? '',
     }),
   });
 
@@ -681,6 +690,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
+    const { data: { user: _cabUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
@@ -693,10 +703,16 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        user_id: _cabUser?.id ?? '',
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 403) {
+        let errData: any = {};
+        try { errData = await response.json(); } catch { /* ignore */ }
+        if (errData.error === 'daily_limit_reached') throw new DailyLimitError();
+      }
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Backend/Claude API error:', response.status, errorText);
@@ -711,6 +727,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     return 'The Cabinet did not respond. Please try again.';
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
+    if (error instanceof DailyLimitError) throw error;
     console.error('Backend request failed:', error);
     return 'Backend server not reachable. Make sure the server is running.';
   }
@@ -754,6 +771,7 @@ export async function sendCheckInToCabinet(
 
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
 
+    const { data: { user: _ciUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: {
@@ -765,6 +783,7 @@ export async function sendCheckInToCabinet(
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        user_id: _ciUser?.id ?? '',
       }),
     });
 
@@ -1009,6 +1028,7 @@ export async function sendBeliefJournalMessage(
     })),
   ];
 
+  const { data: { user: _bjUser } } = await supabase.auth.getUser();
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1017,6 +1037,7 @@ export async function sendBeliefJournalMessage(
       max_tokens: 2000,
       system: systemPrompt,
       messages,
+      user_id: _bjUser?.id ?? '',
     }),
   });
 
