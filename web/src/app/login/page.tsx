@@ -1,13 +1,12 @@
 'use client'
 
 import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 type Mode = 'signin' | 'signup'
 
 function LoginForm() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<Mode>('signin')
   const [email, setEmail] = useState('')

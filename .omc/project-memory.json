@@ -372,6 +372,12 @@
       "type": "file"
     },
     {
+      "path": "web\\src\\app\\login\\page.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777932922370,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260421000000_add_reading_data.sql",
       "accessCount": 1,
       "lastAccessed": 1777903142450,
@@ -448,6 +454,12 @@
       "accessCount": 1,
       "lastAccessed": 1777930931030,
       "type": "directory"
+    },
+    {
+      "path": "academy\\web\\src\\app\\(auth)\\login\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777932881483,
+      "type": "file"
     }
   ],
   "userDirectives": []
