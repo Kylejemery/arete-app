@@ -294,15 +294,15 @@
   },
   "hotPaths": [
     {
-      "path": "app\\(tabs)\\cabinet.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1777909875302,
+      "path": "server\\index.js",
+      "accessCount": 15,
+      "lastAccessed": 1777922413633,
       "type": "file"
     },
     {
-      "path": "server\\index.js",
-      "accessCount": 13,
-      "lastAccessed": 1777921055431,
+      "path": "app\\(tabs)\\cabinet.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1777909875302,
       "type": "file"
     },
     {

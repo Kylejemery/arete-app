@@ -111,6 +111,14 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+function truncateMessages(messages, maxMessages = 12) {
+  const systemMessages = messages.filter(m => m.role === 'system');
+  const conversationMessages = messages.filter(m => m.role !== 'system');
+  if (conversationMessages.length <= maxMessages) return messages;
+  const truncated = conversationMessages.slice(-maxMessages);
+  return [...systemMessages, ...truncated];
+}
+
 app.post('/api/chat', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
@@ -135,8 +143,9 @@ app.post('/api/chat', async (req, res) => {
   const enrichedSystem = system + dateTimeLine + resourceInstruction;
 
   try {
+    const truncatedMessages = truncateMessages(messages);
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
-    console.log(`[/api/chat] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
+    console.log(`[/api/chat] messages: ${messages.length} → ${truncatedMessages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -149,7 +158,7 @@ app.post('/api/chat', async (req, res) => {
         model: model || 'claude-opus-4-5',
         max_tokens: max_tokens || 1500,
         system: enrichedSystem,
-        messages,
+        messages: truncatedMessages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       }),
     });
