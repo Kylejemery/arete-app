@@ -45,11 +45,15 @@ function localToday(): string {
 }
 
 function templateToTask(t: RoutineTemplate) {
-  return {
+  const task: { id: string; title: string; done: boolean; note?: string } = {
     id: t.id,
     title: t.emoji ? `${t.emoji} ${t.title}` : t.title,
     done: false,
   };
+  if (t.title === 'Train') {
+    task.note = 'Boxing, running, or movement';
+  }
+  return task;
 }
 
 export default function MorningScreen() {
@@ -98,10 +102,19 @@ export default function MorningScreen() {
     try {
       let tmpl = await getRoutineTemplates('morning');
       if (tmpl.length === 0) {
-        await addRoutineTemplate('morning', 'Eat Breakfast', '🫙', 0);
-        await addRoutineTemplate('morning', 'Meditate', '🌿', 1);
-        await addRoutineTemplate('morning', 'Boxing', '🥊', 2);
-        tmpl = await getRoutineTemplates('morning');
+        const alreadySeeded = await AsyncStorage.getItem('morning_defaults_seeded');
+        if (!alreadySeeded) {
+          await addRoutineTemplate('morning', 'Eat breakfast', '🍳', 0);
+          await addRoutineTemplate('morning', 'Train', '🥊', 1);
+          await addRoutineTemplate('morning', 'Meditate', '🌿', 2);
+          await AsyncStorage.setItem('morning_defaults_seeded', 'true');
+          tmpl = await getRoutineTemplates('morning');
+        }
+      } else {
+        // Mark existing users with templates as seeded so we never re-seed if they clear their list
+        AsyncStorage.getItem('morning_defaults_seeded').then(v => {
+          if (!v) AsyncStorage.setItem('morning_defaults_seeded', 'true').catch(() => {});
+        }).catch(() => {});
       }
       setTemplates(tmpl);
 
@@ -276,9 +289,16 @@ export default function MorningScreen() {
                     size={26}
                     color={task.done ? '#1a1a2e' : '#c9a84c'}
                   />
-                  <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
-                    {task.title}
-                  </Text>
+                  <View style={styles.taskTextBlock}>
+                    <Text style={[styles.taskText, task.done && styles.taskTextDone]}>
+                      {task.title}
+                    </Text>
+                    {task.note ? (
+                      <Text style={[styles.taskNote, task.done && styles.taskNoteDone]}>
+                        {task.note}
+                      </Text>
+                    ) : null}
+                  </View>
                 </TouchableOpacity>
               </Swipeable>
             ))
@@ -514,15 +534,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#c9a84c',
     borderColor: '#c9a84c',
   },
+  taskTextBlock: {
+    flex: 1,
+  },
   taskText: {
     color: '#fff',
     fontSize: 16,
-    flex: 1,
   },
   taskTextDone: {
     color: '#1a1a2e',
     fontWeight: 'bold',
     textDecorationLine: 'line-through',
+  },
+  taskNote: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  taskNoteDone: {
+    color: '#1a1a2e99',
   },
   swipeDeleteAction: {
     backgroundColor: '#1e2d4a',

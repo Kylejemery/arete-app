@@ -53,6 +53,35 @@ async function retrieveChunks(userMessage, counselorSlug, k = 3) {
 app.use(cors());
 app.use(express.json());
 
+// ---------------------------------------------------------------------------
+// Local datetime helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Derives the user's local date/time from their timezone offset and returns
+ * a formatted line for injection into counselor system prompts.
+ * tzOffsetMinutes = new Date().getTimezoneOffset() on the client
+ * (positive = behind UTC, e.g. 300 for UTC-5; negative = ahead of UTC)
+ */
+function buildLocalDateTimeLine(tzOffsetMinutes) {
+  if (tzOffsetMinutes == null) return '';
+  const localMs = Date.now() - tzOffsetMinutes * 60 * 1000;
+  const d = new Date(localMs);
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const hour = d.getUTCHours();
+  const minute = d.getUTCMinutes();
+  const h12 = hour % 12 || 12;
+  const ampm = hour < 12 ? 'AM' : 'PM';
+  const minuteStr = String(minute).padStart(2, '0');
+  let period;
+  if (hour >= 5 && hour < 12) period = 'Morning';
+  else if (hour >= 12 && hour < 17) period = 'Afternoon';
+  else if (hour >= 17 && hour < 21) period = 'Evening';
+  else period = 'Night';
+  return `\n\nCurrent date and time: ${days[d.getUTCDay()]}, ${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()} — ${h12}:${minuteStr} ${ampm} (${period}).`;
+}
+
 // Request logger middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -72,7 +101,7 @@ app.post('/api/chat', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  const { system, messages, max_tokens, model } = req.body;
+  const { system, messages, max_tokens, model, tzOffsetMinutes } = req.body;
 
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
@@ -86,8 +115,9 @@ app.post('/api/chat', async (req, res) => {
     return res.status(400).json({ error: 'max_tokens must be a positive integer' });
   }
 
+  const dateTimeLine = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + resourceInstruction;
+  const enrichedSystem = system + dateTimeLine + resourceInstruction;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -130,7 +160,7 @@ app.post('/api/chat/counselor', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes } = req.body;
 
   const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
   const tier = req.headers['x-subscription-tier'];
@@ -173,8 +203,9 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
       `\n[END SOURCE TEXTS]`;
   }
 
+  const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + profileBlock + ragContext + resourceInstruction;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + ragContext + resourceInstruction;
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {

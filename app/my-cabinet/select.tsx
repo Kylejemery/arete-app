@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import CabinetPreview from '@/components/CabinetPreview';
 import CounselorCard from '@/components/CounselorCard';
-import { FUTURE_SELF_SLUG, FREE_COUNSELOR_SLUGS, getCounselors, getSubscriptionTier, getUserCabinet, saveCabinetSelection } from '@/lib/db';
+import { FUTURE_SELF_SLUG, FREE_COUNSELOR_SLUGS, STARTER_CABINET_SLUGS, getCounselors, getSubscriptionTier, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor, SubscriptionTier } from '@/lib/types';
 
@@ -92,11 +92,19 @@ export default function CabinetSelectScreen() {
     });
   };
 
-  const filteredCounselors = counselors.filter(c => {
-    if (c.slug === FUTURE_SELF_SLUG) return false;
-    if (activeCategory === 'all') return true;
-    return c.category === activeCategory;
-  });
+  const filteredCounselors = counselors
+    .filter(c => {
+      if (c.slug === FUTURE_SELF_SLUG) return false;
+      if (activeCategory === 'all') return true;
+      return c.category === activeCategory;
+    })
+    .sort((a, b) => {
+      const aStarter = (STARTER_CABINET_SLUGS as readonly string[]).includes(a.slug);
+      const bStarter = (STARTER_CABINET_SLUGS as readonly string[]).includes(b.slug);
+      if (aStarter && !bStarter) return -1;
+      if (!aStarter && bStarter) return 1;
+      return 0;
+    });
 
   const futureSelfCounselor = counselors.find(c => c.slug === FUTURE_SELF_SLUG);
 
@@ -198,6 +206,7 @@ export default function CabinetSelectScreen() {
                 isSelected={selectedSlugs.includes(item.slug)}
                 isDisabled={selectedSlugs.length >= maxCounselors && !selectedSlugs.includes(item.slug) && !isLockedForTier(item.slug)}
                 isLocked={isLockedForTier(item.slug)}
+                isStarter={(STARTER_CABINET_SLUGS as readonly string[]).includes(item.slug)}
                 onToggle={handleToggle}
               />
             )}

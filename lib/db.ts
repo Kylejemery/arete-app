@@ -522,7 +522,8 @@ export async function upsertCalendarData(_data: Record<string, { morning: boolea
 // ----------------------------------------------------------------
 
 export const FUTURE_SELF_SLUG = 'futureSelf'
-const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt']
+export const STARTER_CABINET_SLUGS = ['marcus', 'roosevelt'] as const
+const DEFAULT_CABINET_SLUGS = ['marcus', 'roosevelt']
 
 export async function getCounselors(): Promise<Counselor[]> {
   const { data, error } = await supabase
@@ -568,7 +569,7 @@ export async function getUserCabinet(): Promise<Counselor[]> {
   let counselorSlugs = members.filter(m => m !== FUTURE_SELF_SLUG)
   if (tier === 'free') {
     counselorSlugs = counselorSlugs.filter(s => (FREE_COUNSELOR_SLUGS as readonly string[]).includes(s))
-    if (counselorSlugs.length === 0) counselorSlugs = [...FREE_COUNSELOR_SLUGS]
+    if (counselorSlugs.length === 0) counselorSlugs = [...DEFAULT_CABINET_SLUGS]
   }
   return getCounselorsBySlugs(counselorSlugs)
 }
@@ -629,7 +630,7 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 // SUBSCRIPTION TIER
 // ----------------------------------------------------------------
 
-export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins'] as const;
+export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevelt'] as const;
 
 export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
   free: 3,

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -12,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getUserSettings, upsertUserSettings, getGoals, upsertGoal } from '@/lib/db';
+import { getUserSettings, upsertUserSettings, getGoals, upsertGoal, saveCabinetSelection } from '@/lib/db';
 import { setKnowThyselfComplete } from '@/lib/onboardingAgent';
 import { triggerScrollGeneration } from '@/lib/scrolls';
 
@@ -85,6 +86,9 @@ export default function OnboardingConfirmScreen() {
         accountability_style: accountabilityStyle.trim(),
       });
       await setKnowThyselfComplete();
+      // Seed default cabinet for new users
+      await saveCabinetSelection(['marcus', 'roosevelt']);
+      await AsyncStorage.setItem('cabinet_defaults_seeded', 'true');
       // Fire-and-forget: generate scrolls and seed goals in the background
       const settings = await getUserSettings();
       if (settings && goals.trim()) {

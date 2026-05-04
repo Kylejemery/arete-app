@@ -9,6 +9,7 @@ interface CounselorCardProps {
   isDisabled: boolean;
   isFutureSelf?: boolean;
   isLocked?: boolean;
+  isStarter?: boolean;
   onToggle: (slug: string) => void;
 }
 
@@ -33,6 +34,7 @@ export default function CounselorCard({
   isDisabled,
   isFutureSelf = false,
   isLocked = false,
+  isStarter = false,
   onToggle,
 }: CounselorCardProps) {
   const categoryColor = CATEGORY_COLORS[counselor.category] ?? { bg: 'rgba(201,168,76,0.2)', text: '#c9a84c' };
@@ -80,6 +82,12 @@ export default function CounselorCard({
 
       {isFutureSelf && (
         <Text style={styles.alwaysPresent}>Always Present</Text>
+      )}
+
+      {isStarter && !isFutureSelf && (
+        <View style={styles.starterBadge}>
+          <Text style={styles.starterBadgeText}>Starter</Text>
+        </View>
       )}
 
       {isSelected && !isFutureSelf && !isLocked && (
@@ -176,5 +184,23 @@ const styles = StyleSheet.create({
     color: '#c9a84c',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  starterBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 14,
+    backgroundColor: 'rgba(201,168,76,0.15)',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#c9a84c55',
+  },
+  starterBadgeText: {
+    color: '#c9a84c',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

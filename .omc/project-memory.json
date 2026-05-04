@@ -294,9 +294,57 @@
   },
   "hotPaths": [
     {
+      "path": "app\\(tabs)\\cabinet.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1777909875302,
+      "type": "file"
+    },
+    {
+      "path": "services\\claudeService.ts",
+      "accessCount": 10,
+      "lastAccessed": 1777904379489,
+      "type": "file"
+    },
+    {
+      "path": "app\\counselor-chat.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1777908498811,
+      "type": "file"
+    },
+    {
+      "path": "lib\\db.ts",
+      "accessCount": 7,
+      "lastAccessed": 1777909801286,
+      "type": "directory"
+    },
+    {
+      "path": "app\\(tabs)\\morning.tsx",
+      "accessCount": 6,
+      "lastAccessed": 1777908876682,
+      "type": "file"
+    },
+    {
+      "path": "server\\index.js",
+      "accessCount": 5,
+      "lastAccessed": 1777904453408,
+      "type": "file"
+    },
+    {
       "path": "app\\(tabs)\\timer.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1777908729201,
+      "type": "file"
+    },
+    {
+      "path": "components\\CounselorCard.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1777909945866,
+      "type": "file"
+    },
+    {
+      "path": "web\\src\\lib\\claudeService.ts",
       "accessCount": 4,
-      "lastAccessed": 1777903304622,
+      "lastAccessed": 1777904432105,
       "type": "file"
     },
     {
@@ -306,15 +354,21 @@
       "type": "file"
     },
     {
-      "path": "lib\\types.ts",
-      "accessCount": 2,
-      "lastAccessed": 1777903172457,
+      "path": "app\\onboarding\\confirm.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777909822247,
       "type": "file"
     },
     {
-      "path": "app\\(tabs)\\morning.tsx",
+      "path": "app\\my-cabinet\\select.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1777909905337,
+      "type": "file"
+    },
+    {
+      "path": "lib\\types.ts",
       "accessCount": 2,
-      "lastAccessed": 1777903246418,
+      "lastAccessed": 1777903172457,
       "type": "file"
     },
     {
@@ -330,9 +384,9 @@
       "type": "file"
     },
     {
-      "path": "server\\index.js",
+      "path": "hooks\\useTierLimits.ts",
       "accessCount": 1,
-      "lastAccessed": 1777904109652,
+      "lastAccessed": 1777908299187,
       "type": "file"
     }
   ],

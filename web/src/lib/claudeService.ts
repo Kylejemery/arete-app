@@ -393,6 +393,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
         max_tokens: 4000,
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 
@@ -461,6 +462,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
         max_tokens: 2000,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 
@@ -504,6 +506,7 @@ export async function sendMessageToCounselor(
         max_tokens: 1500,
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 

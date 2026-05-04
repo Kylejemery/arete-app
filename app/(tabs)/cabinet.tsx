@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,8 +17,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet, MessageLimitError } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import type { Counselor } from '@/lib/types';
+import { useTierLimits } from '../../hooks/useTierLimits';
 import {
   ThreadMessage,
   appendMessages,
@@ -26,6 +28,11 @@ import {
   loadThread,
   normalizeCounselorId,
 } from '../../services/threadService';
+
+function getTodayDateKey(): string {
+  const d = new Date();
+  return `daily_messages_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 function timeAgo(timestamp: number): string {
   const diff = Date.now() - timestamp;
@@ -75,6 +82,9 @@ export default function CabinetScreen() {
     { id: string; messageCount: number; lastUpdated: number }[]
   >([]);
 
+  const { tier, maxMessages } = useTierLimits();
+  const [messageCount, setMessageCount] = useState(0);
+
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
   const consumedBeliefContextRef = useRef(false);
@@ -97,9 +107,20 @@ export default function CabinetScreen() {
     }
   };
 
-  // On mount: load thread
+  // On mount: load thread, counselors, and seed defaults for existing users with empty cabinet
   useEffect(() => {
     loadInitialThread();
+    loadCounselorsData();
+    (async () => {
+      const seeded = await AsyncStorage.getItem('cabinet_defaults_seeded');
+      if (!seeded) {
+        const settings = await getUserSettings();
+        if (!settings?.cabinet_members || settings.cabinet_members.length === 0) {
+          await saveCabinetSelection(['marcus', 'roosevelt']);
+        }
+        await AsyncStorage.setItem('cabinet_defaults_seeded', 'true');
+      }
+    })();
   }, []);
 
   const loadCounselorsData = useCallback(async () => {
@@ -135,6 +156,8 @@ export default function CabinetScreen() {
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
         }
+        const stored = await AsyncStorage.getItem(getTodayDateKey());
+        setMessageCount(stored !== null ? parseInt(stored, 10) : 0);
         await loadCounselorsData();
         console.log('[Cabinet] Focus refresh complete');
       })();
@@ -223,6 +246,16 @@ export default function CabinetScreen() {
     const text = inputText.trim();
     if (!text || isLoading) return;
 
+    // Enforce daily message limit before sending
+    const dateKey = getTodayDateKey();
+    const stored = await AsyncStorage.getItem(dateKey);
+    const count = stored !== null ? parseInt(stored, 10) : 0;
+    console.log('[MessageLimit] count:', count, 'max:', maxMessages);
+    if (maxMessages !== null && count >= maxMessages) {
+      router.push('/paywall' as any);
+      return;
+    }
+
     const userMessage: ThreadMessage = {
       role: 'user',
       content: text,
@@ -244,6 +277,9 @@ export default function CabinetScreen() {
       };
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
+      const newCount = count + 1;
+      await AsyncStorage.setItem(dateKey, String(newCount));
+      setMessageCount(newCount);
       await appendMessages('cabinet', [userMessage, assistantMessage]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
@@ -300,6 +336,11 @@ export default function CabinetScreen() {
         <View style={styles.headerText}>
           <Text style={styles.title}>The Cabinet</Text>
           <Text style={styles.subtitle}>Your Council of Invisible Counselors</Text>
+          {cabinetCounselors.length > 0 && (
+            <Text style={styles.memberNames} numberOfLines={1}>
+              {[...cabinetCounselors.map(c => c.name), 'Future Self'].join(' · ')}
+            </Text>
+          )}
         </View>
         {activeTab === 'cabinet' && (
           <View style={styles.headerButtons}>
@@ -500,6 +541,14 @@ export default function CabinetScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          {tier === 'free' && maxMessages !== null && (
+            <View style={styles.limitCounter}>
+              <Text style={styles.limitCounterText}>
+                {Math.max(0, maxMessages - messageCount)} messages remaining today
+              </Text>
+            </View>
+          )}
         </KeyboardAvoidingView>
       ) : (
         /* Counselors Tab */
@@ -609,6 +658,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#888',
     marginTop: 2,
+  },
+  memberNames: {
+    fontSize: 11,
+    color: '#c9a84c99',
+    marginTop: 4,
+    fontVariant: ['small-caps'],
+    letterSpacing: 0.5,
   },
   newSessionButton: {
     backgroundColor: '#16213e',
@@ -946,5 +1002,16 @@ const styles = StyleSheet.create({
   },
   ktNudgeDismiss: {
     padding: 12,
+  },
+  limitCounter: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c9a84c11',
+  },
+  limitCounterText: {
+    color: '#888',
+    fontSize: 12,
   },
 });

@@ -648,6 +648,7 @@ The week has ended. Give me your honest assessment.`;
       max_tokens: 2000,
       system: systemPrompt,
       messages: [{ role: 'user', content: userMessage }],
+      tzOffsetMinutes: new Date().getTimezoneOffset(),
     }),
   });
 
@@ -691,6 +692,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 
@@ -762,6 +764,7 @@ export async function sendCheckInToCabinet(
         max_tokens: 350,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 
@@ -865,6 +868,7 @@ export async function sendMessageToCounselor(
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         userProfile,
         counselorSlug: counselorId,
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 
@@ -940,6 +944,7 @@ export async function prefetchDailyQuestion(counselorId: string, question: strin
         system: systemPrompt,
         messages: [{ role: 'user', content: question }],
         counselorSlug: counselorId,
+        tzOffsetMinutes: new Date().getTimezoneOffset(),
       }),
     });
 

@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,6 +19,7 @@ import {
 import { sendMessageToCounselor, MessageLimitError } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
+import { useTierLimits } from '../hooks/useTierLimits';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -26,6 +28,11 @@ const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   roosevelt: { name: 'Theodore Roosevelt', role: '26th President & Adventurer' },
   futureSelf: { name: 'Future Self', role: 'Years From Now' },
 };
+
+function getTodayDateKey(): string {
+  const d = new Date();
+  return `daily_messages_${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function CounselorChatScreen() {
   const { id, initialMessage, name: nameParam, role: roleParam } = useLocalSearchParams<{
@@ -46,6 +53,8 @@ export default function CounselorChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const hasSentInitialRef = useRef(false);
   const [accessBlocked, setAccessBlocked] = useState(false);
+  const { tier, maxMessages } = useTierLimits();
+  const [messageCount, setMessageCount] = useState(0);
 
   useEffect(() => {
     hasSentInitialRef.current = false;
@@ -94,9 +103,26 @@ export default function CounselorChatScreen() {
     return () => sub.remove();
   }, [router]);
 
+  // Load today's message count on mount
+  useEffect(() => {
+    AsyncStorage.getItem(getTodayDateKey()).then(val => {
+      setMessageCount(val !== null ? parseInt(val, 10) : 0);
+    });
+  }, []);
+
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || isLoading) return;
+
+    // Enforce daily message limit before sending
+    const dateKey = getTodayDateKey();
+    const stored = await AsyncStorage.getItem(dateKey);
+    const count = stored !== null ? parseInt(stored, 10) : 0;
+    console.log('[MessageLimit] count:', count, 'max:', maxMessages);
+    if (maxMessages !== null && count >= maxMessages) {
+      router.push('/paywall' as any);
+      return;
+    }
 
     const userMessage: ThreadMessage = {
       role: 'user',
@@ -121,6 +147,9 @@ export default function CounselorChatScreen() {
       };
       const finalMessages = [...updatedMessages, assistantMessage];
       setMessages(finalMessages);
+      const newCount = count + 1;
+      await AsyncStorage.setItem(dateKey, String(newCount));
+      setMessageCount(newCount);
       await appendMessages(counselorId, [userMessage, assistantMessage]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
@@ -292,6 +321,14 @@ export default function CounselorChatScreen() {
             />
           </TouchableOpacity>
         </View>
+
+        {tier === 'free' && maxMessages !== null && (
+          <View style={styles.limitCounter}>
+            <Text style={styles.limitCounterText}>
+              {Math.max(0, maxMessages - messageCount)} messages remaining today
+            </Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
 
       {/* Access blocked overlay for free tier */}
@@ -547,5 +584,16 @@ const styles = StyleSheet.create({
   accessDismissText: {
     color: '#888',
     fontSize: 14,
+  },
+  limitCounter: {
+    alignItems: 'center',
+    paddingVertical: 6,
+    backgroundColor: '#16213e',
+    borderTopWidth: 1,
+    borderTopColor: '#c9a84c11',
+  },
+  limitCounterText: {
+    color: '#888',
+    fontSize: 12,
   },
 });
