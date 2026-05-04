@@ -1,12 +1,27 @@
+// ---------------------------------------------------------------------------
+// Required Railway environment variables:
+//   CLAUDE_API_KEY          — Anthropic API key
+//   OPENAI_API_KEY          — OpenAI API key (embeddings + OpenAI-backed agents)
+//   SUPABASE_URL            — Supabase project URL
+//   SUPABASE_SERVICE_ROLE_KEY — Supabase service role secret
+// ---------------------------------------------------------------------------
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const OpenAI = require('openai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 console.log('Key starts with:', CLAUDE_API_KEY?.slice(0, 15));
+
+// OpenAI SDK client (used for OpenAI-backed agents and embeddings)
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// Sentinel used in agentRouter to identify Anthropic-backed agents.
+// Anthropic calls use raw fetch throughout this file (no SDK).
+const anthropicClient = { provider: 'anthropic' };
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -714,6 +729,177 @@ app.post('/api/academy/seminar', async (req, res) => {
   } catch (error) {
     console.error('Failed to reach Claude API (academy/seminar):', error);
     return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Academy agent router
+// ---------------------------------------------------------------------------
+
+const agentRouter = (agentType) => {
+  const routes = {
+    'socratic-proctor':   { client: anthropicClient, model: 'claude-opus-4-6' },
+    'writing-supervisor': { client: anthropicClient, model: 'claude-opus-4-6' },
+    'examiner':           { client: anthropicClient, model: 'claude-opus-4-6' },
+    'philologist':        { client: anthropicClient, model: 'claude-opus-4-6' },
+    'language-drills':    { client: anthropicClient, model: 'claude-haiku-4-5-20251001' },
+    'cabinet-counselor':  { client: anthropicClient, model: 'claude-opus-4-6' },
+  };
+  return routes[agentType] ?? routes['socratic-proctor'];
+};
+
+const AGENT_PERSONAS = {
+  'socratic-proctor': `You are a Socratic proctor for Arete Academy. Guide students through rigorous philosophical inquiry using the Socratic method. Ask probing questions rather than providing direct answers. Surface contradictions in the student's reasoning. Push them toward greater precision. Never lecture — always return the question to the student.`,
+  'writing-supervisor': `You are a writing supervisor for Arete Academy. Evaluate and improve students' philosophical writing with a focus on clarity of argument, precision of language, and philosophical rigor. Give specific, actionable feedback. Do not rewrite for the student — show them exactly where their reasoning breaks down.`,
+  'examiner': `You are an examiner for Arete Academy. Administer and evaluate examinations in classical philosophy. Ask precise questions, evaluate answers against the primary texts, and assign marks with clear reasoning. Be demanding but fair.`,
+  'philologist': `You are a philologist and classical scholar at Arete Academy. You have deep expertise in Greek and Latin texts, their translation history, and scholarly reception. Help students engage with primary sources in their original context.`,
+  'language-drills': `You are a language drill instructor at Arete Academy. Conduct focused, efficient drills in ancient Greek and Latin grammar and vocabulary. Be concise, precise, and corrective. Give exercises, check answers, and correct errors immediately.`,
+  'cabinet-counselor': `You are a Cabinet counselor at Arete Academy. Drawing on the wisdom of the great Stoic philosophers — Marcus Aurelius, Epictetus, and Seneca — you provide philosophical guidance, mentorship, and accountability to students pursuing their education in classical thought.`,
+};
+
+async function retrieveCorpusChunks(userMessage, courseId, k = 3) {
+  if (!process.env.OPENAI_API_KEY) return [];
+  try {
+    const embedding = await embedQuery(userMessage);
+    const { data, error } = await supabase.rpc('match_rag_corpus', {
+      query_embedding: embedding,
+      match_course_id: courseId ?? null,
+      match_count: k,
+    });
+    if (error) {
+      // Fallback: direct select if the RPC doesn't exist yet
+      console.warn('match_rag_corpus RPC unavailable, falling back to direct select:', error.message);
+      const query = supabase
+        .from('rag_corpus')
+        .select('content, source_title')
+        .limit(k);
+      if (courseId) query.eq('course_id', courseId);
+      const { data: rows } = await query;
+      return rows ?? [];
+    }
+    return data ?? [];
+  } catch (err) {
+    console.error('Corpus RAG retrieval error:', err.message);
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/academy/agent — multi-model agent router for Arete Academy
+// ---------------------------------------------------------------------------
+
+app.post('/api/academy/agent', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { agent_type, messages, course_id, user_id } = req.body;
+
+  if (!messages || !Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Missing required field: messages (non-empty array)' });
+  }
+
+  const { client, model } = agentRouter(agent_type);
+
+  // Build system prompt: agent persona + RAG context + course context
+  const persona = AGENT_PERSONAS[agent_type] ?? AGENT_PERSONAS['socratic-proctor'];
+
+  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
+  const ragChunks = await retrieveCorpusChunks(lastUserMessage, course_id);
+
+  let ragContext = '';
+  if (ragChunks.length > 0) {
+    ragContext =
+      `\n\n[RELEVANT CORPUS PASSAGES]\nThe following passages from the course corpus are relevant to the current exchange. Ground your response in the actual texts:\n\n` +
+      ragChunks.map((c, i) => `${i + 1}. (${c.source_title ?? 'Corpus'})\n${c.content}`).join('\n\n') +
+      `\n[END CORPUS PASSAGES]`;
+  }
+
+  const courseContext = course_id
+    ? `\n\n[Course: ${course_id}]`
+    : '';
+
+  const systemPrompt = persona + courseContext + ragContext;
+
+  try {
+    let responseText;
+
+    if (client === anthropicClient) {
+      // Anthropic path — raw fetch, consistent with rest of this file
+      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 1200,
+          system: systemPrompt,
+          messages,
+        }),
+      });
+
+      if (!apiRes.ok) {
+        const errorText = await apiRes.text();
+        console.error('Claude API error (academy/agent):', apiRes.status, errorText);
+        return res.status(apiRes.status).json({ error: errorText });
+      }
+
+      const data = await apiRes.json();
+      responseText = data.content?.find(b => b.type === 'text')?.text ?? '';
+    } else {
+      // OpenAI path — SDK
+      const completion = await openai.chat.completions.create({
+        model,
+        max_tokens: 1200,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...messages,
+        ],
+      });
+      responseText = completion.choices[0]?.message?.content ?? '';
+    }
+
+    // Persist exchange to academy_sessions
+    if (user_id && course_id && responseText) {
+      try {
+        const { data: session } = await supabase
+          .from('academy_sessions')
+          .select('id, messages')
+          .eq('user_id', user_id)
+          .eq('course_id', course_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        const lastUserMsg = messages[messages.length - 1];
+        const newMessages = [
+          ...(session?.messages ?? []),
+          ...(lastUserMsg ? [lastUserMsg] : []),
+          { role: 'assistant', content: responseText, timestamp: Date.now() },
+        ];
+
+        if (session?.id) {
+          await supabase
+            .from('academy_sessions')
+            .update({ messages: newMessages, updated_at: new Date().toISOString() })
+            .eq('id', session.id);
+        } else {
+          await supabase
+            .from('academy_sessions')
+            .insert({ user_id, course_id, agent_type: agent_type ?? 'socratic-proctor', messages: newMessages });
+        }
+      } catch (dbErr) {
+        console.warn('academy_sessions persist error (non-fatal):', dbErr.message);
+      }
+    }
+
+    return res.json({ content: responseText, model, agent_type: agent_type ?? 'socratic-proctor' });
+  } catch (error) {
+    console.error('Failed to reach API (academy/agent):', error);
+    return res.status(502).json({ error: 'Failed to reach model API' });
   }
 });
 
