@@ -135,6 +135,8 @@ app.post('/api/chat', async (req, res) => {
   const enrichedSystem = system + dateTimeLine + resourceInstruction;
 
   try {
+    const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
+    console.log(`[/api/chat] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -223,6 +225,8 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   const enrichedSystem = system + dateTimeBlock + profileBlock + ragContext + resourceInstruction;
 
   try {
+    const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
+    console.log(`[/api/chat/counselor] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -279,6 +283,7 @@ app.post('/api/memory/summarize', async (req, res) => {
     .join('\n\n');
 
   try {
+    console.log(`[/api/memory/summarize] messages: ${recentMessages.length} | est. tokens: ${Math.round(recentMessages.reduce((sum, m) => sum + (m.content?.length ?? 0), 0) / 4)} | model: claude-haiku-4-5-20251001`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -342,6 +347,8 @@ app.post('/api/onboard', async (req, res) => {
   }
 
   try {
+    const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
+    console.log(`[/api/onboard] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -436,6 +443,7 @@ You must respond with ONLY valid JSON in exactly this format, nothing else:
 {"title": "<evocative title, 5–12 words>", "body": "<full article text, paragraphs separated by \\n\\n>"}`;
 
   try {
+    console.log(`[/api/scrolls/generate] messages: 1 | est. tokens: ${Math.round(goal.length / 4)} | model: claude-opus-4-5`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -512,6 +520,7 @@ app.post('/api/resources/fetch', async (req, res) => {
 
   try {
     // Call 1 — Search: web search enabled, free-form response
+    console.log(`[/api/resources/fetch search] messages: 1 | est. tokens: ${Math.round(goalsText.length / 4)} | model: claude-haiku-4-5-20251001`);
     const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -546,6 +555,7 @@ app.post('/api/resources/fetch', async (req, res) => {
     }
 
     // Call 2 — Format: no tools, forced JSON output
+    console.log(`[/api/resources/fetch format] messages: 1 | est. tokens: ${Math.round(searchFindings.length / 4)} | model: claude-haiku-4-5-20251001`);
     const formatResponse = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -676,6 +686,8 @@ app.post('/api/academy/seminar', async (req, res) => {
   const enrichedSystem = systemPrompt + ragContext;
 
   try {
+    const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
+    console.log(`[/api/academy/seminar] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: claude-opus-4-5`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -826,6 +838,8 @@ app.post('/api/academy/agent', async (req, res) => {
 
     if (client === anthropicClient) {
       // Anthropic path — raw fetch, consistent with rest of this file
+      const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
+      console.log(`[/api/academy/agent:${agent_type ?? 'socratic-proctor'}] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model}`);
       const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {

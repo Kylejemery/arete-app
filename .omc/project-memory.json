@@ -300,6 +300,12 @@
       "type": "file"
     },
     {
+      "path": "server\\index.js",
+      "accessCount": 13,
+      "lastAccessed": 1777921055431,
+      "type": "file"
+    },
+    {
       "path": "services\\claudeService.ts",
       "accessCount": 10,
       "lastAccessed": 1777904379489,
@@ -321,12 +327,6 @@
       "path": "app\\(tabs)\\morning.tsx",
       "accessCount": 6,
       "lastAccessed": 1777908876682,
-      "type": "file"
-    },
-    {
-      "path": "server\\index.js",
-      "accessCount": 6,
-      "lastAccessed": 1777919465398,
       "type": "file"
     },
     {
