@@ -117,6 +117,44 @@ export default function DashboardPage() {
         </div>
       </Card>
 
+      {/* Program Curriculum */}
+      <div className="mb-8">
+        <CardLabel>Your Program</CardLabel>
+        <div className="grid md:grid-cols-2 gap-4 mt-3">
+          {/* PHIL 701 — available */}
+          <Link href="/courses/phil-701">
+            <Card className="hover:border-academy-gold transition-colors cursor-pointer">
+              <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                PHIL 701 &middot; Gateway Seminar
+              </p>
+              <p className="font-serif text-academy-text text-base mb-1">
+                Foundations of Stoic Ethics
+              </p>
+              <p className="text-academy-muted text-xs">Session I — What is Philosophy For?</p>
+              <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+            </Card>
+          </Link>
+
+          {/* PHIL 702 — locked */}
+          <Card className="opacity-50">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                  PHIL 702
+                </p>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  The Meditations of Marcus Aurelius
+                </p>
+                <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 701</p>
+              </div>
+              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </Card>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Recent Sessions */}
         <div>

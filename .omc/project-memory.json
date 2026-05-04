@@ -412,6 +412,18 @@
       "accessCount": 1,
       "lastAccessed": 1777910975211,
       "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\courses\\phil-701\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777928183855,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\dashboard\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777928201392,
+      "type": "file"
     }
   ],
   "userDirectives": []
