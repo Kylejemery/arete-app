@@ -87,6 +87,21 @@ export default function ProgressScreen() {
         setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
         setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
 
+        // Calculate reading streak — sessions store date as Date.toDateString() (local time)
+        const sessionDates = new Set(sessions.map((s: any) => s.date as string));
+        let rStreak = 0;
+        const cursor = new Date();
+        cursor.setHours(12, 0, 0, 0); // noon avoids DST boundary when decrementing days
+        // If today has no session yet, allow the streak to start from yesterday
+        if (!sessionDates.has(cursor.toDateString())) {
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        while (sessionDates.has(cursor.toDateString())) {
+          rStreak++;
+          cursor.setDate(cursor.getDate() - 1);
+        }
+        setReadingStreak(rStreak);
+
         // Today's reading time — same field the Focus tab writes to
         const d = new Date();
         const todayDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
