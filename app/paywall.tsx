@@ -11,8 +11,18 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import Purchases, { PURCHASES_ERROR_CODE } from 'react-native-purchases';
 import type { PurchasesPackage } from 'react-native-purchases';
+let Purchases: any;
+let PURCHASES_ERROR_CODE: any;
+try {
+  const mod = require('react-native-purchases');
+  Purchases = mod.default;
+  PURCHASES_ERROR_CODE = mod.PURCHASES_ERROR_CODE;
+} catch {
+  const mock = require('@/lib/purchases-mock');
+  Purchases = mock.default;
+  PURCHASES_ERROR_CODE = mock.PURCHASES_ERROR_CODE;
+}
 
 // ─── Static fallback display data ────────────────────────────────────────────
 

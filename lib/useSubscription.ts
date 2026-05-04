@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
-import Purchases from 'react-native-purchases';
+let Purchases: any;
+try {
+  Purchases = require('react-native-purchases').default;
+} catch {
+  Purchases = require('@/lib/purchases-mock').default;
+}
 import { syncTierToSupabase } from '@/lib/syncSubscription';
 
 export type Tier = 'free' | 'arete' | 'arete_pro';

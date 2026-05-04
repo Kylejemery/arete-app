@@ -388,6 +388,30 @@
       "accessCount": 1,
       "lastAccessed": 1777908299187,
       "type": "file"
+    },
+    {
+      "path": "lib\\purchases-mock.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777910952167,
+      "type": "file"
+    },
+    {
+      "path": "app\\_layout.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777910964119,
+      "type": "file"
+    },
+    {
+      "path": "lib\\useSubscription.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777910969627,
+      "type": "file"
+    },
+    {
+      "path": "app\\paywall.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777910975211,
+      "type": "file"
     }
   ],
   "userDirectives": []

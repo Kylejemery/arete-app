@@ -5,7 +5,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Purchases from 'react-native-purchases';
+let Purchases: any;
+try {
+  Purchases = require('react-native-purchases').default;
+} catch {
+  Purchases = require('@/lib/purchases-mock').default;
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
