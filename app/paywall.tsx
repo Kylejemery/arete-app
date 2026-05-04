@@ -67,7 +67,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
 ];
 
 const FEATURES = [
-  { label: 'Messages/day',   free: '3',         arete: '50',      pro: 'Unlimited' },
+  { label: 'Messages/day',   free: '10',        arete: '50',      pro: 'Unlimited' },
   { label: 'Counselors',     free: '3',         arete: '23',      pro: '23' },
   { label: 'Token budget',   free: 'Standard',  arete: 'Extended', pro: 'Max' },
 ];

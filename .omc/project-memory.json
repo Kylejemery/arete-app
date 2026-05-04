@@ -295,8 +295,8 @@
   "hotPaths": [
     {
       "path": "app\\(tabs)\\cabinet.tsx",
-      "accessCount": 21,
-      "lastAccessed": 1777934733324,
+      "accessCount": 30,
+      "lastAccessed": 1777935542826,
       "type": "file"
     },
     {
@@ -384,6 +384,12 @@
       "type": "file"
     },
     {
+      "path": "app\\paywall.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777935349500,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260421000000_add_reading_data.sql",
       "accessCount": 1,
       "lastAccessed": 1777903142450,
@@ -417,12 +423,6 @@
       "path": "lib\\useSubscription.ts",
       "accessCount": 1,
       "lastAccessed": 1777910969627,
-      "type": "file"
-    },
-    {
-      "path": "app\\paywall.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1777910975211,
       "type": "file"
     },
     {

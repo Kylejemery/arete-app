@@ -85,6 +85,7 @@ export default function CabinetScreen() {
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
 
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
@@ -112,6 +113,7 @@ export default function CabinetScreen() {
   useEffect(() => {
     loadInitialThread();
     loadCounselorsData();
+    getUserSettings().then(s => setUserSettings(s)).catch(() => {});
     (async () => {
       const seeded = await AsyncStorage.getItem('cabinet_defaults_seeded');
       if (!seeded) {
@@ -153,6 +155,7 @@ export default function CabinetScreen() {
       (async () => {
         try {
           const settings = await getUserSettings();
+          setUserSettings(settings);
           setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
@@ -314,6 +317,10 @@ export default function CabinetScreen() {
     );
   };
 
+  const futureName = userSettings?.user_name
+    ? `Future ${userSettings.user_name}${userSettings.future_self_years ? ` (Age ${userSettings.future_self_years})` : ''}`
+    : 'Future Self';
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]} {...swipeHandlers}>
       {/* Initial loading state — prevents blank screen on first mount */}
@@ -341,7 +348,7 @@ export default function CabinetScreen() {
           <Text style={styles.subtitle}>Your Council of Invisible Counselors</Text>
           {cabinetCounselors.length > 0 && (
             <Text style={styles.memberNames} numberOfLines={1}>
-              {[...cabinetCounselors.map(c => c.name), 'Future Self'].join(' · ')}
+              {[...cabinetCounselors.map(c => c.name), futureName].join(' · ')}
             </Text>
           )}
         </View>
@@ -440,7 +447,7 @@ export default function CabinetScreen() {
                   <Text style={styles.counselorName}>Epictetus</Text>
                   <Text style={styles.counselorName}>David Goggins</Text>
                   <Text style={styles.counselorName}>Theodore Roosevelt</Text>
-                  <Text style={styles.counselorName}>Future Kyle (Age 50)</Text>
+                  <Text style={styles.counselorName}>{futureName}</Text>
                 </View>
                 {knowThyselfIncomplete && (
                   <TouchableOpacity
