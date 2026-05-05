@@ -1,5 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserCabinet, getUserSettings, saveCabinetSelection } from '@/lib/db';
+import type { Counselor } from '@/lib/types';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -16,10 +18,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { sendMessageToCabinet, MessageLimitError, DailyLimitError } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet, saveCabinetSelection } from '@/lib/db';
-import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
+import { DailyLimitError, MessageLimitError, sendMessageToCabinet } from '../../services/claudeService';
 import {
   ThreadMessage,
   appendMessages,
@@ -601,7 +601,7 @@ export default function CabinetScreen() {
               <TouchableOpacity
                 key={counselor.slug}
                 style={styles.counselorCard}
-                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug, name: counselor.name, role: counselor.one_line } })}
+                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug, name: counselor.name, role: counselor.one_line } } as any)}
               >
                 <View style={styles.counselorCardIcon}>
                   <Text style={styles.counselorInitials}>{getInitials(counselor.name)}</Text>
