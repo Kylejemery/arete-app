@@ -466,6 +466,12 @@
       "accessCount": 1,
       "lastAccessed": 1777932881483,
       "type": "file"
+    },
+    {
+      "path": "academy\\web\\eslint.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1777940618502,
+      "type": "file"
     }
   ],
   "userDirectives": []
