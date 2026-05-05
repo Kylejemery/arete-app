@@ -236,7 +236,7 @@ export default function Phil701Page() {
           agent_type: 'socratic-proctor',
           course_id: COURSE_ID,
           messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
-          user_id: session.userId,
+          user_id: session.user_id,
         }),
       });
       const data = await res.json();
