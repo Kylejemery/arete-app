@@ -2,16 +2,15 @@
   "expo": {
     "name": "Arete",
     "slug": "Arete",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "arete",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kylejemery.areteapp",
-      "buildNumber": "9",
+      "buildNumber": "12",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Arete uses notifications to prompt your morning and evening routines and keep you accountable to your goals.",
         "NSMicrophoneUsageDescription": "Arete does not directly use the microphone. This permission is required by an underlying framework dependency.",
@@ -48,8 +47,7 @@
             "backgroundColor": "#1a1a2e"
           }
         }
-      ],
-      "@react-native-community/datetimepicker"
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

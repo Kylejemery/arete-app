@@ -1,15 +1,1 @@
-{
-  "/_not-found/page": "app/_not-found/page.js",
-  "/(auth)/login/page": "app/(auth)/login/page.js",
-  "/courses/phil-701/page": "app/courses/phil-701/page.js",
-  "/(auth)/signup/page": "app/(auth)/signup/page.js",
-  "/waitlist/page": "app/waitlist/page.js",
-  "/page": "app/page.js",
-  "/dashboard/courses/[courseId]/page": "app/dashboard/courses/[courseId]/page.js",
-  "/dashboard/courses/page": "app/dashboard/courses/page.js",
-  "/dashboard/library/page": "app/dashboard/library/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/dashboard/morning/page": "app/dashboard/morning/page.js",
-  "/dashboard/profile/page": "app/dashboard/profile/page.js",
-  "/dashboard/papers/page": "app/dashboard/papers/page.js"
-}
+{}
