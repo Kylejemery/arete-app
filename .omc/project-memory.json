@@ -372,6 +372,12 @@
       "type": "file"
     },
     {
+      "path": "academy\\web\\src",
+      "accessCount": 3,
+      "lastAccessed": 1777942160953,
+      "type": "directory"
+    },
+    {
       "path": "lib\\types.ts",
       "accessCount": 2,
       "lastAccessed": 1777903172457,
@@ -454,12 +460,6 @@
       "accessCount": 1,
       "lastAccessed": 1777930904025,
       "type": "file"
-    },
-    {
-      "path": "academy\\web\\src",
-      "accessCount": 1,
-      "lastAccessed": 1777930916223,
-      "type": "directory"
     },
     {
       "path": "academy\\web",
