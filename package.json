@@ -1,7 +1,7 @@
 {
   "name": "arete",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -20,7 +20,7 @@
     "@supabase/supabase-js": "^2.99.1",
     "ajv": "^8.20.0",
     "expo": "^52.0.0",
-    "expo-constants": "^17.0.0",
+    "expo-constants": "~17.0.8",
     "expo-font": "^13.0.0",
     "expo-haptics": "^14.0.0",
     "expo-image": "^2.0.0",
@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "@types/react": "~18.3.0",
-    "eslint": "^9.25.0",
+    "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.0",
     "typescript": "~5.3.3"
   },
