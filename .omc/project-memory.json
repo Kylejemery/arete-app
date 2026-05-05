@@ -390,6 +390,12 @@
       "type": "file"
     },
     {
+      "path": "web\\vercel.json",
+      "accessCount": 2,
+      "lastAccessed": 1777941708085,
+      "type": "file"
+    },
+    {
       "path": "supabase\\migrations\\20260421000000_add_reading_data.sql",
       "accessCount": 1,
       "lastAccessed": 1777903142450,
@@ -471,6 +477,12 @@
       "path": "academy\\web\\eslint.config.js",
       "accessCount": 1,
       "lastAccessed": 1777940618502,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\vercel.json",
+      "accessCount": 1,
+      "lastAccessed": 1777941676207,
       "type": "file"
     }
   ],
