@@ -85,8 +85,7 @@ export default function CabinetScreen() {
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
-  const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
-
+  const [userSettings, setUserSettings] = useState<{ user_name?: string | null; future_self_years?: number | null } | null>(null);
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
   const consumedBeliefContextRef = useRef(false);
@@ -601,8 +600,7 @@ export default function CabinetScreen() {
               <TouchableOpacity
                 key={counselor.slug}
                 style={styles.counselorCard}
-                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug, name: counselor.name, role: counselor.one_line } } as any)}
-              >
+                onPress={() => router.push({ pathname: '/counselor-chat', params: { id: counselor.slug, name: counselor.name, role: counselor.one_line } } as any)}              >
                 <View style={styles.counselorCardIcon}>
                   <Text style={styles.counselorInitials}>{getInitials(counselor.name)}</Text>
                 </View>
