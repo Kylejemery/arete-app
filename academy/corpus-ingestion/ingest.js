@@ -3,7 +3,7 @@ require('dotenv').config();
 const fs   = require('fs');
 const path = require('path');
 
-const { chunkRaw }     = require('./chunker');
+const { chunkRaw, chunkSummaryDocx } = require('./chunker');
 const { embedChunks, estimateCost } = require('./embedder');
 const { uploadChunks } = require('./uploader');
 
@@ -87,8 +87,63 @@ async function ingestOne(entry) {
   return { slug: entry.slug, total: allRawChunks.length, uploaded, errors };
 }
 
+async function ingestSummaries() {
+  const summariesDir = path.join(__dirname, 'summaries');
+
+  if (!fs.existsSync(summariesDir)) {
+    console.log('No summaries/ folder found — skipping.');
+    return;
+  }
+
+  const files = fs.readdirSync(summariesDir).filter(f => f.endsWith('_summary.docx'));
+
+  if (files.length === 0) {
+    console.log('No summary .docx files found in summaries/.');
+    return;
+  }
+
+  for (const file of files) {
+    console.log(`\nIngesting summary: ${file}`);
+    try {
+      const filepath = path.join(summariesDir, file);
+      const chunks = await chunkSummaryDocx(filepath);
+      console.log(`  Chunks produced: ${chunks.length}`);
+
+      const shaped = chunks.map(c => ({
+        counselor_slug: 'summary',
+        source_title:   file,
+        chunk_index:    c.chunk_index,
+        strategy:       'paragraph',
+        text:           c.chunk_text,
+        section_label:  c.section_label,
+        word_count:     c.word_count,
+        text_type:      c.text_type,
+        author:         c.author,
+        work:           c.work,
+      }));
+
+      const { estimatedTokens, estimatedCost } = estimateCost(shaped);
+      console.log(`  Estimated tokens: ${estimatedTokens.toLocaleString()} (~$${estimatedCost.toFixed(4)})`);
+
+      const embedded = await embedChunks(shaped);
+      const { uploaded, skipped, errors } = await uploadChunks(embedded);
+      console.log(`  ✓ ${file} — ${uploaded} uploaded, ${skipped} skipped, ${errors} errors`);
+    } catch (err) {
+      console.error(`  ✗ Failed: ${err.message}`);
+    }
+  }
+}
+
 async function main() {
-  const targetSlug = process.argv[2] || null;
+  const command = process.argv[2] || null;
+
+  if (command === 'summaries') {
+    console.log('\nArete RAG Ingestion — Summaries\n');
+    await ingestSummaries();
+    return;
+  }
+
+  const targetSlug = command;
   const queue = targetSlug
     ? MANIFEST.filter(e => e.slug === targetSlug)
     : MANIFEST;
