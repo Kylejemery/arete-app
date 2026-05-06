@@ -54,12 +54,19 @@ export default function RootLayout() {
   }
 }, [session]);
 
-  useEffect(() => {
-    if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: 'appl_BOqigtoHGcsODcjxfsTPwWgqnOK' });
+ useEffect(() => {
+  if (Platform.OS === 'ios' && session !== undefined && session !== null) {
+    try {
+      Purchases.configure({ 
+        apiKey: 'appl_BOqigtoHGcsODcjxfsTPwWgqnOK',
+        appUserID: session.user.id 
+      });
       console.log('RevenueCat initialized');
+    } catch (e) {
+      console.error('RevenueCat configure failed:', e);
     }
-  }, []);
+  }
+}, [session]);
 
 if (session === undefined) {
   return (
