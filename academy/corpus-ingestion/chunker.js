@@ -11,6 +11,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const mammoth = require('mammoth');
 
 // ---------------------------------------------------------------------------
 // Text metadata — matches what Gutenberg ships
@@ -99,6 +100,18 @@ function stripGutenbergBoilerplate(text) {
   }
 
   return text.slice(start, end).trim();
+}
+
+// ---------------------------------------------------------------------------
+// Extract plain text from a .docx summary file (Kyle's chapter summaries)
+// Uses mammoth to strip Word formatting. Returns raw string.
+// ---------------------------------------------------------------------------
+async function extractDocxText(filepath) {
+  const result = await mammoth.extractRawText({ path: filepath });
+  if (result.messages && result.messages.length > 0) {
+    result.messages.forEach(m => console.warn(`  [mammoth] ${m.message}`));
+  }
+  return result.value;
 }
 
 // ---------------------------------------------------------------------------
@@ -435,6 +448,48 @@ function applyOversizeGuard(chunks, maxChars = 24000) {
 }
 
 // ---------------------------------------------------------------------------
+// chunkSummaryDocx — entry point for Kyle's chapter summary .docx files
+//
+// Reads the docx, extracts text, infers metadata from filename convention:
+//   [AuthorLastName]_[ShortTitle]_Ch[N]_summary.docx
+//   e.g. Hadot_InnerCitadel_Ch4_summary.docx
+//
+// text_type is set to 'secondary' to distinguish from primary source chunks.
+// ---------------------------------------------------------------------------
+async function chunkSummaryDocx(filepath) {
+  const filename = path.basename(filepath);
+
+  // Parse filename convention: Author_Title_ChN_summary.docx
+  const nameMatch = filename.match(/^([^_]+)_([^_]+)_Ch(\d+)_summary\.docx$/i);
+  if (!nameMatch) {
+    throw new Error(
+      `Filename "${filename}" does not match expected pattern: Author_Title_ChN_summary.docx`
+    );
+  }
+
+  const [, authorSlug, titleSlug, chapterNum] = nameMatch;
+
+  const baseMeta = {
+    author: authorSlug.replace(/([A-Z])/g, ' $1').trim(),
+    work: titleSlug.replace(/([A-Z])/g, ' $1').trim(),
+    section_label: `Chapter ${chapterNum}`,
+    translator: '',
+    source_url: '',
+    text_type: 'secondary',
+  };
+
+  const rawText = await extractDocxText(filepath);
+
+  if (!rawText || rawText.trim().length < 100) {
+    throw new Error(`Extracted text from "${filename}" is too short — is the file empty?`);
+  }
+
+  const chunks = chunkByParagraph(rawText, baseMeta);
+
+  return applyOversizeGuard(chunks);
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 function chunkFile(filename, rawText) {
@@ -485,7 +540,7 @@ function chunkRaw(rawText, strategy, baseMeta) {
   return applyOversizeGuard(chunks);
 }
 
-module.exports = { chunkFile, chunkRaw, splitOversizedChunk, TEXT_METADATA };
+module.exports = { chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, TEXT_METADATA };
 
 // ---------------------------------------------------------------------------
 // CLI test: node chunker.js — prints first 3 chunks of Meditations

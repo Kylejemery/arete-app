@@ -32,7 +32,12 @@
       "Bash(git stash *)",
       "Bash(git push *)",
       "PowerShell(New-Item -ItemType Directory -Force -Path \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\academy\\\\web\\\\src\\\\app\\\\courses\\\\phil-701\")",
-      "Bash(node --check index.js)"
+      "Bash(node --check index.js)",
+      "Bash(node --check chunker.js)",
+      "Bash(node --check ingest.js)",
+      "Bash(node --check ../../components/ErrorBoundary.tsx)",
+      "Bash(node --check ../../app/_layout.tsx)",
+      "Bash(grep -v \"^$\")"
     ]
   }
 }
