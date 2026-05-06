@@ -293,6 +293,31 @@
       ]
     }
   },
-  "hotPaths": [],
+  "hotPaths": [
+    {
+      "path": "academy\\corpus-ingestion\\chunker.js",
+      "accessCount": 6,
+      "lastAccessed": 1778010737492,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\ingest.js",
+      "accessCount": 4,
+      "lastAccessed": 1778010736793,
+      "type": "file"
+    },
+    {
+      "path": "app\\_layout.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1778032910661,
+      "type": "file"
+    },
+    {
+      "path": "academy\\corpus-ingestion\\package.json",
+      "accessCount": 1,
+      "lastAccessed": 1778010655973,
+      "type": "file"
+    }
+  ],
   "userDirectives": []
 }

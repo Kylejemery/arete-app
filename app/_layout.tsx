@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
@@ -62,17 +63,21 @@ export default function RootLayout() {
 
 if (session === undefined) {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SessionContext.Provider value={session}>
-        <Slot />
-      </SessionContext.Provider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SessionContext.Provider value={session}>
+          <Slot />
+        </SessionContext.Provider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
