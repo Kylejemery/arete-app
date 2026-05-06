@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { syncTierToSupabase } from '@/lib/syncSubscription';
+import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 let Purchases: any;
 try {
@@ -6,7 +7,6 @@ try {
 } catch {
   Purchases = require('@/lib/purchases-mock').default;
 }
-import { syncTierToSupabase } from '@/lib/syncSubscription';
 
 export type Tier = 'free' | 'arete' | 'arete_pro';
 
@@ -70,7 +70,7 @@ interface TierLimits {
 }
 
 const TIER_LIMITS: Record<Tier, TierLimits> = {
-  free:      { maxMessages: 3,        maxCounselors: 3,  maxTokens: 400 },
+  free:      { maxMessages: 10,        maxCounselors: 3,  maxTokens: 400 },
   arete:     { maxMessages: 50,       maxCounselors: 23, maxTokens: 600 },
   arete_pro: { maxMessages: Infinity, maxCounselors: 23, maxTokens: 1000 },
 };

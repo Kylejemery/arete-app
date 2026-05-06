@@ -6,6 +6,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// This tells Expo Router to use our ErrorBoundary for the root route
+export { ErrorBoundary } from '@/components/ErrorBoundary';
+
 let Purchases: any;
 try {
   Purchases = require('react-native-purchases').default;
