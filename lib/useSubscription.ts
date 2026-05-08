@@ -8,7 +8,7 @@ try {
   Purchases = require('@/lib/purchases-mock').default;
 }
 
-export type Tier = 'free' | 'arete' | 'arete_pro';
+export type Tier = 'free' | 'arete' | 'pro';
 
 interface SubscriptionState {
   tier: Tier;
@@ -20,7 +20,7 @@ async function fetchTier(): Promise<Tier> {
   try {
     const customerInfo = await Purchases.getCustomerInfo();
     const active = customerInfo.entitlements.active;
-    if (active['arete_pro']) return 'arete_pro';
+    if (active['arete_pro']) return 'pro';
     if (active['arete']) return 'arete';
     return 'free';
   } catch {
@@ -72,7 +72,7 @@ interface TierLimits {
 const TIER_LIMITS: Record<Tier, TierLimits> = {
   free:      { maxMessages: 10,        maxCounselors: 3,  maxTokens: 400 },
   arete:     { maxMessages: 50,       maxCounselors: 23, maxTokens: 600 },
-  arete_pro: { maxMessages: Infinity, maxCounselors: 23, maxTokens: 1000 },
+  pro: { maxMessages: Infinity, maxCounselors: 23, maxTokens: 1000 },
 };
 
 export function useTierLimits(): TierLimits {

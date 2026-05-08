@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 
-type Tier = 'free' | 'arete' | 'arete_pro';
+type Tier = 'free' | 'arete' | 'pro';
 
 export async function syncTierToSupabase(tier: Tier): Promise<void> {
   try {

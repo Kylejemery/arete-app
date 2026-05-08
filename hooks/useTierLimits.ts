@@ -5,14 +5,14 @@ import type { SubscriptionTier } from '@/lib/types';
 // Only free tier enforces a local daily message cap.
 // Paid tiers are gated server-side and show no counter.
 const MAX_MESSAGES_BY_TIER: Record<SubscriptionTier, number | null> = {
-  free: 3,
+  free: 10,
   arete: null,
   pro: null,
 };
 
 export function useTierLimits(): { tier: SubscriptionTier; maxMessages: number | null } {
   const [tier, setTier] = useState<SubscriptionTier>('free');
-  const [maxMessages, setMaxMessages] = useState<number | null>(3);
+  const [maxMessages, setMaxMessages] = useState<number | null>(10);
 
   useEffect(() => {
     getSubscriptionTier().then(t => {

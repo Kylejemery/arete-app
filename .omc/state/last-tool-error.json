@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"ls \\\"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\academy\\\\web\\\\src\\\\lib\\\\\\\"\"}",
-  "error": "Exit code 2\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!\n/usr/bin/bash: eval: line 1: unexpected EOF while looking for matching `\"'",
-  "timestamp": "2026-04-30T20:02:22.258Z",
-  "retry_count": 1
-}

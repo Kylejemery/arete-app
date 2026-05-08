@@ -633,7 +633,7 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevelt'] as const;
 
 export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
-  free: 3,
+  free: 10,
   arete: 50,
   pro: null,
 };
@@ -669,7 +669,7 @@ export interface MessageLimitStatus {
 
 export async function checkAndIncrementMessageCount(): Promise<MessageLimitStatus> {
   const userId = await getUserId();
-  if (!userId) return { allowed: false, tier: 'free', used: 0, limit: 3 };
+  if (!userId) return { allowed: false, tier: 'free', used: 0, limit: 10 };
 
   const { data, error } = await supabase
     .from('profiles')
@@ -677,7 +677,7 @@ export async function checkAndIncrementMessageCount(): Promise<MessageLimitStatu
     .eq('id', userId)
     .single();
 
-  if (error || !data) return { allowed: false, tier: 'free', used: 0, limit: 3 };
+  if (error || !data) return { allowed: false, tier: 'free', used: 0, limit: 10 };
 
   const tier = (data.subscription_tier as SubscriptionTier) ?? 'free';
   const limit = MESSAGE_LIMITS[tier];

@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1777995045723,
+  "lastScanned": 1778262371298,
   "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete",
   "techStack": {
     "languages": [
@@ -77,14 +77,14 @@
       "path": "academy",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777995045476,
+      "lastAccessed": 1778262370951,
       "keyFiles": []
     },
     "android": {
       "path": "android",
       "purpose": null,
       "fileCount": 6,
-      "lastAccessed": 1777995045547,
+      "lastAccessed": 1778262370955,
       "keyFiles": [
         "build.gradle",
         "gradle.properties",
@@ -96,48 +96,57 @@
     "app": {
       "path": "app",
       "purpose": "Application code",
-      "fileCount": 16,
-      "lastAccessed": 1777995045549,
+      "fileCount": 17,
+      "lastAccessed": 1778262371046,
       "keyFiles": [
+        "+error.tsx",
         "belief-journal.tsx",
         "counselor-chat.tsx",
         "evening.tsx",
-        "home.tsx",
-        "index.tsx"
+        "home.tsx"
       ]
     },
     "app-example": {
       "path": "app-example",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777995045551,
+      "lastAccessed": 1778262371048,
       "keyFiles": []
     },
     "assets": {
       "path": "assets",
       "purpose": "Static assets",
       "fileCount": 0,
-      "lastAccessed": 1777995045552,
+      "lastAccessed": 1778262371050,
       "keyFiles": []
     },
     "components": {
       "path": "components",
       "purpose": "UI components",
-      "fileCount": 7,
-      "lastAccessed": 1777995045553,
+      "fileCount": 8,
+      "lastAccessed": 1778262371051,
       "keyFiles": [
         "CabinetPreview.tsx",
         "CounselorCard.tsx",
+        "ErrorBoundary.tsx",
         "EveningScreen.js",
-        "HomeScreen.js",
-        "JournalScreen.js"
+        "HomeScreen.js"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1778262371055,
+      "keyFiles": [
+        "metadata.json"
       ]
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
       "fileCount": 2,
-      "lastAccessed": 1777995045554,
+      "lastAccessed": 1778262371056,
       "keyFiles": [
         "index.html",
         "privacy.html"
@@ -147,7 +156,7 @@
       "path": "hooks",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1777995045555,
+      "lastAccessed": 1778262371057,
       "keyFiles": [
         "useSwipeNavigation.ts",
         "useTierLimits.ts"
@@ -157,7 +166,7 @@
       "path": "lib",
       "purpose": "Library code",
       "fileCount": 9,
-      "lastAccessed": 1777995045556,
+      "lastAccessed": 1778262371057,
       "keyFiles": [
         "db.ts",
         "devMode.ts",
@@ -170,14 +179,14 @@
       "path": "pull",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777995045557,
+      "lastAccessed": 1778262371058,
       "keyFiles": []
     },
     "server": {
       "path": "server",
       "purpose": null,
       "fileCount": 6,
-      "lastAccessed": 1777995045557,
+      "lastAccessed": 1778262371059,
       "keyFiles": [
         "index.js",
         "package-lock.json",
@@ -189,7 +198,7 @@
       "path": "services",
       "purpose": "Business logic services",
       "fileCount": 2,
-      "lastAccessed": 1777995045558,
+      "lastAccessed": 1778262371060,
       "keyFiles": [
         "claudeService.ts",
         "threadService.ts"
@@ -199,14 +208,14 @@
       "path": "supabase",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1777995045559,
+      "lastAccessed": 1778262371061,
       "keyFiles": []
     },
     "types": {
       "path": "types",
       "purpose": "Type definitions",
       "fileCount": 1,
-      "lastAccessed": 1777995045560,
+      "lastAccessed": 1778262371061,
       "keyFiles": [
         "onboarding.ts"
       ]
@@ -215,7 +224,7 @@
       "path": "web",
       "purpose": null,
       "fileCount": 12,
-      "lastAccessed": 1777995045561,
+      "lastAccessed": 1778262371062,
       "keyFiles": [
         "eslint.config.mjs",
         "next.config.ts",
@@ -228,7 +237,7 @@
       "path": "android\\app",
       "purpose": "Application code",
       "fileCount": 3,
-      "lastAccessed": 1777995045563,
+      "lastAccessed": 1778262371063,
       "keyFiles": [
         "build.gradle",
         "debug.keystore",
@@ -239,7 +248,7 @@
       "path": "app-example\\app",
       "purpose": "Application code",
       "fileCount": 2,
-      "lastAccessed": 1777995045566,
+      "lastAccessed": 1778262371064,
       "keyFiles": [
         "modal.tsx",
         "_layout.tsx"
@@ -249,7 +258,7 @@
       "path": "app-example\\components",
       "purpose": "UI components",
       "fileCount": 6,
-      "lastAccessed": 1777995045568,
+      "lastAccessed": 1778262371065,
       "keyFiles": [
         "external-link.tsx",
         "haptic-tab.tsx",
@@ -260,23 +269,34 @@
       "path": "app-example\\scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 1,
-      "lastAccessed": 1777995045569,
+      "lastAccessed": 1778262371067,
       "keyFiles": [
         "reset-project.js"
+      ]
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 42,
+      "lastAccessed": 1778262371069,
+      "keyFiles": [
+        "017bc6ba3fc25503e5eb5e53826d48a8",
+        "0747a1317bbe9c6fc340b889ef8ab3ae",
+        "0a328cd9c1afd0afe8e3b1ec5165b1b4"
       ]
     },
     "server\\node_modules": {
       "path": "server\\node_modules",
       "purpose": "Dependencies",
       "fileCount": 1,
-      "lastAccessed": 1777995045576,
+      "lastAccessed": 1778262371072,
       "keyFiles": []
     },
     "supabase\\migrations": {
       "path": "supabase\\migrations",
       "purpose": "Database migrations",
       "fileCount": 18,
-      "lastAccessed": 1777995045578,
+      "lastAccessed": 1778262371073,
       "keyFiles": [
         "001_initial_schema.sql",
         "20260320000000_custom_cabinet.sql",
@@ -287,7 +307,7 @@
       "path": "web\\src",
       "purpose": "Source code",
       "fileCount": 1,
-      "lastAccessed": 1777995045580,
+      "lastAccessed": 1778262371075,
       "keyFiles": [
         "middleware.ts"
       ]
@@ -295,28 +315,28 @@
   },
   "hotPaths": [
     {
-      "path": "academy\\corpus-ingestion\\chunker.js",
-      "accessCount": 6,
-      "lastAccessed": 1778010737492,
-      "type": "file"
-    },
-    {
-      "path": "academy\\corpus-ingestion\\ingest.js",
+      "path": "lib\\useSubscription.ts",
       "accessCount": 4,
-      "lastAccessed": 1778010736793,
+      "lastAccessed": 1778262526168,
       "type": "file"
     },
     {
-      "path": "app\\_layout.tsx",
+      "path": "lib\\db.ts",
       "accessCount": 3,
-      "lastAccessed": 1778032910661,
+      "lastAccessed": 1778262559249,
       "type": "file"
     },
     {
-      "path": "academy\\corpus-ingestion\\package.json",
-      "accessCount": 1,
-      "lastAccessed": 1778010655973,
+      "path": "hooks\\useTierLimits.ts",
+      "accessCount": 3,
+      "lastAccessed": 1778262565081,
       "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1778262575640,
+      "type": "directory"
     }
   ],
   "userDirectives": []

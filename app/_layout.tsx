@@ -60,15 +60,20 @@ export default function RootLayout() {
 
  useEffect(() => {
   if (Platform.OS === 'ios' && session !== undefined && session !== null) {
-    try {
-      Purchases.configure({ 
-        apiKey: 'appl_BOqigtoHGcsODcjxfsTPwWgqnOK',
-        appUserID: session.user.id 
-      });
-      console.log('RevenueCat initialized');
-    } catch (e) {
-      console.error('RevenueCat configure failed:', e);
-    }
+    // DIAGNOSTIC: Purchases.configure() commented out to isolate TurboModule crash (Thread 3).
+    // If the crash disappears, RevenueCat is confirmed as the source.
+    // Root cause: react-native-purchases plugin missing from app.json plugins array.
+    // To re-enable: add "react-native-purchases" to plugins in app.json, then rebuild.
+    console.log('[DIAGNOSTIC] RevenueCat configure skipped — crash isolation mode');
+    // try {
+    //   Purchases.configure({
+    //     apiKey: 'appl_BOqigtoHGcsODcjxfsTPwWgqnOK',
+    //     appUserID: session.user.id
+    //   });
+    //   console.log('RevenueCat initialized');
+    // } catch (e) {
+    //   console.error('RevenueCat configure failed:', e);
+    // }
   }
 }, [session]);
 
