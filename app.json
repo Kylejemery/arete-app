@@ -7,11 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "arete",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kylejemery.areteapp",
-      "buildNumber": "31",
+      "buildNumber": "32",
       "infoPlist": {
         "NSUserNotificationsUsageDescription": "Arete uses notifications to prompt your morning and evening routines and keep you accountable to your goals.",
         "NSMicrophoneUsageDescription": "Arete does not directly use the microphone. This permission is required by an underlying framework dependency.",

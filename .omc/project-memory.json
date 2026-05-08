@@ -339,22 +339,28 @@
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 1,
-      "lastAccessed": 1778262575640,
-      "type": "directory"
+      "path": "app\\paywall.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1778271312429,
+      "type": "file"
     },
     {
-      "path": "app\\paywall.tsx",
-      "accessCount": 1,
-      "lastAccessed": 1778269886834,
+      "path": "app.json",
+      "accessCount": 2,
+      "lastAccessed": 1778271945926,
       "type": "file"
     },
     {
       "path": "package.json",
-      "accessCount": 1,
-      "lastAccessed": 1778270143649,
+      "accessCount": 2,
+      "lastAccessed": 1778271952138,
       "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1778262575640,
+      "type": "directory"
     }
   ],
   "userDirectives": []
