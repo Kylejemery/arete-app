@@ -11,18 +11,9 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import type { PurchasesPackage } from 'react-native-purchases';
-let Purchases: any;
-let PURCHASES_ERROR_CODE: any;
-try {
-  const mod = require('react-native-purchases');
-  Purchases = mod.default;
-  PURCHASES_ERROR_CODE = mod.PURCHASES_ERROR_CODE;
-} catch {
-  const mock = require('@/lib/purchases-mock');
-  Purchases = mock.default;
-  PURCHASES_ERROR_CODE = mock.PURCHASES_ERROR_CODE;
-}
+import { getProducts, requestPurchase, restorePurchases } from 'expo-iap';
+import { syncTierToSupabase } from '@/lib/syncSubscription';
+import type { Tier } from '@/lib/useSubscription';
 
 // ─── Static fallback display data ────────────────────────────────────────────
 
@@ -36,9 +27,15 @@ interface PlanDisplay {
   description: string;
 }
 
+const PRODUCT_IDS = ['arete_monthly', 'arete_annual', 'arete_pro'];
+
+function tierForProductId(productId: string): Tier {
+  return productId === 'arete_pro' ? 'pro' : 'arete';
+}
+
 const PLAN_DISPLAY: PlanDisplay[] = [
   {
-    identifier: '$rc_monthly',
+    identifier: 'arete_monthly',
     label: 'Arete',
     price: '$9.99',
     period: '/mo',
@@ -47,7 +44,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     description: '50 messages/day · All 23 counselors',
   },
   {
-    identifier: '$rc_annual',
+    identifier: 'arete_annual',
     label: 'Arete Annual',
     price: '$79.99',
     period: '/yr',
@@ -78,30 +75,27 @@ export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [packages, setPackages] = useState<Record<string, PurchasesPackage>>({});
-  const [selectedId, setSelectedId] = useState<string>('$rc_annual');
+  const [packages, setPackages] = useState<Record<string, any>>({});
+  const [selectedId, setSelectedId] = useState<string>('arete_annual');
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
 
-  // ── Fetch offerings ───────────────────────────────────────────────────────
+  // ── Fetch products ────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (Platform.OS !== 'ios') { setLoadingOfferings(false); return; }
     (async () => {
       try {
-        const offerings = await Purchases.getOfferings();
-        const current = offerings.current;
-        if (!current) return;
-
-        const pkgMap: Record<string, PurchasesPackage> = {};
-        for (const pkg of current.availablePackages) {
-          pkgMap[pkg.identifier] = pkg;
+        const products = await getProducts(PRODUCT_IDS);
+        const productMap: Record<string, any> = {};
+        for (const product of products) {
+          productMap[product.productId] = product;
         }
-        setPackages(pkgMap);
+        setPackages(productMap);
       } catch (e) {
-        console.warn('Failed to load offerings:', e);
+        console.warn('Failed to load products:', e);
       } finally {
         setLoadingOfferings(false);
       }
@@ -112,17 +106,18 @@ export default function PaywallScreen() {
 
   const handleSubscribe = async () => {
     if (Platform.OS !== 'ios') return;
-    const pkg = packages[selectedId];
-    if (!pkg) { setError('Plan not available. Please try again.'); return; }
+    const product = packages[selectedId];
+    if (!product) { setError('Plan not available. Please try again.'); return; }
 
     setError(null);
     setPurchasing(true);
     try {
-      await Purchases.purchasePackage(pkg);
+      await requestPurchase({ sku: selectedId });
+      await syncTierToSupabase(tierForProductId(selectedId));
       router.back();
     } catch (e: unknown) {
       const code = (e as { code?: string }).code;
-      if (code !== PURCHASES_ERROR_CODE.PURCHASE_CANCELLED_ERROR) {
+      if (code !== 'E_USER_CANCELLED') {
         setError('Purchase failed. Please try again.');
       }
     } finally {
@@ -137,7 +132,7 @@ export default function PaywallScreen() {
     setError(null);
     setRestoring(true);
     try {
-      await Purchases.restorePurchases();
+      await restorePurchases();
       router.back();
     } catch {
       setError('Restore failed. Please try again.');

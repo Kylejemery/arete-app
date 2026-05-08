@@ -1,12 +1,7 @@
+import { getSubscriptionTier } from '@/lib/db';
 import { syncTierToSupabase } from '@/lib/syncSubscription';
 import { useEffect, useState } from 'react';
-import { AppState, Platform } from 'react-native';
-let Purchases: any;
-try {
-  Purchases = require('react-native-purchases').default;
-} catch {
-  Purchases = require('@/lib/purchases-mock').default;
-}
+import { AppState } from 'react-native';
 
 export type Tier = 'free' | 'arete' | 'pro';
 
@@ -16,13 +11,8 @@ interface SubscriptionState {
 }
 
 async function fetchTier(): Promise<Tier> {
-  if (Platform.OS !== 'ios') return 'free';
   try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const active = customerInfo.entitlements.active;
-    if (active['arete_pro']) return 'pro';
-    if (active['arete']) return 'arete';
-    return 'free';
+    return await getSubscriptionTier() as Tier;
   } catch {
     return 'free';
   }

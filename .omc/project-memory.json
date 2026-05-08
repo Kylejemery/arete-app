@@ -316,8 +316,8 @@
   "hotPaths": [
     {
       "path": "lib\\useSubscription.ts",
-      "accessCount": 4,
-      "lastAccessed": 1778262526168,
+      "accessCount": 5,
+      "lastAccessed": 1778269893535,
       "type": "file"
     },
     {
@@ -333,10 +333,28 @@
       "type": "file"
     },
     {
+      "path": "app\\_layout.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1778270021685,
+      "type": "file"
+    },
+    {
       "path": "",
       "accessCount": 1,
       "lastAccessed": 1778262575640,
       "type": "directory"
+    },
+    {
+      "path": "app\\paywall.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1778269886834,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1778270143649,
+      "type": "file"
     }
   ],
   "userDirectives": []
