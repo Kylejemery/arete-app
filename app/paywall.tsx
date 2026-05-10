@@ -27,19 +27,15 @@ interface PlanDisplay {
   description: string;
 }
 
-const PRODUCT_IDS = [
-  'com.kylejemery.areteapp.arete_monthly',
-  'com.kylejemery.areteapp.arete_yearly',
-  'com.kylejemery.areteapp.arete_pro_monthly',
-];
+const PRODUCT_IDS = ['arete_monthly', 'arete_annual', 'arete_pro'];
 
 function tierForProductId(productId: string): Tier {
-  return productId === 'com.kylejemery.areteapp.arete_pro_monthly' ? 'pro' : 'arete';
+  return productId === 'arete_pro' ? 'pro' : 'arete';
 }
 
 const PLAN_DISPLAY: PlanDisplay[] = [
   {
-    identifier: 'com.kylejemery.areteapp.arete_monthly',
+    identifier: 'arete_monthly',
     label: 'Arete',
     price: '$9.99',
     period: '/mo',
@@ -48,7 +44,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     description: '50 messages/day · All 23 counselors',
   },
   {
-    identifier: 'com.kylejemery.areteapp.arete_yearly',
+    identifier: 'arete_annual',
     label: 'Arete Annual',
     price: '$79.99',
     period: '/yr',
@@ -57,7 +53,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     description: '$6.67/mo · Save 33% · All 23 counselors',
   },
   {
-    identifier: 'com.kylejemery.areteapp.arete_pro_monthly',
+    identifier: 'arete_pro',
     label: 'Arete Pro',
     price: '$19.99',
     period: '/mo',
@@ -80,7 +76,7 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
 
   const [packages, setPackages] = useState<Record<string, any>>({});
-  const [selectedId, setSelectedId] = useState<string>('com.kylejemery.areteapp.arete_yearly');
+  const [selectedId, setSelectedId] = useState<string>('arete_annual');
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
