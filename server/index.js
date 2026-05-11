@@ -119,10 +119,55 @@ function truncateMessages(messages, maxMessages = 12) {
   return [...systemMessages, ...truncated];
 }
 
+const MESSAGE_LIMITS = { free: 10, arete: 50, pro: null };
+
+async function enforceMessageLimit(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return false;
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) return false;
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('subscription_tier, daily_message_count, message_count_date')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile) return false;
+
+  const tier = profile.subscription_tier || 'free';
+  const limit = Object.prototype.hasOwnProperty.call(MESSAGE_LIMITS, tier) ? MESSAGE_LIMITS[tier] : MESSAGE_LIMITS.free;
+
+  if (limit === null) return false; // pro = unlimited
+
+  // Local date — mirrors db.ts today()
+  const d = new Date();
+  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const isToday = profile.message_count_date === todayLocal;
+  const currentCount = isToday ? (profile.daily_message_count ?? 0) : 0;
+
+  if (currentCount >= limit) {
+    res.status(403).json({ error: 'daily_limit_reached', tier, limit });
+    return true;
+  }
+
+  await supabase
+    .from('profiles')
+    .update({ daily_message_count: currentCount + 1, message_count_date: todayLocal })
+    .eq('id', user.id);
+
+  return false;
+}
+
 app.post('/api/chat', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
+
+  if (await enforceMessageLimit(req, res)) return;
 
   const { system, messages, max_tokens, model, tzOffsetMinutes, user_id } = req.body;
 
@@ -216,6 +261,8 @@ app.post('/api/chat/counselor', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
+
+  if (await enforceMessageLimit(req, res)) return;
 
   const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes } = req.body;
 
