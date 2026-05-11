@@ -892,6 +892,8 @@ app.post('/api/academy/agent', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
+  if (await enforceMessageLimit(req, res)) return;
+
   const { agent_type, messages, course_id, user_id } = req.body;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {

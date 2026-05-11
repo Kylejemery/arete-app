@@ -315,6 +315,12 @@
   },
   "hotPaths": [
     {
+      "path": "server\\index.js",
+      "accessCount": 8,
+      "lastAccessed": 1778509379905,
+      "type": "file"
+    },
+    {
       "path": "lib\\useSubscription.ts",
       "accessCount": 5,
       "lastAccessed": 1778269893535,

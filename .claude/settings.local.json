@@ -40,7 +40,9 @@
       "Bash(grep -v \"^$\")",
       "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); deps=d.get\\('dependencies',{}\\); print\\('react-native-purchases:', deps.get\\('react-native-purchases','NOT FOUND'\\)\\); print\\('expo:', deps.get\\('expo','NOT FOUND'\\)\\); print\\('react-native:', deps.get\\('react-native','NOT FOUND'\\)\\)\")",
       "Bash(npx react-native *)",
-      "Bash(del \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\lib\\\\purchases-mock.ts\")"
+      "Bash(del \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\lib\\\\purchases-mock.ts\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
