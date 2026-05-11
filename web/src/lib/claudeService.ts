@@ -1,6 +1,7 @@
 import { getUserSettings, getLatestCheckIn, getJournalEntries, getReadingData, getCounselorsBySlugs } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
+import { supabase } from '@/lib/supabase';
 
 export interface Message {
   role: 'user' | 'assistant';
@@ -385,9 +386,10 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
+    const { data: { session: cabinetSession } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cabinetSession?.access_token}` },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 4000,
@@ -454,9 +456,10 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
     const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
     const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
 
+    const { data: { session: checkInSession } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${checkInSession?.access_token}` },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 2000,
@@ -498,9 +501,10 @@ export async function sendMessageToCounselor(
     const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
+    const { data: { session: counselorSession } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${counselorSession?.access_token}` },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 1500,
@@ -575,9 +579,10 @@ export async function sendBeliefJournalMessage(
     })),
   ];
 
+  const { data: { session: beliefSession } } = await supabase.auth.getSession();
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${beliefSession?.access_token}` },
     body: JSON.stringify({
       model: 'claude-opus-4-5',
       max_tokens: 2000,
