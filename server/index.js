@@ -131,7 +131,7 @@ async function enforceMessageLimit(req, res) {
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('subscription_tier, daily_message_count, message_count_date')
+    .select('subscription_tier')
     .eq('id', user.id)
     .single();
 
@@ -142,22 +142,27 @@ async function enforceMessageLimit(req, res) {
 
   if (limit === null) return false; // pro = unlimited
 
-  // Local date — mirrors db.ts today()
   const d = new Date();
-  const todayLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayUTC = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
 
-  const isToday = profile.message_count_date === todayLocal;
-  const currentCount = isToday ? (profile.daily_message_count ?? 0) : 0;
+  // Atomic check-and-increment: returns true if allowed, false if at limit.
+  // A single UPDATE avoids the read-then-write race condition where two
+  // simultaneous requests both pass the count check and both get through.
+  const { data: allowed, error: rpcError } = await supabase.rpc('try_increment_message_count', {
+    p_user_id: user.id,
+    p_today: todayUTC,
+    p_limit: limit,
+  });
 
-  if (currentCount >= limit) {
+  if (rpcError) {
+    console.error('[enforceMessageLimit] rpc error:', rpcError.message);
+    return false; // fail open — don't block on DB errors
+  }
+
+  if (!allowed) {
     res.status(403).json({ error: 'daily_limit_reached', tier, limit });
     return true;
   }
-
-  await supabase
-    .from('profiles')
-    .update({ daily_message_count: currentCount + 1, message_count_date: todayLocal })
-    .eq('id', user.id);
 
   return false;
 }
