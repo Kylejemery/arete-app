@@ -10,7 +10,7 @@ const BACKEND_URL =
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  context: { params: Promise<{ path: string[] }> }
 ) {
   if (!BACKEND_URL) {
     return NextResponse.json(
@@ -19,7 +19,8 @@ export async function POST(
     );
   }
 
-  const upstreamPath = `/api/academy/${params.path.join('/')}`;
+  const { path } = await context.params;
+  const upstreamPath = `/api/academy/${path.join('/')}`;
   const upstreamUrl = `${BACKEND_URL}${upstreamPath}`;
 
   const headers: Record<string, string> = {

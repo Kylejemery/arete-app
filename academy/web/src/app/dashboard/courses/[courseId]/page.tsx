@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getEnrollment, getOrCreateSession, appendSeminarMessage } from '@/lib/db';
-import { AGENT_MAP, getAgentsForTier, SYSTEM_PROMPTS } from '@/lib/agents';
+import { AGENT_MAP, SYSTEM_PROMPTS } from '@/lib/agents';
 import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
