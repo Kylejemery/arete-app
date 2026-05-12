@@ -886,7 +886,13 @@ app.post('/api/academy/agent', async (req, res) => {
   let ragContext = '';
 
   if (agent_type === 'socratic-proctor') {
-    const chunks = await getRelevantChunks(lastUserMessage, 5, {});
+    let chunks = [];
+    try {
+      chunks = await getRelevantChunks(lastUserMessage, 5, {});
+    } catch (retrievalErr) {
+      console.error('[/api/academy/agent] getRelevantChunks failed, falling back to retrieveCorpusChunks:', retrievalErr.message);
+      chunks = await retrieveCorpusChunks(lastUserMessage, course_id);
+    }
     if (chunks.length > 0) {
       ragContext =
         `\n\n[CONTEXT]\nThe following passages from the course corpus are directly relevant to the student's message. Use them to ground your Socratic questioning in the actual texts — press claims, surface contradictions, and return the question to the student:\n\n` +

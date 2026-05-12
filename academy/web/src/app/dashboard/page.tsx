@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <CardLabel>Your Program</CardLabel>
         <div className="grid md:grid-cols-2 gap-4 mt-3">
           {/* PHIL 701 — available */}
-          <Link href="/courses/phil-701">
+          <Link href="/dashboard/courses/phil-701">
             <Card className="hover:border-academy-gold transition-colors cursor-pointer">
               <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
                 PHIL 701 &middot; Gateway Seminar
