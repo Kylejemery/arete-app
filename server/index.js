@@ -11,6 +11,8 @@ const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require('openai');
 
+const { getRelevantChunks } = require('./retrieval');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
@@ -880,14 +882,25 @@ app.post('/api/academy/agent', async (req, res) => {
   const persona = AGENT_PERSONAS[agent_type] ?? AGENT_PERSONAS['socratic-proctor'];
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
-  const ragChunks = await retrieveCorpusChunks(lastUserMessage, course_id);
 
   let ragContext = '';
-  if (ragChunks.length > 0) {
-    ragContext =
-      `\n\n[RELEVANT CORPUS PASSAGES]\nThe following passages from the course corpus are relevant to the current exchange. Ground your response in the actual texts:\n\n` +
-      ragChunks.map((c, i) => `${i + 1}. (${c.source_title ?? 'Corpus'})\n${c.content}`).join('\n\n') +
-      `\n[END CORPUS PASSAGES]`;
+
+  if (agent_type === 'socratic-proctor') {
+    const chunks = await getRelevantChunks(lastUserMessage, 5, {});
+    if (chunks.length > 0) {
+      ragContext =
+        `\n\n[CONTEXT]\nThe following passages from the course corpus are directly relevant to the student's message. Use them to ground your Socratic questioning in the actual texts — press claims, surface contradictions, and return the question to the student:\n\n` +
+        chunks.map((c, i) => `${i + 1}. (${c.source_author ? c.source_author + ', ' : ''}${c.source_title ?? 'Corpus'})\n${c.content}`).join('\n\n') +
+        `\n[END CONTEXT]`;
+    }
+  } else {
+    const ragChunks = await retrieveCorpusChunks(lastUserMessage, course_id);
+    if (ragChunks.length > 0) {
+      ragContext =
+        `\n\n[RELEVANT CORPUS PASSAGES]\nThe following passages from the course corpus are relevant to the current exchange. Ground your response in the actual texts:\n\n` +
+        ragChunks.map((c, i) => `${i + 1}. (${c.source_title ?? 'Corpus'})\n${c.content}`).join('\n\n') +
+        `\n[END CORPUS PASSAGES]`;
+    }
   }
 
   const courseContext = course_id
