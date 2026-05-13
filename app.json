@@ -34,6 +34,7 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
+    "_comment_ios26_patch": "Patches RCTTurboModule.mm for iOS 26 SIGABRT fix. Remove when expo/expo#44606 is resolved.",
     "plugins": [
       "expo-router",
       "expo-notifications",
@@ -48,7 +49,8 @@
             "backgroundColor": "#1a1a2e"
           }
         }
-      ]
+      ],
+      "./plugins/withRCTTurboModulePatch"
     ],
     "experiments": {
       "typedRoutes": true,
