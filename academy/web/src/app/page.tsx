@@ -84,7 +84,7 @@ export default function LandingPage() {
             <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">I.</p>
             <h2 className="font-serif text-2xl text-cream mb-6">The Curriculum</h2>
             <p className="text-cream/40 text-sm leading-relaxed mb-8">
-              A structured five-year PhD modelled on classical doctoral programs.
+              A structured five-year program modelled on classical doctoral programs.
               Each course builds on the last.
             </p>
             <ul className="space-y-5">

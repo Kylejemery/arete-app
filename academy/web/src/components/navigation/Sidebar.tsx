@@ -12,7 +12,12 @@ const navItems = [
   { href: '/dashboard/profile', label: 'Profile',    icon: '👤' },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  navOpen: boolean;
+  onToggle: () => void;
+}
+
+export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -27,11 +32,25 @@ export default function Sidebar() {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 min-h-screen bg-academy-surface border-r border-academy-border fixed left-0 top-0">
-        <div className="p-6 border-b border-academy-border">
-          <p className="text-academy-muted text-xs tracking-[0.3em] uppercase mb-1">Arete</p>
-          <h1 className="font-serif text-academy-gold text-2xl tracking-wide">Academy</h1>
-          <p className="text-academy-muted text-xs mt-1 italic">PhD in Stoic Philosophy</p>
+      <aside
+        className={`hidden md:flex flex-col w-60 min-h-screen bg-academy-surface border-r border-academy-border fixed left-0 top-0 z-40 transition-transform duration-300 ${
+          navOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {/* Header with collapse button */}
+        <div className="p-6 border-b border-academy-border flex items-start justify-between gap-2">
+          <div>
+            <p className="text-academy-muted text-xs tracking-[0.3em] uppercase mb-1">Arete</p>
+            <h1 className="font-serif text-academy-gold text-2xl tracking-wide">Academy</h1>
+            <p className="text-academy-muted text-xs mt-1 italic">Advanced Study in Stoic Philosophy</p>
+          </div>
+          <button
+            onClick={onToggle}
+            className="mt-1 flex-shrink-0 text-academy-muted hover:text-academy-gold transition-colors text-xl leading-none"
+            title="Collapse navigation"
+          >
+            ‹
+          </button>
         </div>
 
         <nav className="flex-1 py-4 overflow-y-auto">
@@ -67,7 +86,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav */}
+      {/* Mobile Bottom Nav — unchanged */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-academy-surface border-t border-academy-border z-50">
         <div className="flex">
           {navItems.map(item => (

@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <Card className="col-span-2">
           <CardLabel>Current Standing</CardLabel>
           <p className="text-academy-text text-sm font-semibold capitalize">
-            {enrollment?.tier ?? 'Auditor'} — Stoic Philosophy PhD
+            {enrollment?.tier ?? 'Auditor'} — Advanced Study in Stoic Philosophy
           </p>
           <p className="text-academy-muted text-xs mt-1">{courseTitle}</p>
         </Card>

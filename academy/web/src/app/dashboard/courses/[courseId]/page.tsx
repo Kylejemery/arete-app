@@ -359,7 +359,7 @@ export default function SeminarPage() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
         {/* LEFT: Course Navigation */}
-        <aside className="lg:w-72 lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r border-academy-border bg-academy-card">
+        <aside className="lg:w-56 lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r border-academy-border bg-academy-card">
           <div className="p-5">
             <div className="hidden lg:block mb-5">
               <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
@@ -414,7 +414,7 @@ export default function SeminarPage() {
         </div>
 
         {/* RIGHT: Proctor Chat */}
-        <div className="lg:w-[400px] lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-academy-border min-h-[560px] lg:min-h-0">
+        <div className="lg:w-80 lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-academy-border min-h-[560px] lg:min-h-0">
 
           {/* Proctor header */}
           <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">

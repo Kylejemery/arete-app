@@ -112,7 +112,7 @@ export default function ProfilePage() {
             {enrollment?.current_course?.toUpperCase().replace('-', ' ') ?? 'PHIL 701'}
           </p>
           <p className="text-academy-muted text-xs mt-1">
-            Program: PhD in Stoic Philosophy
+            Program: Advanced Study in Stoic Philosophy
           </p>
         </Card>
 

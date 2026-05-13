@@ -72,7 +72,7 @@ export default function CoursesPage() {
     <div>
       <Topbar
         title="Course Catalog"
-        subtitle="PhD in Stoic Philosophy — four courses, primary texts only"
+        subtitle="Advanced Study in Stoic Philosophy — four courses, primary texts only"
       />
 
       <div className="space-y-5">
