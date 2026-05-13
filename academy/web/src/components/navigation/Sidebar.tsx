@@ -5,11 +5,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 const navItems = [
-  { href: '/dashboard',         label: 'Dashboard',  icon: '🏛️' },
-  { href: '/dashboard/courses', label: 'Courses',    icon: '📚' },
-  { href: '/dashboard/library', label: 'Library',    icon: '📜' },
-  { href: '/dashboard/papers',  label: 'Papers',     icon: '✒️' },
-  { href: '/dashboard/profile', label: 'Profile',    icon: '👤' },
+  { href: '/dashboard',            label: 'Dashboard',    icon: '🏛️' },
+  { href: '/dashboard/courses',    label: 'Courses',      icon: '📚' },
+  { href: '/dashboard/courtyard',  label: 'The Courtyard', icon: '⚗️' },
+  { href: '/dashboard/library',    label: 'Library',      icon: '📜' },
+  { href: '/dashboard/papers',     label: 'Papers',       icon: '✒️' },
+  { href: '/dashboard/profile',    label: 'Profile',      icon: '👤' },
 ];
 
 interface SidebarProps {

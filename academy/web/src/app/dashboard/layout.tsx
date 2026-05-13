@@ -8,8 +8,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [navOpen, setNavOpen] = useState(true);
   const pathname = usePathname();
 
-  // Course seminar pages manage their own full-screen layout — skip the padding wrapper
-  const isCoursePage = /^\/dashboard\/courses\/[^/]+$/.test(pathname ?? '');
+  // Pages that manage their own full-screen layout — skip the padding wrapper
+  const isCoursePage =
+    /^\/dashboard\/courses\/[^/]+$/.test(pathname ?? '') ||
+    pathname === '/dashboard/courtyard';
 
   return (
     <div className="bg-academy-bg text-academy-text min-h-screen">

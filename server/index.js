@@ -999,6 +999,114 @@ app.post('/api/academy/agent', async (req, res) => {
   }
 });
 
+// ─── Courtyard: The Stoa ─────────────────────────────────────────────────────
+
+app.post('/api/courtyard/stoa', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  if (await enforceMessageLimit(req, res)) return;
+
+  const { thread_id, thread_title, thread_body, replies, query } = req.body;
+  if (!thread_id || !thread_title || !thread_body) {
+    return res.status(400).json({ error: 'Missing required fields: thread_id, thread_title, thread_body' });
+  }
+
+  // RAG retrieval
+  let chunks = [];
+  try {
+    chunks = await getRelevantChunks(query || `${thread_title} ${thread_body}`, 8);
+  } catch (ragErr) {
+    console.warn('[/api/courtyard/stoa] RAG failed:', ragErr.message);
+  }
+
+  const ragContext = chunks.length > 0
+    ? '\n\n[CONTEXT]\n' + chunks.map(c =>
+        `[${c.source_author} — ${c.source_title}]\n${c.content}`
+      ).join('\n\n') + '\n[END CONTEXT]'
+    : '';
+
+  const systemPrompt = `You are The Stoa. You speak only from the Stoic tradition — Marcus Aurelius, Epictetus, Seneca, and their interpreters. You never offer personal opinion. Every claim you make is grounded in the texts. You cite your sources inline using the format (Author, Work, location). You are not a chatbot. You are the voice of a tradition that has been thinking about this question for two thousand years. Be precise. Be brief. End with one question the tradition would ask back.`;
+
+  const threadContext = [
+    `Thread: ${thread_title}`,
+    `Opening post: ${thread_body}`,
+    replies ? `\nReplies so far:\n${replies}` : '',
+  ].filter(Boolean).join('\n');
+
+  const userMessage = `${threadContext}${ragContext}\n\nRespond to this thread from the Stoic tradition.`;
+
+  try {
+    console.log(`[/api/courtyard/stoa] thread: ${thread_id} | chunks: ${chunks.length}`);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[/api/courtyard/stoa] Claude error:', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const reply = data.content?.find(b => b.type === 'text')?.text ?? '';
+
+    // Insert Stoa reply via service role (bypasses RLS)
+    if (reply && thread_id) {
+      const { error: insertErr } = await supabase.from('courtyard_replies').insert({
+        thread_id,
+        author_id: null,
+        handle: 'The Stoa',
+        body: reply,
+        is_stoa: true,
+        stoa_chunks: chunks.length > 0 ? chunks : null,
+      });
+      if (insertErr) console.warn('[/api/courtyard/stoa] reply insert error:', insertErr.message);
+    }
+
+    return res.json({ reply, chunks });
+  } catch (error) {
+    console.error('[/api/courtyard/stoa] error:', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
+// ─── Courtyard: RAG preview ───────────────────────────────────────────────────
+
+app.post('/api/courtyard/rag-preview', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { query } = req.body;
+  if (!query || typeof query !== 'string' || query.trim().length < 3) {
+    return res.json({ chunks: [] });
+  }
+
+  try {
+    const chunks = await getRelevantChunks(query.trim(), 5);
+    return res.json({ chunks });
+  } catch (err) {
+    console.warn('[/api/courtyard/rag-preview] error:', err.message);
+    return res.json({ chunks: [] });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {
