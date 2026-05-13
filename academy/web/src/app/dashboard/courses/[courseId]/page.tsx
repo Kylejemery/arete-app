@@ -251,6 +251,65 @@ function Session1Content({ content, sessions }: { content: CourseContent; sessio
   );
 }
 
+// ── Resizable Drag Handle ─────────────────────────────────────────────────────
+
+function DragHandle({ onDelta, onDragEnd }: { onDelta: (d: number) => void; onDragEnd: () => void }) {
+  const startXRef = useRef(0);
+  const [hovered, setHovered] = useState(false);
+  const [active, setActive] = useState(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startXRef.current = e.clientX;
+    setActive(true);
+    const onMove = (ev: MouseEvent) => {
+      onDelta(ev.clientX - startXRef.current);
+      startXRef.current = ev.clientX;
+    };
+    const onUp = () => {
+      setActive(false);
+      onDragEnd();
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    startXRef.current = e.touches[0].clientX;
+    setActive(true);
+    const onMove = (ev: TouchEvent) => {
+      onDelta(ev.touches[0].clientX - startXRef.current);
+      startXRef.current = ev.touches[0].clientX;
+    };
+    const onEnd = () => {
+      setActive(false);
+      onDragEnd();
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+    };
+    window.addEventListener('touchmove', onMove);
+    window.addEventListener('touchend', onEnd);
+  };
+
+  return (
+    <div
+      className="hidden lg:block flex-shrink-0 h-full"
+      style={{
+        width: 4,
+        cursor: 'col-resize',
+        background: (hovered || active) ? 'rgba(201,168,76,0.5)' : 'rgba(201,168,76,0.15)',
+        transition: 'background 0.15s',
+      }}
+      onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    />
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SeminarPage() {
@@ -268,7 +327,12 @@ export default function SeminarPage() {
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [paperExpanded, setPaperExpanded] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(220);
+  const [rightWidth, setRightWidth] = useState(380);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  // Keep a ref to latest widths so onDragEnd closures always save the current value
+  const widthsRef = useRef({ leftWidth, rightWidth });
+  widthsRef.current = { leftWidth, rightWidth };
 
   const sessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
@@ -298,6 +362,17 @@ export default function SeminarPage() {
     const stored = localStorage.getItem(briefingCompleteKey);
     setBriefingComplete(stored === 'true');
   }, [briefingCompleteKey]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('academy-panel-widths');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.leftWidth) setLeftWidth(Math.min(320, Math.max(160, parsed.leftWidth)));
+        if (parsed.rightWidth) setRightWidth(Math.min(560, Math.max(300, parsed.rightWidth)));
+      }
+    } catch {}
+  }, []);
 
   const handleAgentChange = async (newAgentId: AgentId) => {
     setAgentId(newAgentId);
@@ -374,7 +449,10 @@ export default function SeminarPage() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
         {/* LEFT: Course Navigation */}
-        <aside className="lg:w-56 lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 lg:border-r border-academy-border bg-academy-card">
+        <aside
+          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
+          style={{ width: leftWidth }}
+        >
           <div className="p-5">
             <div className="hidden lg:block mb-5">
               <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
@@ -417,6 +495,11 @@ export default function SeminarPage() {
           </div>
         </aside>
 
+        <DragHandle
+          onDelta={(d) => setLeftWidth(w => Math.min(320, Math.max(160, w + d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
         {/* CENTER: Session Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-10">
@@ -436,8 +519,16 @@ export default function SeminarPage() {
           </div>
         </div>
 
+        <DragHandle
+          onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
         {/* RIGHT: Proctor Chat */}
-        <div className="lg:w-80 lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-academy-border min-h-[560px] lg:min-h-0">
+        <div
+          className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
+          style={{ width: rightWidth }}
+        >
 
           {/* Proctor header */}
           <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">
