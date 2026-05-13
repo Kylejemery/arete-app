@@ -8,6 +8,8 @@ import { getEnrollment, getOrCreateSession, appendSeminarMessage } from '@/lib/d
 import { AGENT_MAP, SYSTEM_PROMPTS } from '@/lib/agents';
 import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
+import PreSeminarBriefing from '@/components/PreSeminarBriefing';
+import { SEMINARS } from '@/data/seminars';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -265,12 +267,15 @@ export default function SeminarPage() {
   const [initializing, setInitializing] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [paperExpanded, setPaperExpanded] = useState(false);
+  const [briefingComplete, setBriefingComplete] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
+  const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
+  const briefingCompleteKey = `briefing-complete-${courseId}-${activeSessionId}`;
 
   useEffect(() => {
     async function init() {
@@ -289,6 +294,11 @@ export default function SeminarPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    const stored = localStorage.getItem(briefingCompleteKey);
+    setBriefingComplete(stored === 'true');
+  }, [briefingCompleteKey]);
+
   const handleAgentChange = async (newAgentId: AgentId) => {
     setAgentId(newAgentId);
     setMessages([]);
@@ -301,6 +311,11 @@ export default function SeminarPage() {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session) return;
+    // Mark briefing complete on first message sent in this session
+    if (!briefingComplete && messages.filter(m => m.role === 'user').length === 0) {
+      localStorage.setItem(briefingCompleteKey, 'true');
+      setBriefingComplete(true);
+    }
     const userMsg: SeminarMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -405,6 +420,14 @@ export default function SeminarPage() {
         {/* CENTER: Session Content */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-10">
+            {briefingData && (
+              <PreSeminarBriefing
+                key={`${courseId}-${activeSessionId}`}
+                courseId={courseId}
+                {...briefingData}
+                isComplete={briefingComplete}
+              />
+            )}
             {activeSessionId === 1 ? (
               <Session1Content content={courseContent} sessions={sessions} />
             ) : (
