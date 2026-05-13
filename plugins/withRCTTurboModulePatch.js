@@ -24,6 +24,18 @@ const withRCTTurboModulePatch = (config) => {
         targetPath = fallbackPath;
       }
 
+      const { execSync } = require('child_process');
+
+      try {
+        const result = execSync(
+          'find /Users/expo/workingdir/build -name "RCTTurboModule.mm" 2>/dev/null',
+          { encoding: 'utf8' }
+        );
+        console.log('[withRCTTurboModulePatch] find result:', result || '(empty)');
+      } catch (e) {
+        console.log('[withRCTTurboModulePatch] find failed:', e.message);
+      }
+
       if (!targetPath) {
         console.warn(
           '[withRCTTurboModulePatch] RCTTurboModule.mm not found — ' +
