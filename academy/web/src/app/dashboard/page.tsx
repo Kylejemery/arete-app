@@ -135,6 +135,20 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
+          {/* The Courtyard */}
+          <Link href="/dashboard/courtyard">
+            <Card className="hover:border-academy-gold transition-colors cursor-pointer">
+              <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                The Courtyard &middot; Forum
+              </p>
+              <p className="font-serif text-academy-text text-base mb-1">
+                The Courtyard
+              </p>
+              <p className="text-academy-muted text-xs">Open philosophical discussion with fellow students.</p>
+              <p className="text-academy-gold text-xs font-semibold mt-3">Enter the Courtyard &rarr;</p>
+            </Card>
+          </Link>
+
           {/* PHIL 702 — locked */}
           <Card className="opacity-50">
             <div className="flex items-start justify-between gap-2">
