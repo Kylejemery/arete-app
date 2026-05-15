@@ -326,9 +326,9 @@ export default function CourtyardPage() {
       // Presence count
       await refreshPresenceCount();
 
-      // Realtime: new threads
+      // Realtime: new threads — unique name avoids StrictMode channel-reuse error
       const threadSub = supabase
-        .channel('courtyard_thread_inserts')
+        .channel(`courtyard_thread_inserts_${Date.now()}`)
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'courtyard_threads' },
@@ -341,11 +341,10 @@ export default function CourtyardPage() {
 
       // Presence count refresh every 30s
       presenceCountIntervalRef.current = setInterval(refreshPresenceCount, 30_000);
-
-      setLoaded(true);
     }
 
-    init();
+    init().finally(() => setLoaded(true));
+
 
     return () => {
       if (threadSubRef.current) supabase.removeChannel(threadSubRef.current);
@@ -397,7 +396,7 @@ export default function CourtyardPage() {
     if (replySubRef.current) supabase.removeChannel(replySubRef.current);
 
     const replySub = supabase
-      .channel(`replies_${activeThread.id}`)
+      .channel(`replies_${activeThread.id}_${Date.now()}`)
       .on(
         'postgres_changes',
         {
