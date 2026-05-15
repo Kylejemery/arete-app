@@ -1,0 +1,1751 @@
+**GREK 101**
+
+**Ancient Greek for Philosophers**
+
+*Sessions 2 – 10  ·  Unit I: The Grammar Foundation*
+
+Sessions 2–10 build the complete grammar foundation needed to reach Session 10's milestone: a first unaided reading of Encheiridion §1 — 'Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν.' Every paradigm, every case, every verb form taught in this unit exists in service of that sentence.
+
+Sessions 2–5 cover noun declensions. Sessions 6–9 cover the verb system. Session 10 is the reading milestone — a synthesis that tests everything learned so far against real Stoic text.
+
+| **SESSION 2** **Nouns: The First Declension** *Feminine -ā and -ē stem nouns · The philosophical vocabulary of soul, truth, virtue* |
+| --- |
+
+| **Learning Objectives** Recognize and produce all first declension endings in singular and plural Identify the nominative, genitive, dative, accusative, and vocative in a first declension noun Decline ψυχή (psychē, soul) and ἀλήθεια (alētheia, truth) in full Read simple noun phrases using first declension nouns with the definite article |
+| --- |
+
+## **Part 1 — What a Declension Is**
+
+Greek is an inflected language. Where English signals grammatical function by word order ('the dog bites the man' vs. 'the man bites the dog'), Greek signals it by changing the ending of the noun itself. The set of endings a noun uses is its declension. First declension nouns are almost all feminine and end in -ā or -ē in the nominative singular.
+
+There are five cases in Greek. Each signals a different function:
+
+**The Five Cases**
+
+| **Case** | **Function** | **Example (English)** |
+| --- | --- | --- |
+| Nominative | Subject of the sentence | The soul is immortal |
+| Genitive | Possession / 'of' | the virtue of the soul |
+| Dative | Indirect object / 'to/for' | to the soul, for the soul |
+| Accusative | Direct object | I pursue virtue |
+| Vocative | Direct address | O soul! O virtue! |
+
+## **Part 2 — First Declension Endings**
+
+The first declension contains two subtypes based on the vowel in the stem. The ψυχή type (long ē throughout) is the most common for philosophical vocabulary.
+
+**First Declension — ψυχή, ψυχῆς (soul) — ē-stem**
+
+| **Case** | **Singular** | **Ending** | **Plural** | **Ending** |
+| --- | --- | --- | --- | --- |
+| Nominative | ψυχή | -ή | ψυχαί | -αί |
+| Genitive | ψυχῆς | -ῆς | ψυχῶν | -ῶν |
+| Dative | ψυχῇ | -ῇ | ψυχαῖς | -αῖς |
+| Accusative | ψυχήν | -ήν | ψυχάς | -άς |
+| Vocative | ψυχή | -ή | ψυχαί | -αί |
+
+**First Declension — ἀλήθεια, ἀληθείας (truth) — -ia stem (short α in sg.)**
+
+| **Case** | **Singular** | **Ending** | **Plural** | **Ending** |
+| --- | --- | --- | --- | --- |
+| Nominative | ἀλήθεια | -α | ἀλήθειαι | -αι |
+| Genitive | ἀληθείας | -ας | ἀληθειῶν | -ῶν |
+| Dative | ἀληθείᾳ | -ᾳ | ἀληθείαις | -αις |
+| Accusative | ἀλήθειαν | -αν | ἀληθείας | -ας |
+| Vocative | ἀλήθεια | -α | ἀλήθειαι | -αι |
+
+## **Part 3 — The Definite Article (First Declension)**
+
+Greek has a definite article — 'the' — which must agree with its noun in gender, number, and case. The first declension is feminine; here are the feminine article forms:
+
+**Definite Article — Feminine (ἡ)**
+
+| **Case** | **Singular** | **Plural** |
+| --- | --- | --- |
+| Nominative | ἡ | αἱ |
+| Genitive | τῆς | τῶν |
+| Dative | τῇ | ταῖς |
+| Accusative | τήν | τάς |
+
+| **Key pattern** *The article and noun endings are nearly identical. Once you know the article, you know the noun endings — and vice versa. This symmetry makes Greek highly learnable once the patterns are internalized.* |
+| --- |
+
+## **Part 4 — First Declension Philosophical Vocabulary**
+
+**Core First Declension Nouns**
+
+| **Greek** | **Genitive** | **English** | **Stoic Significance** |
+| --- | --- | --- | --- |
+| ψυχή | ψυχῆς | soul, mind | Seat of the hēgemonikon; site of impressions, assent, impulse |
+| ἀλήθεια | ἀληθείας | truth | Object of the Sage's knowledge; what katalēptikē phantasia grasps |
+| ἀρετή | ἀρετῆς | virtue, excellence | The only genuine good; sufficient for happiness (eudaimonia) |
+| ἡδονή | ἡδονῆς | pleasure | A 'preferred indifferent' — not a genuine good for Stoics |
+| τύχη | τύχης | fortune, chance | Paradigmatic external — not 'up to us' (eph' hēmin) |
+| φύσις | φύσεως | nature | Note: 3rd decl. — will be learned in Session 13 — listed for awareness |
+
+### **Session 2 Exercises**
+
+| **Exercise 2.1** Decline the full paradigm (all 5 cases, singular and plural) for ἀρετή, ἀρετῆς (virtue). Follow the ψυχή model exactly. |
+| --- |
+| **Answer** *Nom: ἀρετή / ἀρεταί · Gen: ἀρετῆς / ἀρετῶν · Dat: ἀρετῇ / ἀρεταῖς · Acc: ἀρετήν / ἀρετάς · Voc: ἀρετή / ἀρεταί* |
+
+| **Exercise 2.2** Identify the case and number of each underlined form. Give one possible English translation:  a) ψυχῆς     b) ἀληθείᾳ     c) ἀρετάς     d) αἱ ψυχαί     e) τῇ ἀρετῇ |
+| --- |
+| **Answer** *a) genitive singular — **'**of the soul**'** · b) dative singular — **'**to/for truth**'** · c) accusative plural — **'**virtues**'** (direct object) · d) nominative plural — **'**the souls**'** (subject) · e) dative singular — **'**to/for virtue**'** (with the article)* |
+
+| **Exercise 2.3** Translate into Greek using the vocabulary from Part 4. Use the definite article where indicated:  a) of virtue (genitive)     b) the souls (nominative plural)     c) for truth (dative)     d) I pursue virtue [accusative — just the noun] |
+| --- |
+| **Answer** *a) τῆς ἀρετῆς · b) αἱ ψυχαί · c) τῇ ἀληθείᾳ · d) ἀρετήν* |
+
+| **Exercise 2.4 — Encheiridion Preview** In Session 10, you will read: 'τὰ μέν ἐστιν ἐφ᾿ ἡμῖν.' The word ἡμῖν is the dative plural of ἡμεῖς (we/us). Compare its ending (-ῖν) to the first declension dative forms you have learned. Although ἡμῖν is a pronoun, not a first declension noun, what dative pattern do you notice it shares? What does 'ἐφ᾿ ἡμῖν' likely mean? |
+| --- |
+| **Answer** *The -ῖν ending echoes the accented dative pattern. ἐφ᾿ ἡμῖν = **'**upon us**'** / **'**up to us**'** — the Stoic formula for things in our control. The preposition ἐπί (contracted to ἐφ᾿ before rough breathing) + dative = **'**dependent on, in the power of.**'* |
+
+**Session Quiz — 10 Questions**
+
+**1. Which case marks the subject of a Greek sentence?**
+
+    A) Genitive
+
+**    B) Nominative**
+
+    C) Accusative
+
+    D) Dative
+
+*    ✓ B*
+
+**2. The genitive plural ending for first declension nouns is:**
+
+    A) -ης
+
+    B) -αις
+
+**    C) -ων**
+
+    D) -ας
+
+*    ✓ C*
+
+**3. The dative singular of ψυχή is:**
+
+    A) ψυχής
+
+    B) ψυχήν
+
+**    C) ψυχῇ**
+
+    D) ψυχαί
+
+*    ✓ C*
+
+**4. The definite article form τῆς is:**
+
+    A) Nominative singular feminine
+
+**    B) Genitive singular feminine**
+
+    C) Dative plural feminine
+
+    D) Accusative singular feminine
+
+*    ✓ B*
+
+**5. Which word correctly fills the blank? ****'****______ ἀρετήν διώκω****'**** (I pursue ______ virtue)**
+
+    A) τῆς
+
+**    B) τήν**
+
+    C) τῇ
+
+    D) αἱ
+
+*    ✓ B*
+
+**6. The Stoic term ψυχή refers to:**
+
+    A) The body's physical constitution
+
+**    B) The seat of impressions, assent, and impulse — the rational soul**
+
+    C) The external circumstances of fortune
+
+    D) The cosmic principle of reason
+
+*    ✓ B*
+
+**7. Which first declension noun has the genitive singular ἀληθείας?**
+
+    A) ψυχή
+
+    B) ἀρετή
+
+**    C) ἀλήθεια**
+
+    D) ἡδονή
+
+*    ✓ C*
+
+**8. The vocative case is used for:**
+
+    A) Showing possession
+
+    B) Marking the direct object
+
+**    C) Direct address**
+
+    D) Indicating the indirect object
+
+*    ✓ C*
+
+**9. Τύχη (fortune/chance) is philosophically significant in Stoicism because:**
+
+    A) It is the highest good
+
+**    B) It represents things that are not ****'****up to us****'**** — paradigmatic externals**
+
+    C) It is identical to virtue
+
+    D) The Stoics valued it equally with reason
+
+*    ✓ B*
+
+**10. The nominative plural of ἀρετή is:**
+
+    A) ἀρετῶν
+
+    B) ἀρεταῖς
+
+    C) ἀρετάς
+
+**    D) ἀρεταί**
+
+*    ✓ D*
+
+| **SESSION 3** **Nouns: The Second Declension** *Masculine -ος and neuter -ον stems · logos, nous, kosmos* |
+| --- |
+
+| **Learning Objectives** Recognize and produce all second declension masculine and neuter endings Decline λόγος (logos) and νόμος (nomos) as masculine paradigms Decline σῶμα note: preview only — contrast neuter with ἔργον (neuter -ον) Use the masculine definite article (ὁ) correctly with second declension nouns |
+| --- |
+
+## **Part 1 — The Second Declension**
+
+The second declension contains two genders: masculine (ending in -ος) and neuter (ending in -ον). The masculine is the most important for Stoic philosophical vocabulary — λόγος, νόμος, κόσμος, and νοῦς are all second declension.
+
+Neuter nouns have one key rule that applies across all declensions: the nominative and accusative neuter are always identical. This makes them easy to spot — if a neuter noun looks the same in subject and object positions, that is by design.
+
+**Second Declension Masculine — λόγος, λόγου (reason, word)**
+
+| **Case** | **Singular** | **Ending** | **Plural** | **Ending** |
+| --- | --- | --- | --- | --- |
+| Nominative | λόγος | -ος | λόγοι | -οι |
+| Genitive | λόγου | -ου | λόγων | -ων |
+| Dative | λόγῳ | -ῳ | λόγοις | -οις |
+| Accusative | λόγον | -ον | λόγους | -ους |
+| Vocative | λόγε | -ε | λόγοι | -οι |
+
+**Second Declension Neuter — ἔργον, ἔργου (work, deed)**
+
+| **Case** | **Singular** | **Ending** | **Plural** | **Ending** |
+| --- | --- | --- | --- | --- |
+| Nominative | ἔργον | -ον | ἔργα | -α |
+| Genitive | ἔργου | -ου | ἔργων | -ων |
+| Dative | ἔργῳ | -ῳ | ἔργοις | -οις |
+| Accusative | ἔργον | -ον | ἔργα | -α |
+| Vocative | ἔργον | -ον | ἔργα | -α |
+
+**Definite Article — Masculine (ὁ) and Neuter (τό)**
+
+| **Case** | **Masc. Sg.** | **Masc. Pl.** | **Neut. Sg.** | **Neut. Pl.** |
+| --- | --- | --- | --- | --- |
+| Nominative | ὁ | οἱ | τό | τά |
+| Genitive | τοῦ | τῶν | τοῦ | τῶν |
+| Dative | τῷ | τοῖς | τῷ | τοῖς |
+| Accusative | τόν | τούς | τό | τά |
+
+## **Part 2 — Second Declension Philosophical Vocabulary**
+
+**Core Second Declension Nouns**
+
+| **Greek** | **Genitive** | **Gender** | **English** | **Stoic Significance** |
+| --- | --- | --- | --- | --- |
+| λόγος | λόγου | masc. | reason, word, account | The rational principle in the cosmos; the human faculty of reason; the Stoic God |
+| νόμος | νόμου | masc. | law, custom | Natural law (νόμος φύσεως) — the rational order the Sage lives in accord with |
+| κόσμος | κόσμου | masc. | order, world, cosmos | The rationally ordered universe; the Stoic God is also identified with the cosmos |
+| νοῦς | νοῦ | masc. | mind, intellect | Note: contracted 2nd decl. (νοῦς/νοῦ/νῷ/νοῦν) — irregular but critical |
+| βίος | βίου | masc. | life (biographical) | Distinguished from ζωή (biological life); the philosophical life = the examined bios |
+| ἔργον | ἔργου | neut. | work, deed, function | The Stoic ergon (function) of a human being is to exercise reason — the foundation of role ethics |
+| πάθος | πάθους | neut. | passion, emotion, suffering | Note: 3rd decl. — preview only; pathos as false judgment is central to Stoic ethics |
+
+| **The Contracted Noun νοῦς** *νοῦς is a contracted second declension noun. Its forms are shortened: Nom. νοῦς · Gen. νοῦ · Dat. νῷ · Acc. νοῦν. Memorize these individually — they appear constantly in philosophical texts.* |
+| --- |
+
+### **Session 3 Exercises**
+
+| **Exercise 3.1** Decline the full paradigm for κόσμος, κόσμου (cosmos/world). Follow the λόγος model. |
+| --- |
+| **Answer** *Nom: κόσμος/κόσμοι · Gen: κόσμου/κόσμων · Dat: κόσμῳ/κόσμοις · Acc: κόσμον/κόσμους · Voc: κόσμε/κόσμοι* |
+
+| **Exercise 3.2** Parse each form — give case, number, gender, and the dictionary entry it belongs to:  a) λόγοι     b) τοῦ νόμου     c) ἔργα     d) τῷ κόσμῳ     e) νοῦν |
+| --- |
+| **Answer** *a) nom. pl. masc. — λόγος · b) gen. sg. masc. — νόμος · c) nom./acc. pl. neut. — ἔργον · d) dat. sg. masc. — κόσμος · e) acc. sg. masc. — νοῦς (contracted)* |
+
+| **Exercise 3.3** Translate into Greek. Include the definite article:  a) The cosmos (nominative)     b) Of the law (genitive)     c) For the mind (dative)     d) I see the deed [accusative] |
+| --- |
+| **Answer** *a) ὁ κόσμος · b) τοῦ νόμου · c) τῷ νῷ (contracted) · d) τό ἔργον* |
+
+| **Exercise 3.4 — Both Declensions** Identify which declension each noun belongs to (1st or 2nd), its gender, and its dictionary form (nominative + genitive):  ψυχή · λόγος · ἀλήθεια · κόσμος · ἀρετή · νοῦς · ἔργον |
+| --- |
+| **Answer** *ψυχή — 1st, fem, ψυχή/ψυχῆς · λόγος — 2nd, masc, λόγος/λόγου · ἀλήθεια — 1st, fem, ἀλήθεια/ἀληθείας · κόσμος — 2nd, masc, κόσμος/κόσμου · ἀρετή — 1st, fem, ἀρετή/ἀρετῆς · νοῦς — 2nd contr., masc, νοῦς/νοῦ · ἔργον — 2nd, neut, ἔργον/ἔργου* |
+
+**Session Quiz — 10 Questions**
+
+**1. The second declension masculine nominative singular ending is:**
+
+    A) -α
+
+    B) -η
+
+**    C) -ος**
+
+    D) -ον
+
+*    ✓ C*
+
+**2. What is the key grammatical rule for neuter nouns across all declensions?**
+
+    A) Neuter nouns use the masculine article
+
+**    B) Neuter nominative and accusative are always identical**
+
+    C) Neuter nouns have no plural
+
+    D) Neuter nouns are always in the genitive
+
+*    ✓ B*
+
+**3. The contracted noun νοῦς has the accusative singular:**
+
+    A) νόον
+
+**    B) νοῦν**
+
+    C) νῷ
+
+    D) νοῦ
+
+*    ✓ B*
+
+**4. The masculine dative plural article is:**
+
+    A) τῶν
+
+**    B) τοῖς**
+
+    C) τοῦ
+
+    D) τῷ
+
+*    ✓ B*
+
+**5. Κόσμος in Stoic philosophy refers to:**
+
+    A) Chaos and disorder
+
+**    B) The rationally ordered universe**
+
+    C) The physical body only
+
+    D) A type of logical argument
+
+*    ✓ B*
+
+**6. The genitive singular of λόγος is:**
+
+    A) λόγοι
+
+    B) λόγους
+
+**    C) λόγου**
+
+    D) λόγων
+
+*    ✓ C*
+
+**7. The neuter noun ἔργον (function/deed) is philosophically significant because:**
+
+    A) It refers to warfare and conquest
+
+**    B) The ergon of a human being is the exercise of reason — the Stoic foundation of role ethics**
+
+    C) It describes the physical cosmos
+
+    D) It is the Stoic term for political office
+
+*    ✓ B*
+
+**8. Which article form matches a second declension masculine nominative singular noun?**
+
+    A) ἡ
+
+**    B) ὁ**
+
+    C) τό
+
+    D) αἱ
+
+*    ✓ B*
+
+**9. The dative singular of κόσμος is:**
+
+    A) κόσμου
+
+    B) κόσμον
+
+    C) κόσμοις
+
+**    D) κόσμῳ**
+
+*    ✓ D*
+
+**10. Βίος (biographical life) is distinguished from ζωή (biological life) in Stoic thought because:**
+
+    A) They are synonyms — the distinction is purely stylistic
+
+**    B) Bios refers to the philosophical life — the examined, deliberate life one constructs through reason**
+
+    C) Bios refers to animal existence; zōē to human existence
+
+    D) Bios is mortal; zōē is eternal
+
+*    ✓ B*
+
+| **SESSION 4** **The Greek Verb: Present Active Indicative** *The λύω paradigm · Person, number, tense · The verb **'**to be**'** (εἰμί)* |
+| --- |
+
+| **Learning Objectives** Conjugate any regular verb in the present active indicative (all 6 persons) Identify person and number from verb endings alone Conjugate εἰμί (to be) in the present indicative Construct simple subject-verb and subject-verb-object sentences |
+| --- |
+
+## **Part 1 — How Greek Verbs Work**
+
+Greek verbs encode person, number, tense, voice, and mood directly in their endings. A single word — διώκω — means 'I pursue.' The subject pronoun is built into the verb. This means simple Greek sentences can be one or two words long.
+
+The present active indicative is the most fundamental verb form. 'Active' means the subject performs the action. 'Indicative' means the verb makes a straightforward statement. 'Present' means the action is happening now (or habitually).
+
+**Present Active Indicative — λύω (I loosen/release)**
+
+| **Person** | **Singular** | **Ending** | **Plural** | **Ending** |
+| --- | --- | --- | --- | --- |
+| 1st (I / we) | λύω | -ω | λύομεν | -ομεν |
+| 2nd (you / you all) | λύεις | -εις | λύετε | -ετε |
+| 3rd (he/she/it/they) | λύει | -ει | λύουσι(ν) | -ουσι(ν) |
+
+| **Parsing shorthand** *When asked to parse a verb, give: person · number · tense · voice · mood · infinitive. Example: λύει = 3rd singular present active indicative of λύω (to loosen).* |
+| --- |
+
+**εἰμί — To Be (Present Indicative, Irregular)**
+
+| **Person** | **Singular** | **Plural** |
+| --- | --- | --- |
+| 1st | εἰμί (I am) | ἐσμέν (we are) |
+| 2nd | εἶ (you are) | ἐστέ (you [pl.] are) |
+| 3rd | ἐστί(ν) (he/she/it is) | εἰσί(ν) (they are) |
+
+εἰμί is accented and enclitic in certain forms — the details of enclitic accentuation come later. For now, memorize the six forms. ἐστί and εἰσί add movable ν (ν-movable) before vowels and at end of sentence.
+
+## **Part 2 — Stoic Verb Vocabulary**
+
+**Core Verbs for Stoic Texts**
+
+| **Greek** | **1st Sg.** | **English** | **Stoic Context** |
+| --- | --- | --- | --- |
+| διώκω | διώκω | I pursue | Pursuing virtue (ἀρετήν διώκω) |
+| φεύγω | φεύγω | I flee, avoid | Avoiding vice — the Stoic negative duty |
+| λέγω | λέγω | I say, speak | The verb of logos — rational speech |
+| ἔχω | ἔχω | I have, hold | Epictetus: what do you have power over? |
+| ὁράω | ὁρῶ | I see | Seeing clearly = correct impression |
+| νομίζω | νομίζω | I consider, think | The verb of doxa (belief/opinion) |
+| ἀσκέω | ἀσκέω | I practice, train | The Stoic practice (askēsis) of philosophy |
+| ζητέω | ζητέω | I seek, inquire | Philosophical inquiry — Socratic elenchus |
+
+### **Session 4 Exercises**
+
+| **Exercise 4.1** Conjugate ἀσκέω (I practice) in the full present active indicative — all six persons. |
+| --- |
+| **Answer** *ἀσκέω · ἀσκεῖς · ἀσκεῖ · ἀσκοῦμεν · ἀσκεῖτε · ἀσκοῦσι(ν)* |
+
+| **Exercise 4.2** Parse each verb form — give person, number, tense, voice, mood, and dictionary entry:  a) λέγομεν     b) ζητεῖς     c) ἔχει     d) εἰσί     e) ἀσκῶ |
+| --- |
+| **Answer** *a) 1pl. pres. act. ind. — λέγω · b) 2sg. pres. act. ind. — ζητέω · c) 3sg. pres. act. ind. — ἔχω · d) 3pl. pres. ind. — εἰμί · e) 1sg. pres. act. ind. — ἀσκέω* |
+
+| **Exercise 4.3** Translate into English:  a) ἀρετήν διώκω.     b) ὁ σοφὸς φεύγει τὴν ἡδονήν.     c) ἀσκοῦμεν τὴν φιλοσοφίαν.     d) τί ζητεῖς; |
+| --- |
+| **Answer** *a) I pursue virtue. · b) The wise man flees pleasure. · c) We practice philosophy. · d) What are you seeking?* |
+
+| **Exercise 4.4 — Sentence Building** Construct three original Greek sentences using vocabulary from Sessions 2–4. Each sentence must include: (1) a noun with a definite article, (2) a correctly conjugated verb. Write the Greek and then the English translation. |
+| --- |
+| **Answer** *Sample: ὁ φιλόσοφος ζητεῖ τὴν ἀλήθειαν. (The philosopher seeks truth.) — Many valid answers possible. Check: article agrees with noun in case/gender/number; verb ending matches subject.* |
+
+**Session Quiz — 10 Questions**
+
+**1. The first person singular present active indicative ending is:**
+
+    A) -εις
+
+    B) -ει
+
+**    C) -ω**
+
+    D) -ομεν
+
+*    ✓ C*
+
+**2. The verb εἰμί is irregular. Its third person plural form is:**
+
+    A) ἐσμέν
+
+    B) εἶ
+
+**    C) εἰσί(ν)**
+
+    D) ἐστί(ν)
+
+*    ✓ C*
+
+**3. The second person plural present active indicative of λύω is:**
+
+    A) λύεις
+
+**    B) λύετε**
+
+    C) λύουσι
+
+    D) λύομεν
+
+*    ✓ B*
+
+**4. The Greek verb ἀσκέω is particularly important in Stoic philosophy because:**
+
+    A) It means to speak in public
+
+**    B) It means to practice — askēsis (training/practice) is the Stoic method of philosophical formation**
+
+    C) It means to avoid pain
+
+    D) It refers to political participation
+
+*    ✓ B*
+
+**5. Which verb ending indicates third person singular?**
+
+    A) -ω
+
+    B) -ομεν
+
+    C) -ετε
+
+**    D) -ει**
+
+*    ✓ D*
+
+**6. How is the subject usually indicated in a Greek verb?**
+
+    A) By a separate pronoun always placed before the verb
+
+**    B) By the ending of the verb itself — the pronoun is built in**
+
+    C) By the definite article of the nearest noun
+
+    D) By word order only
+
+*    ✓ B*
+
+**7. Parse λέγομεν:**
+
+    A) 1st singular present active indicative
+
+    B) 3rd plural present active indicative
+
+**    C) 1st plural present active indicative**
+
+    D) 2nd plural present active indicative
+
+*    ✓ C*
+
+**8. The Greek verb ζητέω connects to the philosophical method of Socrates because:**
+
+**    A) Zētein (to seek) is the root of zētēsis — Socratic inquiry, the constant questioning that is philosophy**
+
+    B) It means to argue loudly in public
+
+    C) Socrates used it to describe political campaigning
+
+    D) It means to write philosophical texts
+
+*    ✓ A*
+
+**9. The movable ν added to ἐστί before a vowel or at sentence end:**
+
+    A) Changes the meaning of the verb
+
+**    B) Is a phonological convention — no meaning change**
+
+    C) Indicates a different mood
+
+    D) Marks the verb as irregular
+
+*    ✓ B*
+
+**10. In the sentence ****'****ὁ σοφὸς διώκει τὴν ἀρετήν,****'**** what case is ἀρετήν?**
+
+    A) Nominative — it is the subject
+
+    B) Genitive — it shows possession
+
+**    C) Accusative — it is the direct object**
+
+    D) Dative — it is the indirect object
+
+*    ✓ C*
+
+| **SESSION 5** **Adjectives ****&**** Agreement** *The 2-1-2 pattern · Predicative and attributive position · Good, just, wise, free* |
+| --- |
+
+| **Learning Objectives** Understand the three-gender agreement system for Greek adjectives Decline 2-1-2 adjectives (ἀγαθός, ἀγαθή, ἀγαθόν) in full Distinguish attributive position (ὁ ἀγαθὸς ἄνθρωπος) from predicative (ὁ ἄνθρωπος ἀγαθός) Use philosophical adjectives — sophos, dikaios, eleutheros — correctly in context |
+| --- |
+
+## **Part 1 — How Greek Adjectives Work**
+
+Greek adjectives agree with their nouns in three things: gender, number, and case. This is called GNC agreement. An adjective modifying a feminine noun must take feminine endings; modifying a masculine noun, masculine endings; and so on.
+
+The most common adjective type is called 2-1-2 because masculine and neuter forms use second declension endings, and feminine forms use first declension endings. Once you know both declensions from Sessions 2 and 3, you already know the adjective endings.
+
+**2-1-2 Adjective — ἀγαθός, -ή, -όν (good)**
+
+| **Case** | **Masc. Sg.** | **Fem. Sg.** | **Neut. Sg.** | **Masc. Pl.** | **Fem. Pl.** | **Neut. Pl.** |
+| --- | --- | --- | --- | --- | --- | --- |
+| Nom. | ἀγαθός | ἀγαθή | ἀγαθόν | ἀγαθοί | ἀγαθαί | ἀγαθά |
+| Gen. | ἀγαθοῦ | ἀγαθῆς | ἀγαθοῦ | ἀγαθῶν | ἀγαθῶν | ἀγαθῶν |
+| Dat. | ἀγαθῷ | ἀγαθῇ | ἀγαθῷ | ἀγαθοῖς | ἀγαθαῖς | ἀγαθοῖς |
+| Acc. | ἀγαθόν | ἀγαθήν | ἀγαθόν | ἀγαθούς | ἀγαθάς | ἀγαθά |
+
+## **Part 2 — Attributive vs. Predicative Position**
+
+Greek has two ways to use an adjective. The position relative to the article changes the meaning:
+
+**Adjective Position**
+
+| **Type** | **Pattern** | **Greek Example** | **Translation** |
+| --- | --- | --- | --- |
+| Attributive | article + adj. + noun  OR  article + noun + article + adj. | ὁ ἀγαθὸς ἄνθρωπος / ὁ ἄνθρωπος ὁ ἀγαθός | the good man (adjective describes which man) |
+| Predicative | adj. + noun  OR  noun + adj. (NO repeated article) | ἀγαθὸς ὁ ἄνθρωπος  OR  ὁ ἄνθρωπος ἀγαθός | the man is good (adjective makes a claim) |
+
+## **Part 3 — Philosophical Adjective Vocabulary**
+
+**Core Philosophical Adjectives**
+
+| **Greek (Masc.)** | **Fem.** | **Neut.** | **English** | **Stoic Significance** |
+| --- | --- | --- | --- | --- |
+| ἀγαθός | ἀγαθή | ἀγαθόν | good | Only virtue is genuinely agathos — external goods are not goods at all |
+| κακός | κακή | κακόν | bad, evil | Only vice is genuinely kakos — external ills are not evils at all |
+| καλός | καλή | καλόν | beautiful, noble | What is truly kalos is virtue; cosmetic beauty is an indifferent |
+| δίκαιος | δικαία | δίκαιον | just, righteous | Justice (dikaiosynē) as one of the four cardinal Stoic virtues |
+| σοφός | σοφή | σοφόν | wise | The Sage (sophos) — the ideal of complete virtue; exceedingly rare |
+| ἐλεύθερος | ἐλευθέρα | ἐλεύθερον | free | True freedom is inner — Epictetus the slave was freer than his master |
+| ἀδιάφορος | ἀδιάφορη | ἀδιάφορον | indifferent | The Stoic adiaphoron — externals are neither good nor bad in themselves |
+
+### **Session 5 Exercises**
+
+| **Exercise 5.1** Make each adjective agree with its noun. Give the correct form of ἀγαθός:  a) ______ ψυχή (nominative sg. fem.)     b) ______ λόγου (genitive sg. masc.)     c) ______ ἔργα (accusative pl. neut.)     d) ______ σοφοῖς (dative pl. masc.) |
+| --- |
+| **Answer** *a) ἀγαθή · b) ἀγαθοῦ · c) ἀγαθά · d) ἀγαθοῖς* |
+
+| **Exercise 5.2** Identify whether each phrase is attributive or predicative, and translate:  a) ὁ σοφὸς ἄνθρωπος     b) ὁ ἄνθρωπος σοφός     c) αἱ ἐλεύθεραι ψυχαί     d) ἐλεύθεραι αἱ ψυχαί |
+| --- |
+| **Answer** *a) Attributive — **'**the wise man**'** · b) Predicative — **'**the man is wise**'** · c) Attributive — **'**the free souls**'** · d) Predicative — **'**the souls are free**'* |
+
+| **Exercise 5.3** Translate into Greek:  a) The just man pursues virtue.     b) The soul is free.     c) We practice the noble deeds. |
+| --- |
+| **Answer** *a) ὁ δίκαιος ἄνθρωπος ἀρετήν διώκει. · b) ἡ ψυχή ἐλευθέρα ἐστί(ν). · c) ἀσκοῦμεν τὰ καλὰ ἔργα.* |
+
+| **Exercise 5.4 — Stoic Analysis** Epictetus says that his master Epaphroditus thought he could control Epictetus by threatening his body. Epictetus disagreed.  Using the adjectives from Part 3, construct a single Greek sentence that captures Epictetus's response — the idea that he (Epictetus) is free while his master is enslaved. Use at least two adjectives and two nouns from this session. |
+| --- |
+| **Answer** *Sample: ἡ ψυχή μου ἐλευθέρα ἐστίν· ὁ δεσπότης δὲ οὐκ ἐλεύθερός ἐστιν. (My soul is free; the master, however, is not free.) — Many valid constructions possible.* |
+
+**Session Quiz — 10 Questions**
+
+**1. GNC agreement means a Greek adjective must agree with its noun in:**
+
+    A) Grammar, Nominative, Conjugation
+
+**    B) Gender, Number, Case**
+
+    C) Genitive, Noun, Consonant
+
+    D) Grammar, Nature, Context
+
+*    ✓ B*
+
+**2. In the phrase ὁ σοφὸς ἄνθρωπος, the adjective σοφός is:**
+
+    A) Predicative — 'the man is wise'
+
+**    B) Attributive — ****'****the wise man****'**
+
+    C) Vocative — addressing the man
+
+    D) Genitive — showing possession
+
+*    ✓ B*
+
+**3. The Stoic term ἀδιάφορον (indifferent) refers to:**
+
+    A) Vices and passions
+
+**    B) Externals that are neither genuinely good nor bad in themselves**
+
+    C) Things the Sage avoids
+
+    D) The Sage's state of mind
+
+*    ✓ B*
+
+**4. The feminine nominative singular of δίκαιος is:**
+
+    A) δίκαιος
+
+    B) δίκαιον
+
+**    C) δικαία**
+
+    D) δικαίης
+
+*    ✓ C*
+
+**5. In the phrase ὁ ἄνθρωπος σοφός (no article before σοφός), the adjective is:**
+
+    A) Attributive
+
+**    B) Predicative**
+
+    C) Substantive
+
+    D) Genitive
+
+*    ✓ B*
+
+**6. The adjective ἐλεύθερος is philosophically central in Stoicism because:**
+
+    A) Political freedom was the Stoics' primary concern
+
+**    B) True freedom is inner — the slave who governs his own mind is freer than the tyrant who does not**
+
+    C) Stoics believed slaves should be liberated by law
+
+    D) Eleutheros was Zeno's original name
+
+*    ✓ B*
+
+**7. The 2-1-2 adjective type uses which declension endings for the feminine forms?**
+
+    A) Third declension
+
+    B) Second declension
+
+**    C) First declension**
+
+    D) A unique adjective declension
+
+*    ✓ C*
+
+**8. Which is the correct attributive construction for ****'****the good soul****'****?**
+
+    A) ψυχή ἀγαθή ἡ
+
+    B) ἡ ψυχή ἀγαθή
+
+**    C) ἡ ἀγαθὴ ψυχή**
+
+    D) ψυχή ἡ ἀγαθή
+
+*    ✓ C*
+
+**9. The Stoic claim that only virtue is ἀγαθόν (good) is radical because:**
+
+    A) It was illegal to deny that wealth was good in Athens
+
+**    B) It excludes health, wealth, reputation, and pleasure from the category of genuine goods — all are ****'****indifferents****'**
+
+    C) It was the view of Plato, not the Stoics specifically
+
+    D) It only applies to the Sage, not ordinary people
+
+*    ✓ B*
+
+**10. The neuter plural nominative of καλός is:**
+
+    A) καλοί
+
+    B) καλαί
+
+**    C) καλά**
+
+    D) καλῶν
+
+*    ✓ C*
+
+| **SESSION 6** **The Verb εἰμί ****&**** Predicate Adjectives** *Using **'**to be**'** · Predicate nominative · The philosophical copula* |
+| --- |
+
+| **Learning Objectives** Use εἰμί fluently in all six present indicative forms Construct and parse predicate adjective sentences (noun + εἰμί + adjective) Distinguish predicate adjective from attributive adjective in real sentences Translate key Stoic propositions using εἰμί as the copula |
+| --- |
+
+## **Part 1 — The Predicate Nominative**
+
+When εἰμί links a subject to a noun or adjective that describes it, both the subject and the predicate noun/adjective are in the nominative case. This is called the predicate nominative. There is no accusative with εἰμί as there would be with an action verb.
+
+**Predicate Patterns with εἰμί**
+
+| **Pattern** | **Greek Example** | **Translation** |
+| --- | --- | --- |
+| Noun = Noun | ὁ κόσμος θεός ἐστιν. | The cosmos is god. (Stoic theology) |
+| Noun = Adjective | ἡ ἀρετή ἀγαθή ἐστιν. | Virtue is good. |
+| Noun = Adjective | ὁ σοφὸς ἐλεύθερός ἐστιν. | The sage is free. |
+| Noun = Noun | ὁ λόγος ἡ ἀρχή ἐστιν. | Reason is the principle/beginning. |
+
+| **Philosophical note** *The Stoic God is identified with the cosmos, with logos, and with reason itself. The sentence **'**ὁ κόσμος θεός ἐστιν**'** (The cosmos is god) is not metaphor — it is the Stoic thesis of pantheism, expressed in a single predicate nominative.* |
+| --- |
+
+## **Part 2 — Key Stoic Propositions in Greek**
+
+The following sentences are paraphrases of actual Stoic doctrines. Parse every word and translate each one:
+
+**Stoic Propositions — Reading Practice**
+
+| **Greek** | **Notes** |
+| --- | --- |
+| ἡ ἀρετή ἀγαθόν ἐστιν. | ἀγαθόν: neut. sg. pred. adj. — virtue is (the) good |
+| ὁ σοφὸς ἐλεύθερός ἐστιν. | even if legally enslaved — the Epictetan thesis |
+| ὁ κόσμος λόγῳ κυβερνᾶται. | kubernātai: is steered/governed — preview of passive |
+| τὰ ἐκτὸς ἀδιάφορά ἐστιν. | ta ektos: the externals (neut. pl. with article used as noun) |
+| ἡ κακία μόνη κακόν ἐστιν. | kakia (vice) and kakon — the mirror of aretē and agathon |
+
+### **Session 6 Exercises**
+
+| **Exercise 6.1** Translate and parse the predicate proposition:  'ὁ σοφὸς ἐλεύθερός ἐστιν.'  For each word: give the form, case (if noun/adj.), and its role in the sentence. |
+| --- |
+| **Answer** *ὁ — def. art., nom. sg. masc., modifies σοφός · σοφός — adj., nom. sg. masc., subject · ἐλεύθερος — adj., nom. sg. masc., predicate adj. · ἐστιν — 3sg. pres. ind. of εἰμί, copula · Translation: **'**The wise man is free.**'* |
+
+| **Exercise 6.2** Convert each attributive phrase to a predicative sentence using εἰμί:  a) ὁ δίκαιος ἄνθρωπος     b) αἱ ἀγαθαὶ ψυχαί     c) ὁ ἐλεύθερος λόγος |
+| --- |
+| **Answer** *a) ὁ ἄνθρωπος δίκαιός ἐστιν. · b) αἱ ψυχαί ἀγαθαί εἰσιν. · c) ὁ λόγος ἐλεύθερός ἐστιν.* |
+
+| **Exercise 6.3** Translate into Greek:  a) Virtue alone is good.     b) The cosmos is rational. (use λογικός, -ή, -όν)     c) The passions are not good. (use 'οὐκ' for 'not') |
+| --- |
+| **Answer** *a) ἡ ἀρετή μόνη ἀγαθή ἐστιν. · b) ὁ κόσμος λογικός ἐστιν. · c) τὰ πάθη οὐκ ἀγαθά ἐστιν.* |
+
+| **Exercise 6.4 — Proposition Analysis** The Stoics argued that all ethical claims have logical structure. Take the proposition 'ἡ ἀρετή ἀγαθόν ἐστιν' (Virtue is good).  a) Is ἀγαθόν here attributive or predicative? How do you know? b) What would change grammatically if we wanted to say 'the good virtue' instead? c) What is the philosophical difference between those two statements? |
+| --- |
+| **Answer** *a) Predicative — ἀγαθόν is not preceded by an article, and εἰμί is the main verb linking the two nominatives. b) ἡ ἀγαθὴ ἀρετή — article before adjective, no εἰμί needed. c) **'**Virtue is good**'** is a philosophical claim (a proposition about the nature of virtue). **'**The good virtue**'** merely describes a kind of virtue — it assumes virtue can be good or not good, which the Stoics would reject.* |
+
+**Session Quiz — 10 Questions**
+
+**1. In a predicate nominative construction, the predicate noun or adjective is in the:**
+
+    A) Accusative case
+
+    B) Genitive case
+
+**    C) Nominative case**
+
+    D) Dative case
+
+*    ✓ C*
+
+**2. The Stoic sentence ****'****ὁ κόσμος θεός ἐστιν****'**** expresses:**
+
+    A) The view that the cosmos was created by God
+
+**    B) Stoic pantheism — the cosmos itself is identified with God/logos**
+
+    C) That God transcends the cosmos
+
+    D) That the cosmos is beautiful
+
+*    ✓ B*
+
+**3. How do you distinguish a predicate adjective from an attributive adjective?**
+
+    A) Predicate adjectives are always in the dative
+
+**    B) Predicate adjectives stand outside the article-noun unit and often accompany εἰμί**
+
+    C) Attributive adjectives always follow the noun
+
+    D) There is no grammatical difference
+
+*    ✓ B*
+
+**4. The third person plural of εἰμί is:**
+
+    A) ἐστί
+
+    B) ἐσμέν
+
+**    C) εἰσί(ν)**
+
+    D) εἶ
+
+*    ✓ C*
+
+**5. In ****'****τὰ ἐκτὸς ἀδιάφορά ἐστιν,****'**** what does τὰ ἐκτός mean?**
+
+    A) The inner things
+
+**    B) The externals (neuter plural article used substantively with an adverb)**
+
+    C) The good things
+
+    D) The necessary things
+
+*    ✓ B*
+
+**6. The mirror proposition to ****'****ἡ ἀρετή ἀγαθόν ἐστιν****'**** in Stoic ethics is:**
+
+    A) ἡ ψυχή ἀγαθή ἐστιν
+
+**    B) ἡ κακία κακόν ἐστιν**
+
+    C) ὁ κόσμος λογικός ἐστιν
+
+    D) ἡ ἡδονή ἀγαθή ἐστιν
+
+*    ✓ B*
+
+**7. Which sentence correctly uses the predicate position for ****'****the souls are free****'****?**
+
+    A) αἱ ψυχαί αἱ ἐλεύθεραι εἰσιν
+
+    B) αἱ ἐλεύθεραι ψυχαί εἰσιν
+
+**    C) αἱ ψυχαί ἐλεύθεραί εἰσιν**
+
+    D) ἐλεύθεραι αἱ ψυχαί ἐστιν
+
+*    ✓ C*
+
+**8. The first person singular of εἰμί is:**
+
+    A) ἐσμέν
+
+    B) εἶ
+
+**    C) εἰμί**
+
+    D) ἐστί
+
+*    ✓ C*
+
+**9. Why is εἰμί called a ****'****copula****'****?**
+
+    A) Because it describes physical motion
+
+**    B) Because it links (Latin: copulare) subject and predicate without describing an action**
+
+    C) Because it takes an accusative object
+
+    D) Because it is always irregular
+
+*    ✓ B*
+
+**10. The Stoic thesis that ****'****the sage is free****'**** (ὁ σοφὸς ἐλεύθερός ἐστιν) was radical because:**
+
+    A) It was illegal in Athens to call a slave free
+
+**    B) Epictetus — a slave — was one of its most powerful examples; freedom is inner, not a legal status**
+
+    C) It contradicted Aristotle's view that the Sage must be wealthy
+
+    D) It applied only to citizens
+
+*    ✓ B*
+
+| **SESSION 7** **Prepositions ****&**** the Genitive Case** *Spatial and logical relations · ἐπί, ἐν, ἐκ, πρός, ὑπό · eph**'** hēmin preview* |
+| --- |
+
+| **Learning Objectives** Use the eight most important Greek prepositions with the correct cases Recognize that Greek prepositions can take different cases with different meanings Understand the genitive of possession and the partitive genitive Parse the preposition in ἐφ' ἡμῖν — the Stoic formula — and explain its grammar |
+| --- |
+
+## **Part 1 — Prepositions and Case Government**
+
+Greek prepositions govern specific cases — they 'take' a genitive, dative, or accusative, and sometimes different cases produce different meanings. This is not arbitrary: the cases encode spatial and logical relationships, and the preposition refines that relationship.
+
+**Essential Prepositions**
+
+| **Preposition** | **With Genitive** | **With Dative** | **With Accusative** |
+| --- | --- | --- | --- |
+| ἐπί | on, upon, at the time of | on, upon (position) | onto, against, toward |
+| ἐν | — (not used) | in, within, among | — (not used) |
+| ἐκ/ἐξ | out of, from | — (not used) | — (not used) |
+| πρός | from (the side of) | at, near | toward, to, in relation to |
+| ὑπό | by (agent in passive) | under | under (motion), by |
+| κατά | down from, against | — (not used) | according to, throughout |
+| περί | concerning, about | around | around (motion) |
+| σύν | — (not used) | together with | — (not used) |
+
+## **Part 2 — ἐφ****'**** ἡμῖν — The Stoic Formula Unpacked**
+
+The phrase ἐφ' ἡμῖν (eph' hēmin) means 'up to us' or 'in our power.' It is the most important prepositional phrase in Stoic ethics. Session 1 asked you to notice it; now you can parse it completely.
+
+- ἐπί: preposition — normally + genitive, dative, or accusative
+
+- ἡμῖν: dative plural of ἡμεῖς (we/us) — 'to/for us / in our case'
+
+- ἐπί + dative here: position, location — 'dependent on us,' 'in our domain'
+
+- Elision: ἐπί + rough breathing (ἡ-) → ἐφ' (the π becomes φ before h-sound)
+
+| **The full Encheiridion §1 opening** *Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν. You now have all the grammar needed to parse this except τῶν ὄντων (which you will learn in Session 14 — present participle genitive plural). The structure is: **'**Of the things that exist, some are up to us, others are not up to us.**'* |
+| --- |
+
+## **Part 3 — The Genitive Case Extended**
+
+The genitive case has several uses beyond the prepositions that take it. The most important for philosophical Greek:
+
+**Genitive Uses**
+
+| **Use** | **Greek Example** | **Translation** |
+| --- | --- | --- |
+| Possession | ἡ ψυχή τοῦ σοφοῦ | the soul of the wise man |
+| Partitive | τὰ μέν ἐστιν ἐφ' ἡμῖν | some (of the things) are up to us |
+| Genitive absolute | τοῦ σοφοῦ λέγοντος | (with/while) the wise man speaking |
+| With prepositions | ἐκ τῆς ψυχῆς | out of the soul |
+| Objective genitive | ἡ τῆς ἀρετῆς ἄσκησις | the practice of virtue |
+
+### **Session 7 Exercises**
+
+| **Exercise 7.1** Parse the preposition + case in each phrase and translate:  a) ἐν τῇ ψυχῇ     b) ἐκ τοῦ κόσμου     c) πρὸς τὴν ἀλήθειαν     d) κατὰ φύσιν     e) ὑπὸ τοῦ λόγου |
+| --- |
+| **Answer** *a) ἐν + dat. — **'**in the soul**'** · b) ἐκ + gen. — **'**out of the cosmos**'** · c) πρός + acc. — **'**toward truth**'** · d) κατά + acc. — **'**according to nature**'** · e) ὑπό + gen. — **'**by reason**'** (agent)* |
+
+| **Exercise 7.2** Fully parse ἐφ' ἡμῖν: identify the preposition, the form it takes, why elision occurs, and translate the phrase. |
+| --- |
+| **Answer** *ἐπί (prep.) + ἡμῖν (dat. pl. of ἡμεῖς) — ἐπί + dative = **'**on, at, in the power of.**'** Elision: ἐπί before rough breathing (ἡ) → ἐφ**'** (π → φ before h-sound). Translation: **'**up to us / in our power.**'* |
+
+| **Exercise 7.3** Translate into Greek using prepositions from Part 1:  a) I pursue virtue according to nature.     b) The logos is in the soul.     c) The sage acts out of virtue. |
+| --- |
+| **Answer** *a) ἀρετήν διώκω κατὰ φύσιν. · b) ὁ λόγος ἐν τῇ ψυχῇ ἐστιν. · c) ὁ σοφὸς ἐξ ἀρετῆς πράττει.* |
+
+| **Exercise 7.4 — Encheiridion §1 Partial Parse** Write out the Encheiridion §1 opening: 'Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν.'  For each word you have now learned, give the grammatical form. Mark with [?] any word you cannot yet parse. Translate as much as you can. |
+| --- |
+| **Answer** *Τῶν [gen. pl. of ὁ/ἡ/τό — partitive gen., **'**of the things**'**] · ὄντων [?] · τά [nom. pl. neut. art.] · μέν [particle, **'**on the one hand**'**] · ἐστιν [3sg. εἰμί] · ἐφ᾿ [ἐπί + elision] · ἡμῖν [dat. pl. of ἡμεῖς] · τά [nom. pl. neut. art.] · δέ [particle, **'**on the other hand**'**] · οὐκ [negation] · ἐφ᾿ ἡμῖν. Full parse of ὄντων in Session 14.* |
+
+**Session Quiz — 10 Questions**
+
+**1. The preposition ἐν only takes which case?**
+
+    A) Genitive only
+
+**    B) Dative only**
+
+    C) Accusative only
+
+    D) Genitive and dative
+
+*    ✓ B*
+
+**2. The phrase ἐφ****'**** ἡμῖν consists of:**
+
+    A) ἐπί + nominative
+
+    B) ἐκ + dative
+
+**    C) ἐπί + dative (with elision before rough breathing)**
+
+    D) πρός + genitive
+
+*    ✓ C*
+
+**3. In the phrase κατὰ φύσιν (according to nature), κατά takes the:**
+
+    A) Genitive
+
+    B) Dative
+
+**    C) Accusative**
+
+    D) Nominative
+
+*    ✓ C*
+
+**4. The genitive in ****'****ἡ ψυχή τοῦ σοφοῦ****'**** is:**
+
+    A) Genitive absolute
+
+    B) Objective genitive
+
+**    C) Genitive of possession — ****'****the soul of the wise man****'**
+
+    D) Partitive genitive
+
+*    ✓ C*
+
+**5. When ἐπί is followed by a rough breathing, the π changes to φ. This process is called:**
+
+**    A) Assimilation**
+
+    B) Elision
+
+    C) Crasis
+
+    D) Syncope
+
+*    ✓ A*
+
+**6. The preposition ὑπό + genitive expresses:**
+
+    A) Location below
+
+    B) Movement under
+
+**    C) Agency — ****'****by****'**** the agent in a passive construction**
+
+    D) Accompaniment
+
+*    ✓ C*
+
+**7. The phrase ἡ τῆς ἀρετῆς ἄσκησις uses the genitive as:**
+
+    A) Possessive genitive
+
+**    B) Objective genitive — ****'****the practice of virtue****'**** (virtue is what is practiced)**
+
+    C) Partitive genitive
+
+    D) Genitive absolute
+
+*    ✓ B*
+
+**8. ἐκ + genitive means:**
+
+    A) Into
+
+**    B) Out of / from**
+
+    C) Toward
+
+    D) With
+
+*    ✓ B*
+
+**9. The Stoic formula ἐφ****'**** ἡμῖν is significant because:**
+
+    A) It is the Stoic name for the cosmos
+
+**    B) It marks the boundary between what is in our power (virtue, assent) and what is not (externals)**
+
+    C) It refers to the Stoic political community
+
+    D) It describes the movement of pneuma through the body
+
+*    ✓ B*
+
+**10. The preposition σύν always takes the:**
+
+    A) Genitive
+
+    B) Accusative
+
+**    C) Dative**
+
+    D) Nominative
+
+*    ✓ C*
+
+| **SESSION 8** **The Dative Case** *Indirect object, possession, means · σύν and ἐν · Stoic dative patterns* |
+| --- |
+
+| **Learning Objectives** Identify and produce the dative in all three genders across first and second declension Use the dative for indirect object, possession, means/instrument, and manner Recognize the dative in prepositional phrases (ἐν, σύν, ἐπί + dative) Parse the dative in several key Stoic phrases |
+| --- |
+
+## **Part 1 — Dative Uses**
+
+The dative case does several jobs that in English require prepositions. Learning to recognize them is essential for reading Greek prose.
+
+**Dative Uses**
+
+| **Use** | **Greek Example** | **Literal** | **Natural English** |
+| --- | --- | --- | --- |
+| Indirect Object | λέγω σοι τὴν ἀλήθειαν. | I say to you the truth. | I tell you the truth. |
+| Dative of Possession | ἔστι μοι ψυχή. | There is to me a soul. | I have a soul. |
+| Dative of Means | λόγῳ κυβερνᾶται. | It is steered by reason. | It is governed by/with reason. |
+| Dative of Manner | σπουδῇ ἀσκεῖ. | He practices with zeal. | He practices zealously. |
+| Dative of Association | σὺν ἀρετῇ ζῇ. | He lives with virtue. | He lives virtuously. |
+
+| **Dative of possession** *Greek often expresses **'**I have X**'** as **'**X exists to me**'** — ἔστι μοι. Philosophers use this construction constantly: **'**ἔστι μοι ψυχή**'** = **'**I have a soul.**'** It frames possession differently than English — the thing is primary; the person is secondary.* |
+| --- |
+
+## **Part 2 — Dative Forms Review**
+
+**Dative Singular and Plural — Summary**
+
+| **Declension / Gender** | **Singular** | **Plural** |
+| --- | --- | --- |
+| 1st (fem.) — ψυχή | ψυχῇ | ψυχαῖς |
+| 2nd (masc.) — λόγος | λόγῳ | λόγοις |
+| 2nd (neut.) — ἔργον | ἔργῳ | ἔργοις |
+| Article fem. | τῇ | ταῖς |
+| Article masc./neut. | τῷ | τοῖς |
+
+### **Session 8 Exercises**
+
+| **Exercise 8.1** Identify the dative use in each sentence and translate:  a) λέγω σοι τὴν ἀλήθειαν.     b) ὁ κόσμος λόγῳ κυβερνᾶται.     c) ἔστι τῷ σοφῷ ἀρετή.     d) σπουδῇ τὴν φιλοσοφίαν ἀσκοῦμεν. |
+| --- |
+| **Answer** *a) Indirect object — **'**I tell you the truth.**'** · b) Dative of means — **'**The cosmos is governed by reason.**'** · c) Dative of possession — **'**The wise man has virtue.**'** (lit. **'**Virtue belongs to the wise man.**'**) · d) Dative of manner — **'**We practice philosophy zealously.**'* |
+
+| **Exercise 8.2** Convert each English sentence to Greek using the dative:  a) I have a soul. [dative of possession]     b) She practices with virtue. [σύν + dative]     c) We speak to the philosopher. [indirect object] |
+| --- |
+| **Answer** *a) ἔστι μοι ψυχή. · b) σὺν ἀρετῇ ἀσκεῖ. · c) λέγομεν τῷ φιλοσόφῳ.* |
+
+| **Exercise 8.3 — Stoic Datives** Parse every dative in the following passage (a paraphrase of Stoic doctrine):  'ὁ σοφὸς λόγῳ καὶ ἀρετῇ ζῇ. ἔστιν αὐτῷ ἐλευθερία καὶ εὐδαιμονία. σὺν τῇ φύσει πράττει.'  For each dative: give the case use, the noun's dictionary form, and its meaning. |
+| --- |
+| **Answer** *λόγῳ — dat. means, λόγος, **'**by/with reason**'** · ἀρετῇ — dat. means/association, ἀρετή, **'**by/with virtue**'** · αὐτῷ — dat. possession, αὐτός (pronoun, 3sg. masc.), **'**he has**'** · τῇ φύσει — dat. with σύν (prep.), φύσις, **'**with nature**'** — note: φύσις is 3rd decl. (preview)* |
+
+**Session Quiz — 10 Questions**
+
+**1. The dative of possession is expressed in Greek as:**
+
+    A) The noun in the genitive following the verb 'have'
+
+**    B) ****'****Exists to [person]****'**** — ἔστι + dative**
+
+    C) The accusative with a special possessive verb
+
+    D) The nominative of the possessed thing
+
+*    ✓ B*
+
+**2. In ****'****ὁ κόσμος λόγῳ κυβερνᾶται,****'**** the dative λόγῳ expresses:**
+
+    A) The indirect object
+
+    B) The manner of governing
+
+**    C) The means or instrument — ****'****by reason****'**
+
+    D) Possession
+
+*    ✓ C*
+
+**3. The dative singular feminine article is:**
+
+    A) τήν
+
+**    B) τῇ**
+
+    C) τῆς
+
+    D) τῶν
+
+*    ✓ B*
+
+**4. The preposition σύν takes which case?**
+
+    A) Genitive
+
+    B) Accusative
+
+**    C) Dative**
+
+    D) Nominative
+
+*    ✓ C*
+
+**5. The dative of manner in ****'****σπουδῇ ἀσκεῖ****'**** means:**
+
+    A) He practices with a student
+
+**    B) He practices zealously / with zeal**
+
+    C) He practices for zeal's sake
+
+    D) Zeal practices with him
+
+*    ✓ B*
+
+**6. The dative plural of ψυχή is:**
+
+    A) ψυχῶν
+
+    B) ψυχήν
+
+**    C) ψυχαῖς**
+
+    D) ψυχῇ
+
+*    ✓ C*
+
+**7. Why does Greek use the dative of possession (****'****X exists to me****'****) rather than a direct verb ****'****to have****'****?**
+
+    A) Greek has no verb meaning 'to have'
+
+    B) The dative construction is shorter
+
+**    C) It reflects a different conceptual framing — the thing is primary, the person secondary; possession is a relationship**
+
+    D) It is only used in poetry
+
+*    ✓ C*
+
+**8. In ****'****λέγω σοι τὴν ἀλήθειαν,****'**** σοι is:**
+
+    A) Dative of means
+
+    B) Dative of manner
+
+**    C) Indirect object — ****'****to you****'**
+
+    D) Dative of possession
+
+*    ✓ C*
+
+**9. The dative plural of λόγος is:**
+
+    A) λόγους
+
+**    B) λόγοις**
+
+    C) λόγων
+
+    D) λόγῳ
+
+*    ✓ B*
+
+**10. The Stoic phrase ****'****κατὰ φύσιν ζῆν****'**** (to live according to nature) uses κατά + accusative. If you wanted instead to say ****'****to live with nature****'**** using σύν, what case would φύσις take?**
+
+    A) Genitive: σὺν τῆς φύσεως
+
+**    B) Dative: σὺν τῇ φύσει**
+
+    C) Accusative: σὺν τὴν φύσιν
+
+    D) Nominative: σὺν ἡ φύσις
+
+*    ✓ B*
+
+| **SESSION 9** **The Accusative ****&**** Direct Object** *Transitive verbs · Motion · Extent · τὰ ἐφ**'** ἡμῖν as accusative target* |
+| --- |
+
+| **Learning Objectives** Use the accusative correctly as the direct object of transitive verbs Recognize the accusative of extent (space and time) Identify accusative uses with prepositions (εἰς, πρός, κατά, ἐπί + acc.) Translate complete subject-verb-object sentences with all three genders |
+| --- |
+
+## **Part 1 — Accusative Uses**
+
+**Accusative Uses**
+
+| **Use** | **Greek Example** | **Translation** |
+| --- | --- | --- |
+| Direct Object | διώκω τὴν ἀρετήν. | I pursue virtue. |
+| Accusative of Extent | τρεῖς ἡμέρας μένει. | He remains for three days. |
+| With εἰς (motion to) | εἰς τὸν κόσμον βλέπει. | He looks into/toward the cosmos. |
+| With πρός (toward) | πρὸς τὴν ἀλήθειαν ζητεῖ. | He seeks toward truth. |
+| With κατά (according) | κατὰ φύσιν πράττει. | He acts according to nature. |
+| Accusative subject of inf. | λέγει τὸν σοφὸν ἐλεύθερον εἶναι. | He says that the sage is free. |
+
+## **Part 2 — Accusative Forms Review**
+
+**Accusative Singular and Plural — Summary**
+
+| **Declension / Gender** | **Singular** | **Plural** |
+| --- | --- | --- |
+| 1st (fem.) — ψυχή | ψυχήν | ψυχάς |
+| 2nd (masc.) — λόγος | λόγον | λόγους |
+| 2nd (neut.) — ἔργον | ἔργον | ἔργα |
+| Article fem. | τήν | τάς |
+| Article masc. | τόν | τούς |
+| Article neut. | τό | τά |
+
+### **Session 9 Exercises**
+
+| **Exercise 9.1** Identify the case of each underlined form and its function. Translate the full sentence:  a) ὁ φιλόσοφος διώκει τὴν ἀρετήν.     b) πρὸς τὸν κόσμον βλέπομεν.     c) κατὰ φύσιν ζῇ ὁ σοφός.     d) λέγει τὸν νοῦν ἐλεύθερον εἶναι. |
+| --- |
+| **Answer** *a) ἀρετήν — acc. sg. fem., direct object — **'**The philosopher pursues virtue.**'** · b) κόσμον — acc. sg. masc. with πρός — **'**We look toward the cosmos.**'** · c) φύσιν — acc. sg. with κατά — **'**The wise man lives according to nature.**'** · d) νοῦν — acc. sg. masc., subject of inf. — **'**He says that the mind is free.**'* |
+
+| **Exercise 9.2** Build sentences. Use a transitive verb and put the noun in the accusative:  a) The sage seeks (ζητεῖ) truth.     b) We practice (ἀσκοῦμεν) philosophy.     c) I pursue (διώκω) virtue alone. |
+| --- |
+| **Answer** *a) ὁ σοφὸς ζητεῖ τὴν ἀλήθειαν. · b) ἀσκοῦμεν τὴν φιλοσοφίαν. · c) μόνην τὴν ἀρετὴν διώκω.* |
+
+| **Exercise 9.3 — Full Parse: Encheiridion §1 (Nearly Complete)** Write out: 'Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν.'  You now have all the grammar except one word (ὄντων). Parse everything else and attempt a complete translation. Identify what ὄντων might be given its context. |
+| --- |
+| **Answer** *Τῶν — gen. pl. (partitive) of the article (τό) · ὄντων — gen. pl. of participle of εἰμί — **'**of the things existing/that exist**'** [Session 14] · τά — nom. pl. neut. article · μέν — particle (**'**on the one hand**'**) · ἐστιν — 3sg. pres. εἰμί · ἐφ᾿ — ἐπί + elision · ἡμῖν — dat. pl. of ἡμεῖς · τά — nom. pl. neut. · δέ — particle (**'**but/on the other hand**'**) · οὐκ — negation · Full translation: **'**Of the things that exist, some are up to us, others are not up to us.**'* |
+
+**Session Quiz — 10 Questions**
+
+**1. The accusative case primarily marks:**
+
+    A) The subject of the sentence
+
+**    B) The direct object of a transitive verb**
+
+    C) The indirect object
+
+    D) Possession
+
+*    ✓ B*
+
+**2. The accusative singular masculine article is:**
+
+    A) τῷ
+
+**    B) τόν**
+
+    C) τοῦ
+
+    D) τό
+
+*    ✓ B*
+
+**3. In ****'****κατὰ φύσιν πράττει,****'**** the accusative φύσιν follows κατά meaning:**
+
+    A) Out of nature
+
+    B) Against nature
+
+**    C) According to nature**
+
+    D) Into nature
+
+*    ✓ C*
+
+**4. The neuter accusative plural of ἔργον is:**
+
+    A) ἔργους
+
+    B) ἔργων
+
+    C) ἔργοις
+
+**    D) ἔργα**
+
+*    ✓ D*
+
+**5. The ****'****accusative subject of infinitive****'**** construction in ****'****λέγει τὸν σοφὸν ἐλεύθερον εἶναι****'**** means:**
+
+    A) The sage says freedom.
+
+**    B) He says that the sage is free. (τόν σοφόν is the subject of the infinitive εἶναι)**
+
+    C) He says freedom to the sage.
+
+    D) The free sage says something.
+
+*    ✓ B*
+
+**6. The accusative of extent in ****'****τρεῖς ἡμέρας μένει****'**** expresses:**
+
+    A) Direction of movement
+
+**    B) How long he remains — a duration of time**
+
+    C) Where he remains
+
+    D) Why he remains
+
+*    ✓ B*
+
+**7. The preposition εἰς takes which case?**
+
+    A) Genitive
+
+    B) Dative
+
+**    C) Accusative**
+
+    D) Nominative
+
+*    ✓ C*
+
+**8. In ****'****ὁ φιλόσοφος διώκει τὴν ἀρετήν,****'**** what determines that ὁ φιλόσοφος is the subject and not τήν ἀρετήν?**
+
+    A) Word order — subject must come first
+
+**    B) The nominative case of ὁ φιλόσοφος vs. the accusative τήν ἀρετήν**
+
+    C) The definite article on both nouns
+
+    D) The verb ending -ει
+
+*    ✓ B*
+
+**9. The accusative feminine plural of ψυχή is:**
+
+    A) ψυχαί
+
+    B) ψυχῶν
+
+**    C) ψυχάς**
+
+    D) ψυχαῖς
+
+*    ✓ C*
+
+**10. After studying Sessions 7–9, you can now parse most of Encheiridion §1. The only word you cannot fully parse yet is ὄντων. Based on context, ὄντων is likely:**
+
+    A) A first declension noun
+
+**    B) A present participle of εἰμί in the genitive plural — ****'****of the things that exist****'**
+
+    C) A second declension adjective
+
+    D) A verb form in the imperfect tense
+
+*    ✓ B*
+
+| **SESSION 10** **MILESTONE — Encheiridion §1: First Reading** *Synthesis of Sessions 1–9 · First unaided reading of Epictetus in Greek* |
+| --- |
+
+| **Milestone Session** This session is a synthesis, not a new grammar lesson. No new paradigms are introduced. Everything you need to parse and translate Encheiridion §1 has been taught in Sessions 1–9. The goal is to attempt a sustained reading of primary Stoic text — imperfectly, but in the original Greek. |
+| --- |
+
+| **Learning Objectives** Read and translate Encheiridion §1 (first three sentences) with minimal support Parse every word in the passage — case, form, and function Explain the philosophical significance of each key term in context Identify one grammatical form (ὄντων) that will be fully explained in Session 14 |
+| --- |
+
+## **The Text — Epictetus, Encheiridion §1**
+
+| **Primary Text** *Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν. ἐφ᾿ ἡμῖν μὲν ὑπόληψις, ὁρμή, ὄρεξις, ἔκκλισις, καὶ ἁπλῶς ὅσα ἡμέτερα ἔργα· οὐκ ἐφ᾿ ἡμῖν δὲ σῶμα, κτῆσις, δόξα, ἀρχή, καὶ ἁπλῶς ὅσα οὐχ ἡμέτερα ἔργα.* |
+| --- |
+
+## **Word-by-Word Analysis**
+
+Work through each sentence. For every word: give the grammatical form, the lexical entry, and the meaning in context. An answer key follows each sentence.
+
+### **Sentence 1: Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν.**
+
+**Sentence 1 — Word-by-Word Parse**
+
+| **Word** | **Form** | **Dictionary Entry** | **Meaning in Context** |
+| --- | --- | --- | --- |
+| Τῶν | Gen. pl. masc./neut. article | ὁ/ἡ/τό | Of [the things] — partitive genitive |
+| ὄντων | Gen. pl. pres. ptcpl. of εἰμί | εἰμί | Of the things that exist — Session 14 |
+| τά | Nom. pl. neut. article | ὁ/ἡ/τό | Some [things] — with μέν, partitive |
+| μέν | Particle (contrast: μέν...δέ) | μέν | On the one hand / some |
+| ἐστιν | 3sg. pres. ind. of εἰμί | εἰμί | are / is |
+| ἐφ᾿ | ἐπί + elision (rough breathing) | ἐπί | upon / in the power of |
+| ἡμῖν | Dat. pl. of ἡμεῖς (1st pers. pron.) | ἡμεῖς | us / to us / in our case |
+| τά | Nom. pl. neut. article | ὁ/ἡ/τό | Others [things] |
+| δέ | Particle (contrast with μέν) | δέ | But / on the other hand |
+| οὐκ | Negation (before smooth breathing) | οὐ | not |
+| ἐφ᾿ ἡμῖν | Repeated prepositional phrase | — | up to us (same as above) |
+
+| **Translation of Sentence 1** *Of the things that exist, some are up to us, others are not up to us.* |
+| --- |
+
+### **Sentence 2: ἐφ᾿ ἡμῖν μὲν ὑπόληψις, ὁρμή, ὄρεξις, ἔκκλισις, καὶ ἁπλῶς ὅσα ἡμέτερα ἔργα·**
+
+**Sentence 2 — Vocabulary ****&**** Parse**
+
+| **Word** | **Form** | **English** |
+| --- | --- | --- |
+| ὑπόληψις | Nom. sg. fem. — 3rd decl. (Session 13) | judgement, opinion (what we think about impressions) |
+| ὁρμή | Nom. sg. fem. — 1st decl. | impulse, drive (the movement toward action) |
+| ὄρεξις | Nom. sg. fem. — 3rd decl. | desire, appetite (reaching out toward what seems good) |
+| ἔκκλισις | Nom. sg. fem. — 3rd decl. | aversion, avoidance (the negative counterpart to desire) |
+| ἁπλῶς | Adverb | simply, in a word (rhetorical summation) |
+| ὅσα | Nom./acc. pl. neut. of ὅσος (rel. pron.) | as many as, whatever — 'all that' |
+| ἡμέτερα | Nom./acc. pl. neut. of ἡμέτερος (adj.) | our own — ἡμέτερα ἔργα = our own works/deeds/functions |
+| ἔργα | Nom. pl. neut. — 2nd decl. — ἔργον | deeds, functions, works (neut. pl. nom. = neut. pl. acc.) |
+
+| **Translation of Sentence 2** *Up to us are: judgement, impulse, desire, aversion — and in a word, whatever are our own functions.* |
+| --- |
+
+| **Philosophical note on Sentence 2** *The four things Epictetus lists — ὑπόληψις, ὁρμή, ὄρεξις, ἔκκλισις — are the four acts of the hēgemonikon (ruling faculty). Judgement and desire are directed at what seems good; impulse and aversion produce action. Epictetus**'**s claim: these alone are up to us. Everything else follows.* |
+| --- |
+
+### **Sentence 3: οὐκ ἐφ᾿ ἡμῖν δὲ σῶμα, κτῆσις, δόξα, ἀρχή, καὶ ἁπλῶς ὅσα οὐχ ἡμέτερα ἔργα.**
+
+**Sentence 3 — Vocabulary**
+
+| **Word** | **Form** | **English** | **Philosophical Note** |
+| --- | --- | --- | --- |
+| σῶμα | Nom. sg. neut. — 3rd decl. | body | The body — health, beauty, strength — all externals |
+| κτῆσις | Nom. sg. fem. — 3rd decl. | property, possessions | Wealth and material goods — not eph' hēmin |
+| δόξα | Nom. sg. fem. — 1st decl. | reputation, glory, opinion | What others think of you — external, uncontrollable |
+| ἀρχή | Nom. sg. fem. — 1st decl. | office, rule, beginning | Political power — Seneca and Marcus both tested this |
+| οὐχ | Negation before rough breathing | not (οὐ + rough breathing → οὐχ) | Phonological variation of οὐ |
+
+| **Translation of Sentence 3** *Not up to us are: body, property, reputation, political office — and in a word, whatever are not our own functions.* |
+| --- |
+
+## **Full Translation**
+
+| *Of the things that exist, some are up to us, others are not up to us. Up to us are judgement, impulse, desire, aversion — and in a word, whatever are our own functions. Not up to us are body, property, reputation, political office — and in a word, whatever are not our own functions.* |
+| --- |
+
+### **Session 10 Exercises**
+
+| **Exercise 10.1 — Close Reading** Epictetus lists four things that are 'up to us': ὑπόληψις (judgement), ὁρμή (impulse), ὄρεξις (desire), ἔκκλισις (aversion).  a) What do these four things have in common — what is the general category Epictetus is pointing to? b) He lists four things 'not up to us': σῶμα, κτῆσις, δόξα, ἀρχή. What do these have in common? c) Is this distinction intuitive or counterintuitive? What resists it? |
+| --- |
+| **Answer** *a) All four are activities of the rational soul — the hēgemonikon. They are internal, psychological acts over which the agent has (in principle) direct authority. b) All are external to the soul — body states, economic status, reputation, political power. They depend on circumstances outside the agent**'**s rational control. c) The distinction is counterintuitive because we usually think of our body as **'**us.**'** What resists it: the strong identification most people have with their physical condition, status, and what others think of them.* |
+
+| **Exercise 10.2 — Grammar Audit** List every word in §1 that you parsed correctly without the answer key. List every word you needed help with. Which grammatical forms do you most need to review before Session 11? |
+| --- |
+| **Answer** *[Open — personal audit. Common difficulties: ὄντων (participle — Session 14), ὑπόληψις/ὄρεξις/ἔκκλισις (3rd declension — Session 13), the correlative pronoun ὅσα. This exercise calibrates the student**'**s own understanding.]* |
+
+| **Exercise 10.3 — Memorization** Memorize the first sentence: 'Τῶν ὄντων τὰ μέν ἐστιν ἐφ᾿ ἡμῖν, τὰ δὲ οὐκ ἐφ᾿ ἡμῖν.' Write it out from memory three times. Then write the English translation from memory. This sentence should become automatic — it is the key to the course. |
+| --- |
+| **Answer** *[Drill exercise — no single answer. The sentence should be committed to memory by end of Session 10. Students report it in Session 11 from memory without prompting.]* |
+
+| **Exercise 10.4 — Philosophical Application** Epictetus wrote Encheiridion §1 as a slave. His master Epaphroditus had physically tortured him. Write 150–200 words on how this biographical fact changes (or doesn't change) your reading of ἐφ᾿ ἡμῖν. Is the claim more or less credible given who wrote it? |
+| --- |
+| **Answer** *[Open response. Expected engagement: The biography lends the text a weight that abstract philosophical propositions lack. Epictetus is not claiming that suffering doesn**'**t exist — he is claiming that what is **'**up to us**'** remains intact regardless. Counter-consideration: does the victim of extreme violence truly retain inner freedom? The Proctor should probe this hard.]* |
+
+**Session Quiz — 10 Questions**
+
+**1. The opening words ****'****Τῶν ὄντων****'**** use a genitive that is:**
+
+    A) Genitive of possession
+
+**    B) Partitive genitive — ****'****of the things [that exist], some...****'**
+
+    C) Genitive absolute
+
+    D) Objective genitive
+
+*    ✓ B*
+
+**2. The μέν...δέ construction in §1 signals:**
+
+    A) Negation
+
+    B) A question and answer
+
+**    C) A contrast — ****'****on the one hand...on the other****'**
+
+    D) A temporal sequence
+
+*    ✓ C*
+
+**3. The word ὄντων (which you cannot yet fully parse) is flagged as:**
+
+    A) An irregular 2nd declension noun
+
+**    B) A present participle of εἰμί in the genitive plural — ****'****of the things that exist****'**
+
+    C) A 1st declension adjective
+
+    D) A perfect tense verb form
+
+*    ✓ B*
+
+**4. The four things Epictetus lists as ἐφ****'**** ἡμῖν are:**
+
+    A) Body, property, reputation, office
+
+    B) Cosmos, logos, nature, virtue
+
+**    C) Judgement, impulse, desire, aversion**
+
+    D) Wisdom, justice, courage, moderation
+
+*    ✓ C*
+
+**5. The elision in ἐφ᾿ ἡμῖν produces φ instead of π because:**
+
+    A) Phi is easier to pronounce than pi
+
+**    B) Pi becomes phi before a rough breathing — a process of aspiration assimilation**
+
+    C) It is an irregular form of ἐπί
+
+    D) The ι in ἡμῖν triggers the change
+
+*    ✓ B*
+
+**6. The phrase ἡμέτερα ἔργα means:**
+
+    A) The good deeds
+
+**    B) Our own functions / what belongs to us**
+
+    C) The things we fear
+
+    D) The things the sage desires
+
+*    ✓ B*
+
+**7. Why is δόξα (reputation) listed among things NOT up to us?**
+
+    A) Because reputation is unimportant
+
+**    B) Because what others think of us is formed in their minds, not ours — we cannot directly control it**
+
+    C) Because the Stoics thought reputation was bad
+
+    D) Because Epictetus personally had a bad reputation
+
+*    ✓ B*
+
+**8. The negation οὐχ (instead of οὐκ) in Sentence 3 appears because:**
+
+    A) It is a different word with a different meaning
+
+**    B) Οὐ changes to οὐχ before a rough breathing (ἡ-)**
+
+    C) It indicates a stronger negation
+
+    D) It is an error in the text
+
+*    ✓ B*
+
+**9. The word ὁρμή (impulse, drive) is philosophically connected to which Stoic concept?**
+
+    A) The indifferents (adiaphora)
+
+**    B) The impulse toward action — hormē is what produces movement from assent, the causal chain from impression to deed**
+
+    C) The Sage's knowledge
+
+    D) The physical constitution of pneuma
+
+*    ✓ B*
+
+**10. Having completed Session 10, a student has successfully read:**
+
+    A) A summary of Epictetus's philosophy
+
+    B) The first sentence of the Encheiridion in English translation
+
+**    C) The first three sentences of the Encheiridion in the original Greek, with full parsing**
+
+    D) All 53 sections of the Encheiridion
+
+*    ✓ C*
+
+# **Unit I Complete — What Comes Next**
+
+Sessions 1–10 have given students the foundational grammar of ancient Greek and a first sustained encounter with primary Stoic text. The Unit I grammar toolkit:
+
+- Alphabet, breathing marks, diacriticals (Session 1)
+
+- First and second declension nouns — all five cases, singular and plural (Sessions 2–3)
+
+- Present active indicative verb system — all six persons; εἰμί in full (Session 4)
+
+- 2-1-2 adjective agreement — attributive and predicative positions (Session 5)
+
+- Predicate adjective and copula constructions (Session 6)
+
+- Prepositions and case government — 8 essential prepositions (Session 7)
+
+- Dative case — all uses including possession and means (Session 8)
+
+- Accusative case — all uses including extent and accusative + infinitive (Session 9)
+
+- First reading of Encheiridion §1 — complete parse and translation (Session 10)
+
+## **Unit II Preview — Sessions 11–20**
+
+Unit II builds the verb system: middle and passive voice, the imperfect tense, third declension nouns, participles, and the subjunctive. Sessions 11–15 will focus on the verb; Session 15 will return to Encheiridion §1 with a deeper parse using the new grammar (including ὄντων — the present participle of εἰμί).
+
+*GREK 101  ·  Unit I: Sessions 1–10  ·  Arete Academy  ·  May 2026*
