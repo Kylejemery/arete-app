@@ -141,6 +141,64 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Study the Originals */}
+      <section className="border-t border-navy-border px-6 py-20 max-w-7xl mx-auto">
+        <div className="text-center mb-14">
+          <p className="font-serif text-gold/70 text-xs tracking-[0.3em] uppercase mb-3">IV.</p>
+          <h2 className="font-serif text-3xl md:text-4xl text-cream mb-4">Study the Originals</h2>
+          <p className="text-cream/40 text-sm max-w-xl mx-auto leading-relaxed">
+            Most Stoicism courses hand you a translation and call it philosophy.
+            Arete Academy goes further.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {/* Ancient Greek */}
+          <div className="border-t-2 border-gold bg-navy-card rounded-lg p-8">
+            <div className="text-gold font-serif text-3xl mb-4 leading-none">Α</div>
+            <h3 className="font-serif text-xl text-cream mb-3">Ancient Greek</h3>
+            <p className="text-cream/50 text-sm leading-relaxed mb-6">
+              Chrysippus wrote in Greek. Epictetus lectured in Greek. The Discourses you read are
+              already one step removed. GREK 101 begins in Year 1 alongside your philosophy
+              courses — building toward the ability to read primary Stoic texts in the original.
+            </p>
+            <span className="inline-block text-gold/80 text-xs tracking-widest uppercase border border-gold/40 rounded-full px-3 py-1">
+              Coming — Year 1
+            </span>
+          </div>
+
+          {/* Latin */}
+          <div className="border-t-2 border-gold bg-navy-card rounded-lg p-8">
+            <div className="text-gold font-serif text-3xl mb-4 leading-none">I·II·III</div>
+            <h3 className="font-serif text-xl text-cream mb-3">Latin</h3>
+            <p className="text-cream/50 text-sm leading-relaxed mb-6">
+              Marcus Aurelius wrote the Meditations in Greek, but Seneca wrote in Latin — and
+              Latin shaped the entire transmission of Stoic ideas into the Western tradition.
+              LATN 101 runs parallel to GREK 101, giving you access to Seneca, Cicero, and the
+              Roman Stoics on their own terms.
+            </p>
+            <span className="inline-block text-gold/80 text-xs tracking-widest uppercase border border-gold/40 rounded-full px-3 py-1">
+              Coming — Year 1
+            </span>
+          </div>
+
+          {/* Stoic Logic */}
+          <div className="border-t-2 border-gold bg-navy-card rounded-lg p-8">
+            <div className="text-gold font-serif text-3xl mb-4 leading-none">⊢</div>
+            <h3 className="font-serif text-xl text-cream mb-3">Stoic Logic</h3>
+            <p className="text-cream/50 text-sm leading-relaxed mb-6">
+              The Stoics built the first complete propositional logic system — 300 years before
+              Frege. PHIL 705 covers Chrysippus&rsquo;s five indemonstrable argument forms, the
+              Stoic theory of the lekton, and the logic of impressions and assent. Most Stoicism
+              courses skip this entirely. We don&rsquo;t.
+            </p>
+            <span className="inline-block text-gold/80 text-xs tracking-widest uppercase border border-gold/40 rounded-full px-3 py-1">
+              PHIL 705 — Year 2
+            </span>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Banner */}
       <section className="border-t border-navy-border text-center px-6 py-24">
         <div className="gold-rule mb-10" />

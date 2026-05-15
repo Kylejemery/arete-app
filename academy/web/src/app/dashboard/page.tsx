@@ -169,6 +169,93 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Language & Logic Tracks */}
+      <div className="mb-8">
+        <div className="flex items-center gap-4 mb-3">
+          <CardLabel>Language &amp; Logic Tracks</CardLabel>
+          <div className="flex-1 h-px bg-academy-border" />
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* GREK 101 */}
+          <Card className="opacity-50 border-t-2 border-t-academy-gold">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                    GREK 101
+                  </p>
+                  <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                    Language Track
+                  </span>
+                </div>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  Ancient Greek for Philosophers
+                </p>
+                <p className="text-academy-muted text-xs">
+                  Read Epictetus and Chrysippus in the original. Year 1, parallel track.
+                </p>
+                <p className="text-academy-muted text-xs mt-1.5 italic">Coming Soon</p>
+              </div>
+              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </Card>
+
+          {/* LATN 101 */}
+          <Card className="opacity-50 border-t-2 border-t-academy-gold">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                    LATN 101
+                  </p>
+                  <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                    Language Track
+                  </span>
+                </div>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  Latin for Philosophers
+                </p>
+                <p className="text-academy-muted text-xs">
+                  Read Seneca and Cicero without a translator between you and the text. Year 1, parallel track.
+                </p>
+                <p className="text-academy-muted text-xs mt-1.5 italic">Coming Soon</p>
+              </div>
+              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </Card>
+
+          {/* PHIL 705 — Stoic Logic */}
+          <Card className="opacity-50 border-t-2 border-t-academy-gold md:col-span-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                    PHIL 705
+                  </p>
+                  <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                    Logic Track
+                  </span>
+                </div>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  Stoic Logic and Epistemology
+                </p>
+                <p className="text-academy-muted text-xs">
+                  Chrysippus&apos;s propositional logic, the theory of impressions, and the Stoic epistemology of assent. Year 2.
+                </p>
+                <p className="text-academy-muted text-xs mt-1.5 italic">Unlocks after PHIL 704</p>
+              </div>
+              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+          </Card>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-6">
         {/* Recent Sessions */}
         <div>
