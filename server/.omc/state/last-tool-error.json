@@ -1,0 +1,7 @@
+{
+  "tool_name": "PowerShell",
+  "tool_input_preview": "{\"command\":\"cd \\\"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\server\\\"; git commit -m \\\"$(cat <<'EOF'\\nfeat: add RAG retrieval module and wire into Socratic Proctor agent\\n\\n- Add server/retrieval.js with getRel...",
+  "error": "Exit code 1\nAt line:1 char:65\r\n+ ... d \"C:\\Users\\kjemery\\Arete\\Arete\\server\"; git commit -m \"$(cat <<'EOF'\r\n+                                                                    ~\r\nMissing file specification after redirection operator.\r\nAt line:1 char:64\r\n+ ... d \"C:\\Users\\kjemery\\Arete\\Arete\\server\"; git commit -m \"$(cat <<'EOF'\r\n+                                                                   ~\r\nThe '<' operator is reserved for future use.\r\nAt line:1 char:65\r\n+ ... d \"C:\\Users\\kjemery\\Arete\\...",
+  "timestamp": "2026-05-12T13:53:34.180Z",
+  "retry_count": 1
+}

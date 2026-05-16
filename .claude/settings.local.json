@@ -42,7 +42,23 @@
       "Bash(npx react-native *)",
       "Bash(del \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\lib\\\\purchases-mock.ts\")",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "mcp__a6244408-a83e-4651-9b5f-92c59c412136__list_tables",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\server\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "Bash(git commit *)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('C:/Users/kjemery/Arete/Arete/app.json', 'utf8'\\)\\); console.log\\('valid JSON'\\)\")",
+      "Bash(ls \"C:\\\\Users\\\\kjemery\")",
+      "Bash(python -c \"from docx import Document; d = Document\\('academy/web/src/data/reference/GREK_101_Sessions_2_10.docx'\\); [print\\(p.text\\) for p in d.paragraphs]\")",
+      "Bash(python -m pip install python-docx --quiet)",
+      "Bash(python -c \"from docx import Document; d = Document\\('academy/web/src/data/reference/GREK_101_Sessions_2_10.docx'\\); print\\('PARAS:', len\\(d.paragraphs\\)\\); print\\('TABLES:', len\\(d.tables\\)\\)\")",
+      "Bash(mkdir -p '/c/Users/kjemery/Arete/Arete/academy/web/src/data/reference' && cp '/c/Users/kjemery/Downloads/GREK_101_Sessions_2_10.txt' '/c/Users/kjemery/Arete/Arete/academy/web/src/data/reference/')",
+      "Bash(cd '/c/Users/kjemery/Arete/Arete/academy/web' && cat src/lib/agents.ts 2>/dev/null | head -60; echo \"---TYPES---\"; grep -n 'AgentId\\\\|language-drills\\\\|socratic-proctor' src/types/index.ts 2>/dev/null | head -20)",
+      "Bash(sed -n '60,120p' src/lib/agents.ts)",
+      "Bash(sed -n '30,50p' src/types/index.ts)",
+      "Bash(echo \"TSC_EXIT=$?\")",
+      "Bash(echo \"REAL_TSC_EXIT=$?\")",
+      "Bash(echo \"POSTREBASE_TSC=$?\")"
     ]
   }
 }

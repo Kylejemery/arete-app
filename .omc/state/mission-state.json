@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-03T01:04:39.339Z",
+  "updatedAt": "2026-05-13T14:00:09.040Z",
   "missions": [
     {
       "id": "session:d56756c9-c1e7-4a1e-ac9d-0a4a1369f8ba:none",
@@ -260,6 +260,62 @@
           "agent": "Explore:a835601",
           "detail": "completed",
           "sourceKey": "session-stop:a835601d38c0ed97b"
+        }
+      ]
+    },
+    {
+      "id": "session:64a50001-45bc-43a3-9700-a765fc2cfd58:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-05-11T19:37:41.587Z",
+      "updatedAt": "2026-05-13T14:00:09.040Z",
+      "status": "done",
+      "workerCount": 1,
+      "taskCounts": {
+        "total": 1,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 0,
+        "completed": 1,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "Explore:abb8973",
+          "role": "Explore",
+          "ownership": "abb8973e2a15ba4ac",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-05-13T14:00:09.040Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:abb8973e2a15ba4ac:2026-05-11T19:37:41.587Z",
+          "at": "2026-05-11T19:37:41.587Z",
+          "kind": "update",
+          "agent": "Explore:abb8973",
+          "detail": "started Explore:abb8973",
+          "sourceKey": "session-start:abb8973e2a15ba4ac"
+        },
+        {
+          "id": "session-stop:abb8973e2a15ba4ac:2026-05-11T19:41:53.663Z",
+          "at": "2026-05-11T19:41:53.663Z",
+          "kind": "completion",
+          "agent": "Explore:abb8973",
+          "detail": "completed",
+          "sourceKey": "session-stop:abb8973e2a15ba4ac"
+        },
+        {
+          "id": "session-stop:a11f4c90afe1d4588:2026-05-13T14:00:09.040Z",
+          "at": "2026-05-13T14:00:09.040Z",
+          "kind": "completion",
+          "agent": "Explore:abb8973",
+          "detail": "completed",
+          "sourceKey": "session-stop:a11f4c90afe1d4588"
         }
       ]
     }
