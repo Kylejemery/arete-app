@@ -176,31 +176,26 @@ export default function DashboardPage() {
           <div className="flex-1 h-px bg-academy-border" />
         </div>
         <div className="grid md:grid-cols-2 gap-4">
-          {/* GREK 101 */}
-          <Card className="opacity-50 border-t-2 border-t-academy-gold">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
-                    GREK 101
-                  </p>
-                  <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
-                    Language Track
-                  </span>
-                </div>
-                <p className="font-serif text-academy-text text-base mb-1">
-                  Ancient Greek for Philosophers
+          {/* GREK 101 — available */}
+          <Link href="/dashboard/courses/grek-101">
+            <Card className="hover:border-academy-gold transition-colors cursor-pointer border-t-2 border-t-academy-gold">
+              <div className="flex items-center gap-2 mb-1">
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                  GREK 101
                 </p>
-                <p className="text-academy-muted text-xs">
-                  Read Epictetus and Chrysippus in the original. Year 1, parallel track.
-                </p>
-                <p className="text-academy-muted text-xs mt-1.5 italic">Coming Soon</p>
+                <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                  Language Track
+                </span>
               </div>
-              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-          </Card>
+              <p className="font-serif text-academy-text text-base mb-1">
+                Ancient Greek for Philosophers
+              </p>
+              <p className="text-academy-muted text-xs">
+                Read Epictetus and Chrysippus in the original. Year 1, parallel track.
+              </p>
+              <p className="text-academy-gold text-xs font-semibold mt-3">Begin GREK 101 &rarr;</p>
+            </Card>
+          </Link>
 
           {/* LATN 101 */}
           <Card className="opacity-50 border-t-2 border-t-academy-gold">
