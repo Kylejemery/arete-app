@@ -10,6 +10,7 @@ import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import { SEMINARS } from '@/data/seminars';
+import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -368,9 +369,507 @@ function DragHandle({ onDelta, onDragEnd }: { onDelta: (d: number) => void; onDr
   );
 }
 
+// ── Language Course Registry ──────────────────────────────────────────────────
+
+interface LanguageCourseMeta {
+  code: string;
+  shortTitle: string; // \n-separated for two-line display
+  sessions: LanguageSession[];
+}
+
+const LANGUAGE_COURSES: Record<string, LanguageCourseMeta> = {
+  'grek-101': {
+    code: 'GREK 101',
+    shortTitle: 'Ancient Greek\nfor Philosophers',
+    sessions: GREK_101_SESSIONS,
+  },
+};
+
+// ── Language Course Components ────────────────────────────────────────────────
+
+const GREEK_RE = /[Ͱ-Ͽἀ-῿]/;
+const DM_MONO = 'DM Mono, monospace';
+
+function GoldStar() {
+  return (
+    <svg className="w-3.5 h-3.5 text-academy-gold flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+      <path d="M10 1.5l2.6 5.27 5.82.846-4.21 4.105.994 5.796L10 14.85l-5.204 2.736.994-5.796L1.58 7.616l5.82-.846L10 1.5z" />
+    </svg>
+  );
+}
+
+function ParadigmTable({ paradigm }: { paradigm: NonNullable<LanguageSession['parts'][number]['paradigms']>[number] }) {
+  return (
+    <div className="my-6">
+      <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">{paradigm.title}</p>
+      <div className="overflow-x-auto rounded-lg border border-academy-border">
+        <table className="w-full text-sm border-collapse min-w-[480px]">
+          <thead>
+            <tr style={{ background: '#0C1420' }}>
+              {paradigm.headers.map((h, i) => (
+                <th key={i} className="text-left text-white font-semibold px-3 py-2 border-b border-academy-border whitespace-nowrap">
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paradigm.rows.map((row, ri) => (
+              <tr key={ri} style={{ background: ri % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                {row.map((cell, ci) => (
+                  <td
+                    key={ci}
+                    className="px-3 py-2 border-b border-academy-border/40 text-academy-text align-top"
+                    style={GREEK_RE.test(cell) ? { fontFamily: DM_MONO } : undefined}
+                  >
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="bg-academy-card border border-academy-border rounded-xl p-5 mb-3">
+      <div className="flex items-start gap-3">
+        <span className="text-academy-gold text-xs font-mono font-semibold mt-0.5 flex-shrink-0">{ex.number}</span>
+        <p className="text-academy-text text-sm leading-relaxed flex-1">{ex.prompt}</p>
+      </div>
+      {ex.answer && (
+        <div className="mt-3 pl-8">
+          <button
+            onClick={() => setShown(s => !s)}
+            className="text-academy-gold text-xs font-semibold uppercase tracking-widest hover:opacity-80 transition-opacity"
+          >
+            {shown ? '▲ Hide Answer' : '▼ Show Answer'}
+          </button>
+          {shown && (
+            <p className="mt-2 text-academy-muted text-sm leading-relaxed border-l-2 border-academy-gold/40 pl-3">
+              {ex.answer}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuizSection({ quiz }: { quiz: LanguageSession['quiz'] }) {
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const score = quiz.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0);
+
+  return (
+    <section className="mt-10">
+      <h2 className="font-serif text-xl text-academy-text mb-1">Session Quiz</h2>
+      <p className="text-academy-muted text-xs mb-5">{quiz.length} questions · select one answer each</p>
+      <div className="space-y-5">
+        {quiz.map((q, qi) => (
+          <div key={qi}>
+            <p className="text-academy-text text-sm font-medium mb-2">
+              <span className="text-academy-gold font-mono mr-2">{qi + 1}.</span>
+              {q.question}
+            </p>
+            <div className="space-y-1.5 pl-6">
+              {q.options.map((opt, oi) => {
+                const chosen = answers[qi] === oi;
+                const isCorrect = oi === q.correct;
+                let cls = 'border-academy-border text-academy-muted';
+                if (submitted && isCorrect) cls = 'border-green-500/60 bg-green-500/10 text-green-300';
+                else if (submitted && chosen && !isCorrect) cls = 'border-red-500/50 bg-red-500/10 text-red-300';
+                else if (chosen) cls = 'border-academy-gold/50 text-academy-text';
+                return (
+                  <label
+                    key={oi}
+                    className={`flex items-start gap-2.5 px-3 py-2 rounded-lg border text-sm cursor-pointer transition-colors ${cls}`}
+                  >
+                    <input
+                      type="radio"
+                      name={`q-${qi}`}
+                      checked={chosen}
+                      disabled={submitted}
+                      onChange={() => setAnswers(a => ({ ...a, [qi]: oi }))}
+                      className="mt-0.5 accent-academy-gold"
+                    />
+                    <span style={GREEK_RE.test(opt) ? { fontFamily: DM_MONO } : undefined}>{opt}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 flex items-center gap-4">
+        {!submitted ? (
+          <button
+            onClick={() => setSubmitted(true)}
+            disabled={Object.keys(answers).length < quiz.length}
+            className="bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Submit Quiz
+          </button>
+        ) : (
+          <>
+            <p className="text-academy-text text-sm font-semibold">
+              Score: <span className="text-academy-gold">{score} / {quiz.length}</span>
+            </p>
+            <button
+              onClick={() => { setSubmitted(false); setAnswers({}); }}
+              className="text-academy-muted text-xs underline hover:text-academy-text"
+            >
+              Retake
+            </button>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function LanguageLessonContent({ session }: { session: LanguageSession }) {
+  return (
+    <article>
+      <div className="flex items-center gap-2 mb-2">
+        <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+          Session {session.id}
+        </p>
+        {session.isMilestone && (
+          <span className="flex items-center gap-1 text-academy-gold text-xs font-semibold uppercase tracking-widest">
+            <GoldStar /> Milestone
+          </span>
+        )}
+      </div>
+      <h1 className="font-serif text-3xl text-academy-text mb-1 leading-tight">{session.title}</h1>
+      <p className="text-academy-muted text-sm italic mb-8">{session.subtitle}</p>
+
+      {/* Learning objectives — teal callout box */}
+      <div
+        className="rounded-xl p-5 mb-10"
+        style={{ background: 'rgba(45,156,142,0.08)', border: '1px solid rgba(45,156,142,0.3)' }}
+      >
+        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#2D9C8E' }}>
+          Learning Objectives
+        </p>
+        <ol className="space-y-2">
+          {session.objectives.map((o, i) => (
+            <li key={i} className="flex items-start gap-3 text-academy-text text-sm leading-relaxed">
+              <span className="font-mono text-xs mt-0.5 flex-shrink-0" style={{ color: '#2D9C8E' }}>
+                {i + 1}.
+              </span>
+              <span>{o}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Lesson parts */}
+      {session.parts.map((part, pi) => (
+        <section key={pi} className="mb-10">
+          <h2 className="font-serif text-xl text-academy-text mb-3">{part.heading}</h2>
+          <p className="text-academy-muted text-sm leading-relaxed whitespace-pre-line">{part.body}</p>
+          {part.paradigms?.map((p, idx) => <ParadigmTable key={idx} paradigm={p} />)}
+          {part.callout && (
+            <div
+              className="rounded-xl p-5 mt-5"
+              style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.25)' }}
+            >
+              {part.callout.label && (
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">
+                  {part.callout.label}
+                </p>
+              )}
+              <p
+                className="text-academy-text text-sm leading-relaxed italic"
+                style={GREEK_RE.test(part.callout.text) ? { fontFamily: DM_MONO } : undefined}
+              >
+                {part.callout.text}
+              </p>
+            </div>
+          )}
+        </section>
+      ))}
+
+      {/* Exercises */}
+      <section className="mb-4">
+        <h2 className="font-serif text-xl text-academy-text mb-1">Exercises</h2>
+        <p className="text-academy-muted text-xs mb-5 italic">
+          Attempt each before revealing the answer.
+        </p>
+        {session.exercises.map(ex => <ExerciseCard key={ex.number} ex={ex} />)}
+      </section>
+
+      {/* Quiz */}
+      <QuizSection quiz={session.quiz} />
+    </article>
+  );
+}
+
+interface DrillMsg { role: 'user' | 'assistant'; content: string }
+
+function DrillChatPanel({ courseId, width }: { courseId: string; width: number }) {
+  const [messages, setMessages] = useState<DrillMsg[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const send = async () => {
+    if (!input.trim() || isLoading) return;
+    const next: DrillMsg[] = [...messages, { role: 'user', content: input.trim() }];
+    setMessages(next);
+    setInput('');
+    setIsLoading(true);
+    try {
+      let userId: string | undefined;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
+      } catch {}
+      const res = await fetch(`${API_BASE}/api/academy/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_type: 'language-drills',
+          course_id: courseId,
+          user_id: userId,
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = await res.json();
+      const text =
+        (typeof data.content === 'string' ? data.content : data.content?.[0]?.text) ??
+        data.response ??
+        'The drill room is temporarily unavailable.';
+      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'The drill room is temporarily unavailable. Please try again.' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
+      style={{ width }}
+    >
+      <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">
+        <div className="flex items-center gap-2.5 mb-0.5">
+          <span className="text-academy-gold font-serif text-base leading-none">Δ</span>
+          <h3 className="font-serif text-academy-text text-base">The Drill Agent</h3>
+        </div>
+        <p className="text-academy-muted text-xs italic">Rigorous, patient. Attempt the exercise first.</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center px-6">
+            <p className="text-4xl mb-4">⚱️</p>
+            <p className="text-academy-muted text-xs leading-relaxed italic max-w-[220px]">
+              Bring a paradigm to drill, an exercise to check, or a grammar question. I correct — I do not give answers before you attempt.
+            </p>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                m.role === 'user'
+                  ? 'bg-academy-gold/15 text-academy-text border border-academy-gold/25'
+                  : 'bg-academy-card text-academy-muted border border-academy-border'
+              }`}
+            >
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-academy-card border border-academy-border rounded-xl px-4 py-2.5 text-academy-muted text-sm italic">
+              The Drill Agent is considering…
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">
+        <textarea
+          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
+          rows={2}
+          placeholder="Submit an attempt or ask a grammar question…"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+        />
+        <button
+          onClick={send}
+          disabled={isLoading || !input.trim()}
+          className="self-end bg-academy-gold text-navy font-semibold rounded-lg px-4 py-2.5 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LanguageCoursePage({ courseId }: { courseId: string }) {
+  const router = useRouter();
+  const meta = LANGUAGE_COURSES[courseId];
+  const [activeSessionId, setActiveSessionId] = useState(1);
+  const [leftWidth, setLeftWidth] = useState(220);
+  const [rightWidth, setRightWidth] = useState(380);
+  const [initializing, setInitializing] = useState(true);
+  const widthsRef = useRef({ leftWidth, rightWidth });
+  widthsRef.current = { leftWidth, rightWidth };
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/login'); return; }
+      setInitializing(false);
+    }
+    init();
+  }, [router]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('academy-panel-widths');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.leftWidth) setLeftWidth(Math.min(320, Math.max(160, parsed.leftWidth)));
+        if (parsed.rightWidth) setRightWidth(Math.min(560, Math.max(300, parsed.rightWidth)));
+      }
+    } catch {}
+  }, []);
+
+  // Sequential lock: session 1 open, each subsequent unlocks after the prior.
+  const sessionItems = meta.sessions.map(s => ({
+    id: s.id,
+    title: s.title,
+    locked: s.id > 1,
+    isMilestone: !!s.isMilestone,
+  }));
+  const activeSession = meta.sessions.find(s => s.id === activeSessionId) ?? meta.sessions[0];
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center">
+        <p className="font-serif text-academy-muted italic text-sm">Preparing the lesson…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col bg-navy" style={{ height: '100vh' }}>
+      <header className="flex-shrink-0 h-14 flex items-center justify-between px-6 border-b border-academy-border bg-academy-card">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-gold text-sm transition-colors">
+            ← Courses
+          </Link>
+          <span className="text-academy-border text-xs select-none">|</span>
+          <span className="text-academy-gold font-serif text-sm hidden sm:inline">Arete Academy</span>
+        </div>
+        <Link href="/dashboard/papers" className="text-xs border border-academy-border text-academy-muted px-3 py-1.5 rounded hover:border-academy-gold hover:text-academy-text transition-all">
+          ✎ Submit Paper
+        </Link>
+      </header>
+
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* LEFT: Session list */}
+        <aside
+          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
+          style={{ width: leftWidth }}
+        >
+          <div className="p-5">
+            <div className="hidden lg:block mb-5">
+              <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                {meta.code} · Language Track
+              </p>
+              <h2 className="font-serif text-academy-text text-base leading-snug whitespace-pre-line">
+                {meta.shortTitle}
+              </h2>
+            </div>
+            <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">
+              {meta.code} — Sessions
+            </p>
+            <nav className="space-y-0.5">
+              {sessionItems.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => !s.locked && setActiveSessionId(s.id)}
+                  disabled={s.locked}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2.5 transition-all ${
+                    s.id === activeSessionId
+                      ? 'bg-academy-gold/10 text-academy-gold border border-academy-gold/20'
+                      : s.locked
+                      ? 'text-academy-muted/40 cursor-not-allowed'
+                      : 'text-academy-muted hover:text-academy-text hover:bg-navy/50'
+                  }`}
+                >
+                  <span className="flex-shrink-0 w-5 mt-0.5 flex items-center">
+                    {s.locked ? (
+                      <LockIcon />
+                    ) : s.isMilestone ? (
+                      <GoldStar />
+                    ) : (
+                      <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
+                        {s.id}
+                      </span>
+                    )}
+                  </span>
+                  <span className="leading-snug">{s.title}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        <DragHandle
+          onDelta={(d) => setLeftWidth(w => Math.min(320, Math.max(160, w + d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
+        {/* CENTER: Lesson */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-6 py-10">
+            <LanguageLessonContent session={activeSession} />
+          </div>
+        </div>
+
+        <DragHandle
+          onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
+        {/* RIGHT: Drill agent */}
+        <DrillChatPanel courseId={courseId} width={rightWidth} />
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-export default function SeminarPage() {
+export default function CoursePage() {
+  const params = useParams();
+  const courseId = params.courseId as string;
+  if (LANGUAGE_COURSES[courseId]) {
+    return <LanguageCoursePage courseId={courseId} />;
+  }
+  return <SeminarPage />;
+}
+
+function SeminarPage() {
   const params = useParams();
   const router = useRouter();
   const courseId = params.courseId as string;
