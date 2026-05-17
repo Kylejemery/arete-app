@@ -11,6 +11,7 @@ import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
+import { LATN_101_SESSIONS } from '@/data/latn101';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -371,10 +372,16 @@ function DragHandle({ onDelta, onDragEnd }: { onDelta: (d: number) => void; onDr
 
 // ── Language Course Registry ──────────────────────────────────────────────────
 
+// The language layout never renders the `vocabulary` field, so the registry
+// is typed without it — letting GREK ({greek,...}) and LATN ({latin,...})
+// session arrays share one shape.
+type LessonSession = Omit<LanguageSession, 'vocabulary'>;
+
 interface LanguageCourseMeta {
   code: string;
   shortTitle: string; // \n-separated for two-line display
-  sessions: LanguageSession[];
+  sessions: LessonSession[];
+  badge: { label: string; color: string };
 }
 
 const LANGUAGE_COURSES: Record<string, LanguageCourseMeta> = {
@@ -382,6 +389,13 @@ const LANGUAGE_COURSES: Record<string, LanguageCourseMeta> = {
     code: 'GREK 101',
     shortTitle: 'Ancient Greek\nfor Philosophers',
     sessions: GREK_101_SESSIONS,
+    badge: { label: 'GK', color: '#1a5c38' },
+  },
+  'latn-101': {
+    code: 'LATN 101',
+    shortTitle: 'Latin\nfor Philosophers',
+    sessions: LATN_101_SESSIONS,
+    badge: { label: 'LA', color: '#4a2060' },
   },
 };
 
@@ -398,7 +412,7 @@ function GoldStar() {
   );
 }
 
-function ParadigmTable({ paradigm }: { paradigm: NonNullable<LanguageSession['parts'][number]['paradigms']>[number] }) {
+function ParadigmTable({ paradigm, mono = false }: { paradigm: NonNullable<LanguageSession['parts'][number]['paradigms']>[number]; mono?: boolean }) {
   return (
     <div className="my-6">
       <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">{paradigm.title}</p>
@@ -420,7 +434,7 @@ function ParadigmTable({ paradigm }: { paradigm: NonNullable<LanguageSession['pa
                   <td
                     key={ci}
                     className="px-3 py-2 border-b border-academy-border/40 text-academy-text align-top"
-                    style={GREEK_RE.test(cell) ? { fontFamily: DM_MONO } : undefined}
+                    style={(mono || GREEK_RE.test(cell)) ? { fontFamily: DM_MONO } : undefined}
                   >
                     {cell}
                   </td>
@@ -533,7 +547,7 @@ function QuizSection({ quiz }: { quiz: LanguageSession['quiz'] }) {
   );
 }
 
-function LanguageLessonContent({ session }: { session: LanguageSession }) {
+function LanguageLessonContent({ session, mono = false }: { session: LessonSession; mono?: boolean }) {
   return (
     <article>
       <div className="flex items-center gap-2 mb-2">
@@ -574,7 +588,7 @@ function LanguageLessonContent({ session }: { session: LanguageSession }) {
         <section key={pi} className="mb-10">
           <h2 className="font-serif text-xl text-academy-text mb-3">{part.heading}</h2>
           <p className="text-academy-muted text-sm leading-relaxed whitespace-pre-line">{part.body}</p>
-          {part.paradigms?.map((p, idx) => <ParadigmTable key={idx} paradigm={p} />)}
+          {part.paradigms?.map((p, idx) => <ParadigmTable key={idx} paradigm={p} mono={mono} />)}
           {part.callout && (
             <div
               className="rounded-xl p-5 mt-5"
@@ -792,14 +806,28 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         >
           <div className="p-5">
             <div className="hidden lg:block mb-5">
-              <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
-                {meta.code} · Language Track
-              </p>
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className="text-[10px] font-bold tracking-wider text-white rounded px-1.5 py-0.5 leading-none"
+                  style={{ background: meta.badge.color }}
+                >
+                  {meta.badge.label}
+                </span>
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                  {meta.code} · Language Track
+                </p>
+              </div>
               <h2 className="font-serif text-academy-text text-base leading-snug whitespace-pre-line">
                 {meta.shortTitle}
               </h2>
             </div>
-            <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">
+            <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3 flex items-center gap-2">
+              <span
+                className="text-[10px] font-bold tracking-wider text-white rounded px-1.5 py-0.5 leading-none"
+                style={{ background: meta.badge.color }}
+              >
+                {meta.badge.label}
+              </span>
               {meta.code} — Sessions
             </p>
             <nav className="space-y-0.5">
@@ -842,7 +870,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         {/* CENTER: Lesson */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-10">
-            <LanguageLessonContent session={activeSession} />
+            <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} />
           </div>
         </div>
 
