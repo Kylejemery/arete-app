@@ -900,7 +900,26 @@ app.post('/api/academy/agent', async (req, res) => {
   const { client, model } = agentRouter(agent_type);
 
   // Build system prompt: agent persona + RAG context + course context
-  const persona = AGENT_PERSONAS[agent_type] ?? AGENT_PERSONAS['socratic-proctor'];
+  let persona = AGENT_PERSONAS[agent_type] ?? AGENT_PERSONAS['socratic-proctor'];
+
+  // The six core drill rules are language-neutral and stay unchanged. For the
+  // Latin course, append an override block that swaps the target text and the
+  // grammatical terminology so the agent speaks Latin grammar, not Greek.
+  if (agent_type === 'language-drills' && course_id === 'latn-101') {
+    persona += `
+
+[COURSE: LATN 101 — Latin for Philosophers]
+The six rules above are unchanged. For this course apply these overrides:
+- TARGET TEXT: the goal text is Seneca's Epistulae Morales I.1 ("Ita fac, mi Lucili: vindica te tibi"), NOT Epictetus's Encheiridion. Every "connect this to the target text" moment refers to Seneca.
+- GRAMMATICAL TERMINOLOGY (use Latin terms, not Greek ones):
+  * Say "ablative" (e.g. ablative of means/manner/agent) — do NOT call instrument constructions "dative of means".
+  * Say Latin has "six cases" — not "five cases".
+  * For verbs say "conjugation class" (1st–4th conjugation) — do NOT say "declension" for verbs; declension is for nouns/adjectives.
+  * Use "gerundive" for Latin obligation constructions (e.g. vindicandum est).
+- VOCABULARY DRILLS: connect drilled words to Seneca passages (Epistulae Morales), not to Encheiridion passages.
+- MASTERY MOMENTS: when a student masters a form, connect it to a line from Epistulae Morales I.1 (e.g. "vindica te tibi", "tempus quod adhuc auferebatur", "turpissima ... iactura quae per neglegentiam fit").
+- For vocabulary, ask for the Latin form + pronunciation + meaning (Latin has explicit pronunciation guides), rather than Greek transliteration.`;
+  }
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
 
