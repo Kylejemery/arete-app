@@ -739,6 +739,9 @@ function DrillChatPanel({ courseId, width }: { courseId: string; width: number }
 function LanguageCoursePage({ courseId }: { courseId: string }) {
   const router = useRouter();
   const meta = LANGUAGE_COURSES[courseId];
+  // The parallel language track (the other unlocked language course).
+  const parallelId = Object.keys(LANGUAGE_COURSES).find(id => id !== courseId);
+  const parallel = parallelId ? LANGUAGE_COURSES[parallelId] : null;
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
@@ -859,6 +862,16 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
                 </button>
               ))}
             </nav>
+            {parallel && parallelId && (
+              <div className="mt-5 pt-4 border-t border-academy-border">
+                <Link
+                  href={`/dashboard/courses/${parallelId}`}
+                  className="text-academy-muted text-xs hover:text-academy-text transition-colors"
+                >
+                  Parallel track: {parallel.code} &rarr;
+                </Link>
+              </div>
+            )}
           </div>
         </aside>
 
