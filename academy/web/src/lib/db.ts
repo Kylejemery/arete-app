@@ -45,6 +45,24 @@ export async function upsertEnrollment(updates: Partial<Omit<Enrollment, 'id' | 
 }
 
 // ----------------------------------------------------------------
+// PROFILE
+// ----------------------------------------------------------------
+
+// Fetches the current user's admin flag. is_admin = true bypasses all
+// course locks and session prerequisites on the frontend only.
+export async function getProfile(): Promise<{ is_admin: boolean } | null> {
+  const userId = await getUserId();
+  if (!userId) return null;
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .maybeSingle();
+  if (error) { console.error('getProfile error:', error); return null; }
+  return { is_admin: data?.is_admin === true };
+}
+
+// ----------------------------------------------------------------
 // SEMINAR SESSIONS
 // ----------------------------------------------------------------
 

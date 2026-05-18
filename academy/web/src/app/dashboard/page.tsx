@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { getEnrollment, getRecentSessions, getPapers } from '@/lib/db';
+import { getEnrollment, getRecentSessions, getPapers, getProfile } from '@/lib/db';
 import { Card, CardLabel } from '@/components/ui/Card';
 import Topbar from '@/components/navigation/Topbar';
 import type { Enrollment, SeminarSession, Paper } from '@/types';
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [userName, setUserName] = useState('');
   const [streak, setStreak] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,11 +33,14 @@ export default function DashboardPage() {
 
       setUserName(user.email?.split('@')[0] ?? 'Scholar');
 
-      const [enroll, recentSessions, recentPapers] = await Promise.all([
+      const [enroll, recentSessions, recentPapers, profile] = await Promise.all([
         getEnrollment(),
         getRecentSessions(3),
         getPapers(),
+        getProfile(),
       ]);
+
+      setIsAdmin(profile?.is_admin === true);
 
       if (!enroll) {
         // Auto-enroll new users as auditors
@@ -75,6 +79,11 @@ export default function DashboardPage() {
       <Topbar
         title={`Welcome back, ${userName}.`}
         subtitle="The examined life continues."
+        action={isAdmin ? (
+          <span className="text-[10px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-2.5 py-1 leading-none">
+            Admin
+          </span>
+        ) : undefined}
       />
 
       {/* Streak */}
@@ -219,15 +228,18 @@ export default function DashboardPage() {
           </Link>
 
           {/* PHIL 705 — Stoic Logic */}
-          <Card className="opacity-50 border-t-2 border-t-academy-gold md:col-span-2">
-            <div className="flex items-start justify-between gap-2">
-              <div>
+          {isAdmin ? (
+            <Link href="/dashboard/courses/phil-705" className="md:col-span-2">
+              <Card className="hover:border-academy-gold transition-colors cursor-pointer border-t-2 border-t-academy-gold">
                 <div className="flex items-center gap-2 mb-1">
                   <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
                     PHIL 705
                   </p>
                   <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
                     Logic Track
+                  </span>
+                  <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                    Year 2
                   </span>
                 </div>
                 <p className="font-serif text-academy-text text-base mb-1">
@@ -236,13 +248,38 @@ export default function DashboardPage() {
                 <p className="text-academy-muted text-xs">
                   Chrysippus&apos;s propositional logic, the theory of impressions, and the Stoic epistemology of assent. Year 2.
                 </p>
-                <p className="text-academy-muted text-xs mt-1.5 italic">Unlocks after PHIL 704</p>
+                <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="opacity-50 border-t-2 border-t-academy-gold md:col-span-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest">
+                      PHIL 705
+                    </p>
+                    <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                      Logic Track
+                    </span>
+                    <span className="text-academy-muted text-xs border border-academy-border rounded-full px-2 py-0.5">
+                      Year 2
+                    </span>
+                  </div>
+                  <p className="font-serif text-academy-text text-base mb-1">
+                    Stoic Logic and Epistemology
+                  </p>
+                  <p className="text-academy-muted text-xs">
+                    Chrysippus&apos;s propositional logic, the theory of impressions, and the Stoic epistemology of assent. Year 2.
+                  </p>
+                  <p className="text-academy-muted text-xs mt-1.5 italic">Unlocks after PHIL 704</p>
+                </div>
+                <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
               </div>
-              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
       </div>
 

@@ -121,6 +121,18 @@ function truncateMessages(messages, maxMessages = 12) {
   return [...systemMessages, ...truncated];
 }
 
+// Admin check. is_admin = true bypasses all course locks and session
+// prerequisites on the frontend. This helper is available for backend use
+// but does NOT relax JWT enforcement or message limits.
+async function isAdmin(userId) {
+  const { data } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', userId)
+    .single();
+  return data?.is_admin === true;
+}
+
 const MESSAGE_LIMITS = { free: 10, arete: 50, pro: null };
 
 async function enforceMessageLimit(req, res) {
