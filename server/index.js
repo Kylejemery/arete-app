@@ -903,7 +903,7 @@ app.post('/api/academy/agent', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { agent_type, messages, course_id, user_id } = req.body;
+  const { agent_type, messages, course_id, user_id, course_context } = req.body;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing required field: messages (non-empty array)' });
@@ -931,6 +931,14 @@ The six rules above are unchanged. For this course apply these overrides:
 - VOCABULARY DRILLS: connect drilled words to Seneca passages (Epistulae Morales), not to Encheiridion passages.
 - MASTERY MOMENTS: when a student masters a form, connect it to a line from Epistulae Morales I.1 (e.g. "vindica te tibi", "tempus quod adhuc auferebatur", "turpissima ... iactura quae per neglegentiam fit").
 - For vocabulary, ask for the Latin form + pronunciation + meaning (Latin has explicit pronunciation guides), rather than Greek transliteration.`;
+  }
+
+  // PHIL 705 covers formal Stoic logic — the Proctor must evaluate logic
+  // exercises with rigor, not soften logical errors with encouragement.
+  if (agent_type === 'socratic-proctor' && course_id === 'phil-705') {
+    persona += `
+
+This course covers formal Stoic logic — propositional calculus, the five indemonstrables, the lekton, the cognitive impression, and the conditional. When evaluating logic exercises, assess: (1) whether the student has correctly identified the argument form; (2) whether their analysis is valid; (3) whether their answer engages with the Stoic technical vocabulary from the session. Be rigorous — logical errors should be identified precisely, not glossed over with encouragement.`;
   }
 
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
@@ -965,7 +973,13 @@ The six rules above are unchanged. For this course apply these overrides:
     ? `\n\n[Course: ${course_id}]`
     : '';
 
-  const systemPrompt = persona + courseContext + ragContext;
+  // Session-specific grounding passed from the frontend (primary sources,
+  // key concepts) so the Proctor stays anchored to the active session.
+  const sessionContext = course_context
+    ? `\n\n[Session context]\n${course_context}`
+    : '';
+
+  const systemPrompt = persona + courseContext + sessionContext + ragContext;
 
   try {
     let responseText;
