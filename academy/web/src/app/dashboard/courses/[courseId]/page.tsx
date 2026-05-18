@@ -1354,6 +1354,29 @@ function Phil705StubContent({ session }: { session: Phil705Session }) {
   );
 }
 
+function Phil705ExamContent({ session }: { session: Phil705Session }) {
+  const sections = session.examFormat ?? [];
+  return (
+    <article>
+      <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">
+        Session {session.id}
+      </p>
+      <h1 className="font-serif text-3xl text-academy-text mb-1 leading-tight">{session.title}</h1>
+      {session.primarySources && (
+        <p className="text-academy-muted text-sm italic mb-8">{session.primarySources}</p>
+      )}
+      {sections.map((sec, i) => (
+        <section key={i} className="mb-8">
+          <h2 className="font-serif text-xl text-academy-text mb-3">{sec.title}</h2>
+          <div className="space-y-3 text-academy-muted text-sm leading-relaxed">
+            {sec.body.map((p, j) => <p key={j} className="whitespace-pre-line">{p}</p>)}
+          </div>
+        </section>
+      ))}
+    </article>
+  );
+}
+
 function Phil705CoursePage() {
   const router = useRouter();
   const [activeSessionId, setActiveSessionId] = useState(2);
@@ -1507,7 +1530,7 @@ function Phil705CoursePage() {
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-10">
             <LectureVideoBlock sessionId={activeSession.id} />
-            {!activeSession.stub && (
+            {!activeSession.stub && !activeSession.isFinalExam && (
               <PreSeminarBriefing
                 key={`phil-705-${activeSession.id}`}
                 courseId="phil-705"
@@ -1515,12 +1538,14 @@ function Phil705CoursePage() {
                 title={activeSession.title}
                 problem={activeSession.preSeminarBriefing.problem}
                 whyItMatters={activeSession.preSeminarBriefing.whyItMatters}
-                watchFor={[activeSession.preSeminarBriefing.whatToWatchFor]}
+                watchFor={activeSession.preSeminarBriefing.whatToWatchFor ? [activeSession.preSeminarBriefing.whatToWatchFor] : []}
                 yourTask={activeSession.preSeminarBriefing.yourTask}
               />
             )}
             {activeSession.stub ? (
               <Phil705StubContent session={activeSession} />
+            ) : activeSession.isFinalExam ? (
+              <Phil705ExamContent session={activeSession} />
             ) : (
               <LanguageLessonContent session={phil705ToLesson(activeSession)} />
             )}

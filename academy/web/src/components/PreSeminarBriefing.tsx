@@ -77,27 +77,31 @@ export default function PreSeminarBriefing({
           </div>
 
           {/* Why It Matters */}
-          <div>
-            <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
-              Why It Matters
-            </p>
-            <p className="text-academy-muted text-sm leading-relaxed">{whyItMatters}</p>
-          </div>
+          {whyItMatters && (
+            <div>
+              <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
+                Why It Matters
+              </p>
+              <p className="text-academy-muted text-sm leading-relaxed">{whyItMatters}</p>
+            </div>
+          )}
 
           {/* What to Watch For */}
-          <div>
-            <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
-              What to Watch For
-            </p>
-            <ul className="space-y-1.5">
-              {watchFor.map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-academy-muted">
-                  <span className="text-academy-gold font-bold leading-none mt-0.5">&mdash;</span>
-                  <span className="leading-relaxed">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {watchFor.length > 0 && (
+            <div>
+              <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
+                What to Watch For
+              </p>
+              <ul className="space-y-1.5">
+                {watchFor.map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-academy-muted">
+                    <span className="text-academy-gold font-bold leading-none mt-0.5">&mdash;</span>
+                    <span className="leading-relaxed">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Your Task */}
           <div className="border-t border-academy-gold/20 pt-5">
