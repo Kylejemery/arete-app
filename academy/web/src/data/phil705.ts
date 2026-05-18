@@ -92,31 +92,193 @@ export function phil705ToLesson(s: Phil705Session): Omit<LanguageSession, 'vocab
   };
 }
 
-// Locked placeholder for sessions whose source document is not yet available.
-function stubSession(id: number, block: string, opts: Partial<Phil705Session> = {}): Phil705Session {
-  return {
-    id,
-    title: opts.title ?? `Session ${id} — Content forthcoming`,
-    block,
-    primarySources: '',
-    keyConcepts: '',
-    preSeminarBriefing: {
-      problem: 'The source document for this session has not yet been provided.',
-      whyItMatters: '',
-      whatToWatchFor: '',
-      yourTask: '',
-    },
-    parts: [],
-    exercises: [],
-    quiz: [],
-    stub: true,
-    ...opts,
-  };
-}
-
 export const PHIL_705_SESSIONS: Phil705Session[] = [
-  // ── SESSION 1 — stub (no source document) ───────────────────────────────────
-  stubSession(1, 'Introduction', { title: 'Session 1 — Introduction: Why Stoic Logic?' }),
+  // ── SESSION 1 ───────────────────────────────────────────────────────────────
+  {
+    id: 1,
+    title: 'What is Logic? The Stoic Answer',
+    block: 'Introduction',
+    primarySources: 'DL VII.42–44; L&S 31A',
+    keyConcepts: 'Logic as a part of philosophy, not just a tool; logos as rational speech and reason',
+    preSeminarBriefing: {
+      problem:
+        'Most people who study Stoic philosophy encounter it as a set of practices or attitudes — journaling, negative visualization, the dichotomy of control. This is not wrong, but it is incomplete. The practices rest on a theory. The theory rests on a logic. This course begins at the foundation.',
+      whyItMatters:
+        'The Stoics divided philosophy into three parts: logic, physics, ethics. They began with logic — not because it was most interesting, but because they believed clear thinking was the precondition for clear living. If you cannot analyze how impressions work, you cannot understand why assent matters. If you do not understand assent, the dichotomy of control is just a slogan.',
+      whatToWatchFor:
+        'In this session, notice how the Stoics define logos. The same word means both rational speech and reason itself. This is not an accident — for the Stoics, language and thought are not two different things. Logic is the study of logos in both senses.',
+      yourTask:
+        "Come prepared to defend or challenge this claim: 'Philosophy must begin with logic, not ethics.'",
+    },
+    parts: [
+      {
+        title: 'Part 1 — The Stoic Division of Philosophy',
+        content: [
+          'Diogenes Laertius reports that the Stoics divided philosophy into three parts: logic (logikē), physics (physikē), and ethics (ēthikē). This division was not merely organizational — it was a claim about the order in which philosophical questions must be addressed.',
+          'Various analogies were used to explain the relationship. Some Stoics compared philosophy to an egg: logic is the shell, physics is the white, ethics is the yolk — the thing protected and nourished by all the rest. Others compared it to a fertile field: logic is the fence, physics is the soil, ethics is the crop.',
+          'Both analogies make the same point: you cannot access what matters most — how to live — without first securing the perimeter (clear thinking) and preparing the ground (understanding the natural world). Ethics without logic is inspiration without structure. It may move you, but it cannot guide you.',
+          "'They say that philosophical doctrine has three parts: one concerned with physics, one with ethics, and one with logic. Zeno of Citium first made this division.' — Diogenes Laertius VII.39",
+        ],
+      },
+      {
+        title: 'Part 2 — What is Logic For the Stoics?',
+        content: [
+          "The Stoics used the word 'logic' (logikē) more broadly than modern usage. For them, logic included:",
+          'Formal logic — the analysis of valid argument forms (what we would recognize as logic today)',
+          'Rhetoric — the study of persuasion and extended discourse',
+          'Grammar — the analysis of language and its parts',
+          'Epistemology — the theory of knowledge, impressions, and the criterion of truth',
+          'All of these fall under logic because all of them concern logos — rational speech and reason. The Stoics did not sharply separate the study of how we think from the study of how we speak. For them, thought is a kind of inner speech, and speech is externalized thought. Logic studies the whole of this.',
+        ],
+      },
+      {
+        title: 'Key Concept — Logos',
+        content: [
+          'Logos: the single most important word in the Stoic philosophical vocabulary. It means: (1) rational speech — the ability to use language governed by reason; (2) reason itself — the faculty that distinguishes humans from animals; (3) the rational principle pervading the cosmos — the Stoic God. Logic studies logos in senses (1) and (2). Physics and theology deal with sense (3). But they are the same word.',
+        ],
+      },
+      {
+        title: 'Part 3 — Why Logic Comes First',
+        content: [
+          'A critic might object: surely ethics is the most important part of philosophy? Shouldn\'t we begin with the question of how to live, rather than abstract questions about valid argument forms?',
+          'The Stoic answer is that you cannot reliably answer ethical questions without first being able to distinguish good from bad reasoning. The person who approaches ethics without logic is at the mercy of whoever makes the most compelling-sounding argument. The sophisticated Stoic can evaluate the argument itself — not just whether it feels persuasive.',
+          'More specifically: the Stoic ethical theory depends on a theory of assent (synkatathesis). The central claim — that only virtue is good, that externals are indifferent — is not obvious. Reaching it and holding it requires the ability to resist bad impressions and withhold assent from them. And that ability requires understanding what an impression is and how assent works. That understanding is logic.',
+        ],
+      },
+    ],
+    exercises: [
+      {
+        title: 'Exercise 1.1 — Reconstruction',
+        body:
+          'Using the egg and field analogies described in Part 1, answer: a) What does logic \'protect\' in the egg analogy? What does this imply about the order of study? b) In the field analogy, ethics is the crop. Does this mean ethics is the only thing that matters? Or does the analogy suggest something more subtle? c) Can you think of a third analogy — from your own experience — that captures the same relationship between logic, physics, and ethics?',
+        answer:
+          'a) Logic (the shell) protects physics and ethics from contamination by bad reasoning. The order: secure clear thinking first. b) The crop is the goal, but without fence and soil it cannot grow — ethics is the purpose but not the starting point. c) Open-ended — any analogy that shows a necessary precondition structure is valid.',
+      },
+      {
+        title: 'Exercise 1.2 — Analysis',
+        body:
+          "The Stoics included epistemology (theory of knowledge) under 'logic.' Modern philosophers typically treat these as separate fields. a) What is the Stoic rationale for this grouping? (Hint: consider what both epistemology and logic have in common for the Stoics.) b) Is the Stoic grouping defensible? Make the strongest case for it in 3–4 sentences. c) What is lost by separating them, if anything?",
+        answer:
+          'a) Both concern logos — clear reasoning about how we come to know, and how we draw valid inferences. Epistemology asks what impressions we can trust; logic asks what follows from them. b) Strong case: they cannot be separated because validity of inference depends on truth of premises, which depends on reliability of knowledge. c) Separating them can obscure that logical validity is insufficient without epistemological reliability.',
+      },
+      {
+        title: 'Exercise 1.3 — Socratic Proctor Warm-Up',
+        body:
+          "The Pre-Seminar Briefing asked you to defend or challenge: 'Philosophy must begin with logic, not ethics.' Write a 150–200 word argument — take a position and defend it. Use at least one concrete example. The Socratic Proctor will question your argument in the seminar. Be prepared to have your assumptions challenged.",
+        answer:
+          '[Open response — no single correct answer. Proctor will evaluate: (1) Is a clear position taken? (2) Is at least one concrete example provided? (3) Is the structure of the argument clear? Strong responses will anticipate a counterargument.]',
+      },
+      {
+        title: 'Exercise 1.4 — Valid or Invalid?',
+        body:
+          "Note: The Stoics identified five basic valid argument forms called the Five Indemonstrables (Session 11). You are not yet learning their full theory. But even in Session 1, you can begin to recognize valid and invalid reasoning. These exercises use natural language, not formal notation.\n\nFor each argument, determine whether the conclusion follows from the premises. Write 'Valid' or 'Invalid' and explain in one sentence why. a) All virtuous people act from reason. Marcus acted from reason. Therefore Marcus is virtuous. b) If I assent to a false impression, I am in error. I am in error. Therefore I assented to a false impression. c) Only virtue is genuinely good. Health is not virtue. Therefore health is not genuinely good. d) The Sage never makes errors of judgment. I sometimes make errors of judgment. Therefore I am not a Sage.",
+        answer:
+          'a) INVALID — affirming the consequent. Acting from reason is necessary for virtue but may not be sufficient. b) INVALID — affirming the consequent. There may be other ways to be in error. c) VALID — modus tollens structure; if only virtue = good, and health ≠ virtue, then health ≠ genuinely good. d) VALID — modus tollens: if Sage → no errors, and I have errors → I am not a Sage.',
+      },
+    ],
+    quiz: [
+      {
+        question: 'The Stoics divided philosophy into how many parts?',
+        options: [
+          'A) Two: theory and practice',
+          'B) Three: logic, physics, ethics',
+          'C) Four: logic, physics, ethics, theology',
+          'D) Five, corresponding to the five faculties of the soul',
+        ],
+        correct: 'B',
+      },
+      {
+        question: 'In the Stoic egg analogy, what does logic represent?',
+        options: [
+          'A) The yolk — the essential inner nourishment',
+          'B) The white — the nutritive middle layer',
+          'C) The shell — the protective outer structure',
+          'D) The heat that incubates the egg',
+        ],
+        correct: 'C',
+      },
+      {
+        question: "Why did the Stoics include epistemology under 'logic'?",
+        options: [
+          'A) For organizational convenience only',
+          'B) Because both concern logos — reasoning about knowledge and valid inference',
+          'C) Because Aristotle had done the same',
+          'D) Because they had no separate word for epistemology',
+        ],
+        correct: 'B',
+      },
+      {
+        question: 'The Stoic concept of logos does NOT refer to:',
+        options: [
+          'A) Rational speech — language governed by reason',
+          'B) The rational principle pervading the cosmos',
+          'C) The faculty of reason in humans',
+          'D) The emotional impulse that drives action',
+        ],
+        correct: 'D',
+      },
+      {
+        question: 'Which argument form is logically valid?',
+        options: [
+          'A) All dogs bark. Rex barks. Therefore Rex is a dog.',
+          'B) If it rains, the ground is wet. The ground is wet. Therefore it rained.',
+          'C) All Sages are wise. Socrates is not a Sage. Therefore Socrates is not wise.',
+          'D) If I am virtuous, I act from reason. I am not virtuous. Therefore I do not act from reason.',
+        ],
+        correct: 'D',
+      },
+      {
+        question: 'The Stoic argument that logic must precede ethics rests on:',
+        options: [
+          'A) The belief that physics is more important than ethics',
+          'B) The claim that ethical reasoning requires the ability to evaluate impressions and assent — which is logic',
+          'C) The view that logic is more pleasurable to study',
+          'D) An arbitrary traditional ordering inherited from Plato',
+        ],
+        correct: 'B',
+      },
+      {
+        question: "In what sense does Stoic 'logic' differ from modern logic?",
+        options: [
+          'A) It is narrower — limited to syllogisms only',
+          'B) It is broader — including grammar, rhetoric, and epistemology',
+          'C) It excludes formal argument analysis entirely',
+          'D) It deals only with mathematical proof',
+        ],
+        correct: 'B',
+      },
+      {
+        question: "Chrysippus's reputation in antiquity was:",
+        options: [
+          'A) Modest — he was seen as derivative of Zeno',
+          'B) Dominant — widely considered the greatest logician who ever lived',
+          'C) Controversial — most Stoics rejected his logical work',
+          'D) Limited to ethics — his logic was considered amateurish',
+        ],
+        correct: 'B',
+      },
+      {
+        question: 'The Stoic concept of synkatathesis (assent) is introduced in this session because:',
+        options: [
+          "A) It is a rhetorical technique for public argument",
+          'B) It connects logic to ethics: assent is up to us, making us responsible for our beliefs and actions',
+          'C) It explains why logic precedes physics',
+          "D) It is the name for the Stoic school's voting procedure",
+        ],
+        correct: 'B',
+      },
+      {
+        question: 'Which of the following best describes the Stoic position on the relationship between logic and ethics?',
+        options: [
+          'A) They are independent — logic is for academics, ethics is for everyone',
+          'B) Ethics comes first — once you know how to live, logic helps you argue for it',
+          'C) Logic is a precondition for reliable ethical reasoning — you cannot navigate impressions without it',
+          'D) They are identical — all of ethics is just applied logic',
+        ],
+        correct: 'C',
+      },
+    ],
+  },
 
   // ── SESSION 2 ───────────────────────────────────────────────────────────────
   {

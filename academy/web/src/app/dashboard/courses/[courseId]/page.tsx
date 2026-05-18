@@ -1379,7 +1379,7 @@ function Phil705ExamContent({ session }: { session: Phil705Session }) {
 
 function Phil705CoursePage() {
   const router = useRouter();
-  const [activeSessionId, setActiveSessionId] = useState(2);
+  const [activeSessionId, setActiveSessionId] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [leftWidth, setLeftWidth] = useState(240);
@@ -1410,7 +1410,7 @@ function Phil705CoursePage() {
   }, []);
 
   const adminBypass = isAdmin;
-  const activeSession = PHIL_705_SESSIONS.find(s => s.id === activeSessionId) ?? PHIL_705_SESSIONS[1];
+  const activeSession = PHIL_705_SESSIONS.find(s => s.id === activeSessionId) ?? PHIL_705_SESSIONS[0];
   // Admin bypasses all locks. Non-admins reach this course only via the
   // dashboard, which gates it behind the prerequisite; here we keep a
   // conservative sequential lock (only Session 1 open) for safety.
