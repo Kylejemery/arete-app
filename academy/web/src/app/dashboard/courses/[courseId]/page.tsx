@@ -12,6 +12,8 @@ import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
+import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Session } from '@/data/phil705';
+import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -904,6 +906,9 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
 export default function CoursePage() {
   const params = useParams();
   const courseId = params.courseId as string;
+  if (courseId === 'phil-705') {
+    return <Phil705CoursePage />;
+  }
   if (LANGUAGE_COURSES[courseId]) {
     return <LanguageCoursePage courseId={courseId} />;
   }
@@ -1202,6 +1207,333 @@ function SeminarPage() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PHIL 705 — Stoic Logic & Epistemology ─────────────────────────────────────
+// Seminar course that reuses the language renderer (LanguageLessonContent) for
+// multi-part session content, with the Socratic Proctor in the right column.
+
+const PHIL_705_BLOCK_ORDER = ['Introduction', 'Block A', 'Block B', 'Block C', 'Block D', 'Block E', 'Block F', 'Block G', 'Block H'];
+
+function Phil705SessionPill({ kind }: { kind: 'seminar' | 'exam' }) {
+  return (
+    <span className="text-[9px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-1.5 py-0.5 leading-none">
+      {kind === 'seminar' ? 'Seminar' : 'Exam'}
+    </span>
+  );
+}
+
+function ProctorChatPanel({ session, width }: { session: Phil705Session; width: number }) {
+  const [messages, setMessages] = useState<DrillMsg[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  const send = async () => {
+    if (!input.trim() || isLoading) return;
+    const next: DrillMsg[] = [...messages, { role: 'user', content: input.trim() }];
+    setMessages(next);
+    setInput('');
+    setIsLoading(true);
+    try {
+      let userId: string | undefined;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
+      } catch {}
+      const res = await fetch(`${API_BASE}/api/academy/agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_type: 'socratic-proctor',
+          course_id: 'phil-705',
+          user_id: userId,
+          course_context: session.primarySources || session.keyConcepts
+            ? `Session ${session.id}: ${session.title}. Primary sources: ${session.primarySources}. Key concepts: ${session.keyConcepts}.`
+            : undefined,
+          messages: next.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = await res.json();
+      const text =
+        (typeof data.content === 'string' ? data.content : data.content?.[0]?.text) ??
+        data.response ??
+        'The seminar room is temporarily unavailable.';
+      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: 'The seminar room is temporarily unavailable. Please try again.' }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
+      style={{ width }}
+    >
+      <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">
+        <div className="flex items-center gap-2.5 mb-0.5">
+          <span className="text-academy-gold font-serif text-base leading-none">&Phi;</span>
+          <h3 className="font-serif text-academy-text text-base">The Socratic Proctor</h3>
+        </div>
+        <p className="text-academy-muted text-xs italic">I do not lecture. I question.</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 && !isLoading && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-center px-6">
+            <p className="text-4xl mb-4">&#127981;</p>
+            <p className="text-academy-muted text-xs leading-relaxed italic max-w-[220px]">
+              The Proctor awaits. Bring your response to the session&rsquo;s task, and the examination will commence.
+            </p>
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div
+              className={`max-w-[85%] rounded-xl px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                m.role === 'user'
+                  ? 'bg-academy-gold/15 text-academy-text border border-academy-gold/25'
+                  : 'bg-academy-card text-academy-muted border border-academy-border'
+              }`}
+            >
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="flex justify-start">
+            <div className="bg-academy-card border border-academy-border rounded-xl px-4 py-2.5 text-academy-muted text-sm italic">
+              The Proctor is considering&hellip;
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">
+        <textarea
+          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
+          rows={2}
+          placeholder="Respond to the Proctor..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
+        />
+        <button
+          onClick={send}
+          disabled={isLoading || !input.trim()}
+          className="self-end bg-academy-gold text-navy font-semibold rounded-lg px-4 py-2.5 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Phil705StubContent({ session }: { session: Phil705Session }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="w-14 h-14 rounded-full border border-academy-border flex items-center justify-center mb-6">
+        <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.247m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.247" />
+        </svg>
+      </div>
+      <h2 className="font-serif text-2xl text-academy-text mb-2">{session.title}</h2>
+      <p className="text-academy-muted text-sm max-w-md">
+        The source material for this session is being prepared and will be published here once available.
+      </p>
+    </div>
+  );
+}
+
+function Phil705CoursePage() {
+  const router = useRouter();
+  const [activeSessionId, setActiveSessionId] = useState(2);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [initializing, setInitializing] = useState(true);
+  const [leftWidth, setLeftWidth] = useState(240);
+  const [rightWidth, setRightWidth] = useState(380);
+  const widthsRef = useRef({ leftWidth, rightWidth });
+  widthsRef.current = { leftWidth, rightWidth };
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.replace('/login'); return; }
+      const profile = await getProfile();
+      setIsAdmin(profile?.is_admin === true);
+      setInitializing(false);
+    }
+    init();
+  }, [router]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('academy-panel-widths');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.leftWidth) setLeftWidth(Math.min(340, Math.max(180, parsed.leftWidth)));
+        if (parsed.rightWidth) setRightWidth(Math.min(560, Math.max(300, parsed.rightWidth)));
+      }
+    } catch {}
+  }, []);
+
+  const adminBypass = isAdmin;
+  const activeSession = PHIL_705_SESSIONS.find(s => s.id === activeSessionId) ?? PHIL_705_SESSIONS[1];
+  // Admin bypasses all locks. Non-admins reach this course only via the
+  // dashboard, which gates it behind the prerequisite; here we keep a
+  // conservative sequential lock (only Session 1 open) for safety.
+  const isLocked = (s: Phil705Session) => (adminBypass ? false : s.id !== 1);
+
+  if (initializing) {
+    return (
+      <div className="min-h-screen bg-navy flex items-center justify-center">
+        <p className="font-serif text-academy-muted italic text-sm">Preparing the seminar room&hellip;</p>
+      </div>
+    );
+  }
+
+  // Group sessions by block, preserving block order, for the sidebar.
+  const grouped: { block: string; sessions: Phil705Session[] }[] = [];
+  for (const blk of PHIL_705_BLOCK_ORDER) {
+    const inBlock = PHIL_705_SESSIONS.filter(s => s.block === blk);
+    if (inBlock.length > 0) grouped.push({ block: blk, sessions: inBlock });
+  }
+
+  return (
+    <div className="flex flex-col bg-navy" style={{ height: '100vh' }}>
+      <header className="flex-shrink-0 h-14 flex items-center justify-between px-6 border-b border-academy-border bg-academy-card">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-gold text-sm transition-colors">
+            &larr; Courses
+          </Link>
+          <span className="text-academy-border text-xs select-none">|</span>
+          <span className="text-academy-gold font-serif text-sm hidden sm:inline">Arete Academy</span>
+          {isAdmin && (
+            <span className="text-[10px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-2 py-0.5 leading-none">
+              Admin
+            </span>
+          )}
+        </div>
+        <Link href="/dashboard/papers" className="text-xs border border-academy-border text-academy-muted px-3 py-1.5 rounded hover:border-academy-gold hover:text-academy-text transition-all">
+          &#9998; Submit Paper
+        </Link>
+      </header>
+
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* LEFT: Block-grouped session list */}
+        <aside
+          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
+          style={{ width: leftWidth }}
+        >
+          <div className="p-5">
+            <div className="hidden lg:block mb-5">
+              <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                PHIL 705 &middot; Logic Track
+              </p>
+              <h2 className="font-serif text-academy-text text-base leading-snug">
+                Stoic Logic &amp;{'\n'}Epistemology
+              </h2>
+            </div>
+            <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">
+              PHIL 705 &mdash; Sessions
+            </p>
+            <nav className="space-y-3">
+              {grouped.map(group => (
+                <div key={group.block}>
+                  <p
+                    className="text-academy-muted uppercase mb-1.5 px-1"
+                    style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, letterSpacing: '0.12em' }}
+                  >
+                    {PHIL_705_BLOCKS[group.block] ?? group.block}
+                  </p>
+                  <div className="space-y-0.5">
+                    {group.sessions.map(s => {
+                      const locked = isLocked(s);
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => !locked && setActiveSessionId(s.id)}
+                          disabled={locked}
+                          className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2.5 transition-all ${
+                            s.id === activeSessionId
+                              ? 'bg-academy-gold/10 text-academy-gold border border-academy-gold/20'
+                              : locked
+                              ? 'text-academy-muted/40 cursor-not-allowed'
+                              : 'text-academy-muted hover:text-academy-text hover:bg-navy/50'
+                          }`}
+                        >
+                          <span className="flex-shrink-0 w-5 mt-0.5 flex items-center">
+                            {locked ? (
+                              <LockIcon />
+                            ) : (
+                              <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
+                                {s.id}
+                              </span>
+                            )}
+                          </span>
+                          <span className="leading-snug flex-1">
+                            {s.title}
+                            {(s.isSeminar || s.isFinalExam) && (
+                              <span className="ml-2 inline-block align-middle">
+                                <Phil705SessionPill kind={s.isFinalExam ? 'exam' : 'seminar'} />
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </nav>
+          </div>
+        </aside>
+
+        <DragHandle
+          onDelta={(d) => setLeftWidth(w => Math.min(340, Math.max(180, w + d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
+        {/* CENTER: Briefing + session content */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-2xl mx-auto px-6 py-10">
+            <LectureVideoBlock sessionId={activeSession.id} />
+            {!activeSession.stub && (
+              <PreSeminarBriefing
+                key={`phil-705-${activeSession.id}`}
+                courseId="phil-705"
+                session={activeSession.id}
+                title={activeSession.title}
+                problem={activeSession.preSeminarBriefing.problem}
+                whyItMatters={activeSession.preSeminarBriefing.whyItMatters}
+                watchFor={[activeSession.preSeminarBriefing.whatToWatchFor]}
+                yourTask={activeSession.preSeminarBriefing.yourTask}
+              />
+            )}
+            {activeSession.stub ? (
+              <Phil705StubContent session={activeSession} />
+            ) : (
+              <LanguageLessonContent session={phil705ToLesson(activeSession)} />
+            )}
+          </div>
+        </div>
+
+        <DragHandle
+          onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
+          onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
+        />
+
+        {/* RIGHT: Socratic Proctor */}
+        <ProctorChatPanel session={activeSession} width={rightWidth} />
       </div>
     </div>
   );
