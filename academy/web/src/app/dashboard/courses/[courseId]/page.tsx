@@ -928,6 +928,7 @@ function SeminarPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [activeSessionId, setActiveSessionId] = useState(1);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [paperExpanded, setPaperExpanded] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
   const [leftWidth, setLeftWidth] = useState(220);
@@ -937,7 +938,10 @@ function SeminarPage() {
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
 
-  const sessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
+  // Admin bypass unlocks every session for navigation. Non-admin behaviour
+  // (including PHIL 701) is unchanged.
+  const baseSessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
+  const sessions = isAdmin ? baseSessions.map(s => ({ ...s, locked: false })) : baseSessions;
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
@@ -950,6 +954,8 @@ function SeminarPage() {
       if (!user) { router.replace('/login'); return; }
       const enroll = await getEnrollment();
       setEnrollment(enroll);
+      const profile = await getProfile();
+      setIsAdmin(profile?.is_admin === true);
       const sess = await getOrCreateSession(courseId, agentId);
       if (sess) { setSession(sess); setMessages(sess.messages); }
       setInitializing(false);
