@@ -1,19 +1,22 @@
-// Academy Library — curated, read-only reading list of open-access resources.
-// Maintained as a static file (admin-edited). All URLs are verified open-access.
+// Academy Library — curated, read-only reading list of external resources.
+// Maintained as a static file (admin-edited). open-access items have free
+// direct links; library-access items link to a publisher/PhilPapers record.
 
 export interface LibraryItem {
-  id: string;                     // unique slug, e.g. 'bobzien-sequent-2019'
-  title: string;                  // full citation title
-  author: string;                 // last name, first initial — e.g. 'Bobzien, S.'
+  id: string;                     // unique slug
+  title: string;
+  author: string;
   year: number;
   type: 'paper' | 'book' | 'reference' | 'encyclopedia';
-  url: string;                    // open-access URL — required
-  urlLabel: string;               // short label for the link button
-  description: string;            // 1–2 sentence annotation
-  courses: string[];              // course IDs this applies to, e.g. ['phil-705']
-  sessions: number[];             // session numbers (empty = whole course)
+  accessType: 'open-access' | 'library-access';
+  url: string;
+  urlLabel: string;
+  description: string;
+  courses: string[];
+  sessions: number[];             // empty = whole course
   difficulty: 'introductory' | 'intermediate' | 'advanced';
   tags: string[];
+  libraryNote?: string;           // alternative access route for library-access items
 }
 
 export interface CourseLibrary {
@@ -31,6 +34,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Bobzien, S.',
     year: 2006,
     type: 'encyclopedia',
+    accessType: 'open-access',
     url: 'https://plato.stanford.edu/entries/logic-ancient/',
     urlLabel: 'Stanford Encyclopedia',
     description: 'The authoritative overview of ancient logic including Stoic propositional calculus, the five indemonstrables, and the debate over conditionals. Required orientation reading for PHIL 705.',
@@ -45,6 +49,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Trepp, T.C.',
     year: 2025,
     type: 'paper',
+    accessType: 'open-access',
     url: 'https://philarchive.org/rec/TREBDA-3',
     urlLabel: 'PhilArchive',
     description: 'Accessible survey comparing Stoic syllogistic, the Sorites and Liar paradoxes, and Stoic logic against Frege and Russell. Good preparation reading before Session 19.',
@@ -52,6 +57,36 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     sessions: [19],
     difficulty: 'introductory',
     tags: ['stoic logic', 'frege', 'sorites', 'liar', 'comparison', 'survey'],
+  },
+  {
+    id: 'diogenes-laertius-book7',
+    title: 'Lives of Eminent Philosophers, Book VII (On the Stoics)',
+    author: 'Diogenes Laertius',
+    year: 0,
+    type: 'reference',
+    accessType: 'open-access',
+    url: 'https://en.wikisource.org/wiki/Lives_of_the_Eminent_Philosophers/Book_VII',
+    urlLabel: 'Wikisource (free)',
+    description: 'The most important continuous ancient source for Stoic logic — 40 paragraphs covering lekta, axiomata, the five indemonstrables, and the conditional. Referenced throughout PHIL 705 as D.L. VII.',
+    courses: ['phil-705'],
+    sessions: [],
+    difficulty: 'intermediate',
+    tags: ['primary source', 'chrysippus', 'lekton', 'indemonstrables', 'stoic logic'],
+  },
+  {
+    id: 'philpapers-stoic-logic-browse',
+    title: 'Stoics: Logic — Full Bibliography',
+    author: 'PhilPapers',
+    year: 2026,
+    type: 'reference',
+    accessType: 'open-access',
+    url: 'https://philpapers.org/browse/stoics-logic',
+    urlLabel: 'PhilPapers',
+    description: 'Continuously updated bibliography of all scholarship on Stoic logic. Use to find additional papers on any topic covered in PHIL 705.',
+    courses: ['phil-705'],
+    sessions: [],
+    difficulty: 'intermediate',
+    tags: ['bibliography', 'stoic logic', 'reference'],
   },
 
   // ── PHIL 705 — Session 12 ────────────────────────────────────
@@ -61,9 +96,10 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Bobzien, S.',
     year: 2019,
     type: 'paper',
+    accessType: 'open-access',
     url: 'https://philpapers.org/rec/BOBSSL',
     urlLabel: 'PhilPapers',
-    description: 'Shows that Stoic analysis (the reduction to indemonstrables via the themata) is structurally closest to backward proof search in substructural sequent logics — closer to logic programming than to Gentzen\'s natural deduction. Transforms Session 12.',
+    description: 'Shows that Stoic analysis is structurally closest to backward proof search in substructural sequent logics — closer to logic programming than to Gentzen\'s natural deduction. Transforms the Session 12 picture of what the themata actually do.',
     courses: ['phil-705'],
     sessions: [12],
     difficulty: 'advanced',
@@ -75,6 +111,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Bobzien, S. & Dyckhoff, R.',
     year: 2018,
     type: 'paper',
+    accessType: 'open-access',
     url: 'https://philpapers.org/rec/BOBABA-3',
     urlLabel: 'PhilPapers (open access)',
     description: 'Proves decidability of Stoic propositional logic and shows Cut is not admissible in the standard Stoic system. Technical companion to the sequent logic paper above.',
@@ -84,6 +121,40 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     tags: ['proof theory', 'cut rule', 'decidability', 'stoic logic', 'sequent'],
   },
 
+  // ── PHIL 705 — Session 16 ────────────────────────────────────
+  {
+    id: 'bobzien-chrysippus-causes-1999',
+    title: "Chrysippus' Theory of Causes",
+    author: 'Bobzien, S.',
+    year: 1999,
+    type: 'paper',
+    accessType: 'library-access',
+    url: 'https://philarchive.org/rec/BOBCTO',
+    urlLabel: 'PhilArchive record',
+    description: "Systematic reconstruction of Chrysippus's causal theory grounded in the Stoic tenets that causes are bodies, that they are relative, and that all causation traces to the active pneuma. Challenges the standard taxonomy and argues antecedent and principal causes are alternatives, not cooperating factors — directly relevant to the cylinder argument in Session 16.",
+    courses: ['phil-705'],
+    sessions: [16],
+    difficulty: 'advanced',
+    tags: ['causation', 'chrysippus', 'fate', 'pneuma', 'determinism', 'cylinder argument', 'principal cause'],
+    libraryNote: "Published in Ierodiakonou (ed.), Topics in Stoic Philosophy, OUP 1999. Available via university libraries. Core arguments also covered in Bobzien, Determinism and Freedom in Stoic Philosophy (OUP 1998), Ch. 1 — which is more widely available.",
+  },
+  {
+    id: 'bobzien-determinism-freedom-1998',
+    title: 'Determinism and Freedom in Stoic Philosophy',
+    author: 'Bobzien, S.',
+    year: 1998,
+    type: 'book',
+    accessType: 'library-access',
+    url: 'https://academic.oup.com/book/479',
+    urlLabel: 'OUP',
+    description: "The definitive monograph on Stoic determinism, fate, and compatibilism. Chapters 1–2 cover Chrysippus's theory of causes and the cylinder argument in depth. The most important secondary source for Block G.",
+    courses: ['phil-705'],
+    sessions: [16],
+    difficulty: 'advanced',
+    tags: ['determinism', 'fate', 'compatibilism', 'causation', 'cylinder argument', 'chrysippus', 'free will'],
+    libraryNote: 'Available through most university libraries and used from secondhand booksellers.',
+  },
+
   // ── PHIL 705 — Session 19 ────────────────────────────────────
   {
     id: 'bobzien-frege-plagiarism-2020',
@@ -91,38 +162,24 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Bobzien, S.',
     year: 2020,
     type: 'paper',
+    accessType: 'open-access',
     url: 'https://philarchive.org/archive/BOBFPT',
     urlLabel: 'PhilArchive (author manuscript)',
-    description: 'Argues that Frege absorbed Stoic logic from Prantl\'s 1855 History of Western Logic without attribution — documenting 120+ parallels, including cases where Frege\'s errors track Prantl\'s misrepresentations of the Stoics. Central paper for Session 19.',
+    description: "Argues that Frege absorbed Stoic logic from Prantl's 1855 History of Western Logic without attribution — documenting 120+ parallels, including cases where Frege's errors track Prantl's misrepresentations. Central paper for Session 19.",
     courses: ['phil-705'],
     sessions: [19],
     difficulty: 'advanced',
     tags: ['frege', 'chrysippus', 'lekton', 'sinn', 'plagiarism', 'history of logic', 'prantl'],
   },
 
-  // ── PHIL 705 — Primary Sources ───────────────────────────────
-  {
-    id: 'diogenes-laertius-book7',
-    title: 'Lives of Eminent Philosophers, Book VII (On the Stoics)',
-    author: 'Diogenes Laertius',
-    year: 0,
-    type: 'reference',
-    url: 'https://en.wikisource.org/wiki/Lives_of_the_Eminent_Philosophers/Book_VII',
-    urlLabel: 'Wikisource (free)',
-    description: 'The most important continuous ancient source for Stoic logic — 40 paragraphs covering lekta, axiomata, the five indemonstrables, and the conditional. Referenced throughout PHIL 705 as D.L. VII.',
-    courses: ['phil-705'],
-    sessions: [],
-    difficulty: 'intermediate',
-    tags: ['primary source', 'chrysippus', 'lekton', 'indemonstrables', 'stoic logic'],
-  },
-
-  // ── PHIL 701 — General Stoicism ──────────────────────────────
+  // ── PHIL 701–704 — General Stoicism ─────────────────────────
   {
     id: 'sep-stoicism',
     title: 'Stoicism',
     author: 'Baltzly, D.',
     year: 2019,
     type: 'encyclopedia',
+    accessType: 'open-access',
     url: 'https://plato.stanford.edu/entries/stoicism/',
     urlLabel: 'Stanford Encyclopedia',
     description: 'Comprehensive overview of Stoic philosophy covering physics, logic, and ethics. Essential orientation reading for the Philosophy track.',
@@ -137,29 +194,14 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
     author: 'Seddon, K.',
     year: 2023,
     type: 'encyclopedia',
+    accessType: 'open-access',
     url: 'https://plato.stanford.edu/entries/epictetus/',
     urlLabel: 'Stanford Encyclopedia',
-    description: 'Overview of Epictetus\'s life and philosophy including the dichotomy of control, the three disciplines, and the relationship between the Enchiridion and Discourses.',
+    description: "Overview of Epictetus's life and philosophy including the dichotomy of control, the three disciplines, and the relationship between the Enchiridion and Discourses.",
     courses: ['phil-701', 'phil-703'],
     sessions: [],
     difficulty: 'introductory',
     tags: ['epictetus', 'dichotomy', 'enchiridion', 'discourses'],
-  },
-
-  // ── PhilPapers Reference ─────────────────────────────────────
-  {
-    id: 'philpapers-stoic-logic-browse',
-    title: 'Stoics: Logic — Full Bibliography',
-    author: 'PhilPapers',
-    year: 2026,
-    type: 'reference',
-    url: 'https://philpapers.org/browse/stoics-logic',
-    urlLabel: 'PhilPapers',
-    description: 'Continuously updated bibliography of all scholarship on Stoic logic. Use to find additional papers on any topic covered in PHIL 705.',
-    courses: ['phil-705'],
-    sessions: [],
-    difficulty: 'intermediate',
-    tags: ['bibliography', 'stoic logic', 'reference'],
   },
 ];
 
