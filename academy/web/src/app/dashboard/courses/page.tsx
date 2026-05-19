@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getEnrollment } from '@/lib/db';
+import { getEnrollment, getProfile } from '@/lib/db';
 import { Card, CardLabel } from '@/components/ui/Card';
 import Topbar from '@/components/navigation/Topbar';
 import type { Course, Tier } from '@/types';
@@ -49,22 +49,70 @@ const COURSES: Course[] = [
       { title: 'Letters to Lucilius', author: 'Seneca', sourceSlug: 'seneca' },
     ],
   },
+  {
+    id: 'phil-705',
+    code: 'PHIL 705',
+    title: 'Stoic Logic & Epistemology',
+    description: 'The propositional logic system Chrysippus built 300 years before Frege. Twenty sessions from the lekton through the five indemonstrables to the Liar Paradox — and back to the examined life.',
+    term: 'Year 2',
+    assignedTexts: [
+      { title: 'The Hellenistic Philosophers (Stoic Logic)', author: 'Long & Sedley', sourceSlug: 'epictetus' },
+    ],
+  },
+  {
+    id: 'grek-101',
+    code: 'GREK 101',
+    title: 'Ancient Greek for Philosophers',
+    description: 'The Greek of the Stoics, from alphabet to philosophy. Ten sessions building toward a full grammatical reading of Epictetus Enchiridion §1.',
+    term: 'Year 1',
+    assignedTexts: [
+      { title: 'Enchiridion §1', author: 'Epictetus', sourceSlug: 'epictetus' },
+    ],
+  },
+  {
+    id: 'latn-101',
+    code: 'LATN 101',
+    title: 'Latin for Philosophers',
+    description: 'The Latin of Seneca, from alphabet to philosophy. Ten sessions building toward a reading of Epistulae Morales I.',
+    term: 'Year 1',
+    assignedTexts: [
+      { title: 'Epistulae Morales I', author: 'Seneca', sourceSlug: 'seneca' },
+    ],
+  },
 ];
 
 const TIER_RANK: Record<Tier, number> = { auditor: 0, scholar: 1, fellow: 2 };
 
+// Courses accessible to every tier (no Scholar+ gate). PHIL 702–704 remain
+// tier-gated unless the admin bypass is active.
+const OPEN_ACCESS = new Set(['phil-701', 'phil-705', 'grek-101', 'latn-101']);
+
+// Track badge by course id. PHIL 701–704 show no track badge (unchanged).
+const TRACK_BADGE: Record<string, { label: string; color: string }> = {
+  'phil-705': { label: 'Logic', color: '#C9A84C' },
+  'grek-101': { label: 'Language', color: '#1a5c38' },
+  'latn-101': { label: 'Language', color: '#4a2060' },
+};
+
 export default function CoursesPage() {
   const [tier, setTier] = useState<Tier>('auditor');
   const [currentCourse, setCurrentCourse] = useState('phil-701');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     getEnrollment().then(e => {
       if (e) { setTier(e.tier); setCurrentCourse(e.current_course); }
     });
+    getProfile().then(p => setIsAdmin(p?.is_admin === true));
   }, []);
 
-  const canAccess = (courseIndex: number) => {
-    if (tier === 'auditor') return courseIndex === 0;
+  const adminBypass = isAdmin;
+
+  // Admin bypass overrides every tier/prerequisite lock. Otherwise open-access
+  // courses are always available; PHIL 702–704 require Scholar+.
+  const canAccess = (course: Course) => {
+    if (adminBypass) return true;
+    if (OPEN_ACCESS.has(course.id)) return true;
     return TIER_RANK[tier] >= 1;
   };
 
@@ -72,13 +120,19 @@ export default function CoursesPage() {
     <div>
       <Topbar
         title="Course Catalog"
-        subtitle="Advanced Study in Stoic Philosophy — four courses, primary texts only"
+        subtitle="Advanced Study in Stoic Philosophy — the full curriculum"
+        action={isAdmin ? (
+          <span className="text-[10px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-2.5 py-1 leading-none">
+            Admin
+          </span>
+        ) : undefined}
       />
 
       <div className="space-y-5">
-        {COURSES.map((course, i) => {
-          const accessible = canAccess(i);
+        {COURSES.map((course) => {
+          const accessible = canAccess(course);
           const isCurrent = course.id === currentCourse;
+          const track = TRACK_BADGE[course.id];
           return (
             <Card key={course.id} gold={isCurrent} className={accessible ? '' : 'opacity-60'}>
               <div className="flex items-start justify-between gap-4">
@@ -88,6 +142,14 @@ export default function CoursesPage() {
                     {isCurrent && (
                       <span className="text-xs bg-academy-gold/20 text-academy-gold px-2 py-0.5 rounded-full border border-academy-gold/30">
                         Current
+                      </span>
+                    )}
+                    {track && (
+                      <span
+                        className="text-[10px] font-bold tracking-wider uppercase text-white rounded-full px-2 py-0.5 leading-none"
+                        style={{ background: track.color }}
+                      >
+                        {track.label}
                       </span>
                     )}
                     <span className="text-xs text-academy-muted">{course.term}</span>
