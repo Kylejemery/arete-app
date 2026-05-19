@@ -24,19 +24,30 @@ const DIFFICULTY_STYLE: Record<LibraryItem['difficulty'], string> = {
   advanced: 'border-orange-500/50 text-orange-300',
 };
 
+type AccessFilter = 'all' | 'open' | 'library-incl';
+
 function minSession(item: LibraryItem): number {
   return item.sessions.length === 0 ? -1 : Math.min(...item.sessions);
 }
 
 function ItemCard({ item }: { item: LibraryItem }) {
+  const isOpen = item.accessType === 'open-access';
   return (
     <div className="bg-academy-card border border-academy-border rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-2">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
         <span
           className="text-[10px] uppercase tracking-widest border border-academy-gold/40 text-academy-gold rounded-full px-2 py-0.5 leading-none"
           style={{ fontFamily: DM_MONO }}
         >
           {item.type}
+        </span>
+        <span
+          className={`text-[10px] uppercase tracking-widest border rounded-full px-2 py-0.5 leading-none ${
+            isOpen ? 'border-green-500/50 text-green-300' : 'border-amber-500/50 text-amber-300'
+          }`}
+          style={{ fontFamily: DM_MONO }}
+        >
+          {isOpen ? 'Open Access' : 'Library Access'}
         </span>
         <span
           className={`text-[10px] uppercase tracking-widest border rounded-full px-2 py-0.5 leading-none ${DIFFICULTY_STYLE[item.difficulty]}`}
@@ -60,14 +71,30 @@ function ItemCard({ item }: { item: LibraryItem }) {
       <p className="text-academy-muted text-xs mt-3" style={{ fontFamily: DM_MONO }}>
         {item.tags.join(' · ')}
       </p>
-      <a
-        href={item.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-block mt-4 bg-academy-gold text-navy font-semibold rounded-lg px-4 py-2 text-xs hover:opacity-90 transition-opacity"
-      >
-        Open {item.urlLabel} &rarr;
-      </a>
+      {isOpen ? (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-4 bg-academy-gold text-navy font-semibold rounded-lg px-4 py-2 text-xs hover:opacity-90 transition-opacity"
+        >
+          Open {item.urlLabel} &rarr;
+        </a>
+      ) : (
+        <a
+          href={item.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-4 border border-amber-500/60 text-amber-300 font-semibold rounded-lg px-4 py-2 text-xs hover:bg-amber-500/10 transition-colors"
+        >
+          Find in Library &rarr;
+        </a>
+      )}
+      {item.libraryNote && (
+        <p className="text-academy-muted/70 text-[11px] leading-relaxed mt-3 italic">
+          {item.libraryNote}
+        </p>
+      )}
     </div>
   );
 }
@@ -76,10 +103,9 @@ export default function LibraryPage() {
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [accessFilter, setAccessFilter] = useState<AccessFilter>('all');
   const [ctx, setCtx] = useState<{ courseId: string; session: number } | null>(null);
 
-  // Detect session context from query params (?course=phil-705&session=12),
-  // present only when navigated from a session page. Otherwise omit.
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search);
@@ -99,19 +125,17 @@ export default function LibraryPage() {
     return LIBRARY_ITEMS.filter(item => {
       if (selectedCourse !== 'all' && !item.courses.includes(selectedCourse)) return false;
       if (selectedTag && !item.tags.includes(selectedTag)) return false;
+      if (accessFilter === 'open' && item.accessType !== 'open-access') return false;
       if (q) {
         const hay = `${item.title} ${item.author} ${item.description} ${item.tags.join(' ')}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [selectedCourse, selectedTag, search]);
+  }, [selectedCourse, selectedTag, accessFilter, search]);
 
-  // Group by course (in canonical order) when "All Courses" is selected.
   const groups = useMemo(() => {
-    const courseIds = selectedCourse === 'all'
-      ? COURSE_ORDER
-      : [selectedCourse];
+    const courseIds = selectedCourse === 'all' ? COURSE_ORDER : [selectedCourse];
     return courseIds
       .map(cid => ({
         courseId: cid,
@@ -124,13 +148,13 @@ export default function LibraryPage() {
   }, [filtered, selectedCourse]);
 
   const sessionReadings = ctx ? getLibraryForSession(ctx.courseId, ctx.session) : [];
-  const hasFilters = selectedCourse !== 'all' || search !== '' || selectedTag !== null;
+  const hasFilters = selectedCourse !== 'all' || search !== '' || selectedTag !== null || accessFilter !== 'all';
 
   return (
     <div>
       <Topbar
         title="Academy Library"
-        subtitle="Curated open-access scholarship and primary sources, by course and session"
+        subtitle="Curated scholarship and primary sources, by course and session"
       />
 
       {ctx && sessionReadings.length > 0 && (
@@ -191,7 +215,7 @@ export default function LibraryPage() {
           ))}
         </main>
 
-        {/* RIGHT: search + tag cloud */}
+        {/* RIGHT: search, access filter, tag cloud */}
         <aside className="space-y-5">
           <div>
             <p
@@ -207,6 +231,34 @@ export default function LibraryPage() {
               placeholder="Title, author, tag..."
               className="w-full bg-navy border border-academy-border rounded-lg px-3 py-2 text-academy-text placeholder-academy-muted focus:outline-none focus:border-academy-gold transition-colors text-sm"
             />
+          </div>
+
+          <div>
+            <p
+              className="text-academy-muted text-[11px] uppercase tracking-widest mb-2"
+              style={{ fontFamily: DM_MONO }}
+            >
+              Access
+            </p>
+            <div className="space-y-1">
+              {([
+                ['all', 'All'],
+                ['open', 'Open Access Only'],
+                ['library-incl', 'All including Library Access'],
+              ] as [AccessFilter, string][]).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setAccessFilter(val)}
+                  className={`w-full text-left px-3 py-1.5 rounded-lg text-xs transition-all ${
+                    accessFilter === val
+                      ? 'bg-academy-gold/10 text-academy-gold border border-academy-gold/20'
+                      : 'text-academy-muted hover:text-academy-text border border-transparent'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div>
@@ -238,7 +290,7 @@ export default function LibraryPage() {
 
           {hasFilters && (
             <button
-              onClick={() => { setSelectedCourse('all'); setSearch(''); setSelectedTag(null); }}
+              onClick={() => { setSelectedCourse('all'); setSearch(''); setSelectedTag(null); setAccessFilter('all'); }}
               className="text-academy-muted text-xs underline hover:text-academy-text"
             >
               Clear filters
