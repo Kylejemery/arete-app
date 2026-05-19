@@ -119,19 +119,28 @@ export default function PreSeminarBriefing({
                 Further Reading
               </p>
               <ul className="space-y-2">
-                {sessionReadings.map(item => (
-                  <li key={item.id} className="text-sm text-academy-muted leading-relaxed">
-                    {item.author} ({item.year > 0 ? item.year : 'ancient'}) — {item.title}{' '}
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-academy-gold hover:underline whitespace-nowrap"
-                    >
-                      Open &rarr;
-                    </a>
-                  </li>
-                ))}
+                {sessionReadings.map(item => {
+                  const isOpen = item.accessType === 'open-access';
+                  return (
+                    <li key={item.id} className="text-sm text-academy-muted leading-relaxed">
+                      {!isOpen && (
+                        <span
+                          className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 align-middle"
+                          aria-hidden
+                        />
+                      )}
+                      {item.author} ({item.year > 0 ? item.year : 'ancient'}) — {item.title}{' '}
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`hover:underline whitespace-nowrap ${isOpen ? 'text-academy-gold' : 'text-amber-300'}`}
+                      >
+                        {isOpen ? 'Open' : 'Library'} &rarr;
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
