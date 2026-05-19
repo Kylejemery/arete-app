@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getLibraryForSession } from '@/data/library';
 
 export interface BriefingData {
   session: number;
@@ -28,6 +29,7 @@ export default function PreSeminarBriefing({
 }: PreSeminarBriefingProps) {
   const storageKey = `briefing-collapsed-${courseId}-${session}`;
   const [collapsed, setCollapsed] = useState(false);
+  const sessionReadings = getLibraryForSession(courseId, session);
 
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
@@ -110,6 +112,29 @@ export default function PreSeminarBriefing({
             </p>
             <p className="font-serif text-academy-gold text-sm leading-relaxed italic">{yourTask}</p>
           </div>
+
+          {sessionReadings.length > 0 && (
+            <div className="border-t border-academy-border pt-5">
+              <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-3">
+                Further Reading
+              </p>
+              <ul className="space-y-2">
+                {sessionReadings.map(item => (
+                  <li key={item.id} className="text-sm text-academy-muted leading-relaxed">
+                    {item.author} ({item.year > 0 ? item.year : 'ancient'}) — {item.title}{' '}
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-academy-gold hover:underline whitespace-nowrap"
+                    >
+                      Open &rarr;
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
