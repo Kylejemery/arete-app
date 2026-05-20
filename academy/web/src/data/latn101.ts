@@ -1226,4 +1226,1106 @@ export const LATN_101_SESSIONS: LatinSession[] = [
       { latin: 'turpis, turpe', pronunciation: 'TUR-pis', english: 'shameful, disgraceful (3rd decl. adj.)' },
     ],
   },
+
+  // ── SESSION 11 ─────────────────────────────────────────────────────────────
+  {
+    id: 11,
+    title: 'Passive Voice',
+    subtitle: 'Being acted upon — Latin’s third voice and the grammar of external circumstances',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Recognize and produce present passive indicative forms of all four conjugations',
+      'Distinguish active from passive meaning by ending',
+      'Use the ablative of agent with a/ab',
+      'Identify passive infinitives',
+      'Connect passive constructions to Stoic themes of what happens to us vs. what we do',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Active vs. Passive: A Stoic Frame',
+        body: 'Latin grammar mirrors a fundamental Stoic distinction. The active voice describes what the subject does: virtus exercetur — “virtue is practiced” (active). The passive describes what happens to the subject: virtus laudatur — “virtue is praised” (passive). For the Stoics, the ethical significance of this distinction is immense: what we do is eph’ hēmin (up to us); what happens to us is not. The passive voice is the grammar of external circumstances — things done to us, bestowed or withdrawn by fortune.\n\nEpictetus and Seneca write in both voices, but with full awareness: when Seneca says fata ducunt — “fate leads” (active) — he puts the agency squarely with fate. When he says ducimur — “we are led” — he describes the human side of the same event, stripped of agency. Both sentences describe the same reality; the voice encodes where agency sits.',
+      },
+      {
+        heading: 'Part 2 — Present Passive Indicative: All Four Conjugations',
+        body: 'The passive voice is formed by replacing the active endings with passive endings. The passive ending characteristic: -r appears in 1st person, -ris in 2nd, -tur in 3rd, -mur in 1st plural, -mini in 2nd plural, -ntur in 3rd plural.',
+        paradigms: [
+          {
+            title: 'Present Passive Indicative',
+            headers: ['Person', '1st Conj. (amare)', '2nd Conj. (monere)', '3rd Conj. (ducere)', '4th Conj. (audire)'],
+            rows: [
+              ['1st sg.', 'amor', 'moneor', 'ducor', 'audior'],
+              ['2nd sg.', 'amaris', 'moneris', 'duceris', 'audiris'],
+              ['3rd sg.', 'amatur', 'monetur', 'ducitur', 'auditur'],
+              ['1st pl.', 'amamur', 'monemur', 'ducimur', 'audimur'],
+              ['2nd pl.', 'amamini', 'monemini', 'ducimini', 'audimini'],
+              ['3rd pl.', 'amantur', 'monentur', 'ducuntur', 'audiuntur'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Memory key: active 1st sg. ends in -o/-m; passive 1st sg. ends in -r. Active 3rd sg. ends in -t; passive 3rd sg. ends in -tur. The -r signals “I am being acted upon.”',
+        },
+      },
+      {
+        heading: 'Part 3 — Ablative of Agent',
+        body: 'When a passive verb needs to express who performs the action, Latin uses the preposition a/ab + ablative. This is the ablative of agent, used only with passive verbs and only with persons (not things — means uses the plain ablative).',
+        paradigms: [
+          {
+            title: 'Agent vs. Means',
+            headers: ['Construction', 'Latin', 'Translation'],
+            rows: [
+              ['Ablative of agent', 'virtus a philosopho laudatur.', 'Virtue is praised by the philosopher.'],
+              ['Ablative of means (no a/ab)', 'ratio ratione regitur.', 'Reason is governed by reason (means).'],
+              ['Ablative of agent', 'animus a Deo regitur.', 'The soul is governed by God.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 4 — Passive Infinitive',
+        body: 'The present passive infinitive replaces the -re of the active infinitive with -ri (1st, 2nd, 4th conjugations) or -i (3rd conjugation).',
+        paradigms: [
+          {
+            title: 'Passive Infinitive',
+            headers: ['Conjugation', 'Active inf.', 'Passive inf.'],
+            rows: [
+              ['1st', 'amare (to love)', 'amari (to be loved)'],
+              ['2nd', 'monere (to warn)', 'moneri (to be warned)'],
+              ['3rd', 'ducere (to lead)', 'duci (to be led)'],
+              ['4th', 'audire (to hear)', 'audiri (to be heard)'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Seneca uses the passive infinitive in his philosophical program: beatum esse — “to be happy” (active), and contextually “to be made happy” in discussions of whether happiness is something done or something received.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '11.1',
+        prompt: 'Form the Passive — give the present passive 3rd singular of: amo, moneo, duco, audio',
+        answer: 'amatur, monetur, ducitur, auditur',
+      },
+      {
+        number: '11.2',
+        prompt: 'Translate: 1. virtus a sapiente laudatur.  2. animus ratione regitur.  3. fata a Deo ducuntur.  4. veritas non facile invenitur.',
+        answer: '1. Virtue is praised by the wise man. 2. The soul/mind is governed by reason. 3. The fates are led by God. 4. Truth is not easily found.',
+      },
+      {
+        number: '11.3',
+        prompt: 'Active to Passive — convert to passive (retaining the same subject relationship): philosophus virtutem exercet.',
+        answer: 'virtus a philosopho exercetur. (Virtue is practiced by the philosopher.)',
+      },
+      {
+        number: '11.4',
+        prompt: 'Stoic Reflection — what is the Stoic significance of the passive voice when applied to body, reputation, and wealth?',
+        answer: 'Body is acted upon — it suffers disease, injury, aging — without our choosing. Reputation is conferred or withheld by others. Wealth is gained and lost by external fortune. The passive voice grammatically encodes what Epictetus calls the ouk eph’ hēmin category: things that happen to us, not things we do. When Seneca writes corpus corrumpitur — “the body is corrupted” — the passive correctly places agency outside the subject. The only thing that cannot be fully subjected to the passive is the soul’s judgment (iudicium) — which is why Stoics say the soul is free even in an enslaved body.',
+      },
+    ],
+    quiz: [
+      { question: 'What ending signals the passive 1st singular?', options: ['-o', '-r (e.g., amor, moneor, ducor)', '-tur', '-mur'], correct: 1 },
+      { question: 'What ending signals the passive 3rd singular?', options: ['-t', '-tur (e.g., amatur, ducitur)', '-nt', '-r'], correct: 1 },
+      { question: 'What construction expresses the agent with a passive verb?', options: ['a/ab + ablative (the ablative of agent)', 'the dative case alone', 'the genitive case', 'cum + ablative'], correct: 0 },
+      { question: 'Give the passive infinitive of duco.', options: ['ducere', 'duci', 'ductus', 'duceri'], correct: 1 },
+      { question: 'Translate: virtus a philosopho laudatur.', options: ['The philosopher praises virtue.', 'Virtue is praised by the philosopher.', 'Virtue praises the philosopher.', 'Let virtue be praised.'], correct: 1 },
+      { question: 'What distinguishes the ablative of agent from the ablative of means?', options: ['Agent uses a/ab + ablative (persons); means uses the bare ablative (things/instruments)', 'They are identical', 'Agent uses the dative; means uses the genitive', 'Means always takes a/ab'], correct: 0 },
+      { question: 'Give the present passive 3rd plural of audio.', options: ['audiunt', 'audiuntur', 'audiantur', 'audimur'], correct: 1 },
+      { question: 'Give the present passive 1st plural of moneo.', options: ['monemus', 'monentur', 'monemur', 'moneor'], correct: 2 },
+      { question: 'Translate: animus ratione regitur.', options: ['Reason governs the soul.', 'The soul/mind is governed by reason.', 'The soul governs by reason.', 'Let reason govern the soul.'], correct: 1 },
+      { question: 'Why is the passive voice philosophically significant for Stoic ethics?', options: ['It is grammatically simpler than the active', 'It encodes what happens to us (ouk eph’ hēmin) vs. what we do (eph’ hēmin) — the foundational Stoic distinction', 'It is used only in poetry', 'It refers only to the gods'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'amare', pronunciation: 'a-MA-re', english: 'to love (1st conj.)' },
+      { latin: 'monere', pronunciation: 'mo-NE-re', english: 'to warn, to advise (2nd conj.)' },
+      { latin: 'ducere', pronunciation: 'DU-ke-re', english: 'to lead (3rd conj.)' },
+      { latin: 'audire', pronunciation: 'au-DI-re', english: 'to hear (4th conj.)' },
+      { latin: 'regere', pronunciation: 'RE-ge-re', english: 'to rule, to govern (3rd conj.)' },
+      { latin: 'laudare', pronunciation: 'lau-DA-re', english: 'to praise (1st conj.)' },
+    ],
+  },
+
+  // ── SESSION 12 ─────────────────────────────────────────────────────────────
+  {
+    id: 12,
+    title: 'Imperfect Tense',
+    subtitle: 'Continuous and repeated past action — the grammar of habit and formation',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the imperfect active and passive of all four conjugations',
+      'Understand the aspectual difference between imperfect (ongoing) and perfect (completed)',
+      'Recognize the imperfect of sum (esse)',
+      'Read the imperfect in Seneca describing past practice and habit',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Latin Tense System: Aspect Matters',
+        body: 'Latin makes a crucial aspectual distinction in the past: the imperfect describes ongoing, repeated, or background past action (“was doing,” “used to do”); the perfect describes completed action with present relevance (“has done,” “did and it is done”). This distinction maps onto the Stoic emphasis on continuous practice (exercitatio) as distinct from isolated acts.\n\nWhen Seneca describes his daily philosophical practices — what he used to do, what he was reflecting on — he reaches for the imperfect. The imperfect is the tense of the prokopton’s training journal, not the sage’s completed achievement.',
+      },
+      {
+        heading: 'Part 2 — Imperfect Active: Formation',
+        body: 'The imperfect active is formed by: present stem + ba + secondary active endings. The -ba- infix is the signature of the Latin imperfect.',
+        paradigms: [
+          {
+            title: 'Imperfect Active',
+            headers: ['Person', '1st Conj. (amare)', '2nd Conj. (monere)', '3rd Conj. (ducere)', '4th Conj. (audire)'],
+            rows: [
+              ['1st sg.', 'ama-ba-m', 'mone-ba-m', 'duce-ba-m', 'audie-ba-m'],
+              ['2nd sg.', 'ama-ba-s', 'mone-ba-s', 'duce-ba-s', 'audie-ba-s'],
+              ['3rd sg.', 'ama-ba-t', 'mone-ba-t', 'duce-ba-t', 'audie-ba-t'],
+              ['1st pl.', 'ama-ba-mus', 'mone-ba-mus', 'duce-ba-mus', 'audie-ba-mus'],
+              ['2nd pl.', 'ama-ba-tis', 'mone-ba-tis', 'duce-ba-tis', 'audie-ba-tis'],
+              ['3rd pl.', 'ama-ba-nt', 'mone-ba-nt', 'duce-ba-nt', 'audie-ba-nt'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Imperfect Passive and sum',
+        body: 'The imperfect passive replaces the active endings with passive endings on the same -ba- stem.',
+        paradigms: [
+          {
+            title: 'Imperfect Active vs. Passive',
+            headers: ['Person', 'Imperfect Active', 'Imperfect Passive'],
+            rows: [
+              ['1st sg.', 'amabam', 'amabar'],
+              ['3rd sg.', 'amabat', 'amabatur'],
+              ['3rd pl.', 'amabant', 'amabantur'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'sum (to be) has an irregular imperfect: eram, eras, erat, eramus, eratis, erant. These forms appear constantly in Seneca — especially erat (it was) in his narrative constructions.',
+        },
+      },
+      {
+        heading: 'Part 4 — Imperfect in Seneca',
+        body: 'Epistulae Morales I.1 uses very few imperfects (it is primarily present-tense philosophical counsel), but adjacent Senecan prose is full of them. In Epistula I.4 — which Unit II students will encounter — Seneca describes his past habits of wasting time: diffundebam (I was squandering), procrastinabam (I was putting off). Both are imperfects, capturing the ongoing character of his former bad habits.',
+        paradigms: [
+          {
+            title: 'The Imperfect in Context',
+            headers: ['Latin', 'Translation + Note'],
+            rows: [
+              ['exercitabam animum cotidie.', 'I was training / used to train the mind daily. (imperfect of exercitare)'],
+              ['tempus perdebam in nugis.', 'I was wasting time on trifles. (imperfect of perdere)'],
+              ['sapientia non casu venit.', 'Wisdom does not come by chance. (present — general truth)'],
+            ],
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        number: '12.1',
+        prompt: 'Form the Imperfect — give the imperfect active 1st singular of: amo, moneo, duco, audio',
+        answer: 'amabam, monebam, ducebam, audiebam',
+      },
+      {
+        number: '12.2',
+        prompt: 'Imperfect of sum — give all six forms of the imperfect of sum.',
+        answer: 'eram, eras, erat, eramus, eratis, erant',
+      },
+      {
+        number: '12.3',
+        prompt: 'Translate: 1. exercitabam animum cotidie.  2. philosophus virtutem laudabat semper.  3. tempus a nobis perdebatur.',
+        answer: '1. I was training / used to train the mind daily. 2. The philosopher was always / used to praise virtue. 3. Time was being wasted by us.',
+      },
+      {
+        number: '12.4',
+        prompt: 'Aspectual Distinction — explain why Seneca would use the imperfect rather than the perfect to describe his former bad habits.',
+        answer: 'The imperfect (perdebam — “I was wasting / used to waste”) describes habitual, ongoing past action — a pattern of behavior across many days and years. It captures the sustained character of the bad habit. The perfect (perdidi — “I wasted / I have wasted”) would describe a single completed act of waste. Seneca’s point is precisely that his former time-wasting was a habitual mode of life, not a single incident. The imperfect is the tense of bad character just as it is the tense of good practice — both are described as sustained patterns over time.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the signature marker of the Latin imperfect?', options: ['-ba- between the stem and the secondary endings', '-vi-', '-r', '-nt'], correct: 0 },
+      { question: 'What aspectual meaning does the imperfect carry?', options: ['Completed single past action', 'Ongoing, continuous, or repeated past action (“was doing,” “used to do”)', 'Future intention', 'A direct command'], correct: 1 },
+      { question: 'Give the imperfect 3rd singular of sum.', options: ['est', 'erat', 'fuit', 'erit'], correct: 1 },
+      { question: 'Give the imperfect active 3rd plural of amo.', options: ['amabant', 'amaverunt', 'amant', 'amabunt'], correct: 0 },
+      { question: 'Give the imperfect passive 3rd singular of moneo.', options: ['monebat', 'monebatur', 'monetur', 'monebantur'], correct: 1 },
+      { question: 'Translate: philosophus virtutem laudabat.', options: ['The philosopher praised virtue once.', 'The philosopher was praising / used to praise virtue.', 'The philosopher will praise virtue.', 'Let the philosopher praise virtue.'], correct: 1 },
+      { question: 'Which tense describes completed past action with present relevance?', options: ['The imperfect', 'The future', 'The perfect', 'The present'], correct: 2 },
+      { question: 'What is the imperfect active 1st plural of duco?', options: ['ducebam', 'ducebamus', 'duxerimus', 'ducimus'], correct: 1 },
+      { question: 'Give the imperfect passive 3rd plural of audio.', options: ['audiebantur', 'audiebatur', 'audiuntur', 'audientur'], correct: 0 },
+      { question: 'Translate: exercitabam animum cotidie.', options: ['I trained the mind once.', 'I was training / used to train the mind daily.', 'I will train the mind daily.', 'Train the mind daily!'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'exercitare', pronunciation: 'ek-ser-ki-TA-re', english: 'to train, to exercise (1st conj.)' },
+      { latin: 'perdere', pronunciation: 'PER-de-re', english: 'to waste, to lose, to destroy (3rd conj.)' },
+      { latin: 'cotidie', pronunciation: 'ko-TI-di-e', english: 'daily, every day (adv.)' },
+      { latin: 'semper', pronunciation: 'SEM-per', english: 'always (adv.)' },
+      { latin: 'sum, esse', pronunciation: 'sum, ES-se', english: 'to be (irregular)' },
+      { latin: 'procrastinare', pronunciation: 'pro-kras-ti-NA-re', english: 'to put off, to delay (1st conj.)' },
+    ],
+  },
+
+  // ── SESSION 13 ─────────────────────────────────────────────────────────────
+  {
+    id: 13,
+    title: 'Subjunctive Mood I — Present and Imperfect',
+    subtitle: 'Purpose, result, and indirect command — the grammar of Latin’s most important mood',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the present and imperfect subjunctive active and passive',
+      'Use the subjunctive in purpose clauses (ut + subj.)',
+      'Use the subjunctive in indirect commands (iubeo/hortor + ut + subj.)',
+      'Understand sequence of tenses (primary vs. secondary sequence)',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Subjunctive: Latin’s Most Productive Mood',
+        body: 'Latin uses the subjunctive mood far more extensively than Greek. Where Greek often uses the indicative for hypothetical statements, Latin regularly reaches for the subjunctive. For students of Stoic philosophical prose, mastery of the subjunctive is not optional — it is the mood of purpose, possibility, command, and indirect discourse.\n\nThe key formation rule: the present subjunctive uses different vowels than the present indicative. The mnemonic is “She sees a bee” — the 1st conjugation present subjunctive uses -e- (not -a-); the 2nd–4th use -a- (not -e-/-i-).',
+      },
+      {
+        heading: 'Part 2 — Present Subjunctive Active',
+        body: 'Formation: the 1st conj. present subjunctive changes -a- to -e- (amem). The 2nd–4th present subjunctive inserts -a- (moneam, ducam, audiam).',
+        paradigms: [
+          {
+            title: 'Present Subjunctive Active',
+            headers: ['Person', '1st Conj.', '2nd Conj.', '3rd Conj.', '4th Conj.'],
+            rows: [
+              ['1st sg.', 'amem', 'moneam', 'ducam', 'audiam'],
+              ['2nd sg.', 'ames', 'moneas', 'ducas', 'audias'],
+              ['3rd sg.', 'amet', 'moneat', 'ducat', 'audiat'],
+              ['1st pl.', 'amemus', 'moneamus', 'ducamus', 'audiamus'],
+              ['2nd pl.', 'ametis', 'moneatis', 'ducatis', 'audiatis'],
+              ['3rd pl.', 'ament', 'moneant', 'ducant', 'audiant'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Imperfect Subjunctive',
+        body: 'The imperfect subjunctive is the easiest Latin form to generate: it is the present infinitive + personal endings. Take any verb’s infinitive and add the personal endings directly.',
+        paradigms: [
+          {
+            title: 'Imperfect Subjunctive',
+            headers: ['Person', '1st Conj. (amare)', '2nd Conj. (monere)'],
+            rows: [
+              ['1st sg.', 'amarem', 'monerem'],
+              ['2nd sg.', 'amares', 'moneres'],
+              ['3rd sg.', 'amaret', 'moneret'],
+              ['3rd pl.', 'amarent', 'monerent'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Imperfect subjunctive of esse (to be): essem, esses, esset, essemus, essetis, essent — or the alternative form forem, fores, foret, forent (archaic, appears in Cicero and Livy).',
+        },
+      },
+      {
+        heading: 'Part 4 — Purpose Clauses and Sequence of Tenses',
+        body: 'Purpose clauses (final clauses) use ut + subjunctive (positive) or ne + subjunctive (negative). The tense of the subjunctive depends on the main verb’s tense — this is the sequence of tenses. Primary sequence: if the main verb is present or future, the purpose clause uses the present subjunctive. Secondary sequence: if the main verb is past (perfect, imperfect, pluperfect), the purpose clause uses the imperfect subjunctive.',
+        paradigms: [
+          {
+            title: 'Sequence of Tenses',
+            headers: ['Main Verb', 'Example'],
+            rows: [
+              ['Present (primary): philosophatur', 'philosophatur ut virtutem discat. He philosophizes in order to learn virtue. (pres. subj.)'],
+              ['Imperfect (secondary): philosophabatur', 'philosophabatur ut virtutem disceret. He was philosophizing in order to learn virtue. (imperf. subj.)'],
+            ],
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        number: '13.1',
+        prompt: 'Form the Subjunctive — give the present subjunctive 3rd singular of: amo, moneo, duco, audio, sum',
+        answer: 'amet, moneat, ducat, audiat, sit',
+      },
+      {
+        number: '13.2',
+        prompt: 'Purpose Clauses — translate: 1. philosophatur ut virtutem discat.  2. laborabat ne tempus perderet.',
+        answer: '1. He philosophizes in order to learn virtue. 2. He was working so that he might not waste time.',
+      },
+      {
+        number: '13.3',
+        prompt: 'Sequence of Tenses — identify whether each uses primary or secondary sequence: 1. legit ut sapiat.  2. legebat ut saperet.  3. leget ut sapiat.',
+        answer: '1. Primary (present main verb — legit). 2. Secondary (imperfect main verb — legebat). 3. Primary (future main verb — leget).',
+      },
+      {
+        number: '13.4',
+        prompt: 'Seneca on Purpose — translate and analyze: ita fac, mi Lucili: vindica te tibi — so that you may possess yourself.',
+        answer: 'Seneca’s command: vindica te tibi — “claim yourself for yourself.” The implied purpose clause would be ut tibi vivas (so that you may live for yourself) — Seneca’s actual phrase in Ep. I.1. The subjunctive purpose clause encodes the telos of philosophical practice: the whole project of askēsis is oriented toward self-possession, which requires a subjunctive because it is not yet actual — it is aimed at.',
+      },
+    ],
+    quiz: [
+      { question: 'What vowel change creates the 1st conjugation present subjunctive?', options: ['-a- changes to -e- (amem, ames, amet…)', '-e- changes to -a-', '-i- changes to -e-', 'No vowel change occurs'], correct: 0 },
+      { question: 'How is the imperfect subjunctive formed?', options: ['Augment + stem', 'Present infinitive + personal endings (amarem, amares, amaret…)', 'Perfect stem + -erim', 'Reduplication + stem'], correct: 1 },
+      { question: 'What conjunction introduces purpose clauses?', options: ['quod (positive) / quia (negative)', 'ut (positive) or ne (negative) + subjunctive', 'cum + indicative', 'si + subjunctive'], correct: 1 },
+      { question: 'What is primary sequence?', options: ['Main verb present or future → the purpose clause uses the present subjunctive', 'Main verb past → present subjunctive', 'Main verb present → imperfect subjunctive', 'Any verb → perfect subjunctive'], correct: 0 },
+      { question: 'What is secondary sequence?', options: ['Main verb present → imperfect subjunctive', 'Main verb is past → the purpose clause uses the imperfect subjunctive', 'Main verb future → present subjunctive', 'There is no secondary sequence'], correct: 1 },
+      { question: 'Give the present subjunctive 3rd singular of sum.', options: ['est', 'sit', 'esset', 'fuit'], correct: 1 },
+      { question: 'Translate: laborat ut discat.', options: ['He learned by working.', 'He works in order to learn.', 'He was working to learn.', 'Let him work and learn.'], correct: 1 },
+      { question: 'Give the imperfect subjunctive 1st singular of moneo.', options: ['moneam', 'monerem', 'monuissem', 'monebam'], correct: 1 },
+      { question: 'What is the negative purpose conjunction?', options: ['non', 'ne (+ subjunctive)', 'haud', 'nec'], correct: 1 },
+      { question: 'Why is the subjunctive the appropriate mood for purpose clauses?', options: ['Purpose statements are always false', 'Purpose describes something aimed at but not yet achieved — a goal, not a fact', 'The indicative cannot form clauses', 'Purpose clauses describe the past'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'discere', pronunciation: 'DIS-ke-re', english: 'to learn (3rd conj.)' },
+      { latin: 'laborare', pronunciation: 'la-bo-RA-re', english: 'to work, to labor (1st conj.)' },
+      { latin: 'sapere', pronunciation: 'SA-pe-re', english: 'to be wise, to taste (3rd conj.)' },
+      { latin: 'ut', pronunciation: 'ut', english: 'so that, in order that (+ subjunctive)' },
+      { latin: 'ne', pronunciation: 'ne', english: 'so that not, lest (+ subjunctive)' },
+      { latin: 'philosophari', pronunciation: 'phi-lo-so-PHA-ri', english: 'to philosophize (1st conj. deponent)' },
+    ],
+  },
+
+  // ── SESSION 14 ─────────────────────────────────────────────────────────────
+  {
+    id: 14,
+    title: 'Participles — Present, Perfect, Future Active',
+    subtitle: 'Latin’s three active participles and the grammar of character description',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form present active, perfect passive, and future active participles',
+      'Decline participles as 3rd declension adjectives',
+      'Use participial phrases to compress relative clauses',
+      'Recognize the ablative absolute construction',
+      'Read participial phrases in Seneca describing the wise man and the prokopton',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Latin’s Participle System',
+        body: 'Latin has four participles: present active, perfect passive, future active, and future passive (gerundive). This session covers the first three; the gerundive gets its own treatment in Session 18.\n\nThe practical difference from English: Latin participles carry the full burden of subordinate clauses. Where English says “the man who was training,” Latin prefers the participle: vir exercitans. Where English says “having chosen virtue, he became wise,” Latin uses the perfect participle in an ablative absolute: virtute electa, sapiens factus est.',
+      },
+      {
+        heading: 'Part 2 — Present Active Participle',
+        body: 'Formed by adding -ns (gen. -ntis) to the present stem. It declines as a 3rd declension adjective (like the Greek -ων type). Key participles for Stoic texts: sapiens/sapientis (wise, the sage — also a noun, “the wise man”), vir exercitans (the man who is practicing), animus regens (the soul governing).',
+        paradigms: [
+          {
+            title: 'Present Active Participle (amans)',
+            headers: ['Case', 'Masc./Fem.', 'Neuter', 'Note'],
+            rows: [
+              ['Nom. sg.', 'amans', 'amans', 'same for m. and f.'],
+              ['Gen. sg.', 'amantis', 'amantis', 'stem: amant-'],
+              ['Dat. sg.', 'amanti', 'amanti', ''],
+              ['Acc. sg.', 'amantem', 'amans', 'neuter acc. = nom.'],
+              ['Abl. sg.', 'amante / amanti', 'amante / amanti', '-i in attributive use; -e in predicate/absolute'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Perfect Passive Participle and Ablative Absolute',
+        body: 'The perfect passive participle (PPP) is the 4th principal part of the verb: amatus, -a, -um (having been loved). It declines as a 1st/2nd declension adjective. The ablative absolute is a participial construction where a noun + participle in the ablative case forms an independent clause, describing the circumstances of the main action.',
+        paradigms: [
+          {
+            title: 'The Ablative Absolute',
+            headers: ['Ablative Absolute', 'Translation + Note'],
+            rows: [
+              ['virtute electa, sapiens factus est.', 'With virtue having been chosen / Since virtue was chosen, he became wise.'],
+              ['animo confirmato, timorem vicit.', 'With the soul having been strengthened / Once his soul was strengthened, he overcame fear.'],
+              ['rebus compositis, ad philosophiam rediit.', 'With matters settled, he returned to philosophy.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 4 — Future Active Participle',
+        body: 'The future active participle (FAP) is formed from the PPP stem + -urus, -a, -um. It describes intended or imminent action: moriturus (about to die), facturus (about to do), scripturus (about to write). It is often used with sum to form the active periphrastic conjugation.',
+        paradigms: [
+          {
+            title: 'Future Active Participle',
+            headers: ['Latin', 'Translation'],
+            rows: [
+              ['philosophaturus ad Forum venit.', 'He came to the Forum, about to philosophize.'],
+              ['moriturus non timuisti.', 'You, about to die, did not fear. (addressing a Stoic)'],
+              ['dicturus est multa de virtute.', 'He is about to say many things about virtue.'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Seneca uses the future active participle to great effect in his discussions of death: moriturus — “about to die” — is not a threat but a philosophical frame. The man who remembers he is moriturus lives differently from the man who forgets.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '14.1',
+        prompt: 'Form Participles — give the nominative singular masculine present active participle of: amo, moneo, duco, vivo',
+        answer: 'amans, monens, ducens, vivens',
+      },
+      {
+        number: '14.2',
+        prompt: 'Ablative Absolute — translate the ablative absolutes: 1. animo confirmato, ad philosophiam rediit.  2. rebus compositis, sapiens quiescit.',
+        answer: '1. With his soul strengthened / Once his soul was strengthened, he returned to philosophy. 2. With matters settled / Once matters are settled, the wise man rests.',
+      },
+      {
+        number: '14.3',
+        prompt: 'Future Active Participle — translate: moriturus non timuisti.',
+        answer: 'Being about to die / Facing death, you did not fear.',
+      },
+      {
+        number: '14.4',
+        prompt: 'The Grammar of the Sage — Seneca calls the ideal philosopher a vir exercitans. Analyze the phrase grammatically and explain its philosophical significance.',
+        answer: 'vir = nominative singular masculine (man). exercitans = present active participle of exercito/exerceo (training, practicing), nominative singular to agree with vir. Together: “the man who is practicing / the practicing man.” Philosophically, the present participle is significant: not vir exercitatus (the man who was trained — perfect), but vir exercitans (the man currently in the act of training). Stoic virtue is not a past acquisition but an active, ongoing exercise of reason. The present participle captures askēsis as a mode of being in the present, not a status conferred by past achievement.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the present active participle of amo?', options: ['amatus', 'amans (gen. amantis)', 'amaturus', 'amavi'], correct: 1 },
+      { question: 'How does the present active participle decline?', options: ['As a 1st declension noun', 'As a 3rd declension adjective (gen. in -ntis)', 'It does not decline', 'As a 2nd declension noun'], correct: 1 },
+      { question: 'What is the perfect passive participle of amo?', options: ['amans', 'amaturus', 'amatus, -a, -um', 'amandus'], correct: 2 },
+      { question: 'What is an ablative absolute?', options: ['A noun + participle in the ablative, grammatically independent from the main clause, expressing circumstance', 'A verb in the passive voice', 'A purpose clause', 'A superlative adjective'], correct: 0 },
+      { question: 'What is the future active participle of facio?', options: ['factus', 'faciens', 'facturus, -a, -um', 'faciendus'], correct: 2 },
+      { question: 'Translate: virtute electa, sapiens factus est.', options: ['He chose virtue and was wise.', 'With virtue chosen / Since virtue was chosen, he became wise.', 'Virtue makes the wise man.', 'He will choose virtue to become wise.'], correct: 1 },
+      { question: 'What does sapiens mean as a noun?', options: ['The act of knowing', 'The wise man — the Stoic sage', 'Wisdom as an abstract quality', 'A wise saying'], correct: 1 },
+      { question: 'Translate: moriturus non timuisti.', options: ['He was about to die and feared.', 'About to die / Facing death, you did not fear.', 'You died without fear.', 'May you die without fear.'], correct: 1 },
+      { question: 'Why is -i the ablative singular of present participles in attributive use?', options: ['It is an error', '3rd declension adjectives use -i in the ablative when attributive; -e when predicate or in an ablative absolute', 'All ablatives end in -i', 'The -i marks the plural'], correct: 1 },
+      { question: 'What does exercitans grammatically describe in vir exercitans?', options: ['A perfect passive participle — “the man who was trained”', 'A present active participle modifying vir — “the man who is training/practicing”', 'A future participle — “about to train”', 'A noun meaning “exercise”'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'vivere', pronunciation: 'WI-we-re', english: 'to live (3rd conj.)' },
+      { latin: 'sapiens, sapientis', pronunciation: 'SA-pi-ens', english: 'wise; the wise man, the sage' },
+      { latin: 'facere', pronunciation: 'FA-ke-re', english: 'to do, to make (3rd conj.)' },
+      { latin: 'mori', pronunciation: 'MO-ri', english: 'to die (3rd conj. deponent)' },
+      { latin: 'componere', pronunciation: 'kom-PO-ne-re', english: 'to settle, to arrange (3rd conj.)' },
+      { latin: 'vir, viri', pronunciation: 'wir', english: 'man (m., 2nd decl.)' },
+    ],
+  },
+
+  // ── SESSION 15 ─────────────────────────────────────────────────────────────
+  {
+    id: 15,
+    title: 'Epistulae Morales I.1 — Full Parse',
+    subtitle: 'The milestone of Unit II — complete grammatical analysis of Seneca’s first letter',
+    targetText: SENECA_I_1,
+    isMilestone: true,
+    objectives: [
+      'Parse every word of Epistula I.1 with full grammatical identification',
+      'Produce a working translation from memory',
+      'Explain each grammatical choice in context',
+      'Connect Seneca’s letter to the Stoic framework built in Sessions 1–14',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Text',
+        body: 'Ita fac, mi Lucili: vindica te tibi, et tempus quod adhuc aut auferebatur aut subripiebatur aut excidebat, collige et serva. Persuade tibi hoc sic esse ut scribo: quaedam tempora eripiuntur nobis, quaedam subducuntur, quaedam effluunt. Turpissima tamen est iactura quae per neglegentiam fit. Et si volueris attendere, magna pars vitae elabitur male agentibus, magna otio, magna aliis occupati. Dabit tibi hoc ratio.\n\nTranslation target: “Do this, my Lucilius: claim yourself for yourself, and gather and save that time which was until now either being taken from you, or stolen, or slipping away. Persuade yourself that it is so as I write: some time is snatched from us, some is stolen, some flows away. But the most shameful loss is that which comes about through negligence. And if you are willing to pay attention, a large part of life slips away while we act badly, a large part in idleness, a large part while occupied with other things. This reason will give you.”',
+      },
+      {
+        heading: 'Part 2 — Parse: Sentence 1',
+        body: 'The opening sentence is a command followed by a relative clause describing the time to be reclaimed.',
+        paradigms: [
+          {
+            title: 'Sentence 1 — Parse',
+            headers: ['Word', 'Form', 'Parse', 'Role'],
+            rows: [
+              ['Ita fac', 'fac', 'imperative 2nd sg. of facio', 'command: “do this”'],
+              ['mi Lucili', 'mi, Lucili', 'vocative (mi = meus contracted), proper noun vocative', 'address to recipient'],
+              ['vindica', 'vindica', 'imperative 2nd sg. of vindico (1st conj.)', 'command: “claim, rescue”'],
+              ['te tibi', 'te (acc.), tibi (dat.)', 'reflexive acc. + dat. of interest', '“yourself for yourself” — reflexive intensification'],
+              ['quod… auferebatur', 'auferebatur', 'imperfect passive 3rd sg. of aufero', 'ongoing past action: “was being taken”'],
+              ['aut subripiebatur', 'subripiebatur', 'imperfect passive 3rd sg. of subripio', 'parallel passive imperfect: “was being stolen”'],
+              ['aut excidebat', 'excidebat', 'imperfect active 3rd sg. of excido', 'active — time itself slipping: “was slipping away”'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Parse: Central Distinctions',
+        body: 'The central section gives Seneca’s taxonomy of how time is lost and names the vice that causes the worst loss.',
+        paradigms: [
+          {
+            title: 'Central Distinctions — Parse',
+            headers: ['Word', 'Form', 'Parse', 'Seneca’s Meaning'],
+            rows: [
+              ['eripiuntur', 'pres. pass. 3rd pl.', 'eripio — to snatch away', 'time violently stolen — external force'],
+              ['subducuntur', 'pres. pass. 3rd pl.', 'subduco — to remove secretly', 'time quietly taken — subtle theft'],
+              ['effluunt', 'pres. act. 3rd pl.', 'effluo — to flow out', 'time just drifting away — our own inattention'],
+              ['iactura', 'nom. sg. fem.', '3rd decl. from iacio — loss, throwing away', 'the loss that results from neglegentia'],
+              ['neglegentiam', 'acc. sg. fem.', '1st decl. — negligence, inattention', 'the vice Seneca diagnoses as worst'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 4 — The Three Kinds of Time-Loss and Stoic Analysis',
+        body: 'Seneca gives a taxonomy of how time is lost: eripiuntur (snatched — external force), subducuntur (stolen — subtle external appropriation), effluunt (flow away — our own inattention). The philosophical weight falls on the third: the turpissima (most shameful) loss is per neglegentiam — through our own failure of attention.\n\nThis taxonomy mirrors the Stoic analysis of obstacles: some come from outside (force majeure), some are social (others’ demands), but the worst come from within — from our failure to govern our own prohairesis. Neglegentia in time is the temporal equivalent of failure to examine impressions: we simply do not pay attention, and time flows away ungoverned.\n\nThe grammatical point: note that eripiuntur and subducuntur are passive (time is the recipient of action), while effluunt is active (time actively flows — we are neither subject nor object, just absent). Seneca’s grammar enacts his philosophy.',
+      },
+    ],
+    exercises: [
+      {
+        number: '15.1',
+        prompt: 'Unaided Translation — without notes: translate the opening of Epistula I.1 from memory.',
+        answer: 'Do this, my Lucilius: claim yourself for yourself, and gather and save that time which was until now being taken from you, or stolen, or slipping away. Persuade yourself that it is so as I write: some time is snatched from us, some stolen, some flows away.',
+      },
+      {
+        number: '15.2',
+        prompt: 'Parse on Demand — parse fully: 1. auferebatur  2. eripiuntur  3. neglegentiam  4. effluunt',
+        answer: '1. Imperfect passive 3rd sg. of aufero — “was being taken away” (ongoing past). 2. Present passive 3rd pl. of eripio — “are being snatched” (current process). 3. Accusative singular feminine of neglegentia (1st decl.) — “negligence,” object of per. 4. Present active 3rd pl. of effluo — “they flow away” (active — time itself as agent).',
+      },
+      {
+        number: '15.3',
+        prompt: 'Grammatical Philosophy — why does Seneca use the active voice (effluunt) for the third kind of time-loss but the passive voice (eripiuntur, subducuntur) for the first two?',
+        answer: 'The passive voice places the agent of action outside the subject — time is acted upon by external forces (stolen, snatched). The active voice (effluunt) removes any external agent — time itself flows away, and we are neither subject nor object. We are simply absent. This grammatical distinction enacts Seneca’s philosophical point: external theft of time can be resisted or compensated; the flow of time from our own inattention is the worst because we are not even the subject of a passive sentence — we are simply not there. The most shameful loss is the one where there is no thief, no force, just our own ungoverned attention.',
+      },
+      {
+        number: '15.4',
+        prompt: 'Connection to Encheiridion §1 — connect Epistula I.1’s theme to Epictetus’s partition in Encheiridion §1.',
+        answer: 'Seneca’s taxonomy of time-loss maps onto the Stoic partition: time snatched by external force (ouk eph’ hēmin — not up to us), time stolen by social demands (borderline — we could refuse but often do not), time that flows away from inattention (this is the eph’ hēmin category — our prohairesis governs our attention). The turpissima iactura is the one we could have prevented by exercising our eph’ hēmin faculty — attention, prosochē. Seneca’s letter is an application of Epictetus’s §1 to the specific domain of time-use: gather what is up to you (your attention and governance of time), let go of what is not.',
+      },
+    ],
+    quiz: [
+      { question: 'What does vindica te tibi mean?', options: ['“Claim yourself for yourself” — imperative of vindico + reflexive accusative and dative', '“Defend Lucilius”', '“Give yourself time”', '“Live for others”'], correct: 0 },
+      { question: 'What are the three verbs describing how time is lost?', options: ['amo, moneo, duco', 'eripiuntur (snatched), subducuntur (stolen), effluunt (flow away)', 'vivo, lego, scribo', 'sum, fero, eo'], correct: 1 },
+      { question: 'What does turpissima mean?', options: ['somewhat shameful', 'most shameful (superlative of turpis)', 'not shameful', 'shameful (positive degree)'], correct: 1 },
+      { question: 'What is iactura?', options: ['gain, profit', 'a kind of letter', 'loss — the waste of time through negligence', 'attention'], correct: 2 },
+      { question: 'Parse auferebatur.', options: ['Present active 3rd sg. of aufero', 'Imperfect passive 3rd singular of aufero — “was being taken away”', 'Perfect passive of aufero', 'Future of aufero'], correct: 1 },
+      { question: 'Why is effluunt active while eripiuntur is passive?', options: ['effluunt is simply irregular', 'eripiuntur: time acted upon by external force; effluunt: time simply flows away — no external agent, we are absent', 'They mean the same thing', 'effluunt is passive too'], correct: 1 },
+      { question: 'What is the grammatical form of mi Lucili?', options: ['Nominative', 'Vocative — mi (dear) + Lucili, vocative of Lucilius', 'Genitive', 'Ablative'], correct: 1 },
+      { question: 'What vice does Seneca identify as the source of the worst time-loss?', options: ['avaritia (greed)', 'neglegentia — negligence, inattention', 'ira (anger)', 'superbia (pride)'], correct: 1 },
+      { question: 'What is the Stoic parallel to Seneca’s call for time-governance?', options: ['amor fati', 'prosochē — attention to impressions and judgments; governing what is eph’ hēmin', 'apatheia', 'oikeiōsis'], correct: 1 },
+      { question: 'Translate: magna pars vitae elabitur male agentibus.', options: ['A large part of life is praised by good men.', 'A large part of life slips away for those acting badly / while we act badly.', 'Life acts badly in great part.', 'A great part of life must be lived well.'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'auferre', pronunciation: 'au-FER-re', english: 'to take away, to carry off (irregular)' },
+      { latin: 'eripere', pronunciation: 'e-RI-pe-re', english: 'to snatch away (3rd conj.)' },
+      { latin: 'subducere', pronunciation: 'sub-DU-ke-re', english: 'to withdraw, to remove secretly (3rd conj.)' },
+      { latin: 'effluere', pronunciation: 'ef-FLU-e-re', english: 'to flow away, to slip away (3rd conj.)' },
+      { latin: 'differre', pronunciation: 'dif-FER-re', english: 'to put off, to defer (irregular)' },
+      { latin: 'agere', pronunciation: 'A-ge-re', english: 'to do, to drive, to act (3rd conj.)' },
+    ],
+  },
+
+  // ── SESSION 16 ─────────────────────────────────────────────────────────────
+  {
+    id: 16,
+    title: 'Deponent Verbs and Semi-Deponents',
+    subtitle: 'Passive in form, active in meaning — and the verbs Seneca most loves',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Recognize deponent verbs from their principal parts',
+      'Conjugate common deponents in present, imperfect, and perfect',
+      'Identify semi-deponents and their active/passive split',
+      'Master the core Stoic deponents: loquor, sequor, morior, patior, utor',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — What Deponent Means',
+        body: 'A deponent verb has laid aside (deposuit) its active forms — hence deponens. Its forms look passive but mean active. You cannot derive an active form from a deponent; it simply exists only in passive morphology with active meaning. This is not irregular behavior — it is a lexical property. Many of the most important philosophical verbs in Latin are deponents.\n\nRecognition rule: a deponent’s dictionary entry shows passive forms. Instead of amo, amare, amavi, amatum, you see loquor, loqui, locutus sum — passive infinitive, no active principal parts. When you see a verb whose dictionary entry ends in -or and whose infinitive ends in -i or -ari, it is a deponent.',
+      },
+      {
+        heading: 'Part 2 — Core Stoic Deponents',
+        body: 'These deponents recur constantly in Seneca and Epictetus. Each describes a mode of being — speaking, following, dying, suffering, using — rather than a transitive act on an external object.',
+        paradigms: [
+          {
+            title: 'Core Stoic Deponents',
+            headers: ['Verb', 'Meaning', '3rd sg. Pres.', 'Stoic Use'],
+            rows: [
+              ['loquor, loqui', 'to speak, say', 'loquitur', 'Sapiens de virtute loquitur.'],
+              ['sequor, sequi', 'to follow', 'sequitur', 'Ratio naturam sequitur.'],
+              ['morior, mori', 'to die', 'moritur', 'Omnes morimur. moriturus es.'],
+              ['patior, pati', 'to suffer, allow', 'patitur', 'Sapiens nihil invitus patitur.'],
+              ['utor, uti', 'to use (+ abl.)', 'utitur', 'Virtute uti debemus.'],
+              ['proficiscor, proficisci', 'to set out, depart', 'proficiscitur', 'Ad philosophiam proficiscitur.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Conjugating Deponents',
+        body: 'Deponents follow the same passive conjugation patterns you learned in Session 11. The only difference is meaning — passive forms, active translation.',
+        paradigms: [
+          {
+            title: 'Conjugation of loquor',
+            headers: ['Person', 'Present', 'Imperfect', 'Perfect', 'Translation'],
+            rows: [
+              ['1st sg.', 'loquor', 'loquebar', 'locutus sum', 'I speak / I was speaking / I spoke'],
+              ['2nd sg.', 'loqueris', 'loquebaris', 'locutus es', 'you speak / were speaking / spoke'],
+              ['3rd sg.', 'loquitur', 'loquebatur', 'locutus est', 'he speaks / was speaking / spoke'],
+              ['3rd pl.', 'loquuntur', 'loquebantur', 'locuti sunt', 'they speak / were speaking / spoke'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'The perfect of deponents uses the perfect passive participle (4th principal part) + sum/es/est. But the meaning is active: locutus est = “he spoke,” not “he was spoken.”',
+        },
+      },
+      {
+        heading: 'Part 4 — Semi-Deponents',
+        body: 'Semi-deponents have active forms in the present system but passive forms (with active meaning) in the perfect system.',
+        paradigms: [
+          {
+            title: 'Semi-Deponents',
+            headers: ['Verb', 'Present (active)', 'Perfect (deponent)'],
+            rows: [
+              ['audeo, -ere', 'I dare (active)', 'ausus sum (I dared — passive form, active meaning)'],
+              ['soleo, -ere', 'I am accustomed (active)', 'solitus sum (I was accustomed)'],
+              ['fido, -ere', 'I trust (active)', 'fisus sum (I trusted)'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'soleo is especially important in Seneca: solebam cotidie aliquid ex Epicuro legere — “I used to read something from Epicurus every day.” The combination of semi-deponent perfect and imperfect captures habitual past practice perfectly.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '16.1',
+        prompt: 'Conjugate loquor — give all six persons of loquor in the present tense.',
+        answer: 'loquor, loqueris, loquitur, loquimur, loquimini, loquuntur',
+      },
+      {
+        number: '16.2',
+        prompt: 'Translate: 1. sapiens de virtute loquitur.  2. ratio naturam sequitur.  3. mortem non timebo — moriturus sum.  4. virtute uti debemus.',
+        answer: '1. The wise man speaks about virtue. 2. Reason follows nature. 3. I will not fear death — I am about to die. (future active participle as predicate) 4. We ought to use virtue.',
+      },
+      {
+        number: '16.3',
+        prompt: 'Identify Deponent or Regular Passive: 1. loquitur  2. laudatur  3. moriuntur  4. amantur  5. patimur',
+        answer: '1. Deponent — loquitur = “he speaks” (active meaning). 2. Regular passive — laudatur = “he is praised.” 3. Deponent — moriuntur = “they die” (active meaning). 4. Regular passive — amantur = “they are loved.” 5. Deponent — patimur = “we suffer” (active meaning).',
+      },
+      {
+        number: '16.4',
+        prompt: 'patior and Stoic Suffering — explain the Stoic significance of the verb patior, pati: what does it mean to suffer, and why does Seneca say sapiens nihil invitus patitur?',
+        answer: 'patior means to suffer, to undergo, to allow or permit. It is a deponent — passive in form, but describing an experience of the subject. Seneca’s sapiens nihil invitus patitur — “the wise man suffers nothing unwillingly” — makes a Stoic philosophical point using the grammar: patior acknowledges that things happen to the sage (external events, bodily pain, loss). The sage does not deny these events. But invitus (unwillingly, against one’s will) is what the sage eliminates. By aligning his will (voluntas) with what happens, the sage removes the involuntary quality from every experience. Grammar: nihil (accusative of nothing, direct object of patitur); invitus (predicate adjective modifying the subject of patitur, in the nominative — “the sage, being willing/not-unwilling, suffers nothing”).',
+      },
+    ],
+    quiz: [
+      { question: 'What is a deponent verb?', options: ['A verb with only active forms', 'A verb passive in form but active in meaning, with no active forms', 'A verb with no perfect tense', 'A verb used only in commands'], correct: 1 },
+      { question: 'How do you recognize a deponent in the dictionary?', options: ['Its entry ends in -o', 'Its entry ends in -or and its infinitive in -i or -ari (e.g., loquor, loqui)', 'It has four active principal parts', 'It begins with a prefix'], correct: 1 },
+      { question: 'What is the present 3rd singular of sequor?', options: ['sequit', 'sequitur', 'sequetur', 'secutus est'], correct: 1 },
+      { question: 'What is the perfect of loquor?', options: ['loquivi', 'locutus/a sum', 'loquebar', 'loquebatur'], correct: 1 },
+      { question: 'What is a semi-deponent?', options: ['A verb passive throughout', 'A verb with active forms in the present system but passive forms (active meaning) in the perfect', 'A verb with no infinitive', 'A half-conjugated verb'], correct: 1 },
+      { question: 'Give an example of a semi-deponent.', options: ['amo (present) / amavi', 'audeo (present active) / ausus sum (perfect — “I dared”)', 'duco / duxi', 'sum / fui'], correct: 1 },
+      { question: 'Translate: ratio naturam sequitur.', options: ['Nature follows reason.', 'Reason follows nature.', 'Reason is followed by nature.', 'Let reason follow nature.'], correct: 1 },
+      { question: 'What case does utor take as its object?', options: ['The accusative', 'The genitive', 'The ablative case', 'The dative'], correct: 2 },
+      { question: 'Translate: sapiens nihil invitus patitur.', options: ['The wise man suffers nothing unwillingly.', 'The wise man suffers everything.', 'Nothing is unwillingly wise.', 'The wise man is unwilling to suffer.'], correct: 0 },
+      { question: 'Why are many key Stoic verbs deponents?', options: ['It is a historical accident with no meaning', 'Deponents often describe internal experience and self-directed action (to speak, follow, die, experience) — naturally middle/reflexive in sense', 'The Stoics invented the deponent verb', 'Deponents are easier to conjugate'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'loqui', pronunciation: 'LO-kwi', english: 'to speak, to say (3rd conj. deponent)' },
+      { latin: 'sequi', pronunciation: 'SE-kwi', english: 'to follow (3rd conj. deponent)' },
+      { latin: 'mori', pronunciation: 'MO-ri', english: 'to die (3rd conj. deponent)' },
+      { latin: 'pati', pronunciation: 'PA-ti', english: 'to suffer, to allow (3rd conj. deponent)' },
+      { latin: 'uti', pronunciation: 'U-ti', english: 'to use (+ ablative; 3rd conj. deponent)' },
+      { latin: 'proficisci', pronunciation: 'pro-fi-KIS-ki', english: 'to set out, to depart (3rd conj. deponent)' },
+    ],
+  },
+
+  // ── SESSION 17 ─────────────────────────────────────────────────────────────
+  {
+    id: 17,
+    title: 'Indirect Statement — Accusative and Infinitive',
+    subtitle: 'Reporting thought and speech — the construction Stoic philosophers use most',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form indirect statement with accusative + infinitive after verba sentiendi et dicendi',
+      'Match the tense of the infinitive to the time of the reported statement (present = same time, perfect = earlier, future = later)',
+      'Use reflexive pronouns correctly in indirect statement',
+      'Read indirect statement in Seneca’s philosophical arguments',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Verba Dicendi and Sentiendi',
+        body: 'Latin uses the accusative + infinitive construction (ACI) for indirect statement after verbs of saying, thinking, knowing, perceiving, and showing. The accusative is the subject of the embedded clause; the infinitive carries the predicate. The tense of the infinitive is relative to the main verb, not absolute.\n\nKey verbs taking the ACI: dico (say), puto/arbitror/censeo (think), scio/cognosco (know), sentio (perceive), video (see — when it means “perceive”), ostendo (show), nego (deny).',
+      },
+      {
+        heading: 'Part 2 — Tense of the Infinitive',
+        body: 'The tense of the infinitive in an ACI is relative: it locates the reported action before, at, or after the time of the main verb.',
+        paradigms: [
+          {
+            title: 'Relative Tense of the Infinitive',
+            headers: ['Infinitive tense', 'Meaning relative to main verb', 'Example'],
+            rows: [
+              ['Present infinitive', 'Same time as the main verb', 'dicit virtutem esse bonum — “he says virtue is good”'],
+              ['Perfect infinitive', 'Earlier than the main verb', 'dicit virtutem fuisse bonum — “he says virtue was good (earlier)”'],
+              ['Future infinitive', 'Later than the main verb', 'dicit virtutem futuram esse — “he says virtue will be good”'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'The future infinitive of esse is fore or futurum esse. For other verbs: future active participle + esse — facturum esse (to be about to do), victurum esse (to be about to conquer).',
+        },
+      },
+      {
+        heading: 'Part 3 — Reflexive Pronouns in the ACI',
+        body: 'In indirect statement, se (himself/herself/themselves) refers back to the subject of the main verb, while eum/eam/eos refers to a different person. This distinction is critical and frequently tested.',
+        paradigms: [
+          {
+            title: 'se vs. eum in Indirect Statement',
+            headers: ['Latin', 'Translation + Note'],
+            rows: [
+              ['dicit se virtutem amare.', 'He says that he himself loves virtue. (se refers to the subject of dicit)'],
+              ['dicit eum virtutem amare.', 'He says that he (= someone else) loves virtue. (eum = a different person)'],
+              ['Seneca scribit se cotidie philosophari.', 'Seneca writes that he himself philosophizes daily.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 4 — Indirect Statement in Stoic Philosophy',
+        body: 'Stoic philosophical argument constantly uses the ACI to report doctrines, characterize positions, and attribute beliefs. When Seneca says Stoici putant virtutem solam esse bonum — “the Stoics think that virtue alone is good” — the ACI is the grammatical vehicle for reporting the central Stoic thesis.\n\nThe indirect statement also governs how Stoics report their own judgments. When a Stoic says iudico hoc malum esse — “I judge this to be evil” — the ACI is the form of the false judgment that askēsis is supposed to correct. Learning to identify, analyze, and withhold assent from ACI constructions in one’s own thinking is the grammar of the prosochē practice.',
+      },
+    ],
+    exercises: [
+      {
+        number: '17.1',
+        prompt: 'Translate ACI: 1. Stoici putant virtutem solam esse bonum.  2. Seneca scribit se cotidie philosophari.  3. dicit eum mortem non timuisse.',
+        answer: '1. The Stoics think that virtue alone is good. 2. Seneca writes that he himself philosophizes daily. 3. He says that he (= another person) did not fear death.',
+      },
+      {
+        number: '17.2',
+        prompt: 'Construct ACI — express in Latin using the ACI: “I know that virtue is the only good.”',
+        answer: 'scio virtutem solum esse bonum. (or: scio virtutem solam bonam esse)',
+      },
+      {
+        number: '17.3',
+        prompt: 'se vs. eum — translate and explain: Seneca dicit se liberum esse. vs. Seneca dicit eum liberum esse.',
+        answer: 'Seneca dicit se liberum esse — Seneca says that he himself is free. (se = Seneca, reflexive) Seneca dicit eum liberum esse — Seneca says that he (= someone else, not Seneca) is free. (eum = a different person)',
+      },
+      {
+        number: '17.4',
+        prompt: 'ACI and Stoic Assent — explain how the ACI connects to the Stoic theory of assent (synkatathesis in Greek, assensio in Latin).',
+        answer: 'The ACI is the grammatical form of a proposition offered for assent. In Stoic epistemology, when an impression (phantasia/visum) arises, it presents the mind with a content — effectively an accusative + infinitive: “this thing to be good,” “that person to be an enemy.” The mind can give assent (synkatathesis/assensio) to this proposition, producing judgment (ὑπόληψις), or withhold assent. The ACI is precisely the structure of a kataleptic or acataleptic impression: an accusative subject (this, that) + an infinitive predicate (to be X). Stoic practice is partly the practice of recognizing these ACI structures in one’s own mind and choosing whether to assent — making the ACI not just a grammatical exercise but the form of every moment of philosophical attention.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the ACI construction?', options: ['Ablative + participle', 'Accusative + infinitive — accusative subject, infinitive predicate, after verbs of saying/thinking', 'Nominative + subjunctive', 'Dative + gerund'], correct: 1 },
+      { question: 'What does a present infinitive express in the ACI?', options: ['Action earlier than the main verb', 'Action simultaneous with the main verb', 'Action later than the main verb', 'A command'], correct: 1 },
+      { question: 'What does a perfect infinitive express in the ACI?', options: ['Action simultaneous with the main verb', 'Action later than the main verb', 'Action earlier than the main verb', 'A purpose'], correct: 2 },
+      { question: 'Translate: dicit virtutem esse bonum.', options: ['Virtue says he is good.', 'He says that virtue is good.', 'He wishes virtue to be good.', 'Virtue is said by the good.'], correct: 1 },
+      { question: 'What is the future infinitive of esse?', options: ['esse', 'futurum esse (or fore)', 'fuisse', 'erat'], correct: 1 },
+      { question: 'What does se refer to in indirect statement?', options: ['A different person from the subject', 'The subject of the main verb (reflexive)', 'The object of the infinitive', 'No one in particular'], correct: 1 },
+      { question: 'How does eum differ from se in indirect statement?', options: ['eum and se are identical', 'eum refers to a different person from the subject of the main verb', 'eum is plural, se is singular', 'eum is nominative'], correct: 1 },
+      { question: 'Translate: Stoici putant virtutem solam esse bonum.', options: ['The Stoics alone think virtue is good.', 'The Stoics think that virtue alone is good.', 'Virtue thinks the Stoics are good.', 'Only good Stoics think.'], correct: 1 },
+      { question: 'Which group of verbs all take the ACI?', options: ['amo, moneo, rego, audio', 'dico, puto, scio, sentio', 'sum, possum, volo, eo', 'venio, facio, capio, ago'], correct: 1 },
+      { question: 'How does the ACI relate to Stoic prosochē practice?', options: ['It has no connection to Stoic practice', 'Impressions present themselves as ACI-structured propositions (“this to be good/bad”); attention means recognizing and choosing whether to assent', 'The ACI is forbidden in Stoic texts', 'Only the sage may use the ACI'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'dicere', pronunciation: 'DI-ke-re', english: 'to say, to tell (3rd conj.)' },
+      { latin: 'putare', pronunciation: 'pu-TA-re', english: 'to think, to suppose (1st conj.)' },
+      { latin: 'scire', pronunciation: 'SKI-re', english: 'to know (4th conj.)' },
+      { latin: 'sentire', pronunciation: 'sen-TI-re', english: 'to perceive, to feel (4th conj.)' },
+      { latin: 'negare', pronunciation: 'ne-GA-re', english: 'to deny, to say no (1st conj.)' },
+      { latin: 'arbitrari', pronunciation: 'ar-bi-TRA-ri', english: 'to think, to judge (1st conj. deponent)' },
+    ],
+  },
+
+  // ── SESSION 18 ─────────────────────────────────────────────────────────────
+  {
+    id: 18,
+    title: 'Gerund and Gerundive',
+    subtitle: 'The grammar of obligation, purpose, and philosophical necessity',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the gerund as a verbal noun',
+      'Form the gerundive as a verbal adjective of necessity',
+      'Distinguish gerund from gerundive',
+      'Use gerundive + esse for the passive periphrastic (obligation)',
+      'Read gerundive constructions in Seneca expressing what must be done',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Gerund: Verbal Noun',
+        body: 'The gerund is a verbal noun used in the oblique cases (genitive, dative, accusative with prepositions, ablative). It is formed by adding -nd- to the present stem + 2nd declension neuter endings: -ndi (gen.), -ndo (dat./abl.), -ndum (acc.). The nominative is replaced by the infinitive.',
+        paradigms: [
+          {
+            title: 'The Gerund (amo)',
+            headers: ['Case', 'Form (amo)', 'Translation'],
+            rows: [
+              ['Nominative (= inf.)', 'amare', 'to love / loving'],
+              ['Genitive', 'amandi', 'of loving'],
+              ['Dative', 'amando', 'for loving'],
+              ['Accusative (w/ prep)', 'ad amandum', 'for the purpose of loving'],
+              ['Ablative', 'amando', 'by loving / in loving'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'In Stoic texts: vivendi ars (the art of living — gen. gerund of vivo), ratio philosophandi (the method of philosophizing — gen. gerund of philosophor), ad discendum (for the purpose of learning — acc. gerund of disco).',
+        },
+      },
+      {
+        heading: 'Part 2 — The Gerundive: Verbal Adjective',
+        body: 'The gerundive (future passive participle) looks like the gerund + adjective endings: -ndus, -nda, -ndum. It is an adjective meaning “needing to be done/loved/etc.” — it expresses necessity or obligation.',
+        paradigms: [
+          {
+            title: 'The Gerundive',
+            headers: ['Verb', 'Gerundive nom. sg.', 'Meaning'],
+            rows: [
+              ['amo', 'amandus, -a, -um', 'needing to be loved / to be loved'],
+              ['sequor (dep.)', 'sequendus, -a, -um', 'needing to be followed / to be followed'],
+              ['philosophor', 'philosophandum est', 'one must philosophize (impers.)'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Passive Periphrastic (Gerundive + esse)',
+        body: 'When gerundive + sum appears, it expresses obligation — “must be done,” “ought to be done.” The person obligated goes in the dative (the dative of agent). This is the passive periphrastic, and it is Seneca’s favored construction for moral commands.',
+        paradigms: [
+          {
+            title: 'The Passive Periphrastic',
+            headers: ['Latin', 'Translation'],
+            rows: [
+              ['philosophandum est nobis.', 'We must philosophize. (lit. “it is to-be-philosophized by us”)'],
+              ['virtus amanda est.', 'Virtue must be loved / ought to be loved.'],
+              ['tempus colligendum est.', 'Time must be gathered / saved.'],
+              ['mors non timenda est.', 'Death is not to be feared / must not be feared.'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'The last phrase — mors non timenda est — is one of Seneca’s most famous: “Death is not to be feared.” The gerundive here does the work of the Stoic analysis: death is not an evil (malum), therefore it does not fall into the category of things to be avoided (timendum).',
+        },
+      },
+      {
+        heading: 'Part 4 — Gerund vs. Gerundive: The Critical Distinction',
+        body: 'The gerund is a neuter noun (invariable): ars vivendi — “the art of living.” The gerundive is an adjective agreeing with a noun: vita amanda — “a life to be loved.” When the gerund would take an accusative object, Latin prefers the gerundive construction: instead of ad colligendum tempus (gerund + object), Latin prefers ad tempus colligendum (gerundive agreeing with tempus).',
+        paradigms: [
+          {
+            title: 'Preferred Gerundive Construction',
+            headers: ['Preferred (gerundive)', 'Avoided (gerund + object)'],
+            rows: [
+              ['ad tempus colligendum', 'ad colligendum tempus'],
+              ['ad virtutem amandam', 'ad amandum virtutem'],
+            ],
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        number: '18.1',
+        prompt: 'Form the Gerund — give the genitive gerund of: vivo, philosophor, disco, sequor',
+        answer: 'vivendi, philosophandi, discendi, sequendi',
+      },
+      {
+        number: '18.2',
+        prompt: 'Passive Periphrastic — translate: 1. philosophandum est nobis.  2. mors non timenda est.  3. virtus semper amanda est.',
+        answer: '1. We must philosophize. 2. Death must not be feared / is not to be feared. 3. Virtue must always be loved.',
+      },
+      {
+        number: '18.3',
+        prompt: 'Gerund or Gerundive? Identify and explain: 1. ars vivendi  2. vita amanda  3. ad tempus colligendum',
+        answer: '1. Gerund — vivendi is the genitive of the verbal noun. “The art of living.” 2. Gerundive — amanda agrees with vita (feminine). “A life to be loved.” 3. Gerundive — colligendum agrees with tempus (neuter acc.). “For the purpose of gathering time.”',
+      },
+      {
+        number: '18.4',
+        prompt: 'Seneca’s mors non timenda est — analyze the Stoic argument encoded in mors non timenda est. What philosophical work does the gerundive do?',
+        answer: 'The gerundive -ndus conveys “ought to be / is to be” — it is the grammar of categorical obligation or prohibition. mors non timenda est = “death is not in the category of things to be feared.” This is not merely Seneca’s personal opinion but a categorical claim about death’s nature. The argument: for something to be timendum (to be feared), it must be malum (evil). Death is not malum — it is either indifferent (adiaphoron) or, for the Stoics, a natural event within the logos. Therefore death is non timenda — categorically not to be feared. The gerundive makes this an objective, class-level claim rather than a personal preference.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the gerund?', options: ['A verbal adjective of necessity', 'A verbal noun used in oblique cases, formed by adding -nd- + 2nd decl. neuter endings to the present stem', 'A passive participle', 'An irregular verb'], correct: 1 },
+      { question: 'What is the gerundive?', options: ['A verbal noun', 'A verbal adjective of necessity/obligation, formed like the gerund but with full adjectival endings (-ndus, -nda, -ndum)', 'A perfect tense form', 'A type of infinitive'], correct: 1 },
+      { question: 'What construction uses gerundive + esse?', options: ['The active periphrastic', 'The passive periphrastic — expressing obligation (“must be done”)', 'The ablative absolute', 'Indirect statement'], correct: 1 },
+      { question: 'Where does the agent of obligation go in a passive periphrastic?', options: ['In the accusative', 'In the ablative with a/ab', 'In the dative (the dative of agent)', 'In the genitive'], correct: 2 },
+      { question: 'Translate: philosophandum est nobis.', options: ['We were philosophizing.', 'We must philosophize.', 'Let us philosophize!', 'We can philosophize.'], correct: 1 },
+      { question: 'What is ars vivendi?', options: ['The life of art', 'The art of living — genitive gerund of vivo modifying ars', 'A life that must be lived', 'Living artfully'], correct: 1 },
+      { question: 'Translate: mors non timenda est.', options: ['Death feared nothing.', 'Death must not be feared / is not to be feared.', 'Death is feared by all.', 'Let death be feared.'], correct: 1 },
+      { question: 'When does Latin prefer the gerundive construction over the gerund with an object?', options: ['Always', 'Never', 'When the gerund would take an accusative object — Latin prefers gerundive + noun in the same case', 'Only in poetry'], correct: 2 },
+      { question: 'What is the genitive gerund of philosophor?', options: ['philosophare', 'philosophandi', 'philosophatus', 'philosophando'], correct: 1 },
+      { question: 'What Stoic argument does mors non timenda est encode grammatically?', options: ['It is only Seneca’s personal opinion', 'The gerundive makes a categorical claim: only evils (mala) are to be feared; death is not malum; therefore death is non timenda', 'It commands one to fear death', 'It has no philosophical content'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'vivendi', pronunciation: 'wi-WEN-di', english: 'of living (gen. gerund of vivo)' },
+      { latin: 'timere', pronunciation: 'ti-ME-re', english: 'to fear (2nd conj.)' },
+      { latin: 'ars, artis', pronunciation: 'ars', english: 'art, skill (f., 3rd decl.)' },
+      { latin: 'mors, mortis', pronunciation: 'mors', english: 'death (f., 3rd decl.)' },
+      { latin: 'amandus, -a, -um', pronunciation: 'a-MAN-dus', english: 'needing to be loved (gerundive of amo)' },
+      { latin: 'oportet', pronunciation: 'o-POR-tet', english: 'it is necessary, one ought (impersonal)' },
+    ],
+  },
+
+  // ── SESSION 19 ─────────────────────────────────────────────────────────────
+  {
+    id: 19,
+    title: 'Subjunctive Mood II — Perfect, Pluperfect, and Result Clauses',
+    subtitle: 'Completing the subjunctive system — consequence and completed hypothetical action',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the perfect and pluperfect subjunctive active and passive',
+      'Use the subjunctive in result clauses (ut/ita ut + subj.)',
+      'Distinguish purpose from result clauses',
+      'Recognize the subjunctive in cum clauses',
+      'Read complex subjunctive constructions in Seneca’s philosophical arguments',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Perfect and Pluperfect Subjunctive Active',
+        body: 'The perfect subjunctive active is formed from the perfect active stem + -erim endings (erim, eris, erit, erimus, eritis, erint). The pluperfect subjunctive active uses the perfect stem + -issem endings (issem, isses, isset, issemus, issetis, issent).',
+        paradigms: [
+          {
+            title: 'Perfect and Pluperfect Subjunctive',
+            headers: ['Person', 'Perfect Subj.', 'Pluperfect Subj.', 'Perf. of sum subj.', 'Pluperf. of sum subj.'],
+            rows: [
+              ['1st sg.', 'amaverim', 'amavissem', 'fuerim', 'fuissem'],
+              ['2nd sg.', 'amaveris', 'amavisses', 'fueris', 'fuisses'],
+              ['3rd sg.', 'amaverit', 'amavisset', 'fuerit', 'fuisset'],
+              ['3rd pl.', 'amaverint', 'amavissent', 'fuerint', 'fuissent'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 2 — Result Clauses',
+        body: 'Result clauses (consecutive clauses) describe the actual consequence of the main action. They use ut (positive) or ut non (negative) + subjunctive, typically signaled by an anticipatory word in the main clause: tam (so), ita (so), tantus (so great), talis (such).',
+        paradigms: [
+          {
+            title: 'Result Clauses',
+            headers: ['Latin', 'Translation'],
+            rows: [
+              ['ita philosophatur ut nemo sapientior sit.', 'He philosophizes so (in such a way) that no one is wiser.'],
+              ['tam sapienter vixit ut omnes eum laudarent.', 'He lived so wisely that everyone praised him.'],
+              ['tanta erat virtus eius ut vitia vinceret.', 'So great was his virtue that it overcame vices.'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Distinguish purpose from result: purpose uses the subjunctive because the goal is not yet achieved; result uses the subjunctive but typically describes something that actually happened. Purpose: ita facit ut discat (he acts so that he may learn — goal). Result: ita fecit ut disceret (he acted in such a way that he learned — actual consequence).',
+        },
+      },
+      {
+        heading: 'Part 3 — cum Clauses',
+        body: 'The conjunction cum (when/since/although) takes the subjunctive in two main constructions: (1) temporal cum with imperfect or pluperfect subjunctive in narrative describing circumstances; (2) causal/concessive cum meaning “since” or “although” + subjunctive.',
+        paradigms: [
+          {
+            title: 'cum Clauses',
+            headers: ['Type', 'Example'],
+            rows: [
+              ['Temporal (circumstantial)', 'cum haec scriberem, philosophabar. — When/while I was writing this, I was philosophizing.'],
+              ['Causal', 'cum haec sciret, tamen timebat. — Since/although he knew this, he still feared.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 4 — The Full Subjunctive System in Philosophical Prose',
+        body: 'Seneca’s philosophical prose is dense with subjunctives of all types. In a single paragraph he may use purpose, result, cum-clauses, indirect questions, and conditions. The key to reading is identifying the introductory word: ut + subj. after tam/ita = result; ut + subj. expressing a goal = purpose; cum + subj. = temporal/causal/concessive; si + subj. = condition (Sessions to come).\n\nBy the end of Unit II, you have the full Latin subjunctive system. Unit III will apply it to sustained prose reading in Epistulae I.4 and selected passages from Marcus Aurelius’s Meditations in Latin translation.',
+      },
+    ],
+    exercises: [
+      {
+        number: '19.1',
+        prompt: 'Form Pluperfect Subjunctive — give the pluperfect subjunctive active 3rd singular of: amo, duco, sum',
+        answer: 'amavisset, duxisset, fuisset',
+      },
+      {
+        number: '19.2',
+        prompt: 'Result or Purpose? 1. philosophatur ut sapiat.  2. ita philosophatur ut sapiat.  3. ita philosophatus est ut omnes mirarentur.',
+        answer: '1. Purpose clause — “He philosophizes in order to be wise.” 2. Could be purpose or result; context needed. With ita anticipating: result — “He philosophizes in such a way that he is wise.” 3. Result — “He philosophized in such a way that everyone marveled.” (ita + pluperfect context)',
+      },
+      {
+        number: '19.3',
+        prompt: 'Translate cum Clause — translate: cum haec scriberet, cogitabat de morte.',
+        answer: 'When/while he was writing this, he was thinking about death. (temporal cum + imperfect subjunctive)',
+      },
+      {
+        number: '19.4',
+        prompt: 'Synthesis: Seneca’s Argument Structure — identify and label all subjunctives in: philosophandum est nobis, cum vita brevis sit, ut ea bene utamur.',
+        answer: 'sit — cum clause, present subjunctive (causal: “since life is short”). utamur — result/purpose clause with ut, present subjunctive (purpose: “so that we may use it well”). Reading: “We must philosophize, since life is short, so that we may use it well.”',
+      },
+    ],
+    quiz: [
+      { question: 'How is the perfect subjunctive active formed?', options: ['Present stem + -ba-', 'Perfect active stem + -erim endings (amaverim, amaveris, amaverit…)', 'Present infinitive + endings', 'Reduplication + the perfect stem'], correct: 1 },
+      { question: 'How is the pluperfect subjunctive active formed?', options: ['Perfect stem + -issem endings (amavissem, amavisses, amavisset…)', 'Present stem + -ba-', 'Perfect stem + -erim', 'Present infinitive + endings'], correct: 0 },
+      { question: 'What signals a result clause?', options: ['si + subjunctive', 'An anticipatory word (tam, ita, tantus, talis) in the main clause + ut + subjunctive', 'cum + indicative', 'A vocative'], correct: 1 },
+      { question: 'How do you distinguish purpose from result?', options: ['They cannot be distinguished', 'Purpose: no anticipatory word, action aimed at; Result: anticipatory word (tam/ita), actual consequence', 'Purpose uses the indicative; result the subjunctive', 'Result always comes first'], correct: 1 },
+      { question: 'Give the pluperfect subjunctive 3rd singular of sum.', options: ['erat', 'esset', 'fuisset', 'fuerit'], correct: 2 },
+      { question: 'What does cum + imperfect subjunctive typically express in narrative?', options: ['A direct command', 'Temporal circumstances — “when/while he was doing X”', 'A future prediction', 'A purpose'], correct: 1 },
+      { question: 'Translate: ita vixit ut omnes laudarent.', options: ['He lived in order that everyone might praise him.', 'He lived in such a way that everyone praised him.', 'Everyone praised the way he should live.', 'He will live and be praised.'], correct: 1 },
+      { question: 'What is the negative of a result clause?', options: ['ne + subjunctive', 'ut non + subjunctive', 'non ut + indicative', 'There is no negative result clause'], correct: 1 },
+      { question: 'Give the perfect subjunctive 3rd plural of amo.', options: ['amaverunt', 'amaverint', 'amavissent', 'amabant'], correct: 1 },
+      { question: 'Translate: cum haec sciret, tamen timebat.', options: ['When he knew this, he feared.', 'Since/although he knew this, he still feared.', 'He feared because he did not know.', 'Knowing this, he will fear.'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'mirari', pronunciation: 'mi-RA-ri', english: 'to wonder, to marvel at (1st conj. deponent)' },
+      { latin: 'cum', pronunciation: 'kum', english: 'when, since, although (+ subjunctive)' },
+      { latin: 'tam', pronunciation: 'tam', english: 'so, so much (adv.)' },
+      { latin: 'ita', pronunciation: 'I-ta', english: 'so, in such a way (adv.)' },
+      { latin: 'vincere', pronunciation: 'WIN-ke-re', english: 'to conquer, to overcome (3rd conj.)' },
+      { latin: 'cogitare', pronunciation: 'ko-gi-TA-re', english: 'to think, to ponder (1st conj.)' },
+    ],
+  },
+
+  // ── SESSION 20 ─────────────────────────────────────────────────────────────
+  {
+    id: 20,
+    title: 'Milestone II — Epistulae Morales I.4 Reading',
+    subtitle: 'Sustained unseen prose — the Unit II culmination in Senecan philosophical Latin',
+    targetText: SENECA_I_1,
+    isMilestone: true,
+    objectives: [
+      'Read and parse a new Senecan passage (Ep. I.4) using all grammar from Units I and II',
+      'Identify all constructions without scaffolding',
+      'Connect the grammar to Stoic philosophical argument',
+      'Prepare for Unit III: sustained reading in Seneca and the Meditations',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Text of Epistula I.4',
+        body: 'Dum differtur vita transcurrit. Omnia, Lucili, aliena sunt, tempus tantum nostrum est. In solam possessionem temporis natura nos posuit fugacis et labentis, ex qua expellit quicumque vult. Et tanta stultitia mortalium est ut, quae minima et vilissima sunt, certe recuperabilia, inputari sibi patiantur — nemo autem aestimat quantum temporis pereat, quasi nihil ibi abeat quod gratis constet aut parvi, cum sit omnium rerum pretiosissimum.\n\nTranslation target: “While we put it off, life passes. Everything, Lucilius, belongs to others; time alone is ours. Nature has placed us in possession of time alone — fleeting and slipping — from which anyone who wishes expels us. And the foolishness of mortals is so great that they allow things which are smallest and cheapest — and certainly recoverable — to be charged to their account, but no one estimates how much time is wasted, as if nothing passes there that costs nothing or little, when it is the most precious of all things.”',
+      },
+      {
+        heading: 'Part 2 — Key Constructions: Annotated',
+        body: 'Each of these phrases deploys a construction from Units I and II. Identify the construction first, then the parse.',
+        paradigms: [
+          {
+            title: 'Key Constructions Annotated',
+            headers: ['Phrase', 'Construction', 'Parse', 'Note'],
+            rows: [
+              ['Dum differtur', 'dum + indicative pres. passive', '3rd sg. pres. pass. of differo', '“while it is being put off” — dum + pres. ind. = simultaneous action'],
+              ['vita transcurrit', 'intransitive active', '3rd sg. pres. act. of transcurro', '“life passes” — note active: life is the agent'],
+              ['aliena sunt', 'predicate adj.', 'pl. of alienus, -a, -um', '“belonging to others” — alieni iuris, outside us'],
+              ['tempus… nostrum est', 'predicate possessive', 'nostrum = gen. of nos as adj.', '“time is ours” — the only possession that is eph’ hēmin'],
+              ['tanta stultitia est ut… patiantur', 'result clause', 'tantus anticipates ut; patiantur = pres. subj. of patior (deponent)', '“so great is the foolishness that they suffer/allow”'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Grammar Synthesis: What This Passage Uses',
+        body: 'Epistula I.4 deploys every major construction from Units I and II:\n— Imperfect/present indicative for ongoing states (differtur, transcurrit, pereat)\n— Passive voice for things done to us (differtur, expellit… nos — active verb, passive situation)\n— Result clause with tanta… ut + subjunctive patiantur\n— Relative clause with quae and quicumque\n— Indirect question implied in aestimat quantum (quantum introduces an indirect question with the subjunctive pereat)\n— Gerundive phrase: recuperabilia (verbal adjective — “capable of being recovered”)\n\nThe sentence architecture: a short declarative (dum differtur, vita transcurrit), then slow elaboration of the central paradox (time is the only real possession yet most people ignore its loss), ending with the superlative cum sit omnium rerum pretiosissimum — the climactic declaration of time’s supreme value.',
+      },
+      {
+        heading: 'Part 4 — Looking Forward: Unit III',
+        body: 'You have completed Unit II. The grammar you now possess — all five cases, all four conjugations in active and passive voice, imperfect and perfect tenses, participles, infinitives, the full subjunctive in purpose/result/cum clauses, indirect statement, gerund and gerundive — is the complete toolkit for reading Senecan philosophical prose.\n\nUnit III (Sessions 21–30) will apply this toolkit to sustained reading: Epistulae Morales in sequence, selected passages from Marcus Aurelius’s Meditations, and the formal argument structures of Stoic philosophy as Cicero preserves them in De Finibus and De Natura Deorum. No new grammar — pure application.\n\nThe milestone of Session 30 is the same as every great Stoic goal: not the accumulation of more tools but the ability to use what you have. Omnia, Lucili, aliena sunt, tempus tantum nostrum est.',
+      },
+    ],
+    exercises: [
+      {
+        number: '20.1',
+        prompt: 'Unaided Translation — translate Epistula I.4 (the opening paragraph above) without notes.',
+        answer: 'See the translation in Part 1. Key: “While we put it off, life passes. Everything belongs to others; time alone is ours. Nature has placed us in possession of time alone — fleeting and slipping — from which anyone who wishes expels us…”',
+      },
+      {
+        number: '20.2',
+        prompt: 'Parse on Demand — parse: 1. differtur  2. patiantur  3. pereat  4. pretiosissimum',
+        answer: '1. Present passive 3rd sg. of differo — “is being put off/deferred.” 2. Present subjunctive 3rd pl. of patior (deponent) — in the result clause after tanta… ut. 3. Present subjunctive 3rd sg. of pereo — indirect question after quantum. 4. Superlative adjective, nominative/accusative neuter of pretiosus — “most precious.”',
+      },
+      {
+        number: '20.3',
+        prompt: 'Structural Analysis — identify the result clause in the passage and explain how you recognize it.',
+        answer: 'Et tanta stultitia mortalium est ut… patiantur. Recognition: tanta (anticipatory adjective — “so great”) in the main clause signals the consequence coming in the subordinate clause. ut + subjunctive (patiantur, present subjunctive of patior) = result clause. Translation: “And the foolishness of mortals is so great that they allow…”',
+      },
+      {
+        number: '20.4',
+        prompt: 'Stoic Reflection: The Unit II Lesson — what single philosophical lesson do Seneca’s two letters (I.1 and I.4) together teach, and how does the Latin grammar embody it?',
+        answer: 'Together, I.1 and I.4 teach one lesson: time is the only res that is truly nostra — truly eph’ hēmin — and we waste it through inattention (neglegentia) and deferral (differtur). I.1 gives the taxonomy of loss (snatched/stolen/flowing away) and the command: vindica te tibi. I.4 gives the philosophical foundation: omnia aliena sunt, tempus tantum nostrum est. The grammar embodies the philosophy throughout: passive voice for what happens to us (differtur, eripiuntur), active for what we do (transcurrit, colligamus), gerundive for what must be done (colligendum, philosophandum), and the present subjunctive in purpose clauses for what we aim at — the telos of governing our own prohairesis in time.',
+      },
+    ],
+    quiz: [
+      { question: 'Translate: Dum differtur vita transcurrit.', options: ['Life put off death.', 'While it is put off / while we defer, life passes.', 'Defer life and it will pass.', 'Life transcends time.'], correct: 1 },
+      { question: 'What does aliena sunt mean?', options: ['They are alien creatures.', '“They belong to others” — literally “they are foreign/external things”', 'They are alone.', 'They are made of bronze.'], correct: 1 },
+      { question: 'Parse patiantur in the result clause.', options: ['Present indicative 3rd pl. of patior', 'Present subjunctive 3rd pl. of patior (deponent) — they allow/suffer', 'Perfect of patior', 'Imperative of patior'], correct: 1 },
+      { question: 'What is pretiosissimum?', options: ['A comparative adjective', 'The superlative of pretiosus — most precious, most valuable', 'A noun meaning “price”', 'A verb form'], correct: 1 },
+      { question: 'What construction does quantum pereat use?', options: ['A purpose clause', 'An ablative absolute', 'An indirect question — quantum introduces a question with the subjunctive (pereat)', 'A result clause'], correct: 2 },
+      { question: 'What is the central philosophical claim of I.4?', options: ['Virtue alone is good.', 'Omnia aliena sunt, tempus tantum nostrum est — everything belongs to others, time alone is ours', 'Death is not to be feared.', 'Reason follows nature.'], correct: 1 },
+      { question: 'What is the Unit II milestone passage?', options: ['Epistula I.1 only', 'The Aeneid', 'Epistulae Morales I.1 (Session 15) and I.4 (Session 20)', 'The Meditations of Marcus Aurelius'], correct: 2 },
+      { question: 'How does I.4 connect to Encheiridion §1?', options: ['They are unrelated', 'Tempus tantum nostrum est = the temporal application of eph’ hēmin — time-governance is the one “possession” up to us', 'I.4 rejects Epictetus', 'Both deny that time exists'], correct: 1 },
+      { question: 'What does Unit III focus on?', options: ['New grammar each week', 'Application — sustained prose reading using the complete grammar of Units I and II', 'Only vocabulary memorization', 'Greek grammar'], correct: 1 },
+      { question: 'What does Seneca’s phrase vindica te tibi mean, and why does it use the dative?', options: ['“Free Lucilius” — accusative of respect', '“Claim yourself for yourself” — tibi is a dative of interest (“for yourself”), intensifying the reflexive te', '“Give time to yourself” — ablative of means', '“You are claimed” — passive'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'transcurrere', pronunciation: 'trans-KUR-re-re', english: 'to run past, to pass by (3rd conj.)' },
+      { latin: 'alienus, -a, -um', pronunciation: 'a-li-E-nus', english: 'belonging to another, foreign' },
+      { latin: 'possessio, possessionis', pronunciation: 'pos-SES-si-o', english: 'possession, ownership (f.)' },
+      { latin: 'fugax, fugacis', pronunciation: 'FU-gaks', english: 'fleeting, swift to flee (adj.)' },
+      { latin: 'pretiosus, -a, -um', pronunciation: 'pre-ti-O-sus', english: 'precious, valuable' },
+      { latin: 'stultitia, stultitiae', pronunciation: 'stul-TI-ti-a', english: 'foolishness, folly (f.)' },
+    ],
+  },
 ];
