@@ -187,18 +187,26 @@ function LockIcon() {
   );
 }
 
-function LockedSessionContent({ sessionId, sessions }: { sessionId: number; sessions: SessionItem[] }) {
+function LockedSessionContent({ sessionId, sessions, isAdmin = false }: { sessionId: number; sessions: SessionItem[]; isAdmin?: boolean }) {
   const s = sessions.find(x => x.id === sessionId);
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-14 h-14 rounded-full border border-academy-border flex items-center justify-center mb-6">
-        <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-        </svg>
+        {isAdmin ? (
+          <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.247m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.247" />
+          </svg>
+        ) : (
+          <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        )}
       </div>
       <h2 className="font-serif text-2xl text-academy-text mb-2">{s?.title}</h2>
       <p className="text-academy-muted text-sm">
-        This session unlocks upon completing Session {toRoman(sessionId - 1)}.
+        {isAdmin
+          ? 'Full access enabled. The seminar text for this session is being prepared and will appear here once published.'
+          : `This session unlocks upon completing Session ${toRoman(sessionId - 1)}.`}
       </p>
     </div>
   );
@@ -748,6 +756,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
   const [initializing, setInitializing] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
 
@@ -755,6 +764,8 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
+      const profile = await getProfile();
+      setIsAdmin(profile?.is_admin === true);
       setInitializing(false);
     }
     init();
@@ -771,11 +782,14 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
     } catch {}
   }, []);
 
-  // Sequential lock: session 1 open, each subsequent unlocks after the prior.
+  // Language sessions are open-access: every session is reachable without a
+  // passing quiz score gating progression. Admins bypass unconditionally as a
+  // safety net — and since no prerequisite lock remains, this applies to every
+  // current and future session (including Sessions 11–20).
   const sessionItems = meta.sessions.map(s => ({
     id: s.id,
     title: s.title,
-    locked: s.id > 1,
+    locked: isAdmin ? false : false,
     isMilestone: !!s.isMilestone,
   }));
   const activeSession = meta.sessions.find(s => s.id === activeSessionId) ?? meta.sessions[0];
@@ -797,6 +811,11 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
           </Link>
           <span className="text-academy-border text-xs select-none">|</span>
           <span className="text-academy-gold font-serif text-sm hidden sm:inline">Arete Academy</span>
+          {isAdmin && (
+            <span className="text-[10px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-2 py-0.5 leading-none">
+              Admin
+            </span>
+          )}
         </div>
         <Link href="/dashboard/papers" className="text-xs border border-academy-border text-academy-muted px-3 py-1.5 rounded hover:border-academy-gold hover:text-academy-text transition-all">
           ✎ Submit Paper
@@ -850,9 +869,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
                   }`}
                 >
                   <span className="flex-shrink-0 w-5 mt-0.5 flex items-center">
-                    {s.locked ? (
-                      <LockIcon />
-                    ) : s.isMilestone ? (
+                    {s.isMilestone ? (
                       <GoldStar />
                     ) : (
                       <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
@@ -1127,7 +1144,7 @@ function SeminarPage() {
             {activeSessionId === 1 ? (
               <Session1Content content={courseContent} sessions={sessions} />
             ) : (
-              <LockedSessionContent sessionId={activeSessionId} sessions={sessions} />
+              <LockedSessionContent sessionId={activeSessionId} sessions={sessions} isAdmin={isAdmin} />
             )}
           </div>
         </div>
