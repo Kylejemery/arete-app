@@ -13,6 +13,7 @@ import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
 import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Session } from '@/data/phil705';
+import { PHIL_701_SESSIONS, phil701ToLesson, type Phil701Session } from '@/data/phil701';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
@@ -77,18 +78,20 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
   ],
 };
 
+interface SessionContent {
+  quote: string;
+  quoteSource: string;
+  intro: string[];
+  readings: string[];
+  prompt: string;
+}
+
 interface CourseContent {
   code: string;
   shortTitle: string;
   fullTitle: string;
   assignedText: string;
-  session1: {
-    quote: string;
-    quoteSource: string;
-    intro: string[];
-    readings: string[];
-    prompt: string;
-  };
+  sessions: Record<number, SessionContent>;
 }
 
 const COURSE_CONTENT: Record<string, CourseContent> = {
@@ -97,19 +100,21 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
     shortTitle: 'Foundations of\nStoic Ethics',
     fullTitle: 'Introduction to Stoic Philosophy',
     assignedText: 'Epictetus — Enchiridion',
-    session1: {
-      quote: '“Ancient philosophy proposed to mankind an art of living. By contrast, modern philosophy appears above all as the construction of a technical discourse.”',
-      quoteSource: '— Pierre Hadot, Philosophy as a Way of Life',
-      intro: [
-        'This is the first seminar of the doctoral program. Before you encounter any primary Stoic text — before Marcus, Epictetus, or Seneca — you will encounter a question: what is philosophy for? The question is not rhetorical. How you answer it will determine what kind of reader you become.',
-        'Pierre Hadot argued that modern scholarship had fundamentally misread what the Greeks and Romans were doing. Philosophy, for the ancients, was a set of exercises aimed at transforming the self — what Hadot called spiritual exercises: attention, meditation, examination of conscience, the view from above, the preparation for death.',
-        'PHIL 701 begins with Hadot because his framework is the interpretive lens for everything that follows. Stoic ethics is not a doctrine you learn in order to pass an examination; it is a set of disciplines you practice in order to become a certain kind of person.',
-      ],
-      readings: [
-        'Hadot, Philosophy as a Way of Life, Ch. 11',
-        'Hadot, The Inner Citadel, Ch. 1',
-      ],
-      prompt: 'Hadot argues that ancient philosophy was not a body of doctrine to be learned but a set of exercises to be practiced. If he is right, what becomes of philosophy as we have inherited it in the modern university? And what would it mean to enter this program as a practitioner rather than a reader?',
+    sessions: {
+      1: {
+        quote: '“Ancient philosophy proposed to mankind an art of living. By contrast, modern philosophy appears above all as the construction of a technical discourse.”',
+        quoteSource: '— Pierre Hadot, Philosophy as a Way of Life',
+        intro: [
+          'This is the first seminar of your philosophical formation. Before you encounter any primary Stoic text — before Marcus, Epictetus, or Seneca — you will encounter a question: what is philosophy for? The question is not rhetorical. How you answer it will determine what kind of reader you become.',
+          'Pierre Hadot argued that modern scholarship had fundamentally misread what the Greeks and Romans were doing. Philosophy, for the ancients, was a set of exercises aimed at transforming the self — what Hadot called spiritual exercises: attention, meditation, examination of conscience, the view from above, the preparation for death.',
+          'PHIL 701 begins with Hadot because his framework is the interpretive lens for everything that follows. Stoic ethics is not a doctrine you learn in order to pass an examination; it is a set of disciplines you practice in order to become a certain kind of person.',
+        ],
+        readings: [
+          'Hadot, Philosophy as a Way of Life, Ch. 11',
+          'Hadot, The Inner Citadel, Ch. 1',
+        ],
+        prompt: 'Hadot argues that ancient philosophy was not a body of doctrine to be learned but a set of exercises to be practiced. If he is right, what becomes of philosophy as we have inherited it in the modern university? And what would it mean to enter this program as a practitioner rather than a reader?',
+      },
     },
   },
   'phil-702': {
@@ -117,19 +122,21 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
     shortTitle: 'The Meditations\nof Marcus Aurelius',
     fullTitle: 'The Meditations of Marcus Aurelius',
     assignedText: 'Marcus Aurelius — Meditations',
-    session1: {
-      quote: '“You have power over your mind — not outside events. Realize this, and you will find strength.”',
-      quoteSource: '— Marcus Aurelius, Meditations IV.3',
-      intro: [
-        'The Meditations are not a treatise. They were never intended to be read. Marcus wrote to himself, in private, in a language that was not his native tongue, at the edge of the empire. They are a record of a man trying — and failing, and trying again — to live according to what he believed.',
-        'This course reads the Meditations as a philosophical practice, not as a body of doctrine. The central question is not what Marcus believed but what he was doing when he wrote. Hadot’s answer: he was performing spiritual exercises. We will test that thesis book by book.',
-        'You are not here to summarize. You are here to argue about what the text actually says, what it means, and whether the practice it embodies is coherent.',
-      ],
-      readings: [
-        'Marcus Aurelius, Meditations, Books I–II (Gregory Hays translation)',
-        'Hadot, The Inner Citadel, Introduction',
-      ],
-      prompt: 'Marcus writes to himself in the second person — “You have power over your mind.” Why? What does this grammatical choice tell us about the nature of the exercise he is performing? Is he persuading himself, commanding himself, or something else entirely?',
+    sessions: {
+      1: {
+        quote: '“You have power over your mind — not outside events. Realize this, and you will find strength.”',
+        quoteSource: '— Marcus Aurelius, Meditations IV.3',
+        intro: [
+          'The Meditations are not a treatise. They were never intended to be read. Marcus wrote to himself, in private, in a language that was not his native tongue, at the edge of the empire. They are a record of a man trying — and failing, and trying again — to live according to what he believed.',
+          'This course reads the Meditations as a philosophical practice, not as a body of doctrine. The central question is not what Marcus believed but what he was doing when he wrote. Hadot’s answer: he was performing spiritual exercises. We will test that thesis book by book.',
+          'You are not here to summarize. You are here to argue about what the text actually says, what it means, and whether the practice it embodies is coherent.',
+        ],
+        readings: [
+          'Marcus Aurelius, Meditations, Books I–II (Gregory Hays translation)',
+          'Hadot, The Inner Citadel, Introduction',
+        ],
+        prompt: 'Marcus writes to himself in the second person — “You have power over your mind.” Why? What does this grammatical choice tell us about the nature of the exercise he is performing? Is he persuading himself, commanding himself, or something else entirely?',
+      },
     },
   },
   'phil-703': {
@@ -137,19 +144,21 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
     shortTitle: 'Epictetus and the\nDiscipline of Desire',
     fullTitle: 'Epictetus and the Discipline of Desire',
     assignedText: 'Epictetus — Discourses',
-    session1: {
-      quote: '“Make the best use of what is in your power, and take the rest as it happens.”',
-      quoteSource: '— Epictetus, Discourses I.1',
-      intro: [
-        'Epictetus was a slave. This is not incidental biographical detail — it is the origin of his philosophy. His entire system is built around a single distinction: what is up to us and what is not. For a man who could not control his own body, this distinction was not abstract.',
-        'The Discourses were not written by Epictetus but recorded by his student Arrian. We are reading notes from a classroom. The voice is direct, sometimes harsh, often comic. Epictetus had no patience for students who wanted to discuss philosophy rather than practice it.',
-        'This course reads the Discourses as a curriculum. Each book develops a specific aspect of the three disciplines. Your task is not to agree with Epictetus but to understand exactly what he is claiming — and then to examine whether the claim holds.',
-      ],
-      readings: [
-        'Epictetus, Discourses, Book I (Robin Hard translation)',
-        'Epictetus, Enchiridion (full)',
-      ],
-      prompt: 'Epictetus claims that freedom is available to everyone, including slaves. This is either one of the most profound insights in the history of philosophy or a dangerous rationalization of injustice. Which is it? Defend your answer.',
+    sessions: {
+      1: {
+        quote: '“Make the best use of what is in your power, and take the rest as it happens.”',
+        quoteSource: '— Epictetus, Discourses I.1',
+        intro: [
+          'Epictetus was a slave. This is not incidental biographical detail — it is the origin of his philosophy. His entire system is built around a single distinction: what is up to us and what is not. For a man who could not control his own body, this distinction was not abstract.',
+          'The Discourses were not written by Epictetus but recorded by his student Arrian. We are reading notes from a classroom. The voice is direct, sometimes harsh, often comic. Epictetus had no patience for students who wanted to discuss philosophy rather than practice it.',
+          'This course reads the Discourses as a curriculum. Each book develops a specific aspect of the three disciplines. Your task is not to agree with Epictetus but to understand exactly what he is claiming — and then to examine whether the claim holds.',
+        ],
+        readings: [
+          'Epictetus, Discourses, Book I (Robin Hard translation)',
+          'Epictetus, Enchiridion (full)',
+        ],
+        prompt: 'Epictetus claims that freedom is available to everyone, including slaves. This is either one of the most profound insights in the history of philosophy or a dangerous rationalization of injustice. Which is it? Defend your answer.',
+      },
     },
   },
   'phil-704': {
@@ -157,19 +166,21 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
     shortTitle: "Seneca’s Letters and\nthe Art of Dying Well",
     fullTitle: "Seneca’s Letters and the Art of Dying Well",
     assignedText: 'Seneca — Letters to Lucilius',
-    session1: {
-      quote: '“Omnia, Lucili, aliena sunt, tempus tantum nostrum est.”\n“Everything, Lucilius, belongs to others; time alone is ours.”',
-      quoteSource: '— Seneca, Epistulae I.1',
-      intro: [
-        'Seneca was a hypocrite. He wrote about poverty while living in extraordinary wealth. He wrote about the tranquility of retirement while serving at the court of Nero. He knew it. He said so. This course takes his hypocrisy seriously — not as an excuse to dismiss him, but as the central philosophical problem of his work.',
-        'The Letters to Lucilius are the product of Seneca’s final years, written in the knowledge that Nero would eventually require his death. They are one of the great documents of a man trying to get his philosophy straight before it is too late.',
-        'We read Seneca not to learn what to think about time, friendship, and death, but to watch a first-rate mind struggle with questions it cannot fully resolve. That is the nature of the exercise.',
-      ],
-      readings: [
-        'Seneca, Letters to Lucilius, Letters I–X (Margaret Graver / A. A. Long translation)',
-        'Seneca, On the Shortness of Life (full)',
-      ],
-      prompt: 'Seneca opens the Letters by telling Lucilius to “seize” time, to “gather and save” it. But he also says that the present moment is all we truly possess. Are these claims consistent? What is Seneca’s actual theory of time?',
+    sessions: {
+      1: {
+        quote: '“Omnia, Lucili, aliena sunt, tempus tantum nostrum est.”\n“Everything, Lucilius, belongs to others; time alone is ours.”',
+        quoteSource: '— Seneca, Epistulae I.1',
+        intro: [
+          'Seneca was a hypocrite. He wrote about poverty while living in extraordinary wealth. He wrote about the tranquility of retirement while serving at the court of Nero. He knew it. He said so. This course takes his hypocrisy seriously — not as an excuse to dismiss him, but as the central philosophical problem of his work.',
+          'The Letters to Lucilius are the product of Seneca’s final years, written in the knowledge that Nero would eventually require his death. They are one of the great documents of a man trying to get his philosophy straight before it is too late.',
+          'We read Seneca not to learn what to think about time, friendship, and death, but to watch a first-rate mind struggle with questions it cannot fully resolve. That is the nature of the exercise.',
+        ],
+        readings: [
+          'Seneca, Letters to Lucilius, Letters I–X (Margaret Graver / A. A. Long translation)',
+          'Seneca, On the Shortness of Life (full)',
+        ],
+        prompt: 'Seneca opens the Letters by telling Lucilius to “seize” time, to “gather and save” it. But he also says that the present moment is all we truly possess. Are these claims consistent? What is Seneca’s actual theory of time?',
+      },
     },
   },
 };
@@ -187,51 +198,43 @@ function LockIcon() {
   );
 }
 
-function LockedSessionContent({ sessionId, sessions, isAdmin = false }: { sessionId: number; sessions: SessionItem[]; isAdmin?: boolean }) {
+function PreparedNotice({ sessionId, sessions }: { sessionId: number; sessions: SessionItem[] }) {
   const s = sessions.find(x => x.id === sessionId);
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
       <div className="w-14 h-14 rounded-full border border-academy-border flex items-center justify-center mb-6">
-        {isAdmin ? (
-          <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.247m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.247" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        )}
+        <svg className="w-6 h-6 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.247m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.247" />
+        </svg>
       </div>
       <h2 className="font-serif text-2xl text-academy-text mb-2">{s?.title}</h2>
       <p className="text-academy-muted text-sm">
-        {isAdmin
-          ? 'Full access enabled. The seminar text for this session is being prepared and will appear here once published.'
-          : `This session unlocks upon completing Session ${toRoman(sessionId - 1)}.`}
+        The seminar text for this session is being prepared and will appear here once published.
       </p>
     </div>
   );
 }
 
-function Session1Content({ content, sessions }: { content: CourseContent; sessions: SessionItem[] }) {
-  const { session1 } = content;
+function SessionContent({ content, sessionId, sessions }: { content: SessionContent; sessionId: number; sessions: SessionItem[] }) {
+  const session = sessions.find(s => s.id === sessionId);
   return (
     <article>
-      <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">Session I</p>
+      <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">Session {toRoman(sessionId)}</p>
       <h1 className="font-serif text-3xl text-academy-text mb-8 leading-tight">
-        {sessions[0]?.title ?? 'Introduction'}
+        {session?.title ?? 'Introduction'}
       </h1>
 
       <blockquote className="border-l-4 border-academy-gold pl-6 py-1 mb-10">
         <p className="font-serif text-academy-text text-lg leading-relaxed italic whitespace-pre-line">
-          {session1.quote}
+          {content.quote}
         </p>
-        <footer className="mt-3 text-academy-muted text-sm not-italic">{session1.quoteSource}</footer>
+        <footer className="mt-3 text-academy-muted text-sm not-italic">{content.quoteSource}</footer>
       </blockquote>
 
       <section className="mb-10">
         <h2 className="font-serif text-xl text-academy-text mb-5">Seminar Introduction</h2>
         <div className="space-y-4 text-academy-muted text-sm leading-relaxed">
-          {session1.intro.map((p, i) => <p key={i}>{p}</p>)}
+          {content.intro.map((p, i) => <p key={i}>{p}</p>)}
         </div>
       </section>
 
@@ -240,7 +243,7 @@ function Session1Content({ content, sessions }: { content: CourseContent; sessio
       <section className="mb-10">
         <h2 className="font-serif text-xl text-academy-text mb-4">Required Reading</h2>
         <ul className="space-y-3">
-          {session1.readings.map(r => (
+          {content.readings.map(r => (
             <li key={r} className="flex items-start gap-3 text-academy-muted text-sm">
               <span className="text-academy-gold font-semibold leading-none mt-0.5">&rsaquo;</span>
               <span>{r}</span>
@@ -254,7 +257,7 @@ function Session1Content({ content, sessions }: { content: CourseContent; sessio
       <section>
         <h2 className="font-serif text-xl text-academy-text mb-4">Discussion Prompt</h2>
         <div className="bg-academy-card border border-academy-gold/20 rounded-xl p-6">
-          <p className="font-serif text-academy-text leading-relaxed italic">{session1.prompt}</p>
+          <p className="font-serif text-academy-text leading-relaxed italic">{content.prompt}</p>
           <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mt-5">
             Bring your response to the Socratic Proctor &rarr;
           </p>
@@ -464,7 +467,7 @@ function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
     <div className="bg-academy-card border border-academy-border rounded-xl p-5 mb-3">
       <div className="flex items-start gap-3">
         <span className="text-academy-gold text-xs font-mono font-semibold mt-0.5 flex-shrink-0">{ex.number}</span>
-        <p className="text-academy-text text-sm leading-relaxed flex-1">{ex.prompt}</p>
+        <p className="text-academy-text text-sm leading-relaxed flex-1 whitespace-pre-line">{ex.prompt}</p>
       </div>
       {ex.answer && (
         <div className="mt-3 pl-8">
@@ -475,7 +478,7 @@ function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
             {shown ? '▲ Hide Answer' : '▼ Show Answer'}
           </button>
           {shown && (
-            <p className="mt-2 text-academy-muted text-sm leading-relaxed border-l-2 border-academy-gold/40 pl-3">
+            <p className="mt-2 text-academy-muted text-sm leading-relaxed border-l-2 border-academy-gold/40 pl-3 whitespace-pre-line">
               {ex.answer}
             </p>
           )}
@@ -574,24 +577,26 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
       <p className="text-academy-muted text-sm italic mb-8">{session.subtitle}</p>
 
       {/* Learning objectives — teal callout box */}
-      <div
-        className="rounded-xl p-5 mb-10"
-        style={{ background: 'rgba(45,156,142,0.08)', border: '1px solid rgba(45,156,142,0.3)' }}
-      >
-        <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#2D9C8E' }}>
-          Learning Objectives
-        </p>
-        <ol className="space-y-2">
-          {session.objectives.map((o, i) => (
-            <li key={i} className="flex items-start gap-3 text-academy-text text-sm leading-relaxed">
-              <span className="font-mono text-xs mt-0.5 flex-shrink-0" style={{ color: '#2D9C8E' }}>
-                {i + 1}.
-              </span>
-              <span>{o}</span>
-            </li>
-          ))}
-        </ol>
-      </div>
+      {session.objectives.length > 0 && (
+        <div
+          className="rounded-xl p-5 mb-10"
+          style={{ background: 'rgba(45,156,142,0.08)', border: '1px solid rgba(45,156,142,0.3)' }}
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#2D9C8E' }}>
+            Learning Objectives
+          </p>
+          <ol className="space-y-2">
+            {session.objectives.map((o, i) => (
+              <li key={i} className="flex items-start gap-3 text-academy-text text-sm leading-relaxed">
+                <span className="font-mono text-xs mt-0.5 flex-shrink-0" style={{ color: '#2D9C8E' }}>
+                  {i + 1}.
+                </span>
+                <span>{o}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {/* Lesson parts */}
       {session.parts.map((part, pi) => (
@@ -630,8 +635,28 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
       </section>
 
       {/* Quiz */}
-      <QuizSection quiz={session.quiz} />
+      {session.quiz.length > 0 && <QuizSection quiz={session.quiz} />}
     </article>
+  );
+}
+
+// PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
+// content (parts + exercises); the short-answer quiz is rendered below it as
+// reveal cards, since LanguageLessonContent's quiz is multiple-choice only.
+function Phil701SessionContent({ session }: { session: Phil701Session }) {
+  return (
+    <>
+      <LanguageLessonContent session={phil701ToLesson(session)} />
+      <section className="mt-10">
+        <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
+        <p className="text-academy-muted text-xs mb-5 italic">
+          Answer each in your own words, then reveal.
+        </p>
+        {session.quiz.map((q, i) => (
+          <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
+        ))}
+      </section>
+    </>
   );
 }
 
@@ -960,6 +985,12 @@ function SeminarPage() {
   const baseSessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
   const sessions = isAdmin ? baseSessions.map(s => ({ ...s, locked: false })) : baseSessions;
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
+  const sessionContent = courseContent.sessions[activeSessionId];
+  // PHIL 701 sessions 2–11 carry full transcribed content (briefing + parts +
+  // exercises + quiz); session 1 stays the landing-card content above.
+  const phil701Session = courseId === 'phil-701'
+    ? PHIL_701_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
@@ -1133,18 +1164,36 @@ function SeminarPage() {
               sessionId={activeSessionId}
               videoUrl={sessions.find(s => s.id === activeSessionId)?.videoUrl}
             />
-            {briefingData && (
-              <PreSeminarBriefing
-                key={`${courseId}-${activeSessionId}`}
-                courseId={courseId}
-                {...briefingData}
-                isComplete={briefingComplete}
-              />
-            )}
-            {activeSessionId === 1 ? (
-              <Session1Content content={courseContent} sessions={sessions} />
+            {phil701Session ? (
+              <>
+                <PreSeminarBriefing
+                  key={`phil-701-${activeSessionId}`}
+                  courseId="phil-701"
+                  session={activeSessionId}
+                  title={phil701Session.title}
+                  problem={phil701Session.preSeminarBriefing.problem}
+                  whyItMatters={phil701Session.preSeminarBriefing.whyItMatters}
+                  watchFor={phil701Session.preSeminarBriefing.whatToWatchFor.split('\n\n').filter(Boolean)}
+                  yourTask={phil701Session.preSeminarBriefing.yourTask}
+                />
+                <Phil701SessionContent session={phil701Session} />
+              </>
             ) : (
-              <LockedSessionContent sessionId={activeSessionId} sessions={sessions} isAdmin={isAdmin} />
+              <>
+                {briefingData && (
+                  <PreSeminarBriefing
+                    key={`${courseId}-${activeSessionId}`}
+                    courseId={courseId}
+                    {...briefingData}
+                    isComplete={briefingComplete}
+                  />
+                )}
+                {sessionContent ? (
+                  <SessionContent content={sessionContent} sessionId={activeSessionId} sessions={sessions} />
+                ) : (
+                  <PreparedNotice sessionId={activeSessionId} sessions={sessions} />
+                )}
+              </>
             )}
           </div>
         </div>

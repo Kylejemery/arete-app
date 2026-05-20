@@ -15,8 +15,8 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Arete Academy — Doctoral Program in Stoic Philosophy',
-  description: 'The world\'s first AI-proctored doctoral program in Stoic Philosophy.',
+  title: 'Arete Academy — A Complete Formation in Stoic Philosophy',
+  description: 'The world\'s first AI-proctored school of Stoic philosophy.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

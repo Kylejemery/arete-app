@@ -1,11 +1,11 @@
 ﻿import Link from 'next/link'
 
 const CURRICULUM = [
-  { code: 'PHIL 701', title: 'The Meditations of Marcus Aurelius',     year: 'Year I'   },
-  { code: 'PHIL 702', title: 'Epictetus: Discourses & Enchiridion',    year: 'Year II'  },
-  { code: 'PHIL 703', title: 'Seneca: Letters, Essays & Tragedies',    year: 'Year III' },
-  { code: 'PHIL 704', title: 'The Early Stoics: Zeno to Chrysippus',   year: 'Year IV'  },
-  { code: 'PHIL 705', title: 'Stoic Synthesis: Dissertation & Defense',year: 'Year V'   },
+  { code: 'PHIL 701', title: 'Foundations of Stoic Ethics',            year: 'Year I'   },
+  { code: 'PHIL 702', title: 'The Meditations of Marcus Aurelius',     year: 'Year II'  },
+  { code: 'PHIL 703', title: 'Epictetus and the Discourses',           year: 'Year III' },
+  { code: 'PHIL 704', title: 'Seneca and the Letters',                 year: 'Year IV'  },
+  { code: 'PHIL 705', title: 'Stoic Logic & Epistemology',             year: 'Year V'   },
 ]
 
 const AGENTS = [
@@ -13,7 +13,7 @@ const AGENTS = [
   { name: 'The Historian',            role: 'Classical context. Rome, Athens, the Stoa.' },
   { name: 'The Translator',           role: 'Original Greek and Latin. Nothing lost.' },
   { name: 'The Devil\'s Advocate',   role: 'Challenges every assumption you hold.' },
-  { name: 'The Dissertation Advisor', role: 'Long-form guidance on scholarly argument.' },
+  { name: 'The Writing Supervisor',   role: 'Evaluates philosophical argument. Rigorous, honest, no flattery.' },
   { name: 'The Librarian',            role: 'Navigates 800,000 words of primary corpus.' },
 ]
 
@@ -62,16 +62,16 @@ export default function LandingPage() {
         <div className="gold-rule my-8" />
 
         <p className="text-cream/70 text-lg md:text-xl max-w-2xl leading-relaxed mb-4 font-light">
-          The world&rsquo;s first AI-proctored doctoral program
-          in Stoic Philosophy.
+          The world&rsquo;s first AI-proctored school
+          of Stoic philosophy.
         </p>
         <p className="text-cream/40 text-sm max-w-xl leading-relaxed mb-14">
-          Five years. Six AI specialists. 800,000 words of primary text.
-          A genuine education in the philosophy that built empires.
+          Seven courses. Six AI specialists. 800,000 words of primary text.
+          A genuine formation in the philosophy that built empires.
         </p>
 
         <Link href="/waitlist" className="btn-primary">
-          Apply for Early Access
+          Begin Your Formation
         </Link>
       </section>
 
@@ -84,7 +84,7 @@ export default function LandingPage() {
             <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">I.</p>
             <h2 className="font-serif text-2xl text-cream mb-6">The Curriculum</h2>
             <p className="text-cream/40 text-sm leading-relaxed mb-8">
-              A structured five-year program modelled on classical doctoral programs.
+              A structured course of study modelled on the ancient philosophical schools.
               Each course builds on the last.
             </p>
             <ul className="space-y-5">
@@ -206,10 +206,10 @@ export default function LandingPage() {
           The first cohort is forming now.
         </h2>
         <p className="text-cream/40 text-sm mb-10 max-w-md mx-auto">
-          Applications are reviewed manually. Tell us why you want to study Stoicism.
+          Tell us why you want to study Stoicism.
         </p>
         <Link href="/waitlist" className="btn-primary">
-          Apply for Early Access
+          Begin Your Formation
         </Link>
       </section>
 

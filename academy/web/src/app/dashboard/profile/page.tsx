@@ -25,7 +25,7 @@ const TIER_DETAILS: Record<Tier, { label: string; price: string; agents: string[
     label: 'Fellow',
     price: '$79/mo',
     agents: ['All six agents'],
-    description: 'The complete doctoral experience. No restrictions.',
+    description: 'The complete formation experience. No restrictions.',
   },
 };
 
