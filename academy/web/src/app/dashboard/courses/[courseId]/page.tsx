@@ -683,20 +683,37 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
 
 // PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
 // content (parts + exercises); the short-answer quiz is rendered below it as
-// reveal cards, since LanguageLessonContent's quiz is multiple-choice only.
-function Phil701SessionContent({ session }: { session: Phil701Session }) {
+// reveal cards for self-study. onQuizClick switches the tab to the submission
+// interface when the student is ready to submit for grading.
+function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Session; onQuizClick?: () => void }) {
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
-      <section className="mt-10">
-        <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
-        <p className="text-academy-muted text-xs mb-5 italic">
-          Answer each in your own words, then reveal.
-        </p>
-        {session.quiz.map((q, i) => (
-          <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
-        ))}
-      </section>
+      {session.quiz.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
+          <p className="text-academy-muted text-xs mb-5 italic">
+            Review each question, attempt your answer, then reveal.
+          </p>
+          {session.quiz.map((q, i) => (
+            <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
+          ))}
+
+          {onQuizClick && (
+            <div className="mt-8 border-t border-academy-gold/20 pt-6">
+              <p className="text-academy-muted text-sm mb-4 leading-relaxed">
+                When you have worked through all ten questions, submit your written answers to the faculty for review.
+              </p>
+              <button
+                onClick={onQuizClick}
+                className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
+              >
+                Submit Quiz for Review &rarr;
+              </button>
+            </div>
+          )}
+        </section>
+      )}
     </>
   );
 }
@@ -1306,7 +1323,10 @@ function SeminarPage() {
                             yourTask={phil701Session.preSeminarBriefing.yourTask}
                             requiredReading={phil701Session.preSeminarBriefing.requiredReading}
                           />
-                          <Phil701SessionContent session={phil701Session} />
+                          <Phil701SessionContent
+                            session={phil701Session}
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
                         </>
                       ) : (
                         <>
