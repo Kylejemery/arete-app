@@ -14,6 +14,7 @@ import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
 import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Session } from '@/data/phil705';
 import { PHIL_701_SESSIONS, phil701ToLesson, type Phil701Session } from '@/data/phil701';
+import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
@@ -25,6 +26,7 @@ interface SessionItem {
   id: number;
   title: string;
   locked: boolean;
+  lockReason?: 'completion-gate' | null;
   videoUrl?: string;
 }
 
@@ -211,6 +213,44 @@ function PreparedNotice({ sessionId, sessions }: { sessionId: number; sessions: 
     </div>
   );
 }
+
+// ── Completion-gate lock notice ────────────────────────────────────────────────
+
+function CompletionGateLock({ sessionId, sessions }: { sessionId: number; sessions: SessionItem[] }) {
+  const s = sessions.find(x => x.id === sessionId);
+  return (
+    <div className="flex flex-col items-center justify-center py-24 text-center px-8">
+      <div className="w-14 h-14 rounded-full border border-academy-border flex items-center justify-center mb-6">
+        <svg className="w-5 h-5 text-academy-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+      </div>
+      <h2 className="font-serif text-xl text-academy-text mb-3">{s?.title ?? `Session ${toRoman(sessionId)}`}</h2>
+      <p className="text-academy-muted text-sm max-w-xs leading-relaxed">
+        Pass the quiz for the previous session to unlock this one.
+      </p>
+    </div>
+  );
+}
+
+// ── Quiz helpers ──────────────────────────────────────────────────────────────
+
+function hasQuizData(courseId: string, sessionId: number): boolean {
+  if (courseId === 'phil-701') {
+    const s = PHIL_701_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
+  return false;
+}
+
+function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
+  if (courseId === 'phil-701') {
+    return PHIL_701_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  return [];
+}
+
+// ── SessionContent ────────────────────────────────────────────────────────────
 
 function SessionContent({ content, sessionId, sessions }: { content: SessionContent; sessionId: number; sessions: SessionItem[] }) {
   const session = sessions.find(s => s.id === sessionId);
@@ -976,15 +1016,27 @@ function SeminarPage() {
   const [briefingComplete, setBriefingComplete] = useState(false);
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
+  const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
+  const [activeTab, setActiveTab] = useState<'lesson' | 'quiz'>('lesson');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   // Keep a ref to latest widths so onDragEnd closures always save the current value
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
 
-  // Admin bypass unlocks every session for navigation. Non-admin behaviour
-  // (including PHIL 701) is unchanged.
+  // Completion-gate locking: session N unlocks when session N-1 is 'passed'.
+  // Sessions without quiz data are treated as auto-passed for gating purposes
+  // so that content-less sessions never become permanent blockers.
+  // Admins and session 1 bypass unconditionally.
   const baseSessions = COURSE_SESSIONS[courseId] ?? COURSE_SESSIONS['phil-701'];
-  const sessions = isAdmin ? baseSessions.map(s => ({ ...s, locked: false })) : baseSessions;
+  const sessions: SessionItem[] = baseSessions.map(s => {
+    if (isAdmin || s.id === 1) return { ...s, locked: false, lockReason: null };
+    const prevHasQuiz = hasQuizData(courseId, s.id - 1);
+    const prevEffectiveStatus = prevHasQuiz
+      ? (sessionProgress[s.id - 1] ?? 'not_started')
+      : 'passed';
+    const locked = prevEffectiveStatus !== 'passed';
+    return { ...s, locked, lockReason: locked ? ('completion-gate' as const) : null };
+  });
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
   const sessionContent = courseContent.sessions[activeSessionId];
   // PHIL 701 sessions 2–11 carry full transcribed content (briefing + parts +
@@ -1005,6 +1057,17 @@ function SeminarPage() {
       setEnrollment(enroll);
       const profile = await getProfile();
       setIsAdmin(profile?.is_admin === true);
+      // Fetch quiz completion progress for this course
+      const { data: progressRows } = await supabase
+        .from('session_progress')
+        .select('session_id, status')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+      const progress: Record<number, string> = {};
+      for (const row of progressRows ?? []) {
+        progress[row.session_id as number] = row.status as string;
+      }
+      setSessionProgress(progress);
       const sess = await getOrCreateSession(courseId, agentId);
       if (sess) { setSession(sess); setMessages(sess.messages); }
       setInitializing(false);
@@ -1041,6 +1104,26 @@ function SeminarPage() {
     if (sess) { setSession(sess); setMessages(sess.messages); }
     setInitializing(false);
   };
+
+  // Re-fetches session_progress after a quiz is submitted so the sidebar
+  // and locking logic immediately reflect the new 'completed' status.
+  const refreshProgress = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: progressRows } = await supabase
+      .from('session_progress')
+      .select('session_id, status')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId);
+    const progress: Record<number, string> = {};
+    for (const row of progressRows ?? []) {
+      progress[row.session_id as number] = row.status as string;
+    }
+    setSessionProgress(progress);
+  };
+
+  // Reset to Lesson tab whenever the student navigates to a different session.
+  useEffect(() => { setActiveTab('lesson'); }, [activeSessionId]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session) return;
@@ -1097,6 +1180,11 @@ function SeminarPage() {
           </Link>
           <span className="text-academy-border text-xs select-none">|</span>
           <span className="text-academy-gold font-serif text-sm hidden sm:inline">Arete Academy</span>
+          {isAdmin && (
+            <span className="text-[10px] font-bold tracking-widest uppercase text-academy-gold border border-academy-gold/50 rounded-full px-2 py-0.5 leading-none">
+              Admin
+            </span>
+          )}
         </div>
         <Link href="/dashboard/papers" className="text-xs border border-academy-border text-academy-muted px-3 py-1.5 rounded hover:border-academy-gold hover:text-academy-text transition-all">
           &#9998; Submit Paper
@@ -1159,46 +1247,91 @@ function SeminarPage() {
         />
 
         {/* CENTER: Session Content */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6 py-10">
-            <LectureVideoBlock
-              sessionId={activeSessionId}
-              videoUrl={sessions.find(s => s.id === activeSessionId)?.videoUrl}
-            />
-            {phil701Session ? (
-              <>
-                <PreSeminarBriefing
-                  key={`phil-701-${activeSessionId}`}
-                  courseId="phil-701"
-                  session={activeSessionId}
-                  title={phil701Session.title}
-                  problem={phil701Session.preSeminarBriefing.problem}
-                  whyItMatters={phil701Session.preSeminarBriefing.whyItMatters}
-                  watchFor={phil701Session.preSeminarBriefing.whatToWatchFor.split('\n\n').filter(Boolean)}
-                  yourTask={phil701Session.preSeminarBriefing.yourTask}
-                  requiredReading={phil701Session.preSeminarBriefing.requiredReading}
-                />
-                <Phil701SessionContent session={phil701Session} />
-              </>
-            ) : (
-              <>
-                {briefingData && (
-                  <PreSeminarBriefing
-                    key={`${courseId}-${activeSessionId}`}
-                    courseId={courseId}
-                    {...briefingData}
-                    isComplete={briefingComplete}
-                  />
-                )}
-                {sessionContent ? (
-                  <SessionContent content={sessionContent} sessionId={activeSessionId} sessions={sessions} />
-                ) : (
-                  <PreparedNotice sessionId={activeSessionId} sessions={sessions} />
-                )}
-              </>
-            )}
-          </div>
-        </div>
+        {(() => {
+          const currentSession = sessions.find(s => s.id === activeSessionId);
+          const isLocked = currentSession?.locked ?? false;
+          const quizQs = getQuizQuestions(courseId, activeSessionId);
+          const showQuizTab = !isLocked && quizQs.length > 0;
+          return (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tab bar — Lesson / Quiz */}
+              {showQuizTab && (
+                <div className="flex-shrink-0 border-b border-academy-border bg-academy-card">
+                  <div className="max-w-2xl mx-auto px-6 flex">
+                    {(['lesson', 'quiz'] as const).map(tab => (
+                      <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`px-4 py-3 text-xs font-semibold uppercase tracking-widest border-b-2 transition-colors ${
+                          activeTab === tab
+                            ? 'border-academy-gold text-academy-gold'
+                            : 'border-transparent text-academy-muted hover:text-academy-text'
+                        }`}
+                      >
+                        {tab === 'lesson' ? 'Lesson' : 'Quiz'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Scrollable content area */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="max-w-2xl mx-auto px-6 py-10">
+                  {isLocked ? (
+                    <CompletionGateLock sessionId={activeSessionId} sessions={sessions} />
+                  ) : activeTab === 'quiz' && quizQs.length > 0 ? (
+                    <StudentQuiz
+                      courseId={courseId}
+                      sessionId={activeSessionId}
+                      questions={quizQs}
+                      onSubmitted={refreshProgress}
+                    />
+                  ) : (
+                    <>
+                      <LectureVideoBlock
+                        sessionId={activeSessionId}
+                        videoUrl={currentSession?.videoUrl}
+                      />
+                      {phil701Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-701-${activeSessionId}`}
+                            courseId="phil-701"
+                            session={activeSessionId}
+                            title={phil701Session.title}
+                            problem={phil701Session.preSeminarBriefing.problem}
+                            whyItMatters={phil701Session.preSeminarBriefing.whyItMatters}
+                            watchFor={phil701Session.preSeminarBriefing.whatToWatchFor.split('\n\n').filter(Boolean)}
+                            yourTask={phil701Session.preSeminarBriefing.yourTask}
+                            requiredReading={phil701Session.preSeminarBriefing.requiredReading}
+                          />
+                          <Phil701SessionContent session={phil701Session} />
+                        </>
+                      ) : (
+                        <>
+                          {briefingData && (
+                            <PreSeminarBriefing
+                              key={`${courseId}-${activeSessionId}`}
+                              courseId={courseId}
+                              {...briefingData}
+                              isComplete={briefingComplete}
+                            />
+                          )}
+                          {sessionContent ? (
+                            <SessionContent content={sessionContent} sessionId={activeSessionId} sessions={sessions} />
+                          ) : (
+                            <PreparedNotice sessionId={activeSessionId} sessions={sessions} />
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         <DragHandle
           onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
