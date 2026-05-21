@@ -10,6 +10,7 @@ export interface BriefingData {
   whyItMatters: string;
   watchFor: string[];
   yourTask: string;
+  requiredReading?: { source: string; passage: string; note: string }[];
 }
 
 interface PreSeminarBriefingProps extends BriefingData {
@@ -25,6 +26,7 @@ export default function PreSeminarBriefing({
   whyItMatters,
   watchFor,
   yourTask,
+  requiredReading,
   isComplete = false,
 }: PreSeminarBriefingProps) {
   const storageKey = `briefing-collapsed-${courseId}-${session}`;
@@ -112,6 +114,44 @@ export default function PreSeminarBriefing({
             </p>
             <p className="font-serif text-academy-gold text-sm leading-relaxed italic">{yourTask}</p>
           </div>
+
+          {/* Required Reading */}
+          {requiredReading && requiredReading.length > 0 && (
+            <div className="border-t border-academy-gold/20 pt-5">
+              <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-3">
+                Required Reading
+              </p>
+              {/* Desktop: three-column table */}
+              <table className="hidden md:table w-full border-collapse border-l-2 border-academy-gold">
+                <thead>
+                  <tr>
+                    <th className="font-mono text-academy-muted text-[10px] font-normal uppercase tracking-widest text-left px-3 pb-2">Source</th>
+                    <th className="font-mono text-academy-muted text-[10px] font-normal uppercase tracking-widest text-left px-3 pb-2">Passage</th>
+                    <th className="font-mono text-academy-muted text-[10px] font-normal uppercase tracking-widest text-left px-3 pb-2">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requiredReading.map((r, i) => (
+                    <tr key={i} className="border-t border-academy-border align-top">
+                      <td className="font-serif text-academy-text text-sm px-3 py-2">{r.source}</td>
+                      <td className="font-serif text-academy-text text-sm px-3 py-2">{r.passage}</td>
+                      <td className="text-academy-muted text-sm leading-relaxed px-3 py-2">{r.note}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* Mobile: stacked cards */}
+              <div className="md:hidden space-y-3">
+                {requiredReading.map((r, i) => (
+                  <div key={i} className="border-l-2 border-academy-gold pl-3">
+                    <p className="font-serif text-academy-text text-sm font-semibold">{r.source}</p>
+                    <p className="font-serif text-academy-text text-sm">{r.passage}</p>
+                    <p className="text-academy-muted text-sm italic leading-relaxed mt-0.5">{r.note}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {sessionReadings.length > 0 && (
             <div className="border-t border-academy-border pt-5">

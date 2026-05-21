@@ -18,6 +18,7 @@ export interface Phil701Session {
     whyItMatters: string;
     whatToWatchFor: string;
     yourTask: string;
+    requiredReading?: Array<{ source: string; passage: string; note: string }>;
   };
   parts: Array<{
     title: string;
@@ -44,7 +45,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "Session 1 ended with a question: if philosophy is a way of life, not just a set of beliefs, what makes a life go well? The Stoics gave a radical answer. Most things people pursue — wealth, health, reputation, pleasure — are not goods at all. Only one thing is good: virtue. This session examines why.",
       "whyItMatters": "The entire Stoic practical program follows from the theory of value. If only virtue is good, then illness is not a bad thing — it is indifferent. If indifferents are genuinely indifferent, then the Sage is happy in prison. These are not rhetorical provocations; they are conclusions that follow from a carefully worked-out axiology. You cannot understand Epictetus's instructions without understanding what he thinks good and bad are.",
       "whatToWatchFor": "The Stoics do not say that health, wealth, and pleasure are worthless. They call them preferred indifferents (proēgmena adiaphora) — things that have a kind of selective value but not genuine goodness. The distinction between value (axia) and goodness (agathon) is the hinge on which everything turns.",
-      "yourTask": "Before the session, consider this challenge: if health is not genuinely good, why do doctors exist? Come prepared to either defend the Stoic position against this challenge or identify where you think it fails."
+      "yourTask": "Before the session, consider this challenge: if health is not genuinely good, why do doctors exist? Come prepared to either defend the Stoic position against this challenge or identify where you think it fails.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§1–2 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Diogenes Laertius",
+          "passage": "Lives VII.101–104 (on goods and indifferents)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {
@@ -197,7 +215,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "Session 2 established what the good is. This session asks: how does the mind relate to the world? Before we can understand why the Stoics think we are responsible for our emotions and character, we need to understand their account of how impressions arise, how we respond to them, and where the power of choice sits.",
       "whyItMatters": "The dichotomy of control — the opening move of the Encheiridion — is not a self-help slogan. It is a claim about the structure of the human mind. The 'things up to us' are precisely the operations of the ruling faculty (hēgemonikon): impression, assent, impulse. Everything else is 'not up to us' because it bypasses the ruling faculty. Understanding this architecture is the precondition for understanding every practical Stoic instruction.",
       "whatToWatchFor": "Impressions (phantasiai) come from the world and are not themselves up to us — the impression that someone has insulted you arises automatically. Assent (synkatathesis) is up to us — giving or withholding your judgment that the impression is accurate is a voluntary act of the ruling faculty. The moment where philosophy happens is always the gap between impression and assent.",
-      "yourTask": "Think of a recent situation where you reacted strongly — anger, anxiety, or longing. Identify the impression that preceded the reaction. Was there a moment of assent? Come prepared to describe it."
+      "yourTask": "Think of a recent situation where you reacted strongly — anger, anxiety, or longing. Identify the impression that preceded the reaction. Was there a moment of assent? Come prepared to describe it.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§1, 5, 16, 20",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Discourses I.1 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {
@@ -334,7 +369,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "We now have the architecture — impressions, assent, impulse, the ruling faculty. Session 4 asks the practical question: what do we do with it? Epictetus organized Stoic practice into three disciplines. The first — and the one he considered most urgent — is the discipline of desire and aversion (orexis and ekklisis). This session unpacks it.",
       "whyItMatters": "Most human misery, on the Stoic account, comes from desiring things we cannot guarantee and fearing things we cannot prevent. You want your reputation to be good — you cannot guarantee it. You fear illness — you cannot prevent it. As long as desire reaches toward what is not up to us, and aversion is directed at what is not up to us, you will be perpetually disappointed and perpetually anxious. The discipline of desire is the cure.",
       "whatToWatchFor": "Epictetus does not say: stop wanting things. He says: redirect desire toward what is genuinely up to you (virtue, your own judgments and choices) and redirect aversion away from externals toward vice alone. This is not passive resignation — it is a radical reorientation of what you care about.",
-      "yourTask": "List three things you currently want. For each, determine whether it is eph' hēmin (up to you) or not. Come prepared to discuss what the Stoic instruction for each desire would be."
+      "yourTask": "List three things you currently want. For each, determine whether it is eph' hēmin (up to you) or not. Come prepared to discuss what the Stoic instruction for each desire would be.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§2, 4, 8, 14",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Discourses III.2.1–5",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Hadot, PhWoL Ch. 10",
+          "passage": "as assigned",
+          "note": "Present-moment focus as practice. Best with discipline of desire."
+        }
+      ]
     },
     "parts": [
       {
@@ -485,7 +537,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "Sessions 3 and 4 addressed the interior life — impressions, assent, desire. But we live among other people, in institutions, with obligations we did not choose. The second Stoic discipline — the discipline of impulse and action — governs how we engage with the world. It is the ethics of the middle ground: neither the hermit's withdrawal nor the slave's passive compliance, but the philosopher's engaged action.",
       "whyItMatters": "The Stoics were not quietists. Marcus Aurelius was an emperor. Seneca was a statesman. Epictetus ran a school. They acted in the world, took on responsibilities, served communities. The discipline of action explains how to do this without losing your integrity — how to pursue preferred indifferents vigorously, meet your obligations to others, and remain a rational, social animal while holding all external outcomes lightly.",
       "whatToWatchFor": "The concept of kathēkon — appropriate action, or role — is central here. The Stoics believed every person has multiple roles: human being, citizen, family member, professional. Each role generates appropriate actions. The discipline of action is the practice of identifying and fulfilling those actions, while holding outcomes with the reserve clause.",
-      "yourTask": "Identify two roles you currently occupy (parent, friend, professional, citizen, etc.). For each role, identify one action that is clearly kathēkon — appropriate given that role. Come prepared to defend why those actions are appropriate."
+      "yourTask": "Identify two roles you currently occupy (parent, friend, professional, citizen, etc.). For each role, identify one action that is clearly kathēkon — appropriate given that role. Come prepared to defend why those actions are appropriate.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Discourses II.10 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§17, 24, 30",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {
@@ -622,7 +691,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "Sessions 4 and 5 covered desire and action — the first two disciplines. Session 6 completes the trio with the discipline of assent (synkatathesis). This is the deepest discipline, the one that governs the other two, and the one most closely connected to Hadot's concept of philosophy as a spiritual exercise.",
       "whyItMatters": "The discipline of assent is the practice of prosochē — attention, watchfulness, the constant vigilance over the impressions that arise in the ruling faculty. Without it, the other disciplines collapse: you cannot redirect desire if you cannot identify the impressions driving it; you cannot act appropriately if you cannot distinguish accurate impressions from distorted ones. The discipline of assent is the foundation.",
       "whatToWatchFor": "Hadot identifies the discipline of assent with what ancient philosophers called prosochē — attention to oneself. This is not introspection in the modern psychological sense (examining your feelings, processing your past). It is logical vigilance: checking each impression for accuracy before giving assent.",
-      "yourTask": "For the next 24 hours before this session, try to practice what Epictetus calls the 'pause' — when a strong impression arises, notice it and hold it briefly before responding. Report one instance in the seminar."
+      "yourTask": "For the next 24 hours before this session, try to practice what Epictetus calls the 'pause' — when a strong impression arises, notice it and hold it briefly before responding. Report one instance in the seminar.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§20, 34, 45",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Discourses II.18 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Hadot, PhWoL Ch. 11 — 'Spiritual Exercises'",
+          "passage": "as assigned",
+          "note": "The foundational text for the entire Academy. Read before Session 1."
+        }
+      ]
     },
     "parts": [
       {
@@ -754,7 +840,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "The Stoics are widely misunderstood as recommending the suppression of emotion — cold, robotic indifference to everything that happens. This session corrects that misreading. The Stoic critique is not of emotion as such but of a specific class of emotions called pathē (passions) — emotions that rest on false judgments. And in place of the passions, the Stoics described a set of positive rational emotions — the eupatheiai — which are the emotional life of the Sage.",
       "whyItMatters": "The misreading of Stoicism as emotional suppression is the most common reason people reject it without fairly engaging with it. If you think Stoicism means not caring about anything, you have not understood it. Understanding what the Stoics actually said about emotion is necessary for the course and for your own philosophical formation.",
       "whatToWatchFor": "The four passions are desire (epithumia), fear (phobos), pleasure (hēdonē), and distress (lupē). Each is defined as a false judgment — not merely an intense feeling. The corresponding eupatheiai are wish (boulēsis), caution (eulabeia), joy (chara), and there is no eupatheia corresponding to distress — because the Sage has no occasion for distress.",
-      "yourTask": "Identify one passion you experience regularly — not its feeling-quality but its underlying judgment. What does it assume to be good or bad? Come prepared to examine whether that judgment is accurate."
+      "yourTask": "Identify one passion you experience regularly — not its feeling-quality but its underlying judgment. What does it assume to be good or bad? Come prepared to examine whether that judgment is accurate.",
+      "requiredReading": [
+        {
+          "source": "Diogenes Laertius",
+          "passage": "Lives VII.110–116 (on the passions)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Discourses I.28 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {
@@ -892,7 +995,29 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "The Stoics were determinists. They believed every event in the universe is necessitated by the causal chain they called fate (heimarmenē). They also believed human beings are free and responsible for their choices. This is the tension at the heart of Stoic metaphysics. This session examines it — and the remarkable Stoic conclusion: once you understand the universe correctly, your proper response to it is not resignation but love.",
       "whyItMatters": "Amor fati — love of fate — is one of the most distinctive and demanding Stoic commitments. It is not mere acceptance of what happens. It is the affirmative embrace of reality as it is, grounded in the conviction that the universe is governed by a rational, providential logos. Understanding why the Stoics held this conviction, and what it demands practically, is essential for understanding the full scope of Stoic ethics.",
       "whatToWatchFor": "The Stoic universe is a living, rational organism — the logos permeating all things. Fate is not an alien force imposing events on a passive world; it is the self-expression of the logos working through everything that happens. To resist fate is to resist the logos — which is to resist your own deepest nature as a rational being. To embrace fate is to align with it.",
-      "yourTask": "Think of one significant circumstance in your life you did not choose — a loss, a limitation, a constraint. Come prepared to examine whether amor fati, as the Stoics understand it, is psychologically and philosophically achievable for you in this case."
+      "yourTask": "Think of one significant circumstance in your life you did not choose — a loss, a limitation, a constraint. Come prepared to examine whether amor fati, as the Stoics understand it, is psychologically and philosophically achievable for you in this case.",
+      "requiredReading": [
+        {
+          "source": "Marcus Aurelius",
+          "passage": "Meditations IV.3 (complete); V.8; VI.2; IX.28",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §§8, 17, 53",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Cleanthes",
+          "passage": "Hymn to Zeus (complete — 14 lines)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {
@@ -1020,7 +1145,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "The Stoic Sage (sophos) is the ideal — a person of perfect virtue, perfect assent, perfect emotional life. The Stoics also said the Sage is almost impossibly rare. This creates a practical problem: if the standard is unachievable, what is the point? Session 9 addresses this by focusing on the prokopton — the person making progress — and the Stoic account of moral development.",
       "whyItMatters": "Most people who engage seriously with Stoicism are not Sages and will not become Sages. The practical ethics of Stoicism is almost entirely the ethics of the prokopton — the person between the mass of humanity (in the grip of passions and false judgments) and the Sage (in perfect accordance with logos). Understanding what progress looks like and how to pursue it is the practical core of the course.",
       "whatToWatchFor": "The Stoics made a controversial logical claim: moral virtue is all-or-nothing — you either have it or you don't, and any degree of vice makes you as bad as maximum vice (just as a drowning person is equally drowned whether one foot or ten feet underwater). But they also recognized that moral development is real and gradual. These two claims are in tension, and how the Stoics resolve it is philosophically interesting.",
-      "yourTask": "Identify one area of your own character where you are clearly making progress — where you act better than you did a year ago. Come prepared to describe what changed and how."
+      "yourTask": "Identify one area of your own character where you are clearly making progress — where you act better than you did a year ago. Come prepared to describe what changed and how.",
+      "requiredReading": [
+        {
+          "source": "Epictetus",
+          "passage": "Discourses I.4 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Seneca",
+          "passage": "Epistulae Morales Ep. 1 (complete)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Hadot, PhWoL Ch. 2",
+          "passage": "as assigned",
+          "note": "How Stoic exercises were transmitted and transformed. Formation history."
+        }
+      ]
     },
     "parts": [
       {
@@ -1152,7 +1294,24 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "The Stoics defined the goal (telos) of human life as 'living according to nature' (kata phusin zēn). This sounds like it might mean: follow your instincts, act naturally, live simply. It means none of these things. 'Nature' for the Stoics is a technical term with a specific philosophical meaning — and understanding what they mean by it unlocks the entire practical program.",
       "whyItMatters": "The Stoic telos is the synthesis of everything covered so far: the theory of value (Session 2), the psychology of impression and assent (Session 3), the disciplines (Sessions 4–6), the emotions (Session 7), the cosmology (Session 8), and the ideal of the Sage (Session 9). 'Living according to nature' is the name for the life that integrates all of these — the fully examined, fully rational, fully virtuous life.",
       "whatToWatchFor": "'Nature' in the Stoic formula has at least three senses that must be distinguished: (1) nature as the physical universe — the logos pervading all things; (2) human nature specifically — the rational, social animal; (3) individual nature — your particular constitution, roles, and circumstances. Living according to nature means aligning with all three simultaneously.",
-      "yourTask": "In one sentence, state what you currently take to be the goal of your life. Come prepared to examine whether this telos is consistent with the Stoic formula — and to defend it or revise it."
+      "yourTask": "In one sentence, state what you currently take to be the goal of your life. Come prepared to examine whether this telos is consistent with the Stoic formula — and to defend it or revise it.",
+      "requiredReading": [
+        {
+          "source": "Diogenes Laertius",
+          "passage": "Lives VII.84–89 (on the Stoic telos)",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Marcus Aurelius",
+          "passage": "Meditations V.1 (complete); VIII.7",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Hadot, PhWoL Ch. 3",
+          "passage": "as assigned",
+          "note": "The philosopher's total commitment. Best pairing with Session 10 (telos)."
+        }
+      ]
     },
     "parts": [
       {
@@ -1284,7 +1443,19 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "problem": "This final session is a seminar — no lecture, no new content. The Socratic Proctor will open with a question and follow your reasoning wherever it leads. The seminar ends when you are satisfied that you have worked through the central question. You are not being tested on whether you agree with Stoicism. You are being asked to think — carefully, honestly, with full engagement.",
       "whyItMatters": "Socrates said 'the unexamined life is not worth living.' The Stoics took this literally — the examined life, the life governed by the three disciplines, the life of prosochē and virtue and amor fati, is the only life fully worth calling human. This course has given you the tools for that examination. The seminar is the first sustained exercise of them.",
       "whatToWatchFor": "The Proctor's questions will probe the consistency, depth, and honesty of your engagement with Stoicism. The questions are not traps; they are invitations to go deeper. When a question feels difficult, that is the moment of philosophical work.\n\nTHE CENTRAL QUESTIONS FOR THIS SEMINAR: Come prepared to engage with at least one of the following:\n\n(1) THE SUFFICIENCY QUESTION: Is virtue really sufficient for happiness? Could you be happy — genuinely, fully happy — in extreme poverty, serious illness, or social isolation? Does the Stoic answer feel true to you, or like a philosophical demand that exceeds human psychology?\n\n(2) THE ENGAGEMENT QUESTION: Does Stoicism's emphasis on the interior — on governing desire and assent — lead to withdrawal from the world, or does the discipline of action (kathēkon, roles, oikeiōsis) provide adequate grounds for full engagement? Can you be a committed parent, a driven professional, a loyal friend, and a Stoic simultaneously?\n\n(3) THE TRANSFORMATION QUESTION: Has anything in this course changed how you see a situation in your own life — even slightly? What would it take for Stoic philosophy to become not just something you know but something you practice?",
-      "yourTask": "Choose one of these questions and prepare a 200-word opening statement. The Proctor will respond."
+      "yourTask": "Choose one of these questions and prepare a 200-word opening statement. The Proctor will respond.",
+      "requiredReading": [
+        {
+          "source": "Review: Encheiridion §§1–2, 5, 8, 14, 17, 20, 53",
+          "passage": "see text",
+          "note": "Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
     },
     "parts": [
       {

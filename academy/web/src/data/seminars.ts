@@ -14,6 +14,11 @@ export const SEMINARS: Record<string, BriefingData[]> = {
         'Where you find yourself resisting Hadot\'s thesis — and why',
       ],
       yourTask: 'Before engaging the Proctor, write one sentence stating what you believe philosophy is for. Then bring that sentence into the seminar and be prepared to defend it against the question: how do you know?',
+      requiredReading: [
+        { source: "Hadot, PhWoL Ch. 11 — 'Spiritual Exercises'", passage: "as assigned", note: "The foundational text for the entire Academy. Read before Session 1." },
+        { source: "Hadot, Inner Citadel Ch. 1", passage: "as assigned", note: "Already assigned PHIL 701 Session 1." },
+        { source: "Sellars, Lessons in Stoicism (2019) [optional]", passage: "complete", note: "Short, accessible (120 pages). Optional pre-course primer before PHIL 701 Session 1. Not required but recommended." },
+      ],
     },
   ],
 };

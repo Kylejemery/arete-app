@@ -109,10 +109,7 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
           'Pierre Hadot argued that modern scholarship had fundamentally misread what the Greeks and Romans were doing. Philosophy, for the ancients, was a set of exercises aimed at transforming the self — what Hadot called spiritual exercises: attention, meditation, examination of conscience, the view from above, the preparation for death.',
           'PHIL 701 begins with Hadot because his framework is the interpretive lens for everything that follows. Stoic ethics is not a doctrine you learn in order to pass an examination; it is a set of disciplines you practice in order to become a certain kind of person.',
         ],
-        readings: [
-          'Hadot, Philosophy as a Way of Life, Ch. 11',
-          'Hadot, The Inner Citadel, Ch. 1',
-        ],
+        readings: [],
         prompt: 'Hadot argues that ancient philosophy was not a body of doctrine to be learned but a set of exercises to be practiced. If he is right, what becomes of philosophy as we have inherited it in the modern university? And what would it mean to enter this program as a practitioner rather than a reader?',
       },
     },
@@ -238,19 +235,23 @@ function SessionContent({ content, sessionId, sessions }: { content: SessionCont
         </div>
       </section>
 
-      <div className="border-t border-academy-gold/20 my-8" />
+      {content.readings.length > 0 && (
+        <>
+          <div className="border-t border-academy-gold/20 my-8" />
 
-      <section className="mb-10">
-        <h2 className="font-serif text-xl text-academy-text mb-4">Required Reading</h2>
-        <ul className="space-y-3">
-          {content.readings.map(r => (
-            <li key={r} className="flex items-start gap-3 text-academy-muted text-sm">
-              <span className="text-academy-gold font-semibold leading-none mt-0.5">&rsaquo;</span>
-              <span>{r}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+          <section className="mb-10">
+            <h2 className="font-serif text-xl text-academy-text mb-4">Required Reading</h2>
+            <ul className="space-y-3">
+              {content.readings.map(r => (
+                <li key={r} className="flex items-start gap-3 text-academy-muted text-sm">
+                  <span className="text-academy-gold font-semibold leading-none mt-0.5">&rsaquo;</span>
+                  <span>{r}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </>
+      )}
 
       <div className="border-t border-academy-gold/20 my-8" />
 
@@ -1175,6 +1176,7 @@ function SeminarPage() {
                   whyItMatters={phil701Session.preSeminarBriefing.whyItMatters}
                   watchFor={phil701Session.preSeminarBriefing.whatToWatchFor.split('\n\n').filter(Boolean)}
                   yourTask={phil701Session.preSeminarBriefing.yourTask}
+                  requiredReading={phil701Session.preSeminarBriefing.requiredReading}
                 />
                 <Phil701SessionContent session={phil701Session} />
               </>
