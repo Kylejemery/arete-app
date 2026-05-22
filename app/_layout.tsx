@@ -4,8 +4,15 @@ import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { ErrorUtils, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// ── Global JS error handler — catches errors BEFORE RCTExceptionsManager ──────
+const originalHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  console.error('[GLOBAL ERROR CAUGHT]', 'fatal:', isFatal, 'message:', error?.message, 'stack:', error?.stack);
+  originalHandler(error, isFatal);
+});
 
 // This tells Expo Router to use our ErrorBoundary for the root route
 export { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -51,23 +58,30 @@ export default function RootLayout() {
   }
 }, [session]);
 
-if (session === undefined) {
-  return (
-    <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
-      </GestureHandlerRootView>
-    </ErrorBoundary>
-  );
-}
+  try {
+    if (session === undefined) {
+      return (
+        <ErrorBoundary>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
+          </GestureHandlerRootView>
+        </ErrorBoundary>
+      );
+    }
 
-  return (
-    <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <SessionContext.Provider value={session}>
-          <Slot />
-        </SessionContext.Provider>
-      </GestureHandlerRootView>
-    </ErrorBoundary>
-  );
+    return (
+      <ErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <SessionContext.Provider value={session}>
+            <Slot />
+          </SessionContext.Provider>
+        </GestureHandlerRootView>
+      </ErrorBoundary>
+    );
+  } catch (error: unknown) {
+    const e = error as Error;
+    console.error('[ROOT LAYOUT RENDER ERROR]', e?.message, e?.stack);
+    // Re-throw so React's error boundary still catches it
+    throw error;
+  }
 }
