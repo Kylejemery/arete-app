@@ -1,0 +1,392 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1779123726113,
+  "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "19.1.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.1.0",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run start",
+    "scripts": {
+      "start": "expo start",
+      "reset-project": "node ./scripts/reset-project.js",
+      "android": "expo run:android",
+      "ios": "expo run:ios",
+      "web": "expo start --web",
+      "lint": "expo lint"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "app",
+      "assets",
+      "components",
+      "docs",
+      "lib"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "academy": {
+      "path": "academy",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1779123725663,
+      "keyFiles": [
+        "Arete_Academy_Langugage_Logic_Courses_v1.txt",
+        "GREK_101_Sessions_2_10.txt"
+      ]
+    },
+    "android": {
+      "path": "android",
+      "purpose": null,
+      "fileCount": 6,
+      "lastAccessed": 1779123725777,
+      "keyFiles": [
+        "build.gradle",
+        "gradle.properties",
+        "gradlew",
+        "gradlew.bat",
+        "settings.gradle"
+      ]
+    },
+    "app": {
+      "path": "app",
+      "purpose": "Application code",
+      "fileCount": 17,
+      "lastAccessed": 1779123725778,
+      "keyFiles": [
+        "+error.tsx",
+        "belief-journal.tsx",
+        "counselor-chat.tsx",
+        "evening.tsx",
+        "home.tsx"
+      ]
+    },
+    "app-example": {
+      "path": "app-example",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1779123725784,
+      "keyFiles": []
+    },
+    "assets": {
+      "path": "assets",
+      "purpose": "Static assets",
+      "fileCount": 0,
+      "lastAccessed": 1779123725791,
+      "keyFiles": []
+    },
+    "components": {
+      "path": "components",
+      "purpose": "UI components",
+      "fileCount": 8,
+      "lastAccessed": 1779123725799,
+      "keyFiles": [
+        "CabinetPreview.tsx",
+        "CounselorCard.tsx",
+        "ErrorBoundary.tsx",
+        "EveningScreen.js",
+        "HomeScreen.js"
+      ]
+    },
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1779123725806,
+      "keyFiles": [
+        "metadata.json"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1779123725831,
+      "keyFiles": [
+        "index.html",
+        "privacy.html"
+      ]
+    },
+    "hooks": {
+      "path": "hooks",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1779123725844,
+      "keyFiles": [
+        "useSwipeNavigation.ts",
+        "useTierLimits.ts"
+      ]
+    },
+    "lib": {
+      "path": "lib",
+      "purpose": "Library code",
+      "fileCount": 8,
+      "lastAccessed": 1779123725854,
+      "keyFiles": [
+        "db.ts",
+        "devMode.ts",
+        "onboardingAgent.ts",
+        "scrolls.ts",
+        "supabase.ts"
+      ]
+    },
+    "plugins": {
+      "path": "plugins",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1779123725862,
+      "keyFiles": [
+        "withRCTTurboModulePatch.js"
+      ]
+    },
+    "pull": {
+      "path": "pull",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1779123725875,
+      "keyFiles": []
+    },
+    "server": {
+      "path": "server",
+      "purpose": null,
+      "fileCount": 7,
+      "lastAccessed": 1779123725876,
+      "keyFiles": [
+        "index.js",
+        "package-lock.json",
+        "package.json",
+        "README.md",
+        "retrieval.js"
+      ]
+    },
+    "services": {
+      "path": "services",
+      "purpose": "Business logic services",
+      "fileCount": 2,
+      "lastAccessed": 1779123725880,
+      "keyFiles": [
+        "claudeService.ts",
+        "threadService.ts"
+      ]
+    },
+    "supabase": {
+      "path": "supabase",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1779123725882,
+      "keyFiles": []
+    },
+    "types": {
+      "path": "types",
+      "purpose": "Type definitions",
+      "fileCount": 1,
+      "lastAccessed": 1779123725896,
+      "keyFiles": [
+        "onboarding.ts"
+      ]
+    },
+    "web": {
+      "path": "web",
+      "purpose": null,
+      "fileCount": 12,
+      "lastAccessed": 1779123725899,
+      "keyFiles": [
+        "eslint.config.mjs",
+        "next.config.ts",
+        "package-lock.json",
+        "package.json",
+        "postcss.config.js"
+      ]
+    },
+    "android\\app": {
+      "path": "android\\app",
+      "purpose": "Application code",
+      "fileCount": 3,
+      "lastAccessed": 1779123725905,
+      "keyFiles": [
+        "build.gradle",
+        "debug.keystore",
+        "proguard-rules.pro"
+      ]
+    },
+    "app-example\\app": {
+      "path": "app-example\\app",
+      "purpose": "Application code",
+      "fileCount": 2,
+      "lastAccessed": 1779123725911,
+      "keyFiles": [
+        "modal.tsx",
+        "_layout.tsx"
+      ]
+    },
+    "app-example\\components": {
+      "path": "app-example\\components",
+      "purpose": "UI components",
+      "fileCount": 6,
+      "lastAccessed": 1779123725923,
+      "keyFiles": [
+        "external-link.tsx",
+        "haptic-tab.tsx",
+        "hello-wave.tsx"
+      ]
+    },
+    "app-example\\scripts": {
+      "path": "app-example\\scripts",
+      "purpose": "Build/utility scripts",
+      "fileCount": 1,
+      "lastAccessed": 1779123725929,
+      "keyFiles": [
+        "reset-project.js"
+      ]
+    },
+    "dist\\assets": {
+      "path": "dist\\assets",
+      "purpose": "Static assets",
+      "fileCount": 42,
+      "lastAccessed": 1779123725943,
+      "keyFiles": [
+        "017bc6ba3fc25503e5eb5e53826d48a8",
+        "0747a1317bbe9c6fc340b889ef8ab3ae",
+        "0a328cd9c1afd0afe8e3b1ec5165b1b4"
+      ]
+    },
+    "server\\node_modules": {
+      "path": "server\\node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 1,
+      "lastAccessed": 1779123725970,
+      "keyFiles": []
+    },
+    "supabase\\migrations": {
+      "path": "supabase\\migrations",
+      "purpose": "Database migrations",
+      "fileCount": 22,
+      "lastAccessed": 1779123725972,
+      "keyFiles": [
+        "001_initial_schema.sql",
+        "20260320000000_custom_cabinet.sql",
+        "20260320000001_seed_counselors.sql"
+      ]
+    },
+    "web\\src": {
+      "path": "web\\src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1779123725975,
+      "keyFiles": [
+        "middleware.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "academy\\web\\src\\app\\dashboard\\courses\\[courseId]\\page.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1779149095174,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\components\\PreSeminarBriefing.tsx",
+      "accessCount": 4,
+      "lastAccessed": 1779150166713,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\data\\reference\\PHIL_705_Sessions_2_6.extracted.txt",
+      "accessCount": 1,
+      "lastAccessed": 1779124837235,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\data\\reference\\PHIL_705_Sessions_7_8.extracted.txt",
+      "accessCount": 1,
+      "lastAccessed": 1779124845240,
+      "type": "file"
+    },
+    {
+      "path": "server\\index.js",
+      "accessCount": 1,
+      "lastAccessed": 1779125616261,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\data\\reference\\PHIL_705_Sessions_9_10.extracted.txt",
+      "accessCount": 1,
+      "lastAccessed": 1779126216395,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\data\\phil705.ts",
+      "accessCount": 1,
+      "lastAccessed": 1779127514793,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\dashboard\\courses\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779148939803,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\dashboard\\library\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779150092189,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\data\\reference\\_bobzien_insert.txt",
+      "accessCount": 1,
+      "lastAccessed": 1779198469198,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

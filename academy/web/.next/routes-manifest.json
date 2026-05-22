@@ -20,6 +20,22 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/api/academy/[...path]",
+      "regex": "^/api/academy/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/academy/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/courtyard/[...path]",
+      "regex": "^/api/courtyard/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPpath": "nxtPpath"
+      },
+      "namedRegex": "^/api/courtyard/(?<nxtPpath>.+?)(?:/)?$"
+    },
+    {
       "page": "/dashboard/courses/[courseId]",
       "regex": "^/dashboard/courses/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -48,6 +64,12 @@
       "namedRegex": "^/courses/phil\\-701(?:/)?$"
     },
     {
+      "page": "/courses/phil-702",
+      "regex": "^/courses/phil\\-702(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/courses/phil\\-702(?:/)?$"
+    },
+    {
       "page": "/dashboard",
       "regex": "^/dashboard(?:/)?$",
       "routeKeys": {},
@@ -58,6 +80,12 @@
       "regex": "^/dashboard/courses(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/dashboard/courses(?:/)?$"
+    },
+    {
+      "page": "/dashboard/courtyard",
+      "regex": "^/dashboard/courtyard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard/courtyard(?:/)?$"
     },
     {
       "page": "/dashboard/library",

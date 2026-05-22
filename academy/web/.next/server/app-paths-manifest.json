@@ -1,1 +1,19 @@
-{}
+{
+  "/api/courtyard/[...path]/route": "app/api/courtyard/[...path]/route.js",
+  "/api/academy/[...path]/route": "app/api/academy/[...path]/route.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/signup/page": "app/(auth)/signup/page.js",
+  "/courses/phil-701/page": "app/courses/phil-701/page.js",
+  "/courses/phil-702/page": "app/courses/phil-702/page.js",
+  "/page": "app/page.js",
+  "/waitlist/page": "app/waitlist/page.js",
+  "/dashboard/courses/[courseId]/page": "app/dashboard/courses/[courseId]/page.js",
+  "/dashboard/morning/page": "app/dashboard/morning/page.js",
+  "/dashboard/courses/page": "app/dashboard/courses/page.js",
+  "/dashboard/courtyard/page": "app/dashboard/courtyard/page.js",
+  "/dashboard/library/page": "app/dashboard/library/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/papers/page": "app/dashboard/papers/page.js",
+  "/dashboard/profile/page": "app/dashboard/profile/page.js"
+}

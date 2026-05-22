@@ -1,15 +1,19 @@
 {
+  "/api/courtyard/[...path]/route": "/api/courtyard/[...path]",
+  "/api/academy/[...path]/route": "/api/academy/[...path]",
   "/_not-found/page": "/_not-found",
   "/(auth)/login/page": "/login",
-  "/courses/phil-701/page": "/courses/phil-701",
   "/(auth)/signup/page": "/signup",
-  "/waitlist/page": "/waitlist",
+  "/courses/phil-701/page": "/courses/phil-701",
+  "/courses/phil-702/page": "/courses/phil-702",
   "/page": "/",
+  "/waitlist/page": "/waitlist",
   "/dashboard/courses/[courseId]/page": "/dashboard/courses/[courseId]",
+  "/dashboard/morning/page": "/dashboard/morning",
   "/dashboard/courses/page": "/dashboard/courses",
+  "/dashboard/courtyard/page": "/dashboard/courtyard",
   "/dashboard/library/page": "/dashboard/library",
   "/dashboard/page": "/dashboard",
-  "/dashboard/morning/page": "/dashboard/morning",
-  "/dashboard/profile/page": "/dashboard/profile",
-  "/dashboard/papers/page": "/dashboard/papers"
+  "/dashboard/papers/page": "/dashboard/papers",
+  "/dashboard/profile/page": "/dashboard/profile"
 }

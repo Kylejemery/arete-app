@@ -1,7 +1,0 @@
-{
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"ls -la '/c/Users/kjemery/Arete/Arete/academy/web/src/data/reference/' 2>&1\",\"description\":\"List reference directory contents\"}",
-  "error": "Exit code 2\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!\nls: cannot access '/c/Users/kjemery/Arete/Arete/academy/web/src/data/reference/': No such file or directory",
-  "timestamp": "2026-05-15T19:12:33.589Z",
-  "retry_count": 1
-}
