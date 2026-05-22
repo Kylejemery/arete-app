@@ -78,7 +78,9 @@ export default function TimerScreen() {
   );
 
   useEffect(() => {
-    Notifications.requestPermissionsAsync();
+    if (Platform.OS !== 'web') {
+      Notifications.requestPermissionsAsync().catch(() => {});
+    }
     return () => {
       clearInterval(intervalRef.current);
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);

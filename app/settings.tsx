@@ -19,14 +19,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
 
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
 const MORNING_MESSAGES = [
