@@ -11,9 +11,28 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { getProducts, requestPurchase, restorePurchases } from 'expo-iap';
 import { syncTierToSupabase } from '@/lib/syncSubscription';
 import type { Tier } from '@/lib/useSubscription';
+
+// ─── expo-iap stubs ──────────────────────────────────────────────────────────
+// expo-iap has been removed from the project for now. These stubs disable
+// in-app purchases while keeping the paywall screen rendering. getProducts
+// returns an empty list (must stay iterable so the screen still compiles).
+
+async function getProducts(_productIds: string[]): Promise<any[]> {
+  console.log('IAP not available');
+  return [];
+}
+
+async function requestPurchase(_options: { sku: string }): Promise<null> {
+  console.log('IAP not available');
+  return null;
+}
+
+async function restorePurchases(): Promise<null> {
+  console.log('IAP not available');
+  return null;
+}
 
 // ─── Static fallback display data ────────────────────────────────────────────
 
