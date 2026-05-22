@@ -1173,6 +1173,95 @@ app.post('/api/courtyard/rag-preview', async (req, res) => {
   }
 });
 
+// ─── Daily Examination: Proctor follow-up ─────────────────────────────────────
+
+app.post('/api/examine/proctor', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  // Require an authenticated student.
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+  if (await enforceMessageLimit(req, res)) return;
+
+  const { responses, sessionId, period } = req.body;
+  // responses: [{ prompt, response }, { prompt, response }, { prompt, response }]
+  // period: 'morning' | 'evening'
+  if (!Array.isArray(responses) || responses.length === 0) {
+    return res.status(400).json({ error: 'Missing required field: responses' });
+  }
+  const sessionNum = Number(sessionId);
+  if (!Number.isInteger(sessionNum) || sessionNum < 1 || (period !== 'morning' && period !== 'evening')) {
+    return res.status(400).json({ error: 'Missing or invalid fields: sessionId, period' });
+  }
+
+  // RAG retrieval — student responses inform the corpus context.
+  let chunks = [];
+  try {
+    chunks = await getRelevantChunks(responses.map(r => r.response).join(' '), 5);
+  } catch (ragErr) {
+    console.warn('[/api/examine/proctor] RAG failed:', ragErr.message);
+  }
+
+  const systemPrompt = `You are the Socratic Proctor of Arete Academy.
+A student has completed their ${period} examination for PHIL 701 Session ${sessionNum}.
+You have read their three responses. Your task is to ask ONE follow-up question.
+
+Rules:
+- Ask exactly one question. No more.
+- Do not evaluate or grade the responses.
+- Do not praise or criticize.
+- The question should push deeper into something the student said — a tension,
+  an assumption, or an undeveloped thought.
+- The question should be specific to their actual responses, not generic.
+- Socratic register: precise, brief, unsettling in the best sense.
+- Maximum 3 sentences. Usually 1-2 is better.
+
+Relevant corpus passages for context:
+${chunks.map(c => c.content).join('\n\n')}`;
+
+  const userMessage = responses.map((r, i) =>
+    `Question ${i + 1}: ${r.prompt}\nStudent response: ${r.response}`
+  ).join('\n\n');
+
+  try {
+    console.log(`[/api/examine/proctor] user: ${user.id} | session: ${sessionNum} | period: ${period} | chunks: ${chunks.length}`);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 300,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[/api/examine/proctor] Claude error:', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const question = data.content?.find(b => b.type === 'text')?.text ?? '';
+    return res.json({ question });
+  } catch (error) {
+    console.error('[/api/examine/proctor] error:', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {

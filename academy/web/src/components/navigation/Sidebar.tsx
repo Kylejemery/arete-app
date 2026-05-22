@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 const navItems = [
   { href: '/dashboard',            label: 'Dashboard',    icon: '🏛️' },
   { href: '/dashboard/courses',    label: 'Courses',      icon: '📚' },
+  { href: '/dashboard/examine',    label: 'Daily Examination', icon: '☀️' },
   { href: '/dashboard/courtyard',  label: 'The Courtyard', icon: '⚗️' },
   { href: '/dashboard/library',    label: 'Library',      icon: '📜' },
   { href: '/dashboard/papers',     label: 'Papers',       icon: '✒️' },

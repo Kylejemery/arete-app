@@ -16,6 +16,13 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-704': "PHIL 704 — Seneca's Letters",
 };
 
+type ExamSignal = { label: string; href: string } | { done: true } | null;
+
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
@@ -24,6 +31,7 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [streak, setStreak] = useState(0);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [examSignal, setExamSignal] = useState<ExamSignal>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -33,14 +41,46 @@ export default function DashboardPage() {
 
       setUserName(user.email?.split('@')[0] ?? 'Scholar');
 
-      const [enroll, recentSessions, recentPapers, profile] = await Promise.all([
+      const todayStr = localToday();
+      const [enroll, recentSessions, recentPapers, profile, passedRes, examRes] = await Promise.all([
         getEnrollment(),
         getRecentSessions(3),
         getPapers(),
         getProfile(),
+        supabase
+          .from('session_progress')
+          .select('session_id')
+          .eq('user_id', user.id)
+          .eq('course_id', 'phil-701')
+          .eq('status', 'passed')
+          .limit(1),
+        supabase
+          .from('daily_examinations')
+          .select('morning_completed_at, evening_completed_at')
+          .eq('user_id', user.id)
+          .eq('date', todayStr)
+          .maybeSingle(),
       ]);
 
       setIsAdmin(profile?.is_admin === true);
+
+      // Time-aware Daily Examination signal — only for active PHIL 701 students
+      // (those with at least one passed session).
+      if ((passedRes.data?.length ?? 0) > 0) {
+        const examRow = examRes.data as
+          | { morning_completed_at: string | null; evening_completed_at: string | null }
+          | null;
+        const hour = new Date().getHours();
+        const morningDone = !!examRow?.morning_completed_at;
+        const eveningDone = !!examRow?.evening_completed_at;
+        if (morningDone && eveningDone) {
+          setExamSignal({ done: true });
+        } else if (!examRow && hour < 12) {
+          setExamSignal({ label: 'Morning examination available', href: '/dashboard/examine' });
+        } else if (morningDone && !eveningDone && hour >= 12) {
+          setExamSignal({ label: 'Evening examination available', href: '/dashboard/examine' });
+        }
+      }
 
       if (!enroll) {
         // Auto-enroll new users as auditors
@@ -106,6 +146,28 @@ export default function DashboardPage() {
           <p className="text-academy-muted text-xs mt-1">{courseTitle}</p>
         </Card>
       </div>
+
+      {/* Daily Examination signal */}
+      {examSignal && 'label' in examSignal && (
+        <Link href={examSignal.href}>
+          <Card className="mb-6 hover:border-academy-gold transition-colors cursor-pointer">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <CardLabel>Daily Examination</CardLabel>
+                <p className="font-serif text-academy-text text-base">{examSignal.label}</p>
+              </div>
+              <span className="text-academy-gold text-sm font-semibold whitespace-nowrap">
+                Begin &rarr;
+              </span>
+            </div>
+          </Card>
+        </Link>
+      )}
+      {examSignal && 'done' in examSignal && (
+        <p className="text-academy-muted text-sm italic mb-6">
+          Daily examination complete for today.
+        </p>
+      )}
 
       {/* Next Session CTA */}
       <Card gold className="mb-6">
