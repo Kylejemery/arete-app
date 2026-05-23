@@ -16,6 +16,13 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-704': "PHIL 704 — Seneca's Letters",
 };
 
+const COURSE_SESSION_INFO: Record<string, { title: string; subtitle: string }> = {
+  'phil-701': { title: 'Foundations of Stoic Ethics', subtitle: 'Session I — What is Philosophy For?' },
+  'phil-702': { title: 'The Meditations of Marcus Aurelius', subtitle: 'Session I — The Man and His Book' },
+  'phil-703': { title: 'Epictetus and the Discipline of Desire', subtitle: 'Session I — The Former Slave and His School' },
+  'phil-704': { title: "Seneca's Letters and the Art of Dying Well", subtitle: 'Session I — How to Live with Time' },
+};
+
 type ExamSignal = { label: string; href: string } | { done: true } | null;
 
 function localToday(): string {
@@ -113,6 +120,7 @@ export default function DashboardPage() {
 
   const currentCourse = enrollment?.current_course ?? 'phil-701';
   const courseTitle = COURSE_TITLES[currentCourse] ?? currentCourse;
+  const sessionInfo = COURSE_SESSION_INFO[currentCourse];
 
   return (
     <div>
@@ -174,9 +182,9 @@ export default function DashboardPage() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <CardLabel>Next Seminar</CardLabel>
-            <h3 className="font-serif text-xl text-academy-text mb-1">{courseTitle}</h3>
+            <h3 className="font-serif text-xl text-academy-text mb-1">{sessionInfo?.title ?? courseTitle}</h3>
             <p className="text-academy-muted text-sm">
-              Your Socratic Proctor is ready. The text awaits examination.
+              {sessionInfo?.subtitle ?? 'Your Socratic Proctor is ready.'}
             </p>
           </div>
           <Link
@@ -220,23 +228,38 @@ export default function DashboardPage() {
             </Card>
           </Link>
 
-          {/* PHIL 702 — locked */}
-          <Card className="opacity-50">
-            <div className="flex items-start justify-between gap-2">
-              <div>
+          {/* PHIL 702 */}
+          {isAdmin ? (
+            <Link href="/dashboard/courses/phil-702">
+              <Card className="hover:border-academy-gold transition-colors cursor-pointer">
                 <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
                   PHIL 702
                 </p>
                 <p className="font-serif text-academy-text text-base mb-1">
                   The Meditations of Marcus Aurelius
                 </p>
-                <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 701</p>
+                <p className="text-academy-muted text-xs">Session I — The Man and His Book</p>
+                <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="opacity-50">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                    PHIL 702
+                  </p>
+                  <p className="font-serif text-academy-text text-base mb-1">
+                    The Meditations of Marcus Aurelius
+                  </p>
+                  <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 701</p>
+                </div>
+                <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
               </div>
-              <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-          </Card>
+            </Card>
+          )}
         </div>
       </div>
 
