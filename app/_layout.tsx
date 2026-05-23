@@ -4,8 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
-import * as Notifications from 'expo-notifications';
-import { ErrorUtils, Platform, View } from 'react-native';
+import { ErrorUtils, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // ── Global JS error handler — catches errors BEFORE RCTExceptionsManager ──────
@@ -29,21 +28,6 @@ export function useSession() {
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-
-  // ── Register notification handler after the TurboModule layer is ready ───────
-  // Must NOT be called at module level — doing so causes SIGABRT on iOS 26 via
-  // ObjCTurboModule::performVoidMethodInvocation before JS is fully initialized.
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowBanner: true,
-        shouldShowList: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
-  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {

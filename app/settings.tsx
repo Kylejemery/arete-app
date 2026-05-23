@@ -1,6 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import * as Notifications from 'expo-notifications';
+// expo-notifications removed — iOS 26 SIGABRT fix. Reinstate post-crash resolution.
+const Notifications = {
+  setNotificationHandler: (_handler: unknown) => {},
+  requestPermissionsAsync: () => Promise.resolve({ status: 'undetermined' as const }),
+  getPermissionsAsync: () => Promise.resolve({ status: 'undetermined' as const }),
+  cancelAllScheduledNotificationsAsync: () => Promise.resolve(),
+  scheduleNotificationAsync: (_req: unknown) => Promise.resolve(''),
+  setNotificationChannelAsync: (_id: unknown, _channel: unknown) => Promise.resolve(null),
+  AndroidImportance: { MAX: 5 },
+  SchedulableTriggerInputTypes: { CALENDAR: 'calendar', TIME_INTERVAL: 'timeInterval' },
+};
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {

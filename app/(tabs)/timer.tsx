@@ -12,7 +12,13 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
+// expo-notifications removed — iOS 26 SIGABRT fix. Reinstate post-crash resolution.
+const Notifications = {
+  requestPermissionsAsync: () => Promise.resolve({ status: 'undetermined' as const }),
+  cancelAllScheduledNotificationsAsync: () => Promise.resolve(),
+  scheduleNotificationAsync: (_req: unknown) => Promise.resolve(''),
+  SchedulableTriggerInputTypes: { CALENDAR: 'calendar', TIME_INTERVAL: 'timeInterval' },
+};
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
 
