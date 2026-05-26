@@ -13,11 +13,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-arete-bg text-arete-text min-h-screen">
+    <html lang="en" className="h-full">
+      <body className="h-full bg-arete-bg text-arete-text overflow-hidden">
         <Sidebar />
-        {/* Desktop: offset for sidebar width. Mobile: offset for bottom nav. */}
-        <main className="md:ml-56 pb-24 md:pb-0">
+        {/* Desktop: offset for sidebar width. Mobile: offset for bottom nav.
+            h-full + overflow-y-auto makes this the scroll container for all pages,
+            which lets chat pages use flex-1 without escaping the viewport. */}
+        <main className="md:ml-56 pb-24 md:pb-0 h-full overflow-y-auto">
           {children}
         </main>
       </body>

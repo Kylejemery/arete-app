@@ -153,8 +153,8 @@ export default function CabinetPage() {
   const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm resize-none";
 
   return (
-    <div className="min-h-screen bg-arete-bg flex flex-col" style={{ height: '100dvh' }}>
-      <div className="p-6 md:p-8 pb-2">
+    <div className="h-full bg-arete-bg flex flex-col">
+      <div className="p-6 md:p-8 pb-2 flex-shrink-0">
         <PageHeader title="Cabinet" subtitle="Your Council of Invisible Counselors" />
 
         <div className="mb-4">
@@ -210,7 +210,7 @@ export default function CabinetPage() {
           </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
             {filteredMessages.length === 0 && !isLoading && (
               <div className="text-center text-arete-muted text-sm py-8">
                 <p className="text-2xl mb-2">🏛️</p>
@@ -300,7 +300,7 @@ export default function CabinetPage() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto space-y-4 pb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
                 {counselorMessages.length === 0 && !counselorLoading && (
                   <div className="text-center text-arete-muted text-sm py-8">
                     <p className="text-2xl mb-2">🧠</p>

@@ -85,14 +85,14 @@ export default function ConversationPage() {
 
   if (initializing) {
     return (
-      <div className="min-h-screen bg-arete-bg flex items-center justify-center">
+      <div className="h-full bg-arete-bg flex items-center justify-center">
         <p className="text-arete-muted text-sm">Starting conversation...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-arete-bg flex flex-col" style={{ height: '100dvh' }}>
+    <div className="h-full bg-arete-bg flex flex-col">
       <div className="p-6 md:p-8 pb-2 flex-shrink-0">
         <a href="/cabinet" className="text-arete-muted hover:text-arete-text text-sm mb-4 inline-block">
           ← Back to Cabinet
@@ -101,7 +101,7 @@ export default function ConversationPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 md:px-8 space-y-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 space-y-4 pb-4">
         {messages.length === 0 && !isLoading && (
           <div className="text-center text-arete-muted text-sm py-8">
             <p className="text-2xl mb-2">🏛️</p>
