@@ -1,3 +1,66 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ── Arete v2 Design Tokens ──────────────────────────────────────── */
+:root {
+  /* Color primitives */
+  --bg:             #0f1724;
+  --surface:        rgba(255, 255, 255, 0.04);
+  --surface-solid:  #161f2e;
+  --gold:           #c9a84c;
+  --gold-dim:       rgba(201, 168, 76, 0.15);
+  --text:           #e6eef8;
+  --muted:          #9aa0a6;
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-solid:   #2a3a5c;
+
+  /* Typography stacks (populated by next/font at runtime) */
+  --font-serif: Georgia, serif;
+  --font-sans:  system-ui, sans-serif;
+  --font-mono:  'Courier New', monospace;
+
+  /* Border radii */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   24px;
+  --radius-pill: 9999px;
+}
+
+/* ── Base body ───────────────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Font utility classes ────────────────────────────────────────── */
+.font-serif { font-family: var(--font-serif); }
+.font-sans  { font-family: var(--font-sans);  }
+.font-mono  { font-family: var(--font-mono);  }
+
+/* ── Glass surface helper ────────────────────────────────────────── */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+/* ── Gold gradient text ──────────────────────────────────────────── */
+.text-gold-gradient {
+  background: linear-gradient(135deg, #c9a84c 0%, #e8c96a 50%, #c9a84c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Thin scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar              { width: 4px; height: 4px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-thumb        { background: rgba(201, 168, 76, 0.20); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover  { background: rgba(201, 168, 76, 0.40); }
