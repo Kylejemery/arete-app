@@ -74,51 +74,94 @@ export async function upsertUserSettings(data: Partial<Omit<UserSettings, 'id' |
 // CHECK-INS (check_ins table)
 // ----------------------------------------------------------------
 
-export async function getLatestCheckIn(type: 'morning' | 'evening'): Promise<{ cabinet_response: string; user_input: string; check_in_date: string } | null> {
+export async function getTodayCheckin(): Promise<Record<string, unknown> | null> {
   const userId = await getUserId()
   if (!userId) return null
   try {
     const { data, error } = await supabase
       .from('check_ins')
-      .select('cabinet_response, user_input, check_in_date')
+      .select('*')
       .eq('user_id', userId)
-      .eq('type', type)
       .eq('check_in_date', today())
-      .order('created_at', { ascending: false })
-      .limit(1)
       .maybeSingle()
     if (error) {
-      console.error('getLatestCheckIn error:', error)
+      console.error('getTodayCheckin error:', error)
       return null
     }
     return data ?? null
   } catch (e) {
-    console.error('getLatestCheckIn exception:', e)
+    console.error('getTodayCheckin exception:', e)
     return null
   }
 }
 
-export async function hasCheckInToday(type: 'morning' | 'evening'): Promise<boolean> {
-  const result = await getLatestCheckIn(type)
-  return result !== null
-}
-
-export async function createCheckIn(type: 'morning' | 'evening', userInput: string, cabinetResponse: string): Promise<void> {
+export async function upsertTodayCheckin(data: Record<string, unknown>): Promise<void> {
   const userId = await getUserId()
   if (!userId) return
   try {
     const { error } = await supabase
       .from('check_ins')
-      .insert({
-        user_id: userId,
-        type,
-        user_input: userInput,
-        cabinet_response: cabinetResponse,
-        check_in_date: today(),
-      })
-    if (error) console.error('createCheckIn error:', error)
+      .upsert(
+        { ...data, user_id: userId, check_in_date: today(), updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,check_in_date' }
+      )
+    if (error) console.error('upsertTodayCheckin error:', error)
   } catch (e) {
-    console.error('createCheckIn exception:', e)
+    console.error('upsertTodayCheckin exception:', e)
+  }
+}
+
+export async function getDailyQuestionCache(): Promise<{ counselorSlug: string; response: string } | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('daily_question_counselor, daily_question_response')
+      .eq('user_id', userId)
+      .eq('check_in_date', today())
+      .maybeSingle()
+    if (error) {
+      console.error('getDailyQuestionCache error:', error)
+      return null
+    }
+    if (data?.daily_question_counselor && data?.daily_question_response) {
+      return { counselorSlug: data.daily_question_counselor as string, response: data.daily_question_response as string }
+    }
+    return null
+  } catch (e) {
+    console.error('getDailyQuestionCache exception:', e)
+    return null
+  }
+}
+
+/** @deprecated Use getTodayCheckin + checkin.morning_done / checkin.evening_done */
+export async function hasCheckInToday(type: 'morning' | 'evening'): Promise<boolean> {
+  const checkin = await getTodayCheckin()
+  if (!checkin) return false
+  return type === 'morning'
+    ? Boolean(checkin.morning_done)
+    : Boolean(checkin.evening_done)
+}
+
+/** @deprecated Use getTodayCheckin directly */
+export async function getLatestCheckIn(type: 'morning' | 'evening'): Promise<{ cabinet_response: string; user_input: string; check_in_date: string } | null> {
+  const checkin = await getTodayCheckin()
+  if (!checkin) return null
+  const done = type === 'morning' ? checkin.morning_done : checkin.evening_done
+  if (!done) return null
+  const cabinet_response = (type === 'morning'
+    ? checkin.cabinet_morning_response
+    : checkin.cabinet_evening_response) as string | null
+  if (!cabinet_response) return null
+  return { cabinet_response, user_input: '', check_in_date: checkin.check_in_date as string }
+}
+
+export async function createCheckIn(type: 'morning' | 'evening', _userInput: string, cabinetResponse: string): Promise<void> {
+  if (type === 'morning') {
+    await upsertTodayCheckin({ cabinet_morning_response: cabinetResponse, morning_done: true })
+  } else {
+    await upsertTodayCheckin({ cabinet_evening_response: cabinetResponse, evening_done: true })
   }
 }
 

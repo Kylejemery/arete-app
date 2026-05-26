@@ -34,19 +34,21 @@ export default function FocusPage() {
   const [sessions, setSessions] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reading tracker
+  // Reading tracker — book-aware timer matching mobile flow
   const [currentBooks, setCurrentBooks] = useState<Book[]>([]);
   const [readingSessions, setReadingSessions] = useState<ReadingSession[]>([]);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [showAddBook, setShowAddBook] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAuthor, setNewAuthor] = useState('');
-  const [showLogSession, setShowLogSession] = useState(false);
-  const [logBookId, setLogBookId] = useState('');
-  const [logStartPage, setLogStartPage] = useState('');
-  const [logEndPage, setLogEndPage] = useState('');
-  const [logMinutes, setLogMinutes] = useState('');
-  const [readingTimerRunning, setReadingTimerRunning] = useState(false);
+  const [isReadingRunning, setIsReadingRunning] = useState(false);
+  const [isReadingPaused, setIsReadingPaused] = useState(false);
   const [readingSeconds, setReadingSeconds] = useState(0);
+  const [sessionStartPage, setSessionStartPage] = useState(0);
+  const [showStartConfig, setShowStartConfig] = useState(false);
+  const [startPageInput, setStartPageInput] = useState('');
+  const [showEndPageInput, setShowEndPageInput] = useState(false);
+  const [endPageInput, setEndPageInput] = useState('');
   const readingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export default function FocusPage() {
 
   // Reading timer logic
   useEffect(() => {
-    if (readingTimerRunning) {
+    if (isReadingRunning && !isReadingPaused) {
       readingTimerRef.current = setInterval(() => {
         setReadingSeconds(s => s + 1);
       }, 1000);
@@ -98,7 +100,7 @@ export default function FocusPage() {
       if (readingTimerRef.current) clearInterval(readingTimerRef.current);
     }
     return () => { if (readingTimerRef.current) clearInterval(readingTimerRef.current); };
-  }, [readingTimerRunning]);
+  }, [isReadingRunning, isReadingPaused]);
 
   const resetTimer = () => {
     setIsRunning(false);
@@ -138,32 +140,53 @@ export default function FocusPage() {
     await upsertReadingData({ current_books: updatedBooks, books_read: booksRead });
   };
 
-  const logSession = async () => {
-    const book = currentBooks.find(b => b.id === logBookId);
-    if (!book || !logStartPage || !logEndPage) return;
-    const pagesRead = Math.max(0, parseInt(logEndPage) - parseInt(logStartPage));
-    const duration = parseInt(logMinutes) * 60 || readingSeconds;
+  const handleReadingStart = () => {
+    if (!selectedBook) return;
+    setStartPageInput(selectedBook.currentPage ? String(selectedBook.currentPage) : '');
+    setShowStartConfig(true);
+  };
+
+  const confirmReadingStart = () => {
+    const page = parseInt(startPageInput);
+    if (!page || page <= 0) return;
+    setSessionStartPage(page);
+    setShowStartConfig(false);
+    setReadingSeconds(0);
+    setIsReadingRunning(true);
+    setIsReadingPaused(false);
+  };
+
+  const handleReadingStop = () => {
+    setIsReadingRunning(false);
+    setIsReadingPaused(false);
+    setShowEndPageInput(true);
+  };
+
+  const saveReadingSession = async () => {
+    const endPage = parseInt(endPageInput);
+    if (!endPage || endPage <= 0 || !selectedBook) return;
+    const pagesRead = Math.max(0, endPage - sessionStartPage);
     const session: ReadingSession = {
       id: Date.now().toString(),
-      bookTitle: book.title,
-      startPage: parseInt(logStartPage),
-      endPage: parseInt(logEndPage),
+      bookTitle: selectedBook.title,
+      startPage: sessionStartPage,
+      endPage,
       pagesRead,
-      duration,
+      duration: readingSeconds,
       date: new Date().toISOString(),
       dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     const updatedSessions = [...readingSessions, session];
     setReadingSessions(updatedSessions);
-
-    const updatedBooks = currentBooks.map(b => b.id === logBookId ? { ...b, currentPage: parseInt(logEndPage) } : b);
+    const updatedBooks = currentBooks.map(b =>
+      b.id === selectedBook.id ? { ...b, currentPage: endPage } : b
+    );
     setCurrentBooks(updatedBooks);
-
+    setSelectedBook({ ...selectedBook, currentPage: endPage });
     await upsertReadingData({ reading_sessions: updatedSessions, current_books: updatedBooks });
-
-    setLogBookId(''); setLogStartPage(''); setLogEndPage(''); setLogMinutes('');
-    setReadingSeconds(0); setReadingTimerRunning(false);
-    setShowLogSession(false);
+    setReadingSeconds(0);
+    setEndPageInput('');
+    setShowEndPageInput(false);
   };
 
   const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none w-full text-sm";
@@ -208,22 +231,84 @@ export default function FocusPage() {
         <p className="text-arete-muted text-sm">Sessions completed today: <span className="text-arete-gold font-semibold">{sessions}</span></p>
       </div>
 
-      {/* Reading Tracker */}
+      {/* Reading Timer — book-aware, matches mobile flow */}
       <div className="bg-arete-surface rounded-lg border border-arete-border p-4 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-arete-gold font-semibold">Reading Timer</h3>
-          <div className="flex gap-2 items-center">
-            <span className="text-arete-text font-mono text-lg">{formatTime(readingSeconds)}</span>
-            <button
-              onClick={() => setReadingTimerRunning(r => !r)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${readingTimerRunning ? 'bg-red-600 text-white' : 'bg-arete-gold text-arete-bg hover:opacity-90'}`}
-            >
-              {readingTimerRunning ? 'Stop' : 'Start'}
-            </button>
-          </div>
+
+        {/* Timer display */}
+        <div className="text-center mb-4">
+          <h3 className="text-arete-gold font-semibold mb-1">Reading Timer</h3>
+          <div className="text-5xl font-mono font-bold text-arete-gold">{formatTime(readingSeconds)}</div>
+          <p className="text-arete-muted text-xs mt-1">
+            {selectedBook
+              ? `📖 ${selectedBook.title}${selectedBook.currentPage ? ` · p.${selectedBook.currentPage}` : ''}`
+              : 'Select a book below to start'}
+          </p>
         </div>
 
-        <div className="flex justify-between items-center mb-3">
+        {/* Controls */}
+        {showStartConfig ? (
+          <div className="space-y-2 mb-4">
+            <p className="text-arete-text text-sm font-medium">Starting page — {selectedBook?.title}</p>
+            <input
+              className={inputClass}
+              type="number"
+              placeholder={`Current page (${selectedBook?.currentPage || 1})`}
+              value={startPageInput}
+              onChange={e => setStartPageInput(e.target.value)}
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && confirmReadingStart()}
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setShowStartConfig(false)} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
+              <button onClick={confirmReadingStart} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 text-sm">Start ▶</button>
+            </div>
+          </div>
+        ) : showEndPageInput ? (
+          <div className="space-y-2 mb-4">
+            <p className="text-arete-text text-sm font-medium">What page did you stop on?</p>
+            <input
+              className={inputClass}
+              type="number"
+              placeholder="Ending page"
+              value={endPageInput}
+              onChange={e => setEndPageInput(e.target.value)}
+              autoFocus
+              onKeyDown={e => e.key === 'Enter' && saveReadingSession()}
+            />
+            <div className="flex gap-2">
+              <button onClick={() => { setShowEndPageInput(false); setEndPageInput(''); }} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
+              <button onClick={saveReadingSession} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 text-sm">Save Session</button>
+            </div>
+          </div>
+        ) : isReadingRunning ? (
+          <div className="flex gap-2 justify-center mb-4">
+            <button
+              onClick={() => setIsReadingPaused(p => !p)}
+              className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-6 py-2 text-sm hover:opacity-90"
+            >
+              {isReadingPaused ? 'Resume' : 'Pause'}
+            </button>
+            <button
+              onClick={handleReadingStop}
+              className="bg-red-600 text-white font-semibold rounded-lg px-6 py-2 text-sm hover:opacity-90"
+            >
+              Stop
+            </button>
+          </div>
+        ) : (
+          <div className="flex justify-center mb-4">
+            <button
+              onClick={handleReadingStart}
+              disabled={!selectedBook}
+              className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-8 py-2.5 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {selectedBook ? 'Start' : 'Select a book below'}
+            </button>
+          </div>
+        )}
+
+        {/* Book list */}
+        <div className="flex justify-between items-center mb-2">
           <h4 className="text-arete-text font-medium text-sm">Currently Reading</h4>
           <button onClick={() => setShowAddBook(s => !s)} className="text-arete-gold text-xs hover:underline">+ Add Book</button>
         </div>
@@ -244,42 +329,31 @@ export default function FocusPage() {
         ) : (
           <div className="space-y-2">
             {currentBooks.map(book => (
-              <div key={book.id} className="flex items-center gap-2 rounded-lg border border-arete-border p-3">
+              <button
+                key={book.id}
+                onClick={() => !isReadingRunning && setSelectedBook(book)}
+                disabled={isReadingRunning}
+                className={`w-full text-left flex items-center gap-2 rounded-lg border p-3 transition-colors ${
+                  selectedBook?.id === book.id
+                    ? 'border-arete-gold bg-arete-gold/10'
+                    : 'border-arete-border hover:border-arete-gold'
+                } disabled:opacity-60`}
+              >
                 <div className="flex-1 min-w-0">
                   <p className="text-arete-text text-sm font-medium truncate">{book.title}</p>
                   <p className="text-arete-muted text-xs">by {book.author} · page {book.currentPage}</p>
                 </div>
-                <button onClick={() => finishBook(book.id)} className="text-arete-gold text-xs hover:underline flex-shrink-0">Finished</button>
-                <button onClick={() => removeBook(book.id)} className="text-arete-muted text-xs hover:text-red-400 flex-shrink-0">✕</button>
-              </div>
+                {selectedBook?.id === book.id && (
+                  <span className="text-arete-gold text-xs flex-shrink-0">✓</span>
+                )}
+                {!isReadingRunning && (
+                  <div className="flex gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                    <span onClick={() => finishBook(book.id)} className="text-arete-gold text-xs hover:underline cursor-pointer">Finished</span>
+                    <span onClick={() => removeBook(book.id)} className="text-arete-muted text-xs hover:text-red-400 cursor-pointer">✕</span>
+                  </div>
+                )}
+              </button>
             ))}
-          </div>
-        )}
-
-        {currentBooks.length > 0 && (
-          <button
-            onClick={() => setShowLogSession(s => !s)}
-            className="mt-3 w-full border border-arete-gold text-arete-gold rounded-lg px-4 py-2 hover:bg-arete-gold hover:text-arete-bg transition-colors text-sm font-semibold"
-          >
-            Log Reading Session
-          </button>
-        )}
-
-        {showLogSession && (
-          <div className="mt-3 space-y-2">
-            <select className={inputClass} value={logBookId} onChange={e => setLogBookId(e.target.value)}>
-              <option value="">Select book...</option>
-              {currentBooks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
-            </select>
-            <div className="flex gap-2">
-              <input className={inputClass} placeholder="Start page" type="number" value={logStartPage} onChange={e => setLogStartPage(e.target.value)} />
-              <input className={inputClass} placeholder="End page" type="number" value={logEndPage} onChange={e => setLogEndPage(e.target.value)} />
-            </div>
-            <input className={inputClass} placeholder={`Minutes (or use timer: ${formatTime(readingSeconds)})`} type="number" value={logMinutes} onChange={e => setLogMinutes(e.target.value)} />
-            <div className="flex gap-2">
-              <button onClick={() => setShowLogSession(false)} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
-              <button onClick={logSession} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 hover:opacity-90 text-sm">Log Session</button>
-            </div>
           </div>
         )}
       </div>

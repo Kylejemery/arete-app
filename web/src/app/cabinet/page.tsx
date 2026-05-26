@@ -34,6 +34,13 @@ export default function CabinetPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const counselorEndRef = useRef<HTMLDivElement>(null);
 
+  // Pre-seed cabinet input from ?q= query param (e.g. from Today's Question CTA)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const q = params.get('q');
+    if (q) setInput(q);
+  }, []);
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()

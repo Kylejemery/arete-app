@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getLatestCheckIn, createCheckIn, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, upsertTodayCheckin, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { AFFIRMATIONS, getDailyItem } from '@/lib/quotes';
@@ -40,20 +40,24 @@ export default function MorningPage() {
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      const templates = await getRoutineTemplates('morning');
-      const storedDoneIds: string[] = JSON.parse(
-        typeof window !== 'undefined' ? localStorage.getItem(DONE_STORAGE_KEY) || '[]' : '[]'
-      );
+      const [templates, checkin] = await Promise.all([
+        getRoutineTemplates('morning'),
+        getTodayCheckin(),
+      ]);
 
-      if (templates.length > 0) {
+      // Task state: prefer Supabase row (cross-platform sync), fall back to templates/defaults
+      const dbTasks = checkin?.morning_tasks as Task[] | null;
+      if (dbTasks && dbTasks.length > 0) {
+        setTasks(dbTasks);
+        setUsingDefaults(false);
+      } else if (templates.length > 0) {
         setTasks(templates.map(t => ({
           id: t.id,
           title: t.emoji ? `${t.title} ${t.emoji}` : t.title,
-          done: storedDoneIds.includes(t.id),
+          done: false,
         })));
         setUsingDefaults(false);
       } else {
-        // Fall back to settings or hardcoded defaults — not synced, just local
         const fallback = settings.morning_tasks?.length > 0
           ? (settings.morning_tasks as Task[]).map(t => ({ ...t, done: false }))
           : DEFAULT_TASKS;
@@ -61,11 +65,8 @@ export default function MorningPage() {
         setUsingDefaults(true);
       }
 
-      const latestCheckIn = await getLatestCheckIn('morning');
-      if (latestCheckIn) {
-        setCheckInDone(true);
-        setCheckInResponse(latestCheckIn.cabinet_response);
-      }
+      if (checkin?.morning_done) setCheckInDone(true);
+      if (checkin?.cabinet_morning_response) setCheckInResponse(checkin.cabinet_morning_response as string);
 
       setLoaded(true);
     }
@@ -79,10 +80,12 @@ export default function MorningPage() {
     }
   };
 
-  const toggleTask = (id: string) => {
+  const toggleTask = async (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
     setTasks(updated);
     persistDone(updated);
+    const allDone = updated.length > 0 && updated.every(t => t.done);
+    await upsertTodayCheckin({ morning_tasks: updated, morning_done: allDone });
   };
 
   const addTask = async () => {
@@ -112,10 +115,8 @@ export default function MorningPage() {
   const handleCheckIn = async () => {
     setIsLoading(true);
     try {
-      const taskSummary = tasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ');
-      const userInput = `Morning tasks: ${taskSummary}`;
       const response = await sendCheckInToCabinet('morning');
-      await createCheckIn('morning', userInput, response);
+      await upsertTodayCheckin({ cabinet_morning_response: response, morning_done: true });
       setCheckInResponse(response);
       setCheckInDone(true);
     } catch {

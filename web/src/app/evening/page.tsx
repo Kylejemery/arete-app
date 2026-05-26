@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getLatestCheckIn, createCheckIn, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, upsertTodayCheckin, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
@@ -43,16 +43,21 @@ export default function EveningPage() {
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      const templates = await getRoutineTemplates('evening');
-      const storedDoneIds: string[] = JSON.parse(
-        typeof window !== 'undefined' ? localStorage.getItem(DONE_STORAGE_KEY) || '[]' : '[]'
-      );
+      const [templates, checkin] = await Promise.all([
+        getRoutineTemplates('evening'),
+        getTodayCheckin(),
+      ]);
 
-      if (templates.length > 0) {
+      // Task state: prefer Supabase row (cross-platform sync), fall back to templates/defaults
+      const dbTasks = checkin?.evening_tasks as Task[] | null;
+      if (dbTasks && dbTasks.length > 0) {
+        setTasks(dbTasks);
+        setUsingDefaults(false);
+      } else if (templates.length > 0) {
         setTasks(templates.map(t => ({
           id: t.id,
           title: t.emoji ? `${t.title} ${t.emoji}` : t.title,
-          done: storedDoneIds.includes(t.id),
+          done: false,
         })));
         setUsingDefaults(false);
       } else {
@@ -70,11 +75,8 @@ export default function EveningPage() {
         if (storedStoic) setStoicAnswer(storedStoic);
       }
 
-      const latestCheckIn = await getLatestCheckIn('evening');
-      if (latestCheckIn) {
-        setCheckInDone(true);
-        setCheckInResponse(latestCheckIn.cabinet_response);
-      }
+      if (checkin?.evening_done) setCheckInDone(true);
+      if (checkin?.cabinet_evening_response) setCheckInResponse(checkin.cabinet_evening_response as string);
 
       setLoaded(true);
     }
@@ -98,10 +100,12 @@ export default function EveningPage() {
     if (typeof window !== 'undefined') localStorage.setItem('arete_stoic_answer', value);
   };
 
-  const toggleTask = (id: string) => {
+  const toggleTask = async (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
     setTasks(updated);
     persistDone(updated);
+    const allDone = updated.length > 0 && updated.every(t => t.done);
+    await upsertTodayCheckin({ evening_tasks: updated, evening_done: allDone });
   };
 
   const addTask = async () => {
@@ -130,10 +134,8 @@ export default function EveningPage() {
   const handleCheckIn = async () => {
     setIsLoading(true);
     try {
-      const taskSummary = tasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ');
-      const userInput = `Reflection: ${reflectionAnswer || '(not answered)'}. Stoic: ${stoicAnswer || '(not answered)'}. Evening tasks: ${taskSummary}`;
       const response = await sendCheckInToCabinet('evening');
-      await createCheckIn('evening', userInput, response);
+      await upsertTodayCheckin({ cabinet_evening_response: response, evening_done: true });
       setCheckInResponse(response);
       setCheckInDone(true);
     } catch {

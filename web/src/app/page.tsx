@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, hasCheckInToday, getProfileStreak } from '@/lib/db';
+import { getUserSettings, hasCheckInToday, getProfileStreak, getDailyQuestionCache, upsertTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { DAILY_QUOTES } from '@/lib/quotes';
+import { DAILY_QUOTES, getDailyPrompt } from '@/lib/quotes';
 
 const COUNSELOR_NAMES: Record<string, string> = {
   'marcus-aurelius': 'Marcus Aurelius',
@@ -44,11 +44,12 @@ export default function HomePage() {
         router.replace('/login?redirectTo=/');
         return;
       }
-      const [settings, morningDoneToday, eveningDoneToday, streakVal] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, streakVal, dqCache] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
         getProfileStreak(),
+        getDailyQuestionCache(),
       ]);
       if (!settings?.user_name) {
         router.replace('/setup');
@@ -59,7 +60,13 @@ export default function HomePage() {
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
       setStreak(streakVal);
-      setDailyQuestion(null);
+
+      // Save today's counselor slug so mobile can verify cache validity
+      if (!dqCache) {
+        const dp = getDailyPrompt();
+        upsertTodayCheckin({ daily_question_counselor: dp.counselorSlug }).catch(() => {});
+      }
+      setDailyQuestion(dqCache);
       setLoaded(true);
     }
     load();
@@ -158,23 +165,35 @@ export default function HomePage() {
         <p className="text-arete-muted text-xs italic mt-2">— {quote.author}</p>
       </div>
 
-      {/* Today's Question (if cached from mobile) */}
-      {dailyQuestion && (
-        <Link href="/cabinet" className="block mb-6">
-          <div className="bg-arete-surface rounded-lg border border-arete-border p-5 hover:border-arete-gold transition-colors">
-            <p className="text-arete-gold font-semibold text-xs uppercase tracking-wider mb-2">
-              Today&apos;s Question
-            </p>
-            <p className="text-arete-text text-sm leading-relaxed line-clamp-4">
-              {dailyQuestion.response}
-            </p>
-            <p className="text-arete-muted text-xs italic mt-3">
-              — {COUNSELOR_NAMES[dailyQuestion.counselorSlug] ?? dailyQuestion.counselorSlug}
-            </p>
-            <p className="text-arete-gold text-xs mt-2 font-medium">Open in Cabinet →</p>
-          </div>
-        </Link>
-      )}
+      {/* Today's Question */}
+      {(() => {
+        const dp = getDailyPrompt();
+        const questionUrl = `/cabinet?q=${encodeURIComponent(dp.prompt)}&counselor=${dp.counselorSlug}`;
+        return (
+          <Link href={questionUrl} className="block mb-6">
+            <div className="bg-arete-surface rounded-lg border border-arete-gold border-l-4 p-5 hover:opacity-90 transition-opacity">
+              <p className="text-arete-gold font-semibold text-xs uppercase tracking-wider mb-2">
+                Today&apos;s Question
+              </p>
+              <p className="text-arete-text text-sm leading-relaxed">
+                {dp.prompt}
+              </p>
+              <p className="text-arete-gold text-xs italic mt-2">
+                — {dp.counselorName}
+              </p>
+              {dailyQuestion ? (
+                <div className="mt-3 pt-3 border-t border-arete-border">
+                  <p className="text-arete-muted text-xs uppercase tracking-wider mb-1">Response</p>
+                  <p className="text-arete-text text-xs leading-relaxed line-clamp-3">{dailyQuestion.response}</p>
+                  <p className="text-arete-gold text-xs mt-2 font-medium">Open in Cabinet →</p>
+                </div>
+              ) : (
+                <p className="text-arete-gold text-xs mt-3 font-medium">Ask in Cabinet →</p>
+              )}
+            </div>
+          </Link>
+        );
+      })()}
 
       {/* Know Thyself nudge */}
       {knowThyselfIncomplete && (
