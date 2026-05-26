@@ -357,10 +357,10 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* FAB */}
+      {/* FAB — sits above the mobile bottom nav, normal position on desktop */}
       <button
         onClick={() => setShowTypeSelector(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg hover:opacity-90 transition-opacity z-40"
+        className="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg hover:opacity-90 transition-opacity z-40"
         style={{ background: '#c9a84c', color: '#1a1a2e' }}
       >
         +
@@ -369,7 +369,7 @@ export default function JournalPage() {
       {/* Type selector modal */}
       {showTypeSelector && (
         <div
-          className="fixed inset-0 z-50 flex items-end"
+          className="fixed inset-0 z-[60] flex items-end"
           style={{ background: 'rgba(0,0,0,0.67)' }}
           onClick={() => setShowTypeSelector(false)}
         >

@@ -153,10 +153,10 @@ export default function MorningPage() {
         <h3 className="text-arete-gold font-semibold mb-3">Morning Tasks</h3>
         <div className="space-y-2">
           {tasks.map(task => (
-            <div key={task.id} className="flex items-center gap-3 group">
+            <div key={task.id} className="flex items-center gap-3 group min-h-[44px]">
               <button
                 onClick={() => toggleTask(task.id)}
-                className={`w-6 h-6 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${task.done ? 'bg-arete-gold border-arete-gold' : 'border-arete-border hover:border-arete-gold'}`}
+                className={`w-7 h-7 md:w-6 md:h-6 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${task.done ? 'bg-arete-gold border-arete-gold' : 'border-arete-border hover:border-arete-gold'}`}
               >
                 {task.done && <span className="text-arete-bg text-xs font-bold">✓</span>}
               </button>
@@ -165,7 +165,7 @@ export default function MorningPage() {
               </span>
               <button
                 onClick={() => removeTask(task.id)}
-                className="text-arete-muted hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity text-sm"
+                className="text-arete-muted hover:text-red-400 text-sm opacity-40 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
               >
                 ✕
               </button>

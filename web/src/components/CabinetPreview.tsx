@@ -25,12 +25,13 @@ export default function CabinetPreview() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      {/* Horizontal scroll on mobile so chips never wrap into multiple rows */}
+      <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mb-1 md:flex-wrap md:overflow-x-visible md:pb-0 md:mb-0">
         {loading ? (
           <>
-            <span className="bg-arete-border/50 animate-pulse rounded-full h-6 w-24" />
-            <span className="bg-arete-border/50 animate-pulse rounded-full h-6 w-20" />
-            <span className="bg-arete-border/50 animate-pulse rounded-full h-6 w-28" />
+            <span className="flex-shrink-0 bg-arete-border/50 animate-pulse rounded-full h-6 w-24" />
+            <span className="flex-shrink-0 bg-arete-border/50 animate-pulse rounded-full h-6 w-20" />
+            <span className="flex-shrink-0 bg-arete-border/50 animate-pulse rounded-full h-6 w-28" />
           </>
         ) : (
           <>
@@ -39,12 +40,12 @@ export default function CabinetPreview() {
               .map(c => (
                 <span
                   key={c.slug}
-                  className="bg-arete-border text-arete-muted text-xs px-2 py-1 rounded-full"
+                  className="flex-shrink-0 bg-arete-border text-arete-muted text-xs px-2 py-1 rounded-full"
                 >
                   {c.name}
                 </span>
               ))}
-            <span className="bg-arete-border text-arete-muted text-xs px-2 py-1 rounded-full">
+            <span className="flex-shrink-0 bg-arete-border text-arete-muted text-xs px-2 py-1 rounded-full">
               Future Self
             </span>
           </>

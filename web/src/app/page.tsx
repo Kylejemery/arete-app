@@ -100,7 +100,7 @@ export default function HomePage() {
       <div className="mb-6">
         <p className="text-arete-muted text-lg">{greeting.salutation}</p>
         <p className="text-arete-gold text-sm italic">{greeting.subtitle}</p>
-        <h2 className="text-3xl font-bold text-arete-text mt-1">{userName} ⚔️</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-arete-text mt-1">{userName} ⚔️</h2>
       </div>
 
       {/* Morning / Cabinet / Evening pills */}
