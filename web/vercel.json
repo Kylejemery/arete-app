@@ -3,5 +3,5 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "ignoreCommand": "git diff HEAD^ HEAD --name-only | grep -qvE '^web/'"
+  "ignoreCommand": "! git diff HEAD^ HEAD --name-only | grep -qE '^web/'"
 }
