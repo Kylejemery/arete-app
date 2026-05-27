@@ -405,11 +405,13 @@ export async function gatherAppContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // Today's reading time
+  // Today's reading time — only inject if data actually exists (avoids model hallucinating reading activity)
   try {
     const readingSeconds = readingData?.today_reading_seconds ?? 0;
-    lines.push('');
-    lines.push(`TODAY'S READING TIME: ${formatReadingTime(readingSeconds)}`);
+    if (readingSeconds > 0) {
+      lines.push('');
+      lines.push(`TODAY'S READING TIME: ${formatReadingTime(readingSeconds)}`);
+    }
   } catch { /* skip */ }
 
   // Recent reading sessions
@@ -443,13 +445,11 @@ export async function gatherAppContext(): Promise<string> {
   // Overall stats
   try {
     const streak = checkin?.streak ?? 0;
-    const readingStreak = checkin?.reading_streak ?? 0;
     const journalCount = journalEntries.length;
     const quoteCount = journalEntries.filter(e => e.type === 'quote').length;
     lines.push('');
     lines.push('OVERALL STATS:');
     lines.push(`- Streak: ${streak} days`);
-    lines.push(`- Reading streak: ${readingStreak} days`);
     lines.push(`- Total journal entries: ${journalCount}`);
     lines.push(`- Total quotes saved: ${quoteCount}`);
   } catch { /* skip */ }

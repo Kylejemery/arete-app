@@ -175,11 +175,13 @@ export async function gatherAppContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // Today's reading time
+  // Today's reading time — only inject if data actually exists (avoids model hallucinating reading activity)
   try {
     const readingSeconds = readingData?.today_reading_seconds ?? 0;
-    lines.push('');
-    lines.push(`TODAY'S READING TIME: ${formatReadingTime(readingSeconds)}`);
+    if (readingSeconds > 0) {
+      lines.push('');
+      lines.push(`TODAY'S READING TIME: ${formatReadingTime(readingSeconds)}`);
+    }
   } catch { /* skip */ }
 
   // Recent reading sessions
