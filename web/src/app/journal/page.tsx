@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getUserSettings, getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { JournalEntry } from '@/lib/types';
-import PageHeader from '@/components/PageHeader';
+import ChapterRule from '@/components/ChapterRule';
 
 interface DisplayEntry {
   id: string;
@@ -20,17 +20,23 @@ interface DisplayEntry {
 type FilterType = 'all' | 'reflection' | 'quote' | 'idea';
 
 const TYPE_LABELS: Record<string, string> = {
-  reflection: '📝 Reflection',
-  quote: '📖 Quote',
-  idea: '🧠 Idea',
+  reflection: 'Reflection',
+  quote: 'Quote',
+  idea: 'Idea',
+};
+
+const TYPE_ICONS: Record<string, string> = {
+  reflection: '📝',
+  quote: '📖',
+  idea: '🧠',
 };
 
 function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function dbToDisplay(e: JournalEntry): DisplayEntry | null {
-  if (e.type === 'belief') return null; // belief is mobile-only
+  if (e.type === 'belief') return null;
   return {
     id: e.id,
     type: e.type as 'reflection' | 'quote' | 'idea',
@@ -179,41 +185,73 @@ export default function JournalPage() {
     setShowInputForm(true);
   };
 
-  // Input form
+  // ── Input form (returns early) ────────────────────────────────
   if (showInputForm && inputType) {
     const isEditing = !!editingEntry;
     return (
-      <div className="min-h-screen bg-arete-bg text-arete-text flex flex-col">
-        <div className="max-w-2xl mx-auto w-full px-4 py-6 flex flex-col flex-1">
+      <div className="min-h-screen pb-8" style={{ background: '#0f1724' }}>
+        <div className="max-w-2xl mx-auto w-full px-4 py-6 flex flex-col">
+          {/* Form header */}
           <div className="flex items-center justify-between mb-6">
-            <button onClick={resetInputForm} className="text-arete-gold text-lg font-bold hover:opacity-80">&larr;</button>
-            <h1 className="text-lg font-bold text-arete-text">
+            <button
+              onClick={resetInputForm}
+              className="text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-70"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+            >
+              ← Cancel
+            </button>
+            <div
+              className="text-[11px] tracking-[1.8px] uppercase"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+            >
               {isEditing ? 'Edit' : 'New'} {TYPE_LABELS[inputType]}
-            </h1>
-            <button onClick={isEditing ? updateEntry : addEntry} className="text-arete-gold text-sm font-semibold hover:opacity-80">
+            </div>
+            <button
+              onClick={isEditing ? updateEntry : addEntry}
+              className="text-[10px] tracking-[1.2px] uppercase font-semibold transition-opacity hover:opacity-80"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+            >
               Save
             </button>
           </div>
 
           {inputType === 'quote' ? (
-            <div className="flex flex-col gap-3 flex-1">
+            <div className="flex flex-col gap-3">
               <textarea
-                className="w-full min-h-40 bg-arete-surface rounded-lg p-4 text-arete-text text-sm resize-none border border-arete-border focus:outline-none focus:border-arete-gold italic"
-                placeholder='"Enter quote..."'
+                className="w-full min-h-40 px-4 py-3 text-[15px] italic leading-relaxed resize-none outline-none rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(201,168,76,0.2)',
+                  color: '#e6eef8',
+                  fontFamily: 'var(--font-serif, Georgia, serif)',
+                }}
+                placeholder='"Enter quote…"'
                 value={quoteText}
                 onChange={e => setQuoteText(e.target.value)}
                 autoFocus
               />
               <input
                 type="text"
-                className="w-full bg-arete-surface rounded-lg px-4 py-3 text-sm text-arete-text border border-arete-border focus:outline-none focus:border-arete-gold"
+                className="w-full px-4 py-3 text-[14px] outline-none rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#e6eef8',
+                  fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+                }}
                 placeholder="Book title *"
                 value={quoteBook}
                 onChange={e => setQuoteBook(e.target.value)}
               />
               <input
                 type="text"
-                className="w-full bg-arete-surface rounded-lg px-4 py-3 text-sm text-arete-text border border-arete-border focus:outline-none focus:border-arete-gold"
+                className="w-full px-4 py-3 text-[14px] outline-none rounded-xl"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#e6eef8',
+                  fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+                }}
                 placeholder="Author (optional)"
                 value={quoteAuthor}
                 onChange={e => setQuoteAuthor(e.target.value)}
@@ -221,7 +259,13 @@ export default function JournalPage() {
             </div>
           ) : (
             <textarea
-              className="w-full flex-1 min-h-64 bg-arete-surface rounded-lg p-4 text-arete-text text-sm resize-none border border-arete-border focus:outline-none focus:border-arete-gold"
+              className="w-full min-h-64 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none rounded-xl"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e6eef8',
+                fontFamily: 'var(--font-serif, Georgia, serif)',
+              }}
               placeholder={inputType === 'reflection' ? "What's on your mind?" : 'What seed do you want to keep?'}
               value={textInput}
               onChange={e => setTextInput(e.target.value)}
@@ -233,99 +277,174 @@ export default function JournalPage() {
     );
   }
 
-  // Main feed
+  // ── Main feed ────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-arete-bg text-arete-text">
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="mb-4">
-          <PageHeader title="Journal 📓" />
-        </div>
+    <div className="min-h-screen pb-24">
 
-        {/* Search */}
-        <div className="flex items-center gap-2 bg-arete-surface rounded-lg px-3 py-2 mb-4 border border-arete-border">
-          <span className="text-arete-muted text-sm">🔍</span>
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-5">
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          Chapter IV · Examen
+        </div>
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          The examined<br />
+          <em style={{ color: '#c9a84c' }}>life.</em>
+        </h1>
+      </div>
+
+      <ChapterRule className="mx-5" />
+
+      {/* ── Search ──────────────────────────────────────────────── */}
+      <div className="px-4 pb-3">
+        <div
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <span style={{ color: '#9aa0a6', fontSize: 13 }}>⌕</span>
           <input
             type="text"
-            className="flex-1 bg-transparent text-sm text-arete-text focus:outline-none"
-            placeholder="Search entries..."
-            style={{ color: '#e6eef8' }}
+            className="flex-1 bg-transparent text-[13px] outline-none"
+            style={{ color: '#e6eef8', fontFamily: 'var(--font-sans, system-ui, sans-serif)' }}
+            placeholder="Search entries…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button onClick={() => setSearchQuery('')} className="text-arete-muted hover:text-arete-text text-sm">&#x2715;</button>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="transition-opacity hover:opacity-70"
+              style={{ color: '#9aa0a6', fontSize: 13 }}
+            >
+              ✕
+            </button>
           )}
         </div>
+      </div>
 
-        {/* Filter chips */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-          {(['all', 'reflection', 'quote', 'idea'] as FilterType[]).map(f => (
-            <button
-              key={f}
-              onClick={() => setActiveFilter(prev => prev === f ? 'all' : f)}
-              className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors"
-              style={
-                activeFilter === f
-                  ? { background: '#c9a84c', borderColor: '#c9a84c', color: '#1a1a2e' }
-                  : { background: 'transparent', borderColor: '#2a3a5c', color: '#9aa0a6' }
-              }
-            >
-              {f === 'all' ? 'All' : f === 'reflection' ? '📝 Reflection' : f === 'quote' ? '📖 Quote' : '🧠 Idea'}
-            </button>
-          ))}
-        </div>
+      {/* ── Filter chips ────────────────────────────────────────── */}
+      <div className="px-4 pb-5 flex gap-2 overflow-x-auto">
+        {(['all', 'reflection', 'quote', 'idea'] as FilterType[]).map(f => (
+          <button
+            key={f}
+            onClick={() => setActiveFilter(prev => prev === f ? 'all' : f)}
+            className="flex-shrink-0 px-3 py-1.5 rounded-full text-[11px] transition-all"
+            style={
+              activeFilter === f
+                ? {
+                    background: '#c9a84c',
+                    color: '#0f1724',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    border: '1px solid #c9a84c',
+                    fontWeight: 700,
+                  }
+                : {
+                    background: 'rgba(255,255,255,0.04)',
+                    color: '#9aa0a6',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }
+            }
+          >
+            {f === 'all' ? 'All' : `${TYPE_ICONS[f]} ${TYPE_LABELS[f]}`}
+          </button>
+        ))}
+      </div>
 
-        {/* Entry feed */}
+      {/* ── Entry feed ──────────────────────────────────────────── */}
+      <div className="px-4">
         {filteredEntries.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="text-5xl mb-4" style={{ opacity: 0.15 }}>📓</div>
-            <p className="text-arete-muted">No entries yet.</p>
-            <p className="text-arete-muted text-sm mt-1">Tap + to add your first entry.</p>
+            <div className="text-[48px] mb-4" style={{ opacity: 0.12 }}>📓</div>
+            <p
+              className="text-[15px] italic"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+            >
+              No entries yet.
+            </p>
+            <p
+              className="text-[11px] tracking-[1px] uppercase mt-1"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+            >
+              Tap + to begin.
+            </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 pb-24">
+          <div className="flex flex-col gap-3">
             {filteredEntries.map(entry => {
               const isExpanded = expandedIds.has(entry.id);
-              const preview = entry.content.length > 120 ? entry.content.slice(0, 120) + '...' : entry.content;
+              const preview = entry.content.length > 120 ? entry.content.slice(0, 120) + '…' : entry.content;
 
               return (
                 <div
                   key={entry.id}
-                  className="relative rounded-lg p-4 cursor-pointer transition-opacity hover:opacity-90"
-                  style={{ border: '1px solid rgba(201,168,76,0.13)', background: '#1a1a2e' }}
+                  className="relative rounded-xl px-4 py-3.5 cursor-pointer transition-opacity hover:opacity-90"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                  }}
                   onClick={() => toggleExpand(entry.id)}
                   onMouseEnter={() => setHoveredId(entry.id)}
                   onMouseLeave={() => { setHoveredId(null); setMenuEntryId(null); }}
                 >
+                  {/* Entry header */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-arete-gold">{TYPE_LABELS[entry.type]}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-arete-muted">{formatDate(entry.createdAt)}</span>
+                      <span style={{ fontSize: 13 }}>{TYPE_ICONS[entry.type]}</span>
+                      <span
+                        className="text-[10px] tracking-[1.4px] uppercase"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                      >
+                        {TYPE_LABELS[entry.type]}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="text-[10px]"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {formatDate(entry.createdAt)}
+                      </span>
                       {hoveredId === entry.id && (
                         <div className="relative">
                           <button
                             onClick={e => { e.stopPropagation(); setMenuEntryId(prev => prev === entry.id ? null : entry.id); }}
-                            className="text-arete-muted hover:text-arete-text text-base leading-none px-1"
+                            className="px-1 transition-opacity hover:opacity-70 text-base leading-none"
+                            style={{ color: '#9aa0a6' }}
                           >
-                            &#x22EF;
+                            ⋯
                           </button>
                           {menuEntryId === entry.id && (
                             <div
-                              className="absolute right-0 top-6 rounded-lg shadow-lg z-10 py-1 min-w-[7rem]"
-                              style={{ background: '#1a1a2e', border: '1px solid #2a3a5c' }}
+                              className="absolute right-0 top-6 rounded-xl shadow-lg z-10 py-1 min-w-[6rem] overflow-hidden"
+                              style={{
+                                background: 'rgba(15,23,36,0.97)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                backdropFilter: 'blur(12px)',
+                              }}
                               onClick={e => e.stopPropagation()}
                             >
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-arete-text hover:bg-arete-surface"
+                                className="w-full text-left px-4 py-2.5 text-[13px] transition-colors hover:bg-white/5"
+                                style={{ fontFamily: 'var(--font-sans, system-ui)', color: '#e6eef8' }}
                                 onClick={() => openEdit(entry)}
                               >
-                                &#x270F; Edit
+                                Edit
                               </button>
                               <button
-                                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-arete-surface"
+                                className="w-full text-left px-4 py-2.5 text-[13px] transition-colors hover:bg-white/5"
+                                style={{ fontFamily: 'var(--font-sans, system-ui)', color: '#f87171' }}
                                 onClick={() => deleteEntry(entry.id)}
                               >
-                                &#x1F5D1; Delete
+                                Delete
                               </button>
                             </div>
                           )}
@@ -334,19 +453,29 @@ export default function JournalPage() {
                     </div>
                   </div>
 
+                  {/* Entry content */}
                   {entry.type === 'quote' ? (
                     <>
-                      <p className={`text-arete-text text-sm leading-relaxed italic ${!isExpanded ? 'line-clamp-3' : ''}`}>
+                      <p
+                        className={`italic text-[15px] leading-relaxed ${!isExpanded ? 'line-clamp-3' : ''}`}
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
                         &ldquo;{entry.content}&rdquo;
                       </p>
                       {entry.bookTitle && (
-                        <p className="text-arete-gold text-xs mt-1">
-                          📖 {entry.bookTitle}{entry.author && ` — ${entry.author}`}
+                        <p
+                          className="text-[11px] tracking-[0.5px] mt-1.5"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                        >
+                          {entry.bookTitle}{entry.author && ` — ${entry.author}`}
                         </p>
                       )}
                     </>
                   ) : (
-                    <p className="text-arete-text text-sm leading-relaxed">
+                    <p
+                      className="text-[15px] leading-relaxed"
+                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                    >
                       {isExpanded ? entry.content : preview}
                     </p>
                   )}
@@ -357,16 +486,16 @@ export default function JournalPage() {
         )}
       </div>
 
-      {/* FAB — sits above the mobile bottom nav, normal position on desktop */}
+      {/* ── FAB ─────────────────────────────────────────────────── */}
       <button
         onClick={() => setShowTypeSelector(true)}
         className="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-14 h-14 rounded-full flex items-center justify-center text-2xl font-bold shadow-lg hover:opacity-90 transition-opacity z-40"
-        style={{ background: '#c9a84c', color: '#1a1a2e' }}
+        style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
       >
         +
       </button>
 
-      {/* Type selector modal */}
+      {/* ── Type selector modal ──────────────────────────────────── */}
       {showTypeSelector && (
         <div
           className="fixed inset-0 z-[60] flex items-end"
@@ -375,21 +504,39 @@ export default function JournalPage() {
         >
           <div
             className="w-full max-w-lg mx-auto rounded-t-2xl p-6"
-            style={{ background: '#1a1a2e', borderTop: '1px solid #2a3a5c' }}
+            style={{
+              background: 'rgba(13,20,30,0.98)',
+              backdropFilter: 'blur(20px)',
+              borderTop: '1px solid rgba(255,255,255,0.1)',
+            }}
             onClick={e => e.stopPropagation()}
           >
-            <h2 className="text-base font-bold text-arete-text mb-4 text-center">What are you adding?</h2>
+            <div
+              className="text-[10px] tracking-[1.8px] uppercase mb-4 text-center"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+            >
+              What are you adding?
+            </div>
             {(['reflection', 'quote', 'idea'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => selectType(t)}
-                className="w-full text-left px-4 py-3 rounded-lg mb-2 hover:bg-arete-surface transition-colors"
-                style={{ border: '1px solid #2a3a5c' }}
+                className="w-full text-left px-4 py-3.5 rounded-xl mb-2 transition-opacity hover:opacity-80"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                }}
               >
-                <div className="font-semibold text-sm text-arete-text">
-                  {t === 'reflection' ? '📝 Reflection' : t === 'quote' ? '📖 Quote' : '🧠 Idea'}
+                <div
+                  className="text-[15px] font-medium"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  {TYPE_ICONS[t]} {TYPE_LABELS[t]}
                 </div>
-                <div className="text-xs text-arete-muted mt-0.5">
+                <div
+                  className="text-[11px] mt-0.5"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                >
                   {t === 'reflection' ? 'Daily thoughts, free writing'
                     : t === 'quote' ? 'Passage from a book'
                     : 'Seed for an essay or project'}
@@ -398,7 +545,8 @@ export default function JournalPage() {
             ))}
             <button
               onClick={() => setShowTypeSelector(false)}
-              className="w-full py-3 rounded-lg text-sm text-arete-muted hover:text-arete-text transition-colors mt-2"
+              className="w-full py-3 rounded-xl text-[12px] tracking-[1px] uppercase mt-1 transition-opacity hover:opacity-70"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
             >
               Cancel
             </button>

@@ -8,10 +8,26 @@ import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeServic
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
-import PageHeader from '@/components/PageHeader';
-import CabinetPreview from '@/components/CabinetPreview';
+import GlassCard from '@/components/GlassCard';
 
 type Tab = 'cabinet' | 'counselors';
+
+function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function parseBlocks(text: string): { type: 'quote' | 'para'; content: string }[] {
+  return text
+    .split(/\n\n+/)
+    .map(block => {
+      const t = block.trim();
+      if ((t.startsWith('"') && t.endsWith('"')) || t.startsWith('> ')) {
+        return { type: 'quote' as const, content: t.replace(/^> /, '').replace(/^"|"$/g, '') };
+      }
+      return { type: 'para' as const, content: t };
+    })
+    .filter(b => b.content.length > 0);
+}
 
 export default function CabinetPage() {
   const router = useRouter();
@@ -23,7 +39,6 @@ export default function CabinetPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
 
-  // Counselor tab
   const [selectedCounselor, setSelectedCounselor] = useState<string | null>(null);
   const [counselorMessages, setCounselorMessages] = useState<ThreadMessage[]>([]);
   const [counselorInput, setCounselorInput] = useState('');
@@ -34,7 +49,6 @@ export default function CabinetPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const counselorEndRef = useRef<HTMLDivElement>(null);
 
-  // Pre-seed cabinet input from ?q= query param (e.g. from Today's Question CTA)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
@@ -43,32 +57,26 @@ export default function CabinetPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
-      // Load cabinet thread
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);
 
-      // Load active members
       if (Array.isArray(settings.cabinet_members) && settings.cabinet_members.length > 0) {
         setActiveMembers(settings.cabinet_members);
       } else {
         setActiveMembers(COUNSELOR_LIST.map(c => c.id));
       }
 
-      // Load cabinet counselors from Supabase
       const fetched = await getUserCabinet();
       if (fetched.length > 0) {
         setCabinetCounselors(fetched.map(c => ({
-          id: c.slug,
-          name: c.name,
-          role: c.category ?? 'Counselor',
-          description: c.description ?? '',
+          id: c.slug, name: c.name, role: c.category ?? 'Counselor', description: c.description ?? '',
         })));
       } else {
         setCabinetCounselors(COUNSELOR_LIST.map(c => ({ id: c.id, name: c.name, role: c.role, description: c.description })));
@@ -77,13 +85,8 @@ export default function CabinetPage() {
     load();
   }, [router]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [cabinetMessages]);
-
-  useEffect(() => {
-    counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [counselorMessages]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cabinetMessages]);
+  useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
 
   const handleSendCabinet = async () => {
     if (!input.trim() || isLoading) return;
@@ -92,7 +95,6 @@ export default function CabinetPage() {
     setCabinetMessages(newMessages);
     setInput('');
     setIsLoading(true);
-
     try {
       const response = await sendMessageToCabinet(newMessages);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
@@ -100,8 +102,7 @@ export default function CabinetPage() {
       setCabinetMessages(finalMessages);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
     } catch {
-      const errMsg: ThreadMessage = { role: 'assistant', content: 'The Cabinet is temporarily unavailable. Please try again.', timestamp: Date.now() };
-      setCabinetMessages(prev => [...prev, errMsg]);
+      setCabinetMessages(prev => [...prev, { role: 'assistant', content: 'The Cabinet is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +127,6 @@ export default function CabinetPage() {
     setCounselorMessages(newMessages);
     setCounselorInput('');
     setCounselorLoading(true);
-
     try {
       const response = await sendMessageToCounselor(selectedCounselor, newMessages);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
@@ -134,8 +134,7 @@ export default function CabinetPage() {
       setCounselorMessages(finalMessages);
       await saveThread({ id: selectedCounselor, messages: finalMessages, lastUpdated: Date.now() });
     } catch {
-      const errMsg: ThreadMessage = { role: 'assistant', content: 'Your counselor is temporarily unavailable. Please try again.', timestamp: Date.now() };
-      setCounselorMessages(prev => [...prev, errMsg]);
+      setCounselorMessages(prev => [...prev, { role: 'assistant', content: 'Your counselor is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
     } finally {
       setCounselorLoading(false);
     }
@@ -150,26 +149,90 @@ export default function CabinetPage() {
     : COUNSELOR_LIST.filter(c => activeMembers.includes(c.id));
   const selectedCounselorMeta = activeCounselors.find(c => c.id === selectedCounselor);
 
-  const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm resize-none";
-
   return (
-    <div className="h-full bg-arete-bg flex flex-col">
-      <div className="p-6 md:p-8 pb-2 flex-shrink-0">
-        <PageHeader title="Cabinet" subtitle="Your Council of Invisible Counselors" />
+    <div className="h-full flex flex-col" style={{ background: '#0f1724' }}>
 
-        <div className="mb-4">
-          <CabinetPreview />
+      {/* ── Glass header ─────────────────────────────────────────── */}
+      <div
+        className="flex-shrink-0 px-5 pt-5 pb-4"
+        style={{
+          background: 'rgba(10,14,28,0.6)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          The Council Convenes
+        </div>
+        <h1
+          className="text-[28px] font-medium leading-none tracking-tight mb-3"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          Speak to the <em style={{ color: '#c9a84c' }}>Cabinet</em>
+        </h1>
+
+        {/* Overlapping counselor circles */}
+        <div className="flex items-center mb-4">
+          {activeCounselors.slice(0, 5).map((c, i) => (
+            <div
+              key={c.id}
+              className="flex items-center justify-center rounded-full flex-shrink-0"
+              style={{
+                width: 32, height: 32,
+                background: 'rgba(201,168,76,0.15)',
+                border: '2px solid rgba(10,14,28,0.8)',
+                marginLeft: i === 0 ? 0 : -8,
+                fontFamily: 'var(--font-mono, monospace)',
+                fontSize: 9, fontWeight: 700,
+                color: '#c9a84c',
+                zIndex: activeCounselors.length - i,
+                position: 'relative',
+              }}
+            >
+              {getInitials(c.name)}
+            </div>
+          ))}
+          {activeCounselors.length > 5 && (
+            <div
+              className="flex items-center justify-center rounded-full flex-shrink-0 text-[9px]"
+              style={{
+                width: 32, height: 32,
+                background: 'rgba(201,168,76,0.08)',
+                border: '2px solid rgba(10,14,28,0.8)',
+                marginLeft: -8,
+                color: '#9aa0a6',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              +{activeCounselors.length - 5}
+            </div>
+          )}
+          <span
+            className="text-[11px] ml-3"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+          >
+            {activeCounselors.length} counselor{activeCounselors.length !== 1 ? 's' : ''} assembled
+          </span>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-arete-border mb-4">
+        {/* Tab switcher */}
+        <div
+          className="flex gap-1 p-1 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
           {(['cabinet', 'counselors'] as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-                tab === t ? 'text-arete-gold border-arete-gold' : 'text-arete-muted border-transparent hover:text-arete-text'
-              }`}
+              className="flex-1 py-2 rounded-lg text-[11px] tracking-[1px] uppercase capitalize transition-all"
+              style={
+                tab === t
+                  ? { background: '#c9a84c', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700 }
+                  : { color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
+              }
             >
               {t}
             </button>
@@ -177,23 +240,41 @@ export default function CabinetPage() {
         </div>
       </div>
 
-      {tab === 'cabinet' && (
-        <div className="flex flex-col flex-1 px-6 md:px-8 overflow-hidden">
-          {/* Know Thyself nudge */}
-          {knowThyselfIncomplete && (
-            <div className="bg-arete-surface rounded-lg border border-arete-gold p-4 mb-4 flex-shrink-0">
-              <p className="text-arete-gold font-semibold text-sm">Complete Your Profile</p>
-              <p className="text-arete-muted text-xs mt-1">The Cabinet&apos;s responses are generic until you fill in your Know Thyself profile.</p>
-              <a href="/profile" className="text-arete-gold text-xs font-semibold hover:underline mt-1 block">Complete Now →</a>
+      {/* Know Thyself nudge */}
+      {knowThyselfIncomplete && (
+        <div className="mx-4 mt-3 flex-shrink-0">
+          <GlassCard>
+            <div className="px-4 py-3 flex items-center justify-between">
+              <p className="text-[13px]" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}>
+                The Cabinet&apos;s responses are generic until you complete your profile.
+              </p>
+              <a
+                href="/profile"
+                className="text-[10px] tracking-[1px] uppercase ml-3 flex-shrink-0 hover:opacity-80"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                Complete →
+              </a>
             </div>
-          )}
+          </GlassCard>
+        </div>
+      )}
 
-          {/* Search + Clear bar */}
-          <div className="flex items-center gap-2 mb-3 flex-shrink-0">
+      {/* ── Cabinet tab ──────────────────────────────────────────── */}
+      {tab === 'cabinet' && (
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Search + Clear */}
+          <div className="px-4 pt-3 pb-2 flex items-center gap-2 flex-shrink-0">
             {showSearch ? (
               <input
-                className="bg-arete-bg border border-arete-border rounded-lg px-3 py-1.5 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm"
-                placeholder="Search messages..."
+                className="flex-1 px-3 py-2 rounded-xl text-[13px] outline-none"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(201,168,76,0.2)',
+                  color: '#e6eef8',
+                  fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+                }}
+                placeholder="Search messages…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 autoFocus
@@ -201,154 +282,436 @@ export default function CabinetPage() {
             ) : (
               <div className="flex-1" />
             )}
-            <button onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }} className="text-arete-muted hover:text-arete-text text-sm px-2 py-1">
-              {showSearch ? '✕' : '🔍'}
+            <button
+              onClick={() => { setShowSearch(s => !s); setSearchQuery(''); }}
+              className="text-[10px] tracking-[1px] uppercase px-3 py-1.5 rounded-lg transition-opacity hover:opacity-70"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {showSearch ? '✕' : 'Search'}
             </button>
-            <button onClick={handleClearCabinet} className="text-arete-muted hover:text-red-400 text-xs px-2 py-1">
+            <button
+              onClick={handleClearCabinet}
+              className="text-[10px] tracking-[1px] uppercase px-3 py-1.5 rounded-lg transition-colors hover:text-red-400"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
               Clear
             </button>
           </div>
 
           {/* Messages */}
-          <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 flex flex-col gap-3.5">
             {filteredMessages.length === 0 && !isLoading && (
-              <div className="text-center text-arete-muted text-sm py-8">
-                <p className="text-2xl mb-2">🏛️</p>
-                <p>Your Cabinet awaits. Ask them anything.</p>
+              <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                <div className="text-[40px] mb-3 opacity-15">🏛️</div>
+                <p
+                  className="text-[15px] italic"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                >
+                  Your Cabinet awaits.
+                </p>
+                <p
+                  className="text-[11px] tracking-[1px] uppercase mt-1"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+                >
+                  Ask them anything.
+                </p>
               </div>
             )}
+
             {filteredMessages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === 'user'
-                    ? 'bg-arete-border text-arete-text'
-                    : 'bg-arete-surface border border-arete-gold text-arete-gold'
-                }`}>
-                  <p className="whitespace-pre-wrap">{msg.content}</p>
-                </div>
+                {msg.role === 'user' ? (
+                  <div
+                    className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
+                    style={{
+                      background: 'rgba(201,168,76,0.12)',
+                      border: '1px solid rgba(201,168,76,0.2)',
+                      borderRadius: '18px 18px 6px 18px',
+                      fontFamily: 'var(--font-serif, Georgia, serif)',
+                      color: '#e6eef8',
+                    }}
+                  >
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="max-w-[90%] flex gap-3 items-start">
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                      style={{
+                        width: 32, height: 32,
+                        background: 'rgba(201,168,76,0.15)',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: 9, fontWeight: 700,
+                        color: '#c9a84c',
+                      }}
+                    >
+                      TC
+                    </div>
+                    <div
+                      className="flex flex-col gap-2 px-4 py-3 flex-1"
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '18px 18px 18px 6px',
+                      }}
+                    >
+                      {parseBlocks(msg.content).map((block, bi) =>
+                        block.type === 'quote' ? (
+                          <div
+                            key={bi}
+                            className="pl-3 py-1 italic text-[14px] leading-relaxed"
+                            style={{
+                              borderLeft: '3px solid rgba(201,168,76,0.5)',
+                              fontFamily: 'var(--font-serif, Georgia, serif)',
+                              color: '#c9a84c',
+                            }}
+                          >
+                            &ldquo;{block.content}&rdquo;
+                          </div>
+                        ) : (
+                          <p
+                            key={bi}
+                            className="text-[14px] leading-relaxed"
+                            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                          >
+                            {block.content}
+                          </p>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
+
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-arete-surface border border-arete-gold rounded-lg px-4 py-3 text-arete-gold text-sm">
-                  The Cabinet is deliberating...
+                <div className="flex gap-3 items-start">
+                  <div
+                    className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                    style={{
+                      width: 32, height: 32,
+                      background: 'rgba(201,168,76,0.15)',
+                      border: '1px solid rgba(201,168,76,0.3)',
+                      fontFamily: 'var(--font-mono, monospace)',
+                      fontSize: 9, fontWeight: 700,
+                      color: '#c9a84c',
+                    }}
+                  >
+                    TC
+                  </div>
+                  <div
+                    className="px-4 py-3 italic text-[14px]"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: '18px 18px 18px 6px',
+                      fontFamily: 'var(--font-serif, Georgia, serif)',
+                      color: '#9aa0a6',
+                    }}
+                  >
+                    The Cabinet deliberates…
+                  </div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
-          <div className="flex gap-2 pt-3 border-t border-arete-border pb-4 flex-shrink-0">
+          {/* Composer */}
+          <div
+            className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
+            style={{
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(10,14,28,0.5)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
             <textarea
-              className={inputClass}
+              className="flex-1 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                borderRadius: 22,
+                color: '#e6eef8',
+                fontFamily: 'var(--font-serif, Georgia, serif)',
+              }}
               rows={2}
-              placeholder="Speak to your Cabinet..."
+              placeholder="Speak to your Cabinet…"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendCabinet();
-                }
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendCabinet(); }
               }}
             />
             <button
               onClick={handleSendCabinet}
               disabled={isLoading || !input.trim()}
-              className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed self-end"
+              className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
             >
-              Send
+              →
             </button>
           </div>
         </div>
       )}
 
+      {/* ── Counselors tab ───────────────────────────────────────── */}
       {tab === 'counselors' && (
-        <div className="flex flex-col flex-1 px-6 md:px-8 overflow-y-auto">
+        <div className="flex flex-col flex-1 overflow-hidden">
           {!selectedCounselor ? (
-            // Counselor list
-            <div className="space-y-3 overflow-y-auto flex-1">
-              <p className="text-arete-muted text-sm mb-4">Choose a counselor for a private session.</p>
-              {activeCounselors.map(counselor => (
-                <button
-                  key={counselor.id}
-                  onClick={() => handleSelectCounselor(counselor.id)}
-                  className="w-full text-left bg-arete-surface rounded-lg border border-arete-border p-4 hover:border-arete-gold transition-colors"
-                >
-                  <p className="text-arete-text font-semibold">{counselor.name}</p>
-                  <p className="text-arete-muted text-xs mt-0.5">{counselor.role}</p>
-                  <p className="text-arete-muted text-sm mt-1">{counselor.description}</p>
-                </button>
-              ))}
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <p
+                className="text-[11px] tracking-[1px] uppercase mb-4"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+              >
+                Choose a counselor for a private session
+              </p>
+              <div className="flex flex-col gap-2.5">
+                {activeCounselors.map(counselor => (
+                  <button
+                    key={counselor.id}
+                    onClick={() => handleSelectCounselor(counselor.id)}
+                    className="w-full text-left flex items-center gap-3 px-4 py-3.5 rounded-xl transition-opacity hover:opacity-80"
+                    style={{
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    <div
+                      className="flex items-center justify-center rounded-full flex-shrink-0"
+                      style={{
+                        width: 40, height: 40,
+                        background: 'rgba(201,168,76,0.12)',
+                        border: '1px solid rgba(201,168,76,0.25)',
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: 10, fontWeight: 700,
+                        color: '#c9a84c',
+                      }}
+                    >
+                      {getInitials(counselor.name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="text-[15px] font-medium"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {counselor.name}
+                      </div>
+                      <div
+                        className="text-[10px] tracking-[1px] uppercase mt-0.5"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {counselor.role}
+                      </div>
+                    </div>
+                    <span style={{ color: '#c9a84c', fontSize: 16 }}>→</span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            // Individual counselor chat
             <>
-              <div className="flex items-center gap-3 mb-4 flex-shrink-0">
-                <button onClick={() => setSelectedCounselor(null)} className="text-arete-muted hover:text-arete-text text-sm">← Back</button>
-                <div>
-                  <p className="text-arete-text font-semibold">{selectedCounselorMeta?.name}</p>
-                  <p className="text-arete-muted text-xs">{selectedCounselorMeta?.role}</p>
+              {/* Counselor header */}
+              <div
+                className="px-4 py-3 flex items-center gap-3 flex-shrink-0"
+                style={{
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgba(10,14,28,0.4)',
+                }}
+              >
+                <button
+                  onClick={() => setSelectedCounselor(null)}
+                  className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                >
+                  ← Back
+                </button>
+                <div
+                  className="flex items-center justify-center rounded-full flex-shrink-0"
+                  style={{
+                    width: 36, height: 36,
+                    background: 'rgba(201,168,76,0.12)',
+                    border: '1px solid rgba(201,168,76,0.25)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: 10, fontWeight: 700,
+                    color: '#c9a84c',
+                  }}
+                >
+                  {selectedCounselorMeta ? getInitials(selectedCounselorMeta.name) : '?'}
+                </div>
+                <div className="flex-1">
+                  <div
+                    className="text-[15px] font-medium"
+                    style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                  >
+                    {selectedCounselorMeta?.name}
+                  </div>
+                  <div
+                    className="text-[10px] tracking-[1px] uppercase"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                  >
+                    {selectedCounselorMeta?.role}
+                  </div>
                 </div>
                 <button
-                onClick={() => { clearThread(selectedCounselor).then(() => setCounselorMessages([])); }}
-                  className="ml-auto text-arete-muted hover:text-red-400 text-xs"
+                  onClick={() => { clearThread(selectedCounselor).then(() => setCounselorMessages([])); }}
+                  className="text-[10px] tracking-[1px] uppercase transition-colors hover:text-red-400"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
                 >
                   Clear
                 </button>
               </div>
 
               {/* Messages */}
-              <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pb-4">
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 flex flex-col gap-3.5">
                 {counselorMessages.length === 0 && !counselorLoading && (
-                  <div className="text-center text-arete-muted text-sm py-8">
-                    <p className="text-2xl mb-2">🧠</p>
-                    <p>{selectedCounselorMeta?.name} is listening.</p>
+                  <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                    <div className="text-[40px] mb-3 opacity-15">🧠</div>
+                    <p
+                      className="text-[15px] italic"
+                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                    >
+                      {selectedCounselorMeta?.name} is listening.
+                    </p>
                   </div>
                 )}
+
                 {counselorMessages.map((msg, i) => (
                   <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-arete-border text-arete-text'
-                        : 'bg-arete-surface border border-arete-gold text-arete-gold'
-                    }`}>
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
-                    </div>
+                    {msg.role === 'user' ? (
+                      <div
+                        className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
+                        style={{
+                          background: 'rgba(201,168,76,0.12)',
+                          border: '1px solid rgba(201,168,76,0.2)',
+                          borderRadius: '18px 18px 6px 18px',
+                          fontFamily: 'var(--font-serif, Georgia, serif)',
+                          color: '#e6eef8',
+                        }}
+                      >
+                        {msg.content}
+                      </div>
+                    ) : (
+                      <div className="max-w-[90%] flex gap-3 items-start">
+                        <div
+                          className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                          style={{
+                            width: 32, height: 32,
+                            background: 'rgba(201,168,76,0.15)',
+                            border: '1px solid rgba(201,168,76,0.3)',
+                            fontFamily: 'var(--font-mono, monospace)',
+                            fontSize: 9, fontWeight: 700,
+                            color: '#c9a84c',
+                          }}
+                        >
+                          {selectedCounselorMeta ? getInitials(selectedCounselorMeta.name) : 'C'}
+                        </div>
+                        <div
+                          className="flex flex-col gap-2 px-4 py-3 flex-1"
+                          style={{
+                            background: 'rgba(255,255,255,0.03)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderRadius: '18px 18px 18px 6px',
+                          }}
+                        >
+                          {parseBlocks(msg.content).map((block, bi) =>
+                            block.type === 'quote' ? (
+                              <div
+                                key={bi}
+                                className="pl-3 py-1 italic text-[14px] leading-relaxed"
+                                style={{
+                                  borderLeft: '3px solid rgba(201,168,76,0.5)',
+                                  fontFamily: 'var(--font-serif, Georgia, serif)',
+                                  color: '#c9a84c',
+                                }}
+                              >
+                                &ldquo;{block.content}&rdquo;
+                              </div>
+                            ) : (
+                              <p
+                                key={bi}
+                                className="text-[14px] leading-relaxed"
+                                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                              >
+                                {block.content}
+                              </p>
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
+
                 {counselorLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-arete-surface border border-arete-gold rounded-lg px-4 py-3 text-arete-gold text-sm">
-                      {selectedCounselorMeta?.name} is thinking...
+                    <div className="flex gap-3 items-start">
+                      <div
+                        className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                        style={{
+                          width: 32, height: 32,
+                          background: 'rgba(201,168,76,0.15)',
+                          border: '1px solid rgba(201,168,76,0.3)',
+                          fontFamily: 'var(--font-mono, monospace)',
+                          fontSize: 9, fontWeight: 700,
+                          color: '#c9a84c',
+                        }}
+                      >
+                        {selectedCounselorMeta ? getInitials(selectedCounselorMeta.name) : 'C'}
+                      </div>
+                      <div
+                        className="px-4 py-3 italic text-[14px]"
+                        style={{
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          borderRadius: '18px 18px 18px 6px',
+                          fontFamily: 'var(--font-serif, Georgia, serif)',
+                          color: '#9aa0a6',
+                        }}
+                      >
+                        {selectedCounselorMeta?.name} is thinking…
+                      </div>
                     </div>
                   </div>
                 )}
                 <div ref={counselorEndRef} />
               </div>
 
-              {/* Input */}
-              <div className="flex gap-2 pt-3 border-t border-arete-border pb-4 flex-shrink-0">
+              {/* Composer */}
+              <div
+                className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
+                style={{
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgba(10,14,28,0.5)',
+                  backdropFilter: 'blur(8px)',
+                }}
+              >
                 <textarea
-                  className={inputClass}
+                  className="flex-1 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(201,168,76,0.15)',
+                    borderRadius: 22,
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-serif, Georgia, serif)',
+                  }}
                   rows={2}
-                  placeholder={`Speak to ${selectedCounselorMeta?.name}...`}
+                  placeholder={`Speak to ${selectedCounselorMeta?.name}…`}
                   value={counselorInput}
                   onChange={e => setCounselorInput(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendCounselor();
-                    }
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendCounselor(); }
                   }}
                 />
                 <button
                   onClick={handleSendCounselor}
                   disabled={counselorLoading || !counselorInput.trim()}
-                  className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed self-end"
+                  className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
                 >
-                  Send
+                  →
                 </button>
               </div>
             </>

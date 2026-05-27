@@ -5,10 +5,21 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings, getGoals, completeGoal, deleteGoal } from '@/lib/db';
 import type { Goal } from '@/lib/types';
-import PageHeader from '@/components/PageHeader';
+import GlassCard from '@/components/GlassCard';
+import ChapterRule from '@/components/ChapterRule';
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function getMilestonePct(goal: Goal): number {
+  if (!goal.target_date) return 0;
+  const created = new Date(goal.created_at).getTime();
+  const target = new Date(goal.target_date).getTime();
+  const now = Date.now();
+  const range = target - created;
+  if (range <= 0) return 1;
+  return Math.min(1, Math.max(0, (now - created) / range));
 }
 
 export default function GoalsPage() {
@@ -57,118 +68,253 @@ export default function GoalsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-arete-bg flex items-center justify-center">
-        <p className="text-arete-muted text-sm">Loading goals...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <span
+          className="text-[11px] tracking-[2px] uppercase"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+        >
+          Loading…
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      <PageHeader title="Goals 🎯" subtitle="Your path to excellence" />
+    <div className="min-h-screen pb-8">
 
-      {/* Tab switcher */}
-      <div className="flex bg-arete-card rounded-xl p-1 mb-6 max-w-xs">
-        <button
-          onClick={() => setActiveTab('active')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'active' ? 'bg-arete-gold text-arete-bg' : 'text-arete-muted hover:text-arete-text'
-          }`}
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-5">
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
         >
-          Active ({activeGoals.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('completed')}
-          className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${
-            activeTab === 'completed' ? 'bg-arete-gold text-arete-bg' : 'text-arete-muted hover:text-arete-text'
-          }`}
+          Chapter V · Telos
+        </div>
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
         >
-          Completed ({completedGoals.length})
-        </button>
+          Your path to<br />
+          <em style={{ color: '#c9a84c' }}>excellence.</em>
+        </h1>
       </div>
 
-      {displayed.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="text-5xl mb-4" style={{ opacity: 0.15 }}>🎯</div>
-          <p className="text-arete-text font-semibold mb-1">
-            {activeTab === 'active' ? 'No active goals' : 'No completed goals yet'}
-          </p>
-          <p className="text-arete-muted text-sm mt-1">
-            {activeTab === 'active'
-              ? 'Add goals in Know Thyself on mobile to see them here.'
-              : 'Complete a goal to see it here.'}
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-3 max-w-2xl">
-          {displayed.map(goal => (
-            <div
-              key={goal.id}
-              className={`bg-arete-surface rounded-lg border p-4 ${
-                goal.completed ? 'border-arete-border opacity-75' : 'border-arete-border'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    {goal.category && (
-                      <span className="text-xs text-arete-muted bg-arete-bg border border-arete-border rounded-full px-2 py-0.5 capitalize">
-                        {goal.category}
-                      </span>
-                    )}
-                    {goal.source === 'onboarding' && (
-                      <span className="text-xs text-arete-muted bg-arete-bg border border-arete-border rounded-full px-2 py-0.5">
-                        From onboarding
-                      </span>
-                    )}
-                    {goal.completed && (
-                      <span className="text-xs text-green-400 font-semibold">✓ Done</span>
-                    )}
-                  </div>
-                  <p className={`text-sm leading-relaxed font-medium ${goal.completed ? 'text-arete-muted line-through' : 'text-arete-text'}`}>
-                    {goal.title}
-                  </p>
-                  {goal.description && (
-                    <p className="text-arete-muted text-xs mt-1 leading-relaxed">{goal.description}</p>
-                  )}
-                  <div className="flex items-center gap-3 mt-2 flex-wrap">
-                    <span className="text-arete-muted text-xs">Added {formatDate(goal.created_at)}</span>
-                    {goal.target_date && (
-                      <>
-                        <span className="text-arete-border text-xs">·</span>
-                        <span className="text-arete-muted text-xs">Target {formatDate(goal.target_date)}</span>
-                      </>
-                    )}
-                    {goal.completed_at && (
-                      <>
-                        <span className="text-arete-border text-xs">·</span>
-                        <span className="text-green-400 text-xs">Completed {formatDate(goal.completed_at)}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
+      <ChapterRule className="mx-5" />
 
-                <div className="flex flex-col gap-1 flex-shrink-0">
-                  {!goal.completed && (
-                    <button
-                      onClick={() => handleComplete(goal.id)}
-                      className="text-xs text-arete-gold border border-arete-gold rounded px-2 py-1 hover:bg-arete-gold hover:text-arete-bg transition-colors"
-                    >
-                      Complete
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(goal.id)}
-                    className="text-xs text-arete-muted border border-arete-border rounded px-2 py-1 hover:text-red-400 hover:border-red-400 transition-colors"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
+      {/* ── Tab switcher ────────────────────────────────────────── */}
+      <div className="px-4 pb-5">
+        <div
+          className="flex gap-1 p-1 rounded-xl"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+        >
+          {(['active', 'completed'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className="flex-1 py-2 rounded-lg text-[11px] tracking-[1px] uppercase transition-all"
+              style={
+                activeTab === t
+                  ? { background: '#c9a84c', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700 }
+                  : { color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
+              }
+            >
+              {t} ({t === 'active' ? activeGoals.length : completedGoals.length})
+            </button>
           ))}
         </div>
-      )}
+      </div>
+
+      {/* ── Goal list ───────────────────────────────────────────── */}
+      <div className="px-4">
+        {displayed.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="text-[48px] mb-4" style={{ opacity: 0.12 }}>🎯</div>
+            <p
+              className="text-[15px] italic"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+            >
+              {activeTab === 'active' ? 'No active goals.' : 'No completed goals yet.'}
+            </p>
+            <p
+              className="text-[11px] tracking-[1px] uppercase mt-1"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+            >
+              {activeTab === 'active' ? 'Add goals via the mobile app.' : 'Complete a goal to see it here.'}
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            {displayed.map(goal => {
+              const pct = goal.completed ? 1 : getMilestonePct(goal);
+              const milestones = [0.25, 0.5, 0.75, 1];
+
+              return (
+                <GlassCard key={goal.id} className={goal.completed ? 'opacity-70' : ''}>
+                  <div className="p-4">
+                    {/* Tags row */}
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      {goal.category && (
+                        <span
+                          className="text-[10px] tracking-[1px] uppercase px-2 py-0.5 rounded-md"
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            background: 'rgba(201,168,76,0.1)',
+                            border: '1px solid rgba(201,168,76,0.2)',
+                            color: '#c9a84c',
+                          }}
+                        >
+                          {goal.category}
+                        </span>
+                      )}
+                      {goal.source === 'onboarding' && (
+                        <span
+                          className="text-[10px] tracking-[1px] uppercase px-2 py-0.5 rounded-md"
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            color: '#9aa0a6',
+                          }}
+                        >
+                          Onboarding
+                        </span>
+                      )}
+                      {goal.completed && (
+                        <span
+                          className="text-[10px] tracking-[1px] uppercase px-2 py-0.5 rounded-md"
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            background: 'rgba(74,222,128,0.1)',
+                            border: '1px solid rgba(74,222,128,0.25)',
+                            color: '#4ade80',
+                          }}
+                        >
+                          ✓ Done
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <p
+                      className="text-[17px] font-medium leading-snug mb-1"
+                      style={{
+                        fontFamily: 'var(--font-serif, Georgia, serif)',
+                        color: goal.completed ? '#9aa0a6' : '#e6eef8',
+                        textDecoration: goal.completed ? 'line-through' : 'none',
+                        textDecorationColor: '#8a6f27',
+                      }}
+                    >
+                      {goal.title}
+                    </p>
+
+                    {goal.description && (
+                      <p
+                        className="text-[13px] leading-relaxed mb-2"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                      >
+                        {goal.description}
+                      </p>
+                    )}
+
+                    {/* Progress track + milestones */}
+                    {goal.target_date && !goal.completed && (
+                      <div className="mb-3">
+                        <div
+                          className="relative h-[3px] rounded-sm mb-2"
+                          style={{ background: 'rgba(201,168,76,0.12)' }}
+                        >
+                          <div
+                            className="absolute left-0 top-0 h-full rounded-sm transition-all duration-500"
+                            style={{
+                              width: `${pct * 100}%`,
+                              background: 'linear-gradient(90deg, #8a6f27, #e3c77a)',
+                              boxShadow: pct > 0 ? '0 0 6px rgba(201,168,76,0.4)' : 'none',
+                            }}
+                          />
+                          {milestones.map(m => (
+                            <div
+                              key={m}
+                              className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full"
+                              style={{
+                                left: `calc(${m * 100}% - 4px)`,
+                                background: pct >= m ? '#c9a84c' : 'rgba(201,168,76,0.2)',
+                                border: `1px solid ${pct >= m ? '#c9a84c' : 'rgba(201,168,76,0.15)'}`,
+                                boxShadow: pct >= m ? '0 0 6px rgba(201,168,76,0.5)' : 'none',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span
+                            className="text-[10px]"
+                            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                          >
+                            Started {formatDate(goal.created_at)}
+                          </span>
+                          <span
+                            className="text-[10px]"
+                            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                          >
+                            Target {formatDate(goal.target_date)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {!goal.target_date && (
+                      <div
+                        className="text-[10px] mb-2"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        Added {formatDate(goal.created_at)}
+                      </div>
+                    )}
+
+                    {goal.completed_at && (
+                      <div
+                        className="text-[10px] mb-2"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#4ade80' }}
+                      >
+                        Completed {formatDate(goal.completed_at)}
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-3">
+                      {!goal.completed && (
+                        <button
+                          onClick={() => handleComplete(goal.id)}
+                          className="text-[10px] tracking-[1px] uppercase px-3 py-1.5 rounded-lg transition-all hover:opacity-80"
+                          style={{
+                            fontFamily: 'var(--font-mono, monospace)',
+                            background: 'rgba(201,168,76,0.12)',
+                            border: '1px solid rgba(201,168,76,0.3)',
+                            color: '#c9a84c',
+                          }}
+                        >
+                          Mark Complete
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(goal.id)}
+                        className="text-[10px] tracking-[1px] uppercase px-3 py-1.5 rounded-lg transition-all hover:text-red-400"
+                        style={{
+                          fontFamily: 'var(--font-mono, monospace)',
+                          background: 'rgba(255,255,255,0.04)',
+                          border: '1px solid rgba(255,255,255,0.08)',
+                          color: '#9aa0a6',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </GlassCard>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

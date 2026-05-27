@@ -6,7 +6,19 @@ import { supabase } from '@/lib/supabase';
 import { getUserCabinet, createConversation, appendMessage } from '@/lib/db';
 import { sendMessageToCabinet } from '@/lib/claudeService';
 import type { ThreadMessage } from '@/lib/threadService';
-import PageHeader from '@/components/PageHeader';
+
+function parseBlocks(text: string): { type: 'quote' | 'para'; content: string }[] {
+  return text
+    .split(/\n\n+/)
+    .map(block => {
+      const t = block.trim();
+      if ((t.startsWith('"') && t.endsWith('"')) || t.startsWith('> ')) {
+        return { type: 'quote' as const, content: t.replace(/^> /, '').replace(/^"|"$/g, '') };
+      }
+      return { type: 'para' as const, content: t };
+    })
+    .filter(b => b.content.length > 0);
+}
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -21,7 +33,6 @@ export default function ConversationPage() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
-
       try {
         const cabinet = await getUserCabinet();
         const slugs = cabinet.map(c => c.slug);
@@ -43,16 +54,12 @@ export default function ConversationPage() {
   const handleSend = async () => {
     if (!input.trim() || isLoading || !conversationId) return;
 
-    // ThreadMessage (role: 'user'|'assistant', timestamp: number) is used for local chat state
-    // and for sendMessageToCabinet(). ConversationMessage (timestamp: ISO string) is used for
-    // Supabase persistence via appendMessage().
     const userMsg: ThreadMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
-    // Persist user message to Supabase
     await appendMessage(conversationId, {
       role: 'user',
       content: userMsg.content,
@@ -65,19 +72,17 @@ export default function ConversationPage() {
       const finalMessages = [...newMessages, assistantMsg];
       setMessages(finalMessages);
 
-      // Persist assistant message to Supabase
       await appendMessage(conversationId, {
         role: 'assistant',
         content: response,
         timestamp: new Date().toISOString(),
       }).catch(e => console.error('appendMessage (assistant) error:', e));
     } catch {
-      const errMsg: ThreadMessage = {
+      setMessages(prev => [...prev, {
         role: 'assistant',
         content: 'The Cabinet is temporarily unavailable. Please try again.',
         timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, errMsg]);
+      }]);
     } finally {
       setIsLoading(false);
     }
@@ -85,71 +90,204 @@ export default function ConversationPage() {
 
   if (initializing) {
     return (
-      <div className="h-full bg-arete-bg flex items-center justify-center">
-        <p className="text-arete-muted text-sm">Starting conversation...</p>
+      <div className="h-full flex items-center justify-center" style={{ background: '#0f1724' }}>
+        <span
+          className="text-[11px] tracking-[2px] uppercase"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+        >
+          Assembling your Cabinet…
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-arete-bg flex flex-col">
-      <div className="p-6 md:p-8 pb-2 flex-shrink-0">
-        <a href="/cabinet" className="text-arete-muted hover:text-arete-text text-sm mb-4 inline-block">
-          ← Back to Cabinet
+    <div className="h-full flex flex-col" style={{ background: '#0f1724' }}>
+
+      {/* ── Glass header ─────────────────────────────────────────── */}
+      <div
+        className="flex-shrink-0 px-5 pt-4 pb-4"
+        style={{
+          background: 'rgba(10,14,28,0.6)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        <a
+          href="/cabinet"
+          className="text-[10px] tracking-[1.2px] uppercase mb-2 inline-block transition-opacity hover:opacity-70"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+        >
+          ← Cabinet
         </a>
-        <PageHeader title="Cabinet Conversation" subtitle="A new session with your council" />
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          New Session
+        </div>
+        <h1
+          className="text-[24px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          Cabinet <em style={{ color: '#c9a84c' }}>Conversation</em>
+        </h1>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-6 md:px-8 space-y-4 pb-4">
+      {/* ── Messages ─────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 flex flex-col gap-3.5">
         {messages.length === 0 && !isLoading && (
-          <div className="text-center text-arete-muted text-sm py-8">
-            <p className="text-2xl mb-2">🏛️</p>
-            <p>Your Cabinet awaits. Ask them anything.</p>
+          <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+            <div className="text-[40px] mb-3 opacity-15">🏛️</div>
+            <p
+              className="text-[15px] italic"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+            >
+              Your Cabinet awaits.
+            </p>
+            <p
+              className="text-[11px] tracking-[1px] uppercase mt-1"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+            >
+              Ask them anything.
+            </p>
           </div>
         )}
+
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
-              msg.role === 'user'
-                ? 'bg-arete-border text-arete-text'
-                : 'bg-arete-surface border border-arete-gold text-arete-gold'
-            }`}>
-              <p className="whitespace-pre-wrap">{msg.content}</p>
-            </div>
+            {msg.role === 'user' ? (
+              <div
+                className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
+                style={{
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.2)',
+                  borderRadius: '18px 18px 6px 18px',
+                  fontFamily: 'var(--font-serif, Georgia, serif)',
+                  color: '#e6eef8',
+                }}
+              >
+                {msg.content}
+              </div>
+            ) : (
+              <div className="max-w-[90%] flex gap-3 items-start">
+                <div
+                  className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                  style={{
+                    width: 32, height: 32,
+                    background: 'rgba(201,168,76,0.15)',
+                    border: '1px solid rgba(201,168,76,0.3)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: 9, fontWeight: 700,
+                    color: '#c9a84c',
+                  }}
+                >
+                  TC
+                </div>
+                <div
+                  className="flex flex-col gap-2 px-4 py-3 flex-1"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '18px 18px 18px 6px',
+                  }}
+                >
+                  {parseBlocks(msg.content).map((block, bi) =>
+                    block.type === 'quote' ? (
+                      <div
+                        key={bi}
+                        className="pl-3 py-1 italic text-[14px] leading-relaxed"
+                        style={{
+                          borderLeft: '3px solid rgba(201,168,76,0.5)',
+                          fontFamily: 'var(--font-serif, Georgia, serif)',
+                          color: '#c9a84c',
+                        }}
+                      >
+                        &ldquo;{block.content}&rdquo;
+                      </div>
+                    ) : (
+                      <p
+                        key={bi}
+                        className="text-[14px] leading-relaxed"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {block.content}
+                      </p>
+                    )
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         ))}
+
         {isLoading && (
           <div className="flex justify-start">
-            <div className="bg-arete-surface border border-arete-gold rounded-lg px-4 py-3 text-arete-gold text-sm">
-              The Cabinet is deliberating...
+            <div className="flex gap-3 items-start">
+              <div
+                className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                style={{
+                  width: 32, height: 32,
+                  background: 'rgba(201,168,76,0.15)',
+                  border: '1px solid rgba(201,168,76,0.3)',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 9, fontWeight: 700,
+                  color: '#c9a84c',
+                }}
+              >
+                TC
+              </div>
+              <div
+                className="px-4 py-3 italic text-[14px]"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '18px 18px 18px 6px',
+                  fontFamily: 'var(--font-serif, Georgia, serif)',
+                  color: '#9aa0a6',
+                }}
+              >
+                The Cabinet deliberates…
+              </div>
             </div>
           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="flex gap-2 px-6 md:px-8 pt-3 border-t border-arete-border pb-4 flex-shrink-0">
+      {/* ── Composer ─────────────────────────────────────────────── */}
+      <div
+        className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
+        style={{
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(10,14,28,0.5)',
+          backdropFilter: 'blur(8px)',
+        }}
+      >
         <textarea
-          className="bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm resize-none"
+          className="flex-1 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none"
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(201,168,76,0.15)',
+            borderRadius: 22,
+            color: '#e6eef8',
+            fontFamily: 'var(--font-serif, Georgia, serif)',
+          }}
           rows={2}
-          placeholder="Speak to your Cabinet..."
+          placeholder="Speak to your Cabinet…"
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
           }}
         />
         <button
           onClick={handleSend}
           disabled={isLoading || !input.trim() || !conversationId}
-          className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-2 hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed self-end"
+          className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
         >
-          Send
+          →
         </button>
       </div>
     </div>

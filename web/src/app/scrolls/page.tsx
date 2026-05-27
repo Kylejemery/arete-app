@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings, getScrolls } from '@/lib/db';
 import type { Scroll } from '@/lib/types';
-import PageHeader from '@/components/PageHeader';
+import ChapterRule from '@/components/ChapterRule';
 
 const COUNSELOR_LABELS: Record<string, string> = {
   marcus: 'Marcus Aurelius',
@@ -14,7 +14,7 @@ const COUNSELOR_LABELS: Record<string, string> = {
 };
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function ScrollsPage() {
@@ -38,79 +38,149 @@ export default function ScrollsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-arete-bg flex items-center justify-center">
-        <p className="text-arete-muted text-sm">Loading scrolls...</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <span
+          className="text-[11px] tracking-[2px] uppercase"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+        >
+          Loading…
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      <PageHeader title="Scrolls 📜" subtitle="Wisdom generated for your goals" />
+    <div className="min-h-screen pb-8">
 
-      {scrolls.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="text-5xl mb-4" style={{ opacity: 0.15 }}>📜</div>
-          <p className="text-arete-text font-semibold mb-1">No scrolls yet</p>
-          <p className="text-arete-muted text-sm mt-1">
-            Scrolls are generated from your goals. Complete Know Thyself to receive your first scroll.
-          </p>
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-5">
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          Chapter VI · Scrolls
         </div>
-      ) : (
-        <div className="space-y-4 max-w-2xl">
-          {scrolls.map(scroll => {
-            const isExpanded = expandedId === scroll.id;
-            return (
-              <div
-                key={scroll.id}
-                className="bg-arete-surface rounded-lg border border-arete-border overflow-hidden"
-              >
-                {/* Header */}
-                <button
-                  className="w-full text-left p-5 flex items-start justify-between gap-3 hover:bg-arete-bg transition-colors"
-                  onClick={() => setExpandedId(isExpanded ? null : scroll.id)}
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          Wisdom for<br />
+          <em style={{ color: '#c9a84c' }}>your goals.</em>
+        </h1>
+      </div>
+
+      <ChapterRule className="mx-5" />
+
+      {/* ── Scroll list ─────────────────────────────────────────── */}
+      <div className="px-4">
+        {scrolls.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="text-[48px] mb-4" style={{ opacity: 0.12 }}>📜</div>
+            <p
+              className="text-[15px] italic"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+            >
+              No scrolls yet.
+            </p>
+            <p
+              className="text-[11px] tracking-[1px] uppercase mt-1"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+            >
+              Complete Know Thyself to receive your first scroll.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 max-w-2xl">
+            {scrolls.map(scroll => {
+              const isExpanded = expandedId === scroll.id;
+              return (
+                <div
+                  key={scroll.id}
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                  }}
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-arete-gold font-semibold text-sm mb-1">
-                      {scroll.title}
-                    </p>
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-arete-muted text-xs">
-                        {COUNSELOR_LABELS[scroll.counselor] ?? scroll.counselor}
-                      </span>
-                      <span className="text-arete-border text-xs">·</span>
-                      <span className="text-arete-muted text-xs">{formatDate(scroll.created_at)}</span>
-                      {scroll.read_count ? (
-                        <>
-                          <span className="text-arete-border text-xs">·</span>
-                          <span className="text-arete-muted text-xs">Read {scroll.read_count}×</span>
-                        </>
-                      ) : null}
-                    </div>
-                    {scroll.goal_source && (
-                      <p className="text-arete-muted text-xs mt-1 italic truncate">
-                        Goal: {scroll.goal_source}
+                  {/* Scroll header (clickable) */}
+                  <button
+                    className="w-full text-left px-4 py-4 flex items-start justify-between gap-3 transition-opacity hover:opacity-80"
+                    onClick={() => setExpandedId(isExpanded ? null : scroll.id)}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-[16px] font-medium leading-snug mb-1.5"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {scroll.title}
                       </p>
-                    )}
-                  </div>
-                  <span className="text-arete-muted text-sm flex-shrink-0 mt-0.5">
-                    {isExpanded ? '▲' : '▼'}
-                  </span>
-                </button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className="text-[10px] tracking-[1px] uppercase"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                        >
+                          {COUNSELOR_LABELS[scroll.counselor] ?? scroll.counselor}
+                        </span>
+                        <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>
+                        <span
+                          className="text-[10px]"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                        >
+                          {formatDate(scroll.created_at)}
+                        </span>
+                        {scroll.read_count ? (
+                          <>
+                            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>
+                            <span
+                              className="text-[10px]"
+                              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                            >
+                              Read {scroll.read_count}×
+                            </span>
+                          </>
+                        ) : null}
+                      </div>
+                      {scroll.goal_source && (
+                        <p
+                          className="text-[11px] italic mt-1 truncate"
+                          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                        >
+                          Goal: {scroll.goal_source}
+                        </p>
+                      )}
+                    </div>
+                    <span
+                      className="flex-shrink-0 mt-0.5 transition-transform duration-200"
+                      style={{
+                        color: '#c9a84c',
+                        fontSize: 13,
+                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                      }}
+                    >
+                      ▾
+                    </span>
+                  </button>
 
-                {/* Body */}
-                {isExpanded && (
-                  <div className="px-5 pb-5 border-t border-arete-border">
-                    <p className="text-arete-text text-sm leading-relaxed whitespace-pre-wrap pt-4">
-                      {scroll.body}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  {/* Scroll body */}
+                  {isExpanded && (
+                    <div
+                      className="px-4 pb-5"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+                    >
+                      <p
+                        className="text-[15px] leading-relaxed whitespace-pre-wrap pt-4"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {scroll.body}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

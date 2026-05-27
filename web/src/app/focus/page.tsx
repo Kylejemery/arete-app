@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, getReadingData, upsertReadingData } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import PageHeader from '@/components/PageHeader';
+import TimerOrbit from '@/components/TimerOrbit';
+import GlassCard from '@/components/GlassCard';
+import ChapterRule from '@/components/ChapterRule';
 
 interface Book {
   id: string;
@@ -19,7 +21,7 @@ interface ReadingSession {
   startPage: number;
   endPage: number;
   pagesRead: number;
-  duration: number; // seconds
+  duration: number;
   date: string;
   dateFormatted: string;
 }
@@ -34,7 +36,7 @@ export default function FocusPage() {
   const [sessions, setSessions] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Reading tracker — book-aware timer matching mobile flow
+  // Reading tracker
   const [currentBooks, setCurrentBooks] = useState<Book[]>([]);
   const [readingSessions, setReadingSessions] = useState<ReadingSession[]>([]);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
@@ -53,11 +55,10 @@ export default function FocusPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       const [settings, readingData] = await Promise.all([getUserSettings(), getReadingData()]);
       if (!settings?.user_name) { router.replace('/setup'); return; }
-
       setCurrentBooks((readingData?.current_books || []) as Book[]);
       setReadingSessions((readingData?.reading_sessions || []) as ReadingSession[]);
     }
@@ -189,193 +190,408 @@ export default function FocusPage() {
     setShowEndPageInput(false);
   };
 
-  const inputClass = "bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none w-full text-sm";
+  const pomodoroTotal = mode === 'work' ? 25 * 60 : 5 * 60;
+  const pomodoroElapsed = pomodoroTotal - timeLeft;
 
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      <PageHeader title="Focus" subtitle="Deep work and reading" />
+    <div className="min-h-screen pb-8">
 
-      {/* Pomodoro Timer */}
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-6 mb-6 text-center">
-        <div className="flex gap-4 justify-center mb-4">
-          {(['work', 'break'] as const).map(m => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setTimeLeft(m === 'work' ? 25 * 60 : 5 * 60); setIsRunning(false); }}
-              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-arete-gold text-arete-bg' : 'text-arete-muted hover:text-arete-text'}`}
-            >
-              {m === 'work' ? '25 min Work' : '5 min Break'}
-            </button>
-          ))}
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-5">
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          Chapter III · Concentration
         </div>
-
-        <div className="text-7xl font-mono font-bold text-arete-gold mb-6">
-          {formatTime(timeLeft)}
-        </div>
-
-        <div className="flex gap-3 justify-center mb-4">
-          <button
-            onClick={() => setIsRunning(r => !r)}
-            className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-8 py-3 hover:opacity-90 text-lg"
-          >
-            {isRunning ? 'Pause' : 'Start'}
-          </button>
-          <button
-            onClick={resetTimer}
-            className="border border-arete-border text-arete-muted rounded-lg px-6 py-3 hover:border-arete-gold hover:text-arete-text transition-colors"
-          >
-            Reset
-          </button>
-        </div>
-
-        <p className="text-arete-muted text-sm">Sessions completed today: <span className="text-arete-gold font-semibold">{sessions}</span></p>
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          The work<br />
+          <em style={{ color: '#c9a84c' }}>before you.</em>
+        </h1>
       </div>
 
-      {/* Reading Timer — book-aware, matches mobile flow */}
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-4 mb-6">
+      <ChapterRule className="mx-5" />
 
-        {/* Timer display */}
-        <div className="text-center mb-4">
-          <h3 className="text-arete-gold font-semibold mb-1">Reading Timer</h3>
-          <div className="text-5xl font-mono font-bold text-arete-gold">{formatTime(readingSeconds)}</div>
-          <p className="text-arete-muted text-xs mt-1">
-            {selectedBook
-              ? `📖 ${selectedBook.title}${selectedBook.currentPage ? ` · p.${selectedBook.currentPage}` : ''}`
-              : 'Select a book below to start'}
-          </p>
-        </div>
-
-        {/* Controls */}
-        {showStartConfig ? (
-          <div className="space-y-2 mb-4">
-            <p className="text-arete-text text-sm font-medium">Starting page — {selectedBook?.title}</p>
-            <input
-              className={inputClass}
-              type="number"
-              placeholder={`Current page (${selectedBook?.currentPage || 1})`}
-              value={startPageInput}
-              onChange={e => setStartPageInput(e.target.value)}
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && confirmReadingStart()}
-            />
-            <div className="flex gap-2">
-              <button onClick={() => setShowStartConfig(false)} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
-              <button onClick={confirmReadingStart} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 text-sm">Start ▶</button>
+      {/* ── Pomodoro Timer ──────────────────────────────────────── */}
+      <div className="px-4 pb-4">
+        <GlassCard>
+          <div className="p-4">
+            <div className="text-[10px] tracking-[1.8px] uppercase mb-4" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}>
+              Focus Session
             </div>
-          </div>
-        ) : showEndPageInput ? (
-          <div className="space-y-2 mb-4">
-            <p className="text-arete-text text-sm font-medium">What page did you stop on?</p>
-            <input
-              className={inputClass}
-              type="number"
-              placeholder="Ending page"
-              value={endPageInput}
-              onChange={e => setEndPageInput(e.target.value)}
-              autoFocus
-              onKeyDown={e => e.key === 'Enter' && saveReadingSession()}
-            />
-            <div className="flex gap-2">
-              <button onClick={() => { setShowEndPageInput(false); setEndPageInput(''); }} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
-              <button onClick={saveReadingSession} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 text-sm">Save Session</button>
+
+            {/* Mode toggle */}
+            <div
+              className="flex gap-1 p-1 rounded-xl mb-6"
+              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {(['work', 'break'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setTimeLeft(m === 'work' ? 25 * 60 : 5 * 60); setIsRunning(false); }}
+                  className="flex-1 py-2 rounded-lg text-[11px] tracking-[1px] uppercase transition-all"
+                  style={
+                    mode === m
+                      ? { background: '#c9a84c', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700 }
+                      : { color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
+                  }
+                >
+                  {m === 'work' ? '25 min Work' : '5 min Break'}
+                </button>
+              ))}
             </div>
-          </div>
-        ) : isReadingRunning ? (
-          <div className="flex gap-2 justify-center mb-4">
-            <button
-              onClick={() => setIsReadingPaused(p => !p)}
-              className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-6 py-2 text-sm hover:opacity-90"
-            >
-              {isReadingPaused ? 'Resume' : 'Pause'}
-            </button>
-            <button
-              onClick={handleReadingStop}
-              className="bg-red-600 text-white font-semibold rounded-lg px-6 py-2 text-sm hover:opacity-90"
-            >
-              Stop
-            </button>
-          </div>
-        ) : (
-          <div className="flex justify-center mb-4">
-            <button
-              onClick={handleReadingStart}
-              disabled={!selectedBook}
-              className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-8 py-2.5 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {selectedBook ? 'Start' : 'Select a book below'}
-            </button>
-          </div>
-        )}
 
-        {/* Book list */}
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="text-arete-text font-medium text-sm">Currently Reading</h4>
-          <button onClick={() => setShowAddBook(s => !s)} className="text-arete-gold text-xs hover:underline">+ Add Book</button>
-        </div>
-
-        {showAddBook && (
-          <div className="space-y-2 mb-3">
-            <input className={inputClass} placeholder="Book title..." value={newTitle} onChange={e => setNewTitle(e.target.value)} autoFocus />
-            <input className={inputClass} placeholder="Author..." value={newAuthor} onChange={e => setNewAuthor(e.target.value)} />
-            <div className="flex gap-2">
-              <button onClick={() => setShowAddBook(false)} className="text-arete-muted text-sm hover:text-arete-text">Cancel</button>
-              <button onClick={addBook} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-1.5 hover:opacity-90 text-sm">Add</button>
+            {/* Orbit timer */}
+            <div className="flex justify-center mb-4">
+              <TimerOrbit elapsed={pomodoroElapsed} total={pomodoroTotal} isRunning={isRunning} />
             </div>
-          </div>
-        )}
 
-        {currentBooks.length === 0 ? (
-          <p className="text-arete-muted text-sm">No books in progress. Add one to track your reading.</p>
-        ) : (
-          <div className="space-y-2">
-            {currentBooks.map(book => (
+            {/* Controls */}
+            <div className="flex gap-3 justify-center mb-4">
               <button
-                key={book.id}
-                onClick={() => !isReadingRunning && setSelectedBook(book)}
-                disabled={isReadingRunning}
-                className={`w-full text-left flex items-center gap-2 rounded-lg border p-3 transition-colors ${
-                  selectedBook?.id === book.id
-                    ? 'border-arete-gold bg-arete-gold/10'
-                    : 'border-arete-border hover:border-arete-gold'
-                } disabled:opacity-60`}
+                onClick={() => setIsRunning(r => !r)}
+                className="rounded-2xl px-8 py-3 font-bold text-[15px] transition-opacity hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-arete-text text-sm font-medium truncate">{book.title}</p>
-                  <p className="text-arete-muted text-xs">by {book.author} · page {book.currentPage}</p>
-                </div>
-                {selectedBook?.id === book.id && (
-                  <span className="text-arete-gold text-xs flex-shrink-0">✓</span>
-                )}
-                {!isReadingRunning && (
-                  <div className="flex gap-2 flex-shrink-0" onClick={e => e.stopPropagation()}>
-                    <span onClick={() => finishBook(book.id)} className="text-arete-gold text-xs hover:underline cursor-pointer">Finished</span>
-                    <span onClick={() => removeBook(book.id)} className="text-arete-muted text-xs hover:text-red-400 cursor-pointer">✕</span>
-                  </div>
-                )}
+                {isRunning ? 'Pause' : 'Start'}
               </button>
-            ))}
+              <button
+                onClick={resetTimer}
+                className="rounded-2xl px-6 py-3 text-[13px] transition-all hover:opacity-80"
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#9aa0a6',
+                  fontFamily: 'var(--font-mono, monospace)',
+                }}
+              >
+                Reset
+              </button>
+            </div>
+
+            <p
+              className="text-center text-[11px] tracking-[1px] uppercase"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+            >
+              Sessions today:{' '}
+              <span style={{ color: '#c9a84c', fontWeight: 700 }}>{sessions}</span>
+            </p>
           </div>
-        )}
+        </GlassCard>
       </div>
 
-      {/* Recent Sessions */}
-      {readingSessions.length > 0 && (
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-4">
-          <h3 className="text-arete-gold font-semibold mb-3">Recent Sessions</h3>
-          <div className="space-y-2">
-            {readingSessions.slice(-5).reverse().map(s => (
-              <div key={s.id} className="flex items-center justify-between text-sm">
-                <div>
-                  <p className="text-arete-text font-medium">{s.bookTitle}</p>
-                  <p className="text-arete-muted text-xs">{s.dateFormatted} · pp. {s.startPage}–{s.endPage}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-arete-gold font-semibold">{s.pagesRead} pages</p>
-                  <p className="text-arete-muted text-xs">{Math.floor(s.duration / 60)} min</p>
+      <ChapterRule className="mx-5" />
+
+      {/* ── Reading Timer ───────────────────────────────────────── */}
+      <div className="px-4 pb-4">
+        <GlassCard>
+          <div className="p-4">
+            <div className="text-[10px] tracking-[1.8px] uppercase mb-3" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}>
+              Reading Session
+            </div>
+
+            {/* Timer display */}
+            <div className="text-center mb-4">
+              <div
+                className="text-[48px] font-medium leading-none"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e3c77a' }}
+              >
+                {formatTime(readingSeconds)}
+              </div>
+              <p
+                className="text-[11px] mt-1.5 tracking-[0.5px]"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+              >
+                {selectedBook
+                  ? `${selectedBook.title}${selectedBook.currentPage ? ` · p.${selectedBook.currentPage}` : ''}`
+                  : 'Select a book below to start'}
+              </p>
+            </div>
+
+            {/* Reading controls */}
+            {showStartConfig ? (
+              <div className="flex flex-col gap-2 mb-4">
+                <p
+                  className="text-[13px] font-medium"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  Starting page — {selectedBook?.title}
+                </p>
+                <input
+                  className="px-4 py-3 rounded-xl text-[14px] outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(201,168,76,0.2)',
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-sans, system-ui)',
+                  }}
+                  type="number"
+                  placeholder={`Current page (${selectedBook?.currentPage || 1})`}
+                  value={startPageInput}
+                  onChange={e => setStartPageInput(e.target.value)}
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && confirmReadingStart()}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowStartConfig(false)}
+                    className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmReadingStart}
+                    className="rounded-xl px-4 py-1.5 text-[11px] tracking-[1px] uppercase font-bold transition-opacity hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    Start ▶
+                  </button>
                 </div>
               </div>
-            ))}
+            ) : showEndPageInput ? (
+              <div className="flex flex-col gap-2 mb-4">
+                <p
+                  className="text-[13px] font-medium"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  What page did you stop on?
+                </p>
+                <input
+                  className="px-4 py-3 rounded-xl text-[14px] outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(201,168,76,0.2)',
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-sans, system-ui)',
+                  }}
+                  type="number"
+                  placeholder="Ending page"
+                  value={endPageInput}
+                  onChange={e => setEndPageInput(e.target.value)}
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && saveReadingSession()}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowEndPageInput(false); setEndPageInput(''); }}
+                    className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveReadingSession}
+                    className="rounded-xl px-4 py-1.5 text-[11px] tracking-[1px] uppercase font-bold transition-opacity hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    Save Session
+                  </button>
+                </div>
+              </div>
+            ) : isReadingRunning ? (
+              <div className="flex gap-2 justify-center mb-4">
+                <button
+                  onClick={() => setIsReadingPaused(p => !p)}
+                  className="rounded-2xl px-6 py-2.5 font-bold text-[13px] transition-opacity hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
+                >
+                  {isReadingPaused ? 'Resume' : 'Pause'}
+                </button>
+                <button
+                  onClick={handleReadingStop}
+                  className="rounded-2xl px-6 py-2.5 font-bold text-[13px] transition-opacity hover:opacity-90"
+                  style={{ background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.3)', color: '#f87171' }}
+                >
+                  Stop
+                </button>
+              </div>
+            ) : (
+              <div className="flex justify-center mb-4">
+                <button
+                  onClick={handleReadingStart}
+                  disabled={!selectedBook}
+                  className="rounded-2xl px-8 py-2.5 font-bold text-[13px] transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
+                >
+                  {selectedBook ? 'Start Reading' : 'Select a book below'}
+                </button>
+              </div>
+            )}
+
+            {/* Book list */}
+            <div className="flex justify-between items-center mb-2">
+              <span
+                className="text-[10px] tracking-[1.4px] uppercase"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+              >
+                Currently Reading
+              </span>
+              <button
+                onClick={() => setShowAddBook(s => !s)}
+                className="text-[10px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                + Add Book
+              </button>
+            </div>
+
+            {showAddBook && (
+              <div className="flex flex-col gap-2 mb-3">
+                <input
+                  className="px-4 py-3 rounded-xl text-[14px] outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-sans, system-ui)',
+                  }}
+                  placeholder="Book title…"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  autoFocus
+                />
+                <input
+                  className="px-4 py-3 rounded-xl text-[14px] outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-sans, system-ui)',
+                  }}
+                  placeholder="Author…"
+                  value={newAuthor}
+                  onChange={e => setNewAuthor(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowAddBook(false)}
+                    className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={addBook}
+                    className="rounded-xl px-4 py-1.5 text-[11px] tracking-[1px] uppercase font-bold transition-opacity hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {currentBooks.length === 0 ? (
+              <p
+                className="text-[13px] italic"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+              >
+                No books in progress. Add one to track your reading.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {currentBooks.map(book => (
+                  <button
+                    key={book.id}
+                    onClick={() => !isReadingRunning && setSelectedBook(book)}
+                    disabled={isReadingRunning}
+                    className="w-full text-left flex items-center gap-2 px-3 py-3 rounded-xl transition-all disabled:opacity-60"
+                    style={{
+                      background: selectedBook?.id === book.id ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${selectedBook?.id === book.id ? 'rgba(201,168,76,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-[14px] font-medium truncate"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {book.title}
+                      </p>
+                      <p
+                        className="text-[11px]"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {book.author} · p.{book.currentPage}
+                      </p>
+                    </div>
+                    {selectedBook?.id === book.id && (
+                      <span style={{ color: '#c9a84c', fontSize: 13 }}>✓</span>
+                    )}
+                    {!isReadingRunning && (
+                      <div className="flex gap-3 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                        <span
+                          onClick={() => finishBook(book.id)}
+                          className="text-[10px] tracking-[1px] uppercase cursor-pointer transition-opacity hover:opacity-70"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                        >
+                          Finished
+                        </span>
+                        <span
+                          onClick={() => removeBook(book.id)}
+                          className="text-[10px] cursor-pointer transition-colors hover:text-red-400"
+                          style={{ color: '#9aa0a6' }}
+                        >
+                          ✕
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+        </GlassCard>
+      </div>
+
+      {/* ── Recent Sessions ─────────────────────────────────────── */}
+      {readingSessions.length > 0 && (
+        <div className="px-4 pb-4">
+          <GlassCard>
+            <div className="p-4">
+              <div className="text-[10px] tracking-[1.8px] uppercase mb-3" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}>
+                Recent Sessions
+              </div>
+              <div className="flex flex-col gap-3">
+                {readingSessions.slice(-5).reverse().map(s => (
+                  <div key={s.id} className="flex items-center justify-between">
+                    <div>
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {s.bookTitle}
+                      </p>
+                      <p
+                        className="text-[10px] mt-0.5"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {s.dateFormatted} · pp.{s.startPage}–{s.endPage}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#c9a84c' }}
+                      >
+                        {s.pagesRead} pages
+                      </p>
+                      <p
+                        className="text-[10px]"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {Math.floor(s.duration / 60)} min
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
         </div>
       )}
     </div>
