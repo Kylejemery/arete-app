@@ -3,30 +3,70 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, hasCheckInToday, getProfileStreak, getDailyQuestionCache, upsertTodayCheckin } from '@/lib/db';
+import {
+  getUserSettings,
+  hasCheckInToday,
+  getProfileStreak,
+  getDailyQuestionCache,
+  upsertTodayCheckin,
+} from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES, getDailyPrompt } from '@/lib/quotes';
+import GlassCard from '@/components/GlassCard';
+import StreakArc from '@/components/StreakArc';
 
-const COUNSELOR_NAMES: Record<string, string> = {
-  'marcus-aurelius': 'Marcus Aurelius',
-  'marcus': 'Marcus Aurelius',
-  'epictetus': 'Epictetus',
-  'seneca': 'Seneca',
-  'david-goggins': 'David Goggins',
-  'goggins': 'David Goggins',
-  'theodore-roosevelt': 'Theodore Roosevelt',
-  'futureSelf': 'Future Self',
+// ── Counselor display metadata ────────────────────────────────────
+const COUNSELOR_META: Record<string, { name: string; initials: string }> = {
+  'marcus-aurelius':     { name: 'Marcus Aurelius',    initials: 'MA' },
+  'marcus':              { name: 'Marcus Aurelius',    initials: 'MA' },
+  'epictetus':           { name: 'Epictetus',          initials: 'EP' },
+  'seneca':              { name: 'Seneca',             initials: 'SN' },
+  'david-goggins':       { name: 'David Goggins',      initials: 'DG' },
+  'goggins':             { name: 'David Goggins',      initials: 'DG' },
+  'theodore-roosevelt':  { name: 'Theodore Roosevelt', initials: 'TR' },
+  'futureSelf':          { name: 'Future Self',        initials: 'FS' },
 };
 
-type TimeSlot = 'morning' | 'midday' | 'evening';
+// ── Helpers ───────────────────────────────────────────────────────
+function toRoman(n: number): string {
+  if (n <= 0) return '–';
+  const map: [string, number][] = [
+    ['M',1000],['CM',900],['D',500],['CD',400],['C',100],
+    ['XC',90],['L',50],['XL',40],['X',10],['IX',9],['V',5],['IV',4],['I',1],
+  ];
+  let result = '';
+  for (const [s, v] of map) while (n >= v) { result += s; n -= v; }
+  return result;
+}
 
-function getTimeSlot(): TimeSlot {
+const ONES = [
+  '','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+  'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen',
+];
+const TENS = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+function numberToWords(n: number): string {
+  if (n <= 0)  return 'Zero';
+  if (n < 20)  return ONES[n];
+  if (n < 100) return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10].toLowerCase() : '');
+  return n.toString();
+}
+
+function getTimeOfDay(): string {
   const h = new Date().getHours();
   if (h < 12) return 'morning';
-  if (h < 18) return 'midday';
+  if (h < 18) return 'afternoon';
   return 'evening';
 }
 
+function getDayOfWeek(): string {
+  return new Date().toLocaleDateString('en-US', { weekday: 'long' });
+}
+
+function getMonthDay(): string {
+  return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+}
+
+// ── Component ─────────────────────────────────────────────────────
 export default function HomePage() {
   const router = useRouter();
   const [userName, setUserName] = useState('');
@@ -72,142 +112,255 @@ export default function HomePage() {
     load();
   }, [router]);
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return { salutation: 'Good morning,', subtitle: 'Rise and pursue virtue' };
-    if (hour < 18) return { salutation: 'Keep going,', subtitle: 'Continue with excellence' };
-    return { salutation: 'Good evening,', subtitle: 'Reflect on this day' };
-  };
-
-  const getDailyQuote = () => DAILY_QUOTES[new Date().getDay() % DAILY_QUOTES.length];
-
   if (!loaded) {
     return (
-      <div className="min-h-screen bg-arete-bg flex items-center justify-center">
-        <div className="text-arete-muted">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <span
+          className="text-[11px] tracking-[2px] uppercase"
+          style={{
+            fontFamily: 'var(--font-mono, monospace)',
+            color: '#9aa0a6',
+          }}
+        >
+          Loading…
+        </span>
       </div>
     );
   }
 
-  const greeting = getGreeting();
-  const quote = getDailyQuote();
-  const timeSlot = getTimeSlot();
+  const dp = getDailyPrompt();
+  const counselorInfo = COUNSELOR_META[dp.counselorSlug] ?? {
+    name: dp.counselorName,
+    initials: dp.counselorName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase(),
+  };
+  const questionUrl = `/cabinet?q=${encodeURIComponent(dp.prompt)}&counselor=${dp.counselorSlug}`;
+  const firstName = userName.split(' ')[0];
+  const quote = DAILY_QUOTES[new Date().getDay() % DAILY_QUOTES.length];
 
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
+    <div className="min-h-screen pb-8">
 
-      {/* Greeting */}
-      <div className="mb-6">
-        <p className="text-arete-muted text-lg">{greeting.salutation}</p>
-        <p className="text-arete-gold text-sm italic">{greeting.subtitle}</p>
-        <h2 className="text-2xl md:text-3xl font-bold text-arete-text mt-1">{userName} ⚔️</h2>
-      </div>
-
-      {/* Morning / Cabinet / Evening pills */}
-      <div className="flex gap-2 mb-6 flex-wrap">
-        <Link
-          href="/morning"
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-          style={
-            timeSlot === 'morning'
-              ? { background: '#c9a84c', color: '#1a1a2e' }
-              : morningDone
-              ? { background: 'rgba(201,168,76,0.15)', border: '1.5px solid #c9a84c', color: '#c9a84c' }
-              : { background: 'transparent', border: '1.5px solid #2a3a5c', color: '#9aa0a6' }
-          }
-        >
-          <span>☀️</span>
-          <span>Morning</span>
-          {morningDone && <span className="text-xs">✓</span>}
-        </Link>
-        <Link
-          href="/cabinet"
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-          style={
-            timeSlot === 'midday'
-              ? { background: '#c9a84c', color: '#1a1a2e' }
-              : { background: 'transparent', border: '1.5px solid #2a3a5c', color: '#9aa0a6' }
-          }
-        >
-          <span>🎙️</span>
-          <span>Cabinet</span>
-        </Link>
-        <Link
-          href="/evening"
-          className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
-          style={
-            timeSlot === 'evening'
-              ? { background: '#c9a84c', color: '#1a1a2e' }
-              : eveningDone
-              ? { background: 'rgba(201,168,76,0.15)', border: '1.5px solid #c9a84c', color: '#c9a84c' }
-              : { background: 'transparent', border: '1.5px solid #2a3a5c', color: '#9aa0a6' }
-          }
-        >
-          <span>🌙</span>
-          <span>Evening</span>
-          {eveningDone && <span className="text-xs">✓</span>}
-        </Link>
-      </div>
-
-      {/* Streak */}
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-6 flex items-center gap-5">
-        <span className="text-4xl leading-none">🔥</span>
+      {/* ── Header ────────────────────────────────────────────────── */}
+      <div className="px-5 pt-6 pb-2 flex justify-between items-start">
         <div>
-          <p className="text-arete-gold text-4xl font-bold leading-none">{streak}</p>
-          <p className="text-arete-text font-semibold text-sm mt-1">Days of Discipline</p>
-          <p className="text-arete-muted text-xs mt-0.5">Keep the chain unbroken</p>
+          <div
+            className="text-[13px] italic tracking-wide"
+            style={{
+              fontFamily: 'var(--font-serif, Georgia, serif)',
+              color: '#c9a84c',
+            }}
+          >
+            {getDayOfWeek()} · {getMonthDay()}
+          </div>
+          <h1
+            className="text-[32px] font-medium leading-none tracking-tight mt-1"
+            style={{
+              fontFamily: 'var(--font-serif, Georgia, serif)',
+              color: '#e6eef8',
+            }}
+          >
+            Good {getTimeOfDay()},<br />
+            <em style={{ color: '#c9a84c' }}>{firstName}.</em>
+          </h1>
+        </div>
+
+        {/* Quick-link pills */}
+        <div className="flex gap-2 mt-2">
+          <Link
+            href="/morning"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all"
+            style={
+              morningDone
+                ? { background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c', fontFamily: 'var(--font-mono, monospace)' }
+                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
+            }
+          >
+            ☀️{morningDone ? ' ✓' : ''}
+          </Link>
+          <Link
+            href="/evening"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all"
+            style={
+              eveningDone
+                ? { background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.4)', color: '#c9a84c', fontFamily: 'var(--font-mono, monospace)' }
+                : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
+            }
+          >
+            🌙{eveningDone ? ' ✓' : ''}
+          </Link>
         </div>
       </div>
 
-      {/* Daily Quote */}
-      <div className="bg-arete-surface rounded-lg border-l-4 border-arete-gold p-5 mb-6">
-        <p className="text-arete-gold italic text-sm leading-relaxed">&ldquo;{quote.text}&rdquo;</p>
-        <p className="text-arete-muted text-xs italic mt-2">— {quote.author}</p>
+      {/* Gold rule */}
+      <div
+        className="h-px mx-5 mt-4"
+        style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }}
+      />
+
+      {/* ── Streak Row ────────────────────────────────────────────── */}
+      <div className="px-5 py-5 flex gap-4 items-center">
+        <StreakArc day={streak} />
+        <div className="flex-1">
+          <div
+            className="text-[9.5px] tracking-[1.6px] uppercase"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+          >
+            Day {toRoman(streak)} of C
+          </div>
+          <div
+            className="text-[19px] mt-1 leading-snug tracking-tight"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            {streak <= 0
+              ? 'Begin today.'
+              : streak === 1
+              ? 'One morning.'
+              : `${numberToWords(streak)} mornings in a row.`}
+          </div>
+          <div
+            className="italic text-[13px] mt-1"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+          >
+            &ldquo;The chain is heavier than it looks.&rdquo;
+          </div>
+        </div>
       </div>
 
-      {/* Today's Question */}
-      {(() => {
-        const dp = getDailyPrompt();
-        const questionUrl = `/cabinet?q=${encodeURIComponent(dp.prompt)}&counselor=${dp.counselorSlug}`;
-        return (
-          <Link href={questionUrl} className="block mb-6">
-            <div className="bg-arete-surface rounded-lg border border-arete-gold border-l-4 p-5 hover:opacity-90 transition-opacity">
-              <p className="text-arete-gold font-semibold text-xs uppercase tracking-wider mb-2">
-                Today&apos;s Question
-              </p>
-              <p className="text-arete-text text-sm leading-relaxed">
-                {dp.prompt}
-              </p>
-              <p className="text-arete-gold text-xs italic mt-2">
-                — {dp.counselorName}
-              </p>
-              {dailyQuestion ? (
-                <div className="mt-3 pt-3 border-t border-arete-border">
-                  <p className="text-arete-muted text-xs uppercase tracking-wider mb-1">Response</p>
-                  <p className="text-arete-text text-xs leading-relaxed line-clamp-3">{dailyQuestion.response}</p>
-                  <p className="text-arete-gold text-xs mt-2 font-medium">Open in Cabinet →</p>
+      {/* Gold rule */}
+      <div
+        className="h-px mx-5"
+        style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }}
+      />
+
+      {/* ── Today's Question ──────────────────────────────────────── */}
+      <div className="px-4 py-4">
+        <Link href={questionUrl}>
+          <GlassCard accent>
+            <div className="p-4 flex gap-3 items-center">
+              {/* Counselor bust */}
+              <div
+                className="rounded-full flex-shrink-0 flex items-center justify-center"
+                style={{
+                  width: 52, height: 52,
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.3)',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: '#c9a84c',
+                }}
+              >
+                {counselorInfo.initials}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div
+                  className="text-[9.5px] tracking-[1.6px] uppercase"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                >
+                  {counselorInfo.name} asks
+                </div>
+                <div
+                  className="italic text-[17px] leading-snug mt-1 tracking-tight line-clamp-2"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  &ldquo;{dp.prompt}&rdquo;
+                </div>
+              </div>
+
+              {/* Arrow / check */}
+              {dailyQuestion?.response ? (
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm"
+                  style={{ background: 'rgba(201,168,76,0.2)', border: '1px solid #c9a84c', color: '#c9a84c' }}
+                >
+                  ✓
                 </div>
               ) : (
-                <p className="text-arete-gold text-xs mt-3 font-medium">Ask in Cabinet →</p>
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold"
+                  style={{ background: '#c9a84c', color: '#0f1724' }}
+                >
+                  →
+                </div>
               )}
             </div>
-          </Link>
-        );
-      })()}
 
-      {/* Know Thyself nudge */}
-      {knowThyselfIncomplete && (
-        <div className="bg-arete-surface rounded-lg border border-arete-gold p-5 mb-6">
-          <div className="flex items-center gap-2 mb-2">
-            <span>👤</span>
-            <span className="text-arete-gold font-semibold">Complete Your Profile</span>
-          </div>
-          <p className="text-arete-muted text-sm mb-3">
-            The Cabinet&apos;s responses are generic until you tell them who you are. It takes 2 minutes.
+            {/* Saved response preview */}
+            {dailyQuestion?.response && (
+              <div
+                className="mx-4 mb-4 px-3 py-2.5 rounded-lg"
+                style={{
+                  background: 'rgba(201,168,76,0.06)',
+                  borderTop: '1px solid rgba(201,168,76,0.12)',
+                }}
+              >
+                <p
+                  className="italic text-[13px] leading-relaxed line-clamp-3"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  &ldquo;{dailyQuestion.response}&rdquo;
+                </p>
+              </div>
+            )}
+          </GlassCard>
+        </Link>
+      </div>
+
+      {/* ── Daily Quote ───────────────────────────────────────────── */}
+      <div className="px-4 pb-4">
+        <div
+          className="rounded-xl p-4"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderLeft: '3px solid rgba(201,168,76,0.5)',
+          }}
+        >
+          <p
+            className="italic text-[15px] opacity-90 leading-relaxed"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            &ldquo;{quote.text}&rdquo;
           </p>
-          <Link href="/profile" className="text-arete-gold text-sm font-semibold hover:underline">
-            Complete Now →
-          </Link>
+          <p
+            className="text-[9.5px] tracking-[1.4px] uppercase mt-2"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+          >
+            {quote.author}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Know Thyself nudge ────────────────────────────────────── */}
+      {knowThyselfIncomplete && (
+        <div className="px-4 pb-4">
+          <GlassCard>
+            <div className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-arete-gold">👤</span>
+                <span
+                  className="text-[10px] tracking-[1.6px] uppercase"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                >
+                  Complete Your Profile
+                </span>
+              </div>
+              <p
+                className="text-[14px] leading-relaxed mb-3"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+              >
+                The Cabinet&apos;s responses are generic until you tell them who you are. It takes 2 minutes.
+              </p>
+              <Link
+                href="/profile"
+                className="text-[10px] tracking-[1.4px] uppercase hover:underline"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                Complete Now →
+              </Link>
+            </div>
+          </GlassCard>
         </div>
       )}
 

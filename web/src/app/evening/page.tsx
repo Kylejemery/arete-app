@@ -2,11 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, getTodayCheckin, upsertTodayCheckin, getRoutineTemplates, addRoutineTemplate, deleteRoutineTemplate } from '@/lib/db';
+import {
+  getUserSettings,
+  getTodayCheckin,
+  upsertTodayCheckin,
+  getRoutineTemplates,
+  addRoutineTemplate,
+  deleteRoutineTemplate,
+} from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
-import PageHeader from '@/components/PageHeader';
+import GlassCard from '@/components/GlassCard';
+import ChapterRule from '@/components/ChapterRule';
 
 interface Task {
   id: string;
@@ -15,17 +23,28 @@ interface Task {
 }
 
 const DEFAULT_TASKS: Task[] = [
-  { id: 'default-1', title: 'Plan Tomorrow 📜', done: false },
-  { id: 'default-2', title: 'Reflect on Your Day 👁️', done: false },
+  { id: 'default-1', title: 'Plan Tomorrow',     done: false },
+  { id: 'default-2', title: 'Reflect on the Day', done: false },
 ];
 
 const DONE_STORAGE_KEY = 'arete_evening_done_ids';
+
+// Counselor prompts built from existing reflection/stoic data
+interface EveningPrompt {
+  counselor: 'reflection' | 'stoic';
+  counselorName: string;
+  initials: string;
+  question: string;
+  response: string;
+  save: (val: string) => void;
+}
 
 export default function EveningPage() {
   const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [usingDefaults, setUsingDefaults] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [showAddInput, setShowAddInput] = useState(false);
   const [reflectionAnswer, setReflectionAnswer] = useState('');
   const [stoicAnswer, setStoicAnswer] = useState('');
   const [checkInResponse, setCheckInResponse] = useState('');
@@ -34,7 +53,7 @@ export default function EveningPage() {
   const [loaded, setLoaded] = useState(false);
 
   const reflectionPrompt = getDailyItem(REFLECTION_PROMPTS);
-  const stoicPrompt = getDailyItem(STOIC_PROMPTS);
+  const stoicPrompt      = getDailyItem(STOIC_PROMPTS);
 
   useEffect(() => {
     async function load() {
@@ -48,7 +67,7 @@ export default function EveningPage() {
         getTodayCheckin(),
       ]);
 
-      // Task state: prefer Supabase row (cross-platform sync), fall back to templates/defaults
+      // Task state: prefer Supabase row, fall back to templates/defaults
       const dbTasks = checkin?.evening_tasks as Task[] | null;
       if (dbTasks && dbTasks.length > 0) {
         setTasks(dbTasks);
@@ -61,9 +80,10 @@ export default function EveningPage() {
         })));
         setUsingDefaults(false);
       } else {
-        const fallback = settings.evening_tasks?.length > 0
-          ? (settings.evening_tasks as Task[]).map(t => ({ ...t, done: false }))
-          : DEFAULT_TASKS;
+        const fallback =
+          settings.evening_tasks?.length > 0
+            ? (settings.evening_tasks as Task[]).map(t => ({ ...t, done: false }))
+            : DEFAULT_TASKS;
         setTasks(fallback);
         setUsingDefaults(true);
       }
@@ -76,7 +96,8 @@ export default function EveningPage() {
       }
 
       if (checkin?.evening_done) setCheckInDone(true);
-      if (checkin?.cabinet_evening_response) setCheckInResponse(checkin.cabinet_evening_response as string);
+      if (checkin?.cabinet_evening_response)
+        setCheckInResponse(checkin.cabinet_evening_response as string);
 
       setLoaded(true);
     }
@@ -100,6 +121,11 @@ export default function EveningPage() {
     if (typeof window !== 'undefined') localStorage.setItem('arete_stoic_answer', value);
   };
 
+  const saveResponse = (counselor: 'reflection' | 'stoic', value: string) => {
+    if (counselor === 'reflection') saveReflection(value);
+    else saveStoic(value);
+  };
+
   const toggleTask = async (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
     setTasks(updated);
@@ -110,15 +136,17 @@ export default function EveningPage() {
 
   const addTask = async () => {
     if (!newTaskTitle.trim()) return;
+    const title = newTaskTitle.trim();
     setNewTaskTitle('');
+    setShowAddInput(false);
 
     if (usingDefaults) {
-      const newTask: Task = { id: Date.now().toString(), title: newTaskTitle.trim(), done: false };
+      const newTask: Task = { id: Date.now().toString(), title, done: false };
       setTasks(prev => [...prev, newTask]);
       return;
     }
 
-    const template = await addRoutineTemplate('evening', newTaskTitle.trim(), undefined, tasks.length);
+    const template = await addRoutineTemplate('evening', title, undefined, tasks.length);
     if (template) {
       setTasks(prev => [...prev, { id: template.id, title: template.title, done: false }]);
     }
@@ -145,87 +173,330 @@ export default function EveningPage() {
     }
   };
 
+  const doneCount  = tasks.filter(t => t.done).length;
+  const totalCount = tasks.length;
+
+  const eveningPrompts: EveningPrompt[] = [
+    {
+      counselor: 'reflection',
+      counselorName: 'Marcus Aurelius',
+      initials: 'MA',
+      question: reflectionPrompt,
+      response: reflectionAnswer,
+      save: saveReflection,
+    },
+    {
+      counselor: 'stoic',
+      counselorName: 'Seneca',
+      initials: 'SN',
+      question: stoicPrompt,
+      response: stoicAnswer,
+      save: saveStoic,
+    },
+  ];
+
   if (!loaded) return null;
 
-  const inputClass = 'bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none w-full';
-
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      <PageHeader title="Evening Debrief" subtitle="Close the day with reflection" />
+    <div className="min-h-screen pb-8">
 
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-4">
-        <p className="text-arete-gold font-semibold text-sm mb-2">Evening Reflection</p>
-        <p className="text-arete-text text-sm mb-3 italic">{reflectionPrompt}</p>
-        <textarea
-          className={`${inputClass} resize-none`}
-          rows={4}
-          placeholder="Your answer..."
-          value={reflectionAnswer}
-          onChange={e => saveReflection(e.target.value)}
-        />
-      </div>
-
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-5 mb-6">
-        <p className="text-arete-gold font-semibold text-sm mb-2">Stoic Journal</p>
-        <p className="text-arete-text text-sm mb-3 italic">{stoicPrompt}</p>
-        <textarea
-          className={`${inputClass} resize-none`}
-          rows={4}
-          placeholder="Your answer..."
-          value={stoicAnswer}
-          onChange={e => saveStoic(e.target.value)}
-        />
-      </div>
-
-      <div className="bg-arete-surface rounded-lg border border-arete-border p-4 mb-6">
-        <h3 className="text-arete-gold font-semibold mb-3">Evening Tasks</h3>
-        <div className="space-y-2">
-          {tasks.map(task => (
-            <div key={task.id} className="flex items-center gap-3 group min-h-[44px]">
-              <button
-                onClick={() => toggleTask(task.id)}
-                className={`w-7 h-7 md:w-6 md:h-6 rounded border flex items-center justify-center flex-shrink-0 transition-colors ${task.done ? 'bg-arete-gold border-arete-gold' : 'border-arete-border hover:border-arete-gold'}`}
-              >
-                {task.done && <span className="text-arete-bg text-xs font-bold">✓</span>}
-              </button>
-              <span className={`flex-1 text-sm ${task.done ? 'line-through text-arete-muted' : 'text-arete-text'}`}>{task.title}</span>
-              <button onClick={() => removeTask(task.id)} className="text-arete-muted hover:text-red-400 text-sm opacity-40 md:opacity-0 md:group-hover:opacity-100 transition-opacity">✕</button>
-            </div>
-          ))}
-        </div>
-        <div className="flex gap-2 mt-4">
-          <input
-            className="bg-arete-bg border border-arete-border rounded-lg px-3 py-2 text-arete-text focus:border-arete-gold focus:outline-none flex-1 text-sm"
-            placeholder="Add a task..."
-            value={newTaskTitle}
-            onChange={e => setNewTaskTitle(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addTask()}
-          />
-          <button onClick={addTask} className="bg-arete-gold text-arete-bg font-semibold rounded-lg px-3 py-2 hover:opacity-90 text-sm">+</button>
-        </div>
-      </div>
-
-      {checkInDone ? (
-        <div className="bg-arete-surface rounded-lg border border-arete-gold p-4 mb-6">
-          <p className="text-arete-gold font-semibold mb-1">✓ Evening Check-in Complete</p>
-          <p className="text-arete-muted text-sm">Well done. Come back tomorrow.</p>
-        </div>
-      ) : (
-        <button
-          onClick={handleCheckIn}
-          disabled={isLoading}
-          className="w-full bg-arete-gold text-arete-bg font-semibold rounded-lg px-4 py-3 hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed transition-opacity mb-6"
+      {/* ── Header ────────────────────────────────────────────────── */}
+      <div
+        className="px-5 pt-3 pb-5"
+        style={{ background: 'linear-gradient(180deg, #0a0a1e 0%, #07050f 100%)' }}
+      >
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
         >
-          {isLoading ? 'Your Cabinet is speaking...' : 'Send Evening Check-in to Cabinet 🌙'}
-        </button>
-      )}
-
-      {checkInResponse && (
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-gold font-semibold text-sm mb-3">Your Cabinet speaks:</p>
-          <p className="text-arete-text text-sm leading-relaxed whitespace-pre-wrap">{checkInResponse}</p>
+          Chapter II · Vesper
         </div>
-      )}
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          The day,<br />
+          <em style={{ color: '#c9a84c' }}>examined.</em>
+        </h1>
+        <p
+          className="italic text-[13px] mt-3 opacity-70 leading-snug"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+        >
+          &ldquo;Let us prepare our minds as if we had come to the very end of life.&rdquo;
+          <span
+            className="not-italic block mt-1 text-[9px] tracking-[1.3px] uppercase"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.6)', fontStyle: 'normal' }}
+          >
+            Seneca
+          </span>
+        </p>
+      </div>
+
+      {/* ── Day Glance Card ───────────────────────────────────────── */}
+      <div className="px-4 pt-4 pb-2">
+        <GlassCard>
+          <div className="px-4 py-3.5 flex justify-between items-center">
+            <div>
+              <div
+                className="text-[9.5px] tracking-[1.5px] uppercase"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                The Day
+              </div>
+              <div
+                className="text-[18px] font-medium mt-0.5"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+              >
+                {doneCount} of {totalCount} disciplines
+              </div>
+            </div>
+            <div className="flex gap-1.5 flex-wrap justify-end max-w-[140px]">
+              {tasks.map((task, i) => (
+                <div
+                  key={i}
+                  className="w-7 h-7 rounded-md flex items-center justify-center border text-xs cursor-pointer"
+                  style={{
+                    background: task.done ? 'rgba(201,168,76,0.2)' : 'transparent',
+                    borderColor: task.done ? '#c9a84c' : 'rgba(201,168,76,0.2)',
+                    color: '#c9a84c',
+                  }}
+                  onClick={() => toggleTask(task.id)}
+                >
+                  {task.done && '✓'}
+                </div>
+              ))}
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+
+      {/* ── Add / Remove Tasks ────────────────────────────────────── */}
+      <div className="px-4 pb-2">
+        {tasks.length > 0 && (
+          <div className="flex flex-col gap-1 mb-2">
+            {tasks.map(task => (
+              <div
+                key={task.id}
+                className="flex items-center justify-between px-3 py-2 group"
+              >
+                <span
+                  className="text-[13px]"
+                  style={{
+                    fontFamily: 'var(--font-serif, Georgia, serif)',
+                    color: task.done ? '#9aa0a6' : '#e6eef8',
+                    textDecoration: task.done ? 'line-through' : 'none',
+                    textDecorationColor: '#8a6f27',
+                  }}
+                >
+                  {task.title}
+                </span>
+                <button
+                  onClick={() => removeTask(task.id)}
+                  className="text-arete-muted hover:text-red-400 text-xs opacity-40 md:opacity-0 md:group-hover:opacity-60 transition-opacity"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        {showAddInput ? (
+          <div className="flex gap-2">
+            <input
+              autoFocus
+              className="flex-1 px-3 py-2.5 rounded-xl text-[14px] outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(201,168,76,0.25)',
+                color: '#e6eef8',
+                fontFamily: 'var(--font-serif, Georgia, serif)',
+              }}
+              placeholder="Add a discipline…"
+              value={newTaskTitle}
+              onChange={e => setNewTaskTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setShowAddInput(false); setNewTaskTitle(''); } }}
+            />
+            <button
+              onClick={addTask}
+              className="px-3 py-2.5 rounded-xl font-bold text-[#0f1724]"
+              style={{ background: '#c9a84c' }}
+            >
+              +
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowAddInput(true)}
+            className="w-full px-4 py-2.5 rounded-xl border border-dashed flex items-center gap-2 transition-opacity hover:opacity-80"
+            style={{
+              borderColor: 'rgba(255,255,255,0.08)',
+              color: '#9aa0a6',
+              fontFamily: 'var(--font-mono, monospace)',
+              fontSize: 11,
+              letterSpacing: '0.1em',
+            }}
+          >
+            <span>+</span> Add discipline
+          </button>
+        )}
+      </div>
+
+      <ChapterRule label="Reflection" className="mx-4" />
+
+      {/* ── Evening Reflection Prompts ────────────────────────────── */}
+      <div className="px-4 flex flex-col gap-3 pb-2">
+        {eveningPrompts.map(prompt => (
+          <div
+            key={prompt.counselor}
+            className="rounded-2xl border p-4"
+            style={{
+              background: 'rgba(20,27,52,0.5)',
+              borderColor: 'rgba(255,255,255,0.07)',
+            }}
+          >
+            {/* Counselor header */}
+            <div className="flex gap-2.5 items-center mb-3">
+              <div
+                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.3)',
+                  fontFamily: 'var(--font-mono, monospace)',
+                  fontSize: 8,
+                  fontWeight: 600,
+                  color: '#c9a84c',
+                }}
+              >
+                {prompt.initials}
+              </div>
+              <div
+                className="text-[9.5px] tracking-[1.5px] uppercase"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                {prompt.counselorName} asks
+              </div>
+            </div>
+
+            {/* Question */}
+            <div
+              className="italic text-[18px] leading-snug tracking-tight mb-3"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+            >
+              &ldquo;{prompt.question}&rdquo;
+            </div>
+
+            {/* Response area */}
+            {checkInDone && prompt.response ? (
+              <div
+                className="px-3 py-2.5 rounded-lg"
+                style={{
+                  background: 'rgba(201,168,76,0.06)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <p
+                  className="italic text-[14px] leading-relaxed"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
+                  &ldquo;{prompt.response}&rdquo;
+                </p>
+              </div>
+            ) : (
+              <textarea
+                className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none resize-none min-h-[64px]"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid rgba(201,168,76,0.08)',
+                  fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+                  color: '#e6eef8',
+                }}
+                placeholder="Begin to write…"
+                value={prompt.response}
+                onChange={e => saveResponse(prompt.counselor, e.target.value)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+
+      <ChapterRule className="mx-4 mt-2" />
+
+      {/* ── Seal the Day CTA ──────────────────────────────────────── */}
+      <div className="px-4 pb-4">
+        {checkInDone ? (
+          <>
+            <GlassCard>
+              <div className="p-4 flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'rgba(201,168,76,0.2)', border: '1px solid #c9a84c' }}
+                >
+                  <span style={{ color: '#c9a84c' }}>✓</span>
+                </div>
+                <div>
+                  <div
+                    className="text-[10px] tracking-[1.6px] uppercase"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                  >
+                    Evening Complete
+                  </div>
+                  <div
+                    className="text-[14px] mt-0.5"
+                    style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                  >
+                    Well done. Come back tomorrow.
+                  </div>
+                </div>
+              </div>
+            </GlassCard>
+
+            {checkInResponse && (
+              <div className="mt-3">
+                <GlassCard>
+                  <div className="p-4">
+                    <div
+                      className="text-[10px] tracking-[1.6px] uppercase mb-3"
+                      style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                    >
+                      Your Cabinet speaks
+                    </div>
+                    <p
+                      className="text-[14px] leading-relaxed whitespace-pre-wrap"
+                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                    >
+                      {checkInResponse}
+                    </p>
+                  </div>
+                </GlassCard>
+              </div>
+            )}
+          </>
+        ) : (
+          <button
+            onClick={handleCheckIn}
+            disabled={isLoading}
+            className="w-full rounded-2xl px-4 py-4 flex justify-between items-center disabled:opacity-60 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)' }}
+          >
+            <div>
+              <div
+                className="text-[9.5px] tracking-[1.6px] font-bold"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#0f1724' }}
+              >
+                {isLoading ? 'SPEAKING…' : 'SEAL THE DAY'}
+              </div>
+              <div
+                className="text-[18px] font-semibold mt-0.5"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#0f1724' }}
+              >
+                {isLoading ? 'Your Cabinet speaks…' : 'Close with the Cabinet'}
+              </div>
+            </div>
+            <span className="text-xl font-bold" style={{ color: '#0f1724' }}>→</span>
+          </button>
+        )}
+      </div>
+
     </div>
   );
 }
