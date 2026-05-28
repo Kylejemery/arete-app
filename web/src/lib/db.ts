@@ -842,3 +842,79 @@ export async function getScrolls(userId: string): Promise<Scroll[]> {
     scroll_reads: undefined,
   }))
 }
+
+// ----------------------------------------------------------------
+// ONBOARDING / KNOW THYSELF
+// ----------------------------------------------------------------
+
+/** Returns true if the user has completed the Future Self onboarding. */
+export async function getKnowThyselfComplete(): Promise<boolean> {
+  const userId = await getUserId()
+  if (!userId) return false
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('know_thyself_complete')
+      .eq('id', userId)
+      .single()
+    if (error) return false
+    return data?.know_thyself_complete ?? false
+  } catch {
+    return false
+  }
+}
+
+export interface OnboardingProfile {
+  identity?: string
+  goals?: string
+  obstacle?: string
+  virtues?: string
+  challenge_style?: string
+  work_meaning?: string
+  future_vision?: string
+  future_years?: number
+}
+
+/**
+ * Saves extracted onboarding profile fields to user_settings and marks
+ * know_thyself_complete = true on profiles.
+ */
+export async function saveOnboardingProfile(profile: OnboardingProfile): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
+
+  // Map extract_profile fields → existing user_settings columns
+  const settingsUpdate: Record<string, unknown> = {}
+  if (profile.identity)       settingsUpdate.kt_identity = profile.identity
+  if (profile.goals)          settingsUpdate.kt_goals = profile.goals
+  if (profile.obstacle)       settingsUpdate.kt_weaknesses = profile.obstacle
+  if (profile.virtues)        settingsUpdate.kt_strengths = profile.virtues
+  if (profile.challenge_style) settingsUpdate.feedback_preference = profile.challenge_style
+  if (profile.work_meaning)   settingsUpdate.kt_background = profile.work_meaning
+  if (profile.future_vision)  settingsUpdate.future_self_description = profile.future_vision
+  if (profile.future_years)   settingsUpdate.future_self_years = profile.future_years
+
+  // Write to user_settings
+  try {
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert(
+        { ...settingsUpdate, user_id: userId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    if (error) console.error('saveOnboardingProfile user_settings error:', error)
+  } catch (e) {
+    console.error('saveOnboardingProfile user_settings exception:', e)
+  }
+
+  // Mark complete on profiles
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ know_thyself_complete: true, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+    if (error) console.error('saveOnboardingProfile profiles error:', error)
+  } catch (e) {
+    console.error('saveOnboardingProfile profiles exception:', e)
+  }
+}

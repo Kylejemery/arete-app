@@ -11,6 +11,7 @@ import {
   incrementProfileStreak,
   getDailyQuestionCache,
   upsertTodayCheckin,
+  getKnowThyselfComplete,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES, getDailyPrompt } from '@/lib/quotes';
@@ -75,6 +76,7 @@ export default function HomePage() {
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  const [showOnboardingBanner, setShowOnboardingBanner] = useState(false);
   const [streak, setStreak] = useState(0);
   const [dailyQuestion, setDailyQuestion] = useState<{ counselorSlug: string; response: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -86,12 +88,13 @@ export default function HomePage() {
         router.replace('/login?redirectTo=/');
         return;
       }
-      const [settings, morningDoneToday, eveningDoneToday, streakVal, dqCache] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, streakVal, dqCache, ktComplete] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
         getProfileStreak(),
         getDailyQuestionCache(),
+        getKnowThyselfComplete(),
       ]);
       if (!settings?.user_name) {
         router.replace('/setup');
@@ -101,6 +104,12 @@ export default function HomePage() {
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
+
+      // Show onboarding banner if not complete and not dismissed this session
+      if (!ktComplete && typeof window !== 'undefined') {
+        const dismissed = sessionStorage.getItem('arete_onboarding_banner_dismissed');
+        if (!dismissed) setShowOnboardingBanner(true);
+      }
 
       // ── Streak increment (once per calendar day) ──────────────────
       // Guard with localStorage so we only check/increment once even if
@@ -226,6 +235,68 @@ export default function HomePage() {
         className="h-px mx-5 mt-4"
         style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }}
       />
+
+      {/* ── Future Self Onboarding Banner ────────────────────────── */}
+      {showOnboardingBanner && (
+        <div className="px-4 pt-4">
+          <div
+            className="rounded-xl p-4 flex items-center gap-3"
+            style={{
+              background: 'linear-gradient(135deg, rgba(201,168,76,0.12), rgba(201,168,76,0.06))',
+              border: '1px solid rgba(201,168,76,0.35)',
+            }}
+          >
+            {/* Icon */}
+            <div
+              className="rounded-full flex-shrink-0 flex items-center justify-center text-lg"
+              style={{ width: 44, height: 44, background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }}
+            >
+              ✦
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div
+                className="text-[9.5px] tracking-[1.6px] uppercase"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                Personalise Your App
+              </div>
+              <div
+                className="text-[15px] leading-snug mt-0.5"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+              >
+                Meet Your Future Self
+              </div>
+            </div>
+
+            {/* Begin CTA */}
+            <Link
+              href="/onboarding"
+              className="flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] tracking-[1.2px] uppercase font-semibold"
+              style={{
+                background: 'linear-gradient(135deg, #e3c77a, #8a6f27)',
+                color: '#0f1724',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              Begin
+            </Link>
+
+            {/* Dismiss */}
+            <button
+              onClick={() => {
+                sessionStorage.setItem('arete_onboarding_banner_dismissed', '1');
+                setShowOnboardingBanner(false);
+              }}
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-xs"
+              style={{ color: '#9aa0a6', background: 'rgba(255,255,255,0.05)' }}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Streak Row ────────────────────────────────────────────── */}
       <div className="px-5 py-5 flex gap-4 items-center">

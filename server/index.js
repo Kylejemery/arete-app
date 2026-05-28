@@ -454,6 +454,123 @@ app.post('/api/onboard', async (req, res) => {
   }
 });
 
+// ─── Future Self Onboarding (web) ─────────────────────────────────────────────
+
+app.post('/api/onboard-web', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+
+  const { messages, futureYears } = req.body;
+
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'Missing required field: messages (array)' });
+  }
+
+  const yearsDisplay = futureYears ? `${futureYears} years` : 'several years';
+
+  const systemPrompt = `You are speaking as this person's Future Self — the version of them speaking from ${yearsDisplay} in the future. You have already become who they are trying to become. You remember what it was like to be where they are now.
+
+Your job is to warmly and philosophically draw out a rich picture of who they are today — their identity, values, goals, struggles, daily life, and vision — so that you can give them deeply personalized guidance throughout the app.
+
+Tone: warm, direct, occasionally challenging, never clinical. You are not a therapist. You are them, at their best, reaching back.
+
+Begin by establishing how many years in the future you are speaking from (if not already established). Then move through these 12 areas naturally over the course of the conversation — do not list them as a checklist, but weave them organically:
+
+1. Identity — Who are they at their core? How do they describe themselves?
+2. Goals — What are they working toward right now? What does success look like?
+3. Obstacle — What is the primary thing blocking them?
+4. Good day — What does an ideal day look like for them?
+5. Virtues — What do they consider their strongest qualities?
+6. Challenge style — Do they want to be pushed hard, treated with compassion, or both?
+7. Daily practice — What disciplines or practices are they working on?
+8. Reading — What are they reading or want to read?
+9. Physical practice — How do they relate to their body?
+10. Work / meaning — What do they do and why does it (or doesn't it) feel meaningful?
+11. Dependents — Who relies on them? (family, employees, community)
+12. Future vision — In their own words, who do they want to become?
+
+When you have gathered enough on at least 9 of these 12 areas and the conversation completeness feels above 0.85, call the extract_profile tool to capture the profile. Do not announce that you are doing this — just call it naturally when you feel ready.
+
+Keep each response to 2-4 sentences. Ask one focused question at a time. Do not rush.`;
+
+  const tools = [
+    {
+      name: 'extract_profile',
+      description: 'Called when enough information has been gathered to build a complete profile. Completeness score should be > 0.85 before calling.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          identity: { type: 'string', description: 'Who they are at their core' },
+          goals: { type: 'string', description: 'What they are working toward' },
+          obstacle: { type: 'string', description: 'Primary thing blocking them' },
+          good_day: { type: 'string', description: 'What an ideal day looks like' },
+          virtues: { type: 'string', description: 'Their strongest qualities' },
+          challenge_style: { type: 'string', enum: ['firm', 'compassionate', 'both'], description: 'How they want to be challenged' },
+          daily_practice: { type: 'string', description: 'Disciplines or practices they work on' },
+          reading: { type: 'string', description: 'What they read or want to read' },
+          physical_practice: { type: 'string', description: 'How they relate to their body' },
+          work_meaning: { type: 'string', description: 'What they do and why it matters' },
+          dependents: { type: 'string', description: 'Who relies on them' },
+          future_vision: { type: 'string', description: 'Who they want to become in their own words' },
+          future_years: { type: 'number', description: 'How many years in the future the conversation is set' },
+          completeness_score: { type: 'number', description: 'Estimated completeness from 0.0 to 1.0' },
+        },
+        required: ['identity', 'goals', 'future_years', 'completeness_score'],
+      },
+    },
+  ];
+
+  try {
+    console.log(`[/api/onboard-web] messages: ${messages.length} | model: claude-sonnet-4-6`);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
+        tools,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (onboard-web):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+
+    // Check if Claude called the extract_profile tool
+    if (data.stop_reason === 'tool_use') {
+      const toolUse = data.content.find(b => b.type === 'tool_use' && b.name === 'extract_profile');
+      if (toolUse) {
+        return res.json({
+          complete: true,
+          profile: toolUse.input,
+          futureYears: toolUse.input.future_years,
+        });
+      }
+    }
+
+    // Return the text response
+    const textBlock = data.content.find(b => b.type === 'text');
+    return res.json({
+      complete: false,
+      message: textBlock ? textBlock.text : '',
+    });
+  } catch (error) {
+    console.error('Failed to reach Claude API (onboard-web):', error);
+    return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
 // ─── Scroll generation ────────────────────────────────────────────────────────
 
 function assignCounselor(goalText) {
