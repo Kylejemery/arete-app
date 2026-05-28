@@ -7,6 +7,8 @@ import {
   getUserSettings,
   hasCheckInToday,
   getProfileStreak,
+  getYesterdayCheckin,
+  incrementProfileStreak,
   getDailyQuestionCache,
   upsertTodayCheckin,
 } from '@/lib/db';
@@ -99,7 +101,35 @@ export default function HomePage() {
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
-      setStreak(streakVal);
+
+      // ── Streak increment (once per calendar day) ──────────────────
+      // Guard with localStorage so we only check/increment once even if
+      // the user navigates to home multiple times on the same day.
+      // Order: read yesterday FIRST, then clear for new day — so we never
+      // evaluate against an already-reset row.
+      {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const checked = typeof window !== 'undefined'
+          ? localStorage.getItem('arete_streak_check_date')
+          : null;
+        if (checked !== todayStr) {
+          const yCheckin = await getYesterdayCheckin();
+          const yTasks = (yCheckin?.morning_tasks as Array<{ done: boolean }> | null) ?? [];
+          // Threshold: at least 1 morning discipline completed yesterday.
+          const earnedStreak = yTasks.some(t => t.done) || Boolean(yCheckin?.morning_done);
+          if (earnedStreak) {
+            const incremented = await incrementProfileStreak();
+            setStreak(incremented);
+          } else {
+            setStreak(streakVal);
+          }
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('arete_streak_check_date', todayStr);
+          }
+        } else {
+          setStreak(streakVal);
+        }
+      }
 
       // Save today's counselor slug so mobile can verify cache validity
       if (!dqCache) {

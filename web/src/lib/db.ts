@@ -26,8 +26,25 @@ async function getUserId(): Promise<string | null> {
   }
 }
 
+// Returns YYYY-MM-DD in the user's LOCAL timezone (not UTC).
+// Using toISOString() was wrong: at 10 pm US Eastern, UTC is already
+// the next calendar day, so tasks got written to tomorrow's row and
+// would still appear "done" the following morning.
+function localDateStr(d: Date = new Date()): string {
+  const year  = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day   = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function today(): string {
-  return new Date().toISOString().split('T')[0]
+  return localDateStr()
+}
+
+function yesterday(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return localDateStr(d)
 }
 
 // ----------------------------------------------------------------
@@ -642,6 +659,57 @@ export async function getProfileStreak(): Promise<number> {
     if (error) return 0
     return data?.streak ?? 0
   } catch {
+    return 0
+  }
+}
+
+/** Fetch the check-in row for yesterday (local date). */
+export async function getYesterdayCheckin(): Promise<Record<string, unknown> | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('check_in_date', yesterday())
+      .maybeSingle()
+    if (error) {
+      console.error('getYesterdayCheckin error:', error)
+      return null
+    }
+    return data ?? null
+  } catch (e) {
+    console.error('getYesterdayCheckin exception:', e)
+    return null
+  }
+}
+
+/**
+ * Increment profiles.streak by 1 and return the new value.
+ * Reads current value first so callers don't have to pass it in.
+ */
+export async function incrementProfileStreak(): Promise<number> {
+  const userId = await getUserId()
+  if (!userId) return 0
+  try {
+    const { data: cur } = await supabase
+      .from('profiles')
+      .select('streak')
+      .eq('id', userId)
+      .single()
+    const newStreak = (cur?.streak ?? 0) + 1
+    const { error } = await supabase
+      .from('profiles')
+      .update({ streak: newStreak })
+      .eq('id', userId)
+    if (error) {
+      console.error('incrementProfileStreak error:', error)
+      return cur?.streak ?? 0
+    }
+    return newStreak
+  } catch (e) {
+    console.error('incrementProfileStreak exception:', e)
     return 0
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   getUserSettings,
@@ -40,6 +40,10 @@ export default function MorningPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [checkInDone, setCheckInDone] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // Used by the visibility-change effect to detect a date change while
+  // the tab is in the background.
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const loadedDateRef = useRef('');
 
   useEffect(() => {
     async function load() {
@@ -83,10 +87,30 @@ export default function MorningPage() {
         if (saved) setIntention(saved);
       }
 
+      // Record the calendar date this data was loaded for, so the
+      // visibility-change effect can detect when the day has rolled over.
+      loadedDateRef.current = new Date().toLocaleDateString('en-CA');
       setLoaded(true);
     }
     load();
-  }, [router]);
+  // refreshTrigger is intentionally included: incrementing it forces a
+  // re-fetch when the visibility-change effect detects a new calendar day.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, refreshTrigger]);
+
+  // Re-fetch when the user returns to this tab on a new calendar day
+  // (handles the case where the app was left open overnight).
+  useEffect(() => {
+    function handleVisibility() {
+      if (document.visibilityState !== 'visible') return;
+      const today = new Date().toLocaleDateString('en-CA');
+      if (loadedDateRef.current && today !== loadedDateRef.current) {
+        setRefreshTrigger(n => n + 1);
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, []);
 
   const persistDone = (updatedTasks: Task[]) => {
     if (typeof window !== 'undefined') {
