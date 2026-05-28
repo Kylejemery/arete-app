@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeService';
@@ -174,8 +175,9 @@ export default function CabinetPage() {
           Speak to the <em style={{ color: '#c9a84c' }}>Cabinet</em>
         </h1>
 
-        {/* Overlapping counselor circles */}
-        <div className="flex items-center mb-4">
+        {/* Overlapping counselor circles + Edit button */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center">
           {activeCounselors.slice(0, 5).map((c, i) => (
             <div
               key={c.id}
@@ -216,6 +218,20 @@ export default function CabinetPage() {
           >
             {activeCounselors.length} counselor{activeCounselors.length !== 1 ? 's' : ''} assembled
           </span>
+          </div>
+
+          <Link
+            href="/cabinet/select"
+            className="flex-shrink-0 px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              color: '#c9a84c',
+              border: '1px solid rgba(201,168,76,0.4)',
+              background: 'rgba(201,168,76,0.06)',
+            }}
+          >
+            Edit Cabinet
+          </Link>
         </div>
 
         {/* Tab switcher */}
