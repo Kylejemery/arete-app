@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getUserSettings, getScrolls } from '@/lib/db';
+import { getUserSettings, getScrolls, getKnowThyselfComplete } from '@/lib/db';
 import type { Scroll } from '@/lib/types';
 import ChapterRule from '@/components/ChapterRule';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
 const COUNSELOR_LABELS: Record<string, string> = {
   marcus: 'Marcus Aurelius',
@@ -22,6 +24,12 @@ export default function ScrollsPage() {
   const [scrolls, setScrolls] = useState<Scroll[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ktComplete, setKtComplete] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [userGoal, setUserGoal] = useState('');
+  const [storedUserName, setStoredUserName] = useState('');
+  const [storedUserId, setStoredUserId] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -29,12 +37,61 @@ export default function ScrollsPage() {
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
-      const data = await getScrolls(user.id);
+      const [data, ktDone] = await Promise.all([
+        getScrolls(user.id),
+        getKnowThyselfComplete(),
+      ]);
       setScrolls(data);
+      setKtComplete(ktDone);
+      setUserGoal(settings.kt_goals || '');
+      setStoredUserName(settings.user_name || '');
+      setStoredUserId(user.id);
       setLoading(false);
     }
     load();
   }, [router]);
+
+  async function requestScroll() {
+    setRequesting(true);
+    setRequestError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${API_BASE_URL}/api/scrolls/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          goal: userGoal || 'personal growth and virtue',
+          userName: storedUserName,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({})) as { error?: string };
+        throw new Error(err.error || `Request failed (${res.status})`);
+      }
+      const { title, body, counselor } = await res.json() as { title: string; body: string; counselor: string };
+      const { error: insertError } = await supabase
+        .from('scrolls')
+        .insert({
+          user_id: storedUserId,
+          title,
+          body,
+          counselor,
+          goal_source: userGoal || null,
+        });
+      if (insertError) throw new Error(insertError.message);
+      // Refresh list and auto-expand the newest scroll
+      const updated = await getScrolls(storedUserId);
+      setScrolls(updated);
+      if (updated.length > 0) setExpandedId(updated[0].id);
+    } catch (e) {
+      setRequestError(e instanceof Error ? e.message : 'Something went wrong.');
+    } finally {
+      setRequesting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -82,15 +139,71 @@ export default function ScrollsPage() {
             >
               No scrolls yet.
             </p>
-            <p
-              className="text-[11px] tracking-[1px] uppercase mt-1"
-              style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
-            >
-              Complete Know Thyself to receive your first scroll.
-            </p>
+            {ktComplete ? (
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <button
+                  onClick={requestScroll}
+                  disabled={requesting}
+                  className="px-6 py-2.5 rounded-lg text-[13px] tracking-[1px] uppercase font-medium transition-opacity"
+                  style={{
+                    fontFamily: 'var(--font-mono, monospace)',
+                    background: 'rgba(201,168,76,0.15)',
+                    border: '1px solid rgba(201,168,76,0.5)',
+                    color: '#c9a84c',
+                    opacity: requesting ? 0.6 : 1,
+                    cursor: requesting ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {requesting ? 'Generating…' : 'Request a Scroll'}
+                </button>
+                {requestError && (
+                  <p
+                    className="text-[11px] mt-1"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
+                  >
+                    {requestError}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p
+                className="text-[11px] tracking-[1px] uppercase mt-1"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+              >
+                Complete Know Thyself to receive your first scroll.
+              </p>
+            )}
           </div>
         ) : (
           <div className="flex flex-col gap-3 max-w-2xl">
+
+            {/* ── Request button (above list) ────────────────────── */}
+            <div className="flex items-center gap-3 mb-1">
+              <button
+                onClick={requestScroll}
+                disabled={requesting}
+                className="px-4 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
+                style={{
+                  fontFamily: 'var(--font-mono, monospace)',
+                  background: 'rgba(201,168,76,0.12)',
+                  border: '1px solid rgba(201,168,76,0.4)',
+                  color: '#c9a84c',
+                  opacity: requesting ? 0.6 : 1,
+                  cursor: requesting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {requesting ? 'Generating…' : '+ Request a Scroll'}
+              </button>
+              {requestError && (
+                <p
+                  className="text-[11px]"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
+                >
+                  {requestError}
+                </p>
+              )}
+            </div>
+
             {scrolls.map(scroll => {
               const isExpanded = expandedId === scroll.id;
               return (
