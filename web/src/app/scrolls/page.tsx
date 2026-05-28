@@ -19,6 +19,64 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+interface RequestFormProps {
+  scrollRequest: string;
+  setScrollRequest: (v: string) => void;
+  requesting: boolean;
+  requestError: string | null;
+  onRequest: () => void;
+  centered?: boolean;
+}
+
+function RequestForm({ scrollRequest, setScrollRequest, requesting, requestError, onRequest, centered }: RequestFormProps) {
+  return (
+    <div className={`flex flex-col gap-2${centered ? ' items-center w-full max-w-sm' : ''}`}>
+      <textarea
+        value={scrollRequest}
+        onChange={e => setScrollRequest(e.target.value)}
+        placeholder="What are you struggling with, or working toward?"
+        rows={3}
+        disabled={requesting}
+        className="w-full rounded-lg px-3 py-2.5 text-[14px] leading-relaxed resize-none outline-none transition-colors"
+        style={{
+          fontFamily: 'var(--font-serif, Georgia, serif)',
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(201,168,76,0.25)',
+          color: '#e6eef8',
+          caretColor: '#c9a84c',
+        }}
+        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'; }}
+        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
+      />
+      <div className={`flex items-center gap-3${centered ? ' justify-center' : ''}`}>
+        <button
+          onClick={onRequest}
+          disabled={requesting}
+          className="px-5 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
+          style={{
+            fontFamily: 'var(--font-mono, monospace)',
+            background: 'rgba(201,168,76,0.15)',
+            border: '1px solid rgba(201,168,76,0.5)',
+            color: '#c9a84c',
+            opacity: requesting ? 0.6 : 1,
+            cursor: requesting ? 'not-allowed' : 'pointer',
+          }}
+        >
+          {requesting ? 'Generating…' : 'Request a Scroll'}
+        </button>
+        {requestError && (
+          <p
+            className="text-[11px]"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
+          >
+            {requestError}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ScrollsPage() {
   const router = useRouter();
   const [scrolls, setScrolls] = useState<Scroll[]>([]);
@@ -87,56 +145,6 @@ export default function ScrollsPage() {
     }
   }
 
-  // Shared request form — textarea + button + error
-  function RequestForm({ centered }: { centered?: boolean }) {
-    return (
-      <div className={`flex flex-col gap-2${centered ? ' items-center w-full max-w-sm' : ''}`}>
-        <textarea
-          value={scrollRequest}
-          onChange={e => setScrollRequest(e.target.value)}
-          placeholder="What are you struggling with, or working toward?"
-          rows={3}
-          disabled={requesting}
-          className="w-full rounded-lg px-3 py-2.5 text-[14px] leading-relaxed resize-none outline-none transition-colors"
-          style={{
-            fontFamily: 'var(--font-serif, Georgia, serif)',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(201,168,76,0.25)',
-            color: '#e6eef8',
-            caretColor: '#c9a84c',
-          }}
-          onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'; }}
-          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
-        />
-        <div className={`flex items-center gap-3${centered ? ' justify-center' : ''}`}>
-          <button
-            onClick={requestScroll}
-            disabled={requesting}
-            className="px-5 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
-            style={{
-              fontFamily: 'var(--font-mono, monospace)',
-              background: 'rgba(201,168,76,0.15)',
-              border: '1px solid rgba(201,168,76,0.5)',
-              color: '#c9a84c',
-              opacity: requesting ? 0.6 : 1,
-              cursor: requesting ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {requesting ? 'Generating…' : 'Request a Scroll'}
-          </button>
-          {requestError && (
-            <p
-              className="text-[11px]"
-              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
-            >
-              {requestError}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -184,7 +192,14 @@ export default function ScrollsPage() {
               No scrolls yet.
             </p>
             {ktComplete ? (
-              <RequestForm centered />
+              <RequestForm
+                scrollRequest={scrollRequest}
+                setScrollRequest={setScrollRequest}
+                requesting={requesting}
+                requestError={requestError}
+                onRequest={requestScroll}
+                centered
+              />
             ) : (
               <p
                 className="text-[11px] tracking-[1px] uppercase"
@@ -211,7 +226,13 @@ export default function ScrollsPage() {
               >
                 New Scroll
               </p>
-              <RequestForm />
+              <RequestForm
+                scrollRequest={scrollRequest}
+                setScrollRequest={setScrollRequest}
+                requesting={requesting}
+                requestError={requestError}
+                onRequest={requestScroll}
+              />
             </div>
 
             {scrolls.map(scroll => {
