@@ -175,6 +175,7 @@ export default function EveningPage() {
 
   const doneCount  = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
+  const pct = totalCount > 0 ? doneCount / totalCount : 0;
 
   const eveningPrompts: EveningPrompt[] = [
     {
@@ -232,93 +233,112 @@ export default function EveningPage() {
         </p>
       </div>
 
-      {/* ── Day Glance Card ───────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-2">
-        <GlassCard>
-          <div className="px-4 py-3.5 flex justify-between items-center">
-            <div>
-              <div
-                className="text-[9.5px] tracking-[1.5px] uppercase"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-              >
-                The Day
-              </div>
-              <div
-                className="text-[18px] font-medium mt-0.5"
-                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-              >
-                {doneCount} of {totalCount} disciplines
-              </div>
-            </div>
-            <div className="flex gap-1.5 flex-wrap justify-end max-w-[140px]">
-              {tasks.map((task, i) => (
-                <div
-                  key={i}
-                  className="w-7 h-7 rounded-md flex items-center justify-center border text-xs cursor-pointer"
-                  style={{
-                    background: task.done ? 'rgba(201,168,76,0.2)' : 'transparent',
-                    borderColor: task.done ? '#c9a84c' : 'rgba(201,168,76,0.2)',
-                    color: '#c9a84c',
-                  }}
-                  onClick={() => toggleTask(task.id)}
-                >
-                  {task.done && '✓'}
-                </div>
-              ))}
-            </div>
-          </div>
-        </GlassCard>
+      {/* ── Progress Strip ────────────────────────────────────────── */}
+      <div className="px-5 pb-3">
+        <div className="flex justify-between items-baseline mb-2">
+          <span
+            className="text-[10.5px] tracking-[1.5px] uppercase"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+          >
+            Progress · {doneCount} of {totalCount}
+          </span>
+          <span
+            className="italic text-[22px] font-medium"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#c9a84c' }}
+          >
+            {Math.round(pct * 100)}
+            <span className="text-[13px] opacity-70">%</span>
+          </span>
+        </div>
+        <div className="flex gap-1">
+          {tasks.map(task => (
+            <div
+              key={task.id}
+              className="flex-1 h-[3px] rounded-sm transition-all duration-300"
+              style={{
+                background: task.done ? '#c9a84c' : 'rgba(201,168,76,0.12)',
+                boxShadow: task.done ? '0 0 8px rgba(201,168,76,0.5)' : 'none',
+              }}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* ── Add / Remove Tasks ────────────────────────────────────── */}
-      <div className="px-4 pb-2">
-        {tasks.length > 0 && (
-          <div className="flex flex-col gap-1 mb-2">
-            {tasks.map(task => (
+      <ChapterRule />
+
+      {/* ── Task List ─────────────────────────────────────────────── */}
+      <div className="px-4 flex flex-col gap-2 pb-2">
+        {tasks.map(task => (
+          <div
+            key={task.id}
+            className="flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all duration-200 cursor-pointer group"
+            style={{
+              background: task.done ? 'rgba(201,168,76,0.04)' : 'rgba(20,27,52,0.5)',
+              borderColor: task.done ? 'rgba(201,168,76,0.2)' : 'rgba(201,168,76,0.1)',
+              opacity: task.done ? 0.65 : 1,
+            }}
+            onClick={() => toggleTask(task.id)}
+          >
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 border transition-all"
+              style={{
+                borderColor: task.done ? '#c9a84c' : '#4a5070',
+                background: task.done ? 'rgba(201,168,76,0.2)' : 'transparent',
+              }}
+            >
+              {task.done && (
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ background: '#c9a84c', boxShadow: '0 0 8px #c9a84c' }}
+                />
+              )}
+            </div>
+
+            <div className="flex-1 min-w-0">
               <div
-                key={task.id}
-                className="flex items-center justify-between px-3 py-2 group"
+                className="text-[17px] font-medium"
+                style={{
+                  fontFamily: 'var(--font-serif, Georgia, serif)',
+                  color: '#e6eef8',
+                  textDecoration: task.done ? 'line-through' : 'none',
+                  textDecorationColor: '#8a6f27',
+                }}
               >
-                <span
-                  className="text-[13px]"
-                  style={{
-                    fontFamily: 'var(--font-serif, Georgia, serif)',
-                    color: task.done ? '#9aa0a6' : '#e6eef8',
-                    textDecoration: task.done ? 'line-through' : 'none',
-                    textDecorationColor: '#8a6f27',
-                  }}
-                >
-                  {task.title}
-                </span>
-                <button
-                  onClick={() => removeTask(task.id)}
-                  className="text-arete-muted hover:text-red-400 text-xs opacity-40 md:opacity-0 md:group-hover:opacity-60 transition-opacity"
-                >
-                  ✕
-                </button>
+                {task.title}
               </div>
-            ))}
+            </div>
+
+            <button
+              onClick={e => { e.stopPropagation(); removeTask(task.id); }}
+              className="text-arete-muted hover:text-red-400 text-xs opacity-40 md:opacity-0 md:group-hover:opacity-60 transition-opacity flex-shrink-0"
+            >
+              ✕
+            </button>
           </div>
-        )}
+        ))}
+      </div>
+
+      {/* ── Add Task ──────────────────────────────────────────────── */}
+      <div className="px-4 pt-2 pb-2">
         {showAddInput ? (
           <div className="flex gap-2">
             <input
               autoFocus
-              className="flex-1 px-3 py-2.5 rounded-xl text-[14px] outline-none"
+              className="flex-1 px-4 py-3 rounded-xl text-[15px] outline-none"
               style={{
-                background: 'rgba(255,255,255,0.04)',
+                background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(201,168,76,0.25)',
                 color: '#e6eef8',
                 fontFamily: 'var(--font-serif, Georgia, serif)',
               }}
-              placeholder="Add a discipline…"
+              placeholder="Name this discipline…"
               value={newTaskTitle}
               onChange={e => setNewTaskTitle(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addTask(); if (e.key === 'Escape') { setShowAddInput(false); setNewTaskTitle(''); } }}
             />
             <button
               onClick={addTask}
-              className="px-3 py-2.5 rounded-xl font-bold text-[#0f1724]"
+              className="px-4 py-3 rounded-xl font-bold text-[#0f1724]"
               style={{ background: '#c9a84c' }}
             >
               +
@@ -327,16 +347,17 @@ export default function EveningPage() {
         ) : (
           <button
             onClick={() => setShowAddInput(true)}
-            className="w-full px-4 py-2.5 rounded-xl border border-dashed flex items-center gap-2 transition-opacity hover:opacity-80"
+            className="w-full px-4 py-3.5 rounded-xl border border-dashed flex items-center gap-2.5 transition-opacity hover:opacity-80"
             style={{
               borderColor: 'rgba(255,255,255,0.08)',
-              color: '#9aa0a6',
-              fontFamily: 'var(--font-mono, monospace)',
-              fontSize: 11,
-              letterSpacing: '0.1em',
+              color: '#c9a84c',
+              fontFamily: 'var(--font-sans, system-ui, sans-serif)',
+              fontSize: 13,
+              fontWeight: 500,
             }}
           >
-            <span>+</span> Add discipline
+            <span className="text-lg leading-none">+</span>
+            Add a discipline
           </button>
         )}
       </div>
