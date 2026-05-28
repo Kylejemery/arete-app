@@ -111,30 +111,18 @@ export default function HomePage() {
         if (!dismissed) setShowOnboardingBanner(true);
       }
 
-      // ── Streak increment (once per calendar day) ──────────────────
-      // Guard with localStorage so we only check/increment once even if
-      // the user navigates to home multiple times on the same day.
-      // Order: read yesterday FIRST, then clear for new day — so we never
-      // evaluate against an already-reset row.
+      // ── Streak increment (once per calendar day, atomic via DB) ──────
+      // The gate is now streak_last_incremented_date on profiles — atomic
+      // at the Postgres level, so multiple devices on the same day only
+      // increment once regardless of which device loads the home screen first.
       {
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const checked = typeof window !== 'undefined'
-          ? localStorage.getItem('arete_streak_check_date')
-          : null;
-        if (checked !== todayStr) {
-          const yCheckin = await getYesterdayCheckin();
-          const yTasks = (yCheckin?.morning_tasks as Array<{ done: boolean }> | null) ?? [];
-          // Threshold: at least 1 morning discipline completed yesterday.
-          const earnedStreak = yTasks.some(t => t.done) || Boolean(yCheckin?.morning_done);
-          if (earnedStreak) {
-            const incremented = await incrementProfileStreak();
-            setStreak(incremented);
-          } else {
-            setStreak(streakVal);
-          }
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('arete_streak_check_date', todayStr);
-          }
+        const yCheckin = await getYesterdayCheckin();
+        const yTasks = (yCheckin?.morning_tasks as Array<{ done: boolean }> | null) ?? [];
+        // Threshold: at least 1 morning discipline completed yesterday.
+        const earnedStreak = yTasks.some(t => t.done) || Boolean(yCheckin?.morning_done);
+        if (earnedStreak) {
+          const incremented = await incrementProfileStreak();
+          setStreak(incremented);
         } else {
           setStreak(streakVal);
         }

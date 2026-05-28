@@ -690,28 +690,64 @@ export async function getYesterdayCheckin(): Promise<Record<string, unknown> | n
 }
 
 /**
- * Increment profiles.streak by 1 and return the new value.
- * Reads current value first so callers don't have to pass it in.
+ * Atomically increment profiles.streak by 1 for today, guarded by
+ * streak_last_incremented_date so multiple devices on the same calendar
+ * day only increment once.
+ *
+ * Strategy:
+ *   1. Read current streak + last incremented date.
+ *   2. If already today → skip, return current value.
+ *   3. UPDATE with a WHERE guard (date IS NULL OR date < today).
+ *      Postgres evaluates this atomically: the second device to race
+ *      will see date = today and update 0 rows.
+ *   4. If 0 rows updated → another device won; re-fetch and return.
  */
 export async function incrementProfileStreak(): Promise<number> {
   const userId = await getUserId()
   if (!userId) return 0
   try {
-    const { data: cur } = await supabase
+    const todayStr = localDateStr()
+
+    // Step 1 — read current values
+    const { data: cur, error: readErr } = await supabase
+      .from('profiles')
+      .select('streak, streak_last_incremented_date')
+      .eq('id', userId)
+      .single()
+    if (readErr || !cur) return 0
+
+    // Step 2 — already incremented today on another device
+    if (cur.streak_last_incremented_date === todayStr) {
+      return cur.streak ?? 0
+    }
+
+    const newStreak = (cur.streak ?? 0) + 1
+
+    // Step 3 — atomic update guarded by date
+    const { data: updated, error: writeErr } = await supabase
+      .from('profiles')
+      .update({ streak: newStreak, streak_last_incremented_date: todayStr })
+      .eq('id', userId)
+      .or(`streak_last_incremented_date.is.null,streak_last_incremented_date.lt.${todayStr}`)
+      .select('streak')
+
+    if (writeErr) {
+      console.error('incrementProfileStreak write error:', writeErr)
+      return cur.streak ?? 0
+    }
+
+    // Step 4 — we won the race
+    if (updated && updated.length > 0) {
+      return (updated[0] as { streak: number }).streak ?? newStreak
+    }
+
+    // Another device already incremented — re-fetch the true current value
+    const { data: refetched } = await supabase
       .from('profiles')
       .select('streak')
       .eq('id', userId)
       .single()
-    const newStreak = (cur?.streak ?? 0) + 1
-    const { error } = await supabase
-      .from('profiles')
-      .update({ streak: newStreak })
-      .eq('id', userId)
-    if (error) {
-      console.error('incrementProfileStreak error:', error)
-      return cur?.streak ?? 0
-    }
-    return newStreak
+    return refetched?.streak ?? newStreak
   } catch (e) {
     console.error('incrementProfileStreak exception:', e)
     return 0
