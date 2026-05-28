@@ -520,7 +520,9 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
   return (data ?? []) as Counselor[];
 }
 
-// Check if current user is premium
+// Check if current user is premium.
+// Unlocked when:  tier === 'premium' | tier === 'scholar' | is_premium === true
+// Locked when:    tier === 'free' AND is_premium === false (or both absent)
 export async function getIsPremium(): Promise<boolean> {
   // Dev mode override
   const devOverride = getDevPremiumOverride();
@@ -530,11 +532,13 @@ export async function getIsPremium(): Promise<boolean> {
   if (!user) return false;
   const { data, error } = await supabase
     .from('profiles')
-    .select('is_premium')
+    .select('is_premium, tier')
     .eq('id', user.id)
     .single();
   if (error) return false;
-  return data?.is_premium ?? false;
+  const tier: string = data?.tier ?? 'free';
+  const isPrem: boolean = data?.is_premium ?? false;
+  return isPrem || tier === 'premium' || tier === 'scholar';
 }
 
 // ----------------------------------------------------------------
