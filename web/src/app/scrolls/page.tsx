@@ -27,6 +27,7 @@ export default function ScrollsPage() {
   const [ktComplete, setKtComplete] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [scrollRequest, setScrollRequest] = useState('');
   const [userGoal, setUserGoal] = useState('');
   const [storedUserName, setStoredUserName] = useState('');
   const [storedUserId, setStoredUserId] = useState('');
@@ -54,6 +55,8 @@ export default function ScrollsPage() {
   async function requestScroll() {
     setRequesting(true);
     setRequestError(null);
+    const goal = scrollRequest.trim() || userGoal || 'personal growth and virtue';
+    const goalSource = scrollRequest.trim() || userGoal || null;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(`${API_BASE_URL}/api/scrolls/generate`, {
@@ -62,10 +65,7 @@ export default function ScrollsPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({
-          goal: userGoal || 'personal growth and virtue',
-          userName: storedUserName,
-        }),
+        body: JSON.stringify({ goal, userName: storedUserName }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({})) as { error?: string };
@@ -74,23 +74,67 @@ export default function ScrollsPage() {
       const { title, body, counselor } = await res.json() as { title: string; body: string; counselor: string };
       const { error: insertError } = await supabase
         .from('scrolls')
-        .insert({
-          user_id: storedUserId,
-          title,
-          body,
-          counselor,
-          goal_source: userGoal || null,
-        });
+        .insert({ user_id: storedUserId, title, body, counselor, goal_source: goalSource });
       if (insertError) throw new Error(insertError.message);
-      // Refresh list and auto-expand the newest scroll
       const updated = await getScrolls(storedUserId);
       setScrolls(updated);
       if (updated.length > 0) setExpandedId(updated[0].id);
+      setScrollRequest('');
     } catch (e) {
       setRequestError(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setRequesting(false);
     }
+  }
+
+  // Shared request form — textarea + button + error
+  function RequestForm({ centered }: { centered?: boolean }) {
+    return (
+      <div className={`flex flex-col gap-2${centered ? ' items-center w-full max-w-sm' : ''}`}>
+        <textarea
+          value={scrollRequest}
+          onChange={e => setScrollRequest(e.target.value)}
+          placeholder="What are you struggling with, or working toward?"
+          rows={3}
+          disabled={requesting}
+          className="w-full rounded-lg px-3 py-2.5 text-[14px] leading-relaxed resize-none outline-none transition-colors"
+          style={{
+            fontFamily: 'var(--font-serif, Georgia, serif)',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(201,168,76,0.25)',
+            color: '#e6eef8',
+            caretColor: '#c9a84c',
+          }}
+          onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'; }}
+          onBlur={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
+        />
+        <div className={`flex items-center gap-3${centered ? ' justify-center' : ''}`}>
+          <button
+            onClick={requestScroll}
+            disabled={requesting}
+            className="px-5 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
+            style={{
+              fontFamily: 'var(--font-mono, monospace)',
+              background: 'rgba(201,168,76,0.15)',
+              border: '1px solid rgba(201,168,76,0.5)',
+              color: '#c9a84c',
+              opacity: requesting ? 0.6 : 1,
+              cursor: requesting ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {requesting ? 'Generating…' : 'Request a Scroll'}
+          </button>
+          {requestError && (
+            <p
+              className="text-[11px]"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
+            >
+              {requestError}
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -128,46 +172,22 @@ export default function ScrollsPage() {
 
       <ChapterRule className="mx-5" />
 
-      {/* ── Scroll list ─────────────────────────────────────────── */}
+      {/* ── Content ─────────────────────────────────────────────── */}
       <div className="px-4">
         {scrolls.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="text-[48px] mb-4" style={{ opacity: 0.12 }}>📜</div>
             <p
-              className="text-[15px] italic"
+              className="text-[15px] italic mb-6"
               style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
             >
               No scrolls yet.
             </p>
             {ktComplete ? (
-              <div className="mt-4 flex flex-col items-center gap-2">
-                <button
-                  onClick={requestScroll}
-                  disabled={requesting}
-                  className="px-6 py-2.5 rounded-lg text-[13px] tracking-[1px] uppercase font-medium transition-opacity"
-                  style={{
-                    fontFamily: 'var(--font-mono, monospace)',
-                    background: 'rgba(201,168,76,0.15)',
-                    border: '1px solid rgba(201,168,76,0.5)',
-                    color: '#c9a84c',
-                    opacity: requesting ? 0.6 : 1,
-                    cursor: requesting ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {requesting ? 'Generating…' : 'Request a Scroll'}
-                </button>
-                {requestError && (
-                  <p
-                    className="text-[11px] mt-1"
-                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
-                  >
-                    {requestError}
-                  </p>
-                )}
-              </div>
+              <RequestForm centered />
             ) : (
               <p
-                className="text-[11px] tracking-[1px] uppercase mt-1"
+                className="text-[11px] tracking-[1px] uppercase"
                 style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
               >
                 Complete Know Thyself to receive your first scroll.
@@ -177,31 +197,21 @@ export default function ScrollsPage() {
         ) : (
           <div className="flex flex-col gap-3 max-w-2xl">
 
-            {/* ── Request button (above list) ────────────────────── */}
-            <div className="flex items-center gap-3 mb-1">
-              <button
-                onClick={requestScroll}
-                disabled={requesting}
-                className="px-4 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
-                style={{
-                  fontFamily: 'var(--font-mono, monospace)',
-                  background: 'rgba(201,168,76,0.12)',
-                  border: '1px solid rgba(201,168,76,0.4)',
-                  color: '#c9a84c',
-                  opacity: requesting ? 0.6 : 1,
-                  cursor: requesting ? 'not-allowed' : 'pointer',
-                }}
+            {/* ── Request form (above list) ──────────────────────── */}
+            <div
+              className="rounded-xl px-4 py-4 mb-1"
+              style={{
+                background: 'rgba(201,168,76,0.04)',
+                border: '1px solid rgba(201,168,76,0.15)',
+              }}
+            >
+              <p
+                className="text-[10px] tracking-[1.5px] uppercase mb-2.5"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.6)' }}
               >
-                {requesting ? 'Generating…' : '+ Request a Scroll'}
-              </button>
-              {requestError && (
-                <p
-                  className="text-[11px]"
-                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
-                >
-                  {requestError}
-                </p>
-              )}
+                New Scroll
+              </p>
+              <RequestForm />
             </div>
 
             {scrolls.map(scroll => {
@@ -258,7 +268,7 @@ export default function ScrollsPage() {
                           className="text-[11px] italic mt-1 truncate"
                           style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
                         >
-                          Goal: {scroll.goal_source}
+                          {scroll.goal_source}
                         </p>
                       )}
                     </div>
