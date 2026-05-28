@@ -47,11 +47,17 @@ export default function OnboardingPage() {
     setLoading(true);
     setError('');
     try {
+      // Claude requires at least one message; inject a silent opener on the
+      // very first call so Future Self generates the initial greeting.
+      const apiMessages = msgs.length === 0
+        ? [{ role: 'user', content: 'Hello.' }]
+        : msgs.map(m => ({ role: m.role, content: m.content }));
+
       const res = await fetch('/api/onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: msgs.map(m => ({ role: m.role, content: m.content })),
+          messages: apiMessages,
           futureYears,
         }),
       });
