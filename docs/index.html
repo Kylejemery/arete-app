@@ -5,29 +5,235 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Arete — Personal Excellence</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-      background:#1a1a2e;color:#e0e0e0;line-height:1.8;padding:40px 20px}
-    .container{max-width:720px;margin:0 auto}
-    h1{font-size:2rem;color:#c9a84c;letter-spacing:3px;text-transform:uppercase;margin-bottom:8px}
-    .subtitle{color:#aaa;font-size:.95rem;margin-bottom:40px}
-    p,li{color:#ccc;margin-bottom:14px}
-    a{color:#c9a84c}
-    .divider{border:none;border-top:1px solid #c9a84c33;margin:36px 0}
-    .footer-links { list-style: none; padding: 0; margin: 0; display: flex; gap: 16px; flex-wrap: wrap; }
-    .footer-links li { display: inline; }
-    footer .container { padding: 16px 0; border-top: 1px solid #c9a84c22; margin-top: 24px; }
-    footer a { color: #c9a84c; text-decoration: none; }
-    .cta-row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-top: 28px; }
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 8px; font-size: .95rem; font-weight: 600; text-decoration: none; letter-spacing: .5px; transition: opacity .15s; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #c9a84c;
+      --bg: #1a1a2e;
+      --text: #e0e0e0;
+      --muted: #aaa;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.8;
+    }
+
+    /* ── Hero ───────────────────────────────────────────────── */
+    .hero {
+      padding: 72px 24px 56px;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      color: var(--gold);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-bottom: 28px;
+    }
+
+    .hero p { color: #ccc; margin-bottom: 14px; }
+
+    hr.divider {
+      border: none;
+      border-top: 1px solid rgba(201,168,76,.2);
+      margin: 36px 0;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 28px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 24px;
+      border-radius: 8px;
+      font-size: .95rem;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: .5px;
+      transition: opacity .15s;
+    }
     .btn:hover { opacity: .85; }
-    .btn-primary { background: #c9a84c; color: #1a1a2e; }
-    .btn-secondary { background: transparent; color: #c9a84c; border: 1.5px solid #c9a84c; }
-    @media (max-width: 480px) { .btn-secondary { order: 2; } .btn-primary { order: 1; } }
+    .btn-primary  { background: var(--gold); color: #1a1a2e; }
+    .btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+
+    /* ── Cabinet Replay section ─────────────────────────────── */
+    #cabinet-replay {
+      position: relative;
+      width: 100%;
+      background: #0a0a0f;
+      padding: 64px 16px 72px;
+      overflow: hidden;
+    }
+
+    #cabinet-replay canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .replay-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .replay-eyebrow {
+      text-align: center;
+      color: var(--gold);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 24px;
+    }
+
+    .replay-window {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(201,168,76,.2);
+      border-radius: 20px;
+      padding: 24px 20px;
+      min-height: 260px;
+      transition: opacity 400ms ease;
+    }
+
+    .replay-window.fading { opacity: 0; }
+
+    /* Bubbles */
+    .bubble-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      margin-bottom: 12px;
+      animation: bubbleIn 300ms ease forwards;
+      opacity: 0;
+    }
+
+    .bubble-row.user { flex-direction: row-reverse; }
+
+    @keyframes bubbleIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .counselor-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      max-width: 78%;
+    }
+
+    .user-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      max-width: 78%;
+    }
+
+    .counselor-name {
+      color: var(--gold);
+      font-size: 12px;
+      font-family: 'Courier New', monospace;
+      letter-spacing: .04em;
+      margin-bottom: 4px;
+    }
+
+    .initial-badge {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--gold);
+      color: #0a0a0f;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: flex-end;
+      margin-bottom: 2px;
+    }
+
+    .bubble {
+      display: block;
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(255,255,255,.07);
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #e6eef8;
+      text-align: left;
+      cursor: pointer;
+      font-family: Georgia, serif;
+      transition: opacity 150ms;
+    }
+    .bubble:hover { opacity: .75; }
+
+    .bubble.user-bubble {
+      background: rgba(255,255,255,.08);
+      border-radius: 18px 18px 4px 18px;
+    }
+    .bubble.counselor-bubble {
+      background: rgba(255,255,255,.05);
+      border-radius: 18px 18px 18px 4px;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid rgba(201,168,76,.13);
+      padding: 20px 24px;
+    }
+
+    footer .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .footer-links {
+      list-style: none;
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    footer a {
+      color: var(--gold);
+      text-decoration: none;
+      font-size: .875rem;
+    }
+
+    @media (max-width: 480px) {
+      .btn-secondary { order: 2; }
+      .btn-primary   { order: 1; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+
+  <!-- ── Hero ─────────────────────────────────────────────────── -->
+  <section class="hero">
     <h1>Arete</h1>
     <p class="subtitle">Personal Excellence — Track your journey toward virtue and growth.</p>
 
@@ -35,25 +241,185 @@
 
     <hr class="divider" />
 
-    <p>Available on iOS, Android, and the web.</p>
+    <p>Available on iOS and the web.</p>
 
     <div class="cta-row">
-      <a href="https://YOUR_WEB_APP_URL" class="btn btn-secondary">Open Web App</a>
-      <a href="https://apps.apple.com/app/arete" class="btn btn-primary">
+      <a href="https://app.pursuearete.com" class="btn btn-secondary">Open Web App</a>
+      <a href="https://apps.apple.com/app/id6762371595" class="btn btn-primary">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         App Store
       </a>
     </div>
-  </div>
+  </section>
+
+  <!-- ── Cabinet Replay ────────────────────────────────────────── -->
+  <section id="cabinet-replay">
+    <canvas id="constellation"></canvas>
+    <div class="replay-inner">
+      <p class="replay-eyebrow">Real conversations from the Cabinet</p>
+      <div class="replay-window" id="replay-window"></div>
+    </div>
+  </section>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
   <footer>
     <div class="container">
       <nav aria-label="Site">
         <ul class="footer-links">
-          <li><a href="/privacy.html" title="Privacy Policy">Privacy Policy</a></li>
-          <li><a href="/about.html">About</a></li>
+          <li><a href="/privacy.html">Privacy Policy</a></li>
         </ul>
       </nav>
     </div>
   </footer>
+
+  <script>
+    /* ── Constellation ──────────────────────────────────────── */
+    (function () {
+      const canvas = document.getElementById('constellation');
+      const section = document.getElementById('cabinet-replay');
+      const ctx = canvas.getContext('2d');
+
+      function resize() {
+        canvas.width  = section.offsetWidth;
+        canvas.height = section.offsetHeight;
+        draw();
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < 60; i++) {
+          const x    = (i * 137.508) % 100 / 100 * canvas.width;
+          const y    = (i * 97.3)    % 100 / 100 * canvas.height;
+          const r    = i % 5 === 0 ? 1.5 : 1;
+          const alpha = 0.08 + (i % 4) * 0.05;
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+          ctx.fill();
+        }
+      }
+
+      resize();
+      window.addEventListener('resize', resize);
+    })();
+
+    /* ── Cabinet Replay ─────────────────────────────────────── */
+    (function () {
+      const APP_URL = 'https://apps.apple.com/app/id6762371595';
+
+      const exchanges = [
+        {
+          counselor: 'Epictetus', initial: 'E',
+          messages: [
+            { role: 'user',      text: 'What should I be focusing on right now?' },
+            { role: 'assistant', text: 'That question can sometimes be a way of avoiding a simpler, harder one: why are you not doing what you already know you should? What is actually stopping you?' },
+          ]
+        },
+        {
+          counselor: 'Marcus Aurelius', initial: 'M',
+          messages: [
+            { role: 'user',      text: 'My wife says she prefers the version of me that’s at peace. I feel like Stoicism is almost… selfish.' },
+            { role: 'assistant', text: 'When you are at peace, who else benefits? The peace you feel is not stolen from them. It is given to them. Which is actually selfish — the man who cultivates inner peace, or the man who makes his turmoil everyone else’s problem?' },
+          ]
+        },
+        {
+          counselor: 'Marcus Aurelius', initial: 'M',
+          messages: [
+            { role: 'user',      text: 'I lost my temper with my kid tonight. Over nothing. I hate myself for it.' },
+            { role: 'assistant', text: 'Do not hate yourself. Examine yourself. There is a difference. What were you carrying into that moment that the child had no part in creating? The enemy was not them. The enemy arrived before they did.' },
+          ]
+        },
+        {
+          counselor: 'Theodore Roosevelt', initial: 'T',
+          messages: [
+            { role: 'user',      text: 'If I were certain I wouldn’t fail — I’d go all in on my own thing. But I keep waiting.' },
+            { role: 'assistant', text: 'The gap between ‘soon’ and ‘now’ is where intention goes to die quietly. You are not waiting for the right moment. You are waiting to feel certain. That feeling never comes. The arena does not care how ready you feel. It only cares whether you showed up.' },
+          ]
+        },
+        {
+          counselor: 'Marcus Aurelius', initial: 'M',
+          messages: [
+            { role: 'user',      text: 'I was exhausted tonight. My kid pushed every button. I kept my mouth shut and said nothing. But I almost didn’t.' },
+            { role: 'assistant', text: 'That is a victory. Small, unglamorous, invisible to everyone but you and the people you did not wound. The man you are becoming is not built in dramatic breakthroughs. He is built in exactly these moments.' },
+          ]
+        },
+      ];
+
+      const window_ = document.getElementById('replay-window');
+      let currentIndex = 0;
+      let timers = [];
+
+      function clearTimers() {
+        timers.forEach(clearTimeout);
+        timers = [];
+      }
+
+      function schedule(fn, delay) {
+        timers.push(setTimeout(fn, delay));
+      }
+
+      function makeBubble(msg, counselorName, initial) {
+        const isUser = msg.role === 'user';
+        const row = document.createElement('div');
+        row.className = 'bubble-row' + (isUser ? ' user' : '');
+
+        if (!isUser) {
+          const badge = document.createElement('div');
+          badge.className = 'initial-badge';
+          badge.textContent = initial;
+          row.appendChild(badge);
+        }
+
+        const col = document.createElement('div');
+        col.className = isUser ? 'user-col' : 'counselor-col';
+
+        if (!isUser) {
+          const name = document.createElement('div');
+          name.className = 'counselor-name';
+          name.textContent = counselorName;
+          col.appendChild(name);
+        }
+
+        const bubble = document.createElement('button');
+        bubble.className = 'bubble ' + (isUser ? 'user-bubble' : 'counselor-bubble');
+        bubble.textContent = msg.text;
+        bubble.addEventListener('click', function () {
+          window.open(APP_URL, '_blank');
+        });
+
+        col.appendChild(bubble);
+        row.appendChild(col);
+        return row;
+      }
+
+      function runExchange(index) {
+        clearTimers();
+        window_.innerHTML = '';
+        window_.classList.remove('fading');
+
+        const exchange = exchanges[index];
+        let elapsed = 0;
+
+        exchange.messages.forEach(function (msg) {
+          elapsed += msg.role === 'user' ? 600 : 1800;
+          const t = elapsed;
+          schedule(function () {
+            window_.appendChild(makeBubble(msg, exchange.counselor, exchange.initial));
+          }, t);
+        });
+
+        // Fade out, then next
+        elapsed += 2500;
+        schedule(function () { window_.classList.add('fading'); }, elapsed);
+        elapsed += 400;
+        schedule(function () {
+          currentIndex = (index + 1) % exchanges.length;
+          runExchange(currentIndex);
+        }, elapsed);
+      }
+
+      runExchange(0);
+    })();
+  </script>
 </body>
 </html>
