@@ -59,6 +59,12 @@ body {
   background-clip: text;
 }
 
+/* ── CabinetReplay bubble entrance ──────────────────────────────── */
+@keyframes cabinetBubbleIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Thin scrollbars ─────────────────────────────────────────────── */
 ::-webkit-scrollbar              { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track        { background: transparent; }
