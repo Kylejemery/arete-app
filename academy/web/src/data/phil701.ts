@@ -34,6 +34,12 @@ export interface Phil701Session {
     question: string;
     answer: string;
   }>;
+  practiceAssignment?: {
+    coreIdea: string;
+    assignment: string;
+    duration: string;
+    greekTerms?: string;
+  };
 }
 
 export const PHIL_701_SESSIONS: Phil701Session[] = [
@@ -205,7 +211,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. Is happiness all-or-nothing for the Stoics, or does it admit of degrees?",
         "answer": "All-or-nothing. You have eudaimonia (virtue sufficient) or you do not. External conditions do not add to or subtract from the happiness of the virtuous person."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Only virtue is genuinely good. Everything else — health, money, reputation — is a preferred indifferent: worth pursuing, but not worth your peace.",
+      "assignment": "Pick one thing you are currently anxious about losing or failing to get. Write it down. Then answer honestly: if you lost it entirely, would you be a worse person — or just a less comfortable one? Hold that distinction for one full day and notice what it does to the anxiety.",
+      "duration": "10 min writing, 1 day noticing",
+      "greekTerms": "adiaphora — indifferents"
+    }
   },
   {
     "id": 3,
@@ -359,7 +371,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. Why is the 'pause' between impression and assent philosophically important?",
         "answer": "It is the moment where freedom is exercised. The pause allows the rational faculty to examine an impression before affirming it, interrupting the automatic chain and making self-governance possible."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Between stimulus and response there is a space. That space is the practice. You do not have to assent to the first impression that arrives.",
+      "assignment": "For one day, practice the pause. Every time something irritates, worries, or delights you — stop for three seconds before responding. You are not suppressing the impression. You are examining it. At the end of the day, record one moment where the pause changed what you did.",
+      "duration": "All day, then 5 min reflection",
+      "greekTerms": "phantasia — impression / synkatathesis — assent"
+    }
   },
   {
     "id": 4,
@@ -527,7 +545,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. What is the connection between the discipline of desire and present-moment focus?",
         "answer": "The reserve clause cuts off future-oriented anxiety about outcomes, allowing full presence in current action — the only thing genuinely up to us."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Desire for externals produces frustrated longing. Aversion to externals produces fear. Both are errors of assent. The discipline is to redirect desire toward what is genuinely up to you.",
+      "assignment": "Write down your top three current desires — things you want that you do not have. For each one, ask: is this up to me entirely, partially, or not at all? For the ones that are partially or not at all up to you, rewrite the desire so it targets only the part that is up to you. 'I want to get promoted' becomes 'I want to do excellent work today.'",
+      "duration": "15 min",
+      "greekTerms": "hormē — impulse toward / ekklisis — aversion"
+    }
   },
   {
     "id": 5,
@@ -681,7 +705,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. How does the reserve clause apply to action?",
         "answer": "Every action aimed at external outcomes is performed with full commitment plus a mental reservation: 'fate permitting.' The action is fully mine; the outcome is not."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Act with reservation. Pursue your duties toward others — but hold the outcome loosely. The archer's job is to aim and release well. Where the arrow lands is not fully theirs.",
+      "assignment": "Identify one relationship where you are currently withholding — effort, honesty, care — because you are not sure it will be reciprocated. Do the thing anyway, once, with full attention and no expectation of return. Notice what it costs you and what it gives you.",
+      "duration": "One action, then brief reflection",
+      "greekTerms": "kathêkon — appropriate action / oikeiôsis — natural affiliation"
+    }
   },
   {
     "id": 6,
@@ -830,7 +860,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. Which discipline is most fundamental and why?",
         "answer": "The discipline of assent (prosochē) — because it governs the other two. You cannot redirect desire without accurate assent to what you are desiring; you cannot identify appropriate action without accurate assent to the situation."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Prosochê — watchful attention — is the core practice. Not dramatic self-examination. Quiet, continuous noticing of what your mind is doing.",
+      "assignment": "For one morning, practice prosochê: every hour on the hour, pause for sixty seconds and ask: what has my attention been on? Was I present in what I was doing, or was my mind elsewhere? Not judgment — just observation. Write three words at the end of each hour. Review at day's end.",
+      "duration": "One morning, 60-sec checks",
+      "greekTerms": "prosochê — watchful attention"
+    }
   },
   {
     "id": 7,
@@ -985,7 +1021,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. Seneca describes joy as what?",
         "answer": "'The solid and stable good of the soul' — not temporary elation but the calm abundance accompanying a life lived in accordance with virtue"
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "Passions are false judgments — they treat indifferents as genuine goods or evils. The eupatheiai are the correct emotional responses of someone who sees clearly: joy, caution, wishing well.",
+      "assignment": "Pick one recurring negative emotion — frustration, anxiety, resentment — that visited you this week. Trace it back to its judgment: what did you believe, in that moment, that a loss or failure was catastrophic? Write the belief explicitly. Then write the Stoic correction: what is the more accurate assessment? You are not suppressing the feeling — you are diagnosing it.",
+      "duration": "15 min",
+      "greekTerms": "pathos — passion / eupatheia — good emotion"
+    }
   },
   {
     "id": 8,
@@ -1135,7 +1177,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. What is the relationship between the human rational soul and the divine logos?",
         "answer": "The human rational soul is a fragment of the divine logos — the same rational principle present in the universe is present in the human rational faculty. Living according to reason is therefore simultaneously living according to God, nature, and fate."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "What happens to you is not random and not personal. It is the unfolding of a rational order. The practice is not resignation — it is active love of what is.",
+      "assignment": "Think of one thing that happened to you in the last month that you resisted, resented, or tried to undo. Write one paragraph about it as if it were exactly what was supposed to happen — not because you are certain it was, but as a practice of the perspective. What would you do differently if you genuinely accepted it?",
+      "duration": "20 min writing",
+      "greekTerms": "amor fati — love of fate / heimarmenê — providence"
+    }
   },
   {
     "id": 9,
@@ -1284,7 +1332,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. What is the virtues unity thesis?",
         "answer": "You cannot have any one virtue without having all of them — each implies the others. Genuine courage requires wisdom, justice, and temperance to be genuine courage rather than mere recklessness."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "You are not the sage. You will never be the sage. That is fine. You are the prokoptôn — the one making progress. Progress, not perfection, is the standard.",
+      "assignment": "Write an honest self-assessment: where are you actually making progress? Not where you want to be — where you genuinely are moving in the right direction, however slowly. Then: where are you not making progress, and what is the one thing that, if you changed it, would matter most? Be specific. Vague self-criticism is not philosophy.",
+      "duration": "20 min",
+      "greekTerms": "prokoptôn — the one making progress"
+    }
   },
   {
     "id": 10,
@@ -1433,7 +1487,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "question": "10. Epictetus: 'The testing of appearances is the first and greatest task of philosophy.' Why?",
         "answer": "The testing of appearances (impressions) is prosochē — the discipline of assent. It is the foundational practice because all other disciplines presuppose it. You cannot redirect desire or act appropriately if you cannot first accurately evaluate what the world is presenting to you."
       }
-    ]
+    ],
+    "practiceAssignment": {
+      "coreIdea": "To live according to nature is to live according to reason — to use the faculty that distinguishes you as a human being in every situation you encounter.",
+      "assignment": "For one full day, before any significant decision or response, ask: what does reason recommend here? Not what do I feel like doing, not what is easiest — what does the reasoning part of me, at its best, actually think I should do? At day's end, identify one moment where you followed it and one where you didn't.",
+      "duration": "All day, then 10 min reflection",
+      "greekTerms": "kata phusin — according to nature / logos — reason"
+    }
   },
   {
     "id": 11,
@@ -1547,7 +1607,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "answer": "'...a theory about life — it is a way of living.' (Hadot) Or: 'a subject to be studied — it is a practice to be performed.' (Epictetus, paraphrase)"
       }
     ],
-    "isSeminar": true
+    "isSeminar": true,
+    "practiceAssignment": {
+      "coreIdea": "Socrates said the unexamined life is not worth living. You have spent ten sessions learning what examination means. The seminar is a test of whether you can do it with others.",
+      "assignment": "Before the seminar: write the one idea from PHIL 701 that has actually changed something about how you live — not your thinking, your living. Bring it to the seminar as your stake in the ground. Philosophy that has not changed your behavior has not yet become yours.",
+      "duration": "30 min reflection",
+      "greekTerms": "arge nu logoi — enough big words"
+    }
   }
 ];
 

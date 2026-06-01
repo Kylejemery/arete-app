@@ -86,6 +86,12 @@ interface SessionContent {
   intro: string[];
   readings: string[];
   prompt: string;
+  practiceAssignment?: {
+    coreIdea: string;
+    assignment: string;
+    duration: string;
+    greekTerms?: string;
+  };
 }
 
 interface CourseContent {
@@ -113,6 +119,11 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
         ],
         readings: [],
         prompt: 'Hadot argues that ancient philosophy was not a body of doctrine to be learned but a set of exercises to be practiced. If he is right, what becomes of philosophy as we have inherited it in the modern university? And what would it mean to enter this program as a practitioner rather than a reader?',
+        practiceAssignment: {
+          coreIdea: 'Philosophy is not an academic discipline — it is a way of life. The question is not what Stoicism says but how you will live.',
+          assignment: 'Before the next session: identify one thing you did today on autopilot — a reaction, a habit, a choice — that you never consciously examined. Write one sentence about it: what was the impression, what did you do, and what would you have done if you had stopped to think? This is your first act of philosophy.',
+          duration: '5 min, once',
+        },
       },
     },
   },
@@ -304,6 +315,9 @@ function SessionContent({ content, sessionId, sessions }: { content: SessionCont
           </p>
         </div>
       </section>
+      {content.practiceAssignment && (
+        <PracticeAssignmentBlock pa={content.practiceAssignment} />
+      )}
     </article>
   );
 }
@@ -681,6 +695,43 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
   );
 }
 
+// ── Practice Assignment block ─────────────────────────────────────────────────
+
+function PracticeAssignmentBlock({ pa }: {
+  pa: { coreIdea: string; assignment: string; duration: string; greekTerms?: string };
+}) {
+  return (
+    <div className="mt-8" style={{ borderLeft: '2px solid #C9A84C', paddingLeft: '1rem' }}>
+      <p
+        className="mb-2"
+        style={{ fontFamily: 'DM Mono, monospace', fontSize: 11, color: '#C9A84C', textTransform: 'uppercase', letterSpacing: '0.1em' }}
+      >
+        Practice assignment
+      </p>
+      <p className="text-academy-muted text-sm italic leading-relaxed">{pa.coreIdea}</p>
+      <p className="text-academy-text leading-relaxed mt-2" style={{ fontSize: 15, lineHeight: 1.7 }}>
+        {pa.assignment}
+      </p>
+      <div className="flex items-center gap-1.5 mt-3">
+        <svg className="w-3 h-3 text-academy-muted flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l2.5 2.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span
+          className="text-academy-muted rounded-full px-2 py-0.5"
+          style={{ fontFamily: 'DM Mono, monospace', fontSize: 12, background: 'rgba(255,255,255,0.05)' }}
+        >
+          Time: {pa.duration}
+        </span>
+      </div>
+      {pa.greekTerms && (
+        <p className="text-academy-muted mt-2" style={{ fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+          Key terms: {pa.greekTerms}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
 // content (parts + exercises); the short-answer quiz is rendered below it as
 // reveal cards for self-study. onQuizClick switches the tab to the submission
@@ -689,6 +740,9 @@ function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Sessi
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
+      {session.isSeminar && session.practiceAssignment && (
+        <PracticeAssignmentBlock pa={session.practiceAssignment} />
+      )}
       {session.quiz.length > 0 && (
         <section className="mt-10">
           <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
@@ -713,6 +767,9 @@ function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Sessi
             </div>
           )}
         </section>
+      )}
+      {!session.isSeminar && session.practiceAssignment && (
+        <PracticeAssignmentBlock pa={session.practiceAssignment} />
       )}
     </>
   );
