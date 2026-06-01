@@ -9,6 +9,7 @@ import { AGENT_MAP, SYSTEM_PROMPTS } from '@/lib/agents';
 import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
+import LessonParagraph from '@/components/LessonParagraph';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
@@ -657,7 +658,7 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
       {session.parts.map((part, pi) => (
         <section key={pi} className="mb-10">
           <h2 className="font-serif text-xl text-academy-text mb-3">{part.heading}</h2>
-          <p className="text-academy-muted text-sm leading-relaxed whitespace-pre-line">{part.body}</p>
+          <LessonParagraph text={part.body} className="text-academy-muted text-sm leading-relaxed whitespace-pre-line" />
           {part.paradigms?.map((p, idx) => <ParadigmTable key={idx} paradigm={p} mono={mono} />)}
           {part.callout && (
             <div
