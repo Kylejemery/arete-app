@@ -106,8 +106,8 @@ interface CourseContent {
 const COURSE_CONTENT: Record<string, CourseContent> = {
   'phil-701': {
     code: 'PHIL 701',
-    shortTitle: 'Foundations of\nStoic Ethics',
-    fullTitle: 'Introduction to Stoic Philosophy',
+    shortTitle: 'The Art of Living\n— Foundations',
+    fullTitle: 'The Art of Living — Foundations',
     assignedText: 'Epictetus — Enchiridion',
     sessions: {
       1: {
@@ -130,8 +130,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-702': {
     code: 'PHIL 702',
-    shortTitle: 'The Meditations\nof Marcus Aurelius',
-    fullTitle: 'The Meditations of Marcus Aurelius',
+    shortTitle: 'Living the Practice\n— Marcus Aurelius',
+    fullTitle: 'Living the Practice — Marcus Aurelius',
     assignedText: 'Marcus Aurelius — Meditations',
     sessions: {
       1: {
@@ -152,8 +152,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-703': {
     code: 'PHIL 703',
-    shortTitle: 'Epictetus and the\nDiscipline of Desire',
-    fullTitle: 'Epictetus and the Discipline of Desire',
+    shortTitle: 'The School of\nEpictetus',
+    fullTitle: 'The School of Epictetus',
     assignedText: 'Epictetus — Discourses',
     sessions: {
       1: {
@@ -174,8 +174,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-704': {
     code: 'PHIL 704',
-    shortTitle: "Seneca’s Letters and\nthe Art of Dying Well",
-    fullTitle: "Seneca’s Letters and the Art of Dying Well",
+    shortTitle: ‘The Examined\nCorrespondence — Seneca’,
+    fullTitle: ‘The Examined Correspondence — Seneca’,
     assignedText: 'Seneca — Letters to Lucilius',
     sessions: {
       1: {
@@ -1748,7 +1748,7 @@ function Phil705CoursePage() {
                 PHIL 705 &middot; Logic Track
               </p>
               <h2 className="font-serif text-academy-text text-base leading-snug">
-                Stoic Logic &amp;{'\n'}Epistemology
+                The Logic of Clear Seeing
               </h2>
             </div>
             <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">

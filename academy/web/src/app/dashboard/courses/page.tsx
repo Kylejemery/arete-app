@@ -11,8 +11,8 @@ const COURSES: Course[] = [
   {
     id: 'phil-701',
     code: 'PHIL 701',
-    title: 'Introduction to Stoic Philosophy',
-    description: 'The foundations of the Stoic tradition — logos, virtue, and the dichotomy of control. Primary texts: Epictetus Enchiridion, selections from Marcus and Seneca.',
+    title: 'The Art of Living — Foundations',
+    description: 'Philosophy is not a subject — it is a practice. This course introduces the architecture of the Stoic art of living: the three disciplines, the tools of attention, and the daily exercises that transform knowledge into character.',
     term: 'Core — Required',
     assignedTexts: [
       { title: 'Enchiridion', author: 'Epictetus', sourceSlug: 'epictetus' },
@@ -22,8 +22,8 @@ const COURSES: Course[] = [
   {
     id: 'phil-702',
     code: 'PHIL 702',
-    title: 'The Meditations of Marcus Aurelius',
-    description: 'A close reading of the Meditations in full. The text as philosophical practice, not doctrine. What does it mean to write to oneself?',
+    title: 'Living the Practice — Marcus Aurelius',
+    description: 'Marcus Aurelius was the most powerful man in the world. He spent his private hours doing the work. The Meditations are not a treatise — they are a practice log. This course reads them as a manual for living, not a monument to admire.',
     term: 'Year 1',
     assignedTexts: [
       { title: 'Meditations (Complete)', author: 'Marcus Aurelius', sourceSlug: 'marcus-aurelius' },
@@ -32,8 +32,8 @@ const COURSES: Course[] = [
   {
     id: 'phil-703',
     code: 'PHIL 703',
-    title: 'Epictetus and the Discipline of Desire',
-    description: "The Discourses in depth. Epictetus's three disciplines and the radical claim that freedom is available to everyone — including slaves.",
+    title: 'The School of Epictetus',
+    description: 'Epictetus said his school was a surgery. You should leave having felt pain, not pleasure. This course enters that school — the Discourses as a demanding teacher, not a historical document.',
     term: 'Year 1',
     assignedTexts: [
       { title: 'Discourses', author: 'Epictetus', sourceSlug: 'epictetus' },
@@ -42,8 +42,8 @@ const COURSES: Course[] = [
   {
     id: 'phil-704',
     code: 'PHIL 704',
-    title: "Seneca's Letters and the Art of Dying Well",
-    description: 'The Letters to Lucilius as a philosophy of time, friendship, and death. Reading Seneca as both thinker and specimen.',
+    title: 'The Examined Correspondence — Seneca',
+    description: 'Seneca wrote to Lucilius every week about how to live. This course enters that correspondence — reading the Letters as practice assignments, not literature.',
     term: 'Year 2',
     assignedTexts: [
       { title: 'Letters to Lucilius', author: 'Seneca', sourceSlug: 'seneca' },
@@ -52,8 +52,8 @@ const COURSES: Course[] = [
   {
     id: 'phil-705',
     code: 'PHIL 705',
-    title: 'Stoic Logic & Epistemology',
-    description: 'The propositional logic system Chrysippus built 300 years before Frege. Twenty sessions from the lekton through the five indemonstrables to the Liar Paradox — and back to the examined life.',
+    title: 'The Logic of Clear Seeing',
+    description: 'The Stoics built the most rigorous logical system of the ancient world because bad reasoning produces bad living. This course shows why logic is not abstract — it is the formal structure of the discipline of assent.',
     term: 'Year 2',
     assignedTexts: [
       { title: 'The Hellenistic Philosophers (Stoic Logic)', author: 'Long & Sedley', sourceSlug: 'epictetus' },

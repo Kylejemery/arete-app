@@ -10,17 +10,17 @@ import Topbar from '@/components/navigation/Topbar';
 import type { Enrollment, SeminarSession, Paper } from '@/types';
 
 const COURSE_TITLES: Record<string, string> = {
-  'phil-701': 'PHIL 701 — Introduction to Stoic Philosophy',
-  'phil-702': 'PHIL 702 — The Meditations of Marcus Aurelius',
-  'phil-703': 'PHIL 703 — Epictetus and the Discipline of Desire',
-  'phil-704': "PHIL 704 — Seneca's Letters",
+  'phil-701': 'PHIL 701 — The Art of Living — Foundations',
+  'phil-702': 'PHIL 702 — Living the Practice — Marcus Aurelius',
+  'phil-703': 'PHIL 703 — The School of Epictetus',
+  'phil-704': 'PHIL 704 — The Examined Correspondence — Seneca',
 };
 
 const COURSE_SESSION_INFO: Record<string, { title: string; subtitle: string }> = {
-  'phil-701': { title: 'Foundations of Stoic Ethics', subtitle: 'Session I — What is Philosophy For?' },
-  'phil-702': { title: 'The Meditations of Marcus Aurelius', subtitle: 'Session I — The Man and His Book' },
-  'phil-703': { title: 'Epictetus and the Discipline of Desire', subtitle: 'Session I — The Former Slave and His School' },
-  'phil-704': { title: "Seneca's Letters and the Art of Dying Well", subtitle: 'Session I — How to Live with Time' },
+  'phil-701': { title: 'The Art of Living — Foundations', subtitle: 'Session I — What is Philosophy For?' },
+  'phil-702': { title: 'Living the Practice — Marcus Aurelius', subtitle: 'Session I — The Man and His Book' },
+  'phil-703': { title: 'The School of Epictetus', subtitle: 'Session I — The Former Slave and His School' },
+  'phil-704': { title: 'The Examined Correspondence — Seneca', subtitle: 'Session I — How to Live with Time' },
 };
 
 type ExamSignal = { label: string; href: string } | { done: true } | null;
@@ -207,7 +207,7 @@ export default function DashboardPage() {
                 PHIL 701 &middot; Gateway Seminar
               </p>
               <p className="font-serif text-academy-text text-base mb-1">
-                Foundations of Stoic Ethics
+                The Art of Living — Foundations
               </p>
               <p className="text-academy-muted text-xs">Session I — What is Philosophy For?</p>
               <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
                   PHIL 702
                 </p>
                 <p className="font-serif text-academy-text text-base mb-1">
-                  The Meditations of Marcus Aurelius
+                  Living the Practice — Marcus Aurelius
                 </p>
                 <p className="text-academy-muted text-xs">Session I — The Man and His Book</p>
                 <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                     PHIL 702
                   </p>
                   <p className="font-serif text-academy-text text-base mb-1">
-                    The Meditations of Marcus Aurelius
+                    Living the Practice — Marcus Aurelius
                   </p>
                   <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 701</p>
                 </div>
@@ -328,7 +328,7 @@ export default function DashboardPage() {
                   </span>
                 </div>
                 <p className="font-serif text-academy-text text-base mb-1">
-                  Stoic Logic and Epistemology
+                  The Logic of Clear Seeing
                 </p>
                 <p className="text-academy-muted text-xs">
                   Chrysippus&apos;s propositional logic, the theory of impressions, and the Stoic epistemology of assent. Year 2.
@@ -352,7 +352,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <p className="font-serif text-academy-text text-base mb-1">
-                    Stoic Logic and Epistemology
+                    The Logic of Clear Seeing
                   </p>
                   <p className="text-academy-muted text-xs">
                     Chrysippus&apos;s propositional logic, the theory of impressions, and the Stoic epistemology of assent. Year 2.

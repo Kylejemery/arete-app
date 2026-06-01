@@ -1,11 +1,11 @@
 ﻿import Link from 'next/link'
 
 const CURRICULUM = [
-  { code: 'PHIL 701', title: 'Foundations of Stoic Ethics',            year: 'Year I'   },
-  { code: 'PHIL 702', title: 'The Meditations of Marcus Aurelius',     year: 'Year II'  },
-  { code: 'PHIL 703', title: 'Epictetus and the Discourses',           year: 'Year III' },
-  { code: 'PHIL 704', title: 'Seneca and the Letters',                 year: 'Year IV'  },
-  { code: 'PHIL 705', title: 'Stoic Logic & Epistemology',             year: 'Year V'   },
+  { code: 'PHIL 701', title: 'The Art of Living — Foundations',                 year: 'Year I'   },
+  { code: 'PHIL 702', title: 'Living the Practice — Marcus Aurelius',            year: 'Year II'  },
+  { code: 'PHIL 703', title: 'The School of Epictetus',                          year: 'Year III' },
+  { code: 'PHIL 704', title: 'The Examined Correspondence — Seneca',             year: 'Year IV'  },
+  { code: 'PHIL 705', title: 'The Logic of Clear Seeing',                        year: 'Year V'   },
 ]
 
 const AGENTS = [
@@ -80,10 +80,9 @@ export default function LandingPage() {
           {/* Column 1: Curriculum */}
           <div className="px-6 md:px-10 pb-12 md:pb-0">
             <p className="font-serif text-gold text-xs tracking-[0.3em] uppercase mb-2">I.</p>
-            <h2 className="font-serif text-2xl text-cream mb-6">The Curriculum</h2>
+            <h2 className="font-serif text-2xl text-cream mb-6">The Formation</h2>
             <p className="text-cream/40 text-sm leading-relaxed mb-8">
-              A structured course of study modelled on the ancient philosophical schools.
-              Each course builds on the last.
+              Four years of practice, not study. Each course is structured around transformation — not the accumulation of knowledge but the development of character.
             </p>
             <ul className="space-y-5">
               {CURRICULUM.map((c) => (

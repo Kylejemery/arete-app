@@ -7,11 +7,11 @@ import { LIBRARY_ITEMS, getLibraryForSession, type LibraryItem } from '@/data/li
 const DM_MONO = 'DM Mono, monospace';
 
 const COURSE_TITLES: Record<string, string> = {
-  'phil-701': 'PHIL 701 — Introduction to Stoic Philosophy',
-  'phil-702': 'PHIL 702 — The Meditations of Marcus Aurelius',
-  'phil-703': 'PHIL 703 — Epictetus and the Discipline of Desire',
-  'phil-704': "PHIL 704 — Seneca's Letters and the Art of Dying Well",
-  'phil-705': 'PHIL 705 — Stoic Logic & Epistemology',
+  'phil-701': 'PHIL 701 — The Art of Living — Foundations',
+  'phil-702': 'PHIL 702 — Living the Practice — Marcus Aurelius',
+  'phil-703': 'PHIL 703 — The School of Epictetus',
+  'phil-704': 'PHIL 704 — The Examined Correspondence — Seneca',
+  'phil-705': 'PHIL 705 — The Logic of Clear Seeing',
   'grek-101': 'GREK 101 — Ancient Greek for Philosophers',
   'latn-101': 'LATN 101 — Latin for Philosophers',
 };

@@ -3800,7 +3800,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
 
 export const PHIL_705_COURSE = {
   id: 'phil-705',
-  title: 'Stoic Logic & Epistemology',
+  title: 'The Logic of Clear Seeing',
   code: 'PHIL 705',
   track: 'Logic',
   year: 2,
