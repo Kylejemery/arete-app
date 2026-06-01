@@ -106,8 +106,8 @@ interface CourseContent {
 const COURSE_CONTENT: Record<string, CourseContent> = {
   'phil-701': {
     code: 'PHIL 701',
-    shortTitle: 'The Art of Living\n— Foundations',
-    fullTitle: 'The Art of Living — Foundations',
+    shortTitle: "The Art of Living\n— Foundations",
+    fullTitle: "The Art of Living — Foundations",
     assignedText: 'Epictetus — Enchiridion',
     sessions: {
       1: {
@@ -130,8 +130,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-702': {
     code: 'PHIL 702',
-    shortTitle: 'Living the Practice\n— Marcus Aurelius',
-    fullTitle: 'Living the Practice — Marcus Aurelius',
+    shortTitle: "Living the Practice\n— Marcus Aurelius",
+    fullTitle: "Living the Practice — Marcus Aurelius",
     assignedText: 'Marcus Aurelius — Meditations',
     sessions: {
       1: {
@@ -152,8 +152,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-703': {
     code: 'PHIL 703',
-    shortTitle: 'The School of\nEpictetus',
-    fullTitle: 'The School of Epictetus',
+    shortTitle: "The School of\nEpictetus",
+    fullTitle: "The School of Epictetus",
     assignedText: 'Epictetus — Discourses',
     sessions: {
       1: {
@@ -174,8 +174,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
   },
   'phil-704': {
     code: 'PHIL 704',
-    shortTitle: ‘The Examined\nCorrespondence — Seneca’,
-    fullTitle: ‘The Examined Correspondence — Seneca’,
+    shortTitle: "The Examined\nCorrespondence — Seneca",
+    fullTitle: "The Examined Correspondence — Seneca",
     assignedText: 'Seneca — Letters to Lucilius',
     sessions: {
       1: {
