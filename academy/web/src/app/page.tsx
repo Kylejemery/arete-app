@@ -52,22 +52,20 @@ export default function LandingPage() {
         <div className="gold-rule mb-10" />
 
         <p className="font-serif text-gold/70 text-sm tracking-[0.3em] uppercase mb-6">
-          Seneca · Epistulae Morales
+          Stoic Philosophy · Techne
         </p>
 
         <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl text-cream leading-tight max-w-4xl mb-6">
-          &ldquo;Learn Like a Spy<br className="hidden md:block" /> in the Enemy Camp&rdquo;
+          The Art of Living
         </h1>
 
         <div className="gold-rule my-8" />
 
         <p className="text-cream/70 text-lg md:text-xl max-w-2xl leading-relaxed mb-4 font-light">
-          The world&rsquo;s first AI-proctored school
-          of Stoic philosophy.
+          Arete is not a feeling. It is a skill.
         </p>
         <p className="text-cream/40 text-sm max-w-xl leading-relaxed mb-14">
-          Seven courses. Six AI specialists. 800,000 words of primary text.
-          A genuine formation in the philosophy that built empires.
+          The Stoics compared virtue to a craft — techne. A carpenter masters wood through practice and knowledge. A philosopher masters living the same way. Arete Academy is where that training happens.
         </p>
 
         <Link href="/waitlist" className="btn-primary">

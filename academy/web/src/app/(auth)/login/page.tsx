@@ -34,7 +34,7 @@ function LoginForm() {
         <div className="text-center mb-10">
           <p className="text-academy-muted text-xs tracking-[0.3em] uppercase mb-2">Arete</p>
           <h1 className="font-serif text-5xl text-academy-gold tracking-wide mb-3">Academy</h1>
-          <p className="text-academy-muted text-sm italic">&ldquo;Learn like a spy in the enemy camp.&rdquo;</p>
+          <p className="text-academy-muted text-sm italic">Arete is not a feeling. It is a skill.</p>
         </div>
 
         <div className="bg-academy-card border border-academy-border rounded-xl p-8">
