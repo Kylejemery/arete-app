@@ -35,7 +35,7 @@ interface SessionItem {
 
 const COURSE_SESSIONS: Record<string, SessionItem[]> = {
   'phil-701': [
-    { id: 1,  title: 'What is Philosophy For? — Hadot as Entry',            locked: false },
+    { id: 1,  title: 'What is Philosophy For? — Hadot as Entry',            locked: false, videoUrl: 'https://www.youtube.com/embed/yF-C2DBB5Jg' },
     { id: 2,  title: 'The Good and the Preferred — Virtue and Indifferents', locked: true },
     { id: 3,  title: 'The Discipline of Desire — Wanting Rightly',           locked: true },
     { id: 4,  title: 'The Discipline of Action — Acting with Reservation',   locked: true },
