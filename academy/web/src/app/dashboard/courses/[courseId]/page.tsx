@@ -15,6 +15,8 @@ import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
 import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Session } from '@/data/phil705';
 import { PHIL_701_SESSIONS, phil701ToLesson, type Phil701Session } from '@/data/phil701';
+import { PHIL_702_SESSIONS, phil702ToLesson, type Phil702Session } from '@/data/phil702';
+import { PHIL702_READING } from '@/data/phil702_reading';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
@@ -46,16 +48,17 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
     { id: 11, title: 'Qualifying Conversation with the Examiner',            locked: true },
   ],
   'phil-702': [
-    { id: 1,  title: 'The Man and His Book — Introduction',                  locked: false },
-    { id: 2,  title: 'Books I–II — Debts and the Practice of Memory',       locked: true },
-    { id: 3,  title: 'Books III–IV — The Commanding Faculty',               locked: true },
-    { id: 4,  title: 'Books V–VI — On Anger and Impermanence',              locked: true },
-    { id: 5,  title: 'Books VII–VIII — Providence and Fate',                locked: true },
-    { id: 6,  title: 'Books IX–X — Other People and the Social Animal',     locked: true },
-    { id: 7,  title: 'Books XI–XII — Death, Time, and the View from Above', locked: true },
-    { id: 8,  title: 'The Text as Spiritual Exercise',                       locked: true },
-    { id: 9,  title: 'Paper Workshop with the Writing Supervisor',           locked: true },
-    { id: 10, title: 'Final Seminar — Synthesis and Objections',             locked: true },
+    { id: 1,  title: 'The Meditations as Spiritual Exercise — How to Read Marcus', locked: false },
+    { id: 2,  title: "The Three Disciplines — Marcus's Daily Framework",           locked: true },
+    { id: 3,  title: 'The Discipline of Desire — Wanting Nothing External',        locked: true },
+    { id: 4,  title: 'The Discipline of Action — Doing Your Duty Without Attachment', locked: true },
+    { id: 5,  title: 'The Discipline of Assent — Guarding the Ruling Faculty',     locked: true },
+    { id: 6,  title: 'The View from Above — Marcus and Cosmic Perspective',        locked: true },
+    { id: 7,  title: 'Memento Mori — Marcus and the Practice of Death',            locked: true },
+    { id: 8,  title: 'The Obstacle as the Way — Amor Fati in Practice',            locked: true },
+    { id: 9,  title: 'Living Among Others — Marcus on Anger and Community',        locked: true },
+    { id: 10, title: 'The Inner Citadel — What Cannot Be Taken',                   locked: true },
+    { id: 11, title: 'Qualifying Conversation — The Examined Emperor',             locked: true },
   ],
   'phil-703': [
     { id: 1,  title: 'The Former Slave and His School — Introduction',       locked: false },
@@ -252,12 +255,19 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_701_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-702') {
+    const s = PHIL_702_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   return false;
 }
 
 function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
   if (courseId === 'phil-701') {
     return PHIL_701_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-702') {
+    return PHIL_702_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
   }
   return [];
 }
@@ -630,7 +640,7 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
         )}
       </div>
       <h1 className="font-serif text-3xl text-academy-text mb-1 leading-tight">{session.title}</h1>
-      <p className="text-academy-muted text-sm italic mb-8">{session.subtitle}</p>
+      {session.subtitle && <p className="text-academy-muted text-sm italic mb-8">{session.subtitle}</p>}
 
       {/* Learning objectives — teal callout box */}
       {session.objectives.length > 0 && (
@@ -741,6 +751,49 @@ function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Sessi
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
+      {session.isSeminar && session.practiceAssignment && (
+        <PracticeAssignmentBlock pa={session.practiceAssignment} />
+      )}
+      {session.quiz.length > 0 && (
+        <section className="mt-10">
+          <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
+          <p className="text-academy-muted text-xs mb-5 italic">
+            Review each question, attempt your answer, then reveal.
+          </p>
+          {session.quiz.map((q, i) => (
+            <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
+          ))}
+
+          {onQuizClick && (
+            <div className="mt-8 border-t border-academy-gold/20 pt-6">
+              <p className="text-academy-muted text-sm mb-4 leading-relaxed">
+                When you have worked through all ten questions, submit your written answers to the faculty for review.
+              </p>
+              <button
+                onClick={onQuizClick}
+                className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
+              >
+                Submit Quiz for Review &rarr;
+              </button>
+            </div>
+          )}
+        </section>
+      )}
+      {!session.isSeminar && session.practiceAssignment && (
+        <PracticeAssignmentBlock pa={session.practiceAssignment} />
+      )}
+    </>
+  );
+}
+
+// PHIL 702 sessions 1–11: same rendering contract as PHIL 701. Lesson parts
+// render through the language renderer; the 10-question short-answer quiz is
+// rendered below as reveal cards for self-study, with the practice assignment
+// before the quiz for the seminar (session 11) and after it for all others.
+function Phil702SessionContent({ session, onQuizClick }: { session: Phil702Session; onQuizClick?: () => void }) {
+  return (
+    <>
+      <LanguageLessonContent session={phil702ToLesson(session)} />
       {session.isSeminar && session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} />
       )}
@@ -1119,6 +1172,11 @@ function SeminarPage() {
   const phil701Session = courseId === 'phil-701'
     ? PHIL_701_SESSIONS.find(s => s.id === activeSessionId)
     : undefined;
+  // PHIL 702 carries full transcribed content (briefing + parts + quiz +
+  // practice assignment) for all 11 sessions — same contract as PHIL 701.
+  const phil702Session = courseId === 'phil-702'
+    ? PHIL_702_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
@@ -1383,6 +1441,24 @@ function SeminarPage() {
                           />
                           <Phil701SessionContent
                             session={phil701Session}
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil702Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-702-${activeSessionId}`}
+                            courseId="phil-702"
+                            session={activeSessionId}
+                            title={phil702Session.title}
+                            problem={phil702Session.briefing}
+                            whyItMatters=""
+                            watchFor={[]}
+                            yourTask=""
+                            requiredReading={PHIL702_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil702Session}
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>

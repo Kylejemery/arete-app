@@ -67,6 +67,11 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
           "source": "Sellars, Stoicism (2006)",
           "passage": "as assigned",
           "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        },
+        {
+          "source": "Sellars, The Art of Living (2003)",
+          "passage": "Ch. 2 — \"The Art of Living as Technē Tou Biou\"",
+          "note": "Virtue as a craft — the technē model of Stoic ethics. PHIL 701 Session 2."
         }
       ]
     },

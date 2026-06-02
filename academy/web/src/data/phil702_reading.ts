@@ -30,6 +30,11 @@ export const PHIL702_READING: Record<number, ReadingItem[]> = {
       "source": "Hadot, Inner Citadel Ch. 2",
       "passage": "as assigned",
       "note": "How to read Marcus — as practice not philosophy. PHIL 702 Session 1."
+    },
+    {
+      "source": "Sellars, The Art of Living (2003)",
+      "passage": "Ch. 6 — \"Marcus Aurelius and the Art Practised\"",
+      "note": "The Meditations as the art of living put into daily practice. PHIL 702 Session 1."
     }
   ],
   "2": [

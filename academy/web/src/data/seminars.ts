@@ -17,6 +17,7 @@ export const SEMINARS: Record<string, BriefingData[]> = {
       requiredReading: [
         { source: "Hadot, PhWoL Ch. 11 — 'Spiritual Exercises'", passage: "as assigned", note: "The foundational text for the entire Academy. Read before Session 1." },
         { source: "Hadot, Inner Citadel Ch. 1", passage: "as assigned", note: "Already assigned PHIL 701 Session 1." },
+        { source: "Sellars, The Art of Living (2003)", passage: "Ch. 1 — 'Philosophy as a Way of Life'", note: "Sellars's reconstruction of philosophy as technē tou biou — the art of living. PHIL 701 Session 1." },
         { source: "Sellars, Lessons in Stoicism (2019) [optional]", passage: "complete", note: "Short, accessible (120 pages). Optional pre-course primer before PHIL 701 Session 1. Not required but recommended." },
       ],
     },

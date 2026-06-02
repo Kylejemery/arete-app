@@ -108,12 +108,14 @@ export default function PreSeminarBriefing({
           )}
 
           {/* Your Task */}
-          <div className="border-t border-academy-gold/20 pt-5">
-            <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
-              Your Task
-            </p>
-            <p className="font-serif text-academy-gold text-sm leading-relaxed italic">{yourTask}</p>
-          </div>
+          {yourTask && (
+            <div className="border-t border-academy-gold/20 pt-5">
+              <p className="font-mono text-academy-muted text-xs uppercase tracking-widest mb-2">
+                Your Task
+              </p>
+              <p className="font-serif text-academy-gold text-sm leading-relaxed italic">{yourTask}</p>
+            </div>
+          )}
 
           {/* Required Reading */}
           {requiredReading && requiredReading.length > 0 && (
