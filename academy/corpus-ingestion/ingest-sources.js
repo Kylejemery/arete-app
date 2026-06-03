@@ -99,7 +99,7 @@ async function ingestFile(filepath, skipExisting) {
         .eq('author', meta.author)
         .eq('work', meta.work)
         .eq('language', meta.language)
-        .eq('source_chunk_index', i)
+        .eq('chunk_index', i)
         .maybeSingle();
       if (existing) {
         skipped++;
@@ -119,10 +119,10 @@ async function ingestFile(filepath, skipExisting) {
       course_relevance: meta.course_relevance,
       difficulty: meta.difficulty,
       text_type: meta.text_type,
-      source_chunk_index: i,
+      chunk_index: i,
       embedding,
     }, {
-      onConflict: 'author,work,program_id,source_chunk_index',
+      onConflict: 'author,work,program_id,chunk_index',
     });
 
     if (error) {
