@@ -48,3 +48,6 @@ app-example
 google-play-service-account.json
 
 .claude/worktrees/
+
+# corpus source texts (large, not committed)
+academy/corpus-ingestion/source_texts/*.txt

@@ -43,7 +43,13 @@ async function generateEmbedding(text) {
   return response.data[0].embedding;
 }
 
-async function retrieveAcademyChunks({ query, author = null, topK = DEFAULT_TOP_K, programId = DEFAULT_PROGRAM } = {}) {
+async function retrieveAcademyChunks({
+  query,
+  author    = null,
+  topK      = DEFAULT_TOP_K,
+  programId = DEFAULT_PROGRAM,
+  course    = null,
+} = {}) {
   const supabase = getSupabase();
 
   const embedding = await generateEmbedding(query);
@@ -51,9 +57,10 @@ async function retrieveAcademyChunks({ query, author = null, topK = DEFAULT_TOP_
   const { data: semanticResults, error } = await supabase.rpc('match_academy_chunks', {
     query_embedding: embedding,
     match_threshold: MATCH_THRESHOLD,
-    match_count: topK,
-    filter_author: author,
-    filter_program: programId,
+    match_count:     topK,
+    filter_author:   author,
+    filter_program:  programId,
+    filter_course:   course,
   });
 
   if (error) throw new Error(`match_academy_chunks RPC failed: ${error.message}`);
@@ -63,12 +70,15 @@ async function retrieveAcademyChunks({ query, author = null, topK = DEFAULT_TOP_
   if (results.length < 3) {
     const keyword = extractKeyword(query);
     if (keyword) {
-      const { data: keywordResults, error: kwError } = await supabase
+      let q = supabase
         .from('rag_corpus')
-        .select('id, author, work, section_label, chunk_text, translator')
+        .select('id, author, work, section_label, chunk_text, translator, course_relevance, difficulty, language')
         .ilike('chunk_text', `%${keyword}%`)
-        .eq('program_id', programId)
-        .limit(5);
+        .eq('program_id', programId);
+
+      if (course) q = q.eq('course_relevance', course);
+
+      const { data: keywordResults, error: kwError } = await q.limit(5);
 
       if (!kwError && keywordResults) {
         const fallback = keywordResults.map(r => ({ ...r, similarity: 0 }));
@@ -84,12 +94,16 @@ async function retrieveAcademyChunks({ query, author = null, topK = DEFAULT_TOP_
     return true;
   });
 
-  return deduped.map(({ author, work, section_label, chunk_text, translator, similarity }) => ({
+  return deduped.map(({ author, work, section_label, chunk_text, translator,
+                        course_relevance, difficulty, language, similarity }) => ({
     author,
     work,
     section_label,
     chunk_text,
     translator,
+    course_relevance,
+    difficulty,
+    language,
     similarity,
   }));
 }
