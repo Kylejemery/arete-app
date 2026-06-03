@@ -85,7 +85,34 @@ function ThreadCard({
   );
 }
 
-function ReplyBubble({ reply }: { reply: Reply }) {
+function ReplyBubble({
+  reply,
+  isOwner,
+  onEdit,
+  onDelete,
+}: {
+  reply: Reply;
+  isOwner: boolean;
+  onEdit: (id: string, newBody: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState(reply.body);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const save = async () => {
+    if (!editBody.trim() || saving) return;
+    setSaving(true);
+    await onEdit(reply.id, editBody.trim());
+    setSaving(false);
+    setEditing(false);
+  };
+
+  const doDelete = async () => {
+    await onDelete(reply.id);
+  };
+
   if (reply.is_stoa) {
     return (
       <div className="border-l-2 border-[#C9A84C] pl-4 py-1 mb-5">
@@ -102,8 +129,9 @@ function ReplyBubble({ reply }: { reply: Reply }) {
       </div>
     );
   }
+
   return (
-    <div className="mb-5">
+    <div className="mb-5 group">
       <div className="flex items-center gap-2 mb-1">
         <span
           className="text-[#6B7A99] text-xs"
@@ -112,8 +140,72 @@ function ReplyBubble({ reply }: { reply: Reply }) {
           {reply.handle}
         </span>
         <span className="text-[#6B7A99] text-xs opacity-50">{timeAgo(reply.created_at)}</span>
+        {isOwner && !editing && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-1">
+            <button
+              onClick={() => { setEditBody(reply.body); setEditing(true); setConfirmDelete(false); }}
+              className="text-[#6B7A99] hover:text-[#C9A84C] text-xs transition-colors px-1"
+              title="Edit reply"
+            >
+              Edit
+            </button>
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="text-[#6B7A99] hover:text-red-400 text-xs transition-colors px-1"
+                title="Delete reply"
+              >
+                Delete
+              </button>
+            ) : (
+              <span className="flex items-center gap-1">
+                <button
+                  onClick={doDelete}
+                  className="text-red-400 text-xs hover:text-red-300 transition-colors px-1"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-[#6B7A99] text-xs hover:text-[#E8E0D0] transition-colors px-1"
+                >
+                  Cancel
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
-      <p className="text-[#E8E0D0] text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</p>
+
+      {editing ? (
+        <div>
+          <textarea
+            className="w-full rounded-lg px-3 py-2 text-sm text-[#E8E0D0] placeholder-[#6B7A99] resize-none focus:outline-none focus:border-[#C9A84C] border"
+            style={{ background: '#080E1A', borderColor: '#1a2a3a' }}
+            rows={3}
+            value={editBody}
+            onChange={e => setEditBody(e.target.value)}
+            autoFocus
+          />
+          <div className="flex items-center gap-2 mt-1.5">
+            <button
+              onClick={save}
+              disabled={!editBody.trim() || saving}
+              className="bg-[#C9A84C] text-[#080E1A] font-semibold px-3 py-1 rounded text-xs hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditing(false); setEditBody(reply.body); }}
+              className="text-[#6B7A99] text-xs hover:text-[#E8E0D0] transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-[#E8E0D0] text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</p>
+      )}
     </div>
   );
 }
@@ -198,6 +290,60 @@ function NewThreadModal({
   );
 }
 
+function EditThreadModal({
+  thread,
+  onClose,
+  onSave,
+}: {
+  thread: Thread;
+  onClose: () => void;
+  onSave: (title: string, body: string) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(thread.title);
+  const [body, setBody] = useState(thread.body);
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!title.trim() || !body.trim() || saving) return;
+    setSaving(true);
+    await onSave(title.trim(), body.trim());
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
+      <div className="w-full max-w-lg bg-[#0A1628] border border-[#1a2a3a] rounded-xl shadow-2xl p-6">
+        <h2 className="font-serif text-[#E8E0D0] text-xl mb-5">Edit Thread</h2>
+        <input
+          className="w-full bg-[#080E1A] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#E8E0D0] placeholder-[#6B7A99] text-sm mb-3 focus:border-[#C9A84C] focus:outline-none"
+          placeholder="Title"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          maxLength={140}
+        />
+        <textarea
+          className="w-full bg-[#080E1A] border border-[#1a2a3a] rounded-lg px-4 py-3 text-[#E8E0D0] placeholder-[#6B7A99] text-sm resize-none focus:border-[#C9A84C] focus:outline-none"
+          rows={5}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+        />
+        <div className="flex items-center justify-between mt-4">
+          <button onClick={onClose} className="text-[#6B7A99] text-sm hover:text-[#E8E0D0] transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={!title.trim() || !body.trim() || saving}
+            className="bg-[#C9A84C] text-[#080E1A] font-semibold px-5 py-2.5 rounded-lg text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HandleModal({ onSave }: { onSave: (handle: string) => Promise<void> }) {
   const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -252,6 +398,8 @@ export default function CourtyardPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const [newThreadOpen, setNewThreadOpen] = useState(false);
+  const [editThreadOpen, setEditThreadOpen] = useState(false);
+  const [confirmDeleteThread, setConfirmDeleteThread] = useState(false);
   const [presenceCount, setPresenceCount] = useState(0);
 
   const [ragChunks, setRagChunks] = useState<Chunk[]>([]);
@@ -479,6 +627,7 @@ export default function CourtyardPage() {
     setStoaChunks(null);
     setStoaLabel('');
     setMobileView('thread');
+    setConfirmDeleteThread(false);
   };
 
   const handlePostThread = async (title: string, body: string) => {
@@ -493,6 +642,45 @@ export default function CourtyardPage() {
       setMobileView('thread');
     }
     setNewThreadOpen(false);
+  };
+
+  const handleEditThread = async (title: string, body: string) => {
+    if (!activeThread) return;
+    const { data, error } = await supabase
+      .from('courtyard_threads')
+      .update({ title, body, updated_at: new Date().toISOString() })
+      .eq('id', activeThread.id)
+      .select()
+      .single();
+    if (!error && data) {
+      const updated = data as Thread;
+      setActiveThread(updated);
+      setThreads(prev => prev.map(t => t.id === updated.id ? updated : t));
+    }
+    setEditThreadOpen(false);
+  };
+
+  const handleDeleteThread = async () => {
+    if (!activeThread) return;
+    await supabase.from('courtyard_threads').delete().eq('id', activeThread.id);
+    setThreads(prev => prev.filter(t => t.id !== activeThread.id));
+    setActiveThread(null);
+    setReplies([]);
+    setConfirmDeleteThread(false);
+    setMobileView('list');
+  };
+
+  const handleEditReply = async (replyId: string, newBody: string) => {
+    await supabase
+      .from('courtyard_replies')
+      .update({ body: newBody })
+      .eq('id', replyId);
+    setReplies(prev => prev.map(r => r.id === replyId ? { ...r, body: newBody } : r));
+  };
+
+  const handleDeleteReply = async (replyId: string) => {
+    await supabase.from('courtyard_replies').delete().eq('id', replyId);
+    setReplies(prev => prev.filter(r => r.id !== replyId));
   };
 
   const handleSubmitReply = async () => {
@@ -557,6 +745,8 @@ export default function CourtyardPage() {
     return null;
   })();
 
+  const isThreadOwner = !!(activeThread && userId && activeThread.author_id === userId);
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center h-screen" style={{ background: '#080E1A' }}>
@@ -574,6 +764,13 @@ export default function CourtyardPage() {
         <NewThreadModal
           onClose={() => setNewThreadOpen(false)}
           onPost={handlePostThread}
+        />
+      )}
+      {editThreadOpen && activeThread && (
+        <EditThreadModal
+          thread={activeThread}
+          onClose={() => setEditThreadOpen(false)}
+          onSave={handleEditThread}
         />
       )}
 
@@ -675,9 +872,49 @@ export default function CourtyardPage() {
                 className="flex-shrink-0 px-6 py-5 border-b overflow-y-auto"
                 style={{ borderColor: '#0F1E35', maxHeight: '45%' }}
               >
-                <h2 className="font-serif text-[#E8E0D0] text-2xl leading-tight mb-2">
-                  {activeThread.title}
-                </h2>
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <h2 className="font-serif text-[#E8E0D0] text-2xl leading-tight">
+                    {activeThread.title}
+                  </h2>
+                  {/* Thread owner controls */}
+                  {isThreadOwner && (
+                    <div className="flex items-center gap-2 flex-shrink-0 pt-1">
+                      <button
+                        onClick={() => { setEditThreadOpen(true); setConfirmDeleteThread(false); }}
+                        className="text-[#6B7A99] hover:text-[#C9A84C] text-xs transition-colors"
+                        style={{ fontFamily: 'DM Mono, monospace' }}
+                      >
+                        Edit
+                      </button>
+                      {!confirmDeleteThread ? (
+                        <button
+                          onClick={() => setConfirmDeleteThread(true)}
+                          className="text-[#6B7A99] hover:text-red-400 text-xs transition-colors"
+                          style={{ fontFamily: 'DM Mono, monospace' }}
+                        >
+                          Delete
+                        </button>
+                      ) : (
+                        <span className="flex items-center gap-1.5">
+                          <button
+                            onClick={handleDeleteThread}
+                            className="text-red-400 hover:text-red-300 text-xs transition-colors"
+                            style={{ fontFamily: 'DM Mono, monospace' }}
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteThread(false)}
+                            className="text-[#6B7A99] hover:text-[#E8E0D0] text-xs transition-colors"
+                            style={{ fontFamily: 'DM Mono, monospace' }}
+                          >
+                            Cancel
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div className="flex items-center gap-2 mb-4">
                   <span
                     className="text-[#6B7A99] text-xs"
@@ -706,7 +943,15 @@ export default function CourtyardPage() {
                     No replies yet. Open the examination.
                   </p>
                 ) : (
-                  replies.map(r => <ReplyBubble key={r.id} reply={r} />)
+                  replies.map(r => (
+                    <ReplyBubble
+                      key={r.id}
+                      reply={r}
+                      isOwner={!!(userId && r.author_id === userId)}
+                      onEdit={handleEditReply}
+                      onDelete={handleDeleteReply}
+                    />
+                  ))
                 )}
                 <div ref={repliesEndRef} />
               </div>
