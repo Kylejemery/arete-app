@@ -109,9 +109,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+// /health is defined later as an async corpus-stats endpoint
 
 function truncateMessages(messages, maxMessages = 12) {
   const systemMessages = messages.filter(m => m.role === 'system');
@@ -1376,6 +1374,192 @@ ${chunks.map(c => c.content).join('\n\n')}`;
   } catch (error) {
     console.error('[/api/examine/proctor] error:', error);
     return res.status(502).json({ error: 'Failed to reach Claude API' });
+  }
+});
+
+// ─── Stoic RAG API ───────────────────────────────────────────────
+
+async function getStoicContext(query, topK = 5, authorFilter = null) {
+  const embeddingResponse = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'text-embedding-3-small',
+      input: query
+    })
+  });
+  const embeddingData = await embeddingResponse.json();
+  const queryEmbedding = embeddingData.data[0].embedding;
+
+  const { data: chunks, error } = await supabase.rpc('match_rag_corpus', {
+    query_embedding: queryEmbedding,
+    match_count: topK,
+    filter_author: authorFilter || null,
+    filter_language: 'english'
+  });
+
+  if (error) throw new Error(`RAG retrieval failed: ${error.message}`);
+  return chunks || [];
+}
+
+function buildStoicSystemPrompt(chunks) {
+  const sourceBlock = chunks.map(c =>
+    `[${c.author} — ${c.work}]\n${c.chunk_text}`
+  ).join('\n\n---\n\n');
+
+  return `You are a Stoic philosopher and scholar. Ground every response in the retrieved passages below. When you reference a passage, cite the author and work inline (e.g. "As Epictetus writes in the Discourses..."). Do not invent citations. If the passages do not address the question, say so and answer from general Stoic principles.
+
+RETRIEVED PASSAGES:
+${sourceBlock}
+
+END PASSAGES`;
+}
+
+// POST /ask — simple JSON endpoint
+app.post('/ask', async (req, res) => {
+  try {
+    const { question, author, top_k } = req.body;
+    if (!question) return res.status(400).json({ error: 'question is required' });
+
+    const chunks = await getStoicContext(question, top_k || 5, author || null);
+    const systemPrompt = buildStoicSystemPrompt(chunks);
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: question }],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const answer = data.content?.find(b => b.type === 'text')?.text ?? '';
+    const sources = chunks.map(c => `${c.author} — ${c.work}`);
+
+    res.json({ answer, sources, chunks_used: chunks.length });
+  } catch (err) {
+    console.error('/ask error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /v1/chat/completions — OpenAI-compatible endpoint
+app.post('/v1/chat/completions', async (req, res) => {
+  try {
+    const { messages, max_tokens } = req.body;
+    if (!messages || !messages.length) {
+      return res.status(400).json({ error: 'messages array is required' });
+    }
+
+    const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMessage) return res.status(400).json({ error: 'No user message found' });
+
+    const chunks = await getStoicContext(lastUserMessage.content, 5, null);
+    const ragSystemPrompt = buildStoicSystemPrompt(chunks);
+
+    const existingSystem = messages.find(m => m.role === 'system');
+    const finalSystem = existingSystem
+      ? `${existingSystem.content}\n\n${ragSystemPrompt}`
+      : ragSystemPrompt;
+
+    const userMessages = messages.filter(m => m.role !== 'system');
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: max_tokens || 1024,
+        system: finalSystem,
+        messages: userMessages,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return res.status(response.status).json({ error: errorText });
+    }
+
+    const data = await response.json();
+    const text = data.content?.find(b => b.type === 'text')?.text ?? '';
+
+    res.json({
+      id: `stoic-${Date.now()}`,
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: 'stoic-rag-1',
+      choices: [{
+        index: 0,
+        message: { role: 'assistant', content: text },
+        finish_reason: 'stop'
+      }],
+      usage: {
+        prompt_tokens: data.usage.input_tokens,
+        completion_tokens: data.usage.output_tokens,
+        total_tokens: data.usage.input_tokens + data.usage.output_tokens
+      }
+    });
+  } catch (err) {
+    console.error('/v1/chat/completions error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /v1/models — OpenAI-compatible model list
+app.get('/v1/models', (req, res) => {
+  res.json({
+    object: 'list',
+    data: [{
+      id: 'stoic-rag-1',
+      object: 'model',
+      created: 1700000000,
+      owned_by: 'arete'
+    }]
+  });
+});
+
+// GET /health — corpus stats
+app.get('/health', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('rag_corpus')
+      .select('author, work')
+      .not('embedding', 'is', null);
+
+    if (error) throw error;
+
+    const stats = {};
+    data.forEach(row => {
+      const key = `${row.author} — ${row.work}`;
+      stats[key] = (stats[key] || 0) + 1;
+    });
+
+    res.json({
+      status: 'ok',
+      total_chunks: data.length,
+      sources: stats
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
