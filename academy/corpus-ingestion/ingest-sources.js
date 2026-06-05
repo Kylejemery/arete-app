@@ -2,6 +2,7 @@
 // Usage: node ingest-sources.js
 //        node ingest-sources.js --file Epictetus_Enchiridion_English.txt
 //        node ingest-sources.js --skip-existing
+//        node ingest-sources.js --new-only
 
 require('dotenv').config();
 const fs = require('fs');
@@ -78,6 +79,18 @@ async function embedChunk(text) {
   return response.data[0].embedding;
 }
 
+async function buildExistingCorpusSet() {
+  const { data, error } = await supabase
+    .from('rag_corpus')
+    .select('author, work');
+  if (error) throw new Error(`Failed to query existing corpus: ${error.message}`);
+  const set = new Set();
+  for (const row of data || []) {
+    set.add(`${row.author}||${row.work}`);
+  }
+  return set;
+}
+
 async function ingestFile(filepath, skipExisting) {
   const filename = path.basename(filepath);
   const meta = parseFilename(filename);
@@ -134,11 +147,13 @@ async function ingestFile(filepath, skipExisting) {
   }
 
   console.log(`  done — ${ingested} ingested, ${skipped} skipped`);
+  return ingested;
 }
 
 async function main() {
   const args = process.argv.slice(2);
   const skipExisting = args.includes('--skip-existing');
+  const newOnly = args.includes('--new-only');
   const fileArg = args.includes('--file') ? args[args.indexOf('--file') + 1] : null;
 
   if (!fs.existsSync(SOURCE_DIR)) {
@@ -159,11 +174,37 @@ async function main() {
 
   console.log(`Found ${files.length} file(s) to process`);
 
+  let existingCorpus = null;
+  if (newOnly) {
+    console.log('--new-only: querying existing corpus...');
+    existingCorpus = await buildExistingCorpusSet();
+    console.log(`  ${existingCorpus.size} (author, work) pair(s) already in corpus`);
+  }
+
+  let filesSkipped = 0;
+  let filesProcessed = 0;
+  let totalChunks = 0;
+
   for (const filepath of files) {
-    await ingestFile(filepath, skipExisting);
+    const filename = path.basename(filepath);
+    if (newOnly) {
+      const meta = parseFilename(filename);
+      const key = `${meta.author}||${meta.work}`;
+      if (existingCorpus.has(key)) {
+        console.log(`[SKIP] ${filename} — already in corpus`);
+        filesSkipped++;
+        continue;
+      }
+    }
+    const chunksUpserted = await ingestFile(filepath, skipExisting);
+    filesProcessed++;
+    totalChunks += chunksUpserted;
   }
 
   console.log('\nIngestion complete.');
+  console.log(`Skipped:           ${filesSkipped} files (already in corpus)`);
+  console.log(`Processed:         ${filesProcessed} files`);
+  console.log(`Total chunks upserted: ${totalChunks}`);
 }
 
 main().catch(err => {
