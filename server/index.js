@@ -1608,22 +1608,10 @@ app.post('/oracle', async (req, res) => {
     }
     const remaining = Math.max(0, 15 - (limitData || 1));
 
-    // 4. EMBED QUESTION
-    const queryEmbedding = await embedText(question);
+    // 4. RETRIEVE FROM CORPUS (embed + search via getStoicContext)
+    const chunks = await getStoicContext(question.trim(), 7, null);
 
-    // 5. RETRIEVE FROM CORPUS
-    const { data: chunks, error: chunkError } = await supabase.rpc('match_rag_corpus', {
-      query_embedding: queryEmbedding,
-      match_count: 7,
-      filter_author: null,
-      filter_language: 'english'
-    });
-    if (chunkError) {
-      console.error('Retrieval error:', chunkError);
-      return res.status(500).json({ error: 'Retrieval failed' });
-    }
-
-    // 6. BUILD CONTEXT BLOCK
+    // 5. BUILD CONTEXT BLOCK
     const contextBlock = (chunks || [])
       .map(c => `${c.author}, ${c.work}:\n${c.chunk_text}`)
       .join('\n\n---\n\n');
