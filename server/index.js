@@ -67,7 +67,14 @@ async function retrieveChunks(userMessage, counselorSlug, k = 3) {
   }
 }
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://app.pursuearete.com',
+    'https://academy.pursuearete.com',
+    'https://www.pursuearete.com',
+    'https://pursuearete.com',
+  ]
+}));
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
