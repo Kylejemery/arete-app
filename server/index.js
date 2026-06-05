@@ -980,27 +980,31 @@ const AGENT_PERSONAS = {
   'cabinet-counselor': `You are a Cabinet counselor at Arete Academy. Drawing on the wisdom of the great Stoic philosophers — Marcus Aurelius, Epictetus, and Seneca — you provide philosophical guidance, mentorship, and accountability to students pursuing their education in classical thought.`,
 };
 
-async function retrieveCorpusChunks(userMessage, courseId, k = 3) {
+// match_academy_chunks has been deprecated in favour of match_rag_corpus.
+// The following two overloads can be dropped manually when convenient:
+//   DROP FUNCTION IF EXISTS match_academy_chunks(vector, float8, int, text, text);
+//   DROP FUNCTION IF EXISTS match_academy_chunks(vector, float8, int, text, text, text);
+async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
   if (!process.env.OPENAI_API_KEY) return [];
   try {
     const embedding = await embedQuery(userMessage);
     const { data, error } = await supabase.rpc('match_rag_corpus', {
       query_embedding: embedding,
-      match_course_id: courseId ?? null,
       match_count: k,
+      filter_author: null,
+      filter_language: 'english',
     });
     if (error) {
-      // Fallback: direct select if the RPC doesn't exist yet
-      console.warn('match_rag_corpus RPC unavailable, falling back to direct select:', error.message);
-      const query = supabase
-        .from('rag_corpus')
-        .select('content, source_title')
-        .limit(k);
-      if (courseId) query.eq('course_id', courseId);
-      const { data: rows } = await query;
-      return rows ?? [];
+      console.error('match_rag_corpus RPC error:', error.message);
+      return [];
     }
-    return data ?? [];
+    // Normalise to the shape expected by the academy agent template:
+    // { source_author, source_title, content }
+    return (data ?? []).map(r => ({
+      source_author: r.author ?? null,
+      source_title: r.work ?? 'Corpus',
+      content: r.chunk_text ?? '',
+    }));
   } catch (err) {
     console.error('Corpus RAG retrieval error:', err.message);
     return [];
