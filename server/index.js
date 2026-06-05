@@ -1567,6 +1567,106 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// POST /oracle — Stoic Oracle with IP rate limiting
+app.post('/oracle', async (req, res) => {
+
+  // 1. GET CLIENT IP
+  const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const ip = rawIp.split(',')[0].trim();
+
+  // 2. VALIDATE INPUT
+  const { question } = req.body;
+  if (!question || typeof question !== 'string' || question.trim().length === 0) {
+    return res.status(400).json({ error: 'question is required' });
+  }
+  if (question.length > 500) {
+    return res.status(400).json({ error: 'question must be 500 characters or fewer' });
+  }
+
+  // 3. ATOMIC RATE LIMIT UPSERT
+  const { data: limitData, error: limitError } = await supabase.rpc(
+    'upsert_oracle_rate_limit',
+    { p_ip: ip }
+  );
+  if (limitError) {
+    console.error('Rate limit error:', limitError);
+    // Fail open — allow query if rate limit check fails
+  } else if (limitData > 15) {
+    return res.status(429).json({
+      error: 'Daily limit reached',
+      message: "You've reached 15 free queries for today. Come back tomorrow, or begin your formation at Arete Academy.",
+      remaining: 0
+    });
+  }
+  const remaining = Math.max(0, 15 - (limitData || 1));
+
+  // 4. EMBED QUESTION
+  const queryEmbedding = await embedText(question);
+
+  // 5. RETRIEVE FROM CORPUS
+  const { data: chunks, error: chunkError } = await supabase.rpc('match_rag_corpus', {
+    query_embedding: queryEmbedding,
+    match_count: 7,
+    filter_author: null,
+    filter_language: 'english'
+  });
+  if (chunkError) {
+    console.error('Retrieval error:', chunkError);
+    return res.status(500).json({ error: 'Retrieval failed' });
+  }
+
+  // 6. BUILD CONTEXT BLOCK
+  const contextBlock = (chunks || [])
+    .map(c => `${c.author}, ${c.work}:\n${c.chunk_text}`)
+    .join('\n\n---\n\n');
+
+  // 7. CLAUDE CALL
+  const systemPrompt = `You are the Stoic Oracle — a unified voice drawing on the wisdom of Marcus Aurelius, Epictetus, Seneca, and the broader Stoic tradition.
+
+You have been given relevant passages from the Stoic corpus. Use them to ground your response. Reference the source naturally (e.g. "Marcus writes in the Meditations..." or "Epictetus reminds us in the Discourses...") — do not quote verbatim at length, but make clear the answer is rooted in the tradition.
+
+Speak with clarity and directness. No flattery, no hedging. The Stoics did not comfort — they clarified. Give the person what they need to think and act well.
+
+Keep responses to 3-5 paragraphs. End with a single short Stoic principle in italics — one sentence the person can carry with them.
+
+Do not mention that you are an AI. Do not break character.
+
+[STOIC CORPUS — ground your response in these passages]
+${contextBlock}
+[END CORPUS]`;
+
+  const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 600,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: question }]
+    })
+  });
+
+  const claudeData = await claudeRes.json();
+  const answer = claudeData.content?.[0]?.text || '';
+
+  // 8. DEDUPLICATE SOURCES
+  const seen = new Set();
+  const sources = (chunks || [])
+    .filter(c => {
+      const key = `${c.author}||${c.work}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map(c => ({ author: c.author, work: c.work }));
+
+  return res.json({ answer, sources, remaining });
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {
