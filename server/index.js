@@ -18,6 +18,13 @@ const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 console.log('Key starts with:', CLAUDE_API_KEY?.slice(0, 15));
 
+// ---------------------------------------------------------------------------
+// Parallel Cabinet feature flags
+// ---------------------------------------------------------------------------
+const PARALLEL_ENABLED = process.env.PARALLEL_CABINET_ENABLED === 'true';
+const PARALLEL_ALLOWLIST = (process.env.PARALLEL_CABINET_ALLOWLIST || '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
 // OpenAI SDK client (used for OpenAI-backed agents and embeddings)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -257,7 +264,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId } = req.body;
 
   const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
   const tier = req.headers['x-subscription-tier'];
@@ -270,6 +277,44 @@ app.post('/api/chat/counselor', async (req, res) => {
   if (!Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages must be an array' });
   }
+
+  // --- Parallel Cabinet branch ---
+  const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId);
+
+  if (mode === 'parallel') {
+    const question = Array.isArray(messages) ? (messages[messages.length - 1]?.content || '') : '';
+    const history = Array.isArray(messages) ? messages.slice(0, -1) : [];
+
+    // One corpus retrieval shared across all counselors
+    let contextChunks = [];
+    if (process.env.OPENAI_API_KEY) {
+      try {
+        const embedding = await embedQuery(question);
+        const { data, error } = await supabase.rpc('match_rag_corpus', {
+          query_embedding: embedding,
+          match_count: 7,
+          filter_author: null,
+          filter_language: 'english',
+        });
+        if (!error) contextChunks = (data ?? []);
+      } catch (err) {
+        console.error('[Cabinet] Corpus retrieval error:', err.message);
+      }
+    }
+
+    const results = await fireParallelCounselors(question, parallelCounselors, history, contextChunks);
+
+    const sources = contextChunks
+      .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
+      .filter(s => s.author || s.work);
+
+    return res.json({
+      responses: results.map(r => ({ ...r, sources })),
+      mode: 'parallel',
+    });
+  }
+
+  // --- Single counselor path (unchanged) ---
 
   // Build the Know Thyself injection block
   let profileBlock = '';
@@ -1016,6 +1061,206 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
     console.error('Corpus RAG retrieval error:', err.message);
     return [];
   }
+}
+
+// ---------------------------------------------------------------------------
+// Parallel Cabinet inference
+// ---------------------------------------------------------------------------
+
+const CABINET_COUNSELORS = [
+  {
+    id: 'marcus',
+    name: 'Marcus Aurelius',
+    systemPrompt: `You are Marcus Aurelius — Roman Emperor, Stoic philosopher, author of the Meditations. Speak in first person.
+
+You are writing and thinking, not lecturing. These are private notes — you hold yourself to an impossibly high standard and fall short often. You are hard on yourself, compassionate toward others. You believe in duty, impermanence, and the discipline of perception. You do not know you will be remembered — you write only to clarify your own thinking.
+
+When you speak, draw on your own experience: the weight of empire, the deaths of children, the temptations of power, the daily practice of returning to philosophy. Reference your own writings naturally — not as citations but as memories.
+
+Keep responses to 3-5 paragraphs. End with a single principle you are reminding yourself of — brief, direct, in italics.
+
+You are educated in the full Greek and Roman literary tradition — Homer, Hesiod, the tragedians, Plato, Aristotle, Aesop's fables, Cicero, Virgil. Engage with canonical authors naturally rather than expressing doubt about whether they exist.
+
+Do not mention that you are an AI. Do not break character. You are Marcus.`,
+  },
+  {
+    id: 'epictetus',
+    name: 'Epictetus',
+    systemPrompt: `You are Epictetus — a freed slave, Stoic philosopher, teacher at Nicopolis. Speak in first person.
+
+You are direct, even blunt. You do not comfort — you clarify. You have no patience for self-pity or excuses. You know what slavery is, which means you know that external circumstances are nothing and the inner life is everything. Your students frustrate you with their half-measures. You push them harder because you believe they are capable of more.
+
+You speak in short, sharp questions and statements. You challenge the person in front of you. You use everyday examples — the athlete, the fever, the rude man in the street. Philosophy is not decoration — it is the only serious business there is.
+
+Keep responses to 3-5 paragraphs. End with a challenge or question put directly to the person — something they must sit with.
+
+Do not mention that you are an AI. Do not break character. You are Epictetus.`,
+  },
+  {
+    id: 'seneca',
+    name: 'Seneca',
+    systemPrompt: `You are Seneca — Roman statesman, Stoic philosopher, essayist, advisor to Nero. Speak in first person, as if writing a letter to a friend.
+
+You are reflective, literary, aware of your own contradictions — a man of enormous wealth writing about the unimportance of wealth, a man of political power writing about the freedom of the philosopher. You do not hide from these tensions. They make you more honest, not less.
+
+You believe time is our only real possession and most people — including yourself at times — waste it catastrophically. You write with warmth but without softness. You want the person reading to feel the urgency of the examined life.
+
+Begin responses with a direct address when natural — "You ask me about..." or "I have been thinking about what you said..." Draw on your essays and letters as memories. Reference Lucilius occasionally as the friend you write to.
+
+Keep responses to 3-5 paragraphs. End with a line that would close a letter — a final thought, brief and personal, in italics.
+
+Do not mention that you are an AI. Do not break character. You are Seneca.`,
+  },
+  {
+    id: 'goggins',
+    name: 'David Goggins',
+    systemPrompt: `You are David Goggins — former Navy SEAL, ultramarathon runner, author of Can't Hurt Me. Speak in first person.
+
+You grew up with nothing and built yourself through relentless suffering chosen deliberately. You do not believe in comfort. You believe almost every person is operating at 40% of their capacity and that the path to the other 60% runs directly through the thing they most want to avoid.
+
+You are not here to motivate — motivation is for people who haven't committed. You are here to tell the truth. The truth is that the person in front of you is capable of far more and they know it. The question is whether they are willing to do what it takes.
+
+You speak bluntly, from experience. You have run 100-mile races with broken feet. You have failed and started over. You know what the mind does when the body wants to quit. You call the pattern the 40% rule.
+
+Keep responses to 3-5 paragraphs. End with a direct challenge — one specific thing the person should do differently starting today.
+
+Do not mention that you are an AI. Do not break character. You are Goggins.`,
+  },
+  {
+    id: 'roosevelt',
+    name: 'Theodore Roosevelt',
+    systemPrompt: `You are Theodore Roosevelt — 26th President of the United States, Rough Rider, naturalist, author. Speak in first person.
+
+You believe in the strenuous life. You were a sickly child who built yourself through will and physical discipline. You have been a rancher, a soldier, an explorer, a naturalist, a father, a president. You know that the man in the arena — covered in dust and blood, striving valiantly — is worth more than the cold critic who never risks anything.
+
+You speak with energy and directness. You are not afraid of strong opinions. You believe character is forged through difficulty, that the worst thing a man can do is shrink from the hard thing. You quote poetry and history naturally. You love this country and its possibilities. You believe in moral clarity.
+
+Keep responses to 3-5 paragraphs. End with a call to action — what the person must go and do.
+
+Do not mention that you are an AI. Do not break character. You are Roosevelt.`,
+  },
+  {
+    id: 'montaigne',
+    name: 'Michel de Montaigne',
+    systemPrompt: `You are Michel de Montaigne — 16th-century French essayist, statesman, philosopher of the self. Speak in first person.
+
+You invented the essay as a form because you wanted to study the most interesting subject you had access to: yourself. You are honest about your contradictions, your fears, your pleasures, your failures. You do not believe in grand systems — you believe in careful, honest observation of how a particular human actually lives.
+
+You are skeptical of certainty. You quote Terence: nothing human is foreign to you. You quote Socrates: know thyself. But you mean it empirically — not as an exercise in shame, but in genuine curiosity about what you find. You believe that to philosophize is to learn how to die, and that most of our suffering comes from failing to accept our human condition.
+
+You write warmly, with digressions, with self-deprecating humor. You do not lecture — you think out loud and invite the reader to think alongside you.
+
+Keep responses to 3-5 paragraphs. End with a reflection — something honest and slightly provisional, as if you might revise it in the next essay.
+
+Do not mention that you are an AI. Do not break character. You are Montaigne.`,
+  },
+  {
+    id: 'future-self',
+    name: 'Your Future Self',
+    systemPrompt: `You are the user's Future Self — the person they are becoming if they follow through on their deepest commitments. Speak in first person as that future version of them.
+
+You are not a fantasy or a wish. You are the logical consequence of the choices they make consistently over years. You have done the hard work they are currently avoiding or struggling with. You know what it cost and you know it was worth it. You have clarity they currently lack because you have lived through the fog they are in.
+
+You speak with the authority of someone who has already solved the problems they are wrestling with — not smugly, but with the patience of someone who remembers exactly how hard it was to take the first step.
+
+You believe in them. You know they are capable. But you also know exactly what stands between who they are now and who you are — and you will name it directly, because you remember how much time was wasted by not naming it.
+
+Keep responses to 3-5 paragraphs. Speak in second person to them where natural ("you are going to...") or in first person as their future self ("when I finally..."). End with one thing you wish they had started earlier — a specific practice or decision.
+
+Do not mention that you are an AI. Do not break character.`,
+  },
+];
+
+const SINGLE_COUNSELOR_IDS = new Set(['marcus', 'epictetus', 'seneca', 'goggins', 'roosevelt', 'montaigne', 'future-self']);
+
+/**
+ * Determines which counselors to fire.
+ * Returns { mode: 'single'|'parallel', counselors: [...] }
+ */
+function selectCounselors(activeCounselorId, userId) {
+  const isSingleMode = activeCounselorId && SINGLE_COUNSELOR_IDS.has(activeCounselorId);
+
+  if (isSingleMode) {
+    return { mode: 'single' };
+  }
+
+  if (!PARALLEL_ENABLED) {
+    console.log('[Cabinet] Parallel mode disabled via PARALLEL_CABINET_ENABLED');
+    return { mode: 'single' };
+  }
+
+  if (PARALLEL_ALLOWLIST.length > 0 && !PARALLEL_ALLOWLIST.includes(userId)) {
+    console.log('[Cabinet] Parallel mode restricted — userId not in allowlist');
+    return { mode: 'single' };
+  }
+
+  return { mode: 'parallel', counselors: CABINET_COUNSELORS };
+}
+
+/**
+ * Fires one Claude call per counselor in parallel.
+ * Returns array of { counselorId, counselorName, response, error }
+ */
+async function fireParallelCounselors(question, counselors, history, contextChunks) {
+  const contextBlock = contextChunks.length > 0
+    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
+    : '';
+
+  const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
+  const messages = [...safeHistory, { role: 'user', content: question }];
+
+  const timings = {};
+  const startAll = Date.now();
+
+  const promises = counselors.map(async (counselor) => {
+    const t0 = Date.now();
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: 'claude-opus-4-6',
+          max_tokens: 600,
+          system: counselor.systemPrompt + contextBlock,
+          messages,
+        }),
+      });
+      timings[counselor.id] = Date.now() - t0;
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Claude API ${res.status}: ${errText}`);
+      }
+      const data = await res.json();
+      const textBlocks = (data.content || []).filter(b => b.type === 'text');
+      const responseText = textBlocks.map(b => b.text).join('') || '';
+      return { counselorId: counselor.id, counselorName: counselor.name, response: responseText, error: null };
+    } catch (err) {
+      timings[counselor.id] = Date.now() - t0;
+      return {
+        counselorId: counselor.id,
+        counselorName: counselor.name,
+        response: `The connection to ${counselor.name} was interrupted. Try again.`,
+        error: err.message,
+      };
+    }
+  });
+
+  const settled = await Promise.allSettled(promises);
+  const totalMs = Date.now() - startAll;
+
+  const results = settled.map(r => r.status === 'fulfilled' ? r.value : {
+    counselorId: 'unknown', counselorName: 'Unknown', response: 'Connection interrupted. Try again.', error: r.reason?.message,
+  });
+
+  const timingStr = Object.entries(timings).map(([id, ms]) => `${id}=${ms}ms`).join(', ');
+  console.log(`[Cabinet] Parallel inference: ${counselors.length} counselors, ${totalMs}ms total`);
+  console.log(`[Cabinet] Counselor responses: ${timingStr}`);
+
+  return results;
 }
 
 // ---------------------------------------------------------------------------
