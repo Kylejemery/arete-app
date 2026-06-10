@@ -690,8 +690,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
-    const { data: { user: _cabUser } } = await supabase.auth.getUser();
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const { data: { session: _cabSession } } = await supabase.auth.getSession();
+    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -703,7 +703,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
-        user_id: _cabUser?.id ?? '',
+        activeCounselorId: 'cabinet',
+        userId: _cabSession?.user?.id,
       }),
     });
 
@@ -720,6 +721,11 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     }
 
     const data = await response.json();
+    if (data.mode === 'parallel' && Array.isArray(data.responses)) {
+      return data.responses
+        .map((r: any) => `**${r.counselorName}**\n${r.response}`)
+        .join('\n\n---\n\n');
+    }
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       return content;
@@ -888,6 +894,8 @@ export async function sendMessageToCounselor(
         userProfile,
         counselorSlug: counselorId,
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        activeCounselorId: counselorId,
+        userId: (await supabase.auth.getSession()).data.session?.user?.id,
       }),
     });
 
@@ -964,6 +972,8 @@ export async function prefetchDailyQuestion(counselorId: string, question: strin
         messages: [{ role: 'user', content: question }],
         counselorSlug: counselorId,
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        activeCounselorId: counselorId,
+        userId: (await supabase.auth.getSession()).data.session?.user?.id,
       }),
     });
 
