@@ -410,7 +410,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const data = await response.json();
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       return data.responses
-        .map((r: any) => `**${r.counselorName}**\n${r.response}`)
+        .map((r: { counselorName: string; response: string }) => `**${r.counselorName}**\n${r.response}`)
         .join('\n\n---\n\n');
     }
     const content = data?.content?.[0]?.text;
@@ -632,5 +632,4 @@ export async function sendBeliefJournalMessage(
 
   return { response: displayContent, refinedStatement, virtueCheck };
 }
- 
- 
+
