@@ -389,15 +389,15 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const { data: { session: cabinetSession } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cabinetSession?.access_token}` },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
-        max_tokens: 4000,
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        activeCounselorId: 'cabinet',
+        userId: cabinetSession?.user?.id,
       }),
     });
 
@@ -408,6 +408,11 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     }
 
     const data = await response.json();
+    if (data.mode === 'parallel' && Array.isArray(data.responses)) {
+      return data.responses
+        .map((r: any) => `**${r.counselorName}**\n${r.response}`)
+        .join('\n\n---\n\n');
+    }
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       return content;
@@ -504,7 +509,7 @@ export async function sendMessageToCounselor(
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const { data: { session: counselorSession } } = await supabase.auth.getSession();
-    const response = await fetch(`${API_BASE_URL}/api/chat`, {
+    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${counselorSession?.access_token}` },
       body: JSON.stringify({
@@ -513,6 +518,8 @@ export async function sendMessageToCounselor(
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
+        activeCounselorId: counselorId,
+        userId: counselorSession?.user?.id,
       }),
     });
 
@@ -625,3 +632,5 @@ export async function sendBeliefJournalMessage(
 
   return { response: displayContent, refinedStatement, virtueCheck };
 }
+ 
+ 
