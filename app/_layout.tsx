@@ -1,5 +1,5 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { installCrashCapture, reportStoredCrash } from '@/lib/crashCapture';
+import { breadcrumb, installCrashCapture, reportStoredCrash } from '@/lib/crashCapture';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
@@ -28,6 +28,7 @@ export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
+    breadcrumb('root layout mounted');
     reportStoredCrash();
   }, []);
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
 
  useEffect(() => {
   if (session !== undefined) {
+    breadcrumb('session resolved, hiding splash');
     SplashScreen.hideAsync().catch(() => {});
   }
 }, [session]);
