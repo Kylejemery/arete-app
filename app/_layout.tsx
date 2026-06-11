@@ -4,8 +4,19 @@ import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { ErrorUtils, View } from 'react-native';
+import { ErrorUtils, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { enableScreens } from 'react-native-screens';
+
+// iOS 26 workaround: disables RNSTabBarController to prevent SIGABRT via
+// ObjCTurboModule::performVoidMethodInvocation on iOS 26. Both Build 47 and
+// Build 48 crash logs confirm RNScreens is in the binary and the crash fires
+// on the TurboModule manager queue at launch. Remove when react-native-screens
+// ships a fix for RNSTabBarController::updateTabBarAppearance on iOS 26.
+// Reference: github.com/software-mansion/react-native-screens/issues/3940
+if (Platform.OS === 'ios') {
+  enableScreens(false);
+}
 
 // ── Global JS error handler — catches errors BEFORE RCTExceptionsManager ──────
 const originalHandler = ErrorUtils.getGlobalHandler();
