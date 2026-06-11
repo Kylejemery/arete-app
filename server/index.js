@@ -1197,9 +1197,11 @@ function selectCounselors(activeCounselorId, userId) {
  * Returns array of { counselorId, counselorName, response, error }
  */
 async function fireParallelCounselors(question, counselors, history, contextChunks) {
+  const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Do not roleplay, quote, or speak as other Cabinet members. Each counselor is responding independently and simultaneously. Stay in your own voice.`;
+
   const contextBlock = contextChunks.length > 0
-    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '';
+    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]` + voiceGuard
+    : voiceGuard;
 
   const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
   const messages = [...safeHistory, { role: 'user', content: question }];
