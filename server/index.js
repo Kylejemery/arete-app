@@ -1885,7 +1885,7 @@ app.get('/health', async (req, res) => {
 const recentCrashes = [];
 
 app.post('/api/crash', (req, res) => {
-  const { message, name, stack, isFatal, at, phase } = req.body || {};
+  const { message, name, stack, isFatal, at, phase, launchId } = req.body || {};
   const entry = {
     message: String(message || '').slice(0, 2000),
     name: String(name || '').slice(0, 200),
@@ -1893,10 +1893,11 @@ app.post('/api/crash', (req, res) => {
     isFatal: !!isFatal,
     at,
     phase,
+    launchId: String(launchId || '').slice(0, 16),
     receivedAt: new Date().toISOString(),
   };
   recentCrashes.unshift(entry);
-  if (recentCrashes.length > 20) recentCrashes.length = 20;
+  if (recentCrashes.length > 200) recentCrashes.length = 200;
   console.error('[CRASH REPORT]', JSON.stringify(entry));
   res.json({ ok: true });
 });

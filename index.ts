@@ -1,13 +1,18 @@
-// Custom entry: install the global crash capture BEFORE expo-router (and the
-// rest of the app graph) evaluates, so fatal errors thrown during module
-// initialization are recorded too. Import order is evaluation order here —
-// keep crashCapture first.
-import { breadcrumb } from './lib/crashCapture';
-import 'expo-router/entry';
+// Custom entry: diagnostics first, then the app.
+//
+// Deliberately require()-based, not import-based: imports hoist, so a
+// try/catch around an `import` is impossible. With require(), a fatal error
+// thrown anywhere in the app's module-graph evaluation lands in our catch
+// SYNCHRONOUSLY, with the real stack — no reliance on ErrorUtils, timers,
+// or networking being alive (Builds 51/52 showed none of them are during
+// early boot).
+const { breadcrumb, reportBootFatal, startBootDiagnostics } = require('./lib/crashCapture');
 
-// Imports above are hoisted, so this runs only after expo-router/entry (and
-// the whole app module graph) finished evaluating. Together with the
-// breadcrumb crashCapture sends during its own eval, this brackets the
-// app-graph evaluation: if only the first breadcrumb arrives, boot died
-// inside the module graph.
-breadcrumb('entry: app module graph evaluated');
+startBootDiagnostics();
+
+try {
+  require('expo-router/entry');
+  breadcrumb('entry: app module graph evaluated');
+} catch (error) {
+  reportBootFatal(error);
+}

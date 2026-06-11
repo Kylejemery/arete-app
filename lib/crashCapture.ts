@@ -1,24 +1,31 @@
-// Crash + boot diagnostics for the TestFlight launch failures (Builds 47-51).
+// Crash + boot diagnostics for the TestFlight launch failures (Builds 47-52).
 //
-// Build 51 taught us that at crash time during early boot, async I/O
-// (AsyncStorage, fetch, even setTimeout) may never complete — the app froze
-// on the splash screen and no report escaped. So this version:
-//   - shows the error in a native Alert immediately (no React tree needed)
-//   - retries the server POST on a loop while the app sits there
-//   - suppresses the native abort for fatal errors in the launch window so
-//     the alert stays readable and the retries get a chance to run
-//   - sends boot breadcrumbs so a silent hang (no JS error at all) still
-//     tells us where boot stopped
+// Lessons so far:
+//   - Build 51: at early boot, AsyncStorage/fetch/setTimeout callbacks may
+//     never complete, so a one-shot report is lost.
+//   - Build 52: even a native Alert + 10 fetch retries produced silence, so
+//     channels can stay dead for a while (or forever) after a boot fatal.
 //
-// Module-eval footprint is deliberately tiny: only ErrorUtils is touched at
-// import time; AsyncStorage and Alert are require()d lazily at use time so
-// this file can load before expo initializes without side effects.
+// This version assumes NOTHING works reliably and brute-forces every
+// channel, forever:
+//   - index.ts catches module-graph errors SYNCHRONOUSLY (require in
+//     try/catch) and hands them to reportBootFatal — no ErrorUtils needed.
+//   - reportBootFatal fires the first Alert/POST/persist dispatches
+//     synchronously, hides the splash screen (a visible signal that the
+//     fatal path ran, even if every other channel fails), then retries the
+//     POST every 3s indefinitely and re-alerts at ~9s and ~27s.
+//   - heartbeats every 5s for 2 minutes tell us whether the event loop and
+//     network are alive at all, independent of any error.
+//   - a crash persisted by a previous launch is replayed at entry, with
+//     retries until the server confirms receipt.
 import { ErrorUtils } from 'react-native';
 
 const STORAGE_KEY = 'arete:lastFatalError';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 const LAUNCH_WINDOW_MS = 20000;
 const moduleLoadedAt = Date.now();
+// Groups all reports from one process launch when reading the server log.
+const launchId = Math.random().toString(36).slice(2, 8);
 
 interface CrashRecord {
   message: string;
@@ -33,12 +40,10 @@ function post(record: CrashRecord): Promise<unknown> {
   return fetch(`${API_BASE_URL}/api/crash`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record),
+    body: JSON.stringify({ ...record, launchId }),
   });
 }
 
-// Fire-and-forget boot marker. If boot hangs with no JS error, the last
-// breadcrumb that reaches the server tells us where it stopped.
 export function breadcrumb(label: string) {
   try {
     post({
@@ -49,20 +54,26 @@ export function breadcrumb(label: string) {
       at: new Date().toISOString(),
       phase: 'boot',
     }).catch(() => {});
-  } catch {
-    // fetch may not exist yet in exotic environments; never let
-    // diagnostics break boot.
-  }
+  } catch {}
 }
 
-function showAlert(record: CrashRecord) {
+function toRecord(error: unknown, isFatal: boolean, phase: string): CrashRecord {
+  const e = error as Error | undefined;
+  return {
+    message: e?.message ?? String(error),
+    name: e?.name ?? 'Unknown',
+    stack: e?.stack ?? '',
+    isFatal,
+    at: new Date().toISOString(),
+    phase,
+  };
+}
+
+function showAlert(title: string, record: CrashRecord) {
   try {
     // Lazy require: Alert talks straight to native and works without React.
     const { Alert } = require('react-native');
-    Alert.alert(
-      'Fatal JS error',
-      `${record.name}: ${record.message}\n\n${record.stack.slice(0, 800)}`,
-    );
+    Alert.alert(title, `${record.name}: ${record.message}\n\n${record.stack.slice(0, 800)}`);
   } catch {}
 }
 
@@ -73,25 +84,95 @@ function persist(record: CrashRecord) {
   } catch {}
 }
 
-// Keep trying to get the report out while the app sits on the splash
-// screen — the network stack may come up seconds after the error fired.
-function reportWithRetries(record: CrashRecord, attemptsLeft: number) {
-  if (attemptsLeft <= 0) return;
+function hideSplash() {
   try {
-    post(record).catch(() => {
-      try {
-        setTimeout(() => reportWithRetries(record, attemptsLeft - 1), 3000);
-      } catch {}
-    });
+    // Visible signal that the fatal path executed: the splash vanishing to a
+    // blank screen means "boot fatal fired" even if no other channel works.
+    const SplashScreen = require('expo-splash-screen');
+    SplashScreen.hideAsync().catch(() => {});
+  } catch {}
+}
+
+// POST until the server confirms receipt. Never gives up: if the network
+// stack revives minutes later, the report still escapes.
+function postUntilDelivered(record: CrashRecord, onDelivered?: () => void, attempt = 1) {
+  try {
+    post(record).then(
+      () => onDelivered?.(),
+      () => {
+        try {
+          setTimeout(() => postUntilDelivered(record, onDelivered, attempt + 1), 3000);
+        } catch {}
+      },
+    );
   } catch {
     try {
-      setTimeout(() => reportWithRetries(record, attemptsLeft - 1), 3000);
+      setTimeout(() => postUntilDelivered(record, onDelivered, attempt + 1), 3000);
     } catch {}
   }
 }
 
+// Synchronous handler for module-graph evaluation errors (called from the
+// try/catch in index.ts). Everything here that CAN run synchronously does,
+// before any reliance on the event loop.
+export function reportBootFatal(error: unknown) {
+  const record = toRecord(error, true, 'boot-fatal');
+  console.error('[BOOT FATAL]', record.message, record.stack);
+
+  persist(record);
+  showAlert('Fatal boot error', record);
+  hideSplash();
+  postUntilDelivered(record);
+
+  // Re-alert later in case the first dialog fired before native could
+  // present it. Same content; whichever lands first is readable.
+  try {
+    setTimeout(() => showAlert('Fatal boot error (retry)', record), 9000);
+    setTimeout(() => showAlert('Fatal boot error (retry 2)', record), 27000);
+  } catch {}
+}
+
+function replayStoredCrash() {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    AsyncStorage.getItem(STORAGE_KEY).then((raw: string | null) => {
+      if (!raw) return;
+      const record = JSON.parse(raw) as CrashRecord;
+      console.error('[PREVIOUS LAUNCH CRASH]', raw);
+      postUntilDelivered({ ...record, phase: 'previous-launch' }, () => {
+        AsyncStorage.removeItem(STORAGE_KEY).catch(() => {});
+      });
+      showAlert('Previous launch crashed', record);
+    }).catch(() => {});
+  } catch {}
+}
+
+function startHeartbeats() {
+  let seq = 0;
+  try {
+    const interval = setInterval(() => {
+      seq += 1;
+      breadcrumb(`heartbeat ${seq} (uptime ${Date.now() - moduleLoadedAt}ms)`);
+      if (seq >= 24) clearInterval(interval); // 2 minutes, then stop
+    }, 5000);
+  } catch {}
+}
+
+let bootDiagnosticsStarted = false;
+
+export function startBootDiagnostics() {
+  if (bootDiagnosticsStarted) return;
+  bootDiagnosticsStarted = true;
+  installCrashCapture();
+  breadcrumb('entry: crashCapture loaded, app graph next');
+  replayStoredCrash();
+  startHeartbeats();
+}
+
 let installed = false;
 
+// ErrorUtils path for fatals OUTSIDE module-graph eval (after boot, or
+// thrown from async callbacks during boot).
 export function installCrashCapture() {
   if (installed) return;
   installed = true;
@@ -99,31 +180,21 @@ export function installCrashCapture() {
   const originalHandler = ErrorUtils.getGlobalHandler();
 
   ErrorUtils.setGlobalHandler((error, isFatal) => {
-    const e = error as Error | undefined;
-    const record: CrashRecord = {
-      message: e?.message ?? String(error),
-      name: e?.name ?? 'Unknown',
-      stack: e?.stack ?? '',
-      isFatal: !!isFatal,
-      at: new Date().toISOString(),
-      phase: 'crash',
-    };
+    const record = toRecord(error, !!isFatal, 'crash');
     console.error('[GLOBAL ERROR CAUGHT]', 'fatal:', record.isFatal, 'message:', record.message, 'stack:', record.stack);
 
     persist(record);
-    reportWithRetries(record, 10);
+    postUntilDelivered(record);
 
     if (!record.isFatal) {
       originalHandler(error, isFatal);
       return;
     }
 
-    showAlert(record);
+    showAlert('Fatal JS error', record);
 
-    // Diagnostic build: a fatal error in the launch window would normally
-    // abort before any of the above flushes. Swallow the abort so the alert
-    // is readable on-device and the POST retries can run. Fatal errors
-    // after launch still abort (delayed so the report can flush first).
+    // Diagnostic build: swallow the abort during the launch window so the
+    // alert stays readable and the POST retries keep running.
     if (Date.now() - moduleLoadedAt < LAUNCH_WINDOW_MS) return;
     try {
       setTimeout(() => originalHandler(error, isFatal), 2500);
@@ -132,31 +203,3 @@ export function installCrashCapture() {
     }
   });
 }
-
-// Call once after the root layout mounts: re-sends a crash from the previous
-// launch and shows it in an alert so it's readable on the TestFlight device.
-export async function reportStoredCrash() {
-  try {
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    const raw = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-
-    const record = JSON.parse(raw) as CrashRecord;
-    console.error('[PREVIOUS LAUNCH CRASH]', raw);
-
-    await post({ ...record, phase: 'previous-launch' }).catch(() => {});
-    await AsyncStorage.removeItem(STORAGE_KEY);
-
-    const { Alert } = require('react-native');
-    Alert.alert(
-      'Previous launch crashed',
-      `${record.name}: ${record.message}\n\n${record.stack.slice(0, 600)}`,
-    );
-  } catch {
-    // Diagnostics must never take the app down.
-  }
-}
-
-// Install on import so index.ts only needs `import './lib/crashCapture'`.
-installCrashCapture();
-breadcrumb('entry: crashCapture loaded, expo-router/entry next');

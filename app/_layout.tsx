@@ -1,5 +1,5 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { breadcrumb, installCrashCapture, reportStoredCrash } from '@/lib/crashCapture';
+import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
@@ -8,9 +8,9 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Normally installed by index.ts before anything else loads; this is a
+// Normally started by index.ts before anything else loads; this is a
 // safety net for environments that bypass the custom entry (e.g. web).
-installCrashCapture();
+startBootDiagnostics();
 
 // This tells Expo Router to use our ErrorBoundary for the root route
 export { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -29,7 +29,6 @@ export default function RootLayout() {
 
   useEffect(() => {
     breadcrumb('root layout mounted');
-    reportStoredCrash();
   }, []);
 
   useEffect(() => {
