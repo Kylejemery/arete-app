@@ -264,7 +264,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses } = req.body;
 
   const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
   const tier = req.headers['x-subscription-tier'];
@@ -302,7 +302,9 @@ app.post('/api/chat/counselor', async (req, res) => {
       }
     }
 
-    const results = await fireParallelCounselors(question, parallelCounselors, history, contextChunks);
+    const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
+
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses);
 
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
@@ -1193,15 +1195,74 @@ function selectCounselors(activeCounselorId, userId) {
 }
 
 /**
+ * Uses a fast Haiku "director" call to select which 1-3 counselors should
+ * respond to the current message. Falls back to all counselors on failure.
+ */
+async function selectRespondingCounselors(question, allCounselors, history) {
+  const directorSystem = `You are the director of a Cabinet of philosophical counselors. Your job is to decide which 1-3 counselors should respond to the user's current message.
+
+Rules:
+- If the user addresses a counselor by name or calls one out specifically, ONLY that counselor responds. No one else.
+- If the user is asking a direct question to the group, select 2-3 whose perspectives are most distinct and relevant.
+- If the user is sharing something personal or emotional, select 1-2 — a full chorus is overwhelming.
+- David Goggins should only respond when the conversation involves effort, physical discipline, mental toughness, or the user avoiding something hard. He is not a philosopher and should not weigh in on abstract questions.
+- Future Self should respond when the conversation is about direction, long-term identity, or what the user is becoming.
+- Never select all 7. Maximum is 3.
+
+Respond ONLY with valid JSON: { "responding": ["id1", "id2"], "reason": "..." }`;
+
+  const recentHistory = Array.isArray(history) ? history.slice(-6) : [];
+  const messages = [...recentHistory, { role: 'user', content: question }];
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
+        system: directorSystem,
+        messages,
+      }),
+    });
+    if (!res.ok) throw new Error(`Director call failed: ${res.status}`);
+    const data = await res.json();
+    const text = data.content?.find(b => b.type === 'text')?.text || '';
+    const parsed = JSON.parse(text);
+    const ids = Array.isArray(parsed.responding) ? parsed.responding : [];
+    const reason = parsed.reason || '';
+    const selected = allCounselors.filter(c => ids.includes(c.id));
+    if (selected.length === 0) throw new Error('Director returned no valid counselor IDs');
+    console.log(`[Cabinet] Director selected: ${selected.map(c => c.id).join(', ')} — ${reason}`);
+    return selected;
+  } catch (err) {
+    console.warn('[Cabinet] Director call failed, falling back to all counselors:', err.message);
+    return allCounselors;
+  }
+}
+
+/**
  * Fires one Claude call per counselor in parallel.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks) {
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses) {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Do not roleplay, quote, or speak as other Cabinet members. Each counselor is responding independently and simultaneously. Stay in your own voice.`;
 
   const contextBlock = contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]` + voiceGuard
     : voiceGuard;
+
+  const checkInBlock = checkInContext
+    ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
+    : '';
+
+  const priorResponsesBlock = (Array.isArray(priorResponses) && priorResponses.length > 0)
+    ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already responded in this conversation turn. You are speaking after them. Do not repeat what they said. Do not respond to them directly. Simply add what only you can add.\n${priorResponses.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
+    : '';
 
   const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
   const messages = [...safeHistory, { role: 'user', content: question }];
@@ -1222,7 +1283,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
         body: JSON.stringify({
           model: 'claude-opus-4-6',
           max_tokens: 600,
-          system: counselor.systemPrompt + contextBlock,
+          system: counselor.systemPrompt + contextBlock + checkInBlock + priorResponsesBlock,
           messages,
         }),
       });
