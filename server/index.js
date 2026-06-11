@@ -1899,11 +1899,36 @@ app.post('/api/crash', (req, res) => {
   recentCrashes.unshift(entry);
   if (recentCrashes.length > 200) recentCrashes.length = 200;
   console.error('[CRASH REPORT]', JSON.stringify(entry));
+
+  // Durable copy — the in-memory list dies on every redeploy/restart.
+  supabase.from('crash_reports').insert({
+    message: entry.message,
+    name: entry.name,
+    stack: entry.stack,
+    is_fatal: entry.isFatal,
+    at: entry.at,
+    phase: entry.phase,
+    launch_id: entry.launchId,
+  }).then(({ error }) => {
+    if (error) console.error('[CRASH REPORT] supabase insert failed:', error.message);
+  });
+
   res.json({ ok: true });
 });
 
-app.get('/api/crash', (req, res) => {
-  res.json(recentCrashes);
+app.get('/api/crash', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('crash_reports')
+      .select('*')
+      .order('received_at', { ascending: false })
+      .limit(200);
+    if (error) throw error;
+    res.json(data);
+  } catch (err) {
+    // Fall back to the in-memory list if the durable store is unreachable.
+    res.json(recentCrashes);
+  }
 });
 
 // POST /oracle — Stoic Oracle with IP rate limiting
