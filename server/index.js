@@ -1877,6 +1877,34 @@ app.get('/health', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Crash reporting — receives fatal JS errors from the mobile app
+// (lib/crashCapture.ts). Reports land in the Railway logs and the last 20
+// are kept in memory, readable via GET /api/crash.
+// ---------------------------------------------------------------------------
+const recentCrashes = [];
+
+app.post('/api/crash', (req, res) => {
+  const { message, name, stack, isFatal, at, phase } = req.body || {};
+  const entry = {
+    message: String(message || '').slice(0, 2000),
+    name: String(name || '').slice(0, 200),
+    stack: String(stack || '').slice(0, 8000),
+    isFatal: !!isFatal,
+    at,
+    phase,
+    receivedAt: new Date().toISOString(),
+  };
+  recentCrashes.unshift(entry);
+  if (recentCrashes.length > 20) recentCrashes.length = 20;
+  console.error('[CRASH REPORT]', JSON.stringify(entry));
+  res.json({ ok: true });
+});
+
+app.get('/api/crash', (req, res) => {
+  res.json(recentCrashes);
+});
+
 // POST /oracle — Stoic Oracle with IP rate limiting
 app.post('/oracle', async (req, res) => {
   try {

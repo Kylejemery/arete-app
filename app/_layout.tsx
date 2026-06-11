@@ -1,18 +1,16 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { installCrashCapture, reportStoredCrash } from '@/lib/crashCapture';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { ErrorUtils, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// ── Global JS error handler — catches errors BEFORE RCTExceptionsManager ──────
-const originalHandler = ErrorUtils.getGlobalHandler();
-ErrorUtils.setGlobalHandler((error, isFatal) => {
-  console.error('[GLOBAL ERROR CAUGHT]', 'fatal:', isFatal, 'message:', error?.message, 'stack:', error?.stack);
-  originalHandler(error, isFatal);
-});
+// Normally installed by index.ts before anything else loads; this is a
+// safety net for environments that bypass the custom entry (e.g. web).
+installCrashCapture();
 
 // This tells Expo Router to use our ErrorBoundary for the root route
 export { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -28,6 +26,10 @@ export function useSession() {
 
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+
+  useEffect(() => {
+    reportStoredCrash();
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
