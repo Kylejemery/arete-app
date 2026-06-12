@@ -676,7 +676,18 @@ The week has ended. Give me your honest assessment.`;
   throw new Error('The Cabinet did not respond. Please try again.');
 }
 
-export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
+// One Cabinet reply per counselor. counselorId/Name are null in single-voice
+// mode (legacy path) — the UI labels those bubbles 'The Cabinet'.
+export interface CabinetReply {
+  counselorId: string | null;
+  counselorName: string | null;
+  text: string;
+}
+
+export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<CabinetReply[]> {
+  const asSingleReply = (text: string): CabinetReply[] => [
+    { counselorId: null, counselorName: null, text },
+  ];
   try {
     const limitStatus = await checkAndIncrementMessageCount();
     if (!limitStatus.allowed) {
@@ -717,25 +728,31 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Backend/Claude API error:', response.status, errorText);
-      return `The Cabinet is temporarily unavailable. (Error ${response.status})`;
+      return asSingleReply(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
 
     const data = await response.json();
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
-      return data.responses
-        .map((r: any) => `**${r.counselorName}**\n${r.response}`)
-        .join('\n\n---\n\n');
+      const replies = data.responses
+        .map((r: any): CabinetReply => ({
+          counselorId: r.counselorId ?? null,
+          counselorName: r.counselorName ?? null,
+          text: typeof r.response === 'string' ? r.response : '',
+        }))
+        .filter((r: CabinetReply) => r.text.length > 0);
+      if (replies.length > 0) return replies;
+      return asSingleReply('The Cabinet did not respond. Please try again.');
     }
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
-      return content;
+      return asSingleReply(content);
     }
-    return 'The Cabinet did not respond. Please try again.';
+    return asSingleReply('The Cabinet did not respond. Please try again.');
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
     if (error instanceof DailyLimitError) throw error;
     console.error('Backend request failed:', error);
-    return 'Backend server not reachable. Make sure the server is running.';
+    return asSingleReply('Backend server not reachable. Make sure the server is running.');
   }
 }
 

@@ -21,6 +21,7 @@ export interface ThreadMessage {
   content: string;
   timestamp: number; // Unix ms
   counselorId?: string; // which counselor replied (for group thread rendering)
+  counselorName?: string; // display name for the bubble label; absent = 'The Cabinet'
 }
 
 export interface Thread {

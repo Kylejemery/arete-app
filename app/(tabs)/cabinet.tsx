@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { sendMessageToCabinet, MessageLimitError, DailyLimitError } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError } from '../../services/claudeService';
 import { getUserSettings, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -43,6 +43,16 @@ function timeAgo(timestamp: number): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function repliesToMessages(replies: CabinetReply[]): ThreadMessage[] {
+  return replies.map((r) => ({
+    role: 'assistant' as const,
+    content: r.text,
+    timestamp: Date.now(),
+    counselorId: r.counselorId ?? undefined,
+    counselorName: r.counselorName ?? undefined,
+  }));
 }
 
 function getInitials(name: string): string {
@@ -206,15 +216,11 @@ export default function CabinetScreen() {
             const updated = [...prev, userMessage];
             setIsLoading(true);
             appendMessages('cabinet', [userMessage]);
-            sendMessageToCabinet(updated).then(reply => {
-              const assistantMessage: ThreadMessage = {
-                role: 'assistant',
-                content: reply,
-                timestamp: Date.now(),
-              };
-              setMessages(u => [...u, assistantMessage]);
+            sendMessageToCabinet(updated).then(replies => {
+              const assistantMessages = repliesToMessages(replies);
+              setMessages(u => [...u, ...assistantMessages]);
               setIsLoading(false);
-              appendMessages('cabinet', [assistantMessage]);
+              appendMessages('cabinet', assistantMessages);
             });
             return updated;
           });
@@ -273,18 +279,14 @@ export default function CabinetScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const reply = await sendMessageToCabinet(updatedMessages);
-      const assistantMessage: ThreadMessage = {
-        role: 'assistant',
-        content: reply,
-        timestamp: Date.now(),
-      };
-      const finalMessages = [...updatedMessages, assistantMessage];
+      const replies = await sendMessageToCabinet(updatedMessages);
+      const assistantMessages = repliesToMessages(replies);
+      const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
       const newCount = count + 1;
       await AsyncStorage.setItem(dateKey, String(newCount));
       setMessageCount(newCount);
-      await appendMessages('cabinet', [userMessage, assistantMessage]);
+      await appendMessages('cabinet', [userMessage, ...assistantMessages]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
       setMessages(prev => prev.slice(0, -1));
@@ -501,7 +503,7 @@ export default function CabinetScreen() {
                         ) : (
                           <View key={index} style={styles.cabinetMessageRow}>
                             <View style={styles.cabinetBubble}>
-                              <Text style={styles.cabinetLabel}>The Cabinet</Text>
+                              <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
                               <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                             </View>
                           </View>
