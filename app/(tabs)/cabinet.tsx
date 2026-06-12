@@ -320,7 +320,7 @@ export default function CabinetScreen() {
   };
 
   const futureName = userSettings?.user_name
-    ? `Future ${userSettings.user_name}${userSettings.future_self_years ? ` (Age ${userSettings.future_self_years})` : ''}`
+    ? `Future ${userSettings.user_name}${userSettings.future_self_years ? ` (in ${userSettings.future_self_years} years)` : ''}`
     : 'Future Self';
 
   return (
