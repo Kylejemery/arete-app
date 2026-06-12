@@ -18,7 +18,18 @@
 //     network are alive at all, independent of any error.
 //   - a crash persisted by a previous launch is replayed at entry, with
 //     retries until the server confirms receipt.
-import { ErrorUtils } from 'react-native';
+// NOTE: no imports at module scope, on purpose. In particular, ErrorUtils is
+// a runtime GLOBAL installed by RN's polyfills — it is NOT an export of the
+// 'react-native' package in RN 0.85. `import { ErrorUtils } from
+// 'react-native'` quietly yields undefined, and calling .getGlobalHandler()
+// on it at module scope WAS the launch crash from Build 43 through Build 54
+// ("[runtime not ready]: TypeError: Cannot read property 'getGlobalHandler'
+// of undefined" in the device syslog).
+type GlobalErrorHandler = (error: unknown, isFatal?: boolean) => void;
+interface ErrorUtilsGlobal {
+  getGlobalHandler: () => GlobalErrorHandler;
+  setGlobalHandler: (handler: GlobalErrorHandler) => void;
+}
 
 const STORAGE_KEY = 'arete:lastFatalError';
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
@@ -177,9 +188,15 @@ export function installCrashCapture() {
   if (installed) return;
   installed = true;
 
-  const originalHandler = ErrorUtils.getGlobalHandler();
+  const errorUtils = (globalThis as { ErrorUtils?: ErrorUtilsGlobal }).ErrorUtils;
+  if (!errorUtils) {
+    breadcrumb('ErrorUtils global missing; global handler not installed');
+    return;
+  }
 
-  ErrorUtils.setGlobalHandler((error, isFatal) => {
+  const originalHandler = errorUtils.getGlobalHandler();
+
+  errorUtils.setGlobalHandler((error, isFatal) => {
     const record = toRecord(error, !!isFatal, 'crash');
     console.error('[GLOBAL ERROR CAUGHT]', 'fatal:', record.isFatal, 'message:', record.message, 'stack:', record.stack);
 
