@@ -1199,17 +1199,21 @@ function selectCounselors(activeCounselorId, userId) {
  * respond to the current message. Falls back to all counselors on failure.
  */
 async function selectRespondingCounselors(question, allCounselors, history) {
-  const directorSystem = `You are the director of a Cabinet of philosophical counselors. Your job is to decide which 1-3 counselors should respond to the user's current message.
+  const directorSystem = `You are the director of a Cabinet of philosophical counselors. For each user message, decide the conversation format and which counselors speak, in what order.
+
+Formats:
+- "solo" — one counselor responds. The default for most messages, and always for personal or emotional ones.
+- "dialogue" — two counselors whose perspectives usefully differ. The second speaker will see the first's response and may push back.
+- "chorus" — three counselors. Rare. Reserve for major life decisions, milestone moments, or when the user explicitly asks the whole Cabinet.
 
 Rules:
-- If the user addresses a counselor by name or calls one out specifically, ONLY that counselor responds. No one else.
-- If the user is asking a direct question to the group, select 2-3 whose perspectives are most distinct and relevant.
-- If the user is sharing something personal or emotional, select 1-2 — a full chorus is overwhelming.
+- If the user addresses a counselor by name or calls one out specifically, ONLY that counselor responds (solo). No one else.
+- Vary who speaks across the conversation — look at the recent history and do not let the same counselor open every turn.
 - David Goggins should only respond when the conversation involves effort, physical discipline, mental toughness, or the user avoiding something hard. He is not a philosopher and should not weigh in on abstract questions.
 - Future Self should respond when the conversation is about direction, long-term identity, or what the user is becoming.
-- Never select all 7. Maximum is 3.
+- List counselors in speaking order. Maximum is 3.
 
-Respond ONLY with valid JSON: { "responding": ["id1", "id2"], "reason": "..." }`;
+Respond ONLY with valid JSON: { "format": "solo" | "dialogue" | "chorus", "responding": ["id1", "id2"], "reason": "..." }`;
 
   const recentHistory = Array.isArray(history) ? history.slice(-6) : [];
   const messages = [...recentHistory, { role: 'user', content: question }];
@@ -1235,44 +1239,61 @@ Respond ONLY with valid JSON: { "responding": ["id1", "id2"], "reason": "..." }`
     const parsed = JSON.parse(text);
     const ids = Array.isArray(parsed.responding) ? parsed.responding : [];
     const reason = parsed.reason || '';
-    const selected = allCounselors.filter(c => ids.includes(c.id));
+    const format = parsed.format || 'solo';
+    // Preserve the director's speaking order — it matters for the relay.
+    const selected = ids
+      .map(id => allCounselors.find(c => c.id === id))
+      .filter(Boolean)
+      .slice(0, 3);
     if (selected.length === 0) throw new Error('Director returned no valid counselor IDs');
-    console.log(`[Cabinet] Director selected: ${selected.map(c => c.id).join(', ')} — ${reason}`);
+    console.log(`[Cabinet] Director selected (${format}): ${selected.map(c => c.id).join(' → ')} — ${reason}`);
     return selected;
   } catch (err) {
-    console.warn('[Cabinet] Director call failed, falling back to all counselors:', err.message);
-    return allCounselors;
+    // Never fall back to the full chorus — the chair speaks for the Cabinet
+    // when the director is unavailable.
+    console.warn('[Cabinet] Director call failed, falling back to chair solo:', err.message);
+    const chair = allCounselors.find(c => c.id === 'marcus') || allCounselors[0];
+    return chair ? [chair] : allCounselors.slice(0, 1);
   }
 }
 
 /**
- * Fires one Claude call per counselor in parallel.
+ * Fires one Claude call per counselor as a sequential relay: each counselor
+ * sees what colleagues said earlier in the turn and may briefly react to
+ * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
 async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses) {
-  const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Do not roleplay, quote, or speak as other Cabinet members. Each counselor is responding independently and simultaneously. Stay in your own voice.`;
+  const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
 
-  const contextBlock = contextChunks.length > 0
-    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]` + voiceGuard + lengthGuard
-    : voiceGuard + lengthGuard;
+  const toneGuard = `\n\nTone: This is a spoken conversation among people in a room, not an exchange of essays. Use contractions. Address the user directly. Do not restate their question back to them. If one sharp sentence is the best response, give one sharp sentence and stop.`;
+
+  const contextBlock = (contextChunks.length > 0
+    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
+    : '') + voiceGuard + lengthGuard + toneGuard;
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
     : '';
 
-  const priorResponsesBlock = (Array.isArray(priorResponses) && priorResponses.length > 0)
-    ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already responded in this conversation turn. You are speaking after them. Do not repeat what they said. Do not respond to them directly. Simply add what only you can add.\n${priorResponses.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
-    : '';
-
   const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
   const messages = [...safeHistory, { role: 'user', content: question }];
 
+  // Colleague responses from earlier client-driven rounds, if any, seed the relay.
+  const seedColleagues = Array.isArray(priorResponses) ? priorResponses : [];
+
   const timings = {};
   const startAll = Date.now();
+  const results = [];
 
-  const promises = counselors.map(async (counselor) => {
+  for (const counselor of counselors) {
+    const colleagues = [...seedColleagues, ...results.filter(r => !r.error)];
+    const colleaguesBlock = colleagues.length > 0
+      ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already spoken in this turn. You are speaking after them. Do not repeat their points. You may briefly react to one of them by name — agree, sharpen, or push back in a sentence — then add what only you can add.\n${colleagues.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
+      : '';
+
     const t0 = Date.now();
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1285,7 +1306,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
         body: JSON.stringify({
           model: 'claude-opus-4-6',
           max_tokens: 300,
-          system: counselor.systemPrompt + contextBlock + checkInBlock + priorResponsesBlock,
+          system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock,
           messages,
         }),
       });
@@ -1297,27 +1318,21 @@ async function fireParallelCounselors(question, counselors, history, contextChun
       const data = await res.json();
       const textBlocks = (data.content || []).filter(b => b.type === 'text');
       const responseText = textBlocks.map(b => b.text).join('') || '';
-      return { counselorId: counselor.id, counselorName: counselor.name, response: responseText, error: null };
+      results.push({ counselorId: counselor.id, counselorName: counselor.name, response: responseText, error: null });
     } catch (err) {
       timings[counselor.id] = Date.now() - t0;
-      return {
+      results.push({
         counselorId: counselor.id,
         counselorName: counselor.name,
         response: `The connection to ${counselor.name} was interrupted. Try again.`,
         error: err.message,
-      };
+      });
     }
-  });
+  }
 
-  const settled = await Promise.allSettled(promises);
   const totalMs = Date.now() - startAll;
-
-  const results = settled.map(r => r.status === 'fulfilled' ? r.value : {
-    counselorId: 'unknown', counselorName: 'Unknown', response: 'Connection interrupted. Try again.', error: r.reason?.message,
-  });
-
   const timingStr = Object.entries(timings).map(([id, ms]) => `${id}=${ms}ms`).join(', ');
-  console.log(`[Cabinet] Parallel inference: ${counselors.length} counselors, ${totalMs}ms total`);
+  console.log(`[Cabinet] Relay inference: ${counselors.length} counselors (sequential), ${totalMs}ms total`);
   console.log(`[Cabinet] Counselor responses: ${timingStr}`);
 
   return results;
