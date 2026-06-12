@@ -21,6 +21,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { getUserSettings } from '@/lib/db';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
 
@@ -53,7 +54,7 @@ const TASK_COUNSELORS = [
   'Epictetus',          // Wednesday (3)
   'Theodore Roosevelt', // Thursday (4)
   'David Goggins',      // Friday (5)
-  'Future Kyle',        // Saturday (6)
+  'Future Self',        // Saturday (6) — replaced with the user's Future name at schedule time
 ];
 
 const TASK_MESSAGES = [
@@ -86,15 +87,20 @@ const READING_MESSAGES = [
   "The impediment to reading? There is none. Only the choice.",
 ];
 
-const FUTURE_KYLE_MESSAGES = [
-  "Is what you're doing right now something I would recognize? — Future Kyle",
-  "I remember this week. What you do today matters more than you know. — Future Kyle",
-  "The Arete app. The boxing. The reading. The family. You can do all of it. I'm proof. — Future Kyle",
-  "Midweek. This is where most people give up. This is also where you separate yourself. — Future Kyle",
-  "I didn't get here by accident. Neither will you. Keep going. — Future Kyle",
-  "Friday Kyle is tired. I know. I remember. Do the one hard thing anyway. — Future Kyle",
-  "Saturdays were sacred. Family, training, reading. Do not waste this one. — Future Kyle",
-];
+// Messages are signed by the user's own Future Self — name resolved at
+// schedule time from user_settings.user_name.
+const futureSelfMessages = (name?: string) => {
+  const signature = name ? `Future ${name}` : 'Future You';
+  return [
+    `Is what you're doing right now something I would recognize? — ${signature}`,
+    `I remember this week. What you do today matters more than you know. — ${signature}`,
+    `The app. The training. The reading. The family. You can do all of it. I'm proof. — ${signature}`,
+    `Midweek. This is where most people give up. This is also where you separate yourself. — ${signature}`,
+    `I didn't get here by accident. Neither will you. Keep going. — ${signature}`,
+    `${name ? `Friday ${name} is tired` : 'Friday-you is tired'}. I know. I remember. Do the one hard thing anyway. — ${signature}`,
+    `Saturdays were sacred. Family, training, reading. Do not waste this one. — ${signature}`,
+  ];
+};
 
 
 export default function SettingsScreen() {
@@ -123,6 +129,9 @@ export default function SettingsScreen() {
   const [futureKyleMinute, setFutureKyleMinute] = useState('00');
 
   const [simulatingFree, setSimulatingFree] = useState(false);
+  // Display label for the user's Future Self ("Future Kyle", "Future Maria");
+  // the futureKyle* state names below are kept for AsyncStorage compatibility.
+  const [futureSelfLabel, setFutureSelfLabel] = useState('Future Self');
   const [activePicker, setActivePicker] = useState<{
     setHour: (v: string) => void;
     setMinute: (v: string) => void;
@@ -155,6 +164,12 @@ export default function SettingsScreen() {
 
   const loadSettings = async () => {
     try {
+      getUserSettings()
+        .then(us => {
+          const first = us?.user_name ? us.user_name.trim().split(/\s+/)[0] : '';
+          if (first) setFutureSelfLabel(`Future ${first}`);
+        })
+        .catch(() => {});
       const s = await AsyncStorage.getItem('notificationSettings');
       if (s) {
         const parsed = JSON.parse(s);
@@ -258,6 +273,15 @@ export default function SettingsScreen() {
 
     await Notifications.cancelAllScheduledNotificationsAsync();
 
+    // Resolve the user's Future Self name fresh at schedule time.
+    let scheduleFirstName = '';
+    try {
+      const us = await getUserSettings();
+      scheduleFirstName = us?.user_name ? us.user_name.trim().split(/\s+/)[0] : '';
+    } catch { /* fall back to generic labels */ }
+    const futureLabel = scheduleFirstName ? `Future ${scheduleFirstName}` : 'Future Self';
+    const fsMessages = futureSelfMessages(scheduleFirstName || undefined);
+
     // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
     // Expo CalendarTrigger weekday: 1=Sunday, 2=Monday, …, 7=Saturday
     const scheduleWeekly = async (
@@ -304,10 +328,10 @@ export default function SettingsScreen() {
       );
     }
 
-    // Midday task reminder — rotating counselors
+    // Midday task reminder — rotating counselors (Saturday is the Future Self)
     if (settings.taskReminderEnabled) {
       await scheduleWeekly(
-        (day) => TASK_COUNSELORS[day],
+        (day) => (day === 6 ? futureLabel : TASK_COUNSELORS[day]),
         (day) => TASK_MESSAGES[day],
         parseInt(settings.taskReminderHour),
         parseInt(settings.taskReminderMinute),
@@ -334,11 +358,11 @@ export default function SettingsScreen() {
       );
     }
 
-    // Future Kyle — big picture check-in (opt-in)
+    // Future Self — big picture check-in (opt-in)
     if (settings.futureKyleEnabled) {
       await scheduleWeekly(
-        () => 'Future Kyle — Age 50',
-        (day) => FUTURE_KYLE_MESSAGES[day],
+        () => futureLabel,
+        (day) => fsMessages[day],
         parseInt(settings.futureKyleHour),
         parseInt(settings.futureKyleMinute),
       );
@@ -511,10 +535,10 @@ export default function SettingsScreen() {
         {readingReminderEnabled && renderTimeInputs(readingReminderHour, setReadingReminderHour, readingReminderMinute, setReadingReminderMinute)}
       </View>
 
-      {/* Future Kyle — Daily Check-In */}
+      {/* Future Self — Daily Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>🔮 Future Kyle — Daily Check-In</Text>
+          <Text style={styles.cardTitle}>🔮 {futureSelfLabel} — Daily Check-In</Text>
           <Switch
             value={futureKyleEnabled}
             onValueChange={(val) => { setFutureKyleEnabled(val); persistAndReschedule({ futureKyleEnabled: val }); }}
@@ -523,7 +547,7 @@ export default function SettingsScreen() {
           />
         </View>
         <Text style={styles.cardSubtitle}>
-          {"\"Is what you're doing right now something I would recognize? — Future Kyle\""}{'\n'}
+          {`"Is what you're doing right now something I would recognize? — ${futureSelfLabel}"`}{'\n'}
           <Text style={styles.hintInline}>Off by default — opt in when ready.</Text>
         </Text>
         {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute)}
