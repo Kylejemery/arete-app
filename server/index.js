@@ -1213,11 +1213,22 @@ Rules:
 - Future Self should respond when the conversation is about direction, long-term identity, or what the user is becoming.
 - List counselors in speaking order. Maximum is 3.
 
-Respond ONLY with valid JSON: { "format": "solo" | "dialogue" | "chorus", "responding": ["id1", "id2"], "reason": "..." }`;
+Respond ONLY with valid JSON, no markdown fences, no other text. Keep "reason" to one short phrase: { "format": "solo" | "dialogue" | "chorus", "responding": ["id1", "id2"], "reason": "..." }`;
+
+  // Deterministic invocation: if the user names a counselor in their message
+  // ("what would Epictetus think?"), that counselor responds — no model call
+  // needed, immune to director flakiness. Multiple names → all of them, in
+  // the order mentioned (max 3).
+  const invoked = detectInvokedCounselors(question, allCounselors);
+  if (invoked.length > 0) {
+    console.log(`[Cabinet] Invoked by name: ${invoked.map(c => c.id).join(' → ')}`);
+    return invoked;
+  }
 
   const recentHistory = Array.isArray(history) ? history.slice(-6) : [];
   const messages = [...recentHistory, { role: 'user', content: question }];
 
+  let directorText = '';
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -1228,15 +1239,17 @@ Respond ONLY with valid JSON: { "format": "solo" | "dialogue" | "chorus", "respo
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5-20251001',
-        max_tokens: 150,
+        max_tokens: 300,
         system: directorSystem,
         messages,
       }),
     });
     if (!res.ok) throw new Error(`Director call failed: ${res.status}`);
     const data = await res.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || '';
-    const parsed = JSON.parse(text);
+    directorText = data.content?.find(b => b.type === 'text')?.text || '';
+    // Tolerate markdown fences and stray prose around the JSON.
+    const jsonMatch = directorText.replace(/```(?:json)?/gi, '').match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : directorText);
     const ids = Array.isArray(parsed.responding) ? parsed.responding : [];
     const reason = parsed.reason || '';
     const format = parsed.format || 'solo';
@@ -1249,12 +1262,41 @@ Respond ONLY with valid JSON: { "format": "solo" | "dialogue" | "chorus", "respo
     console.log(`[Cabinet] Director selected (${format}): ${selected.map(c => c.id).join(' → ')} — ${reason}`);
     return selected;
   } catch (err) {
-    // Never fall back to the full chorus — the chair speaks for the Cabinet
-    // when the director is unavailable.
-    console.warn('[Cabinet] Director call failed, falling back to chair solo:', err.message);
-    const chair = allCounselors.find(c => c.id === 'marcus') || allCounselors[0];
-    return chair ? [chair] : allCounselors.slice(0, 1);
+    // Never fall back to the full chorus. Pick a random philosopher so a
+    // flaky director still produces variety across turns instead of the
+    // same voice every time.
+    console.warn('[Cabinet] Director call failed, falling back to random solo:', err.message);
+    if (directorText) console.warn('[Cabinet] Director raw output:', directorText.slice(0, 300));
+    const pool = allCounselors.filter(c => ['marcus', 'epictetus', 'seneca', 'roosevelt', 'montaigne'].includes(c.id));
+    const pick = pool[Math.floor(Math.random() * pool.length)] || allCounselors[0];
+    return pick ? [pick] : allCounselors.slice(0, 1);
   }
+}
+
+// Name/alias patterns for direct invocation. Order of match position in the
+// message decides speaking order.
+const COUNSELOR_ALIASES = [
+  { id: 'marcus', re: /\bmarcus\b|\baurelius\b/i },
+  { id: 'epictetus', re: /\bepictetus\b/i },
+  { id: 'seneca', re: /\bseneca\b/i },
+  { id: 'goggins', re: /\bgoggins\b/i },
+  { id: 'roosevelt', re: /\broosevelt\b|\bteddy\b|\btheodore\b/i },
+  { id: 'montaigne', re: /\bmontaigne\b/i },
+  { id: 'future-self', re: /\bfuture (?:self|me|you)\b/i },
+];
+
+function detectInvokedCounselors(question, allCounselors) {
+  if (typeof question !== 'string' || question.length === 0) return [];
+  const hits = [];
+  for (const { id, re } of COUNSELOR_ALIASES) {
+    const m = question.match(re);
+    if (m && m.index !== undefined) hits.push({ id, index: m.index });
+  }
+  hits.sort((a, b) => a.index - b.index);
+  return hits
+    .map(h => allCounselors.find(c => c.id === h.id))
+    .filter(Boolean)
+    .slice(0, 3);
 }
 
 /**
