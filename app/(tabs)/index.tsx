@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
@@ -14,6 +14,10 @@ const QUOTE_CACHE_KEY = 'home_quote_cache';
 // Per-session banner dismissal: module-level so it survives tab switches but
 // resets on the next app launch (deliberately not persisted).
 let futureSelfBannerDismissed = false;
+
+// Per-session skip for the name prompt — reappears next launch until a name
+// is actually saved.
+let namePromptSkipped = false;
 
 function getSlotKey(): string {
   const now = new Date();
@@ -68,6 +72,9 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(futureSelfBannerDismissed);
+  const [namePromptVisible, setNamePromptVisible] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [savingName, setSavingName] = useState(false);
   const [cacheLoaded, setCacheLoaded] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
@@ -100,6 +107,9 @@ export default function HomeScreen() {
     // fully usable without a profile; the banner below offers onboarding.
     const settings = await getUserSettings();
     setUserName(settings?.user_name ?? '');
+    if (!settings?.user_name && !namePromptSkipped) {
+      setNamePromptVisible(true);
+    }
     getKnowThyselfComplete()
       .then(complete => setKnowThyselfIncomplete(!complete))
       .catch(() => {});
@@ -157,10 +167,74 @@ export default function HomeScreen() {
     })();
   }, []);
 
+  const handleSaveName = async () => {
+    const name = nameInput.trim();
+    if (!name || savingName) return;
+    setSavingName(true);
+    try {
+      await upsertUserSettings({ user_name: name });
+      setUserName(name);
+      setNamePromptVisible(false);
+    } catch (e) {
+      console.error('[Home] failed to save name:', e);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
   const cta = getPrimaryCTA();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content} {...swipeHandlers}>
+
+      {/* Name capture — shown when no user_name is set yet */}
+      <Modal
+        visible={namePromptVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          namePromptSkipped = true;
+          setNamePromptVisible(false);
+        }}
+      >
+        <KeyboardAvoidingView
+          style={styles.nameModalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={styles.nameModalCard}>
+            <Text style={styles.nameModalKicker}>Welcome to Arete</Text>
+            <Text style={styles.nameModalTitle}>What should we call you?</Text>
+            <TextInput
+              style={styles.nameModalInput}
+              placeholder="Your name"
+              placeholderTextColor="#555"
+              value={nameInput}
+              onChangeText={setNameInput}
+              autoCapitalize="words"
+              autoCorrect={false}
+              maxLength={60}
+              returnKeyType="done"
+              onSubmitEditing={handleSaveName}
+            />
+            <TouchableOpacity
+              style={[styles.nameModalButton, (!nameInput.trim() || savingName) && styles.nameModalButtonDisabled]}
+              onPress={handleSaveName}
+              disabled={!nameInput.trim() || savingName}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.nameModalButtonText}>{savingName ? 'Saving…' : 'Continue'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                namePromptSkipped = true;
+                setNamePromptVisible(false);
+              }}
+            >
+              <Text style={styles.nameModalSkip}>Skip for now</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Top Bar */}
       <View style={styles.topBar}>
@@ -427,6 +501,65 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  nameModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 28,
+  },
+  nameModalCard: {
+    width: '100%',
+    backgroundColor: '#16213e',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.4)',
+    padding: 24,
+    gap: 14,
+  },
+  nameModalKicker: {
+    color: '#c9a84c',
+    fontSize: 10,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  nameModalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  nameModalInput: {
+    backgroundColor: '#1a1a2e',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.3)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: '#fff',
+    fontSize: 16,
+  },
+  nameModalButton: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  nameModalButtonDisabled: {
+    opacity: 0.5,
+  },
+  nameModalButtonText: {
+    color: '#1a1a2e',
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  nameModalSkip: {
+    color: '#888',
+    fontSize: 13,
+    textAlign: 'center',
+    paddingVertical: 2,
   },
   pillRow: {
     flexDirection: 'row',
