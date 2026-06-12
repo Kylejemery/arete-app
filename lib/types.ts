@@ -46,6 +46,9 @@ export interface UserSettings {
   recommended_readings: { title: string; author: string; reason: string }[] | null;
   archetype: string | null;
   cabinet_members: string[];
+  // Per-counselor LLM assignment, keyed by server counselor id
+  // (marcus, epictetus, seneca, goggins, roosevelt, montaigne, future-self)
+  counselor_models?: Record<string, string> | null;
   morning_tasks: Task[];
   evening_tasks: Task[];
   created_at?: string;

@@ -1,6 +1,7 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
+import { modelForCounselor } from '../lib/llmModels';
 
 export class MessageLimitError extends Error {
   constructor(
@@ -707,6 +708,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
+    const cabinetSettings = await getUserSettings();
     const { data: { session: _cabSession } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
@@ -716,6 +718,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
+        counselorModels: cabinetSettings?.counselor_models ?? {},
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         // Label past counselor replies with the speaker's name so the server
@@ -908,6 +911,8 @@ export async function sendMessageToCounselor(
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const userProfile = await getKnowThyselfProfile();
+    const counselorSettings = await getUserSettings();
+    const assignedModel = modelForCounselor(counselorSettings?.counselor_models, counselorId);
 
     const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
@@ -916,7 +921,7 @@ export async function sendMessageToCounselor(
         'x-subscription-tier': limitStatus.tier,
       },
       body: JSON.stringify({
-        model: 'claude-opus-4-5',
+        model: assignedModel,
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),

@@ -12,8 +12,17 @@ import {
   View,
 } from 'react-native';
 import CounselorCard from '@/components/CounselorCard';
-import { getUserCabinet, getIsPremium } from '@/lib/db';
+import { getUserCabinet, getIsPremium, getUserSettings, upsertUserSettings } from '@/lib/db';
+import { COUNSELOR_MODEL_OPTIONS, DEFAULT_COUNSELOR_MODEL } from '@/lib/llmModels';
+import { normalizeCounselorId } from '../../services/threadService';
 import type { Counselor } from '@/lib/types';
+
+// Server counselor id for a cabinet slug ('marcus-aurelius' → 'marcus',
+// 'futureSelf' → 'future-self').
+function modelKeyForSlug(slug: string): string {
+  const id = normalizeCounselorId(slug);
+  return id === 'futureSelf' ? 'future-self' : id;
+}
 
 export default function CabinetIndexScreen() {
   const router = useRouter();
@@ -21,22 +30,60 @@ export default function CabinetIndexScreen() {
   const [isPremium, setIsPremium] = useState(false);
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [counselorModels, setCounselorModels] = useState<Record<string, string>>({});
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
       (async () => {
         setLoading(true);
-        const [members, premium] = await Promise.all([getUserCabinet(), getIsPremium()]);
+        const [members, premium, settings] = await Promise.all([
+          getUserCabinet(),
+          getIsPremium(),
+          getUserSettings(),
+        ]);
         if (active) {
           setCabinet(members);
           setIsPremium(premium);
+          setCounselorModels(settings?.counselor_models ?? {});
           setLoading(false);
         }
       })();
       return () => { active = false; };
     }, [])
   );
+
+  const handleModelSelect = (modelKey: string, modelId: string) => {
+    const updated = { ...counselorModels, [modelKey]: modelId };
+    setCounselorModels(updated);
+    upsertUserSettings({ counselor_models: updated }).catch(e =>
+      console.warn('[MyCabinet] failed to save counselor model:', e)
+    );
+  };
+
+  const renderModelPicker = (modelKey: string) => {
+    const current = counselorModels[modelKey] ?? DEFAULT_COUNSELOR_MODEL;
+    return (
+      <View style={styles.modelRow}>
+        <Text style={styles.modelRowLabel}>Mind</Text>
+        {COUNSELOR_MODEL_OPTIONS.map(option => {
+          const selected = current === option.id;
+          return (
+            <TouchableOpacity
+              key={option.id}
+              style={[styles.modelChip, selected && styles.modelChipSelected]}
+              onPress={() => handleModelSelect(modelKey, option.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modelChipText, selected && styles.modelChipTextSelected]}>
+                {option.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
 
   const handleCustomize = () => {
     if (isPremium) {
@@ -68,17 +115,20 @@ export default function CabinetIndexScreen() {
             <Text style={styles.futureSelfLabel}>Always Present</Text>
             <Text style={styles.futureSelfName}>Future Self</Text>
             <Text style={styles.futureSelfDesc}>Your ideal self, years from now, guiding you forward.</Text>
+            {renderModelPicker('future-self')}
           </View>
 
-          {/* Current cabinet members */}
+          {/* Current cabinet members, each with their assigned mind (LLM) */}
           {cabinet.map((counselor) => (
-            <CounselorCard
-              key={counselor.slug}
-              counselor={counselor}
-              isSelected
-              isDisabled={false}
-              onToggle={() => {}}
-            />
+            <View key={counselor.slug} style={styles.memberBlock}>
+              <CounselorCard
+                counselor={counselor}
+                isSelected
+                isDisabled={false}
+                onToggle={() => {}}
+              />
+              {renderModelPicker(modelKeyForSlug(counselor.slug))}
+            </View>
           ))}
 
           {cabinet.length === 0 && (
@@ -194,6 +244,44 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 24,
+  },
+  memberBlock: {
+    marginBottom: 4,
+  },
+  modelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  modelRowLabel: {
+    color: '#888',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginRight: 2,
+  },
+  modelChip: {
+    borderRadius: 999,
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    backgroundColor: '#1a1a2e',
+    borderWidth: 1,
+    borderColor: '#2a2a3e',
+  },
+  modelChipSelected: {
+    backgroundColor: '#c9a84c18',
+    borderColor: '#c9a84c',
+  },
+  modelChipText: {
+    color: '#888',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  modelChipTextSelected: {
+    color: '#c9a84c',
   },
   footer: {
     padding: 16,
