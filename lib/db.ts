@@ -596,6 +596,67 @@ export async function getKnowThyselfProfile(): Promise<Record<string, string | n
   };
 }
 
+/** Returns true if the user has completed the Future Self onboarding. */
+export async function getKnowThyselfComplete(): Promise<boolean> {
+  const userId = await getUserId()
+  if (!userId) return false
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('know_thyself_complete')
+      .eq('id', userId)
+      .single()
+    if (error) return false
+    return data?.know_thyself_complete ?? false
+  } catch {
+    return false
+  }
+}
+
+// Shape returned by the /api/onboard-web extract_profile tool. Mirrors the
+// web client's OnboardingProfile (web/src/lib/db.ts) — one agent, two clients.
+export interface OnboardingProfile {
+  identity?: string
+  goals?: string
+  obstacle?: string
+  virtues?: string
+  challenge_style?: string
+  work_meaning?: string
+  future_vision?: string
+  future_years?: number
+}
+
+/**
+ * Saves extracted onboarding profile fields to user_settings and marks
+ * know_thyself_complete = true on profiles. Field → column mapping is
+ * identical to the web client's saveOnboardingProfile.
+ */
+export async function saveOnboardingProfile(profile: OnboardingProfile): Promise<void> {
+  const settingsUpdate: Partial<Omit<UserSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>> = {}
+  if (profile.identity) settingsUpdate.kt_identity = profile.identity
+  if (profile.goals) settingsUpdate.kt_goals = profile.goals
+  if (profile.obstacle) settingsUpdate.kt_weaknesses = profile.obstacle
+  if (profile.virtues) settingsUpdate.kt_strengths = profile.virtues
+  if (profile.challenge_style) settingsUpdate.feedback_preference = profile.challenge_style
+  if (profile.work_meaning) settingsUpdate.kt_background = profile.work_meaning
+  if (profile.future_vision) settingsUpdate.future_self_description = profile.future_vision
+  if (profile.future_years) settingsUpdate.future_self_years = profile.future_years
+
+  await upsertUserSettings(settingsUpdate)
+
+  const userId = await getUserId()
+  if (!userId) return
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ know_thyself_complete: true, updated_at: new Date().toISOString() })
+      .eq('id', userId)
+    if (error) console.error('saveOnboardingProfile profiles error:', error)
+  } catch (e) {
+    console.error('saveOnboardingProfile profiles exception:', e)
+  }
+}
+
 export async function getRandomCabinetQuote(
   cabinetSlugs: string[]
 ): Promise<{ quote: string; counselor: string } | null> {

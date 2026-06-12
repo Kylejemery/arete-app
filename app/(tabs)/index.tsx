@@ -4,12 +4,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
 
 const QUOTE_CACHE_KEY = 'home_quote_cache';
+
+// Per-session banner dismissal: module-level so it survives tab switches but
+// resets on the next app launch (deliberately not persisted).
+let futureSelfBannerDismissed = false;
 
 function getSlotKey(): string {
   const now = new Date();
@@ -63,6 +67,7 @@ export default function HomeScreen() {
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(futureSelfBannerDismissed);
   const [cacheLoaded, setCacheLoaded] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
@@ -91,14 +96,13 @@ export default function HomeScreen() {
       setCacheLoaded(true);
     } catch {}
 
-    // Step 2: fresh fetch
+    // Step 2: fresh fetch. New users are never redirected away — the app is
+    // fully usable without a profile; the banner below offers onboarding.
     const settings = await getUserSettings();
-    if (!settings?.user_name) {
-      router.replace('/(onboarding)/setup');
-      return;
-    }
-    setUserName(settings.user_name);
-    setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
+    setUserName(settings?.user_name ?? '');
+    getKnowThyselfComplete()
+      .then(complete => setKnowThyselfIncomplete(!complete))
+      .catch(() => {});
 
     const [checkin, freshStreak] = await Promise.all([
       getTodayCheckin(),
@@ -161,8 +165,8 @@ export default function HomeScreen() {
       {/* Top Bar */}
       <View style={styles.topBar}>
         <View>
-          <Text style={styles.greeting}>{getGreeting()}, {userName.split(' ')[0]}</Text>
-          <Text style={styles.name}>{userName} ⚔️</Text>
+          <Text style={styles.greeting}>{userName ? `${getGreeting()}, ${userName.split(' ')[0]}` : getGreeting()}</Text>
+          <Text style={styles.name}>{userName ? `${userName} ⚔️` : 'Welcome ⚔️'}</Text>
         </View>
         <TouchableOpacity
           style={styles.settingsButton}
@@ -185,18 +189,33 @@ export default function HomeScreen() {
         <View style={styles.quoteSkeleton} />
       )}
 
-      {/* Know Thyself Banner */}
-      {knowThyselfIncomplete && (
-        <View style={styles.ktBanner}>
-          <View style={styles.ktBannerHeader}>
-            <Ionicons name="person-circle-outline" size={24} color="#c9a84c" />
-            <Text style={styles.ktBannerTitle}>Complete Your Profile</Text>
+      {/* Meet Your Future Self banner — shown until onboarding is complete,
+          dismissible for the current session only */}
+      {knowThyselfIncomplete && !bannerDismissed && (
+        <View style={styles.fsBanner}>
+          <View style={styles.fsBannerIcon}>
+            <Text style={styles.fsBannerIconGlyph}>✦</Text>
           </View>
-          <Text style={styles.ktBannerSubtitle}>
-            {"The Cabinet's responses are generic until you tell them who you are. It takes 2 minutes."}
-          </Text>
-          <TouchableOpacity onPress={() => router.push('/know-thyself' as any)}>
-            <Text style={styles.ktBannerLink}>Complete Now →</Text>
+          <View style={styles.fsBannerBody}>
+            <Text style={styles.fsBannerKicker}>Personalise Your App</Text>
+            <Text style={styles.fsBannerTitle}>Meet Your Future Self</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.fsBannerCta}
+            onPress={() => router.push('/onboarding' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.fsBannerCtaText}>Begin</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.fsBannerDismiss}
+            onPress={() => {
+              futureSelfBannerDismissed = true;
+              setBannerDismissed(true);
+            }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close" size={14} color="#9aa0a6" />
           </TouchableOpacity>
         </View>
       )}
@@ -346,35 +365,68 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     opacity: 0.4,
   },
-  ktBanner: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#c9a84c',
-  },
-  ktBannerHeader: {
+  fsBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 12,
+    backgroundColor: 'rgba(201, 168, 76, 0.09)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.35)',
   },
-  ktBannerTitle: {
+  fsBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fsBannerIconGlyph: {
     color: '#c9a84c',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
   },
-  ktBannerSubtitle: {
-    color: '#ccc',
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 10,
+  fsBannerBody: {
+    flex: 1,
+    minWidth: 0,
   },
-  ktBannerLink: {
+  fsBannerKicker: {
     color: '#c9a84c',
-    fontSize: 14,
+    fontSize: 9.5,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
     fontWeight: '600',
+  },
+  fsBannerTitle: {
+    color: '#e6eef8',
+    fontSize: 15,
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  fsBannerCta: {
+    backgroundColor: '#c9a84c',
+    borderRadius: 999,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+  },
+  fsBannerCtaText: {
+    color: '#1a1a2e',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  fsBannerDismiss: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pillRow: {
     flexDirection: 'row',
