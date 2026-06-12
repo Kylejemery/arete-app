@@ -1252,9 +1252,11 @@ Respond ONLY with valid JSON: { "responding": ["id1", "id2"], "reason": "..." }`
 async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses) {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Do not roleplay, quote, or speak as other Cabinet members. Each counselor is responding independently and simultaneously. Stay in your own voice.`;
 
+  const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
+
   const contextBlock = contextChunks.length > 0
-    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]` + voiceGuard
-    : voiceGuard;
+    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]` + voiceGuard + lengthGuard
+    : voiceGuard + lengthGuard;
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
@@ -1282,7 +1284,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
         },
         body: JSON.stringify({
           model: 'claude-opus-4-6',
-          max_tokens: 600,
+          max_tokens: 300,
           system: counselor.systemPrompt + contextBlock + checkInBlock + priorResponsesBlock,
           messages,
         }),
