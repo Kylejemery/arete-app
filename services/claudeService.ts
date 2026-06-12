@@ -718,7 +718,13 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
         model: 'claude-opus-4-5',
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
-        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        // Label past counselor replies with the speaker's name so the server
+        // director can vary who opens and counselors keep cross-turn
+        // continuity. Without this the history is anonymous.
+        messages: contextMessages.map((m) => ({
+          role: m.role,
+          content: m.role === 'assistant' && m.counselorName ? `${m.counselorName}: ${m.content}` : m.content,
+        })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         activeCounselorId: 'cabinet',
         userId: _cabSession?.user?.id,
