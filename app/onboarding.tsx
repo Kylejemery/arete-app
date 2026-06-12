@@ -13,7 +13,9 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { getUserSettings, saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { triggerScrollGeneration } from '@/lib/scrolls';
+import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
@@ -111,6 +113,22 @@ export default function OnboardingScreen() {
     try {
       await saveOnboardingProfile(profile);
       setSaved(true);
+
+      // Post-onboarding payoff: kick off the user's first Scroll from their
+      // stated goals. Fire-and-forget — navigation never waits on this.
+      if (profile.goals) {
+        const goalsText = profile.goals;
+        (async () => {
+          const [{ data: { user } }, settings] = await Promise.all([
+            supabase.auth.getUser(),
+            getUserSettings(),
+          ]);
+          if (user) {
+            await triggerScrollGeneration(user.id, settings?.user_name ?? null, goalsText);
+          }
+        })().catch(err => console.warn('[onboarding] first scroll generation failed:', err));
+      }
+
       setTimeout(() => router.replace('/(tabs)/' as any), 2000);
     } catch (err) {
       console.error('[onboarding] save error:', err);
