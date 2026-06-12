@@ -28,6 +28,54 @@ const PARALLEL_ALLOWLIST = (process.env.PARALLEL_CABINET_ALLOWLIST || '')
 // OpenAI SDK client (used for OpenAI-backed agents and embeddings)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// ---------------------------------------------------------------------------
+// Counselor model routing — users can assign an LLM per counselor
+// (user_settings.counselor_models, keyed by counselor id). Only models on
+// this allowlist are honored; anything else falls back to the default.
+// ---------------------------------------------------------------------------
+const ALLOWED_COUNSELOR_MODELS = new Set([
+  'claude-opus-4-6',
+  'claude-sonnet-4-6',
+  'gpt-5.1',
+]);
+const DEFAULT_COUNSELOR_MODEL = 'claude-opus-4-6';
+
+function resolveCounselorModel(requested) {
+  return ALLOWED_COUNSELOR_MODELS.has(requested) ? requested : DEFAULT_COUNSELOR_MODEL;
+}
+
+/**
+ * Provider-agnostic chat call for counselor responses.
+ * Anthropic models use the raw fetch convention of this file; gpt-* models
+ * go through the OpenAI SDK. Returns the response text.
+ */
+async function callCounselorModel({ model, system, messages, maxTokens }) {
+  if (model.startsWith('gpt-')) {
+    const completion = await openai.chat.completions.create({
+      model,
+      max_completion_tokens: maxTokens,
+      messages: [{ role: 'system', content: system }, ...messages],
+    });
+    return completion.choices?.[0]?.message?.content ?? '';
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Claude API ${res.status}: ${errText}`);
+  }
+  const data = await res.json();
+  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
+}
+
 // Sentinel used in agentRouter to identify Anthropic-backed agents.
 // Anthropic calls use raw fetch throughout this file (no SDK).
 const anthropicClient = { provider: 'anthropic' };
@@ -264,7 +312,8 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels } = req.body;
+  const safeCounselorModels = (counselorModels && typeof counselorModels === 'object') ? counselorModels : {};
 
   const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
   const tier = req.headers['x-subscription-tier'];
@@ -304,7 +353,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels);
 
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
@@ -350,6 +399,25 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
   const enrichedSystem = system + dateTimeBlock + profileBlock + ragContext + resourceInstruction;
+
+  // OpenAI-assigned counselor: route through the OpenAI SDK (no web search
+  // tool) and answer in the Anthropic response shape the client expects.
+  if (typeof model === 'string' && model.startsWith('gpt-')) {
+    const openaiModel = ALLOWED_COUNSELOR_MODELS.has(model) ? model : 'gpt-5.1';
+    try {
+      console.log(`[/api/chat/counselor] messages: ${messages.length} | model: ${openaiModel} (openai)`);
+      const completion = await openai.chat.completions.create({
+        model: openaiModel,
+        max_completion_tokens: serverMaxTokens,
+        messages: [{ role: 'system', content: enrichedSystem }, ...messages],
+      });
+      const text = completion.choices?.[0]?.message?.content ?? '';
+      return res.json({ content: [{ type: 'text', text }] });
+    } catch (err) {
+      console.error('OpenAI error (chat/counselor):', err.message || err);
+      return res.status(502).json({ error: 'Failed to reach OpenAI API' });
+    }
+  }
 
   try {
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
@@ -1305,7 +1373,7 @@ function detectInvokedCounselors(question, allCounselors) {
  * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses) {
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}) {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
@@ -1336,33 +1404,19 @@ async function fireParallelCounselors(question, counselors, history, contextChun
       ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already spoken in this turn. You are speaking after them. Do not repeat their points. You may briefly react to one of them by name — agree, sharpen, or push back in a sentence — then add what only you can add.\n${colleagues.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
       : '';
 
+    const model = resolveCounselorModel(counselorModels[counselor.id]);
     const t0 = Date.now();
     try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: 'claude-opus-4-6',
-          max_tokens: 300,
-          system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock,
-          messages,
-        }),
+      const responseText = await callCounselorModel({
+        model,
+        system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock,
+        messages,
+        maxTokens: 300,
       });
-      timings[counselor.id] = Date.now() - t0;
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`Claude API ${res.status}: ${errText}`);
-      }
-      const data = await res.json();
-      const textBlocks = (data.content || []).filter(b => b.type === 'text');
-      const responseText = textBlocks.map(b => b.text).join('') || '';
+      timings[counselor.id] = `${Date.now() - t0}ms (${model})`;
       results.push({ counselorId: counselor.id, counselorName: counselor.name, response: responseText, error: null });
     } catch (err) {
-      timings[counselor.id] = Date.now() - t0;
+      timings[counselor.id] = `${Date.now() - t0}ms (${model}, failed)`;
       results.push({
         counselorId: counselor.id,
         counselorName: counselor.name,
@@ -1373,7 +1427,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
   }
 
   const totalMs = Date.now() - startAll;
-  const timingStr = Object.entries(timings).map(([id, ms]) => `${id}=${ms}ms`).join(', ');
+  const timingStr = Object.entries(timings).map(([id, ms]) => `${id}=${ms}`).join(', ');
   console.log(`[Cabinet] Relay inference: ${counselors.length} counselors (sequential), ${totalMs}ms total`);
   console.log(`[Cabinet] Counselor responses: ${timingStr}`);
 
