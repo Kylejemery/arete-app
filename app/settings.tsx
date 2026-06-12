@@ -1,16 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
-// expo-notifications removed — iOS 26 SIGABRT fix. Reinstate post-crash resolution.
-const Notifications = {
-  setNotificationHandler: (_handler: unknown) => {},
-  requestPermissionsAsync: () => Promise.resolve({ status: 'undetermined' as const }),
-  getPermissionsAsync: () => Promise.resolve({ status: 'undetermined' as const }),
-  cancelAllScheduledNotificationsAsync: () => Promise.resolve(),
-  scheduleNotificationAsync: (_req: unknown) => Promise.resolve(''),
-  setNotificationChannelAsync: (_id: unknown, _channel: unknown) => Promise.resolve(null),
-  AndroidImportance: { MAX: 5 },
-  SchedulableTriggerInputTypes: { CALENDAR: 'calendar', TIME_INTERVAL: 'timeInterval' },
-};
+// Reinstated post-crash-resolution: the launch SIGABRT was never
+// expo-notifications (see Builds 43-59 saga). NEVER call into this module at
+// module scope — native calls before the TurboModule layer is ready was the
+// original Build 44 crash. All calls here happen in effects/handlers.
+import * as Notifications from 'expo-notifications';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {

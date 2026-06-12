@@ -4,8 +4,9 @@ import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Normally started by index.ts before anything else loads; this is a
@@ -29,6 +30,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     breadcrumb('root layout mounted');
+  }, []);
+
+  // Foreground notification presentation. Registered in an effect (after the
+  // TurboModule layer is ready), never at module scope — a module-scope call
+  // here was the original Build 44 iOS 26 SIGABRT.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
   }, []);
 
   useEffect(() => {
