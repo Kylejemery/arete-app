@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 
 export class MessageLimitError extends Error {
@@ -310,17 +310,23 @@ export async function gatherAppContext(): Promise<string> {
     day: 'numeric',
   });
 
-  const [settings, checkin, journalEntries, readingData] = await Promise.all([
+  const [settings, checkin, journalEntries, readingData, ktComplete] = await Promise.all([
     getUserSettings(),
     getTodayCheckin(),
     getJournalEntries(),
     getReadingData(),
+    getKnowThyselfComplete().catch(() => true),
   ]);
 
   const userName = settings?.user_name || 'the user';
 
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S CURRENT APP DATA (as of ${today}) ===`);
+
+  if (!ktComplete) {
+    lines.push('');
+    lines.push('NOTE: This user has not completed their Know Thyself profile yet. Do not assume or invent any profile details. Engage with what they bring to the conversation, and where natural, you may suggest they meet their Future Self to complete their profile.');
+  }
 
   // Morning routine
   try {
