@@ -312,8 +312,24 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers } = req.body;
   const safeCounselorModels = (counselorModels && typeof counselorModels === 'object') ? counselorModels : {};
+
+  // Older app builds don't send cabinetMembers — look the selection up
+  // server-side so the roster restriction applies to them too.
+  let effectiveCabinetMembers = Array.isArray(cabinetMembers) && cabinetMembers.length > 0 ? cabinetMembers : null;
+  if (!effectiveCabinetMembers && userId) {
+    try {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('cabinet_members')
+        .eq('user_id', userId)
+        .single();
+      if (Array.isArray(data?.cabinet_members) && data.cabinet_members.length > 0) {
+        effectiveCabinetMembers = data.cabinet_members;
+      }
+    } catch { /* no restriction if lookup fails */ }
+  }
 
   const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
   const tier = req.headers['x-subscription-tier'];
@@ -328,7 +344,7 @@ app.post('/api/chat/counselor', async (req, res) => {
   }
 
   // --- Parallel Cabinet branch ---
-  const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId);
+  const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
 
   if (mode === 'parallel') {
     const question = Array.isArray(messages) ? (messages[messages.length - 1]?.content || '') : '';
@@ -1238,11 +1254,43 @@ Do not mention that you are an AI. Do not break character.`,
 
 const SINGLE_COUNSELOR_IDS = new Set(['marcus', 'epictetus', 'seneca', 'goggins', 'roosevelt', 'montaigne', 'future-self']);
 
+// Maps the slug conventions used across the app (counselors table slugs,
+// short thread ids, futureSelf) to the parallel-roster counselor ids above.
+const SLUG_TO_COUNSELOR_ID = {
+  'marcus': 'marcus', 'marcus-aurelius': 'marcus',
+  'epictetus': 'epictetus',
+  'seneca': 'seneca',
+  'goggins': 'goggins', 'david-goggins': 'goggins',
+  'roosevelt': 'roosevelt', 'theodore-roosevelt': 'roosevelt',
+  'montaigne': 'montaigne',
+  'future-self': 'future-self', 'futureSelf': 'future-self',
+};
+
+/**
+ * Restricts the parallel roster to the user's selected cabinet members.
+ * Future Self is always present. Cabinet members without a group persona
+ * (e.g. Socrates, Kobe) are skipped; if that leaves no one but Future Self,
+ * the chair (Marcus) joins so the Cabinet always has a second voice.
+ */
+function filterRosterToCabinet(roster, cabinetMembers) {
+  if (!Array.isArray(cabinetMembers) || cabinetMembers.length === 0) return roster;
+  const wanted = new Set(
+    cabinetMembers.map(s => SLUG_TO_COUNSELOR_ID[s]).filter(Boolean)
+  );
+  wanted.add('future-self');
+  const filtered = roster.filter(c => wanted.has(c.id));
+  if (!filtered.some(c => c.id !== 'future-self')) {
+    const chair = roster.find(c => c.id === 'marcus');
+    if (chair) filtered.unshift(chair);
+  }
+  return filtered.length > 0 ? filtered : roster;
+}
+
 /**
  * Determines which counselors to fire.
  * Returns { mode: 'single'|'parallel', counselors: [...] }
  */
-function selectCounselors(activeCounselorId, userId) {
+function selectCounselors(activeCounselorId, userId, cabinetMembers) {
   const isSingleMode = activeCounselorId && SINGLE_COUNSELOR_IDS.has(activeCounselorId);
 
   if (isSingleMode) {
@@ -1259,7 +1307,11 @@ function selectCounselors(activeCounselorId, userId) {
     return { mode: 'single' };
   }
 
-  return { mode: 'parallel', counselors: CABINET_COUNSELORS };
+  const roster = filterRosterToCabinet(CABINET_COUNSELORS, cabinetMembers);
+  if (roster.length < CABINET_COUNSELORS.length) {
+    console.log(`[Cabinet] Roster limited to user cabinet: ${roster.map(c => c.id).join(', ')}`);
+  }
+  return { mode: 'parallel', counselors: roster };
 }
 
 /**

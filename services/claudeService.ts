@@ -719,6 +719,7 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         counselorModels: cabinetSettings?.counselor_models ?? {},
+        cabinetMembers: cabinetSettings?.cabinet_members ?? [],
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
         system: fullSystem,
         // Label past counselor replies with the speaker's name so the server
