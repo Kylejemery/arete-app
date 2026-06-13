@@ -118,17 +118,17 @@ export default function CabinetIndexScreen() {
             {renderModelPicker('future-self')}
           </View>
 
-          {/* Current cabinet members, each with their assigned mind (LLM) */}
+          {/* Current cabinet members, each with their assigned mind (LLM)
+              rendered inside the card to match the Future Self card */}
           {cabinet.map((counselor) => (
-            <View key={counselor.slug} style={styles.memberBlock}>
-              <CounselorCard
-                counselor={counselor}
-                isSelected
-                isDisabled={false}
-                onToggle={() => {}}
-              />
-              {renderModelPicker(modelKeyForSlug(counselor.slug))}
-            </View>
+            <CounselorCard
+              key={counselor.slug}
+              counselor={counselor}
+              isSelected
+              isDisabled={false}
+              onToggle={() => {}}
+              footer={renderModelPicker(modelKeyForSlug(counselor.slug))}
+            />
           ))}
 
           {cabinet.length === 0 && (
@@ -244,9 +244,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     marginTop: 24,
-  },
-  memberBlock: {
-    marginBottom: 4,
   },
   modelRow: {
     flexDirection: 'row',

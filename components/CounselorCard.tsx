@@ -11,6 +11,9 @@ interface CounselorCardProps {
   isLocked?: boolean;
   isStarter?: boolean;
   onToggle: (slug: string) => void;
+  /** Optional content rendered inside the card, below the description
+      (e.g. the per-counselor model picker in My Cabinet). */
+  footer?: React.ReactNode;
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -36,6 +39,7 @@ export default function CounselorCard({
   isLocked = false,
   isStarter = false,
   onToggle,
+  footer,
 }: CounselorCardProps) {
   const categoryColor = CATEGORY_COLORS[counselor.category] ?? { bg: 'rgba(201,168,76,0.2)', text: '#c9a84c' };
   const challengeColor = counselor.challenge_level ? CHALLENGE_COLORS[counselor.challenge_level] : null;
@@ -100,6 +104,8 @@ export default function CounselorCard({
           <Text style={styles.lockText}>Arete</Text>
         </View>
       )}
+
+      {footer}
     </TouchableOpacity>
   );
 }
