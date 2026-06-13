@@ -67,7 +67,13 @@ export default function ConversationPage() {
     }).catch(e => console.error('appendMessage (user) error:', e));
 
     try {
-      const response = await sendMessageToCabinet(newMessages);
+      const replies = await sendMessageToCabinet(newMessages);
+      // This structured-conversation view stores one assistant message per
+      // turn, so collapse multiple counselor replies into a single labeled
+      // block (matching the prior rendering here).
+      const response = replies
+        .map(r => (r.counselorName ? `**${r.counselorName}**\n${r.text}` : r.text))
+        .join('\n\n---\n\n');
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setMessages(finalMessages);

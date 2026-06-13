@@ -379,12 +379,25 @@ Their communication style is warm, wise, and unhurried.`;
   return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${userProfile}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate.\n- Use Socratic questioning.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
-export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<string> {
+export interface CabinetReply {
+  counselorId: string | null;
+  counselorName: string | null;
+  text: string;
+}
+
+export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<CabinetReply[]> {
+  const asSingleReply = (text: string): CabinetReply[] => [
+    { counselorId: null, counselorName: null, text },
+  ];
   try {
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
+    const [systemBase, appContext, settings] = await Promise.all([
+      buildSystemPrompt(),
+      gatherAppContext(),
+      getUserSettings(),
+    ]);
     const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
@@ -393,8 +406,17 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cabinetSession?.access_token}` },
       body: JSON.stringify({
+        model: 'claude-opus-4-5',
+        counselorModels: settings?.counselor_models ?? {},
+        cabinetMembers: settings?.cabinet_members ?? [],
         system: fullSystem,
-        messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
+        // Label past counselor replies with the speaker's name so the server
+        // director can vary who opens and counselors keep cross-turn
+        // continuity. Without this the history is anonymous.
+        messages: contextMessages.map((m) => ({
+          role: m.role,
+          content: m.role === 'assistant' && m.counselorName ? `${m.counselorName}: ${m.content}` : m.content,
+        })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         activeCounselorId: 'cabinet',
         userId: cabinetSession?.user?.id,
@@ -404,23 +426,29 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<s
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Backend/Claude API error:', response.status, errorText);
-      return `The Cabinet is temporarily unavailable. (Error ${response.status})`;
+      return asSingleReply(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
 
     const data = await response.json();
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
-      return data.responses
-        .map((r: { counselorName: string; response: string }) => `**${r.counselorName}**\n${r.response}`)
-        .join('\n\n---\n\n');
+      const replies = data.responses
+        .map((r: { counselorId?: string; counselorName?: string; response?: string }): CabinetReply => ({
+          counselorId: r.counselorId ?? null,
+          counselorName: r.counselorName ?? null,
+          text: typeof r.response === 'string' ? r.response : '',
+        }))
+        .filter((r: CabinetReply) => r.text.length > 0);
+      if (replies.length > 0) return replies;
+      return asSingleReply('The Cabinet did not respond. Please try again.');
     }
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
-      return content;
+      return asSingleReply(content);
     }
-    return 'The Cabinet did not respond. Please try again.';
+    return asSingleReply('The Cabinet did not respond. Please try again.');
   } catch (error) {
     console.error('Backend request failed:', error);
-    return 'Backend server not reachable. Make sure the server is running.';
+    return asSingleReply('Backend server not reachable. Make sure the server is running.');
   }
 }
 

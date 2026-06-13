@@ -40,6 +40,7 @@ export interface UserSettings {
   future_self_years: number;
   future_self_description: string | null;
   cabinet_members: string[];
+  counselor_models?: Record<string, string> | null;
   morning_tasks: Task[];
   evening_tasks: Task[];
   created_at?: string;

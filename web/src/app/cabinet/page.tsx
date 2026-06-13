@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, type CabinetReply } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
@@ -97,9 +97,15 @@ export default function CabinetPage() {
     setInput('');
     setIsLoading(true);
     try {
-      const response = await sendMessageToCabinet(newMessages);
-      const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
-      const finalMessages = [...newMessages, assistantMsg];
+      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages);
+      const assistantMsgs: ThreadMessage[] = replies.map(r => ({
+        role: 'assistant',
+        content: r.text,
+        timestamp: Date.now(),
+        counselorId: r.counselorId ?? undefined,
+        counselorName: r.counselorName ?? undefined,
+      }));
+      const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
     } catch {
@@ -220,18 +226,32 @@ export default function CabinetPage() {
           </span>
           </div>
 
-          <Link
-            href="/cabinet/select"
-            className="flex-shrink-0 px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
-            style={{
-              fontFamily: 'var(--font-mono, monospace)',
-              color: '#c9a84c',
-              border: '1px solid rgba(201,168,76,0.4)',
-              background: 'rgba(201,168,76,0.06)',
-            }}
-          >
-            Edit Cabinet
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/cabinet/minds"
+              className="px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
+              style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                color: '#c9a84c',
+                border: '1px solid rgba(201,168,76,0.4)',
+                background: 'rgba(201,168,76,0.06)',
+              }}
+            >
+              Assign Minds
+            </Link>
+            <Link
+              href="/cabinet/select"
+              className="px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
+              style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                color: '#c9a84c',
+                border: '1px solid rgba(201,168,76,0.4)',
+                background: 'rgba(201,168,76,0.06)',
+              }}
+            >
+              Edit Cabinet
+            </Link>
+          </div>
         </div>
 
         {/* Tab switcher */}
@@ -362,7 +382,7 @@ export default function CabinetPage() {
                         color: '#c9a84c',
                       }}
                     >
-                      TC
+                      {msg.counselorName ? getInitials(msg.counselorName) : 'TC'}
                     </div>
                     <div
                       className="flex flex-col gap-2 px-4 py-3 flex-1"
@@ -372,6 +392,12 @@ export default function CabinetPage() {
                         borderRadius: '18px 18px 18px 6px',
                       }}
                     >
+                      <div
+                        className="text-[10px] tracking-[1.2px] uppercase"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                      >
+                        {msg.counselorName || 'The Cabinet'}
+                      </div>
                       {parseBlocks(msg.content).map((block, bi) =>
                         block.type === 'quote' ? (
                           <div
