@@ -1430,23 +1430,27 @@ Respond ONLY with valid JSON, no markdown fences, no other text. Keep "reason" t
     const ids = Array.isArray(parsed.responding) ? parsed.responding : [];
     const reason = parsed.reason || '';
     const format = parsed.format || 'solo';
-    // Preserve the director's speaking order — it matters for the relay.
-    const selected = ids
-      .map(id => allCounselors.find(c => c.id === id))
-      .filter(Boolean)
-      .slice(0, 3);
-    if (selected.length === 0) throw new Error('Director returned no valid counselor IDs');
+    // Resolve each token the director returned to a roster counselor,
+    // tolerating id/slug/name/alias variants (Haiku often emits
+    // 'marcus-aurelius', 'David Goggins', 'futureSelf'). Preserve the
+    // director's speaking order — it matters for the relay — and drop dupes.
+    const seen = new Set();
+    const selected = [];
+    for (const raw of ids) {
+      const c = resolveCounselorToken(raw, allCounselors);
+      if (c && !seen.has(c.id)) { seen.add(c.id); selected.push(c); }
+      if (selected.length >= 3) break;
+    }
+    if (selected.length === 0) throw new Error('Director returned no resolvable counselor IDs');
     console.log(`[Cabinet] Director selected (${format}): ${selected.map(c => c.id).join(' → ')} — ${reason}`);
     return selected;
   } catch (err) {
-    // Never fall back to the full chorus. Pick a random philosopher so a
-    // flaky director still produces variety across turns instead of the
-    // same voice every time.
-    console.warn('[Cabinet] Director call failed, falling back to random solo:', err.message);
+    // Director call or parse failed. Fall back to a two-voice dialogue
+    // rather than a lone voice, so the Cabinet still feels like a Cabinet —
+    // pairing a reflector with a challenger when the roster allows.
+    console.warn('[Cabinet] Director failed, falling back to dialogue:', err.message);
     if (directorText) console.warn('[Cabinet] Director raw output:', directorText.slice(0, 300));
-    const pool = allCounselors.filter(c => ['marcus', 'epictetus', 'seneca', 'roosevelt', 'montaigne'].includes(c.id));
-    const pick = pool[Math.floor(Math.random() * pool.length)] || allCounselors[0];
-    return pick ? [pick] : allCounselors.slice(0, 1);
+    return fallbackDialogue(allCounselors);
   }
 }
 
@@ -1474,6 +1478,63 @@ function detectInvokedCounselors(question, allCounselors) {
     .map(h => allCounselors.find(c => c.id === h.id))
     .filter(Boolean)
     .slice(0, 3);
+}
+
+/**
+ * Maps a token the director returned to a roster counselor. The director
+ * is told to return canonical ids, but Haiku frequently emits slugs
+ * ('marcus-aurelius'), display names ('David Goggins'), or camelCase
+ * ('futureSelf'). Resolving these tolerantly is what keeps multi-voice
+ * formats from collapsing to the solo fallback.
+ */
+function resolveCounselorToken(token, roster) {
+  if (typeof token !== 'string') return null;
+  const t = token.trim().toLowerCase();
+  if (!t) return null;
+  // 1. exact roster id
+  let hit = roster.find(c => c.id.toLowerCase() === t);
+  if (hit) return hit;
+  // 2. slug → id mapping (handles 'marcus-aurelius', 'futureSelf', etc.)
+  const mappedId = SLUG_TO_COUNSELOR_ID[token] || SLUG_TO_COUNSELOR_ID[t];
+  if (mappedId) {
+    hit = roster.find(c => c.id === mappedId);
+    if (hit) return hit;
+  }
+  // 3. display name — full match, then any name word ('goggins' from 'David Goggins')
+  hit = roster.find(c => c.name.toLowerCase() === t)
+     || roster.find(c => c.name.toLowerCase().split(/\s+/).includes(t));
+  if (hit) return hit;
+  // 4. alias regex ('aurelius', 'teddy', 'future self', ...)
+  for (const { id, re } of COUNSELOR_ALIASES) {
+    if (re.test(token) && roster.some(c => c.id === id)) {
+      return roster.find(c => c.id === id);
+    }
+  }
+  return null;
+}
+
+/**
+ * When the director can't be parsed, return two distinct voices instead of
+ * one — a reflector paired with a challenger where the roster allows —
+ * randomized within each role so a flaky director still yields variety.
+ */
+function fallbackDialogue(roster) {
+  if (!Array.isArray(roster) || roster.length === 0) return [];
+  const byIds = ids => ids.map(id => roster.find(c => c.id === id)).filter(Boolean);
+  const reflectors = byIds(['marcus', 'seneca', 'montaigne', 'future-self']);
+  const challengers = byIds(['goggins', 'epictetus', 'roosevelt']);
+  const rand = arr => arr[Math.floor(Math.random() * arr.length)];
+  const picks = [];
+  const r = rand(reflectors);
+  if (r) picks.push(r);
+  const c = rand(challengers.filter(x => !r || x.id !== r.id));
+  if (c) picks.push(c);
+  // Top up to two distinct voices from whatever the roster has.
+  for (const cand of roster) {
+    if (picks.length >= 2) break;
+    if (!picks.some(p => p.id === cand.id)) picks.push(cand);
+  }
+  return picks.length > 0 ? picks.slice(0, 2) : roster.slice(0, 1);
 }
 
 /**
