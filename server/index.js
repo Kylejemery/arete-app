@@ -28,6 +28,16 @@ const PARALLEL_ALLOWLIST = (process.env.PARALLEL_CABINET_ALLOWLIST || '')
 // OpenAI SDK client (used for OpenAI-backed agents and embeddings)
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Gemini and Grok expose OpenAI-compatible APIs — same SDK, different base
+// URLs. Clients are null when the key is absent; routing then falls back to
+// the default Claude model so a missing key never errors at the user.
+const gemini = process.env.GEMINI_API_KEY
+  ? new OpenAI({ apiKey: process.env.GEMINI_API_KEY, baseURL: 'https://generativelanguage.googleapis.com/v1beta/openai/' })
+  : null;
+const xai = process.env.XAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.XAI_API_KEY, baseURL: 'https://api.x.ai/v1' })
+  : null;
+
 // ---------------------------------------------------------------------------
 // Counselor model routing — users can assign an LLM per counselor
 // (user_settings.counselor_models, keyed by counselor id). Only models on
@@ -37,6 +47,8 @@ const ALLOWED_COUNSELOR_MODELS = new Set([
   'claude-opus-4-6',
   'claude-sonnet-4-6',
   'gpt-5.1',
+  'gemini-3-pro-preview',
+  'grok-4-fast-non-reasoning',
 ]);
 const DEFAULT_COUNSELOR_MODEL = 'claude-opus-4-6';
 
@@ -44,19 +56,53 @@ function resolveCounselorModel(requested) {
   return ALLOWED_COUNSELOR_MODELS.has(requested) ? requested : DEFAULT_COUNSELOR_MODEL;
 }
 
+function isNonAnthropicModel(model) {
+  return typeof model === 'string' && /^(gpt-|gemini|grok)/.test(model);
+}
+
 /**
- * Provider-agnostic chat call for counselor responses.
- * Anthropic models use the raw fetch convention of this file; gpt-* models
- * go through the OpenAI SDK. Returns the response text.
+ * Returns the OpenAI-compatible client + param style for a model, null when
+ * the provider's key is missing, or undefined for Anthropic models.
+ */
+function compatRouteFor(model) {
+  if (model.startsWith('gpt-')) return { client: openai, provider: 'openai' };
+  if (model.startsWith('gemini')) return gemini ? { client: gemini, provider: 'gemini' } : null;
+  if (model.startsWith('grok')) return xai ? { client: xai, provider: 'xai' } : null;
+  return undefined;
+}
+
+async function callOpenAICompat(route, { model, system, messages, maxTokens }) {
+  const params = {
+    model,
+    messages: [{ role: 'system', content: system }, ...messages],
+  };
+  // gpt-5.x requires max_completion_tokens; Gemini/Grok compat layers take
+  // max_tokens. Reasoning models spend tokens thinking, so give non-OpenAI
+  // providers headroom — the length guard in the prompt keeps replies short.
+  if (route.provider === 'openai') {
+    params.max_completion_tokens = maxTokens;
+  } else {
+    params.max_tokens = Math.max(maxTokens * 4, 1024);
+  }
+  const completion = await route.client.chat.completions.create(params);
+  return completion.choices?.[0]?.message?.content ?? '';
+}
+
+/**
+ * Provider-agnostic chat call for counselor responses. Anthropic models use
+ * the raw fetch convention of this file; gpt/gemini/grok models go through
+ * the OpenAI-compatible SDK clients. Missing provider key → default Claude.
  */
 async function callCounselorModel({ model, system, messages, maxTokens }) {
-  if (model.startsWith('gpt-')) {
-    const completion = await openai.chat.completions.create({
-      model,
-      max_completion_tokens: maxTokens,
-      messages: [{ role: 'system', content: system }, ...messages],
-    });
-    return completion.choices?.[0]?.message?.content ?? '';
+  let effectiveModel = model;
+  const route = isNonAnthropicModel(model) ? compatRouteFor(model) : undefined;
+
+  if (route) {
+    return callOpenAICompat(route, { model, system, messages, maxTokens });
+  }
+  if (route === null) {
+    console.warn(`[Models] No API key for ${model}; falling back to ${DEFAULT_COUNSELOR_MODEL}`);
+    effectiveModel = DEFAULT_COUNSELOR_MODEL;
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -66,7 +112,7 @@ async function callCounselorModel({ model, system, messages, maxTokens }) {
       'x-api-key': CLAUDE_API_KEY,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({ model, max_tokens: maxTokens, system, messages }),
+    body: JSON.stringify({ model: effectiveModel, max_tokens: maxTokens, system, messages }),
   });
   if (!res.ok) {
     const errText = await res.text();
@@ -416,23 +462,31 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
   const enrichedSystem = system + dateTimeBlock + profileBlock + ragContext + resourceInstruction;
 
-  // OpenAI-assigned counselor: route through the OpenAI SDK (no web search
-  // tool) and answer in the Anthropic response shape the client expects.
-  if (typeof model === 'string' && model.startsWith('gpt-')) {
-    const openaiModel = ALLOWED_COUNSELOR_MODELS.has(model) ? model : 'gpt-5.1';
-    try {
-      console.log(`[/api/chat/counselor] messages: ${messages.length} | model: ${openaiModel} (openai)`);
-      const completion = await openai.chat.completions.create({
-        model: openaiModel,
-        max_completion_tokens: serverMaxTokens,
-        messages: [{ role: 'system', content: enrichedSystem }, ...messages],
-      });
-      const text = completion.choices?.[0]?.message?.content ?? '';
-      return res.json({ content: [{ type: 'text', text }] });
-    } catch (err) {
-      console.error('OpenAI error (chat/counselor):', err.message || err);
-      return res.status(502).json({ error: 'Failed to reach OpenAI API' });
+  // Non-Anthropic counselor (gpt/gemini/grok): route through the matching
+  // OpenAI-compatible client (no web search tool) and answer in the
+  // Anthropic response shape the client expects. Missing provider key
+  // falls through to the default Claude path below.
+  let anthropicModel = model;
+  if (isNonAnthropicModel(model)) {
+    const compatModel = ALLOWED_COUNSELOR_MODELS.has(model) ? model : DEFAULT_COUNSELOR_MODEL;
+    const route = isNonAnthropicModel(compatModel) ? compatRouteFor(compatModel) : undefined;
+    if (route) {
+      try {
+        console.log(`[/api/chat/counselor] messages: ${messages.length} | model: ${compatModel} (${route.provider})`);
+        const text = await callOpenAICompat(route, {
+          model: compatModel,
+          system: enrichedSystem,
+          messages,
+          maxTokens: serverMaxTokens,
+        });
+        return res.json({ content: [{ type: 'text', text }] });
+      } catch (err) {
+        console.error(`${route.provider} error (chat/counselor):`, err.message || err);
+        return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
+      }
     }
+    console.warn(`[Models] No API key for ${model}; using default Claude for this chat`);
+    anthropicModel = 'claude-opus-4-5';
   }
 
   try {
@@ -447,7 +501,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: model || 'claude-opus-4-5',
+        model: anthropicModel || 'claude-opus-4-5',
         max_tokens: serverMaxTokens,
         system: enrichedSystem,
         messages,

@@ -4,13 +4,15 @@
 export interface CounselorModelOption {
   id: string;
   label: string;
-  provider: 'Anthropic' | 'OpenAI';
+  provider: 'Anthropic' | 'OpenAI' | 'Google' | 'xAI';
 }
 
 export const COUNSELOR_MODEL_OPTIONS: CounselorModelOption[] = [
   { id: 'claude-opus-4-6', label: 'Claude Opus', provider: 'Anthropic' },
   { id: 'claude-sonnet-4-6', label: 'Claude Sonnet', provider: 'Anthropic' },
   { id: 'gpt-5.1', label: 'GPT-5.1', provider: 'OpenAI' },
+  { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', provider: 'Google' },
+  { id: 'grok-4-fast-non-reasoning', label: 'Grok 4', provider: 'xAI' },
 ];
 
 export const DEFAULT_COUNSELOR_MODEL = 'claude-opus-4-6';
