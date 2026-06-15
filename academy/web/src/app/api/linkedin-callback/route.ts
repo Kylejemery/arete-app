@@ -47,8 +47,8 @@ export async function GET(req: NextRequest) {
       <html><body style="font-family:sans-serif;padding:2rem;max-width:600px;">
         <h2 style="color:green">✓ LinkedIn Connected</h2>
         <p>Copy the access token below and add it to Vercel as <code>LINKEDIN_ACCESS_TOKEN</code>:</p>
-        <textarea 
-          rows="4" 
+        <textarea
+          rows="4"
           style="width:100%;font-family:monospace;font-size:12px;padding:8px;border:1px solid #ccc;border-radius:4px;"
           onclick="this.select()"
         >${data.access_token}</textarea>
