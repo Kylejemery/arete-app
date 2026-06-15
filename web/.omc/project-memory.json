@@ -1,0 +1,204 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1779829143740,
+  "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete\\web",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "next",
+        "version": "15.0.0",
+        "category": "fullstack"
+      },
+      {
+        "name": "react",
+        "version": "19.0.0",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "19.0.0",
+        "category": "frontend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "next dev",
+      "build": "next build",
+      "start": "next start",
+      "lint": "next lint"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "public",
+      "src"
+    ],
+    "gitBranches": {
+      "defaultBranch": "main",
+      "branchingStrategy": null
+    }
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 1,
+      "lastAccessed": 1779829143629,
+      "keyFiles": [
+        "manifest.json"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1779829143630,
+      "keyFiles": [
+        "middleware.ts"
+      ]
+    },
+    "supabase": {
+      "path": "supabase",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1779829143661,
+      "keyFiles": []
+    },
+    "src\\app": {
+      "path": "src\\app",
+      "purpose": "Application code",
+      "fileCount": 3,
+      "lastAccessed": 1779829143661,
+      "keyFiles": [
+        "globals.css",
+        "layout.tsx",
+        "page.tsx"
+      ]
+    },
+    "src\\components": {
+      "path": "src\\components",
+      "purpose": "UI components",
+      "fileCount": 5,
+      "lastAccessed": 1779829143662,
+      "keyFiles": [
+        "CabinetPreview.tsx",
+        "CounselorCard.tsx",
+        "CounselorLibrary.tsx"
+      ]
+    },
+    "src\\lib": {
+      "path": "src\\lib",
+      "purpose": "Library code",
+      "fileCount": 9,
+      "lastAccessed": 1779829143662,
+      "keyFiles": [
+        "claudeService.ts",
+        "counselors.ts",
+        "db.ts"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src\\app\\globals.css",
+      "accessCount": 2,
+      "lastAccessed": 1779829326604,
+      "type": "file"
+    },
+    {
+      "path": "tailwind.config.ts",
+      "accessCount": 2,
+      "lastAccessed": 1779829330623,
+      "type": "file"
+    },
+    {
+      "path": "src\\app\\layout.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779829344795,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\Sidebar.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1779829396863,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\claudeService.ts",
+      "accessCount": 2,
+      "lastAccessed": 1781114300494,
+      "type": "file"
+    },
+    {
+      "path": "vercel.json",
+      "accessCount": 2,
+      "lastAccessed": 1781362745270,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ConstellationBg.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779829268709,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\GlassCard.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779829278232,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\ChapterRule.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779829288263,
+      "type": "file"
+    },
+    {
+      "path": "src\\components\\Tag.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779829298231,
+      "type": "file"
+    },
+    {
+      "path": "src\\lib\\supabase.ts",
+      "accessCount": 1,
+      "lastAccessed": 1781358264131,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

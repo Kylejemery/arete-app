@@ -4,42 +4,103 @@ const fs   = require('fs');
 const path = require('path');
 
 const { chunkRaw, chunkSummaryDocx } = require('./chunker');
-const { embedChunks, estimateCost } = require('./embedder');
-const { uploadChunks } = require('./uploader');
+const { embedChunks, estimateCost }  = require('./embedder');
+const { uploadChunks }               = require('./uploader');
 
 const TEXTS_DIR = path.join(__dirname, 'texts');
 
 // Fix common Windows-1252/Latin-1 mojibake that appears in Gutenberg UTF-8 files
 function fixEncoding(text) {
   return text
-    .replace(/â€™/g, "'")   // right single quote / apostrophe
-    .replace(/â€œ/g, '"')   // left double quote
+    .replace(/â€™/g, "'")    // right single quote / apostrophe
+    .replace(/â€œ/g, '"')    // left double quote
     .replace(/â€\x9d/g, '"') // right double quote
-    .replace(/â€"/g, '—')   // em dash
-    .replace(/â€"/g, '–')   // en dash
-    .replace(/â€¦/g, '…')   // ellipsis
+    .replace(/â€"/g, '—')    // em dash
+    .replace(/â€"/g, '–')    // en dash
+    .replace(/â€¦/g, '…')    // ellipsis
     .replace(/Ã©/g, 'é')
     .replace(/Ã /g, 'à')
     .replace(/Ã¨/g, 'è');
 }
 
 const MANIFEST = [
-  { slug: 'marcus-aurelius', strategy: 'meditations',  file: 'marcus-meditations.txt' },
-  { slug: 'epictetus',       strategy: 'discourses',   files: ['epictetus-discourses.txt', 'epictetus-enchiridion.txt'] },
-  { slug: 'seneca',          strategy: 'letters',      files: ['seneca-letters.txt', 'seneca-shortness.txt'] },
+  { slug: 'marcus-aurelius', strategy: 'meditations', file: 'marcus-meditations.txt' },
+  { slug: 'epictetus',       strategy: 'discourses',  files: ['epictetus-discourses.txt', 'epictetus-enchiridion.txt'] },
+  { slug: 'seneca',          strategy: 'letters',     files: ['seneca-letters.txt', 'seneca-shortness.txt'] },
 ];
+
+// ── Summary metadata ──────────────────────────────────────────────────────────
+//
+// Keys are "AuthorLastName_ShortTitle" prefixes matching the docx filename
+// convention: AuthorLastName_ShortTitle_ChN_summary.docx
+//
+// Add an entry here for each new text before ingesting its summary docx.
+// Fields map directly to rag_corpus columns.
+// ─────────────────────────────────────────────────────────────────────────────
+const SUMMARY_METADATA_OVERRIDES = {
+  'Sellars_Stoicism': {
+    author:           'John Sellars',
+    work:             'Stoicism',
+    translator:       '',
+    program_id:       'stoicism-phd',
+    course_relevance: 'PHIL 701',
+    difficulty:       'Introductory',
+  },
+};
+
+/**
+ * Resolve rag_corpus metadata for a summary docx.
+ *
+ * Priority:
+ *  1. SUMMARY_METADATA_OVERRIDES entry matching "Author_Title" prefix
+ *  2. Values derived from filename convention (Author_Title_ChN_summary.docx)
+ *
+ * Returns a metadata object suitable for passing to uploadChunks().
+ */
+function getSummaryMetadata(filename) {
+  // Try each registered override key as a filename prefix
+  for (const [key, meta] of Object.entries(SUMMARY_METADATA_OVERRIDES)) {
+    if (filename.startsWith(key)) {
+      return { ...meta };
+    }
+  }
+
+  // Fallback: derive from filename
+  const nameMatch = filename.match(/^([^_]+)_([^_]+)_Ch(\d+)_summary\.docx$/i);
+  if (nameMatch) {
+    const [, authorSlug, titleSlug] = nameMatch;
+    return {
+      author:           authorSlug,
+      work:             titleSlug.replace(/([A-Z])/g, ' $1').trim(),
+      translator:       '',
+      program_id:       'stoicism-phd',
+      course_relevance: null,
+      difficulty:       null,
+    };
+  }
+
+  // Last-resort fallback
+  return {
+    author:           'Unknown',
+    work:             filename,
+    translator:       '',
+    program_id:       'stoicism-phd',
+    course_relevance: null,
+    difficulty:       null,
+  };
+}
 
 function sourceTitle(filename) {
   return path.basename(filename, '.txt');
 }
 
+// ── Primary text ingestion ────────────────────────────────────────────────────
+
 async function ingestOne(entry) {
-  // Normalize to always work with an array of files
   const files = entry.files || [entry.file];
 
-  // 1. Chunk all files, combining results with a global chunk_index
   let allRawChunks = [];
-  let globalIndex = 0;
+  let globalIndex  = 0;
 
   for (const file of files) {
     const filepath = path.join(TEXTS_DIR, file);
@@ -47,11 +108,10 @@ async function ingestOne(entry) {
       console.warn(`  Skipping file not found: ${filepath}`);
       continue;
     }
-    const raw = fixEncoding(fs.readFileSync(filepath, 'utf8'));
+    const raw   = fixEncoding(fs.readFileSync(filepath, 'utf8'));
     const title = sourceTitle(file);
     const fileChunks = chunkRaw(raw, entry.strategy, { author: entry.slug, work: title });
-    // Re-index so chunk_index is globally unique across all files for this counselor
-    const reindexed = fileChunks.map(c => ({ ...c, chunk_index: globalIndex++, source_title: title }));
+    const reindexed  = fileChunks.map(c => ({ ...c, chunk_index: globalIndex++, source_title: title }));
     console.log(`  Chunked "${title}" into ${fileChunks.length} chunks`);
     allRawChunks = allRawChunks.concat(reindexed);
   }
@@ -61,31 +121,35 @@ async function ingestOne(entry) {
     return null;
   }
 
-  // 2. Shape chunks for embedder: add counselor_slug, strategy, map chunk_text -> text
+  // Shape: map chunk_text → text for the embedder; keep section_label and chunk_index
   const shaped = allRawChunks.map(c => ({
-    counselor_slug: entry.slug,
-    source_title:   c.source_title,
-    chunk_index:    c.chunk_index,
-    strategy:       entry.strategy,
-    text:           c.chunk_text,
-    section_label:  c.section_label,
-    word_count:     c.word_count,
+    text:          c.chunk_text,
+    chunk_index:   c.chunk_index,
+    section_label: c.section_label,
+    word_count:    c.word_count,
+    // Per-chunk author/work/translator come from TEXT_METADATA via chunker baseMeta
+    author:        c.author,
+    work:          c.work,
+    translator:    c.translator || '',
+    text_type:     c.text_type  || 'primary',
+    source_title:  c.source_title,
   }));
 
-  // 3. Cost estimate before touching the API
   const { estimatedTokens, estimatedCost } = estimateCost(shaped);
   console.log(`  Estimated tokens: ${estimatedTokens.toLocaleString()} (~$${estimatedCost.toFixed(4)})`);
 
-  // 4. Embed
   const embedded = await embedChunks(shaped);
   console.log(`  Embedded ${embedded.length} chunks`);
 
-  // 5. Upload
-  const { uploaded, skipped, errors } = await uploadChunks(embedded);
+  const { uploaded, skipped, errors } = await uploadChunks(embedded, {
+    program_id: 'stoicism-phd',
+  });
   console.log(`  Done. ${uploaded} uploaded, ${skipped} skipped, ${errors} errors`);
 
   return { slug: entry.slug, total: allRawChunks.length, uploaded, errors };
 }
+
+// ── Summary docx ingestion ────────────────────────────────────────────────────
 
 async function ingestSummaries() {
   const summariesDir = path.join(__dirname, 'summaries');
@@ -106,33 +170,37 @@ async function ingestSummaries() {
     console.log(`\nIngesting summary: ${file}`);
     try {
       const filepath = path.join(summariesDir, file);
+      const metadata = getSummaryMetadata(file);
+
+      console.log(`  Metadata: author="${metadata.author}", work="${metadata.work}", ` +
+                  `course="${metadata.course_relevance || 'none'}", ` +
+                  `difficulty="${metadata.difficulty   || 'none'}"`);
+
       const chunks = await chunkSummaryDocx(filepath);
       console.log(`  Chunks produced: ${chunks.length}`);
 
+      // Shape: map chunk_text → text for embedder; carry section_label and chunk_index
       const shaped = chunks.map(c => ({
-        counselor_slug: 'summary',
-        source_title:   file,
-        chunk_index:    c.chunk_index,
-        strategy:       'paragraph',
-        text:           c.chunk_text,
-        section_label:  c.section_label,
-        word_count:     c.word_count,
-        text_type:      c.text_type,
-        author:         c.author,
-        work:           c.work,
+        text:          c.chunk_text,
+        chunk_index:   c.chunk_index,
+        section_label: c.section_label,
+        word_count:    c.word_count,
+        text_type:     'secondary',
       }));
 
       const { estimatedTokens, estimatedCost } = estimateCost(shaped);
       console.log(`  Estimated tokens: ${estimatedTokens.toLocaleString()} (~$${estimatedCost.toFixed(4)})`);
 
       const embedded = await embedChunks(shaped);
-      const { uploaded, skipped, errors } = await uploadChunks(embedded);
+      const { uploaded, skipped, errors } = await uploadChunks(embedded, metadata);
       console.log(`  ✓ ${file} — ${uploaded} uploaded, ${skipped} skipped, ${errors} errors`);
     } catch (err) {
       console.error(`  ✗ Failed: ${err.message}`);
     }
   }
 }
+
+// ── CLI entry point ───────────────────────────────────────────────────────────
 
 async function main() {
   const command = process.argv[2] || null;

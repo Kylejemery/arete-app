@@ -1,7 +1,7 @@
 {
   "version": 4,
   "routes": {
-    "/login": {
+    "/admin": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -14,8 +14,32 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/login",
-      "dataRoute": "/login.rsc",
+      "srcRoute": "/admin",
+      "dataRoute": "/admin.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/signup": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/signup",
+      "dataRoute": "/signup.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -40,6 +64,30 @@
       "initialRevalidateSeconds": false,
       "srcRoute": "/waitlist",
       "dataRoute": "/waitlist.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/courses/phil-701": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/courses/phil-701",
+      "dataRoute": "/courses/phil-701.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -97,7 +145,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/courtyard": {
+    "/dashboard/admin/submissions": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -110,8 +158,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/courtyard",
-      "dataRoute": "/dashboard/courtyard.rsc",
+      "srcRoute": "/dashboard/admin/submissions",
+      "dataRoute": "/dashboard/admin/submissions.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -121,7 +169,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/profile": {
+    "/dashboard/examine": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -134,8 +182,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/profile",
-      "dataRoute": "/dashboard/profile.rsc",
+      "srcRoute": "/dashboard/examine",
+      "dataRoute": "/dashboard/examine.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -169,7 +217,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/dashboard/morning": {
+    "/courses/phil-702": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -182,8 +230,56 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/morning",
-      "dataRoute": "/dashboard/morning.rsc",
+      "srcRoute": "/courses/phil-702",
+      "dataRoute": "/courses/phil-702.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/login": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/login",
+      "dataRoute": "/login.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/dashboard/courtyard": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/dashboard/courtyard",
+      "dataRoute": "/dashboard/courtyard.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -218,7 +314,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/courses/phil-702": {
+    "/dashboard/morning": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -231,56 +327,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/courses/phil-702",
-      "dataRoute": "/courses/phil-702.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/dashboard/papers": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/dashboard/papers",
-      "dataRoute": "/dashboard/papers.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/courses/phil-701": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/courses/phil-701",
-      "dataRoute": "/courses/phil-701.rsc",
+      "srcRoute": "/dashboard/morning",
+      "dataRoute": "/dashboard/morning.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -314,7 +362,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/signup": {
+    "/dashboard/profile": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -327,8 +375,56 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/signup",
-      "dataRoute": "/signup.rsc",
+      "srcRoute": "/dashboard/profile",
+      "dataRoute": "/dashboard/profile.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/dashboard/lexicon": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/dashboard/lexicon",
+      "dataRoute": "/dashboard/lexicon.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/dashboard/papers": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/dashboard/papers",
+      "dataRoute": "/dashboard/papers.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -342,8 +438,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "d563314e19ff38918c12cd83bcf5b76f",
-    "previewModeSigningKey": "e6bb8b3c8bdc872b57c596ac179064cd1c1a034eba0ef282e134d1c4690d7604",
-    "previewModeEncryptionKey": "3b0caf55b0992f9d1b08633c76738b6600e280ee5339a68248a9d1e17593b4c2"
+    "previewModeId": "4c73e749fc7dafe1e2e14d846a0e74f7",
+    "previewModeSigningKey": "13dc055c37f643b0cf086aa95331065ee3852df066b7f7442d06acc5e732285d",
+    "previewModeEncryptionKey": "e74c68a74a2600cd3666ef5394f8bbf6a778a8550e6bc8a4c2aded734929f2f1"
   }
 }
