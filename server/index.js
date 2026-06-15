@@ -1391,6 +1391,9 @@ function selectCounselors(activeCounselorId, userId, cabinetMembers) {
 async function selectRespondingCounselors(question, allCounselors, history) {
   const directorSystem = `You are the director of a Cabinet of philosophical counselors. For each user message, decide the conversation format and which counselors speak, in what order.
 
+Available counselors — use these EXACT ids in "responding" (not display names, not slugs):
+${allCounselors.map(c => `- ${c.id} — ${c.name}`).join('\n')}
+
 Formats:
 - "solo" — one counselor responds. Use ONLY for the narrow cases: a message that addresses one counselor by name, a quick logistical or factual question, or a raw emotional moment where a single steady voice is clearly best and a second one would intrude.
 - "dialogue" — two counselors whose perspectives complement or usefully differ. The second speaker sees the first's response and may build on it or push back. This is your DEFAULT format. Use it for essentially every substantive message — any question, decision, reflection, dilemma, or topic that more than one counselor could speak to.
@@ -1505,24 +1508,30 @@ function detectInvokedCounselors(question, allCounselors) {
  */
 function resolveCounselorToken(token, roster) {
   if (typeof token !== 'string') return null;
-  const t = token.trim().toLowerCase();
-  if (!t) return null;
+  const raw = token.trim();
+  if (!raw) return null;
+  const t = raw.toLowerCase();
+  // Separator-insensitive forms so 'marcus_aurelius', 'marcus-aurelius' and
+  // 'Marcus Aurelius' all resolve the same way (Haiku mixes all three).
+  const dashed = t.replace(/[\s_]+/g, '-');
+  const spaced = t.replace(/[\s_-]+/g, ' ');
   // 1. exact roster id
-  let hit = roster.find(c => c.id.toLowerCase() === t);
+  let hit = roster.find(c => { const id = c.id.toLowerCase(); return id === t || id === dashed; });
   if (hit) return hit;
   // 2. slug → id mapping (handles 'marcus-aurelius', 'futureSelf', etc.)
-  const mappedId = SLUG_TO_COUNSELOR_ID[token] || SLUG_TO_COUNSELOR_ID[t];
+  const mappedId = SLUG_TO_COUNSELOR_ID[token] || SLUG_TO_COUNSELOR_ID[t] || SLUG_TO_COUNSELOR_ID[dashed];
   if (mappedId) {
     hit = roster.find(c => c.id === mappedId);
     if (hit) return hit;
   }
   // 3. display name — full match, then any name word ('goggins' from 'David Goggins')
-  hit = roster.find(c => c.name.toLowerCase() === t)
+  hit = roster.find(c => c.name.toLowerCase() === spaced)
+     || roster.find(c => c.name.toLowerCase().split(/\s+/).includes(spaced))
      || roster.find(c => c.name.toLowerCase().split(/\s+/).includes(t));
   if (hit) return hit;
-  // 4. alias regex ('aurelius', 'teddy', 'future self', ...)
+  // 4. alias regex ('aurelius', 'teddy', 'future self', ...), separator-normalized
   for (const { id, re } of COUNSELOR_ALIASES) {
-    if (re.test(token) && roster.some(c => c.id === id)) {
+    if ((re.test(raw) || re.test(spaced)) && roster.some(c => c.id === id)) {
       return roster.find(c => c.id === id);
     }
   }
