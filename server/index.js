@@ -52,6 +52,14 @@ const ALLOWED_COUNSELOR_MODELS = new Set([
 ]);
 const DEFAULT_COUNSELOR_MODEL = 'claude-opus-4-6';
 
+// The stable option ids we store in counselor_models can outlive a provider's
+// actual model string — Google deprecated `gemini-3-pro-preview` in favor of
+// `gemini-3.1-pro-preview`. Translate at call time so a provider rename never
+// requires migrating every user's saved selection.
+const PROVIDER_MODEL_ALIAS = {
+  'gemini-3-pro-preview': 'gemini-3.1-pro-preview',
+};
+
 function resolveCounselorModel(requested) {
   return ALLOWED_COUNSELOR_MODELS.has(requested) ? requested : DEFAULT_COUNSELOR_MODEL;
 }
@@ -73,7 +81,7 @@ function compatRouteFor(model) {
 
 async function callOpenAICompat(route, { model, system, messages, maxTokens }) {
   const params = {
-    model,
+    model: PROVIDER_MODEL_ALIAS[model] || model,
     messages: [{ role: 'system', content: system }, ...messages],
   };
   // gpt-5.x requires max_completion_tokens; Gemini/Grok compat layers take
@@ -83,6 +91,14 @@ async function callOpenAICompat(route, { model, system, messages, maxTokens }) {
     params.max_completion_tokens = maxTokens;
   } else {
     params.max_tokens = Math.max(maxTokens * 4, 1024);
+  }
+  // Gemini 3 defaults to thinking_level "high". Through the OpenAI-compat
+  // layer that hidden reasoning is billed against max_tokens, so the visible
+  // content often comes back empty. Map to low reasoning (OpenAI's
+  // reasoning_effort → Gemini's thinking_level) so the budget goes to the
+  // actual reply, which is what makes Gemini counselors work at all here.
+  if (route.provider === 'gemini') {
+    params.reasoning_effort = 'low';
   }
   const completion = await route.client.chat.completions.create(params);
   return completion.choices?.[0]?.message?.content ?? '';
@@ -1584,9 +1600,13 @@ async function fireParallelCounselors(question, counselors, history, contextChun
         maxTokens: 300,
       });
       timings[counselor.id] = `${Date.now() - t0}ms (${model})`;
+      if (!responseText || !responseText.trim()) {
+        console.warn(`[Cabinet] Empty response from ${counselor.id} (${model}) — provider returned no content`);
+      }
       results.push({ counselorId: counselor.id, counselorName: counselor.name, response: responseText, error: null });
     } catch (err) {
       timings[counselor.id] = `${Date.now() - t0}ms (${model}, failed)`;
+      console.error(`[Cabinet] ${counselor.id} (${model}) failed: ${err.message}`);
       results.push({
         counselorId: counselor.id,
         counselorName: counselor.name,
