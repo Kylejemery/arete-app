@@ -62,7 +62,8 @@ export async function GET(req: NextRequest) {
       </body></html>
     `, { headers: { 'Content-Type': 'text/html' } })
 
-  } catch (e: any) {
-    return new NextResponse(`Error: ${e.message}`, { status: 500 })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unknown error'
+    return new NextResponse(`Error: ${message}`, { status: 500 })
   }
 }
