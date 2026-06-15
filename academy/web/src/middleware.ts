@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup']
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/api/linkedin-callback']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
