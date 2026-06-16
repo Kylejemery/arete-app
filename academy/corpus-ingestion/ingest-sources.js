@@ -91,19 +91,22 @@ async function buildExistingCorpusSet() {
   return set;
 }
 
-async function ingestFile(filepath, skipExisting) {
-  const filename = path.basename(filepath);
-  const meta = parseFilename(filename);
-  const text = fs.readFileSync(filepath, 'utf8');
-  const chunks = chunkText(text);
-
-  console.log(`\n[${filename}] ${chunks.length} chunks — ${meta.author} / ${meta.work} / ${meta.language}`);
-
+/**
+ * Embeds + upserts an array of chunk strings into rag_corpus under `meta`.
+ * Shared by the CLI (ingestFile) and the corpus agent (corpus-agent.js) so the
+ * chunking/embedding/upload logic lives in exactly one place.
+ *
+ * meta = { author, work, section_label, language, program_id,
+ *          course_relevance, difficulty, text_type, source_url? }
+ * Returns { ingested, skipped, errors }.
+ */
+async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
   let ingested = 0;
   let skipped = 0;
+  let errors = 0;
 
   for (let i = 0; i < chunks.length; i++) {
-    const chunkText = chunks[i];
+    const chunk = chunks[i];
 
     if (skipExisting) {
       const { data: existing } = await supabase
@@ -120,10 +123,10 @@ async function ingestFile(filepath, skipExisting) {
       }
     }
 
-    const embedding = await embedChunk(chunkText);
+    const embedding = await embedChunk(chunk);
 
     const { error } = await supabase.from('rag_corpus').upsert({
-      chunk_text: chunkText,
+      chunk_text: chunk,
       author: meta.author,
       work: meta.work,
       section_label: meta.section_label,
@@ -132,6 +135,7 @@ async function ingestFile(filepath, skipExisting) {
       course_relevance: meta.course_relevance,
       difficulty: meta.difficulty,
       text_type: meta.text_type,
+      source_url: meta.source_url ?? null,
       chunk_index: i,
       embedding,
     }, {
@@ -140,11 +144,25 @@ async function ingestFile(filepath, skipExisting) {
 
     if (error) {
       console.error(`  [${i}] ERROR:`, error.message);
+      errors++;
     } else {
       ingested++;
       if (i % 10 === 0) process.stdout.write(`  chunks ingested: ${ingested}\r`);
     }
   }
+
+  return { ingested, skipped, errors };
+}
+
+async function ingestFile(filepath, skipExisting) {
+  const filename = path.basename(filepath);
+  const meta = parseFilename(filename);
+  const text = fs.readFileSync(filepath, 'utf8');
+  const chunks = chunkText(text);
+
+  console.log(`\n[${filename}] ${chunks.length} chunks — ${meta.author} / ${meta.work} / ${meta.language}`);
+
+  const { ingested, skipped } = await ingestChunks(chunks, meta, { skipExisting });
 
   console.log(`  done — ${ingested} ingested, ${skipped} skipped`);
   return ingested;
@@ -207,7 +225,13 @@ async function main() {
   console.log(`Total chunks upserted: ${totalChunks}`);
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Only run the CLI when invoked directly. When required by corpus-agent.js,
+// just expose the building blocks — do not execute main().
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
+
+module.exports = { chunkText, embedChunk, ingestChunks, parseFilename };
