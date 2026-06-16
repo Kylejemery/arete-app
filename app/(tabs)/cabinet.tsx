@@ -18,7 +18,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet, saveCabinetSelection } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
 import {
@@ -88,6 +89,11 @@ export default function CabinetScreen() {
   const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const consumedSharedSessionRef = useRef(false);
 
   // --- Know Thyself nudge state ---
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
@@ -105,7 +111,7 @@ export default function CabinetScreen() {
   const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
 
   // --- beliefContext deep-link param ---
-  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string }>();
+  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string; sharedSessionId?: string; sharedPartnerName?: string }>();
   const consumedBeliefContextRef = useRef(false);
   const consumedCabinetContextRef = useRef(false);
   const consumedMorningMessageRef = useRef(false);
@@ -142,6 +148,83 @@ export default function CabinetScreen() {
       }
     })();
   }, []);
+
+  // Resolve the current user id and the group-cabinet conversation row id.
+  // The conversation id doubles as the shared-session id when inviting.
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        setCurrentUserId(data.user?.id ?? null);
+      } catch { /* unauthenticated — leave null */ }
+      try {
+        const id = await getOrCreateCabinetConversationId();
+        setCurrentSessionId(id);
+      } catch (err) {
+        console.warn('[Cabinet] Failed to resolve session id:', err);
+      }
+    })();
+  }, []);
+
+  // Consume the sharedSessionId param handed back by the join-session screen
+  // after a partner accepts an invite — flips this device into shared mode.
+  useEffect(() => {
+    const sid = params.sharedSessionId;
+    if (sid && !consumedSharedSessionRef.current) {
+      consumedSharedSessionRef.current = true;
+      setActiveTab('cabinet');
+      setSessionType('shared');
+      setCurrentSessionId(String(sid));
+      setSessionPartners([{ userId: 'partner', displayName: params.sharedPartnerName ? String(params.sharedPartnerName) : 'Partner' }]);
+      router.setParams({ sharedSessionId: undefined, sharedPartnerName: undefined });
+    }
+  }, [params.sharedSessionId, params.sharedPartnerName, router]);
+
+  // Realtime sync for shared sessions. Scaffolding: the send pipeline does not
+  // yet write to session_messages, so no rows arrive in this build — the
+  // subscription is wired and ready for when shared sends are routed here.
+  useEffect(() => {
+    if (sessionType !== 'shared' || !currentSessionId) return;
+
+    const channel = supabase
+      .channel(`cabinet-session-${currentSessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'session_messages',
+          filter: `session_id=eq.${currentSessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            user_id: string | null;
+            role: 'user' | 'assistant';
+            content: string;
+            counselor_id: string | null;
+            counselor_name: string | null;
+            created_at: string;
+          };
+          // Skip our own messages — they're already in state optimistically.
+          if (row.user_id && row.user_id === currentUserId) return;
+          setMessages(prev => [
+            ...prev,
+            {
+              role: row.role,
+              content: row.content,
+              timestamp: new Date(row.created_at).getTime(),
+              counselorId: row.counselor_id ?? undefined,
+              counselorName: row.counselor_name ?? undefined,
+            },
+          ]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionType, currentSessionId, currentUserId]);
 
   const loadCounselorsData = useCallback(async () => {
     try {
@@ -383,9 +466,16 @@ export default function CabinetScreen() {
             </Text>
           )}
           {sessionType === 'shared' && (
-            <Text style={styles.sharedSessionLabel} numberOfLines={1}>
-              {`👥 Shared Session · ${[userSettings?.user_name || 'You', ...sessionPartners.map(p => p.displayName)].join(' & ')}`}
-            </Text>
+            <>
+              <Text style={styles.sharedSessionLabel} numberOfLines={1}>
+                {`👥 Shared Session · ${[userSettings?.user_name || 'You', ...sessionPartners.map(p => p.displayName)].join(' & ')}`}
+              </Text>
+              {sessionPartners.some(p => p.userId !== 'pending') && (
+                <Text style={styles.partnerPresence} numberOfLines={1}>
+                  <Text style={styles.presenceDot}>● </Text>Partner connected
+                </Text>
+              )}
+            </>
           )}
         </View>
         {activeTab === 'cabinet' && (
@@ -1160,6 +1250,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontWeight: '600',
     letterSpacing: 0.3,
+  },
+  partnerPresence: {
+    fontSize: 11,
+    color: '#8fb98f',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  presenceDot: {
+    color: '#4caf50',
   },
   sharedBanner: {
     flexDirection: 'row',

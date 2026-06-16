@@ -397,6 +397,18 @@ export async function getCabinetConversation() {
   return data;
 }
 
+/**
+ * Returns the current user's group-cabinet conversation row id, creating an
+ * empty row if none exists yet. Used as the shared-session id when inviting a
+ * partner (session_participants.session_id references cabinet_conversations.id).
+ */
+export async function getOrCreateCabinetConversationId(): Promise<string | null> {
+  const existing = await getCabinetConversation();
+  if (existing?.id) return existing.id as string;
+  const created = await saveCabinetConversation([]);
+  return (created?.id as string) ?? null;
+}
+
 // ----------------------------------------------------------------
 // CABINET THREADS
 // ----------------------------------------------------------------
