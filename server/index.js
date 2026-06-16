@@ -640,13 +640,27 @@ function generateInviteToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
+// Verifies the Bearer token (same pattern as enforceMessageLimit) and returns
+// the authenticated user's id, or null when no valid token is present.
+async function getAuthenticatedUserId(req) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return null;
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) return null;
+  return user.id;
+}
+
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 // POST /api/sessions/invite — create a pending participant row + email the partner.
 app.post('/api/sessions/invite', async (req, res) => {
-  const { sessionId, inviterUserId, partnerEmail } = req.body || {};
-  if (!sessionId || !inviterUserId || !partnerEmail) {
-    return res.status(400).json({ error: 'Missing required fields: sessionId, inviterUserId, partnerEmail' });
+  const authenticatedUserId = await getAuthenticatedUserId(req);
+  if (!authenticatedUserId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { sessionId, partnerEmail } = req.body || {};
+  if (!sessionId || !partnerEmail) {
+    return res.status(400).json({ error: 'Missing required fields: sessionId, partnerEmail' });
   }
 
   // Verify the session exists and the inviter owns it. cabinet_conversations
@@ -661,7 +675,7 @@ app.post('/api/sessions/invite', async (req, res) => {
     return res.status(500).json({ error: 'Failed to look up session' });
   }
   if (!sessionRow) return res.status(404).json({ error: 'Session not found' });
-  if (sessionRow.user_id !== inviterUserId) {
+  if (sessionRow.user_id !== authenticatedUserId) {
     return res.status(403).json({ error: 'Inviter is not a participant of this session' });
   }
 
@@ -669,7 +683,7 @@ app.post('/api/sessions/invite', async (req, res) => {
   let inviterName = 'Someone';
   try {
     const { data: inv } = await supabase
-      .from('user_settings').select('user_name').eq('user_id', inviterUserId).maybeSingle();
+      .from('user_settings').select('user_name').eq('user_id', authenticatedUserId).maybeSingle();
     if (inv?.user_name) inviterName = inv.user_name;
   } catch { /* fall back to 'Someone' */ }
 
@@ -685,11 +699,11 @@ app.post('/api/sessions/invite', async (req, res) => {
     .from('session_participants')
     .upsert({
       session_id: sessionId,
-      user_id: inviterUserId,
+      user_id: authenticatedUserId,
       status: 'pending',
       invite_token: token,
       invite_email: partnerEmail,
-      invited_by: inviterUserId,
+      invited_by: authenticatedUserId,
       invite_expires_at: expiresAt,
       display_name: partnerEmail,
     }, { onConflict: 'session_id,user_id' });
@@ -718,14 +732,13 @@ app.post('/api/sessions/invite', async (req, res) => {
       });
     } catch (err) {
       console.error('[sessions/invite] email send failed:', err.message || err);
-      return res.json({ success: true, token, emailSent: false });
+      return res.json({ success: true, emailSent: false });
     }
   } else {
     console.warn('[sessions/invite] RESEND_API_KEY not set — skipping email send');
   }
 
-  // NOTE: token is returned for testing only — remove from the response in production.
-  return res.json({ success: true, token, emailSent: !!resend });
+  return res.json({ success: true, emailSent: !!resend });
 });
 
 // GET /api/sessions/join — validate token, then bounce into the app deep link.
@@ -749,9 +762,12 @@ app.get('/api/sessions/join', async (req, res) => {
 
 // POST /api/sessions/accept — partner consumes the token and becomes active.
 app.post('/api/sessions/accept', async (req, res) => {
-  const { token, partnerUserId, partnerDisplayName } = req.body || {};
-  if (!token || !partnerUserId) {
-    return res.status(400).json({ error: 'Missing required fields: token, partnerUserId' });
+  const authenticatedUserId = await getAuthenticatedUserId(req);
+  if (!authenticatedUserId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { token, partnerDisplayName } = req.body || {};
+  if (!token) {
+    return res.status(400).json({ error: 'Missing required field: token' });
   }
   const { data: row, error: lookupErr } = await supabase
     .from('session_participants')
@@ -770,7 +786,7 @@ app.post('/api/sessions/accept', async (req, res) => {
   const { error: updateErr } = await supabase
     .from('session_participants')
     .update({
-      user_id: partnerUserId,
+      user_id: authenticatedUserId,
       display_name: partnerDisplayName || null,
       status: 'active',
       invite_token: null, // consume the token

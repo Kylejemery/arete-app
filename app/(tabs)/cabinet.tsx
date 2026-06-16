@@ -425,12 +425,16 @@ export default function CabinetScreen() {
     setInviteLoading(true);
     setInviteError(null);
     try {
+      // Backend derives the inviter from this Bearer token (JWT), not the body.
+      const { data: { session } } = await supabase.auth.getSession();
       const response = await fetch(`${API_BASE_URL}/api/sessions/invite`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           sessionId: currentSessionId,
-          inviterUserId: currentUserId,
           partnerEmail: email,
         }),
       });

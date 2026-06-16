@@ -30,8 +30,9 @@ export default function JoinSessionScreen() {
         return;
       }
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (!user || !session?.access_token) {
           // Not signed in — send them to login; they can re-tap the link after.
           router.replace('/login' as any);
           return;
@@ -39,10 +40,14 @@ export default function JoinSessionScreen() {
         const settings = await getUserSettings();
         const partnerDisplayName = settings?.user_name || user.email || 'Partner';
 
+        // Backend derives the joining user from this Bearer token (JWT), not the body.
         const response = await fetch(`${API_BASE_URL}/api/sessions/accept`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, partnerUserId: user.id, partnerDisplayName }),
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ token, partnerDisplayName }),
         });
         const data = await response.json().catch(() => ({}));
 
