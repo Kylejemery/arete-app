@@ -2,10 +2,11 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
-import { Slot } from 'expo-router';
+import { Slot, useRouter, useRootNavigationState } from 'expo-router';
+import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -23,6 +24,32 @@ SessionContext.displayName = 'SessionContext';
 
 export function useSession() {
   return useContext(SessionContext);
+}
+
+/**
+ * Routes the `arete://join-session?token=...` deep link (the bounce target of
+ * the email invite's /api/sessions/join redirect) to the join-session screen.
+ * Gated on navigation readiness; replace() keeps it idempotent if expo-router
+ * has already auto-routed the same URL.
+ */
+function DeepLinkHandler() {
+  const router = useRouter();
+  const navState = useRootNavigationState();
+  const url = Linking.useURL();
+  const handledRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!navState?.key) return; // navigation tree not mounted yet
+    if (!url || handledRef.current === url) return;
+    const parsed = Linking.parse(url);
+    if (parsed.path === 'join-session' && parsed.queryParams?.token) {
+      handledRef.current = url;
+      breadcrumb('deep link: join-session');
+      router.replace({ pathname: '/join-session', params: { token: String(parsed.queryParams.token) } } as any);
+    }
+  }, [url, navState?.key, router]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -92,6 +119,7 @@ export default function RootLayout() {
       <ErrorBoundary>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SessionContext.Provider value={session}>
+            <DeepLinkHandler />
             <Slot />
           </SessionContext.Provider>
         </GestureHandlerRootView>
