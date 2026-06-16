@@ -308,6 +308,7 @@ export default function CabinetScreen() {
             appendMessages('cabinet', [userMessage]);
             sendMessageToCabinet(updated, {
               sessionType,
+              sessionId: currentSessionId ?? undefined,
               partnerIds: sessionPartners.map(p => p.userId),
             }).then(replies => {
               const assistantMessages = repliesToMessages(replies);
@@ -374,6 +375,7 @@ export default function CabinetScreen() {
     try {
       const replies = await sendMessageToCabinet(updatedMessages, {
         sessionType,
+        sessionId: currentSessionId ?? undefined,
         partnerIds: sessionPartners.map(p => p.userId),
       });
       const assistantMessages = repliesToMessages(replies);

@@ -693,7 +693,7 @@ export interface CabinetReply {
 
 export async function sendMessageToCabinet(
   messages: ThreadMessage[],
-  sessionOptions?: { sessionType?: 'solo' | 'shared'; partnerIds?: string[] }
+  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] }
 ): Promise<CabinetReply[]> {
   const asSingleReply = (text: string): CabinetReply[] => [
     { counselorId: null, counselorName: null, text },
@@ -748,6 +748,7 @@ export async function sendMessageToCabinet(
         activeCounselorId: 'cabinet',
         userId: _cabSession?.user?.id,
         sessionType,
+        sessionId: sessionOptions?.sessionId,
         participantIds,
       }),
     });

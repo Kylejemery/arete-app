@@ -453,7 +453,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers, sessionType, participantIds } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers, sessionType, sessionId, participantIds } = req.body;
   const safeCounselorModels = (counselorModels && typeof counselorModels === 'object') ? counselorModels : {};
 
   // Older app builds don't send cabinetMembers — look the selection up
@@ -525,6 +525,38 @@ app.post('/api/chat/counselor', async (req, res) => {
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
       .filter(s => s.author || s.work);
+
+    // Shared session: mirror this turn into session_messages so the partner's
+    // realtime listener receives both the prompt and each counselor reply.
+    // Tagged with the sender's userId, so the sender's own listener skips them
+    // (already shown optimistically) while the partner receives them. Writes go
+    // through the service-role client (RLS bypassed). Solo sessions skip this;
+    // best-effort — a write failure never blocks the chat response.
+    if (sessionType === 'shared' && sessionId && userId) {
+      try {
+        await supabase.from('session_messages').insert({
+          session_id: sessionId,
+          user_id: userId,
+          role: 'user',
+          content: question,
+        });
+        const assistantRows = results
+          .filter(r => !r.error && r.response)
+          .map(r => ({
+            session_id: sessionId,
+            user_id: userId,
+            role: 'assistant',
+            content: r.response,
+            counselor_id: r.counselorId ?? null,
+            counselor_name: r.counselorName ?? null,
+          }));
+        if (assistantRows.length > 0) {
+          await supabase.from('session_messages').insert(assistantRows);
+        }
+      } catch (err) {
+        console.error('[Cabinet] session_messages write failed:', err.message || err);
+      }
+    }
 
     return res.json({
       responses: results.map(r => ({ ...r, sources })),
