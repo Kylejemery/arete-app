@@ -6,10 +6,12 @@
 //   SUPABASE_SERVICE_ROLE_KEY — Supabase service role secret
 // ---------------------------------------------------------------------------
 require('dotenv').config();
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require('openai');
+const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
 
@@ -146,6 +148,13 @@ const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
+
+// Resend — transactional email (shared-session invites). Null when the key is
+// absent so invite creation still succeeds locally; email send is skipped.
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const INVITE_FROM_EMAIL = process.env.INVITE_FROM_EMAIL || 'Arete <noreply@pursuearete.com>';
+const PUBLIC_WEB_URL = 'https://pursuearete.com';
+const RAILWAY_PUBLIC_URL = process.env.RAILWAY_PUBLIC_URL || 'https://arete-app-production.up.railway.app';
 
 // ---------------------------------------------------------------------------
 // RAG helpers
@@ -621,6 +630,158 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     console.error('Failed to reach Claude API (chat/counselor):', error);
     return res.status(502).json({ error: 'Failed to reach Claude API' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Shared session invite / join / accept (Arete for Couples)
+// ---------------------------------------------------------------------------
+
+function generateInviteToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+const INVITE_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
+
+// POST /api/sessions/invite — create a pending participant row + email the partner.
+app.post('/api/sessions/invite', async (req, res) => {
+  const { sessionId, inviterUserId, partnerEmail } = req.body || {};
+  if (!sessionId || !inviterUserId || !partnerEmail) {
+    return res.status(400).json({ error: 'Missing required fields: sessionId, inviterUserId, partnerEmail' });
+  }
+
+  // Verify the session exists and the inviter owns it. cabinet_conversations
+  // has one row per user; the owning user_id is the session creator.
+  const { data: sessionRow, error: sessionErr } = await supabase
+    .from('cabinet_conversations')
+    .select('id, user_id')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (sessionErr) {
+    console.error('[sessions/invite] session lookup error:', sessionErr.message);
+    return res.status(500).json({ error: 'Failed to look up session' });
+  }
+  if (!sessionRow) return res.status(404).json({ error: 'Session not found' });
+  if (sessionRow.user_id !== inviterUserId) {
+    return res.status(403).json({ error: 'Inviter is not a participant of this session' });
+  }
+
+  // Inviter's name for the subject line (best effort).
+  let inviterName = 'Someone';
+  try {
+    const { data: inv } = await supabase
+      .from('user_settings').select('user_name').eq('user_id', inviterUserId).maybeSingle();
+    if (inv?.user_name) inviterName = inv.user_name;
+  } catch { /* fall back to 'Someone' */ }
+
+  const token = generateInviteToken();
+  const expiresAt = new Date(Date.now() + INVITE_TTL_MS).toISOString();
+
+  // user_id is a required FK to auth.users and the partner may not have an
+  // account yet, so the inviter's id is a placeholder (replaced on accept).
+  // Upsert on (session_id, user_id) so re-inviting refreshes the token rather
+  // than tripping the UNIQUE(session_id, user_id) constraint. Runs through the
+  // service-role client, so RLS does not block the insert.
+  const { error: upsertErr } = await supabase
+    .from('session_participants')
+    .upsert({
+      session_id: sessionId,
+      user_id: inviterUserId,
+      status: 'pending',
+      invite_token: token,
+      invite_email: partnerEmail,
+      invited_by: inviterUserId,
+      invite_expires_at: expiresAt,
+      display_name: partnerEmail,
+    }, { onConflict: 'session_id,user_id' });
+  if (upsertErr) {
+    console.error('[sessions/invite] upsert error:', upsertErr.message);
+    return res.status(500).json({ error: 'Failed to create invite' });
+  }
+
+  const joinUrl = `${RAILWAY_PUBLIC_URL}/api/sessions/join?token=${token}`;
+
+  if (resend) {
+    const text = `You've been invited to join a shared Cabinet session on Arete.\n\nIn a shared session, you and your partner each bring your philosophical profile, and your Cabinet counselors respond to both of you together.\n\nJoin here: ${joinUrl}\n\nThis invite expires in 48 hours.\n\nIf you don't have an Arete account, you'll be prompted to create one.`;
+    const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a2e;line-height:1.5;">
+      <p>You've been invited to join a <strong>shared Cabinet session</strong> on Arete.</p>
+      <p>In a shared session, you and your partner each bring your philosophical profile, and your Cabinet counselors respond to both of you together.</p>
+      <p><a href="${joinUrl}" style="display:inline-block;background:#c9a84c;color:#1a1a2e;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Join Session</a></p>
+      <p style="color:#666;font-size:13px;">This invite expires in 48 hours. If you don't have an Arete account, you'll be prompted to create one.</p>
+    </div>`;
+    try {
+      await resend.emails.send({
+        from: INVITE_FROM_EMAIL,
+        to: partnerEmail,
+        subject: `${inviterName} invited you to a shared Cabinet session`,
+        text,
+        html,
+      });
+    } catch (err) {
+      console.error('[sessions/invite] email send failed:', err.message || err);
+      return res.json({ success: true, token, emailSent: false });
+    }
+  } else {
+    console.warn('[sessions/invite] RESEND_API_KEY not set — skipping email send');
+  }
+
+  // NOTE: token is returned for testing only — remove from the response in production.
+  return res.json({ success: true, token, emailSent: !!resend });
+});
+
+// GET /api/sessions/join — validate token, then bounce into the app deep link.
+app.get('/api/sessions/join', async (req, res) => {
+  const token = req.query.token;
+  if (!token || typeof token !== 'string') {
+    return res.redirect(`${PUBLIC_WEB_URL}?invite=expired`);
+  }
+  const { data: row } = await supabase
+    .from('session_participants')
+    .select('status, invite_expires_at')
+    .eq('invite_token', token)
+    .maybeSingle();
+  const valid = row && row.status === 'pending' && row.invite_expires_at &&
+    new Date(row.invite_expires_at) > new Date();
+  if (!valid) {
+    return res.redirect(`${PUBLIC_WEB_URL}?invite=expired`);
+  }
+  return res.redirect(`arete://join-session?token=${encodeURIComponent(token)}`);
+});
+
+// POST /api/sessions/accept — partner consumes the token and becomes active.
+app.post('/api/sessions/accept', async (req, res) => {
+  const { token, partnerUserId, partnerDisplayName } = req.body || {};
+  if (!token || !partnerUserId) {
+    return res.status(400).json({ error: 'Missing required fields: token, partnerUserId' });
+  }
+  const { data: row, error: lookupErr } = await supabase
+    .from('session_participants')
+    .select('id, session_id, status, invite_expires_at')
+    .eq('invite_token', token)
+    .maybeSingle();
+  if (lookupErr) {
+    console.error('[sessions/accept] lookup error:', lookupErr.message);
+    return res.status(500).json({ error: 'Failed to look up invite' });
+  }
+  const valid = row && row.status === 'pending' && row.invite_expires_at &&
+    new Date(row.invite_expires_at) > new Date();
+  if (!valid) {
+    return res.status(410).json({ error: 'This invite has expired or is invalid' });
+  }
+  const { error: updateErr } = await supabase
+    .from('session_participants')
+    .update({
+      user_id: partnerUserId,
+      display_name: partnerDisplayName || null,
+      status: 'active',
+      invite_token: null, // consume the token
+      joined_at: new Date().toISOString(),
+    })
+    .eq('id', row.id);
+  if (updateErr) {
+    console.error('[sessions/accept] update error:', updateErr.message);
+    return res.status(500).json({ error: 'Failed to accept invite' });
+  }
+  return res.json({ success: true, sessionId: row.session_id });
 });
 
 // ─── Conversation memory summarization ───────────────────────────────────────
