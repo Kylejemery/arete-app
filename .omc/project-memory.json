@@ -336,16 +336,16 @@
       "type": "file"
     },
     {
+      "path": "app.json",
+      "accessCount": 2,
+      "lastAccessed": 1781642357742,
+      "type": "directory"
+    },
+    {
       "path": "eas.json",
       "accessCount": 1,
       "lastAccessed": 1781642200638,
       "type": "file"
-    },
-    {
-      "path": "app.json",
-      "accessCount": 1,
-      "lastAccessed": 1781642202502,
-      "type": "directory"
     }
   ],
   "userDirectives": []

@@ -165,7 +165,10 @@
       "Bash(curl -s -D - -o /dev/null https://academy.pursuearete.com/api/linkedin-callback)",
       "Bash(gh api *)",
       "PowerShell($gh = \\(Get-Command gh -ErrorAction SilentlyContinue\\).Source; if \\($gh\\) { Write-Output \"gh at: $gh\"; gh api repos/Kylejemery/arete-app/deployments --jq '.[0:3][] | \\(.sha[0:7]\\)+\\\\\" \\\\\"+.environment+\\\\\" \\\\\"+.created_at' } else { Write-Output \"gh not installed\" })",
-      "Bash(curl -s -o /dev/null -w \"current: HTTP %{http_code}\\\\n\" https://academy.pursuearete.com/api/linkedin-callback)"
+      "Bash(curl -s -o /dev/null -w \"current: HTTP %{http_code}\\\\n\" https://academy.pursuearete.com/api/linkedin-callback)",
+      "Bash(ls -la academy/corpus-ingestion/)",
+      "Bash(ls railway.json railway.toml Procfile nixpacks.toml)",
+      "Bash(ls academy/corpus-ingestion/package.json)"
     ]
   }
 }
