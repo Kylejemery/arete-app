@@ -303,6 +303,76 @@ async function enforceMessageLimit(req, res) {
   return false;
 }
 
+// ---------------------------------------------------------------------------
+// Shared Cabinet sessions (Arete for Couples)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetches Know Thyself profiles for a set of users from user_settings.
+ * Returns one entry per requested participant: { userId, displayName, profile }.
+ * Users with no settings row still appear (generic displayName, profile = null)
+ * so a shared session always lists everyone present. The 'pending' placeholder
+ * the client sends before a partner has actually joined is filtered out.
+ */
+async function getParticipantProfiles(participantIds) {
+  const ids = Array.isArray(participantIds)
+    ? [...new Set(participantIds.filter(id => typeof id === 'string' && id && id !== 'pending'))]
+    : [];
+  if (ids.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('user_id, user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_description')
+    .in('user_id', ids);
+
+  if (error) {
+    console.error('Error fetching participant profiles:', error.message);
+    return [];
+  }
+
+  const byId = new Map((data || []).map(row => [row.user_id, row]));
+  return ids.map(userId => {
+    const row = byId.get(userId);
+    return {
+      userId,
+      displayName: row?.user_name || 'A participant',
+      profile: row || null,
+    };
+  });
+}
+
+function summarizeParticipantProfile(participant) {
+  const r = participant.profile;
+  if (!r) return '(no Know Thyself profile yet)';
+  const parts = [];
+  if (r.kt_identity) parts.push(`Identity: ${r.kt_identity}`);
+  if (r.kt_goals) parts.push(`Goals: ${r.kt_goals}`);
+  if (r.kt_strengths) parts.push(`Strengths: ${r.kt_strengths}`);
+  if (r.kt_weaknesses) parts.push(`Weaknesses: ${r.kt_weaknesses}`);
+  if (r.kt_patterns) parts.push(`Patterns and failure modes: ${r.kt_patterns}`);
+  if (r.kt_background) parts.push(`Background: ${r.kt_background}`);
+  if (r.kt_major_events) parts.push(`Major life events: ${r.kt_major_events}`);
+  if (r.future_self_description) parts.push(`Future self vision: ${r.future_self_description}`);
+  return parts.length > 0 ? parts.join('; ') : '(profile incomplete)';
+}
+
+/**
+ * Builds the system-prompt block injected into every counselor during a shared
+ * session so they respond to the group dynamic rather than a single user.
+ */
+function buildSharedContext(participants) {
+  if (!Array.isArray(participants) || participants.length === 0) return '';
+  const lines = participants
+    .map(p => `- ${p.displayName} (profile: ${summarizeParticipantProfile(p)})`)
+    .join('\n');
+  return `\n\n[SHARED CABINET SESSION]
+This is a shared Cabinet session with multiple participants.
+Participants:
+${lines}
+You are speaking to all of them together. Address the group when appropriate. Hold each person accountable to their own stated values. When relevant, note where their values align or create productive tension.
+[END SHARED CABINET SESSION]`;
+}
+
 app.post('/api/chat', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
@@ -374,7 +444,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers } = req.body;
+  const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers, sessionType, participantIds } = req.body;
   const safeCounselorModels = (counselorModels && typeof counselorModels === 'object') ? counselorModels : {};
 
   // Older app builds don't send cabinetMembers — look the selection up
@@ -405,6 +475,16 @@ app.post('/api/chat/counselor', async (req, res) => {
     return res.status(400).json({ error: 'messages must be an array' });
   }
 
+  // --- Shared session context (Arete for Couples) ---
+  // When sessionType is 'shared', fetch every participant's Know Thyself
+  // profile and build a block the counselors see, so they respond to the
+  // group dynamic. Solo sessions (the default) skip this entirely.
+  let sharedContext = '';
+  if (sessionType === 'shared' && Array.isArray(participantIds) && participantIds.length > 0) {
+    const participants = await getParticipantProfiles(participantIds);
+    sharedContext = buildSharedContext(participants);
+  }
+
   // --- Parallel Cabinet branch ---
   const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
 
@@ -431,7 +511,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext);
 
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
@@ -476,7 +556,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + ragContext + resourceInstruction;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + ragContext + resourceInstruction;
 
   // Non-Anthropic counselor (gpt/gemini/grok): route through the matching
   // OpenAI-compatible client (no web search tool) and answer in the
@@ -1568,7 +1648,7 @@ function fallbackDialogue(roster) {
  * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}) {
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '') {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
@@ -1577,7 +1657,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
 
   const contextBlock = (contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '') + voiceGuard + lengthGuard + toneGuard;
+    : '') + voiceGuard + lengthGuard + toneGuard + (sharedContext || '');
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
