@@ -691,7 +691,10 @@ export interface CabinetReply {
   text: string;
 }
 
-export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<CabinetReply[]> {
+export async function sendMessageToCabinet(
+  messages: ThreadMessage[],
+  sessionOptions?: { sessionType?: 'solo' | 'shared'; partnerIds?: string[] }
+): Promise<CabinetReply[]> {
   const asSingleReply = (text: string): CabinetReply[] => [
     { counselorId: null, counselorName: null, text },
   ];
@@ -710,6 +713,18 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
 
     const cabinetSettings = await getUserSettings();
     const { data: { session: _cabSession } } = await supabase.auth.getSession();
+
+    // Shared session (Arete for Couples): include every participant so the
+    // server can fetch their Know Thyself profiles and respond to the group.
+    // Solo (the default) sends no participant list and behaves unchanged.
+    const sessionType = sessionOptions?.sessionType ?? 'solo';
+    const participantIds =
+      sessionType === 'shared'
+        ? [_cabSession?.user?.id, ...(sessionOptions?.partnerIds ?? [])].filter(
+            (id): id is string => typeof id === 'string' && id.length > 0 && id !== 'pending'
+          )
+        : undefined;
+
     const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: {
@@ -732,6 +747,8 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         activeCounselorId: 'cabinet',
         userId: _cabSession?.user?.id,
+        sessionType,
+        participantIds,
       }),
     });
 

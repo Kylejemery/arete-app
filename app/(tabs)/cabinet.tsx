@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -81,6 +82,12 @@ export default function CabinetScreen() {
   // --- Search state ---
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+
+  // --- Shared session state (Arete for Couples) ---
+  const [sessionType, setSessionType] = useState<'solo' | 'shared'>('solo');
+  const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   // --- Know Thyself nudge state ---
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
@@ -216,7 +223,10 @@ export default function CabinetScreen() {
             const updated = [...prev, userMessage];
             setIsLoading(true);
             appendMessages('cabinet', [userMessage]);
-            sendMessageToCabinet(updated).then(replies => {
+            sendMessageToCabinet(updated, {
+              sessionType,
+              partnerIds: sessionPartners.map(p => p.userId),
+            }).then(replies => {
               const assistantMessages = repliesToMessages(replies);
               setMessages(u => [...u, ...assistantMessages]);
               setIsLoading(false);
@@ -279,7 +289,10 @@ export default function CabinetScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const replies = await sendMessageToCabinet(updatedMessages);
+      const replies = await sendMessageToCabinet(updatedMessages, {
+        sessionType,
+        partnerIds: sessionPartners.map(p => p.userId),
+      });
       const assistantMessages = repliesToMessages(replies);
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
@@ -319,6 +332,22 @@ export default function CabinetScreen() {
     );
   };
 
+  const handleSendInvite = () => {
+    const email = inviteEmail.trim();
+    if (!email) return;
+    // Scaffolding: real invite delivery lands in a later build.
+    console.log('Invite requested for:', email);
+    setSessionType('shared');
+    setSessionPartners(prev => [...prev, { userId: 'pending', displayName: email }]);
+    setShowInviteModal(false);
+    setInviteEmail('');
+  };
+
+  const handleEndSharedSession = () => {
+    setSessionType('solo');
+    setSessionPartners([]);
+  };
+
   const futureName = userSettings?.user_name
     ? `Future ${userSettings.user_name}${userSettings.future_self_years ? ` (in ${userSettings.future_self_years} years)` : ''}`
     : 'Future Self';
@@ -353,9 +382,29 @@ export default function CabinetScreen() {
               {[...cabinetCounselors.map(c => c.name), futureName].join(' · ')}
             </Text>
           )}
+          {sessionType === 'shared' && (
+            <Text style={styles.sharedSessionLabel} numberOfLines={1}>
+              {`👥 Shared Session · ${[userSettings?.user_name || 'You', ...sessionPartners.map(p => p.displayName)].join(' & ')}`}
+            </Text>
+          )}
         </View>
         {activeTab === 'cabinet' && (
           <View style={styles.headerButtons}>
+            {sessionType === 'shared' ? (
+              <TouchableOpacity
+                style={styles.newSessionButton}
+                onPress={handleEndSharedSession}
+              >
+                <Ionicons name="exit-outline" size={20} color="#c9a84c" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.newSessionButton}
+                onPress={() => setShowInviteModal(true)}
+              >
+                <Ionicons name="person-add-outline" size={20} color="#c9a84c" />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={styles.newSessionButton}
               onPress={() => {
@@ -430,6 +479,16 @@ export default function CabinetScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
+          {/* Shared session banner */}
+          {sessionType === 'shared' && sessionPartners.some(p => p.userId === 'pending') && (
+            <View style={styles.sharedBanner}>
+              <Ionicons name="people-outline" size={16} color="#c9a84c" />
+              <Text style={styles.sharedBannerText}>
+                Shared session active — waiting for partner to join
+              </Text>
+            </View>
+          )}
+
           {/* Messages */}
           <ScrollView
             ref={scrollViewRef}
@@ -631,6 +690,52 @@ export default function CabinetScreen() {
 
         </>
       )}
+
+      {/* Invite a Partner modal — scaffolding for the full invite system */}
+      <Modal
+        visible={showInviteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInviteModal(false)}
+      >
+        <View style={styles.beliefSeedModal}>
+          <View style={styles.beliefSeedCard}>
+            <Text style={styles.beliefSeedTitle}>Start a Shared Session</Text>
+            <Text style={styles.beliefSeedSubtitle}>
+              Invite someone to join your Cabinet session. Both of your Know Thyself profiles
+              will be shared with your counselors.
+            </Text>
+            <TextInput
+              style={styles.beliefSeedInput}
+              placeholder="partner@email.com"
+              placeholderTextColor="#555"
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <View style={styles.beliefSeedButtons}>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowInviteModal(false);
+                  setInviteEmail('');
+                }}
+                style={styles.inviteCancelButton}
+              >
+                <Text style={styles.inviteCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSendInvite}
+                disabled={!inviteEmail.trim()}
+                style={[styles.inviteSendButton, !inviteEmail.trim() && styles.inviteSendButtonDisabled]}
+              >
+                <Text style={styles.inviteSendText}>Send Invite</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </View>
   );
@@ -1047,5 +1152,57 @@ const styles = StyleSheet.create({
   limitCounterText: {
     color: '#888',
     fontSize: 12,
+  },
+  // Shared session (Arete for Couples)
+  sharedSessionLabel: {
+    fontSize: 11,
+    color: '#c9a84c',
+    marginTop: 4,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  sharedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#16213e',
+    borderBottomWidth: 1,
+    borderBottomColor: '#c9a84c33',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  sharedBannerText: {
+    flex: 1,
+    color: '#e0d5b5',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  inviteCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  inviteCancelText: {
+    color: '#aaa',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  inviteSendButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#c9a84c',
+  },
+  inviteSendButtonDisabled: {
+    backgroundColor: '#16213e',
+    borderWidth: 1,
+    borderColor: '#555',
+  },
+  inviteSendText: {
+    color: '#1a1a2e',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
