@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, API_BASE_URL } from '../../services/claudeService';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
@@ -415,15 +415,40 @@ export default function CabinetScreen() {
     );
   };
 
-  const handleSendInvite = () => {
+  const handleSendInvite = async () => {
     const email = inviteEmail.trim();
-    if (!email) return;
-    // Scaffolding: real invite delivery lands in a later build.
-    console.log('Invite requested for:', email);
-    setSessionType('shared');
-    setSessionPartners(prev => [...prev, { userId: 'pending', displayName: email }]);
-    setShowInviteModal(false);
-    setInviteEmail('');
+    if (!email || inviteLoading) return;
+    if (!currentSessionId || !currentUserId) {
+      setInviteError("Your session isn't ready yet. Try again in a moment.");
+      return;
+    }
+    setInviteLoading(true);
+    setInviteError(null);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/sessions/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          inviterUserId: currentUserId,
+          partnerEmail: email,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data?.success) {
+        setSessionType('shared');
+        setSessionPartners([{ userId: 'pending', displayName: email }]);
+        setShowInviteModal(false);
+        setInviteEmail('');
+      } else {
+        setInviteError(data?.error || 'Could not send the invite. Please try again.');
+      }
+    } catch (err) {
+      console.error('Invite error:', err);
+      setInviteError('Could not reach the server. Please try again.');
+    } finally {
+      setInviteLoading(false);
+    }
   };
 
   const handleEndSharedSession = () => {
@@ -805,22 +830,29 @@ export default function CabinetScreen() {
               autoCapitalize="none"
               autoCorrect={false}
             />
+            {inviteError && <Text style={styles.inviteErrorText}>{inviteError}</Text>}
             <View style={styles.beliefSeedButtons}>
               <TouchableOpacity
                 onPress={() => {
                   setShowInviteModal(false);
                   setInviteEmail('');
+                  setInviteError(null);
                 }}
+                disabled={inviteLoading}
                 style={styles.inviteCancelButton}
               >
                 <Text style={styles.inviteCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleSendInvite}
-                disabled={!inviteEmail.trim()}
-                style={[styles.inviteSendButton, !inviteEmail.trim() && styles.inviteSendButtonDisabled]}
+                disabled={!inviteEmail.trim() || inviteLoading}
+                style={[styles.inviteSendButton, (!inviteEmail.trim() || inviteLoading) && styles.inviteSendButtonDisabled]}
               >
-                <Text style={styles.inviteSendText}>Send Invite</Text>
+                {inviteLoading ? (
+                  <ActivityIndicator size="small" color="#1a1a2e" />
+                ) : (
+                  <Text style={styles.inviteSendText}>Send Invite</Text>
+                )}
               </TouchableOpacity>
             </View>
           </View>
@@ -1303,5 +1335,10 @@ const styles = StyleSheet.create({
     color: '#1a1a2e',
     fontSize: 14,
     fontWeight: '700',
+  },
+  inviteErrorText: {
+    color: '#e07a5f',
+    fontSize: 13,
+    marginBottom: 12,
   },
 });
