@@ -599,6 +599,40 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
   const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + ragContext + resourceInstruction;
 
+  // Shared session: mirror this single-counselor turn into session_messages so
+  // the partner's realtime listener receives it. Same pattern as the parallel
+  // path — user message before the model fires, counselor reply after. Writes
+  // go through the service-role client (RLS bypassed); best-effort, never block
+  // the response. Solo sessions skip this entirely.
+  const isSharedWrite = sessionType === 'shared' && sessionId && userId;
+  if (isSharedWrite) {
+    try {
+      await supabase.from('session_messages').insert({
+        session_id: sessionId,
+        user_id: userId,
+        role: 'user',
+        content: lastUserMessage,
+      });
+    } catch (err) {
+      console.error('[Cabinet] session_messages user write failed (single):', err.message || err);
+    }
+  }
+  const writeSharedAssistant = async (text) => {
+    if (!isSharedWrite || !text) return;
+    try {
+      await supabase.from('session_messages').insert({
+        session_id: sessionId,
+        user_id: userId,
+        role: 'assistant',
+        content: text,
+        counselor_id: counselorSlug ?? null,
+        counselor_name: null,
+      });
+    } catch (err) {
+      console.error('[Cabinet] session_messages assistant write failed (single):', err.message || err);
+    }
+  };
+
   // Non-Anthropic counselor (gpt/gemini/grok): route through the matching
   // OpenAI-compatible client (no web search tool) and answer in the
   // Anthropic response shape the client expects. Missing provider key
@@ -616,6 +650,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
           messages,
           maxTokens: serverMaxTokens,
         });
+        await writeSharedAssistant(text);
         return res.json({ content: [{ type: 'text', text }] });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
@@ -657,6 +692,8 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) data.content = textBlocks;
     }
+    const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+    await writeSharedAssistant(assistantText);
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API (chat/counselor):', error);
