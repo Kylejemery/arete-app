@@ -2,7 +2,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/api/linkedin-callback']
+// /api/cron/post-due authenticates itself with CRON_SECRET (called by Railway,
+// no user session), so it must bypass the session-redirect middleware.
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/api/linkedin-callback', '/api/cron/post-due']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
