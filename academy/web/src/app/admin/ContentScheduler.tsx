@@ -104,7 +104,12 @@ export default function ContentScheduler() {
         body: JSON.stringify({ posts, scheduleTime }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Scheduling failed')
+      if (!res.ok) {
+        const detail = Array.isArray(data.details) && data.details.length
+          ? `: ${data.details.join('; ')}`
+          : ''
+        throw new Error(`${data.error || 'Scheduling failed'}${detail}`)
+      }
       showToast(`✓ ${data.scheduled} post${data.scheduled !== 1 ? 's' : ''} scheduled`)
       setApproved(new Set())
       setStatus(null)

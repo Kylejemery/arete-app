@@ -48,6 +48,30 @@
   flex: 1;
 }
 
+/* Shared, readable styling for the source-row + schedule-row controls.
+   Without an explicit color these inherited a near-invisible light grey. */
+.topicInput,
+.sourceRow select,
+.scheduleRow select {
+  height: 38px;
+  padding: 0 12px;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1a1a1a;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+}
+
+.topicInput::placeholder { color: #aaa; }
+
+.topicInput:focus,
+.sourceRow select:focus,
+.scheduleRow select:focus {
+  border-color: #AFA9EC;
+}
+
 .chipRow {
   display: flex;
   flex-wrap: wrap;
@@ -483,4 +507,13 @@
   .countNum { color: #f0f0f0; }
   .rowItem { color: #ccc; border-color: #2a2a2a; }
   .barTrack { background: #2a2a2a; }
+
+  .topicInput,
+  .sourceRow select,
+  .scheduleRow select {
+    background: #1a1a1a;
+    color: #f0f0f0;
+    border-color: #2a2a2a;
+  }
+  .topicInput::placeholder { color: #777; }
 }
