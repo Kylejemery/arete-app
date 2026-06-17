@@ -27,7 +27,7 @@ export default function ContentScheduler() {
   )
   const [content, setContent] = useState<GeneratedContent>({})
   const [approved, setApproved] = useState<Set<PlatformKey>>(new Set())
-  const [scheduleTime, setScheduleTime] = useState('Best time (Buffer decides)')
+  const [scheduleTime, setScheduleTime] = useState('Post now')
   const [status, setStatus] = useState<Status>(null)
   const [generating, setGenerating] = useState(false)
   const [toast, setToast] = useState('')
@@ -90,7 +90,7 @@ export default function ContentScheduler() {
     const toSchedule = [...approved]
     if (!toSchedule.length) { showToast('Approve at least one post first'); return }
 
-    setStatus({ msg: `Scheduling ${toSchedule.length} posts via Buffer...`, active: true })
+    setStatus({ msg: `Scheduling ${toSchedule.length} posts...`, active: true })
 
     const posts = toSchedule.map(p => ({
       platform: p,
@@ -170,7 +170,6 @@ export default function ContentScheduler() {
             <option>Today at 6pm</option>
             <option>Tomorrow at 9am</option>
             <option>Tomorrow at 6pm</option>
-            <option>Best time (Buffer decides)</option>
           </select>
         </div>
 
