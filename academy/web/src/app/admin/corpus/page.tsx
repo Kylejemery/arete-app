@@ -1,0 +1,353 @@
+'use client'
+
+import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import styles from '../admin.module.css'
+
+type Mode = 'summary' | 'verbatim'
+type Status = 'idle' | 'summarizing' | 'ready' | 'ingesting' | 'done' | 'error'
+type Coverage = { totalChunks: number; authors: { author: string; chunks: number }[] }
+type IngestResult = {
+  chunksCreated: number
+  wordCount: number
+  author: string
+  work: string
+  authorChunkCount: number
+}
+
+function countWords(s: string): number {
+  return s.split(/\s+/).filter(Boolean).length
+}
+
+export default function CorpusIngestPage() {
+  // Same admin gate as the main /admin page.
+  const [authLoading, setAuthLoading] = useState(true)
+  const [authorized, setAuthorized] = useState(false)
+  const router = useRouter()
+
+  // Form state
+  const [inputText, setInputText] = useState('')
+  const [author, setAuthor] = useState('')
+  const [work, setWork] = useState('')
+  const [section, setSection] = useState('')
+  const [language, setLanguage] = useState<'en' | 'grc' | 'lat'>('en')
+  const [courseRelevance, setCourseRelevance] = useState('')
+  const [difficulty, setDifficulty] = useState('')
+  const [mode, setMode] = useState<Mode>('summary')
+  const [publicDomainConfirmed, setPublicDomainConfirmed] = useState(false)
+
+  // Output state
+  const [summaryText, setSummaryText] = useState('')
+  const [status, setStatus] = useState<Status>('idle')
+  const [result, setResult] = useState<IngestResult | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [coverage, setCoverage] = useState<Coverage | null>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
+        setAuthorized(true)
+      } else {
+        router.push('/')
+      }
+      setAuthLoading(false)
+    })
+  }, [router])
+
+  const loadCoverage = useCallback(async () => {
+    try {
+      const res = await fetch('/api/corpus-ingest/coverage', { cache: 'no-store' })
+      if (res.ok) setCoverage(await res.json())
+    } catch {
+      // coverage is non-critical; ignore
+    }
+  }, [])
+
+  useEffect(() => {
+    if (authorized) loadCoverage()
+  }, [authorized, loadCoverage])
+
+  const canStart = author.trim() && work.trim() && inputText.trim().length > 0
+
+  // Summarize (streaming) for summary mode; for verbatim, just move text across.
+  async function handleStart() {
+    setErrorMessage(null)
+    setResult(null)
+
+    if (mode === 'verbatim') {
+      setSummaryText(inputText)
+      setStatus('ready')
+      return
+    }
+
+    setStatus('summarizing')
+    setSummaryText('')
+    try {
+      const response = await fetch('/api/corpus-ingest/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: inputText, author, work, section, language, courseRelevance, difficulty }),
+      })
+      if (!response.ok || !response.body) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Summarization failed')
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let accumulated = ''
+      // Stream the summary in word by word as it's generated.
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        accumulated += decoder.decode(value, { stream: true })
+        setSummaryText(accumulated)
+      }
+      setStatus('ready')
+    } catch (e) {
+      setErrorMessage(e instanceof Error ? e.message : 'Summarization failed')
+      setStatus('error')
+    }
+  }
+
+  async function handleIngest() {
+    setStatus('ingesting')
+    setErrorMessage(null)
+    try {
+      const response = await fetch('/api/corpus-ingest/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: summaryText,
+          mode,
+          publicDomainConfirmed,
+          author,
+          work,
+          section,
+          language,
+          courseRelevance,
+          difficulty,
+        }),
+      })
+      const data = await response.json()
+      if (data.success) {
+        setResult(data)
+        setStatus('done')
+        loadCoverage()
+      } else {
+        setErrorMessage(data.error || 'Ingestion failed')
+        setStatus('error')
+      }
+    } catch {
+      setErrorMessage('Network error — please try again')
+      setStatus('error')
+    }
+  }
+
+  function resetAll() {
+    setInputText('')
+    setAuthor('')
+    setWork('')
+    setSection('')
+    setCourseRelevance('')
+    setDifficulty('')
+    setMode('summary')
+    setPublicDomainConfirmed(false)
+    setSummaryText('')
+    setResult(null)
+    setErrorMessage(null)
+    setStatus('idle')
+  }
+
+  if (authLoading) {
+    return (
+      <div className={styles.page}>
+        <p className={styles.muted}>Checking access…</p>
+      </div>
+    )
+  }
+  if (!authorized) return null
+
+  const verbatimBlocked = mode === 'verbatim' && !publicDomainConfirmed
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <h1>Corpus passage ingestion</h1>
+        <p>Paste a passage, review the agent&apos;s summary, then approve it into the RAG corpus.</p>
+      </div>
+
+      <div className={styles.corpusGrid}>
+        {/* ── Left: source text ────────────────────────────── */}
+        <div className={styles.card}>
+          <div className={styles.sectionLabel}>Source text</div>
+
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Author *</label>
+            <input className={styles.textInput} value={author} onChange={e => setAuthor(e.target.value)} placeholder="Pierre Hadot" />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Work *</label>
+            <input className={styles.textInput} value={work} onChange={e => setWork(e.target.value)} placeholder="Philosophy as a Way of Life" />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Section / Chapter</label>
+            <input className={styles.textInput} value={section} onChange={e => setSection(e.target.value)} placeholder="Chapter 3 — Spiritual Exercises" />
+          </div>
+
+          <div className={styles.fieldRow}>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Language</label>
+              <select className={styles.textInput} value={language} onChange={e => setLanguage(e.target.value as 'en' | 'grc' | 'lat')}>
+                <option value="en">English</option>
+                <option value="grc">Ancient Greek</option>
+                <option value="lat">Latin</option>
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Difficulty</label>
+              <select className={styles.textInput} value={difficulty} onChange={e => setDifficulty(e.target.value)}>
+                <option value="">—</option>
+                <option value="Introductory">Introductory</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Course relevance</label>
+            <input className={styles.textInput} value={courseRelevance} onChange={e => setCourseRelevance(e.target.value)} placeholder="PHIL 701" />
+          </div>
+
+          <div className={styles.sectionLabel} style={{ marginTop: '1rem' }}>Ingestion mode</div>
+          <label className={styles.modeOption}>
+            <input type="radio" checked={mode === 'summary'} onChange={() => setMode('summary')} />
+            <span>
+              <strong>Summarize first</strong> <span className={styles.muted}>(recommended)</span>
+              <br /><span className={styles.muted}>Agent rewrites in its own words. Use for all modern texts.</span>
+            </span>
+          </label>
+          <label className={styles.modeOption}>
+            <input type="radio" checked={mode === 'verbatim'} onChange={() => setMode('verbatim')} />
+            <span>
+              <strong>Verbatim</strong> <span className={styles.muted}>(public domain only)</span>
+              <br /><span className={styles.muted}>Ingests text exactly as pasted. Ancient texts and pre-1928 translations only.</span>
+            </span>
+          </label>
+
+          {mode === 'verbatim' && (
+            <label className={styles.pdCheckbox}>
+              <input type="checkbox" checked={publicDomainConfirmed} onChange={e => setPublicDomainConfirmed(e.target.checked)} />
+              <span>I confirm this text is in the public domain</span>
+            </label>
+          )}
+
+          <div className={styles.field} style={{ marginTop: '1rem' }}>
+            <label className={styles.fieldLabel}>Paste text *</label>
+            <textarea
+              className={styles.bigTextarea}
+              value={inputText}
+              onChange={e => setInputText(e.target.value)}
+              placeholder="Paste the verbatim passage here…"
+            />
+            <span className={styles.charCount}>{inputText.length.toLocaleString()} characters</span>
+          </div>
+
+          <div className={styles.generateRow}>
+            <button
+              className={styles.primaryBtn}
+              disabled={!canStart || status === 'summarizing' || status === 'ingesting'}
+              onClick={handleStart}
+            >
+              {status === 'summarizing' ? 'Summarizing…' : mode === 'summary' ? '✦ Summarize' : 'Preview'}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Right: agent output ──────────────────────────── */}
+        <div className={styles.card}>
+          <div className={styles.sectionLabel}>Agent output</div>
+
+          {status === 'idle' && (
+            <p className={styles.placeholder}>
+              Paste text and click {mode === 'summary' ? 'Summarize' : 'Preview'} to see the output here.
+              The summary appears word by word as it&apos;s generated. Review it before ingesting.
+            </p>
+          )}
+
+          {(status === 'summarizing' || status === 'ready' || status === 'ingesting') && (
+            <>
+              <textarea
+                className={styles.summaryArea}
+                value={summaryText}
+                onChange={e => setSummaryText(e.target.value)}
+                readOnly={status === 'summarizing' || status === 'ingesting'}
+                placeholder="Summary will appear here…"
+              />
+              <div className={styles.summaryFooter}>
+                <span className={styles.charCount}>{countWords(summaryText)} words</span>
+                {status === 'summarizing' && <span className={styles.muted}>generating…</span>}
+              </div>
+
+              {status === 'ready' && (
+                <>
+                  <div className={styles.actions}>
+                    <button className={styles.ghostBtn} onClick={() => { setSummaryText(''); setStatus('idle') }}>✗ Discard</button>
+                    <button className={styles.scheduleBtn} onClick={handleIngest} disabled={verbatimBlocked || summaryText.trim().length < 50}>
+                      ✓ Ingest {mode === 'summary' ? 'summary' : 'text'}
+                    </button>
+                  </div>
+                  <p className={styles.muted} style={{ marginTop: 8 }}>
+                    {verbatimBlocked
+                      ? 'Confirm public domain to enable ingestion.'
+                      : 'You can edit the text above before ingesting.'}
+                  </p>
+                </>
+              )}
+              {status === 'ingesting' && <p className={styles.muted} style={{ marginTop: 12 }}>Ingesting…</p>}
+            </>
+          )}
+
+          {status === 'done' && result && (
+            <div className={styles.successBanner}>
+              <strong>✓ Ingested successfully</strong>
+              <div className={styles.resultLine}>Chunks created: <b>{result.chunksCreated}</b></div>
+              <div className={styles.resultLine}>Words ingested: <b>{result.wordCount}</b></div>
+              <div className={styles.resultLine}>{result.author} — now <b>{result.authorChunkCount}</b> chunks in corpus</div>
+              <div className={styles.actions} style={{ marginTop: 12 }}>
+                <button className={styles.primaryBtn} onClick={resetAll}>Ingest another passage</button>
+              </div>
+            </div>
+          )}
+
+          {status === 'error' && (
+            <div className={styles.errorBanner}>
+              <strong>Something went wrong</strong>
+              <div className={styles.resultLine}>{errorMessage}</div>
+              <div className={styles.actions} style={{ marginTop: 12 }}>
+                <button className={styles.ghostBtn} onClick={() => setStatus(summaryText ? 'ready' : 'idle')}>Try again</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Current corpus ───────────────────────────────── */}
+      {coverage && (
+        <div className={styles.card} style={{ marginTop: '1.5rem' }}>
+          <div className={styles.cardTitleRow}>
+            <span className={styles.cardTitle}>Current corpus</span>
+            <span className={styles.muted}>{coverage.totalChunks.toLocaleString()} chunks</span>
+          </div>
+          {coverage.authors.map(a => (
+            <div key={a.author} className={styles.rowItem}>
+              <span>{a.author}</span>
+              <span className={styles.muted}>{a.chunks}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}

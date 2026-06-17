@@ -517,3 +517,157 @@
   }
   .topicInput::placeholder { color: #777; }
 }
+
+/* ─── Corpus ingestion page ─────────────────────────────────────── */
+.corpusGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .corpusGrid { grid-template-columns: 1fr; }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 0.85rem;
+}
+
+.fieldRow {
+  display: flex;
+  gap: 10px;
+}
+.fieldRow .field { flex: 1; }
+
+.fieldLabel {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.textInput {
+  height: 36px;
+  padding: 0 10px;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1a1a1a;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+}
+.textInput:focus { border-color: #AFA9EC; }
+.textInput::placeholder { color: #bbb; }
+
+.bigTextarea {
+  min-height: 300px;
+  padding: 10px;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  resize: vertical;
+  outline: none;
+}
+.bigTextarea:focus { border-color: #AFA9EC; }
+
+.modeOption {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #333;
+  cursor: pointer;
+}
+.modeOption input { margin-top: 3px; }
+
+.pdCheckbox {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #FFF7E6;
+  border: 0.5px solid #F0D9A8;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #92600A;
+  cursor: pointer;
+}
+
+.placeholder {
+  color: #aaa;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 1rem 0;
+}
+
+.summaryArea {
+  width: 100%;
+  min-height: 320px;
+  padding: 10px;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  background: #fff;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+}
+.summaryArea:focus { border-color: #AFA9EC; }
+
+.summaryFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.successBanner {
+  background: #E1F5EE;
+  border: 0.5px solid #9FE1CB;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  color: #0F6E56;
+  font-size: 14px;
+}
+
+.errorBanner {
+  background: #FBE3E3;
+  border: 0.5px solid #F0B5B5;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  color: #B23535;
+  font-size: 14px;
+}
+
+.resultLine {
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .fieldLabel { color: #aaa; }
+  .textInput,
+  .bigTextarea,
+  .summaryArea {
+    background: #1a1a1a;
+    color: #f0f0f0;
+    border-color: #2a2a2a;
+  }
+  .modeOption { color: #ccc; }
+  .placeholder { color: #777; }
+  .pdCheckbox { background: #2A2310; border-color: #5C4A1E; color: #E5C77A; }
+  .successBanner { background: #0E3A2E; border-color: #1D6E56; color: #9FE1CB; }
+  .errorBanner { background: #3A1414; border-color: #6E2929; color: #F0B5B5; }
+}
