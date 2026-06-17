@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { isDirectPlatform, postDirect } from '@/lib/social'
 
 // Map our platform keys to Buffer profile IDs stored in env vars
 // You'll fill these in after connecting accounts in Buffer
@@ -10,41 +11,6 @@ const BUFFER_PROFILE_IDS: Record<string, string | undefined> = {
   threads:   process.env.BUFFER_PROFILE_THREADS,
   bluesky:   process.env.BUFFER_PROFILE_BLUESKY,
   facebook:  process.env.BUFFER_PROFILE_FACEBOOK,
-}
-
-// LinkedIn has no Buffer-style scheduling via its API — posts publish immediately.
-// Posts directly as the member identified by LINKEDIN_AUTHOR_URN.
-async function postToLinkedIn(text: string): Promise<void> {
-  const token = process.env.LINKEDIN_ACCESS_TOKEN
-  const author = process.env.LINKEDIN_AUTHOR_URN
-  if (!token) throw new Error('LINKEDIN_ACCESS_TOKEN not configured')
-  if (!author) throw new Error('LINKEDIN_AUTHOR_URN not configured')
-
-  const res = await fetch('https://api.linkedin.com/v2/ugcPosts', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'X-Restli-Protocol-Version': '2.0.0',
-    },
-    body: JSON.stringify({
-      author,
-      lifecycleState: 'PUBLISHED',
-      specificContent: {
-        'com.linkedin.ugc.ShareContent': {
-          shareCommentary: { text },
-          shareMediaCategory: 'NONE',
-        },
-      },
-      visibility: {
-        'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC',
-      },
-    }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`LinkedIn API ${res.status}: ${await res.text()}`)
-  }
 }
 
 function buildScheduledAt(scheduleTime: string): string | null {
@@ -81,25 +47,25 @@ export async function POST(req: NextRequest) {
   const errors: string[] = []
 
   for (const post of posts) {
-    // LinkedIn posts directly via the LinkedIn API, not Buffer.
-    if (post.platform === 'linkedin') {
+    // Direct API platforms (LinkedIn, Bluesky, X) post immediately, not via Buffer.
+    if (isDirectPlatform(post.platform)) {
       try {
-        await postToLinkedIn(post.text)
+        await postDirect(post.platform, post.text)
         scheduled++
         await supabase.from('scheduled_posts').insert({
-          platform: 'linkedin',
+          platform: post.platform,
           text: post.text,
           scheduled_at: null,
-          schedule_type: 'Posted now (LinkedIn direct)',
+          schedule_type: 'Posted now (direct)',
           created_at: new Date().toISOString(),
         }).then(() => {})
       } catch (e) {
-        errors.push(`linkedin: ${e instanceof Error ? e.message : String(e)}`)
+        errors.push(`${post.platform}: ${e instanceof Error ? e.message : String(e)}`)
       }
       continue
     }
 
-    // Everything else goes through Buffer.
+    // Remaining platforms (Instagram, Threads, Facebook) still go through Buffer.
     if (!token) {
       errors.push(`${post.platform}: Buffer token not configured — add BUFFER_ACCESS_TOKEN`)
       continue
