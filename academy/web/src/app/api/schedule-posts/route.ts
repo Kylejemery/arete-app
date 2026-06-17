@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { isDirectPlatform, postDirect } from '@/lib/social'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // Map our platform keys to Buffer profile IDs stored in env vars
 // You'll fill these in after connecting accounts in Buffer
@@ -47,20 +48,37 @@ export async function POST(req: NextRequest) {
   const errors: string[] = []
 
   for (const post of posts) {
-    // Direct API platforms (LinkedIn, Bluesky, X) post immediately, not via Buffer.
+    // Direct API platforms (LinkedIn, Bluesky, X) don't go through Buffer.
     if (isDirectPlatform(post.platform)) {
-      try {
-        await postDirect(post.platform, post.text)
-        scheduled++
-        await supabase.from('scheduled_posts').insert({
-          platform: post.platform,
-          text: post.text,
-          scheduled_at: null,
-          schedule_type: 'Posted now (direct)',
-          created_at: new Date().toISOString(),
-        }).then(() => {})
-      } catch (e) {
-        errors.push(`${post.platform}: ${e instanceof Error ? e.message : String(e)}`)
+      // A future time → enqueue for the scheduler cron. Otherwise post now.
+      if (scheduledAt) {
+        try {
+          const admin = createAdminClient()
+          const { error } = await admin.from('post_queue').insert({
+            platform: post.platform,
+            text: post.text,
+            scheduled_at: scheduledAt,
+            status: 'pending',
+          })
+          if (error) throw new Error(error.message)
+          scheduled++
+        } catch (e) {
+          errors.push(`${post.platform}: could not schedule: ${e instanceof Error ? e.message : String(e)}`)
+        }
+      } else {
+        try {
+          await postDirect(post.platform, post.text)
+          scheduled++
+          await supabase.from('scheduled_posts').insert({
+            platform: post.platform,
+            text: post.text,
+            scheduled_at: null,
+            schedule_type: 'Posted now (direct)',
+            created_at: new Date().toISOString(),
+          }).then(() => {})
+        } catch (e) {
+          errors.push(`${post.platform}: ${e instanceof Error ? e.message : String(e)}`)
+        }
       }
       continue
     }

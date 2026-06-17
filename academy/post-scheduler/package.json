@@ -1,0 +1,12 @@
+{
+  "name": "arete-post-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Railway cron trigger that fires due scheduled social posts via the Academy web app.",
+  "scripts": {
+    "start": "node poll.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
