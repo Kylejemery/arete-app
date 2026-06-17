@@ -13,10 +13,10 @@ function percentEncode(str: string): string {
 }
 
 function buildOAuthHeader(method: string, url: string): string {
-  const consumerKey = process.env.X_API_KEY!
-  const consumerSecret = process.env.X_API_SECRET!
-  const token = process.env.X_ACCESS_TOKEN!
-  const tokenSecret = process.env.X_ACCESS_SECRET!
+  const consumerKey = process.env.X_API_KEY!.trim()
+  const consumerSecret = process.env.X_API_SECRET!.trim()
+  const token = process.env.X_ACCESS_TOKEN!.trim()
+  const tokenSecret = process.env.X_ACCESS_SECRET!.trim()
 
   const params: Record<string, string> = {
     oauth_consumer_key: consumerKey,

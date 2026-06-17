@@ -1,8 +1,10 @@
 // Posts to Bluesky via the AT Protocol. Auth is a simple identifier + app
 // password (create one at Settings → App Passwords) — no OAuth flow.
 export async function postBluesky(text: string): Promise<void> {
-  const identifier = process.env.BLUESKY_HANDLE
-  const password = process.env.BLUESKY_APP_PASSWORD
+  // Strip a leading '@' and whitespace — a bare handle, not an "@handle"
+  // (which Bluesky misreads as an email and rejects).
+  const identifier = process.env.BLUESKY_HANDLE?.trim().replace(/^@+/, '')
+  const password = process.env.BLUESKY_APP_PASSWORD?.trim()
   if (!identifier) throw new Error('BLUESKY_HANDLE not configured')
   if (!password) throw new Error('BLUESKY_APP_PASSWORD not configured')
   const service = process.env.BLUESKY_SERVICE || 'https://bsky.social'
