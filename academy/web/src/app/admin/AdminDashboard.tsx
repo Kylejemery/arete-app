@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import Link from 'next/link'
 import styles from './admin.module.css'
 import ContentScheduler from './ContentScheduler'
 import CorpusAgentPanel, { type Health } from './CorpusAgentPanel'
@@ -40,6 +41,7 @@ export default function AdminDashboard() {
             </button>
           ))}
         </div>
+        <Link href="/admin/corpus" className={styles.fleetLink}>+ Ingest passage</Link>
       </div>
 
       {/* Keep the scheduler mounted so its in-progress state survives tab switches. */}

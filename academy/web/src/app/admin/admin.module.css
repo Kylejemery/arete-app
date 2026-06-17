@@ -389,6 +389,18 @@
   flex-shrink: 0;
 }
 
+.fleetLink {
+  margin-left: auto;
+  font-size: 13px;
+  color: #534AB7;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 0.5px solid #AFA9EC;
+  transition: background 0.15s;
+}
+.fleetLink:hover { background: #EEEDFE; }
+
 .dot_ok { background: #1D9E75; }
 .dot_warn { background: #E0A100; }
 .dot_error { background: #E24B4A; }
@@ -502,6 +514,8 @@
   .fleetTab { border-color: #2a2a2a; color: #aaa; }
   .fleetTab:hover { background: #1a1a1a; }
   .fleetTabOn { background: #2A2660; border-color: #534AB7; color: #CFCBF5; }
+  .fleetLink { color: #CFCBF5; border-color: #534AB7; }
+  .fleetLink:hover { background: #2A2660; }
   .cardTitle { color: #f0f0f0; }
   .statValue { color: #f0f0f0; }
   .countNum { color: #f0f0f0; }
