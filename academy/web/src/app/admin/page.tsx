@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import ContentScheduler from './ContentScheduler'
+import AdminDashboard from './AdminDashboard'
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true)
@@ -31,5 +31,5 @@ export default function AdminPage() {
 
   if (!authorized) return null
 
-  return <ContentScheduler />
+  return <AdminDashboard />
 }
