@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
       author,
       work,
       section,
+      pages,
       language,
       courseRelevance,
       difficulty,
@@ -47,7 +48,8 @@ export async function POST(req: NextRequest) {
     const meta: IngestMeta = {
       author: author.trim(),
       work: work.trim(),
-      section_label: section?.trim() || null,
+      // Fold an optional page reference into section_label (e.g. "Chapter 3, pp. 81–84").
+      section_label: [section?.trim(), pages?.trim()].filter(Boolean).join(', ') || null,
       language: language || 'en',
       course_relevance: courseRelevance?.trim() || null,
       difficulty: difficulty?.trim() || null,

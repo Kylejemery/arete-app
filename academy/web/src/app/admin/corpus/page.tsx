@@ -31,6 +31,7 @@ export default function CorpusIngestPage() {
   const [author, setAuthor] = useState('')
   const [work, setWork] = useState('')
   const [section, setSection] = useState('')
+  const [pages, setPages] = useState('')
   const [language, setLanguage] = useState<'en' | 'grc' | 'lat'>('en')
   const [courseRelevance, setCourseRelevance] = useState('')
   const [difficulty, setDifficulty] = useState('')
@@ -124,6 +125,7 @@ export default function CorpusIngestPage() {
           author,
           work,
           section,
+          pages,
           language,
           courseRelevance,
           difficulty,
@@ -149,6 +151,7 @@ export default function CorpusIngestPage() {
     setAuthor('')
     setWork('')
     setSection('')
+    setPages('')
     setCourseRelevance('')
     setDifficulty('')
     setMode('summary')
@@ -190,9 +193,15 @@ export default function CorpusIngestPage() {
             <label className={styles.fieldLabel}>Work *</label>
             <input className={styles.textInput} value={work} onChange={e => setWork(e.target.value)} placeholder="Philosophy as a Way of Life" />
           </div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel}>Section / Chapter</label>
-            <input className={styles.textInput} value={section} onChange={e => setSection(e.target.value)} placeholder="Chapter 3 — Spiritual Exercises" />
+          <div className={styles.fieldRow}>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Section / Chapter</label>
+              <input className={styles.textInput} value={section} onChange={e => setSection(e.target.value)} placeholder="Chapter 3 — Spiritual Exercises" />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.fieldLabel}>Page(s)</label>
+              <input className={styles.textInput} value={pages} onChange={e => setPages(e.target.value)} placeholder="pp. 81–84" />
+            </div>
           </div>
 
           <div className={styles.fieldRow}>
