@@ -1,0 +1,213 @@
+[
+  {
+    "author": "Marcus Aurelius",
+    "work": "Meditations",
+    "tier": 1,
+    "chunk_threshold": 200,
+    "source_type": "public_domain",
+    "notes": "Core Stoic primary text. Foundation of the entire curriculum."
+  },
+  {
+    "author": "Epictetus",
+    "work": "Discourses",
+    "tier": 1,
+    "chunk_threshold": 200,
+    "source_type": "public_domain",
+    "notes": "Most systematic Stoic teaching on the dichotomy of control."
+  },
+  {
+    "author": "Epictetus",
+    "work": "Enchiridion",
+    "tier": 1,
+    "chunk_threshold": 50,
+    "source_type": "public_domain",
+    "notes": "The handbook. Distillation of the Discourses."
+  },
+  {
+    "author": "Seneca",
+    "work": "Letters from a Stoic",
+    "tier": 1,
+    "chunk_threshold": 200,
+    "source_type": "public_domain",
+    "notes": "124 letters. Most readable Stoic primary text. Core to PHIL 701."
+  },
+  {
+    "author": "Seneca",
+    "work": "On the Shortness of Life",
+    "tier": 1,
+    "chunk_threshold": 50,
+    "source_type": "public_domain",
+    "notes": "De Brevitate Vitae. Single most-cited Stoic text on time and attention."
+  },
+  {
+    "author": "Plato",
+    "work": "Republic",
+    "tier": 1,
+    "chunk_threshold": 150,
+    "source_type": "public_domain",
+    "notes": "Foundation of Western philosophy of virtue and justice."
+  },
+  {
+    "author": "Plato",
+    "work": "Apology",
+    "tier": 1,
+    "chunk_threshold": 50,
+    "source_type": "public_domain",
+    "notes": "The examined life. Socrates as the model of philosophical courage."
+  },
+  {
+    "author": "Aristotle",
+    "work": "Nicomachean Ethics",
+    "tier": 1,
+    "chunk_threshold": 150,
+    "source_type": "public_domain",
+    "notes": "Eudaimonia, virtue as habit, the doctrine of the mean. Essential counterpoint to Stoicism."
+  },
+  {
+    "author": "Cicero",
+    "work": "De Officiis",
+    "tier": 2,
+    "chunk_threshold": 80,
+    "source_type": "public_domain",
+    "notes": "On duties. Best Latin bridge between Greek Stoicism and Roman practice."
+  },
+  {
+    "author": "Cicero",
+    "work": "Tusculan Disputations",
+    "tier": 2,
+    "chunk_threshold": 80,
+    "source_type": "public_domain",
+    "notes": "On death, pain, grief, emotional disturbance. Deep Stoic treatment."
+  },
+  {
+    "author": "Musonius Rufus",
+    "work": "Lectures",
+    "tier": 2,
+    "chunk_threshold": 50,
+    "source_type": "public_domain",
+    "notes": "Cora Lutz translation (1947) via Wikisource. 21 extant lectures. Epictetus was his student. NOTE: Wikisource is paginated by lecture — fetch requires per-lecture scraping, not a single Gutenberg URL.",
+    "recommended_url": "https://en.wikisource.org/wiki/Musonius_Rufus"
+  },
+  {
+    "author": "Chrysippus",
+    "work": "Fragments",
+    "tier": 2,
+    "chunk_threshold": 40,
+    "source_type": "summary_only",
+    "notes": "Via Long & Sedley SVF. Modern scholarship — summary ingestion only via admin corpus page."
+  },
+  {
+    "author": "Plutarch",
+    "work": "On Moral Virtue",
+    "tier": 2,
+    "chunk_threshold": 40,
+    "source_type": "public_domain",
+    "notes": "Moralia. Important Stoic-adjacent treatment of virtue and emotion."
+  },
+  {
+    "author": "Plutarch",
+    "work": "On Tranquility of Mind",
+    "tier": 2,
+    "chunk_threshold": 30,
+    "source_type": "public_domain",
+    "notes": "De Tranquillitate Animi. Direct treatment of euthymia."
+  },
+  {
+    "author": "Epicurus",
+    "work": "Letters",
+    "tier": 2,
+    "chunk_threshold": 40,
+    "source_type": "public_domain",
+    "notes": "Letter to Menoeceus, Herodotus, Pythocles. Important contrast tradition — ataraxia vs Stoic eudaimonia.",
+    "recommended_url": "https://www.gutenberg.org/ebooks/52"
+  },
+  {
+    "author": "Pierre Hadot",
+    "work": "Philosophy as a Way of Life",
+    "tier": 2,
+    "chunk_threshold": 60,
+    "source_type": "summary_only",
+    "notes": "Modern scholarship — summary ingestion only. Foundational for Arete's approach."
+  },
+  {
+    "author": "Pierre Hadot",
+    "work": "The Inner Citadel",
+    "tier": 2,
+    "chunk_threshold": 60,
+    "source_type": "summary_only",
+    "notes": "Modern scholarship — summary ingestion only. Best commentary on Marcus Aurelius."
+  },
+  {
+    "author": "Cleanthes",
+    "work": "Hymn to Zeus",
+    "tier": 2,
+    "chunk_threshold": 10,
+    "source_type": "public_domain",
+    "notes": "Only complete text from the early Stoa. 40 lines. Clearest statement of Stoic theology and the logos."
+  },
+  {
+    "author": "Diogenes Laertius",
+    "work": "Lives of the Eminent Philosophers Book VII",
+    "tier": 2,
+    "chunk_threshold": 60,
+    "source_type": "public_domain",
+    "notes": "Primary source for Zeno, Cleanthes, Chrysippus doctrines. Without this, early Stoa is a black hole.",
+    "recommended_url": "https://www.gutenberg.org/ebooks/57342"
+  },
+  {
+    "author": "Confucius",
+    "work": "The Analects",
+    "tier": 3,
+    "chunk_threshold": 30,
+    "source_type": "public_domain",
+    "notes": "Legge translation. Eastern virtue ethics — ren, li, junzi."
+  },
+  {
+    "author": "Laozi",
+    "work": "Tao Te Ching",
+    "tier": 3,
+    "chunk_threshold": 20,
+    "source_type": "public_domain",
+    "notes": "Legge translation. Wu wei as counterpoint to Stoic action."
+  },
+  {
+    "author": "Sun Tzu",
+    "work": "The Art of War",
+    "tier": 3,
+    "chunk_threshold": 30,
+    "source_type": "public_domain",
+    "notes": "Giles translation. Strategy and discipline."
+  },
+  {
+    "author": "Michel de Montaigne",
+    "work": "Essays",
+    "tier": 3,
+    "chunk_threshold": 60,
+    "source_type": "public_domain",
+    "notes": "Cotton translation. The examined life in practice. Bridge between ancient and modern."
+  },
+  {
+    "author": "Adam Smith",
+    "work": "The Theory of Moral Sentiments",
+    "tier": 3,
+    "chunk_threshold": 40,
+    "source_type": "public_domain",
+    "notes": "Sympathy, the impartial spectator. Stoic-influenced moral philosophy."
+  },
+  {
+    "author": "John Sellars",
+    "work": "Stoicism",
+    "tier": 3,
+    "chunk_threshold": 40,
+    "source_type": "summary_only",
+    "notes": "Modern scholarship — summary ingestion only. Best introductory overview."
+  },
+  {
+    "author": "Zeno of Citium",
+    "work": "Fragments",
+    "tier": 3,
+    "chunk_threshold": 20,
+    "source_type": "summary_only",
+    "notes": "Via Diogenes Laertius Book VII. Founder of Stoicism — thin but important."
+  }
+]
