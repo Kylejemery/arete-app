@@ -869,6 +869,40 @@ app.post('/api/sessions/accept', async (req, res) => {
   return res.json({ success: true, sessionId: row.session_id });
 });
 
+// ─── Weekly journal-analysis insight (delivered in-app) ──────────────────────
+
+// Returns the most recent non-distress insight for the authenticated user and
+// marks it delivered. Distress-flagged analyses are intentionally excluded —
+// those route to distress_review_queue for human review, never auto-surfaced.
+app.get('/api/user/insight', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data, error } = await supabase
+    .from('journal_analysis')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('distress_flagged', false)
+    .order('analysis_week', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[/api/user/insight] error:', error.message);
+    return res.status(500).json({ error: 'Failed to load insight' });
+  }
+  if (!data) return res.json({ insight: null });
+
+  if (!data.delivered) {
+    await supabase
+      .from('journal_analysis')
+      .update({ delivered: true, delivered_at: new Date().toISOString() })
+      .eq('id', data.id);
+  }
+
+  return res.json({ insight: data });
+});
+
 // ─── Conversation memory summarization ───────────────────────────────────────
 
 app.post('/api/memory/summarize', async (req, res) => {
