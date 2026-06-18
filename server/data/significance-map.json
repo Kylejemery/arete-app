@@ -25,19 +25,19 @@
   },
   {
     "author": "Seneca",
-    "work": "Letters from a Stoic",
+    "work": "Letters",
     "tier": 1,
     "chunk_threshold": 200,
     "source_type": "public_domain",
-    "notes": "124 letters. Most readable Stoic primary text. Core to PHIL 701."
+    "notes": "Letters from a Stoic (Epistulae Morales). 124 letters. Most readable Stoic primary text. Core to PHIL 701. Work name aligned to corpus ('Letters')."
   },
   {
     "author": "Seneca",
-    "work": "On the Shortness of Life",
+    "work": "Shortness",
     "tier": 1,
     "chunk_threshold": 50,
     "source_type": "public_domain",
-    "notes": "De Brevitate Vitae. Single most-cited Stoic text on time and attention."
+    "notes": "On the Shortness of Life (De Brevitate Vitae). Single most-cited Stoic text on time and attention. Work name aligned to corpus ('Shortness')."
   },
   {
     "author": "Plato",
@@ -139,19 +139,19 @@
   },
   {
     "author": "Cleanthes",
-    "work": "Hymn to Zeus",
+    "work": "Hymn To Zeus",
     "tier": 2,
     "chunk_threshold": 10,
     "source_type": "public_domain",
-    "notes": "Only complete text from the early Stoa. 40 lines. Clearest statement of Stoic theology and the logos."
+    "notes": "Only complete text from the early Stoa. 40 lines. Clearest statement of Stoic theology and the logos. Work name aligned to corpus ('Hymn To Zeus')."
   },
   {
-    "author": "Diogenes Laertius",
-    "work": "Lives of the Eminent Philosophers Book VII",
+    "author": "Diogenes Laërtius",
+    "work": "Lives Book7",
     "tier": 2,
     "chunk_threshold": 60,
     "source_type": "public_domain",
-    "notes": "Primary source for Zeno, Cleanthes, Chrysippus doctrines. Without this, early Stoa is a black hole.",
+    "notes": "Lives of the Eminent Philosophers, Book VII. Primary source for Zeno, Cleanthes, Chrysippus doctrines. Without this, early Stoa is a black hole. Author/work names aligned to corpus ('Diogenes Laërtius' / 'Lives Book7').",
     "recommended_url": "https://www.gutenberg.org/ebooks/57342"
   },
   {
