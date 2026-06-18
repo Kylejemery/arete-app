@@ -38,6 +38,9 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# Next.js build output (regenerated on every build; never commit)
+.next/
+
 app-example
 
 # generated native folders
