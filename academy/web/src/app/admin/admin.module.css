@@ -670,6 +670,199 @@
   margin-top: 6px;
 }
 
+/* ─── Overview agent cards ──────────────────────────────────────── */
+.agentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 1rem;
+}
+
+.agentCard {
+  background: #fff;
+  border: 0.5px solid #e5e5e5;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.agentCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agentIcon { font-size: 16px; }
+
+.agentName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1a1a1a;
+}
+
+.agentStatus {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.agentStatusLabel {
+  font-size: 11px;
+  color: #999;
+  text-transform: capitalize;
+}
+
+.agentMetrics {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.metric { display: flex; flex-direction: column; gap: 2px; }
+.metricValue { font-size: 20px; font-weight: 600; color: #1a1a1a; }
+.metricLabel {
+  font-size: 10px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.redBadge {
+  display: inline-block;
+  min-width: 20px;
+  padding: 0 6px;
+  background: #FBE3E3;
+  color: #B23535;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.agentFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 0.5px solid #f0f0f0;
+  padding-top: 10px;
+}
+
+.viewLink {
+  font-size: 13px;
+  color: #534AB7;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.viewLink:hover { text-decoration: underline; }
+
+/* ─── Gap report rows ───────────────────────────────────────────── */
+.gapRow {
+  padding: 10px 0;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.gapRow:last-child { border-bottom: none; }
+
+.gapRowMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gapTitle { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+
+.gapMeta {
+  font-size: 12px;
+  color: #666;
+  margin: 4px 0 6px;
+}
+
+.gapActions { display: flex; align-items: center; }
+
+.demandBlock {
+  padding: 10px 0;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.demandBlock:last-child { border-bottom: none; }
+
+.passageList {
+  margin-top: 10px;
+  padding-left: 4px;
+}
+
+.passageRow {
+  border: 0.5px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.passageHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.passageSource { font-size: 12px; font-weight: 500; color: #3C3489; }
+
+.passageText {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #444;
+  margin-bottom: 8px;
+}
+
+.passageActions { display: flex; gap: 6px; }
+
+.tallyRow {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* ─── Significance map table ────────────────────────────────────── */
+.sigTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sigTr { border-top: 0.5px solid #f0f0f0; }
+.sigTd { padding: 7px 8px; color: #444; vertical-align: middle; }
+
+.coverageDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.cov_green { background: #1D9E75; }
+.cov_yellow { background: #E0A100; }
+.cov_red { background: #E24B4A; }
+
+@media (prefers-color-scheme: dark) {
+  .agentCard { background: #1a1a1a; border-color: #2a2a2a; }
+  .agentName { color: #f0f0f0; }
+  .metricValue { color: #f0f0f0; }
+  .agentFooter { border-color: #2a2a2a; }
+  .gapRow, .demandBlock { border-color: #2a2a2a; }
+  .gapTitle { color: #f0f0f0; }
+  .passageRow { border-color: #2a2a2a; }
+  .passageSource { color: #CFCBF5; }
+  .passageText { color: #ccc; }
+  .sigTr { border-color: #2a2a2a; }
+  .sigTd { color: #ccc; }
+  .redBadge { background: #3A1414; color: #F0B5B5; }
+}
+
 @media (prefers-color-scheme: dark) {
   .fieldLabel { color: #aaa; }
   .textInput,
