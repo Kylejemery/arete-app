@@ -5,12 +5,14 @@ import Link from 'next/link'
 import styles from './admin.module.css'
 import ContentScheduler from './ContentScheduler'
 import CorpusAgentPanel, { type Health } from './CorpusAgentPanel'
+import JournalAgentPanel from './JournalAgentPanel'
 
-type AgentKey = 'content' | 'corpus'
+type AgentKey = 'content' | 'corpus' | 'journal'
 
 const AGENTS: { key: AgentKey; label: string }[] = [
   { key: 'content', label: 'Content' },
   { key: 'corpus', label: 'RAG Corpus' },
+  { key: 'journal', label: 'Journal' },
 ]
 
 export default function AdminDashboard() {
@@ -18,11 +20,15 @@ export default function AdminDashboard() {
   const [health, setHealth] = useState<Record<AgentKey, Health>>({
     content: 'ok',
     corpus: 'loading',
+    journal: 'loading',
   })
 
-  // Stable identity so CorpusAgentPanel's fetch effect doesn't re-run each render.
+  // Stable identities so the panels' fetch effects don't re-run each render.
   const onCorpusHealth = useCallback((h: Health) => {
     setHealth(prev => ({ ...prev, corpus: h }))
+  }, [])
+  const onJournalHealth = useCallback((h: Health) => {
+    setHealth(prev => ({ ...prev, journal: h }))
   }, [])
 
   return (
@@ -50,6 +56,9 @@ export default function AdminDashboard() {
       </div>
       <div style={{ display: active === 'corpus' ? 'block' : 'none' }}>
         <CorpusAgentPanel onHealth={onCorpusHealth} />
+      </div>
+      <div style={{ display: active === 'journal' ? 'block' : 'none' }}>
+        <JournalAgentPanel onHealth={onJournalHealth} />
       </div>
     </div>
   )
