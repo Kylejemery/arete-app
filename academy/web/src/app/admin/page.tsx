@@ -22,6 +22,12 @@ type Overview = {
     pendingApprovals: number
     status: string | null
   } | null
+  synthesis: {
+    pendingReview: number
+    totalIngested: number
+    latestTitle: string | null
+    latestStatus: string | null
+  } | null
   scheduler: {
     scheduled: number
     lastPublished: string | null
@@ -158,6 +164,26 @@ export default function AdminOverviewPage() {
             ]}
             footer={data.gap?.reportWeek ? `Report week of ${data.gap.reportWeek} · next Mon 5:00 AM ET` : 'Next Mon 5:00 AM ET'}
             href="/admin/gap-agent"
+          />
+
+          <AgentCard
+            icon="🧩"
+            name="Synthesis"
+            status={data.synthesis ? ((data.synthesis.pendingReview ?? 0) > 0 ? 'review needed' : 'idle') : 'no data'}
+            statusKind={!data.synthesis ? 'idle' : (data.synthesis.pendingReview > 0 ? 'warn' : 'ok')}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.synthesis?.pendingReview ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.synthesis?.pendingReview}</span>
+                  : 0,
+              },
+              { label: 'Ingested', value: data.synthesis?.totalIngested ?? 0 },
+            ]}
+            footer={data.synthesis?.latestTitle
+              ? `Latest: ${data.synthesis.latestTitle.slice(0, 40)}${data.synthesis.latestTitle.length > 40 ? '…' : ''} · next Mon 6:00 AM ET`
+              : 'Next Mon 6:00 AM ET'}
+            href="/admin/synthesis"
           />
 
           <AgentCard

@@ -86,6 +86,25 @@ export async function GET() {
     } catch { return null }
   })()
 
+  // --- Synthesis agent ---
+  const synthesis = (async () => {
+    try {
+      const [{ count: pending }, { count: ingested }, { data: latest }] = await Promise.all([
+        admin.from('synthesis_documents').select('id', { count: 'exact', head: true })
+          .in('status', ['pending_review', 'edited']),
+        admin.from('synthesis_documents').select('id', { count: 'exact', head: true }).eq('status', 'ingested'),
+        admin.from('synthesis_documents').select('title, created_at, status')
+          .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ])
+      return {
+        pendingReview: pending ?? 0,
+        totalIngested: ingested ?? 0,
+        latestTitle: latest?.title ?? null,
+        latestStatus: latest?.status ?? null,
+      }
+    } catch { return null }
+  })()
+
   // --- Content scheduler (post_queue is the live table) ---
   const scheduler = (async () => {
     try {
@@ -101,13 +120,15 @@ export async function GET() {
     } catch { return null }
   })()
 
-  const [corpusData, journalData, gapData, schedulerData] = await Promise.all([corpus, journal, gap, scheduler])
+  const [corpusData, journalData, gapData, synthesisData, schedulerData] =
+    await Promise.all([corpus, journal, gap, synthesis, scheduler])
 
   return NextResponse.json({
     week,
     corpus: corpusData,
     journal: journalData,
     gap: gapData,
+    synthesis: synthesisData,
     scheduler: schedulerData,
   })
 }
