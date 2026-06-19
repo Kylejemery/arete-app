@@ -670,6 +670,15 @@
   margin-top: 6px;
 }
 
+/* ─── Header row with action button ─────────────────────────────── */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 1.75rem;
+}
+
 /* ─── Overview agent cards ──────────────────────────────────────── */
 .agentGrid {
   display: grid;

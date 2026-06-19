@@ -82,6 +82,7 @@ export default function GapAgentPage() {
   const [queuing, setQueuing] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
   const [toast, setToast] = useState('')
 
   function showToast(msg: string) {
@@ -113,6 +114,23 @@ export default function GapAgentPage() {
       // non-critical
     }
   }, [])
+
+  const runNow = useCallback(async () => {
+    setRunning(true)
+    try {
+      const res = await fetch('/api/admin/gap-agent/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Run failed')
+      showToast(
+        `Run complete — ${json.structuralGaps} structural, ${json.demandGaps} demand gaps` +
+        (json.demandTruncated ? ' (demand partial — time budget)' : '')
+      )
+      await Promise.all([load(), loadSigMap()])
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Run failed')
+    }
+    setRunning(false)
+  }, [load, loadSigMap])
 
   useEffect(() => { load(); loadSigMap() }, [load, loadSigMap])
 
@@ -178,10 +196,20 @@ export default function GapAgentPage() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.header}>
-        <h1>Coverage Gap agent</h1>
-        <p>Weekly structural + demand gap detection, with passage-level approval that trains future runs.</p>
+      <div className={styles.headerRow}>
+        <div className={styles.header} style={{ marginBottom: 0 }}>
+          <h1>Coverage Gap agent</h1>
+          <p>Weekly structural + demand gap detection, with passage-level approval that trains future runs.</p>
+        </div>
+        <button className={styles.primaryBtn} onClick={runNow} disabled={running}>
+          {running ? 'Running…' : '▶ Run now'}
+        </button>
       </div>
+      {running && (
+        <p className={styles.muted} style={{ marginBottom: '1rem' }}>
+          Running the agent (structural is fast; demand-gap embeddings can take ~20–40s)…
+        </p>
+      )}
 
       {error && (
         <div className={styles.card}>
