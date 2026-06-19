@@ -25,14 +25,17 @@ type Admin = ReturnType<typeof createAdminClient>
 
 // --- Structural gaps (mirror of the agent) ---------------------------------
 async function detectStructuralGaps(admin: Admin) {
-  const [{ data: sigMap }, { data: corpusRows }] = await Promise.all([
+  // Counts come from the corpus_work_counts() RPC, not a plain select — a
+  // select('author, work') is capped at 1000 rows by PostgREST and undercounts
+  // the ~7,000-row corpus, producing false "absent" gaps.
+  const [{ data: sigMap }, { data: workCounts }] = await Promise.all([
     admin.from('corpus_significance_map').select('*').eq('active', true).order('tier', { ascending: true }),
-    admin.from('rag_corpus').select('author, work'),
+    admin.rpc('corpus_work_counts'),
   ])
 
   const countMap: Record<string, number> = {}
-  for (const row of corpusRows ?? []) {
-    countMap[`${row.author}|||${row.work}`] = (countMap[`${row.author}|||${row.work}`] || 0) + 1
+  for (const row of (workCounts as { author: string; work: string; cnt: number }[]) ?? []) {
+    countMap[`${row.author}|||${row.work}`] = Number(row.cnt)
   }
 
   const gaps = []

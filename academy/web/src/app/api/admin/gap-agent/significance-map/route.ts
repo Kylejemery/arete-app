@@ -16,20 +16,21 @@ export async function GET() {
   try {
     const admin = createAdminClient()
 
-    const [{ data: sigMap, error: mapErr }, { data: corpusRows, error: corpusErr }] = await Promise.all([
+    // Counts via the corpus_work_counts() RPC — a plain select('author, work')
+    // is capped at 1000 rows by PostgREST and undercounts the ~7,000-row corpus.
+    const [{ data: sigMap, error: mapErr }, { data: workCounts, error: corpusErr }] = await Promise.all([
       admin.from('corpus_significance_map')
         .select('author, work, tier, chunk_threshold, source_type, recommended_url, active')
         .eq('active', true)
         .order('tier', { ascending: true }),
-      admin.from('rag_corpus').select('author, work'),
+      admin.rpc('corpus_work_counts'),
     ])
     if (mapErr) throw new Error(mapErr.message)
     if (corpusErr) throw new Error(corpusErr.message)
 
     const counts: Record<string, number> = {}
-    for (const row of corpusRows ?? []) {
-      const key = `${row.author}|||${row.work}`
-      counts[key] = (counts[key] || 0) + 1
+    for (const row of (workCounts as { author: string; work: string; cnt: number }[]) ?? []) {
+      counts[`${row.author}|||${row.work}`] = Number(row.cnt)
     }
 
     const rows = (sigMap ?? []).map(s => {

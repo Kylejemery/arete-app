@@ -68,15 +68,15 @@ async function detectStructuralGaps() {
     .eq('active', true)
     .order('tier', { ascending: true });
 
-  // Actual chunk counts per author+work.
-  const { data: actualCounts } = await supabase
-    .from('rag_corpus')
-    .select('author, work');
+  // Actual chunk counts per author+work, via the corpus_work_counts() RPC.
+  // A plain select('author, work') is capped at 1000 rows by PostgREST and
+  // undercounts the ~7,000-row corpus, producing false "absent" gaps.
+  const { data: actualCounts } = await supabase.rpc('corpus_work_counts');
 
   const countMap = {};
   for (const row of actualCounts || []) {
     const key = `${row.author}|||${row.work}`;
-    countMap[key] = (countMap[key] || 0) + 1;
+    countMap[key] = Number(row.cnt);
   }
 
   const gaps = [];
