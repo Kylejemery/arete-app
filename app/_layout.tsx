@@ -1,5 +1,6 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
+import { setupDispatchNotifications } from '@/lib/pushNotifications';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot, useRouter, useRootNavigationState } from 'expo-router';
@@ -103,6 +104,18 @@ export default function RootLayout() {
     SplashScreen.hideAsync().catch(() => {});
   }
 }, [session]);
+
+  // Register for daily-dispatch push notifications and save the device timezone
+  // once per authenticated user. Best-effort and fully guarded inside the helper
+  // so a denied permission or offline launch can't break boot.
+  const dispatchSetupForUser = useRef<string | null>(null);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!session?.user?.id || !session.access_token) return;
+    if (dispatchSetupForUser.current === session.user.id) return;
+    dispatchSetupForUser.current = session.user.id;
+    setupDispatchNotifications(session).catch(() => {});
+  }, [session]);
 
   try {
     if (session === undefined) {
