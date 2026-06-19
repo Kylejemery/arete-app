@@ -4,6 +4,15 @@ import { createAdminClient } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
+// The Corpus Agent fetches source_url and rejects HTML. Gutenberg's /ebooks/N
+// page is HTML; the plain-text form is /cache/epub/N/pgN.txt. Normalize so a
+// seeded landing-page URL is queued as fetchable text.
+function normalizeSourceUrl(raw: string | null): string | null {
+  if (!raw) return raw
+  const m = raw.match(/gutenberg\.org\/ebooks\/(\d+)/i)
+  return m ? `https://www.gutenberg.org/cache/epub/${m[1]}/pg${m[1]}.txt` : raw
+}
+
 type Rec = {
   author?: string
   work?: string
@@ -65,7 +74,7 @@ export async function POST(req: NextRequest) {
       const { error: insErr } = await admin.from('corpus_ingestion_queue').insert({
         author,
         work,
-        source_url: rec.url ?? null,
+        source_url: normalizeSourceUrl(rec.url ?? null),
         language: 'en',
         source_type: 'public_domain',
         status: 'pending',

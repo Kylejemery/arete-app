@@ -83,6 +83,8 @@ export default function GapAgentPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
+  const [urlForm, setUrlForm] = useState({ author: '', work: '', url: '' })
+  const [queuingUrl, setQueuingUrl] = useState(false)
   const [toast, setToast] = useState('')
 
   function showToast(msg: string) {
@@ -133,6 +135,34 @@ export default function GapAgentPage() {
   }, [load, loadSigMap])
 
   useEffect(() => { load(); loadSigMap() }, [load, loadSigMap])
+
+  // Prefill the URL form from a structural-gap row that has no auto-queue URL.
+  function prefillQueueUrl(author: string, work: string) {
+    setUrlForm(f => ({ ...f, author, work }))
+    showToast(`Filled "${author} / ${work}" — paste a plain-text URL in the form above`)
+  }
+
+  async function submitUrl() {
+    if (!urlForm.author.trim() || !urlForm.work.trim() || !urlForm.url.trim()) {
+      showToast('Author, work and URL are all required')
+      return
+    }
+    setQueuingUrl(true)
+    try {
+      const res = await fetch('/api/admin/gap-agent/queue-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author: urlForm.author, work: urlForm.work, sourceUrl: urlForm.url }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to queue')
+      showToast(`Queued — the nightly Corpus Agent will fetch ${json.queuedUrl}`)
+      setUrlForm({ author: '', work: '', url: '' })
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to queue')
+    }
+    setQueuingUrl(false)
+  }
 
   // Map recommendations by author|||work so structural rows know their queue state.
   const recByKey = new Map<string, Rec>()
@@ -229,6 +259,52 @@ export default function GapAgentPage() {
         </div>
       )}
 
+      {/* ── Queue a public-domain source by URL ────────────────────── */}
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>Queue a source by URL</div>
+        <p className={styles.muted} style={{ marginBottom: 12 }}>
+          Adds a public-domain <strong>plain-text</strong> source to the ingestion queue; the nightly
+          Corpus Agent fetches it, strips Gutenberg boilerplate, chunks and embeds it into the corpus.
+          Use the Gutenberg <code>.txt</code> link (e.g. <code>…/cache/epub/8438/pg8438.txt</code>) —
+          an <code>/ebooks/N</code> link is auto-converted, but HTML pages and Wikisource are rejected.
+          Author/Work must match the significance-map names for the gap to clear.
+        </p>
+        <div className={styles.fieldRow}>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Author</label>
+            <input
+              className={styles.textInput}
+              value={urlForm.author}
+              onChange={e => setUrlForm(f => ({ ...f, author: e.target.value }))}
+              placeholder="Aristotle"
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Work</label>
+            <input
+              className={styles.textInput}
+              value={urlForm.work}
+              onChange={e => setUrlForm(f => ({ ...f, work: e.target.value }))}
+              placeholder="Nicomachean Ethics"
+            />
+          </div>
+        </div>
+        <div className={styles.field}>
+          <label className={styles.fieldLabel}>Source URL (plain text)</label>
+          <input
+            className={styles.textInput}
+            value={urlForm.url}
+            onChange={e => setUrlForm(f => ({ ...f, url: e.target.value }))}
+            placeholder="https://www.gutenberg.org/cache/epub/8438/pg8438.txt"
+          />
+        </div>
+        <div className={styles.actions}>
+          <button className={styles.scheduleBtn} onClick={submitUrl} disabled={queuingUrl}>
+            {queuingUrl ? 'Queuing…' : '+ Add to ingestion queue'}
+          </button>
+        </div>
+      </div>
+
       {/* ── Section 1: Latest gap report ───────────────────────────── */}
       {report && (
         <>
@@ -268,9 +344,17 @@ export default function GapAgentPage() {
                         >
                           {queuing === `${g.author}|||${g.work}` ? 'Queuing…' : '+ Add to Queue'}
                         </button>
+                      ) : g.source_type === 'public_domain' ? (
+                        <button
+                          className={styles.ghostBtn}
+                          style={{ height: 28, padding: '0 10px', fontSize: 12 }}
+                          onClick={() => prefillQueueUrl(g.author, g.work)}
+                        >
+                          + Queue by URL
+                        </button>
                       ) : (
                         <span className={styles.muted} style={{ fontSize: 12 }}>
-                          {g.source_type === 'public_domain' ? 'no source URL — queue manually' : 'summary-only — ingest via corpus page'}
+                          summary-only — ingest via corpus page
                         </span>
                       )}
                     </div>
