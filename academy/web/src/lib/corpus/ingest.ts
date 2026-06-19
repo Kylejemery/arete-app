@@ -28,7 +28,7 @@ export function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
 }
 
-async function embedChunk(text: string): Promise<number[]> {
+export async function embedChunk(text: string): Promise<number[]> {
   const key = process.env.OPENAI_API_KEY
   if (!key) throw new Error('OPENAI_API_KEY not configured')
   const res = await fetch('https://api.openai.com/v1/embeddings', {
