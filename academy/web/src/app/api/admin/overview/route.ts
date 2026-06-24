@@ -120,8 +120,24 @@ export async function GET() {
     } catch { return null }
   })()
 
-  const [corpusData, journalData, gapData, synthesisData, schedulerData] =
-    await Promise.all([corpus, journal, gap, synthesis, scheduler])
+  // --- Dispatch agent ---
+  const dispatch = (async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const { data: row } = await admin.from('daily_dispatches')
+        .select('title, total_recipients, delivered_count, dispatch_date')
+        .eq('dispatch_date', today).maybeSingle()
+      return {
+        todayTitle: row?.title ?? null,
+        delivered: row?.delivered_count ?? 0,
+        recipients: row?.total_recipients ?? 0,
+        generatedToday: !!row,
+      }
+    } catch { return null }
+  })()
+
+  const [corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData] =
+    await Promise.all([corpus, journal, gap, synthesis, scheduler, dispatch])
 
   return NextResponse.json({
     week,
@@ -130,5 +146,6 @@ export async function GET() {
     gap: gapData,
     synthesis: synthesisData,
     scheduler: schedulerData,
+    dispatch: dispatchData,
   })
 }

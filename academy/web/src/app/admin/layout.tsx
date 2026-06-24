@@ -14,6 +14,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/journal-agent', label: 'Journal Agent' },
   { href: '/admin/gap-agent', label: 'Gap Agent' },
   { href: '/admin/synthesis', label: 'Synthesis' },
+  { href: '/admin/dispatch', label: 'Dispatch' },
   { href: '/admin/scheduler', label: 'Scheduler' },
   { href: '/admin/corpus', label: 'Corpus Ingestion' },
 ]

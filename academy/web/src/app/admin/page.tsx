@@ -33,6 +33,12 @@ type Overview = {
     lastPublished: string | null
     platforms: { x: boolean; bluesky: boolean; linkedin: boolean }
   } | null
+  dispatch: {
+    todayTitle: string | null
+    delivered: number
+    recipients: number
+    generatedToday: boolean
+  } | null
 }
 
 function timeAgo(iso: string | null): string {
@@ -184,6 +190,21 @@ export default function AdminOverviewPage() {
               ? `Latest: ${data.synthesis.latestTitle.slice(0, 40)}${data.synthesis.latestTitle.length > 40 ? '…' : ''} · next Mon 6:00 AM ET`
               : 'Next Mon 6:00 AM ET'}
             href="/admin/synthesis"
+          />
+
+          <AgentCard
+            icon="☀️"
+            name="Daily Dispatch"
+            status={data.dispatch ? (data.dispatch.generatedToday ? 'generated' : 'pending') : 'no data'}
+            statusKind={!data.dispatch ? 'idle' : data.dispatch.generatedToday ? 'ok' : 'warn'}
+            metrics={[
+              { label: 'Delivered', value: data.dispatch?.delivered ?? 0 },
+              { label: 'Recipients', value: data.dispatch?.recipients ?? 0 },
+            ]}
+            footer={data.dispatch?.todayTitle
+              ? `Today: ${data.dispatch.todayTitle.slice(0, 40)}${data.dispatch.todayTitle.length > 40 ? '…' : ''} · next 5:00 AM ET`
+              : 'Not yet generated · next 5:00 AM ET'}
+            href="/admin/dispatch"
           />
 
           <AgentCard
