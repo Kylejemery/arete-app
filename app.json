@@ -1,4 +1,4 @@
-﻿{
+{
   "expo": {
     "name": "Arete",
     "slug": "Arete",
@@ -54,7 +54,8 @@
       "expo-font",
       "expo-image",
       "expo-status-bar",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -69,4 +70,3 @@
     "owner": "kjemery"
   }
 }
-

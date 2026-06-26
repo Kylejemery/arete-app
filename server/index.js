@@ -903,6 +903,85 @@ app.get('/api/user/insight', async (req, res) => {
   return res.json({ insight: data });
 });
 
+// ─── Daily Dispatch — push token, timezone, and dispatch fetch ───────────────
+
+// POST /api/user/push-token — save the Expo push token to user_settings.
+// Upsert (not update) so it works even before a settings row exists.
+app.post('/api/user/push-token', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { token } = req.body || {};
+  if (!token || typeof token !== 'string' || !token.startsWith('ExponentPushToken[')) {
+    return res.status(400).json({ error: 'Invalid push token format' });
+  }
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: userId, expo_push_token: token }, { onConflict: 'user_id' });
+  if (error) {
+    console.error('[/api/user/push-token] error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+  return res.json({ success: true });
+});
+
+// POST /api/user/timezone — save the device IANA timezone to user_settings.
+app.post('/api/user/timezone', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { timezone } = req.body || {};
+  if (!timezone || typeof timezone !== 'string' || timezone.length > 50) {
+    return res.status(400).json({ error: 'Invalid timezone' });
+  }
+
+  const { error } = await supabase
+    .from('user_settings')
+    .upsert({ user_id: userId, timezone }, { onConflict: 'user_id' });
+  if (error) {
+    console.error('[/api/user/timezone] error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+  return res.json({ success: true });
+});
+
+// GET /api/dispatch/today — today's community dispatch (or { dispatch: null }).
+app.get('/api/dispatch/today', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('daily_dispatches')
+    .select('id, dispatch_date, title, body, teaser, practice, community_themes, corpus_context')
+    .eq('dispatch_date', today)
+    .maybeSingle();
+  if (error) {
+    console.error('[/api/dispatch/today] error:', error.message);
+    return res.status(500).json({ error: 'Failed to load dispatch' });
+  }
+  return res.json({ dispatch: data || null });
+});
+
+// GET /api/dispatch/:id — a specific dispatch (notification deep-link target).
+app.get('/api/dispatch/:id', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { data, error } = await supabase
+    .from('daily_dispatches')
+    .select('id, dispatch_date, title, body, teaser, practice, community_themes, corpus_context')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (error) {
+    console.error('[/api/dispatch/:id] error:', error.message);
+    return res.status(500).json({ error: 'Failed to load dispatch' });
+  }
+  if (!data) return res.status(404).json({ error: 'Not found' });
+  return res.json({ dispatch: data });
+});
+
 // ─── Conversation memory summarization ───────────────────────────────────────
 
 app.post('/api/memory/summarize', async (req, res) => {

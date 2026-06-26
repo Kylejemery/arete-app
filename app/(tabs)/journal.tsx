@@ -16,10 +16,19 @@ import {
     TouchableWithoutFeedback,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, getGoals, upsertGoal, completeGoal, getReadingData } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
+import { API_BASE_URL } from '../../services/claudeService';
 import type { Goal, Book } from '@/lib/types';
+
+interface TodayDispatch {
+    id: string;
+    title: string;
+    teaser: string;
+    dispatch_date: string;
+}
 
 export interface UnifiedEntry {
     id: string;
@@ -100,6 +109,10 @@ export default function JournalScreen() {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [longPressEntry, setLongPressEntry] = useState<UnifiedEntry | null>(null);
 
+    // ── Daily Dispatch card ──────────────────────────────────────────────────
+    const [todayDispatch, setTodayDispatch] = useState<TodayDispatch | null>(null);
+    const [dispatchDismissed, setDispatchDismissed] = useState(false);
+
     // ── Goals state ──────────────────────────────────────────────────────────
     const [goals, setGoals] = useState<Goal[]>([]);
     const [goalsLoading, setGoalsLoading] = useState(true);
@@ -120,8 +133,35 @@ export default function JournalScreen() {
             loadEntries();
             loadGoals();
             loadBooks();
+            loadDispatch();
         }, [])
     );
+
+    // ── Daily Dispatch ────────────────────────────────────────────────────────
+    // Dismissal is keyed by date so the card returns each morning with a new
+    // dispatch (the AsyncStorage flag is effectively cleared at midnight).
+    const loadDispatch = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) return;
+            const res = await fetch(`${API_BASE_URL}/api/dispatch/today`, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            const data = await res.json().catch(() => ({}));
+            const d: TodayDispatch | null = data?.dispatch || null;
+            if (!d) { setTodayDispatch(null); return; }
+            setTodayDispatch(d);
+            const dismissedDate = await AsyncStorage.getItem('dispatch_dismissed_date');
+            setDispatchDismissed(dismissedDate === d.dispatch_date);
+        } catch (e) { console.error('loadDispatch error:', e); }
+    };
+
+    const dismissDispatch = async () => {
+        if (todayDispatch) {
+            await AsyncStorage.setItem('dispatch_dismissed_date', todayDispatch.dispatch_date);
+        }
+        setDispatchDismissed(true);
+    };
 
     // ── Journal functions ────────────────────────────────────────────────────
     const loadEntries = async () => {
@@ -641,6 +681,25 @@ export default function JournalScreen() {
                     contentContainerStyle={styles.feedContent}
                     showsVerticalScrollIndicator={false}
                 >
+                    {todayDispatch && !dispatchDismissed && (
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            style={styles.dispatchCard}
+                            onPress={() => router.push({ pathname: '/dispatch', params: { dispatch_id: todayDispatch.id } } as any)}
+                        >
+                            <View style={styles.dispatchHeaderRow}>
+                                <Text style={styles.dispatchEyebrow}>
+                                    ☀️ Daily Dispatch · {new Date(todayDispatch.dispatch_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' })}
+                                </Text>
+                                <TouchableOpacity onPress={dismissDispatch} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close" size={16} color="#888" />
+                                </TouchableOpacity>
+                            </View>
+                            <Text style={styles.dispatchTitle}>{todayDispatch.title}</Text>
+                            <Text style={styles.dispatchTeaser} numberOfLines={2}>{todayDispatch.teaser}</Text>
+                            <Text style={styles.dispatchReadMore}>Read more →</Text>
+                        </TouchableOpacity>
+                    )}
                     {filteredEntries.length === 0 ? (
                         <View style={styles.emptyContainer}>
                             <Ionicons name="book-outline" size={52} color="#c9a84c22" />
@@ -1062,6 +1121,22 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
     },
     addButtonText: { color: '#1a1a2e', fontWeight: '700', fontSize: 13 },
+
+    // ── Daily Dispatch card ────────────────────────────────────────────────────
+    dispatchCard: {
+        backgroundColor: '#1f2a4a', borderRadius: 14, padding: 16,
+        marginBottom: 14, borderWidth: 1, borderColor: '#c9a84c55',
+    },
+    dispatchHeaderRow: {
+        flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6,
+    },
+    dispatchEyebrow: {
+        color: '#c9a84c', fontSize: 11, fontWeight: '700',
+        textTransform: 'uppercase', letterSpacing: 0.8, flex: 1,
+    },
+    dispatchTitle: { color: '#fff', fontSize: 16, fontWeight: '700', lineHeight: 22, marginBottom: 4 },
+    dispatchTeaser: { color: '#ccc', fontSize: 14, lineHeight: 21 },
+    dispatchReadMore: { color: '#c9a84c', fontSize: 13, fontWeight: '700', marginTop: 10, textAlign: 'right' },
 
     // ── Journal feed ─────────────────────────────────────────────────────────
     feedContent: { padding: 16, paddingTop: 10, paddingBottom: 100 },

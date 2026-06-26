@@ -1,5 +1,6 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
+import { setupDispatchNotifications } from '@/lib/pushNotifications';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot, useRouter, useRootNavigationState } from 'expo-router';
@@ -48,6 +49,44 @@ function DeepLinkHandler() {
       router.replace({ pathname: '/join-session', params: { token: String(parsed.queryParams.token) } } as any);
     }
   }, [url, navState?.key, router]);
+
+  return null;
+}
+
+/**
+ * Routes a tapped Daily Dispatch push notification to the full dispatch reader.
+ * Registered once the navigation tree is mounted; also handles the cold-start
+ * case where the app was launched by tapping the notification.
+ */
+function NotificationTapHandler() {
+  const router = useRouter();
+  const navState = useRootNavigationState();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!navState?.key) return; // navigation tree not mounted yet
+
+    const route = (data: any) => {
+      if (data?.type === 'daily_dispatch') {
+        breadcrumb('notification tap: daily_dispatch');
+        router.push({ pathname: '/dispatch', params: { dispatch_id: String(data.dispatch_id || '') } } as any);
+      }
+    };
+
+    // Cold start: app opened by tapping the notification.
+    Notifications.getLastNotificationResponseAsync()
+      .then(response => {
+        const data = response?.notification?.request?.content?.data;
+        if (data) route(data);
+      })
+      .catch(() => {});
+
+    // Warm: notification tapped while app is running/backgrounded.
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      route(response.notification.request.content.data);
+    });
+    return () => subscription.remove();
+  }, [navState?.key, router]);
 
   return null;
 }
@@ -104,6 +143,18 @@ export default function RootLayout() {
   }
 }, [session]);
 
+  // Register for daily-dispatch push notifications and save the device timezone
+  // once per authenticated user. Best-effort and fully guarded inside the helper
+  // so a denied permission or offline launch can't break boot.
+  const dispatchSetupForUser = useRef<string | null>(null);
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!session?.user?.id || !session.access_token) return;
+    if (dispatchSetupForUser.current === session.user.id) return;
+    dispatchSetupForUser.current = session.user.id;
+    setupDispatchNotifications(session).catch(() => {});
+  }, [session]);
+
   try {
     if (session === undefined) {
       return (
@@ -120,6 +171,7 @@ export default function RootLayout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <SessionContext.Provider value={session}>
             <DeepLinkHandler />
+            <NotificationTapHandler />
             <Slot />
           </SessionContext.Provider>
         </GestureHandlerRootView>
