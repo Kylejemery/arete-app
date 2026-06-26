@@ -87,6 +87,97 @@ function AgentCard({
   )
 }
 
+const PIPELINE: { when: string; icon: string; name: string; tag: string; text: string }[] = [
+  {
+    when: '03:00 daily', icon: '📚', name: 'RAG Corpus', tag: 'ingests',
+    text: 'Pulls queued primary texts, chunks + embeds them into rag_corpus. The shared substrate every other agent retrieves from.',
+  },
+  {
+    when: '04:00 daily', icon: '📓', name: 'Journal Analysis', tag: 'demand signal',
+    text: 'Reads each user’s journal entries + Cabinet conversations and writes weekly themes and a personal insight to journal_analysis. Flags distress for human review — never auto-surfaced. This is what tells the rest of the fleet what the community is wrestling with.',
+  },
+  {
+    when: '05:00 Mon', icon: '🧭', name: 'Coverage Gap', tag: 'Mondays',
+    text: 'Compares community demand (Journal themes) against what the corpus actually covers, then recommends authors/works to add. Approved recommendations become the Corpus agent’s ingestion queue.',
+  },
+  {
+    when: '06:00 Mon', icon: '🧩', name: 'Synthesis', tag: 'Mondays',
+    text: 'Generates cross-thinker documents on in-demand concepts (mapping tensions, never resolving them). Once you approve one, it’s ingested back into the corpus as new source material — the corpus thinking about itself.',
+  },
+  {
+    when: '10:00 daily', icon: '☀️', name: 'Daily Dispatch', tag: 'hourly delivery',
+    text: 'Blends the top community themes + the latest synthesis + the day into one ~175-word reflection with a concrete practice, then delivers it as a push notification at each user’s local 7 AM.',
+  },
+  {
+    when: 'continuous', icon: '📣', name: 'Content Scheduler', tag: 'social',
+    text: 'Queues and publishes social posts (X, Bluesky, LinkedIn). The fleet’s outward voice; runs off content you approve.',
+  },
+]
+
+function FleetGuide() {
+  return (
+    <>
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>How the fleet works</div>
+        <p className={styles.muted} style={{ marginBottom: 14, lineHeight: 1.6 }}>
+          Six agents run on a nightly/weekly cadence (times in UTC). Each reads from shared
+          Supabase tables and feeds the next — together they grow the corpus, learn what the
+          community needs, and turn that into daily guidance.
+        </p>
+        {PIPELINE.map(s => (
+          <div key={s.name} className={styles.guideStep}>
+            <div className={styles.guideWhen}>{s.when}</div>
+            <div className={styles.guideBody}>
+              <div className={styles.guideName}>
+                <span>{s.icon} {s.name}</span>
+                <span className={styles.guideTag}>{s.tag}</span>
+              </div>
+              <div className={styles.guideText}>{s.text}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>How they interact</div>
+        <p className={styles.flowLine}>
+          <strong>Journal Analysis</strong> is the demand signal — it tells Coverage Gap,
+          Synthesis, and Dispatch what members are actually wrestling with.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>Coverage Gap → Corpus:</strong> turns coverage holes into the ingestion queue,
+          so the corpus grows toward what the community needs.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>Synthesis → Corpus:</strong> approved cross-thinker documents are ingested back
+          as retrievable source material.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>Corpus</strong> is the substrate everyone retrieves from; <strong>Dispatch</strong>{' '}
+          is the daily output that reaches users.
+        </p>
+      </div>
+
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>What the admin is responsible for</div>
+        <p className={styles.muted} style={{ marginBottom: 14, lineHeight: 1.6 }}>
+          The agents generate and recommend; nothing reaches the corpus or a user without a human
+          in the loop. Your job is the judgment calls:
+        </p>
+        <ul className={styles.respList}>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Review &amp; approve Synthesis documents</strong> — nothing is auto-ingested into the corpus. (Synthesis tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Triage distress flags</strong> from Journal Analysis — these route to a review queue, never auto-shown to users. (Distress / Journal tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Approve Coverage Gap recommendations</strong> — you decide what actually gets queued for ingestion. (Gap tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Curate the corpus ingestion queue</strong> — add and manage source texts. (Corpus Ingestion tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Approve &amp; schedule social posts.</strong> (Scheduler tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Spot-check the daily Dispatch</strong> and tune each agent’s config (enable/disable, parameters). Config changes apply on the next run — no redeploy.</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Keep API keys valid</strong> (rotate Claude/OpenAI keys on the Railway services as needed).</span></li>
+        </ul>
+      </div>
+    </>
+  )
+}
+
 export default function AdminOverviewPage() {
   const [data, setData] = useState<Overview | null>(null)
   const [error, setError] = useState('')
@@ -227,6 +318,8 @@ export default function AdminOverviewPage() {
           <button className={styles.ghostBtn} onClick={load}>↺ Refresh</button>
         </div>
       )}
+
+      <FleetGuide />
     </div>
   )
 }

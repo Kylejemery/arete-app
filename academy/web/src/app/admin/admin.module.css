@@ -769,6 +769,92 @@
 }
 .viewLink:hover { text-decoration: underline; }
 
+/* ─── Fleet guide (overview explainer) ──────────────────────────── */
+.guideStep {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 0.5px solid #f0f0f0;
+}
+.guideStep:last-child { border-bottom: none; }
+
+.guideWhen {
+  flex-shrink: 0;
+  width: 90px;
+  font-size: 11px;
+  color: #534AB7;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.guideBody { flex: 1; }
+
+.guideName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.guideText {
+  font-size: 12.5px;
+  color: #666;
+  line-height: 1.6;
+  margin-top: 3px;
+}
+
+.guideTag {
+  font-size: 10.5px;
+  color: #3C3489;
+  background: #EEEDFE;
+  border: 0.5px solid #DEDBFA;
+  border-radius: 6px;
+  padding: 1px 7px;
+  font-weight: 500;
+}
+
+.flowLine {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.75;
+  margin: 0 0 8px;
+}
+.flowLine:last-child { margin-bottom: 0; }
+.flowLine strong { color: #3C3489; font-weight: 500; }
+
+.respList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.respItem {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: #444;
+  line-height: 1.6;
+}
+.respMark { color: #1D9E75; flex-shrink: 0; font-weight: 600; }
+.respItem strong { color: #1a1a1a; font-weight: 500; }
+
+@media (prefers-color-scheme: dark) {
+  .guideStep { border-color: #2a2a2a; }
+  .guideWhen { color: #CFCBF5; }
+  .guideName { color: #f0f0f0; }
+  .guideText { color: #aaa; }
+  .guideTag { background: #2A2660; border-color: #534AB7; color: #CFCBF5; }
+  .flowLine { color: #bbb; }
+  .flowLine strong { color: #CFCBF5; }
+  .respItem { color: #ccc; }
+  .respItem strong { color: #f0f0f0; }
+}
+
 /* ─── Gap report rows ───────────────────────────────────────────── */
 .gapRow {
   padding: 10px 0;
