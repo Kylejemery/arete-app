@@ -27,8 +27,15 @@ const PARALLEL_ENABLED = process.env.PARALLEL_CABINET_ENABLED === 'true';
 const PARALLEL_ALLOWLIST = (process.env.PARALLEL_CABINET_ALLOWLIST || '')
   .split(',').map(s => s.trim()).filter(Boolean);
 
-// OpenAI SDK client (used for OpenAI-backed agents and embeddings)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// OpenAI SDK client (used for OpenAI-backed counselor routing). Null when the
+// key is absent — same pattern as gemini/xai below, so a missing OPENAI_API_KEY
+// degrades gpt- counselors to Claude instead of crashing the server at boot.
+// (The openai v6 SDK throws at construction when apiKey is falsy.) Embeddings
+// use raw fetch elsewhere and are independently guarded on OPENAI_API_KEY.
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+if (!openai) console.warn('OPENAI_API_KEY not set — gpt- counselors will fall back to Claude.');
 
 // Gemini and Grok expose OpenAI-compatible APIs — same SDK, different base
 // URLs. Clients are null when the key is absent; routing then falls back to
@@ -75,7 +82,7 @@ function isNonAnthropicModel(model) {
  * the provider's key is missing, or undefined for Anthropic models.
  */
 function compatRouteFor(model) {
-  if (model.startsWith('gpt-')) return { client: openai, provider: 'openai' };
+  if (model.startsWith('gpt-')) return openai ? { client: openai, provider: 'openai' } : null;
   if (model.startsWith('gemini')) return gemini ? { client: gemini, provider: 'gemini' } : null;
   if (model.startsWith('grok')) return xai ? { client: xai, provider: 'xai' } : null;
   return undefined;
