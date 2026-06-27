@@ -3101,6 +3101,110 @@ ${ctxBlock(cb)}`;
   }
 });
 
+// GET /api/library/observatory — the constellation. Concepts the corpus and
+// community are actually working through (concept_passage_map), each with its
+// real voices, co-occurrence edges (shared authors), the matching synthesis
+// (excerpt + divergence pulled from the document), and a "lately the corpus has
+// been thinking about" panel from journals, syntheses, and the gap report.
+app.get('/api/library/observatory', async (req, res) => {
+  try {
+    const [{ data: cpm }, { data: synth }, { data: journals }, { data: gapRows }] = await Promise.all([
+      supabase.from('concept_passage_map').select('concept, author'),
+      supabase.from('synthesis_documents').select('title, concept, content, status, ingested_at'),
+      supabase.from('journal_analysis').select('dominant_theme, created_at').order('created_at', { ascending: false }).limit(20),
+      supabase.from('corpus_gap_reports').select('demand_gaps, recommended_additions, report_week').order('report_week', { ascending: false }).limit(1),
+    ]);
+
+    // Group passages into concepts with their distinct voices.
+    const byConcept = new Map();
+    for (const r of cpm || []) {
+      if (!r.concept) continue;
+      let g = byConcept.get(r.concept);
+      if (!g) { g = { authors: new Set(), passages: 0 }; byConcept.set(r.concept, g); }
+      g.passages++;
+      if (r.author) g.authors.add(r.author);
+    }
+
+    const conceptList = [...byConcept.entries()].map(([name, g], i) => {
+      const voices = [...g.authors].sort();
+      const magnitude = voices.length >= 5 ? 3 : voices.length >= 3 ? 2 : 1;
+      return { id: `c${i}`, name, voices, passages: g.passages, magnitude };
+    }).sort((a, b) => b.magnitude - a.magnitude || b.voices.length - a.voices.length);
+
+    // Attach the matching synthesis document (exact concept, else keyword overlap).
+    const words = s => (s || '').toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length > 3);
+    const matchSynth = (name) => {
+      const exact = (synth || []).find(s => (s.concept || '').toLowerCase() === name.toLowerCase());
+      if (exact) return exact;
+      const nw = new Set(words(name));
+      let best = null, bestScore = 0;
+      for (const s of synth || []) {
+        const score = words(s.concept).filter(w => nw.has(w)).length;
+        if (score > bestScore) { bestScore = score; best = s; }
+      }
+      return bestScore >= 2 ? best : null;
+    };
+    const extractSynth = (s) => {
+      if (!s) return null;
+      const body = (s.content || '').replace(/\r/g, '').trim();
+      const title = (s.title || body.split('\n')[0] || '').replace(/^#+\s*/, '').trim();
+      const paras = body.split(/\n\n+/).map(p => p.replace(/^#+\s*/, '').trim()).filter(p => p.length > 80);
+      const excerptPara = paras.find(p => !title.includes(p.slice(0, 40))) || paras[0] || '';
+      const sentences = body.replace(/\n/g, ' ').split(/(?<=[.!?])\s+/);
+      const div = sentences.find(x => /\b(tension|diverge|differ|disagree|contend|at odds|fault line|pull apart)\b/i.test(x));
+      return {
+        title,
+        status: s.status,
+        excerpt: excerptPara.slice(0, 320),
+        divergence: div ? div.trim().slice(0, 280) : null,
+      };
+    };
+    const concepts = conceptList.map(c => ({ ...c, synthesis: extractSynth(matchSynth(c.name)) }));
+
+    // Edges: concepts that share at least 3 voices (where thinkers answer one another).
+    const edges = [];
+    for (let i = 0; i < conceptList.length; i++) {
+      for (let j = i + 1; j < conceptList.length; j++) {
+        const a = byConcept.get(conceptList[i].name).authors;
+        const b = byConcept.get(conceptList[j].name).authors;
+        let shared = 0;
+        for (const x of a) if (b.has(x)) shared++;
+        if (shared >= 3) edges.push({ a: conceptList[i].id, b: conceptList[j].id, shared });
+      }
+    }
+    edges.sort((x, y) => y.shared - x.shared);
+    const topEdges = edges.slice(0, 18).map(e => [e.a, e.b]);
+
+    // "Lately the corpus has been thinking about"
+    const seen = new Set();
+    const mostAsked = [];
+    for (const j of journals || []) {
+      const t = (j.dominant_theme || '').trim();
+      if (!t || seen.has(t.toLowerCase())) continue;
+      seen.add(t.toLowerCase());
+      mostAsked.push(t);
+      if (mostAsked.length >= 4) break;
+    }
+    const cleanTitle = t => (t || '').replace(/^#+\s*/, '').trim();
+    const tensions = (synth || []).filter(s => s.status === 'pending_review')
+      .map(s => ({ title: cleanTitle(s.title), concept: s.concept }));
+    const newIngests = (synth || []).filter(s => s.status === 'ingested')
+      .sort((a, b) => new Date(b.ingested_at || 0) - new Date(a.ingested_at || 0))
+      .slice(0, 2).map(s => ({ title: cleanTitle(s.title), concept: s.concept }));
+    const gap = (gapRows || [])[0];
+    const gaps = [];
+    if (gap) {
+      for (const d of (gap.demand_gaps || []).slice(0, 2)) if (d.theme) gaps.push(`Thin coverage on “${d.theme}”`);
+      for (const r of (gap.recommended_additions || []).slice(0, 2)) if (r.author && r.work) gaps.push(`Wants ${r.author} — ${r.work}`);
+    }
+
+    return res.json({ concepts, edges: topEdges, recent: { mostAsked, tensions, newIngests, gaps } });
+  } catch (err) {
+    console.error('[/api/library/observatory] error:', err.message);
+    return res.status(500).json({ error: 'The sky could not be charted' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   if (CLAUDE_API_KEY) {

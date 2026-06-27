@@ -52,6 +52,17 @@ type Reader = {
 
 type Related = { id: string; author: string; work: string; title: string; reason: string };
 
+type ObsConcept = {
+  id: string; name: string; voices: string[]; passages: number; magnitude: number;
+  synthesis: { title: string; status: string; excerpt: string; divergence: string | null } | null;
+  x?: number; y?: number;
+};
+type ObsData = {
+  concepts: ObsConcept[];
+  edges: [string, string][];
+  recent: { mostAsked: string[]; tensions: { title: string; concept: string }[]; newIngests: { title: string; concept: string }[]; gaps: string[] };
+};
+
 type Master = {
   id: string;
   name: string;
@@ -310,6 +321,12 @@ export default function LibraryOfArete() {
     setDebatePair(null);
   };
 
+  // From the Observatory: stage a debate on a concept, then jump to the Symposium.
+  const debateConcept = useCallback((conceptName: string) => {
+    setRoom('symposium');
+    runDebate(`On "${conceptName}" — where do the thinkers diverge?`, 'seneca', 'epictetus');
+  }, [runDebate]);
+
   // ---- derived shelves ----
   const stoicOrder = ['Marcus Aurelius', 'Epictetus', 'Seneca', 'Cleanthes', 'Cicero', 'Diogenes Laërtius', 'Arnold', 'Stock'];
   const sortStoic = (a: LibText, b: LibText) => {
@@ -387,7 +404,7 @@ export default function LibraryOfArete() {
           />
         )}
 
-        {room === 'observatory' && <Observatory go={go} />}
+        {room === 'observatory' && <Observatory go={go} onDebate={debateConcept} />}
       </div>
     </div>
   );
@@ -400,7 +417,7 @@ function Atrium({ texts, go }: { texts: LibText[]; go: (r: Room) => void }) {
   const doorways = [
     { key: 'reading' as Room, glyph: '❧', name: 'The Reading Room', sub: 'Pull any text from the shelves and read it in full; let the corpus recommend the next.' },
     { key: 'symposium' as Room, glyph: '⟡', name: 'The Symposium', sub: 'Sit with a master, or set two of them debating a question you pose.' },
-    { key: 'observatory' as Room, glyph: '✶', name: 'The Observatory', sub: 'A sky of ideas across the whole corpus — forthcoming.' },
+    { key: 'observatory' as Room, glyph: '✶', name: 'The Observatory', sub: 'Wander a sky of the ideas the corpus is working through, and see where voices meet.' },
   ];
   return (
     <main style={{ height: '100%', overflowY: 'auto' }}>
@@ -765,23 +782,149 @@ function Symposium(props: {
   );
 }
 
-/* ========================= OBSERVATORY (Phase 2) ========================= */
-function Observatory({ go }: { go: (r: Room) => void }) {
+/* ========================= OBSERVATORY ========================= */
+const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+function shortLabel(name: string): string {
+  const head = name.split(':')[0].trim();
+  return cap(head.length <= 30 ? head : head.slice(0, 28).trim() + '…');
+}
+function layoutConcepts(concepts: ObsConcept[]): ObsConcept[] {
+  const cx = 46, cy = 49;
+  return concepts.map((c, i) => {
+    const ang = i * 2.39996 + 0.6;            // golden-angle spread, deterministic
+    const base = c.magnitude === 3 ? 15 : c.magnitude === 2 ? 27 : 37; // central = more central concept
+    const r = base + (((i * 53) % 9) - 4);
+    const x = Math.max(13, Math.min(80, cx + Math.cos(ang) * r * 1.15));
+    const y = Math.max(15, Math.min(85, cy + Math.sin(ang) * r * 0.8));
+    return { ...c, x, y };
+  });
+}
+
+function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
+  const [data, setData] = useState<ObsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/library/observatory');
+        const json = await res.json();
+        if (!cancelled && res.ok) setData(json);
+      } catch {
+        /* empty sky handled below */
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const concepts = data ? layoutConcepts(data.concepts) : [];
+  const posById = new Map(concepts.map(c => [c.id, c]));
+  const active = concepts.find(c => c.id === activeId) || null;
+  const sizeFor = (m: number) => m >= 3 ? { dot: 16, glow: 22, spread: 3, label: 14, tw: 4.5 }
+    : m === 2 ? { dot: 11, glow: 16, spread: 2, label: 12.5, tw: 5.5 }
+    : { dot: 7, glow: 11, spread: 1, label: 11.5, tw: 6.5 };
+
   return (
-    <main style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-      <div className="lib-fade" style={{ textAlign: 'center', maxWidth: 520 }}>
-        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>The Observatory</div>
-        <div style={{ fontSize: 40, color: GOLD, marginBottom: 18, animation: 'lib-star-pulse 4s ease-in-out infinite' }}>✶</div>
-        <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(28px,4vw,42px)', lineHeight: 1.08, color: IVORY, margin: '0 0 14px' }}>The sky is still being charted</h1>
-        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 19, lineHeight: 1.5, color: MUTED, margin: '0 auto 28px', maxWidth: 440 }}>
-          A constellation of concepts across the whole corpus — where thinkers answer one another — is being mapped as the agents finish their significance pass. For now, the texts and the table are open.
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-          <button onClick={() => go('reading')} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: '11px 18px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Enter the Reading Room →</button>
-          <button onClick={() => go('symposium')} className="lib-discuss" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: '11px 18px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Visit the Symposium →</button>
+    <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
+      {/* sky */}
+      <section style={{ flex: 1, position: 'relative', minWidth: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
+        <div style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
+          <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched. Lines are where they share voices. Wander — tap a star.</p>
         </div>
-      </div>
+
+        {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Charting the sky…</div>}
+        {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
+
+        {/* edges */}
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}>
+          {data?.edges.map(([a, b], i) => {
+            const ca = posById.get(a), cb = posById.get(b);
+            if (!ca || !cb) return null;
+            const lit = active && (active.id === a || active.id === b);
+            return <line key={i} x1={ca.x} y1={ca.y} x2={cb.x} y2={cb.y} stroke={lit ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.14)'} strokeWidth={0.12} />;
+          })}
+        </svg>
+
+        {/* stars */}
+        {concepts.map(c => {
+          const s = sizeFor(c.magnitude);
+          const isActive = activeId === c.id;
+          return (
+            <button key={c.id} onClick={() => setActiveId(c.id)} style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', zIndex: 2, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 6 }}>
+              <span style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : GOLD_L, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`, animation: `lib-star-pulse ${s.tw}s ease-in-out infinite` }} />
+              <span style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.8)', opacity: isActive || c.magnitude >= 2 ? 1 : 0.7 }}>{shortLabel(c.name)}</span>
+            </button>
+          );
+        })}
+      </section>
+
+      {/* dossier / recent */}
+      <aside style={{ width: 354, flexShrink: 0, borderLeft: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.72),rgba(8,14,30,0.78))', overflowY: 'auto' }}>
+        {!active ? (
+          <div className="lib-fade" style={{ padding: '26px 24px' }}>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, marginBottom: 4 }}>Lately, the corpus has been thinking about</div>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED, margin: '0 0 20px' }}>Updated as agents ingest, synthesize, and read the room.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {data?.recent.mostAsked.map((t, i) => <RecentCard key={`m${i}`} tag="Most-asked this week" dot={GOLD} text={cap(t)} />)}
+              {data?.recent.tensions.map((t, i) => <RecentCard key={`t${i}`} tag="Open tension · awaiting review" dot="#d97a6a" text={t.title} />)}
+              {data?.recent.newIngests.map((t, i) => <RecentCard key={`n${i}`} tag="New synthesis ingested" dot="#7a9a6a" text={t.title} />)}
+              {data?.recent.gaps.map((t, i) => <RecentCard key={`g${i}`} tag="Coverage the corpus wants" dot="#6a8ad9" text={t} />)}
+            </div>
+          </div>
+        ) : (
+          <div className="lib-fade" style={{ padding: '26px 24px' }}>
+            <button onClick={() => setActiveId(null)} className="lib-back" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 18 }}>← All the corpus is thinking</button>
+            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>A concept across the corpus</div>
+            <h2 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 27, lineHeight: 1.08, color: IVORY, margin: '0 0 14px' }}>{cap(active.name)}</h2>
+
+            <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED, marginBottom: 10 }}>Voices that touch it · {active.voices.length}</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 22 }}>
+              {active.voices.map(v => (
+                <span key={v} style={{ fontFamily: SERIF, fontSize: 15, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '5px 13px' }}>{v}</span>
+              ))}
+            </div>
+
+            {active.synthesis?.divergence && (
+              <div style={{ background: 'rgba(255,80,80,0.04)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: '16px 17px', marginBottom: 16 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>Where the thinkers diverge</div>
+                <p style={{ fontFamily: SERIF, fontSize: 16, lineHeight: 1.55, color: TEXT, margin: 0 }}>{active.synthesis.divergence}</p>
+              </div>
+            )}
+            {active.synthesis?.excerpt ? (
+              <div style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 12, padding: '16px 17px', marginBottom: 22 }}>
+                <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>From the corpus synthesis {active.synthesis.status === 'pending_review' ? '· forming' : ''}</div>
+                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.55, color: IVORY, margin: 0 }}>{active.synthesis.excerpt}</p>
+              </div>
+            ) : (
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.5, color: MUTED, margin: '0 0 22px' }}>The corpus has gathered passages here but has not yet written across them. Stage a debate and watch the voices contend.</p>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <button onClick={() => onDebate(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Stage a debate on this →</button>
+              <button onClick={() => go('reading')} className="lib-related" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Read the sources →</button>
+            </div>
+          </div>
+        )}
+      </aside>
     </main>
+  );
+}
+
+function RecentCard({ tag, dot, text }: { tag: string; dot: string; text: string }) {
+  return (
+    <div style={{ background: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 12, padding: '16px 17px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: dot }} />
+        <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD }}>{tag}</span>
+      </div>
+      <p style={{ fontFamily: SERIF, fontSize: 16, lineHeight: 1.5, color: TEXT, margin: 0 }}>{text}</p>
+    </div>
   );
 }
 
