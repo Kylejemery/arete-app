@@ -67,6 +67,9 @@ export default function SynthesisPage() {
   const [showIngested, setShowIngested] = useState(false)
   const [showRejected, setShowRejected] = useState(false)
 
+  // On-demand synthesis run.
+  const [running, setRunning] = useState(false)
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(''), 3000)
@@ -93,6 +96,29 @@ export default function SynthesisPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function runSynthesis() {
+    setRunning(true)
+    try {
+      const res = await fetch('/api/admin/synthesis/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count: 3 }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start synthesis')
+      showToast('Synthesis started — generating 3 documents (~a minute). The list refreshes automatically.')
+      // The run is in the background on the server; give it time, then reload.
+      setTimeout(async () => {
+        await load()
+        setRunning(false)
+        showToast('Refreshed — any new documents are in Pending review')
+      }, 55000)
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to start synthesis')
+      setRunning(false)
+    }
+  }
 
   function toggleExpand(id: string, content: string) {
     setExpanded(prev => {
@@ -227,13 +253,23 @@ export default function SynthesisPage() {
       <div className={styles.card}>
         <div className={styles.cardTitleRow}>
           <span className={styles.cardTitle}>Pending review ({pending.length})</span>
-          <button className={styles.ghostBtn} style={{ height: 30, padding: '0 12px', fontSize: 12 }} onClick={load}>↺ Refresh</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              className={styles.primaryBtn}
+              style={{ height: 30, padding: '0 12px', fontSize: 12 }}
+              disabled={running}
+              onClick={runSynthesis}
+            >
+              {running ? 'Generating…' : '✦ Run synthesis (3)'}
+            </button>
+            <button className={styles.ghostBtn} style={{ height: 30, padding: '0 12px', fontSize: 12 }} onClick={load}>↺ Refresh</button>
+          </div>
         </div>
 
         {pending.length === 0 ? (
           <p className={styles.muted}>
-            Nothing awaiting review. The agent generates documents each Monday at 6:00 AM ET — or run{' '}
-            <code>node server/synthesis-agent.js</code> manually.
+            Nothing awaiting review. The agent generates documents each Monday at 6:00 AM ET — or press{' '}
+            <strong>Run synthesis</strong> to generate three now.
           </p>
         ) : (
           pending.map(doc => {
