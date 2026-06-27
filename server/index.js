@@ -2874,7 +2874,15 @@ app.get('/api/library/texts', async (req, res) => {
       spine: libraryHelpers.spine(r.author),
       excerpt: (r.excerpt || '').trim().replace(/\s+/g, ' ').slice(0, 280),
     }));
-    return res.json({ texts });
+
+    // Count of syntheses awaiting admin review (not yet ingested, so not on a
+    // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.
+    const { count: pendingReview } = await supabase
+      .from('synthesis_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending_review');
+
+    return res.json({ texts, pendingReview: pendingReview || 0 });
   } catch (err) {
     console.error('[/api/library/texts] error:', err.message);
     return res.status(500).json({ error: 'Failed to load the shelves' });

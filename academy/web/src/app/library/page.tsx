@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
 // The Library of Arete — a living philosophical library you can "play" in.
@@ -112,6 +113,8 @@ export default function LibraryOfArete() {
   // ---- reading ----
   const [texts, setTexts] = useState<LibText[]>([]);
   const [textsLoading, setTextsLoading] = useState(true);
+  const [pendingReview, setPendingReview] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [active, setActive] = useState<{ author: string; work: string; title: string } | null>(null);
   const [reader, setReader] = useState<Reader | null>(null);
   const [readerLoading, setReaderLoading] = useState(false);
@@ -142,13 +145,28 @@ export default function LibraryOfArete() {
       try {
         const res = await fetch('/api/library/texts');
         const data = await res.json();
-        if (!cancelled) setTexts(data.texts || []);
+        if (!cancelled) {
+          setTexts(data.texts || []);
+          setPendingReview(data.pendingReview || 0);
+        }
       } catch {
         /* shelves stay empty; UI shows a quiet notice */
       } finally {
         if (!cancelled) setTextsLoading(false);
       }
     })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Detect the admin so the synthesis shelf can surface the review queue.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (!cancelled && data.user?.email && adminEmail && data.user.email === adminEmail) {
+        setIsAdmin(true);
+      }
+    }).catch(() => { /* not signed in — stays non-admin */ });
     return () => { cancelled = true; };
   }, []);
 
@@ -353,6 +371,7 @@ export default function LibraryOfArete() {
             stoicTexts={stoicTexts} widerTexts={widerTexts} synthTexts={synthTexts}
             textsLoading={textsLoading} active={active} reader={reader} readerLoading={readerLoading}
             related={related} openWork={openWork} gotoPage={gotoPage} closeText={closeText} goSymposium={() => go('symposium')}
+            isAdmin={isAdmin} pendingReview={pendingReview}
           />
         )}
 
@@ -460,9 +479,9 @@ function ReadingRoom(props: {
   stoicTexts: LibText[]; widerTexts: LibText[]; synthTexts: LibText[]; textsLoading: boolean;
   active: { author: string; work: string; title: string } | null; reader: Reader | null; readerLoading: boolean;
   related: Related[]; openWork: (a: string, w: string, t: string) => void; gotoPage: (n: number) => void;
-  closeText: () => void; goSymposium: () => void;
+  closeText: () => void; goSymposium: () => void; isAdmin: boolean; pendingReview: number;
 }) {
-  const { stoicTexts, widerTexts, synthTexts, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium } = props;
+  const { stoicTexts, widerTexts, synthTexts, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview } = props;
 
   if (active) {
     const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
@@ -549,9 +568,16 @@ function ReadingRoom(props: {
           </>
         )}
 
-        {synthTexts.length > 0 && (
+        {(synthTexts.length > 0 || (isAdmin && pendingReview > 0)) && (
           <>
-            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD, margin: '0 0 7px' }}>The corpus thinking about itself</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, margin: '0 0 7px' }}>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD }}>The corpus thinking about itself</div>
+              {isAdmin && pendingReview > 0 && (
+                <a href="/admin/synthesis" style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '5px 13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  {pendingReview} awaiting your review →
+                </a>
+              )}
+            </div>
             <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: MUTED, margin: '0 0 16px', maxWidth: 600 }}>Synthesis documents the corpus wrote about its own sources — cross-thinker analyses no single text contains.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))', gap: 16 }}>
               {synthTexts.map(t => (
