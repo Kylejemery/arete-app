@@ -9,20 +9,26 @@
   margin-bottom: 1.75rem;
 }
 
+/* Headers render directly on the navy page background (outside the white
+   cards), so they use light text — dark #1a1a1a was near-invisible on navy. */
 .header h1 {
   font-size: 22px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: #f4ead5;
   margin-bottom: 4px;
 }
 
 .header p {
   font-size: 14px;
-  color: #888;
+  color: #9aa7b8;
 }
 
 .card {
   background: #fff;
+  /* Default text color for card content. Without this, bare <h2>/<p> (e.g. the
+     dispatch title, body, and practice) inherited the root body's light
+     `text-cream`, rendering as near-invisible light text on the white card. */
+  color: #1a1a1a;
   border: 0.5px solid #e5e5e5;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
