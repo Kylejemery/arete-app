@@ -299,13 +299,19 @@ async function callClaude(system, userPrompt) {
     },
     body: JSON.stringify({
       model: 'claude-sonnet-4-6',
-      max_tokens: 3000,
+      // A ~2000-word synthesis runs ~2700-3200 tokens; the old 3000 cap cut
+      // documents off mid-sentence. Give ample headroom so they finish.
+      max_tokens: 8000,
       system,
       messages: [{ role: 'user', content: userPrompt }],
     }),
   });
   if (!res.ok) throw new Error(`Claude API ${res.status}: ${await res.text()}`);
-  return res.json();
+  const json = await res.json();
+  if (json.stop_reason === 'max_tokens') {
+    console.warn('  ⚠ generation hit max_tokens — document may be truncated');
+  }
+  return json;
 }
 
 async function generateSynthesis(concept, passages, synthesisType, config) {
@@ -353,7 +359,10 @@ Put the title on the first line, then the document.`;
 
 // --- 2f. Main loop ---------------------------------------------------------
 
-async function runSynthesisAgent() {
+// options.count — generate exactly this many documents on demand (overrides the
+// configured documents_per_week, e.g. the admin "Run synthesis" button).
+// Returns a summary so callers can report results.
+async function runSynthesisAgent(options = {}) {
   const startTime = Date.now();
   console.log(`=== Synthesis Agent — ${new Date().toISOString()} ===`);
 
@@ -369,11 +378,16 @@ async function runSynthesisAgent() {
     console.warn('OPENAI_API_KEY not set — semantic source retrieval will be skipped.');
   }
 
-  const config = await getAgentConfig();
-  if (!config.enabled) {
+  const baseConfig = await getAgentConfig();
+  if (!baseConfig.enabled && !options.count) {
     console.log('Synthesis agent disabled in config. Exiting.');
-    return;
+    return { succeeded: 0, skipped: 0, failed: 0, disabled: true, titles: [] };
   }
+  // A manual run with an explicit count overrides documents_per_week (and runs
+  // even when the scheduled agent is disabled).
+  const config = options.count
+    ? { ...baseConfig, documents_per_week: Math.max(1, options.count) }
+    : baseConfig;
 
   const concepts = await selectConceptsForSynthesis(config);
   console.log(`Selected ${concepts.length} concept(s) for synthesis this week:`);
@@ -381,11 +395,12 @@ async function runSynthesisAgent() {
 
   if (concepts.length === 0) {
     console.log('\nNo eligible concepts (no journal_analysis demand and no structural fallback). Exiting.');
-    return;
+    return { succeeded: 0, skipped: 0, failed: 0, titles: [], reason: 'no_eligible_concepts' };
   }
 
   const generationWeek = getMondayOfCurrentWeek();
   let succeeded = 0, failed = 0, skipped = 0;
+  const titles = [];
 
   for (const { concept, userFrequency, demandRank } of concepts) {
     try {
@@ -425,6 +440,7 @@ async function runSynthesisAgent() {
 
       console.log(`  ✓ Generated: "${result.title}" (${result.wordCount} words) — pending review`);
       succeeded++;
+      titles.push(result.title);
 
       // Rate limit — synthesis calls are expensive.
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -439,6 +455,8 @@ async function runSynthesisAgent() {
   console.log(`All documents pending admin review at academy.pursuearete.com/admin/synthesis`);
   console.log(`Run time: ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
   console.log(`===================`);
+
+  return { succeeded, skipped, failed, titles, generationWeek };
 }
 
 // Exported for testing / manual invocation; only auto-runs as a CLI.

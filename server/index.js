@@ -16,6 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const libraryHelpers = require('./library');
 const { runDispatchGeneration } = require('./dispatch-generation-agent');
+const { runSynthesisAgent } = require('./synthesis-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -2845,6 +2846,39 @@ app.post('/api/admin/dispatch/generate', async (req, res) => {
   } catch (err) {
     console.error('[/api/admin/dispatch/generate] error:', err.message);
     return res.status(500).json({ error: err.message || 'Generation failed' });
+  }
+});
+
+// POST /api/admin/synthesis/generate — run the synthesis agent on demand (admin
+// only), generating N documents (default 3) into pending_review. Generating
+// several Sonnet documents can exceed a serverless timeout, so this kicks the
+// run off in the background and returns immediately; the admin refreshes to see
+// the new documents. A module-level flag prevents overlapping runs.
+let synthesisRunning = false;
+app.post('/api/admin/synthesis/generate', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for synthesis generation' });
+    }
+    if (synthesisRunning) {
+      return res.status(409).json({ error: 'A synthesis run is already in progress' });
+    }
+
+    const count = Math.max(1, Math.min(5, parseInt(req.body?.count, 10) || 3));
+    synthesisRunning = true;
+    runSynthesisAgent({ count })
+      .then(r => console.log('[synthesis/generate] complete:', JSON.stringify(r)))
+      .catch(e => console.error('[synthesis/generate] run error:', e.message))
+      .finally(() => { synthesisRunning = false; });
+
+    return res.json({ ok: true, started: true, count });
+  } catch (err) {
+    synthesisRunning = false;
+    console.error('[/api/admin/synthesis/generate] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to start synthesis' });
   }
 });
 
