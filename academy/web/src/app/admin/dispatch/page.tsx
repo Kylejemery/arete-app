@@ -51,6 +51,7 @@ export default function DispatchPage() {
   const [cfgThemes, setCfgThemes] = useState(5)
   const [cfgModel, setCfgModel] = useState('claude-haiku-4-5-20251001')
   const [savingCfg, setSavingCfg] = useState(false)
+  const [generating, setGenerating] = useState(false)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -105,6 +106,26 @@ export default function DispatchPage() {
     setSavingCfg(false)
   }
 
+  async function generateNow() {
+    setGenerating(true)
+    try {
+      const res = await fetch('/api/admin/dispatch/generate', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Generation failed')
+      if (json.alreadyExisted) {
+        showToast('Today’s dispatch already exists')
+      } else if (json.generated) {
+        showToast(`Generated: ${json.dispatch?.title ?? 'today’s dispatch'}`)
+      } else {
+        showToast('Generation ran, but no dispatch was written')
+      }
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Generation failed')
+    }
+    setGenerating(false)
+  }
+
   const groundedIn = today?.corpus_context?.recentNewAuthors?.filter(Boolean) || []
 
   return (
@@ -127,12 +148,17 @@ export default function DispatchPage() {
       <div className={styles.card}>
         <div className={styles.cardTitleRow}>
           <span className={styles.cardTitle}>Today&apos;s dispatch</span>
-          <button className={styles.ghostBtn} style={{ height: 30, padding: '0 12px', fontSize: 12 }} onClick={load}>↺ Refresh</button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className={styles.primaryBtn} style={{ height: 30, padding: '0 12px', fontSize: 12 }} disabled={generating} onClick={generateNow}>
+              {generating ? 'Generating…' : '✦ Generate now'}
+            </button>
+            <button className={styles.ghostBtn} style={{ height: 30, padding: '0 12px', fontSize: 12 }} onClick={load}>↺ Refresh</button>
+          </div>
         </div>
         {!today ? (
           <p className={styles.muted}>
-            Not yet generated. The generation agent runs daily at 5:00 AM ET — or run{' '}
-            <code>node server/dispatch-generation-agent.js</code> manually.
+            Not yet generated. The generation agent runs daily at 5:00 AM ET — or press{' '}
+            <strong>Generate now</strong> to produce today&apos;s dispatch immediately.
           </p>
         ) : (
           <>

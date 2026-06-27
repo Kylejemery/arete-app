@@ -1,0 +1,827 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+// ---------------------------------------------------------------------------
+// The Library of Arete — a living philosophical library you can "play" in.
+// Four rooms over one shell. Phase 1 wires the Reading Room (read every primary
+// text in full) and the Symposium (sit with a master, or stage a debate) to the
+// real corpus; the Atrium is a light landing and the Observatory is forthcoming.
+// ---------------------------------------------------------------------------
+
+const SERIF = 'var(--font-cormorant), Georgia, serif';
+const SANS = 'var(--font-inter), system-ui, sans-serif';
+const MONO = 'var(--font-jetbrains), monospace';
+
+const GOLD = '#c9a84c';
+const GOLD_L = '#e3c77a';
+const IVORY = '#f4ead5';
+const TEXT = '#e8e4d6';
+const MUTED = '#8a8b8e';
+
+type Room = 'atrium' | 'reading' | 'symposium' | 'observatory';
+
+type LibText = {
+  id: string;
+  author: string;
+  work: string;
+  title: string;
+  era: string;
+  textType: 'primary' | 'synthesis';
+  tradition: 'stoic' | 'wider' | 'synthesis';
+  passages: number;
+  translator: string | null;
+  sourceUrl: string | null;
+  spine: string;
+  excerpt: string;
+};
+
+type Reader = {
+  author: string;
+  work: string;
+  title: string;
+  era: string;
+  translator: string | null;
+  sourceUrl: string | null;
+  page: number;
+  totalPages: number;
+  totalPassages: number;
+  body: string;
+};
+
+type Related = { id: string; author: string; work: string; title: string; reason: string };
+
+type Master = {
+  id: string;
+  name: string;
+  voice: string;
+  initial: string;
+  accent: string;
+  textColor: string;
+  greeting: string;
+  oracleAuthor: string | null;
+};
+
+const MASTERS: Master[] = [
+  { id: 'corpus', name: 'The Corpus', voice: 'Many minds, one counsel', initial: '✶', accent: GOLD, textColor: '#0a1020', oracleAuthor: null,
+    greeting: 'You stand inside the whole tradition at once. Ask, and many voices will answer as one.' },
+  { id: 'socrates', name: 'Socrates', voice: 'Athens · asks until you know', initial: 'Σ', accent: '#1d2c4a', textColor: GOLD_L, oracleAuthor: null,
+    greeting: 'I know nothing worth teaching — but I am very good at questions. Shall we find out together what you actually believe?' },
+  { id: 'zeno', name: 'Zeno of Citium', voice: 'Founder of the Porch', initial: 'Z', accent: '#0f2e1a', textColor: GOLD_L, oracleAuthor: null,
+    greeting: 'I lost everything in a shipwreck and called it the most prosperous voyage I ever made. Tell me — what do you think you have lost?' },
+  { id: 'epictetus', name: 'Epictetus', voice: 'Unsparing, exact', initial: 'E', accent: '#0f2744', textColor: GOLD_L, oracleAuthor: 'Epictetus',
+    greeting: 'Begin here: in this trouble of yours, what is actually yours to command? Name it plainly and we will start.' },
+  { id: 'marcus', name: 'Marcus Aurelius', voice: 'Calm, reflective', initial: 'M', accent: '#2d1b4e', textColor: GOLD_L, oracleAuthor: 'Marcus Aurelius',
+    greeting: 'I keep this journal to steady myself, not to instruct anyone. But sit — let us try to see the thing clearly together.' },
+  { id: 'seneca', name: 'Seneca', voice: 'Warm, worldly', initial: 'S', accent: '#3a2415', textColor: GOLD_L, oracleAuthor: 'Seneca',
+    greeting: 'Speak as you would to a friend who has time for you. What weighs on you tonight?' },
+];
+const masterById = (id: string) => MASTERS.find(m => m.id === id) || MASTERS[0];
+
+const SUGGESTED = [
+  'What is actually mine to control here?',
+  'I keep avoiding something. Why?',
+  'Is it weak to grieve?',
+  'How do I quiet a restless mind?',
+];
+
+const DEBATE_QS = [
+  { text: 'Should the wise person ever feel grief?', a: 'seneca', b: 'epictetus', pair: 'Seneca vs Epictetus' },
+  { text: 'Is it enough to endure — or must we act?', a: 'epictetus', b: 'marcus', pair: 'Epictetus vs Marcus' },
+  { text: 'Does loving fate make us passive?', a: 'marcus', b: 'seneca', pair: 'Marcus vs Seneca' },
+];
+
+const MURMURS = [
+  'It is not things that disturb us, but our judgments about things. — Epictetus',
+  'You have power over your mind, not outside events. — Marcus Aurelius',
+  'We suffer more often in imagination than in reality. — Seneca',
+  'Waste no more time arguing what a good person should be. Be one. — Marcus Aurelius',
+  'No one is free who is not master of themselves. — Epictetus',
+  'Every new beginning comes from some other beginning’s end. — Seneca',
+];
+
+type SitMsg =
+  | { role: 'user'; text: string }
+  | { role: 'master'; masterId: string; text: string; rec: { author: string; work: string; title: string } | null };
+
+type DebateLine = { who: 'a' | 'b'; speaker: string; text: string };
+
+export default function LibraryOfArete() {
+  const [room, setRoom] = useState<Room>('atrium');
+
+  // ---- reading ----
+  const [texts, setTexts] = useState<LibText[]>([]);
+  const [textsLoading, setTextsLoading] = useState(true);
+  const [pendingReview, setPendingReview] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [active, setActive] = useState<{ author: string; work: string; title: string } | null>(null);
+  const [reader, setReader] = useState<Reader | null>(null);
+  const [readerLoading, setReaderLoading] = useState(false);
+  const [related, setRelated] = useState<Related[]>([]);
+
+  // ---- symposium ----
+  const [symMode, setSymMode] = useState<'sit' | 'debate'>('sit');
+  const [symMaster, setSymMaster] = useState('corpus');
+  const [messages, setMessages] = useState<SitMsg[]>([]);
+  const [symInput, setSymInput] = useState('');
+  const [symThinking, setSymThinking] = useState(false);
+  const [remaining, setRemaining] = useState<number | null>(null);
+
+  const [debateInput, setDebateInput] = useState('');
+  const [debateQ, setDebateQ] = useState('');
+  const [debateNote, setDebateNote] = useState('');
+  const [debateLines, setDebateLines] = useState<DebateLine[]>([]);
+  const [debatePair, setDebatePair] = useState<{ a: string; b: string } | null>(null);
+  const [debateLoading, setDebateLoading] = useState(false);
+  const [debateRunning, setDebateRunning] = useState(false);
+  const debateTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  // ---- load the shelves once ----
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/library/texts');
+        const data = await res.json();
+        if (!cancelled) {
+          setTexts(data.texts || []);
+          setPendingReview(data.pendingReview || 0);
+        }
+      } catch {
+        /* shelves stay empty; UI shows a quiet notice */
+      } finally {
+        if (!cancelled) setTextsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Detect the admin so the synthesis shelf can surface the review queue.
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data }) => {
+      const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
+      if (!cancelled && data.user?.email && adminEmail && data.user.email === adminEmail) {
+        setIsAdmin(true);
+      }
+    }).catch(() => { /* not signed in — stays non-admin */ });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => () => { debateTimers.current.forEach(clearTimeout); }, []);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, symThinking]);
+
+  const go = (r: Room) => setRoom(r);
+
+  // ---- reading actions ----
+  const openWork = useCallback(async (author: string, work: string, title: string) => {
+    setRoom('reading');
+    setActive({ author, work, title });
+    setReader(null);
+    setRelated([]);
+    setReaderLoading(true);
+    try {
+      const [tRes, rRes] = await Promise.all([
+        fetch(`/api/library/text?author=${encodeURIComponent(author)}&work=${encodeURIComponent(work)}&page=0`),
+        fetch('/api/library/related', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ author, work }),
+        }),
+      ]);
+      const tData = await tRes.json();
+      if (tRes.ok) setReader(tData);
+      const rData = await rRes.json().catch(() => ({ related: [] }));
+      setRelated(rData.related || []);
+    } catch {
+      /* reader error handled by empty state */
+    } finally {
+      setReaderLoading(false);
+    }
+  }, []);
+
+  const gotoPage = useCallback(async (page: number) => {
+    if (!active) return;
+    setReaderLoading(true);
+    try {
+      const res = await fetch(`/api/library/text?author=${encodeURIComponent(active.author)}&work=${encodeURIComponent(active.work)}&page=${page}`);
+      const data = await res.json();
+      if (res.ok) {
+        setReader(data);
+        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } finally {
+      setReaderLoading(false);
+    }
+  }, [active]);
+
+  const closeText = () => { setActive(null); setReader(null); setRelated([]); };
+
+  // ---- symposium: sit ----
+  const sendSit = useCallback(async (raw: string) => {
+    const q = raw.trim();
+    if (!q || symThinking) return;
+    const master = masterById(symMaster);
+    const history = messages.slice(-6).map(m =>
+      m.role === 'user' ? { role: 'user', content: m.text } : { role: 'assistant', content: m.text });
+    setMessages(prev => [...prev, { role: 'user', text: q }]);
+    setSymInput('');
+    setSymThinking(true);
+    try {
+      const res = await fetch('/api/oracle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q, author: master.oracleAuthor, history }),
+      });
+      const data = await res.json();
+      if (res.status === 429) {
+        setMessages(prev => [...prev, { role: 'master', masterId: symMaster,
+          text: data.message || 'You have reached the free dialogues for today. Return tomorrow.', rec: null }]);
+        setRemaining(0);
+        return;
+      }
+      if (typeof data.remaining === 'number') setRemaining(data.remaining);
+      const src = (data.sources || [])[0];
+      const rec = src ? { author: src.author, work: src.work, title: src.work } : null;
+      setMessages(prev => [...prev, { role: 'master', masterId: symMaster, text: data.answer || 'The Oracle is silent.', rec }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'master', masterId: symMaster, text: 'The Oracle is unreachable. Please try again.', rec: null }]);
+    } finally {
+      setSymThinking(false);
+    }
+  }, [symMaster, messages, symThinking]);
+
+  // ---- symposium: debate ----
+  const runDebate = useCallback(async (question: string, a: string, b: string) => {
+    debateTimers.current.forEach(clearTimeout);
+    debateTimers.current = [];
+    setSymMode('debate');
+    setDebateRunning(true);
+    setDebateLoading(true);
+    setDebateQ(question);
+    setDebateNote('');
+    setDebateLines([]);
+    setDebatePair({ a, b });
+    try {
+      const res = await fetch('/api/library/debate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, a, b }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setDebateNote(data.error || 'The house could not convene.');
+        setDebateLoading(false);
+        return;
+      }
+      if (typeof data.remaining === 'number') setRemaining(data.remaining);
+      const lines: DebateLine[] = data.lines || [];
+      setDebateLoading(false);
+      // reveal one line at a time for the "watch them contend" effect
+      lines.forEach((ln, i) => {
+        const t = setTimeout(() => {
+          setDebateLines(prev => [...prev, ln]);
+          if (i === lines.length - 1) {
+            const nt = setTimeout(() => setDebateNote(data.note || ''), 700);
+            debateTimers.current.push(nt);
+          }
+        }, 400 + i * 1700);
+        debateTimers.current.push(t);
+      });
+    } catch {
+      setDebateNote('The house is silent. Please try again.');
+      setDebateLoading(false);
+    }
+  }, []);
+
+  const resetDebate = () => {
+    debateTimers.current.forEach(clearTimeout);
+    debateTimers.current = [];
+    setDebateRunning(false);
+    setDebateLines([]);
+    setDebateQ('');
+    setDebateNote('');
+    setDebatePair(null);
+  };
+
+  // ---- derived shelves ----
+  const stoicOrder = ['Marcus Aurelius', 'Epictetus', 'Seneca', 'Cleanthes', 'Cicero', 'Diogenes Laërtius', 'Arnold', 'Stock'];
+  const sortStoic = (a: LibText, b: LibText) => {
+    const ai = stoicOrder.indexOf(a.author), bi = stoicOrder.indexOf(b.author);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.title.localeCompare(b.title);
+  };
+  const stoicTexts = texts.filter(t => t.tradition === 'stoic').sort(sortStoic);
+  const widerTexts = texts.filter(t => t.tradition === 'wider').sort((a, b) => a.author.localeCompare(b.author));
+  const synthTexts = texts.filter(t => t.tradition === 'synthesis');
+
+  const activeMaster = masterById(symMaster);
+
+  return (
+    <div style={{ position: 'relative', width: '100%', minHeight: '100vh', overflow: 'hidden',
+      background: 'radial-gradient(ellipse 90% 55% at 50% -8%, rgba(201,168,76,0.09), transparent 60%), linear-gradient(180deg,#0a1020,#0b1124 45%,#070c1a)',
+      display: 'flex', flexDirection: 'column', height: '100vh' }}>
+
+      <style>{LIB_CSS}</style>
+
+      {/* ambient motes */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {MOTES.map((m, i) => (
+          <span key={i} style={{ position: 'absolute', left: m.l, top: m.t, width: m.s, height: m.s, borderRadius: '50%',
+            background: m.c, animation: `${m.a} ${m.d}s ease-in-out infinite ${m.delay}s` }} />
+        ))}
+      </div>
+
+      {/* TOPBAR */}
+      <header style={{ position: 'relative', zIndex: 5, flexShrink: 0, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', gap: 24, padding: '0 28px', height: 62,
+        borderBottom: '1px solid rgba(201,168,76,0.18)', background: 'rgba(8,13,28,0.6)', backdropFilter: 'blur(12px)' }}>
+        <button onClick={() => { closeText(); go('atrium'); }} className="lib-reset" style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: GOLD, animation: 'lib-flicker 4s ease-in-out infinite' }} />
+          <span style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600, letterSpacing: '0.32em', color: GOLD }}>ARETE</span>
+          <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: MUTED, letterSpacing: '0.04em' }}>· the Library</span>
+        </button>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {([['atrium', 'Atrium'], ['reading', 'Reading Room'], ['symposium', 'Symposium'], ['observatory', 'Observatory']] as [Room, string][]).map(([r, label]) => (
+            <button key={r} onClick={() => go(r)} className="lib-nav-btn" style={{ position: 'relative', cursor: 'pointer', padding: '8px 14px',
+              fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: room === r ? GOLD : TEXT }}>
+              {label}
+              {room === r && <span style={{ position: 'absolute', left: 14, right: 14, bottom: 1, height: 1, background: GOLD }} />}
+            </button>
+          ))}
+        </nav>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 2.6s ease-in-out infinite' }} />
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: MUTED, textTransform: 'uppercase' }}>The corpus is awake</span>
+        </div>
+      </header>
+
+      {/* ROOM STAGE */}
+      <div style={{ position: 'relative', zIndex: 2, flex: 1, minHeight: 0, overflow: 'hidden' }}>
+
+        {room === 'atrium' && <Atrium texts={texts} go={go} />}
+
+        {room === 'reading' && (
+          <ReadingRoom
+            stoicTexts={stoicTexts} widerTexts={widerTexts} synthTexts={synthTexts}
+            textsLoading={textsLoading} active={active} reader={reader} readerLoading={readerLoading}
+            related={related} openWork={openWork} gotoPage={gotoPage} closeText={closeText} goSymposium={() => go('symposium')}
+            isAdmin={isAdmin} pendingReview={pendingReview}
+          />
+        )}
+
+        {room === 'symposium' && (
+          <Symposium
+            symMode={symMode} setSymMode={setSymMode} symMaster={symMaster} setSymMaster={setSymMaster}
+            activeMaster={activeMaster} messages={messages} symInput={symInput} setSymInput={setSymInput}
+            symThinking={symThinking} remaining={remaining} sendSit={sendSit} openWork={openWork}
+            scrollRef={scrollRef}
+            debateInput={debateInput} setDebateInput={setDebateInput} debateQ={debateQ} debateNote={debateNote}
+            debateLines={debateLines} debatePair={debatePair} debateLoading={debateLoading} debateRunning={debateRunning}
+            runDebate={runDebate} resetDebate={resetDebate}
+          />
+        )}
+
+        {room === 'observatory' && <Observatory go={go} />}
+      </div>
+    </div>
+  );
+}
+
+/* ========================= ATRIUM ========================= */
+function Atrium({ texts, go }: { texts: LibText[]; go: (r: Room) => void }) {
+  const primaryCount = texts.filter(t => t.textType === 'primary').length;
+  const passageCount = texts.reduce((n, t) => n + t.passages, 0);
+  const doorways = [
+    { key: 'reading' as Room, glyph: '❧', name: 'The Reading Room', sub: 'Pull any text from the shelves and read it in full; let the corpus recommend the next.' },
+    { key: 'symposium' as Room, glyph: '⟡', name: 'The Symposium', sub: 'Sit with a master, or set two of them debating a question you pose.' },
+    { key: 'observatory' as Room, glyph: '✶', name: 'The Observatory', sub: 'A sky of ideas across the whole corpus — forthcoming.' },
+  ];
+  return (
+    <main style={{ height: '100%', overflowY: 'auto' }}>
+      <div className="lib-fade" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 30px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.32em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>The Library of Arete</div>
+          <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(38px,5vw,62px)', lineHeight: 1.03, letterSpacing: '-0.01em', color: IVORY, margin: '0 auto 18px', maxWidth: 760 }}>
+            A living library you can wander, read, and argue with.
+          </h1>
+          <p style={{ fontFamily: SERIF, fontSize: 21, fontStyle: 'italic', lineHeight: 1.55, color: MUTED, margin: '0 auto', maxWidth: 600 }}>
+            Stoic at its heart, open to the wider tradition. {primaryCount > 0
+              ? `${passageCount.toLocaleString()} passages across ${primaryCount} primary works — every one of them here to be read in full.`
+              : 'Every primary text here to be read in full.'}
+          </p>
+        </div>
+
+        <div style={{ marginTop: 40 }}>
+          <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: MUTED, marginBottom: 22 }}>— Wander the halls —</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+            {doorways.map(d => (
+              <button key={d.key} onClick={() => go(d.key)} className="lib-doorway" style={{ position: 'relative', display: 'flex', flexDirection: 'column',
+                alignItems: 'center', textAlign: 'center', background: 'linear-gradient(180deg,rgba(20,30,60,0.55),rgba(9,15,30,0.7))',
+                border: '1px solid rgba(201,168,76,0.2)', borderRadius: '120px 120px 16px 16px', padding: '40px 24px 28px', cursor: 'pointer', overflow: 'hidden' }}>
+                <span style={{ position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '60%', height: '60%',
+                  background: 'radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.14), transparent 70%)', pointerEvents: 'none' }} />
+                <span style={{ fontFamily: SERIF, fontSize: 34, color: GOLD, lineHeight: 1, marginBottom: 14, position: 'relative' }}>{d.glyph}</span>
+                <span style={{ fontFamily: SERIF, fontSize: 23, color: IVORY, position: 'relative' }}>{d.name}</span>
+                <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, color: MUTED, marginTop: 6, position: 'relative', maxWidth: 200, lineHeight: 1.4 }}>{d.sub}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* murmur band */}
+      <div style={{ position: 'relative', marginTop: 28, padding: '14px 0', borderTop: '1px solid rgba(201,168,76,0.16)', overflow: 'hidden', background: 'rgba(7,12,24,0.4)' }}>
+        <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.26em', textTransform: 'uppercase', color: MUTED, textAlign: 'center', marginBottom: 9, opacity: 0.7 }}>the corpus murmurs</div>
+        <div style={{ overflow: 'hidden', WebkitMaskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)', maskImage: 'linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)' }}>
+          <div style={{ display: 'flex', gap: 46, whiteSpace: 'nowrap', width: 'max-content', animation: 'lib-marquee 60s linear infinite' }}>
+            {[...MURMURS, ...MURMURS].map((m, i) => (
+              <span key={i} style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: TEXT, opacity: 0.6 }}>{m}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/* ========================= READING ROOM ========================= */
+function Shelf({ items, openWork }: { items: LibText[]; openWork: (a: string, w: string, t: string) => void }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(250px,1fr))', gap: 16, marginBottom: 42 }}>
+      {items.map(t => (
+        <button key={t.id} onClick={() => openWork(t.author, t.work, t.title)} className="lib-card" style={{ position: 'relative', textAlign: 'left',
+          background: 'linear-gradient(170deg,rgba(18,27,54,0.6),rgba(10,18,36,0.6))', border: '1px solid rgba(201,168,76,0.18)',
+          borderRadius: 14, padding: 0, overflow: 'hidden', cursor: 'pointer', display: 'flex', minHeight: 150 }}>
+          <span style={{ width: 7, flexShrink: 0, background: t.spine }} />
+          <span style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED, marginBottom: 9 }}>
+              {t.textType === 'synthesis' ? 'Synthesis' : 'Primary source'}
+            </span>
+            <span style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.12, color: IVORY, marginBottom: 5 }}>{t.title}</span>
+            <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: GOLD }}>{t.author}</span>
+            <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.06em', color: MUTED, marginTop: 'auto', paddingTop: 14 }}>
+              {t.era ? `${t.era} · ` : ''}{t.passages} passages
+            </span>
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ReadingRoom(props: {
+  stoicTexts: LibText[]; widerTexts: LibText[]; synthTexts: LibText[]; textsLoading: boolean;
+  active: { author: string; work: string; title: string } | null; reader: Reader | null; readerLoading: boolean;
+  related: Related[]; openWork: (a: string, w: string, t: string) => void; gotoPage: (n: number) => void;
+  closeText: () => void; goSymposium: () => void; isAdmin: boolean; pendingReview: number;
+}) {
+  const { stoicTexts, widerTexts, synthTexts, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview } = props;
+
+  if (active) {
+    const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
+    return (
+      <main style={{ height: '100%', overflowY: 'auto' }}>
+        <div className="lib-fade" style={{ maxWidth: 1140, margin: '0 auto', padding: '30px 32px 60px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 38, alignItems: 'start' }}>
+          <div>
+            <button onClick={closeText} className="lib-back" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED, marginBottom: 24 }}>← Back to the shelves</button>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 12 }}>
+              {reader?.era || (active.author)}
+            </div>
+            <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(34px,4.4vw,50px)', lineHeight: 1.04, color: IVORY, margin: '0 0 8px' }}>{active.title}</h1>
+            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: GOLD, marginBottom: 6 }}>{active.author}</div>
+            {reader?.translator && <div style={{ fontFamily: MONO, fontSize: 9, color: MUTED, marginBottom: 24, letterSpacing: '0.06em' }}>trans. {reader.translator}</div>}
+
+            <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: 30 }}>
+              {readerLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Pulling the text from the shelf…</p>}
+              {!readerLoading && reader && paras.map((p, i) => (
+                <p key={i} style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1.72, color: i === 0 ? IVORY : TEXT, opacity: i === 0 ? 1 : 0.9, margin: '0 0 20px' }}>{p}</p>
+              ))}
+              {!readerLoading && !reader && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>This text could not be opened just now.</p>}
+            </div>
+
+            {reader && reader.totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 34, paddingTop: 20, borderTop: '1px solid rgba(201,168,76,0.16)' }}>
+                <button disabled={reader.page <= 0 || readerLoading} onClick={() => gotoPage(reader.page - 1)} className="lib-page-btn"
+                  style={{ cursor: reader.page <= 0 ? 'default' : 'pointer', opacity: reader.page <= 0 ? 0.3 : 1, fontFamily: MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, border: '1px solid rgba(201,168,76,0.3)', borderRadius: 10, padding: '9px 16px', background: 'rgba(201,168,76,0.06)' }}>← Previous</button>
+                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED }}>Folio {reader.page + 1} of {reader.totalPages}</span>
+                <button disabled={reader.page >= reader.totalPages - 1 || readerLoading} onClick={() => gotoPage(reader.page + 1)} className="lib-page-btn"
+                  style={{ cursor: reader.page >= reader.totalPages - 1 ? 'default' : 'pointer', opacity: reader.page >= reader.totalPages - 1 ? 0.3 : 1, fontFamily: MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, border: '1px solid rgba(201,168,76,0.3)', borderRadius: 10, padding: '9px 16px', background: 'rgba(201,168,76,0.06)' }}>Next →</button>
+              </div>
+            )}
+            {reader?.sourceUrl && (
+              <a href={reader.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 20, fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED, textDecoration: 'underline' }}>source edition →</a>
+            )}
+          </div>
+
+          <aside style={{ position: 'sticky', top: 0, background: 'linear-gradient(180deg,rgba(18,27,54,0.5),rgba(10,18,36,0.5))', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 16, padding: '24px 22px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 3s ease-in-out infinite' }} />
+              <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Reads itself alongside</span>
+            </div>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED, margin: '0 0 18px', lineHeight: 1.4 }}>Because you opened this, the corpus surfaces these.</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {related.length === 0 && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED }}>Listening for echoes…</p>}
+              {related.map(r => (
+                <button key={r.id} onClick={() => openWork(r.author, r.work, r.title)} className="lib-related" style={{ textAlign: 'left', background: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 11, padding: '13px 15px', cursor: 'pointer' }}>
+                  <div style={{ fontFamily: SERIF, fontSize: 17, color: IVORY, lineHeight: 1.15, marginBottom: 3 }}>{r.title}</div>
+                  <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, color: GOLD }}>{r.author}</div>
+                  <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.06em', color: MUTED, marginTop: 6 }}>{r.reason}</div>
+                </button>
+              ))}
+            </div>
+            <button onClick={goSymposium} className="lib-discuss" style={{ width: '100%', marginTop: 18, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 11, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Discuss this in the Symposium →</button>
+          </aside>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main style={{ height: '100%', overflowY: 'auto' }}>
+      <div className="lib-fade" style={{ maxWidth: 1120, margin: '0 auto', padding: '44px 32px 60px' }}>
+        <div style={{ marginBottom: 34 }}>
+          <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 10 }}>The Reading Room</div>
+          <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(32px,4vw,46px)', color: IVORY, margin: '0 0 10px' }}>Pull a text from the shelves</h1>
+          <p style={{ fontFamily: SERIF, fontSize: 19, fontStyle: 'italic', color: MUTED, margin: 0, maxWidth: 600 }}>Every primary source is here in full — the Stoics first, and the wider tradition beside them.</p>
+        </div>
+
+        {textsLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Opening the doors…</p>}
+
+        {stoicTexts.length > 0 && (
+          <>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD, margin: '0 0 16px' }}>The Stoic shelf</div>
+            <Shelf items={stoicTexts} openWork={openWork} />
+          </>
+        )}
+
+        {widerTexts.length > 0 && (
+          <>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD, margin: '0 0 7px' }}>The wider tradition</div>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: MUTED, margin: '0 0 16px', maxWidth: 600 }}>The Stoa did not think alone. These voices — from Confucius to Montaigne — are here in full to read and discuss.</p>
+            <Shelf items={widerTexts} openWork={openWork} />
+          </>
+        )}
+
+        {(synthTexts.length > 0 || (isAdmin && pendingReview > 0)) && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, margin: '0 0 7px' }}>
+              <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD }}>The corpus thinking about itself</div>
+              {isAdmin && pendingReview > 0 && (
+                <a href="/admin/synthesis" style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '5px 13px', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  {pendingReview} awaiting your review →
+                </a>
+              )}
+            </div>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: MUTED, margin: '0 0 16px', maxWidth: 600 }}>Synthesis documents the corpus wrote about its own sources — cross-thinker analyses no single text contains.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(310px,1fr))', gap: 16 }}>
+              {synthTexts.map(t => (
+                <button key={t.id} onClick={() => openWork(t.author, t.work, t.title)} className="lib-card" style={{ position: 'relative', textAlign: 'left', background: 'linear-gradient(170deg,rgba(28,24,52,0.5),rgba(12,16,34,0.6))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 14, padding: '22px 24px', cursor: 'pointer' }}>
+                  <span style={{ display: 'inline-block', fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, border: '1px solid rgba(201,168,76,0.3)', borderRadius: 999, padding: '3px 9px', marginBottom: 13 }}>Synthesis</span>
+                  <div style={{ fontFamily: SERIF, fontSize: 21, lineHeight: 1.16, color: IVORY, marginBottom: 9 }}>{t.title}</div>
+                  <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.5, color: TEXT, opacity: 0.78 }}>{t.excerpt}</div>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </main>
+  );
+}
+
+/* ========================= SYMPOSIUM ========================= */
+function Symposium(props: {
+  symMode: 'sit' | 'debate'; setSymMode: (m: 'sit' | 'debate') => void; symMaster: string; setSymMaster: (id: string) => void;
+  activeMaster: Master; messages: SitMsg[]; symInput: string; setSymInput: (s: string) => void; symThinking: boolean;
+  remaining: number | null; sendSit: (s: string) => void; openWork: (a: string, w: string, t: string) => void;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  debateInput: string; setDebateInput: (s: string) => void; debateQ: string; debateNote: string; debateLines: DebateLine[];
+  debatePair: { a: string; b: string } | null; debateLoading: boolean; debateRunning: boolean;
+  runDebate: (q: string, a: string, b: string) => void; resetDebate: () => void;
+}) {
+  const { symMode, setSymMode, symMaster, setSymMaster, activeMaster, messages, symInput, setSymInput, symThinking,
+    remaining, sendSit, openWork, scrollRef, debateInput, setDebateInput, debateQ, debateNote, debateLines,
+    debatePair, debateLoading, debateRunning, runDebate, resetDebate } = props;
+
+  return (
+    <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
+      {/* masters rail */}
+      <aside style={{ width: 236, flexShrink: 0, borderRight: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.7),rgba(8,14,30,0.7))', padding: '22px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.26em', textTransform: 'uppercase', color: GOLD, marginBottom: 3 }}>Take a seat with</div>
+        <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: MUTED, marginBottom: 16 }}>Pull up a chair across the table</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          {MASTERS.map(m => (
+            <button key={m.id} onClick={() => setSymMaster(m.id)} className="lib-master" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 11,
+              border: `1px solid ${symMaster === m.id ? GOLD : 'transparent'}`, background: symMaster === m.id ? 'rgba(201,168,76,0.1)' : 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+              <span style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: m.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 16, color: m.textColor }}>{m.initial}</span>
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontFamily: SERIF, fontSize: 16, color: IVORY, lineHeight: 1.15 }}>{m.name}</span>
+                <span style={{ display: 'block', fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.06em', color: MUTED, marginTop: 2 }}>{m.voice}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+        <div style={{ height: 1, background: 'rgba(201,168,76,0.16)', margin: '18px 0' }} />
+        <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED, lineHeight: 1.7, textAlign: 'center' }}>
+          {remaining === null ? '15 free dialogues a day' : `${remaining} of 15 free dialogues remaining today`}
+        </div>
+      </aside>
+
+      {/* conversation column */}
+      <section style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
+        <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 28px', borderBottom: '1px solid rgba(201,168,76,0.14)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+            <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: activeMaster.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 15, color: activeMaster.textColor }}>{activeMaster.initial}</span>
+            <span style={{ fontFamily: SERIF, fontSize: 19, color: IVORY }}>{activeMaster.name}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 4, background: 'rgba(8,14,30,0.6)', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 999, padding: 3 }}>
+            <button onClick={() => setSymMode('sit')} style={{ background: symMode === 'sit' ? GOLD : 'transparent', border: 'none', borderRadius: 999, padding: '7px 16px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: symMode === 'sit' ? '#0a1020' : MUTED }}>Sit &amp; converse</button>
+            <button onClick={() => setSymMode('debate')} style={{ background: symMode === 'debate' ? GOLD : 'transparent', border: 'none', borderRadius: 999, padding: '7px 16px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: symMode === 'debate' ? '#0a1020' : MUTED }}>Stage a debate</button>
+          </div>
+        </div>
+
+        {symMode === 'sit' && (
+          <>
+            <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+              <div style={{ maxWidth: 680, margin: '0 auto', padding: '26px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {messages.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '36px 10px 6px' }}>
+                    <span style={{ display: 'inline-flex', width: 70, height: 70, borderRadius: '50%', background: activeMaster.accent, alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 32, color: activeMaster.textColor, marginBottom: 18 }}>{activeMaster.initial}</span>
+                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 22, lineHeight: 1.5, color: IVORY, margin: '0 auto 26px', maxWidth: 480 }}>{activeMaster.greeting}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, maxWidth: 480, margin: '0 auto' }}>
+                      {SUGGESTED.map(q => (
+                        <button key={q} onClick={() => sendSit(q)} className="lib-suggest" style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 12, padding: '12px 16px', fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: TEXT, cursor: 'pointer', textAlign: 'left' }}>{q}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {messages.map((m, i) => m.role === 'user' ? (
+                  <div key={i} style={{ alignSelf: 'flex-end', maxWidth: '80%', background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.22)', borderRadius: '18px 18px 4px 18px', padding: '11px 16px', fontFamily: SANS, fontSize: 15, lineHeight: 1.55, color: IVORY }}>{m.text}</div>
+                ) : (
+                  <div key={i} style={{ alignSelf: 'flex-start', maxWidth: '92%' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+                      <span style={{ width: 20, height: 20, borderRadius: '50%', background: masterById(m.masterId).accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 10, color: masterById(m.masterId).textColor }}>{masterById(m.masterId).initial}</span>
+                      <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>{masterById(m.masterId).name}</span>
+                    </div>
+                    <div style={{ background: 'linear-gradient(160deg,rgba(16,24,48,0.78),rgba(10,16,32,0.78))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '4px 18px 18px 18px', padding: '14px 18px', fontFamily: SERIF, fontSize: 18.5, lineHeight: 1.6, color: IVORY, whiteSpace: 'pre-wrap' }}>{m.text}</div>
+                    {m.rec && (
+                      <button onClick={() => openWork(m.rec!.author, m.rec!.work, m.rec!.title)} className="lib-readnext" style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8, background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.22)', borderRadius: 11, padding: '10px 14px', cursor: 'pointer', textAlign: 'left' }}>
+                        <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD, whiteSpace: 'nowrap' }}>Read next →</span>
+                        <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: TEXT }}>{m.rec.author} · {m.rec.title}</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {symThinking && (
+                  <div style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: 5, background: 'linear-gradient(160deg,rgba(16,24,48,0.78),rgba(10,16,32,0.78))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '4px 18px 18px 18px', padding: '13px 18px' }}>
+                    {[0, 0.2, 0.4].map((d, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: `lib-dots 1.4s ease-in-out infinite ${d}s` }} />)}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={{ flexShrink: 0, padding: '12px 24px 16px', borderTop: '1px solid rgba(201,168,76,0.16)', background: 'rgba(8,14,30,0.7)' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: 680, margin: '0 auto', background: 'rgba(16,24,48,0.8)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 16, padding: '8px 8px 8px 16px' }}>
+                <input value={symInput} onChange={e => setSymInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSit(symInput); } }}
+                  placeholder={`Speak with ${activeMaster.name}…`} style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 15, color: IVORY, padding: '6px 0' }} />
+                <button onClick={() => sendSit(symInput)} className="lib-sendbtn" style={{ width: 34, height: 34, borderRadius: 10, border: 'none', background: GOLD, color: '#0a1020', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                </button>
+              </div>
+              <div style={{ maxWidth: 680, margin: '7px auto 0', fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', color: MUTED, textAlign: 'center' }}>Grounded in the corpus · every reply cites its sources · the named master colors the voice</div>
+            </div>
+          </>
+        )}
+
+        {symMode === 'debate' && (
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
+            <div style={{ maxWidth: 720, margin: '0 auto', padding: '26px 24px' }}>
+              {!debateRunning && (
+                <div style={{ textAlign: 'center', padding: '22px 6px' }}>
+                  <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.24em', textTransform: 'uppercase', color: GOLD, marginBottom: 12 }}>Pose a question — watch the corpus argue with itself</div>
+                  <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 21, lineHeight: 1.5, color: IVORY, margin: '0 auto 28px', maxWidth: 500 }}>Two minds from the tradition take opposite chairs and contend in real time. The corpus never resolves the tension — it shows you where the fault line runs.</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11, maxWidth: 540, margin: '0 auto' }}>
+                    {DEBATE_QS.map(q => (
+                      <button key={q.text} onClick={() => runDebate(q.text, q.a, q.b)} className="lib-debate-q" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 13, padding: '15px 18px', cursor: 'pointer', textAlign: 'left' }}>
+                        <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: IVORY }}>{q.text}</span>
+                        <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: GOLD, whiteSpace: 'nowrap' }}>{q.pair}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: 540, margin: '20px auto 0', background: 'rgba(16,24,48,0.8)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 14, padding: '8px 8px 8px 16px' }}>
+                    <input value={debateInput} onChange={e => setDebateInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && debateInput.trim()) { e.preventDefault(); runDebate(debateInput.trim(), 'seneca', 'epictetus'); } }}
+                      placeholder="…or pose your own question to the house" style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 14, color: IVORY, padding: '6px 0' }} />
+                    <button onClick={() => { if (debateInput.trim()) runDebate(debateInput.trim(), 'seneca', 'epictetus'); }} style={{ border: 'none', background: GOLD, color: '#0a1020', borderRadius: 9, padding: '8px 14px', cursor: 'pointer', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Convene</button>
+                  </div>
+                  <div style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.08em', color: MUTED, marginTop: 10, opacity: 0.7 }}>Custom questions are argued by Seneca and Epictetus.</div>
+                </div>
+              )}
+
+              {debateRunning && (
+                <>
+                  <div style={{ marginBottom: 18 }}>
+                    <button onClick={resetDebate} className="lib-back" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 14 }}>← New question</button>
+                    <div style={{ textAlign: 'center', padding: '6px 0 18px', borderBottom: '1px solid rgba(201,168,76,0.14)' }}>
+                      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: MUTED, marginBottom: 8 }}>The question before the house</div>
+                      <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 24, color: IVORY }}>{debateQ}</div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {debateLines.map((ln, i) => {
+                      const left = debatePair ? ln.who === 'a' : true;
+                      return (
+                        <div key={i} style={{ alignSelf: left ? 'flex-start' : 'flex-end', maxWidth: '80%', animation: 'lib-fade-in 0.5s ease both' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5, flexDirection: left ? 'row' : 'row-reverse' }}>
+                            <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>{ln.speaker}</span>
+                          </div>
+                          <div style={{ background: left ? 'linear-gradient(160deg,rgba(16,24,48,0.8),rgba(10,16,32,0.8))' : 'linear-gradient(160deg,rgba(28,22,46,0.8),rgba(14,12,30,0.8))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: left ? '4px 18px 18px 18px' : '18px 4px 18px 18px', padding: '15px 19px', fontFamily: SERIF, fontSize: 18.5, lineHeight: 1.6, color: IVORY }}>{ln.text}</div>
+                        </div>
+                      );
+                    })}
+                    {(debateLoading || (debateRunning && !debateNote && debateLines.length > 0 && debateLines.length < 6)) && (
+                      <div style={{ alignSelf: 'center', display: 'flex', alignItems: 'center', gap: 5, padding: '8px 0' }}>
+                        {[0, 0.2, 0.4].map((d, i) => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: `lib-dots 1.4s ease-in-out infinite ${d}s` }} />)}
+                      </div>
+                    )}
+                  </div>
+                  {debateNote && (
+                    <div style={{ marginTop: 26, background: 'linear-gradient(160deg,rgba(28,24,52,0.5),rgba(12,16,34,0.6))', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 14, padding: '20px 22px' }}>
+                      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 9 }}>The corpus does not resolve this</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.55, color: TEXT, opacity: 0.88, margin: 0 }}>{debateNote}</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}
+
+/* ========================= OBSERVATORY (Phase 2) ========================= */
+function Observatory({ go }: { go: (r: Room) => void }) {
+  return (
+    <main style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+      <div className="lib-fade" style={{ textAlign: 'center', maxWidth: 520 }}>
+        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>The Observatory</div>
+        <div style={{ fontSize: 40, color: GOLD, marginBottom: 18, animation: 'lib-star-pulse 4s ease-in-out infinite' }}>✶</div>
+        <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(28px,4vw,42px)', lineHeight: 1.08, color: IVORY, margin: '0 0 14px' }}>The sky is still being charted</h1>
+        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 19, lineHeight: 1.5, color: MUTED, margin: '0 auto 28px', maxWidth: 440 }}>
+          A constellation of concepts across the whole corpus — where thinkers answer one another — is being mapped as the agents finish their significance pass. For now, the texts and the table are open.
+        </p>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+          <button onClick={() => go('reading')} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: '11px 18px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Enter the Reading Room →</button>
+          <button onClick={() => go('symposium')} className="lib-discuss" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: '11px 18px', cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Visit the Symposium →</button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/* ========================= ambient motes + CSS ========================= */
+const MOTES = [
+  { l: '12%', t: '22%', s: 2, c: 'rgba(244,234,213,0.5)', a: 'lib-drift-a', d: 22, delay: 0 },
+  { l: '28%', t: '64%', s: 3, c: 'rgba(201,168,76,0.45)', a: 'lib-drift-b', d: 28, delay: 0 },
+  { l: '44%', t: '18%', s: 2, c: 'rgba(244,234,213,0.35)', a: 'lib-drift-c', d: 25, delay: 0 },
+  { l: '62%', t: '74%', s: 2, c: 'rgba(244,234,213,0.4)', a: 'lib-drift-a', d: 30, delay: 2 },
+  { l: '78%', t: '30%', s: 3, c: 'rgba(201,168,76,0.4)', a: 'lib-drift-b', d: 24, delay: 1 },
+  { l: '88%', t: '58%', s: 2, c: 'rgba(244,234,213,0.3)', a: 'lib-drift-c', d: 27, delay: 3 },
+  { l: '18%', t: '84%', s: 2, c: 'rgba(201,168,76,0.4)', a: 'lib-drift-a', d: 26, delay: 4 },
+  { l: '54%', t: '46%', s: 2, c: 'rgba(244,234,213,0.35)', a: 'lib-drift-b', d: 32, delay: 2 },
+  { l: '70%', t: '12%', s: 2, c: 'rgba(244,234,213,0.3)', a: 'lib-drift-a', d: 31, delay: 3 },
+];
+
+const LIB_CSS = `
+@keyframes lib-drift-a { 0%{transform:translate(0,0)} 50%{transform:translate(26px,-34px)} 100%{transform:translate(0,0)} }
+@keyframes lib-drift-b { 0%{transform:translate(0,0)} 50%{transform:translate(-30px,-20px)} 100%{transform:translate(0,0)} }
+@keyframes lib-drift-c { 0%{transform:translate(0,0)} 50%{transform:translate(18px,28px)} 100%{transform:translate(0,0)} }
+@keyframes lib-flicker { 0%,100%{opacity:1;box-shadow:0 0 14px 1px rgba(201,168,76,0.7)} 45%{opacity:0.78} 70%{opacity:1;box-shadow:0 0 18px 2px rgba(201,168,76,0.85)} }
+@keyframes lib-marquee { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+@keyframes lib-pulse-dot { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(201,168,76,0.5)} 50%{opacity:0.55;box-shadow:0 0 0 5px rgba(201,168,76,0)} }
+@keyframes lib-star-pulse { 0%,100%{opacity:0.55;transform:scale(1)} 50%{opacity:1;transform:scale(1.18)} }
+@keyframes lib-fade-in { 0%{transform:translateY(10px) scale(0.98);opacity:0} 100%{transform:translateY(0) scale(1);opacity:1} }
+@keyframes lib-dots { 0%,60%,100%{opacity:0.2;transform:scale(0.8)} 30%{opacity:1;transform:scale(1)} }
+@keyframes lib-surface { 0%{transform:translateY(14px);opacity:0} 100%{transform:translateY(0);opacity:1} }
+.lib-fade > * { animation: lib-surface 0.6s cubic-bezier(.2,.8,.2,1) both; }
+button { background: none; border: none; font: inherit; }
+.lib-nav-btn:hover { color: #c9a84c !important; }
+.lib-doorway:hover { border-color: #c9a84c !important; transform: translateY(-4px); transition: border-color .35s, transform .35s; }
+.lib-card { transition: border-color .3s, transform .3s; }
+.lib-card:hover { border-color: #c9a84c !important; transform: translateY(-3px); }
+.lib-master:hover { border-color: rgba(201,168,76,0.4) !important; }
+.lib-related:hover, .lib-readnext:hover { border-color: #c9a84c !important; background: rgba(201,168,76,0.1) !important; }
+.lib-suggest:hover { background: rgba(201,168,76,0.13) !important; border-color: rgba(201,168,76,0.5) !important; color: #f4ead5 !important; }
+.lib-debate-q:hover { background: rgba(201,168,76,0.12) !important; border-color: rgba(201,168,76,0.5) !important; }
+.lib-discuss:hover { background: rgba(201,168,76,0.18) !important; }
+.lib-back:hover { color: #c9a84c !important; }
+.lib-sendbtn:hover { background: #e3c77a !important; }
+.lib-page-btn:hover:not(:disabled) { background: rgba(201,168,76,0.16) !important; }
+.lib-reset:hover span:nth-child(3) { color: #c9a84c; }
+`;

@@ -14,6 +14,8 @@ const OpenAI = require('openai');
 const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
+const libraryHelpers = require('./library');
+const { runDispatchGeneration } = require('./dispatch-generation-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -2799,6 +2801,303 @@ ${contextBlock}
   } catch (err) {
     console.error('/oracle error:', err);
     return res.status(500).json({ error: 'The Oracle is silent. Please try again.' });
+  }
+});
+
+// POST /api/admin/dispatch/generate — run the dispatch generation agent on
+// demand (admin only). Lets an admin produce today's dispatch without waiting
+// for the 10:00 UTC cron. Idempotent: the agent no-ops if today's already
+// exists. Generation only — does NOT send pushes (that's the delivery job).
+app.post('/api/admin/dispatch/generate', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+
+    // Pre-flight: runDispatchGeneration() calls process.exit(1) if these are
+    // unset. Guard here so a misconfiguration returns 500 instead of killing
+    // the always-on web server.
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for dispatch generation' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const { data: before } = await supabase
+      .from('daily_dispatches')
+      .select('id')
+      .eq('dispatch_date', today)
+      .maybeSingle();
+
+    await runDispatchGeneration();
+
+    const { data: dispatch } = await supabase
+      .from('daily_dispatches')
+      .select('id, dispatch_date, title, teaser, total_recipients')
+      .eq('dispatch_date', today)
+      .maybeSingle();
+
+    return res.json({
+      ok: true,
+      alreadyExisted: !!before,
+      generated: !before && !!dispatch,
+      dispatch: dispatch || null,
+    });
+  } catch (err) {
+    console.error('[/api/admin/dispatch/generate] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Generation failed' });
+  }
+});
+
+// ===========================================================================
+// THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
+// Stoic-focused, but every primary text is viewable, readable, and discussable.
+// All endpoints are public (no auth); the discuss/debate routes share the
+// Oracle's 15/day IP rate limit.
+// ===========================================================================
+
+// GET /api/library/texts — the shelves: one entry per work, Stoic-flagged.
+app.get('/api/library/texts', async (req, res) => {
+  try {
+    const { data, error } = await supabase.rpc('library_shelf');
+    if (error) throw error;
+    const texts = (data || []).map(r => ({
+      id: `${r.author}::${r.work}`,
+      author: r.author,
+      work: r.work,
+      title: libraryHelpers.workTitle(r.work),
+      era: libraryHelpers.era(r.author, r.work),
+      textType: r.text_type,                                  // 'primary' | 'synthesis'
+      tradition: libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
+      passages: Number(r.chunk_count) || 0,
+      translator: r.translator || null,
+      sourceUrl: r.source_url || null,
+      spine: libraryHelpers.spine(r.author),
+      excerpt: (r.excerpt || '').trim().replace(/\s+/g, ' ').slice(0, 280),
+    }));
+
+    // Count of syntheses awaiting admin review (not yet ingested, so not on a
+    // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.
+    const { count: pendingReview } = await supabase
+      .from('synthesis_documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending_review');
+
+    return res.json({ texts, pendingReview: pendingReview || 0 });
+  } catch (err) {
+    console.error('[/api/library/texts] error:', err.message);
+    return res.status(500).json({ error: 'Failed to load the shelves' });
+  }
+});
+
+// GET /api/library/text?author=&work=&page= — full readable text, paginated by
+// chunk range and stripped of Project Gutenberg front/back matter.
+const LIBRARY_PAGE_CHUNKS = 30;
+app.get('/api/library/text', async (req, res) => {
+  try {
+    const author = (req.query.author || '').toString();
+    const work = (req.query.work || '').toString();
+    const page = Math.max(0, parseInt(req.query.page || '0', 10) || 0);
+    if (!author || !work) {
+      return res.status(400).json({ error: 'author and work are required' });
+    }
+
+    const { count, error: cErr } = await supabase
+      .from('rag_corpus')
+      .select('id', { count: 'exact', head: true })
+      .eq('author', author)
+      .eq('work', work);
+    if (cErr) throw cErr;
+
+    const total = count || 0;
+    if (total === 0) return res.status(404).json({ error: 'Text not found' });
+    const totalPages = Math.max(1, Math.ceil(total / LIBRARY_PAGE_CHUNKS));
+    const from = page * LIBRARY_PAGE_CHUNKS;
+    const to = from + LIBRARY_PAGE_CHUNKS - 1;
+
+    const { data, error } = await supabase
+      .from('rag_corpus')
+      .select('chunk_index, chunk_text, section_label, translator, source_url, text_type')
+      .eq('author', author)
+      .eq('work', work)
+      .order('chunk_index', { ascending: true })
+      .range(from, to);
+    if (error) throw error;
+    if (!data || data.length === 0) return res.status(404).json({ error: 'Page not found' });
+
+    const body = libraryHelpers.stripGutenberg(
+      data.map(c => (c.chunk_text || '').trim()).filter(Boolean).join('\n\n')
+    );
+
+    return res.json({
+      author,
+      work,
+      title: libraryHelpers.workTitle(work),
+      era: libraryHelpers.era(author, work),
+      tradition: libraryHelpers.tradition(author, data[0].text_type),
+      translator: data[0].translator || null,
+      sourceUrl: data[0].source_url || null,
+      page,
+      totalPages,
+      totalPassages: total,
+      body,
+    });
+  } catch (err) {
+    console.error('[/api/library/text] error:', err.message);
+    return res.status(500).json({ error: 'Failed to open the text' });
+  }
+});
+
+// POST /api/library/related — "reads itself alongside": semantic neighbors of
+// an open text, drawn from a representative passage. Non-critical: failures
+// return an empty list rather than erroring the reader.
+app.post('/api/library/related', async (req, res) => {
+  try {
+    const { author, work } = req.body || {};
+    if (!author || !work) return res.status(400).json({ error: 'author and work are required' });
+
+    const { data: seed } = await supabase
+      .from('rag_corpus')
+      .select('chunk_text')
+      .eq('author', author)
+      .eq('work', work)
+      .order('chunk_index', { ascending: true })
+      .range(0, 60);
+
+    const candidates = (seed || [])
+      .filter(c => c.chunk_text && c.chunk_text.length > 200 && !/project gutenberg/i.test(c.chunk_text));
+    const passage = (candidates[candidates.length - 1]?.chunk_text)
+      || (seed && seed[0]?.chunk_text)
+      || work;
+
+    const chunks = await getStoicContext(passage.slice(0, 800), 14, null);
+    const seen = new Set([`${author}||${work}`]);
+    const related = [];
+    for (const c of chunks || []) {
+      const key = `${c.author}||${c.work}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      related.push({
+        id: `${c.author}::${c.work}`,
+        author: c.author,
+        work: c.work,
+        title: libraryHelpers.workTitle(c.work),
+        reason: 'shares a thread with this text',
+      });
+      if (related.length >= 4) break;
+    }
+    return res.json({ related });
+  } catch (err) {
+    console.error('[/api/library/related] error:', err.message);
+    return res.json({ related: [] });
+  }
+});
+
+// POST /api/library/debate — stage a debate: two thinkers contend on a question,
+// each grounded in their own author's passages. The corpus surfaces the tension
+// and refuses to resolve it. Returns the full exchange; the client reveals it
+// turn by turn. Shares the Oracle's IP rate limit.
+const DEBATE_MASTERS = {
+  socrates:  { name: 'Socrates',          ground: 'Xenophon' },
+  zeno:      { name: 'Zeno of Citium',    ground: 'Diogenes Laërtius' },
+  epictetus: { name: 'Epictetus',         ground: 'Epictetus' },
+  marcus:    { name: 'Marcus Aurelius',   ground: 'Marcus Aurelius' },
+  seneca:    { name: 'Seneca',            ground: 'Seneca' },
+};
+
+app.post('/api/library/debate', async (req, res) => {
+  try {
+    if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
+
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = rawIp.split(',')[0].trim();
+    const { data: limitData, error: limitError } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: ip });
+    if (!limitError && limitData > 15) {
+      return res.status(429).json({ error: 'Daily limit reached', remaining: 0 });
+    }
+    const remaining = Math.max(0, 15 - (limitData || 1));
+
+    const { question, a = 'seneca', b = 'epictetus' } = req.body || {};
+    if (!question || typeof question !== 'string' || !question.trim()) {
+      return res.status(400).json({ error: 'question is required' });
+    }
+    if (question.length > 500) {
+      return res.status(400).json({ error: 'question must be 500 characters or fewer' });
+    }
+    const A = DEBATE_MASTERS[a] || DEBATE_MASTERS.seneca;
+    const B = DEBATE_MASTERS[b] || DEBATE_MASTERS.epictetus;
+
+    const [ca, cb] = await Promise.all([
+      getStoicContext(question.trim(), 4, A.ground).catch(() => []),
+      getStoicContext(question.trim(), 4, B.ground).catch(() => []),
+    ]);
+    const ctxBlock = (chunks) =>
+      (chunks || []).map(c => `[${c.author} — ${c.work}]\n${c.chunk_text}`).join('\n\n---\n\n') || '(no passages retrieved)';
+
+    const system = `You are staging a philosophical debate in the house of Arete between ${A.name} and ${B.name}, on a question put to them.
+
+Rules:
+- Produce EXACTLY 6 turns, strictly alternating, beginning with ${A.name} (who="a"), then ${B.name} (who="b"), and so on.
+- Each speaker argues in their own historical voice and temperament, grounded in the passages provided for them below. Reference ideas naturally; do not quote at length.
+- This is a genuine fault line in the tradition. DO NOT resolve it or force agreement. The final turn and the note should leave the tension standing.
+- Keep each turn to 2–4 sentences.
+- Respond with ONLY valid JSON, no markdown fences, in exactly this shape:
+{"lines":[{"who":"a","text":"..."},{"who":"b","text":"..."}],"note":"one sentence naming the tension the corpus leaves open"}
+
+[${A.name} — grounding passages]
+${ctxBlock(ca)}
+
+[${B.name} — grounding passages]
+${ctxBlock(cb)}`;
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1100,
+        system,
+        messages: [{ role: 'user', content: `The question before the house: ${question.trim()}` }],
+      }),
+    });
+    if (!claudeRes.ok) {
+      const t = await claudeRes.text();
+      console.error('[/api/library/debate] Claude error:', claudeRes.status, t);
+      return res.status(502).json({ error: 'The house is silent. Please try again.' });
+    }
+    const claudeData = await claudeRes.json();
+    let raw = claudeData.content?.[0]?.text || '';
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      parsed = m ? JSON.parse(m[0]) : { lines: [], note: '' };
+    }
+
+    const lines = (parsed.lines || []).slice(0, 8).map(ln => ({
+      who: ln.who === 'b' ? 'b' : 'a',
+      speaker: ln.who === 'b' ? B.name : A.name,
+      text: String(ln.text || '').trim(),
+    })).filter(ln => ln.text);
+
+    return res.json({
+      q: question.trim(),
+      a, b,
+      aName: A.name,
+      bName: B.name,
+      lines,
+      note: String(parsed.note || '').trim(),
+      remaining,
+    });
+  } catch (err) {
+    console.error('[/api/library/debate] error:', err.message);
+    return res.status(500).json({ error: 'The house could not convene. Please try again.' });
   }
 });
 
