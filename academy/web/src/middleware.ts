@@ -4,12 +4,18 @@ import type { NextRequest } from 'next/server'
 
 // /api/cron/post-due authenticates itself with CRON_SECRET (called by Railway,
 // no user session), so it must bypass the session-redirect middleware.
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/api/linkedin-callback', '/api/cron/post-due']
+//
+// The Library of Arete is a public surface: the immersive page, its data
+// proxies (/api/library/*), and the Oracle are reachable without a session.
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
+const PUBLIC_PREFIXES = ['/api/library/']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  if (PUBLIC_ROUTES.includes(pathname)) return NextResponse.next()
+  if (PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
+    return NextResponse.next()
+  }
 
   const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY

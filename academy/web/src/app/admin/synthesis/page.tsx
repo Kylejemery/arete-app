@@ -161,6 +161,23 @@ export default function SynthesisPage() {
     setBusy(null)
   }
 
+  async function deingest(doc: SynthDoc) {
+    if (!window.confirm(
+      `Remove “${doc.title}” from the corpus?\n\nIts chunks are deleted and it returns to the review queue as “edited”, where you can revise and re-ingest it (replace) or reject it (remove for good). The Library and Observatory drop it immediately; nothing else breaks.`
+    )) return
+    setBusy(doc.id)
+    try {
+      const res = await fetch(`/api/admin/synthesis/${doc.id}/deingest`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to remove')
+      showToast(`Removed from corpus — ${json.removed} chunks deleted; back in review`)
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to remove from corpus')
+    }
+    setBusy(null)
+  }
+
   async function saveConfig() {
     if (!config) return
     setSavingCfg(true)
@@ -364,14 +381,43 @@ export default function SynthesisPage() {
           ingested.length === 0 ? (
             <p className={styles.muted}>No synthesis documents ingested yet.</p>
           ) : (
-            ingested.map(doc => (
-              <div key={doc.id} className={styles.rowItem}>
-                <span>{doc.title}</span>
-                <span className={styles.muted}>
-                  {doc.concept} · {(doc.rag_chunk_ids || []).length} chunks · {fmtDate(doc.ingested_at)}
-                </span>
-              </div>
-            ))
+            ingested.map(doc => {
+              const isOpen = expanded.has(doc.id)
+              return (
+                <div key={doc.id} className={styles.gapRow}>
+                  <div className={styles.gapRowMain}>
+                    <span className={`${styles.pill} ${styles.pillOk}`}>in corpus</span>
+                    <span className={styles.gapTitle}>{doc.title}</span>
+                  </div>
+                  <div className={styles.gapMeta}>
+                    {doc.concept} · {(doc.rag_chunk_ids || []).length} chunks · ingested {fmtDate(doc.ingested_at)}
+                  </div>
+                  <div className={styles.gapActions}>
+                    <button
+                      className={styles.ghostBtn}
+                      style={{ height: 30, padding: '0 12px', fontSize: 12 }}
+                      onClick={() => toggleExpand(doc.id, doc.content)}
+                    >
+                      {isOpen ? 'Hide ↑' : 'Read ↓'}
+                    </button>
+                    <button
+                      className={styles.ghostBtn}
+                      style={{ height: 30, padding: '0 12px', fontSize: 12, borderColor: '#B23535', color: '#B23535' }}
+                      disabled={busy === doc.id}
+                      onClick={() => deingest(doc)}
+                    >
+                      {busy === doc.id ? 'Working…' : '↩ Pull back to review'}
+                    </button>
+                  </div>
+                  {isOpen && (
+                    <div style={{ marginTop: 12 }}>
+                      <div className={styles.sectionLabel}>Document (read-only — pull back to edit)</div>
+                      <textarea className={styles.summaryArea} readOnly value={doc.content} />
+                    </div>
+                  )}
+                </div>
+              )
+            })
           )
         )}
       </div>
