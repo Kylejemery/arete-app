@@ -355,15 +355,15 @@ export default function LibraryOfArete() {
       </div>
 
       {/* TOPBAR */}
-      <header style={{ position: 'relative', zIndex: 5, flexShrink: 0, display: 'flex', alignItems: 'center',
+      <header className="lib-topbar" style={{ position: 'relative', zIndex: 5, flexShrink: 0, display: 'flex', alignItems: 'center',
         justifyContent: 'space-between', gap: 24, padding: '0 28px', height: 62,
         borderBottom: '1px solid rgba(201,168,76,0.18)', background: 'rgba(8,13,28,0.6)', backdropFilter: 'blur(12px)' }}>
         <button onClick={() => { closeText(); go('atrium'); }} className="lib-reset" style={{ display: 'flex', alignItems: 'center', gap: 11, cursor: 'pointer' }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: GOLD, animation: 'lib-flicker 4s ease-in-out infinite' }} />
           <span style={{ fontFamily: SERIF, fontSize: 19, fontWeight: 600, letterSpacing: '0.32em', color: GOLD }}>ARETE</span>
-          <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: MUTED, letterSpacing: '0.04em' }}>· the Library</span>
+          <span className="lib-logo-sub" style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, color: MUTED, letterSpacing: '0.04em' }}>· the Library</span>
         </button>
-        <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <nav className="lib-nav" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           {([['atrium', 'Atrium'], ['reading', 'Reading Room'], ['symposium', 'Symposium'], ['observatory', 'Observatory']] as [Room, string][]).map(([r, label]) => (
             <button key={r} onClick={() => go(r)} className="lib-nav-btn" style={{ position: 'relative', cursor: 'pointer', padding: '8px 14px',
               fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: room === r ? GOLD : TEXT }}>
@@ -372,7 +372,7 @@ export default function LibraryOfArete() {
             </button>
           ))}
         </nav>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <div className="lib-status" style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 2.6s ease-in-out infinite' }} />
           <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: MUTED, textTransform: 'uppercase' }}>The corpus is awake</span>
         </div>
@@ -421,7 +421,7 @@ function Atrium({ texts, go }: { texts: LibText[]; go: (r: Room) => void }) {
   ];
   return (
     <main style={{ height: '100%', overflowY: 'auto' }}>
-      <div className="lib-fade" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 30px' }}>
+      <div className="lib-fade lib-atrium-pad" style={{ maxWidth: 1080, margin: '0 auto', padding: '64px 32px 30px' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.32em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>The Library of Arete</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(38px,5vw,62px)', lineHeight: 1.03, letterSpacing: '-0.01em', color: IVORY, margin: '0 auto 18px', maxWidth: 760 }}>
@@ -436,7 +436,7 @@ function Atrium({ texts, go }: { texts: LibText[]; go: (r: Room) => void }) {
 
         <div style={{ marginTop: 40 }}>
           <div style={{ textAlign: 'center', fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: MUTED, marginBottom: 22 }}>— Wander the halls —</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
+          <div className="lib-doorways" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 18 }}>
             {doorways.map(d => (
               <button key={d.key} onClick={() => go(d.key)} className="lib-doorway" style={{ position: 'relative', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', textAlign: 'center', background: 'linear-gradient(180deg,rgba(20,30,60,0.55),rgba(9,15,30,0.7))',
@@ -504,7 +504,7 @@ function ReadingRoom(props: {
     const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
     return (
       <main style={{ height: '100%', overflowY: 'auto' }}>
-        <div className="lib-fade" style={{ maxWidth: 1140, margin: '0 auto', padding: '30px 32px 60px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 38, alignItems: 'start' }}>
+        <div className="lib-fade lib-reader-grid" style={{ maxWidth: 1140, margin: '0 auto', padding: '30px 32px 60px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 38, alignItems: 'start' }}>
           <div>
             <button onClick={closeText} className="lib-back" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED, marginBottom: 24 }}>← Back to the shelves</button>
             <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 12 }}>
@@ -536,7 +536,7 @@ function ReadingRoom(props: {
             )}
           </div>
 
-          <aside style={{ position: 'sticky', top: 0, background: 'linear-gradient(180deg,rgba(18,27,54,0.5),rgba(10,18,36,0.5))', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 16, padding: '24px 22px' }}>
+          <aside className="lib-reader-aside" style={{ position: 'sticky', top: 0, background: 'linear-gradient(180deg,rgba(18,27,54,0.5),rgba(10,18,36,0.5))', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 16, padding: '24px 22px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 3s ease-in-out infinite' }} />
               <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Reads itself alongside</span>
@@ -561,7 +561,7 @@ function ReadingRoom(props: {
 
   return (
     <main style={{ height: '100%', overflowY: 'auto' }}>
-      <div className="lib-fade" style={{ maxWidth: 1120, margin: '0 auto', padding: '44px 32px 60px' }}>
+      <div className="lib-fade lib-reading-pad" style={{ maxWidth: 1120, margin: '0 auto', padding: '44px 32px 60px' }}>
         <div style={{ marginBottom: 34 }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 10 }}>The Reading Room</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(32px,4vw,46px)', color: IVORY, margin: '0 0 10px' }}>Pull a text from the shelves</h1>
@@ -626,15 +626,20 @@ function Symposium(props: {
     remaining, sendSit, openWork, scrollRef, debateInput, setDebateInput, debateQ, debateNote, debateLines,
     debatePair, debateLoading, debateRunning, runDebate, resetDebate } = props;
 
+  // The masters rail is a fixed column on desktop; on a phone it slides in as a
+  // drawer so the conversation gets the full width.
+  const [railOpen, setRailOpen] = useState(false);
+
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
+      {railOpen && <div className="lib-drawer-scrim" onClick={() => setRailOpen(false)} />}
       {/* masters rail */}
-      <aside style={{ width: 236, flexShrink: 0, borderRight: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.7),rgba(8,14,30,0.7))', padding: '22px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <aside className={`lib-masters-rail${railOpen ? ' open' : ''}`} style={{ width: 236, flexShrink: 0, borderRight: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.7),rgba(8,14,30,0.7))', padding: '22px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
         <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.26em', textTransform: 'uppercase', color: GOLD, marginBottom: 3 }}>Take a seat with</div>
         <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: MUTED, marginBottom: 16 }}>Pull up a chair across the table</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
           {MASTERS.map(m => (
-            <button key={m.id} onClick={() => setSymMaster(m.id)} className="lib-master" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 11,
+            <button key={m.id} onClick={() => { setSymMaster(m.id); setRailOpen(false); }} className="lib-master" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '9px 10px', borderRadius: 11,
               border: `1px solid ${symMaster === m.id ? GOLD : 'transparent'}`, background: symMaster === m.id ? 'rgba(201,168,76,0.1)' : 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
               <span style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: m.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 16, color: m.textColor }}>{m.initial}</span>
               <span style={{ minWidth: 0 }}>
@@ -654,6 +659,9 @@ function Symposium(props: {
       <section style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0 }}>
         <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '14px 28px', borderBottom: '1px solid rgba(201,168,76,0.14)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+            <button onClick={() => setRailOpen(true)} className="lib-rail-toggle lib-mobile-only" aria-label="Choose a master" style={{ cursor: 'pointer', flexShrink: 0, alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, border: '1px solid rgba(201,168,76,0.3)', background: 'rgba(201,168,76,0.06)', color: GOLD }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+            </button>
             <span style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, background: activeMaster.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontWeight: 600, fontSize: 15, color: activeMaster.textColor }}>{activeMaster.initial}</span>
             <span style={{ fontFamily: SERIF, fontSize: 19, color: IVORY }}>{activeMaster.name}</span>
           </div>
@@ -804,6 +812,9 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   const [data, setData] = useState<ObsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
+  // On a phone the dossier rides up from the bottom as a sheet instead of
+  // taking a side column; tapping a star opens it.
+  const [dossierOpen, setDossierOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -832,7 +843,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
       {/* sky */}
       <section style={{ flex: 1, position: 'relative', minWidth: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
-        <div style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
+        <div className="lib-obs-intro" style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
           <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched. Lines are where they share voices. Wander — tap a star.</p>
@@ -856,16 +867,22 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
           const s = sizeFor(c.magnitude);
           const isActive = activeId === c.id;
           return (
-            <button key={c.id} onClick={() => setActiveId(c.id)} style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', zIndex: 2, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 6 }}>
+            <button key={c.id} onClick={() => { setActiveId(c.id); setDossierOpen(true); }} className={`lib-star${c.magnitude >= 3 ? ' lib-star-key' : ''}${isActive ? ' lib-star-active' : ''}`} style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', zIndex: isActive ? 4 : 2, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 6 }}>
               <span style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : GOLD_L, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`, animation: `lib-star-pulse ${s.tw}s ease-in-out infinite` }} />
-              <span style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.8)', opacity: isActive || c.magnitude >= 2 ? 1 : 0.7 }}>{shortLabel(c.name)}</span>
+              <span className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.8)', opacity: isActive || c.magnitude >= 2 ? 1 : 0.7 }}>{shortLabel(c.name)}</span>
             </button>
           );
         })}
+
+        {/* mobile-only: surface the dossier sheet */}
+        <button onClick={() => setDossierOpen(true)} className="lib-obs-toggle lib-mobile-only" style={{ position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 5, cursor: 'pointer', alignItems: 'center', gap: 8, background: 'rgba(12,20,40,0.92)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '10px 18px', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>✶ What the corpus is thinking</button>
       </section>
 
+      {dossierOpen && <div className="lib-drawer-scrim" onClick={() => setDossierOpen(false)} />}
+
       {/* dossier / recent */}
-      <aside style={{ width: 354, flexShrink: 0, borderLeft: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.72),rgba(8,14,30,0.78))', overflowY: 'auto' }}>
+      <aside className={`lib-obs-dossier${dossierOpen ? ' open' : ''}`} style={{ width: 354, flexShrink: 0, borderLeft: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.72),rgba(8,14,30,0.78))', overflowY: 'auto' }}>
+        <button onClick={() => setDossierOpen(false)} className="lib-mobile-only" aria-label="Close" style={{ cursor: 'pointer', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 0 4px', fontFamily: MONO, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED }}>↓ Close</button>
         {!active ? (
           <div className="lib-fade" style={{ padding: '26px 24px' }}>
             <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, marginBottom: 4 }}>Lately, the corpus has been thinking about</div>
@@ -967,4 +984,47 @@ button { background: none; border: none; font: inherit; }
 .lib-sendbtn:hover { background: #e3c77a !important; }
 .lib-page-btn:hover:not(:disabled) { background: rgba(201,168,76,0.16) !important; }
 .lib-reset:hover span:nth-child(3) { color: #c9a84c; }
+
+/* ---- responsive: phones & small tablets ---- */
+.lib-mobile-only { display: none; }
+.lib-drawer-scrim { display: none; }
+@media (max-width: 760px) {
+  .lib-mobile-only { display: flex !important; }
+
+  /* topbar stacks: logo row over a centered nav row; live status hidden */
+  .lib-topbar { flex-direction: column !important; height: auto !important; gap: 8px !important; padding: 10px 14px !important; align-items: stretch !important; }
+  .lib-topbar .lib-reset { justify-content: center; }
+  .lib-logo-sub { display: none !important; }
+  .lib-nav { width: 100%; justify-content: center !important; flex-wrap: wrap; gap: 2px !important; }
+  .lib-nav .lib-nav-btn { padding: 6px 9px !important; font-size: 9px !important; letter-spacing: 0.12em !important; }
+  .lib-status { display: none !important; }
+
+  /* atrium */
+  .lib-atrium-pad { padding: 36px 18px 22px !important; }
+  .lib-doorways { grid-template-columns: 1fr !important; gap: 14px !important; }
+
+  /* reading room: reader stacks, related column flows below the text */
+  .lib-reading-pad { padding: 30px 18px 50px !important; }
+  .lib-reader-grid { grid-template-columns: 1fr !important; padding: 22px 18px 50px !important; gap: 24px !important; }
+  .lib-reader-aside { position: static !important; }
+
+  /* shared drawer backdrop */
+  .lib-drawer-scrim { display: block; position: fixed; inset: 0; z-index: 39; background: rgba(4,8,18,0.62); backdrop-filter: blur(2px); }
+
+  /* symposium: masters rail slides in from the left */
+  .lib-masters-rail { position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 40 !important; width: 82% !important; max-width: 290px !important; transform: translateX(-100%); transition: transform .3s ease; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
+  .lib-masters-rail.open { transform: translateX(0); }
+
+  /* observatory: dossier rises from the bottom as a sheet */
+  .lib-obs-intro { max-width: 78% !important; top: 14px !important; left: 16px !important; }
+  .lib-obs-intro h1 { font-size: 22px !important; }
+  .lib-obs-dossier { position: fixed !important; left: 0; right: 0; bottom: 0; width: auto !important; max-height: 80vh; z-index: 40 !important; border-left: none !important; border-top: 1px solid rgba(201,168,76,0.3) !important; border-radius: 18px 18px 0 0; transform: translateY(100%); transition: transform .3s ease; box-shadow: 0 -12px 44px rgba(0,0,0,0.6); }
+  .lib-obs-dossier.open { transform: translateY(0); }
+
+  /* observatory sky is crowded on a phone: label only the central stars
+     (plus whatever is tapped), and let those wrap rather than overlap */
+  .lib-star .lib-star-label { display: none; }
+  .lib-star-key .lib-star-label, .lib-star-active .lib-star-label { display: block !important; opacity: 1 !important; }
+  .lib-star-label { white-space: normal !important; max-width: 96px; text-align: center; line-height: 1.15; }
+}
 `;

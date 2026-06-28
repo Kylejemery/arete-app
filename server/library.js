@@ -14,6 +14,7 @@ const STOIC_AUTHORS = new Set([
   'Cleanthes',
   'Cicero',
   'Diogenes Laërtius',
+  'Musonius Rufus',  // Roman Stoic, Epictetus's teacher
   'Arnold',  // Roman Stoicism (E. V. Arnold)
   'Stock',   // A Guide to Stoicism (St. George Stock)
 ]);
@@ -33,6 +34,7 @@ const SPINES = {
   'Cleanthes': '#13324f',
   'Cicero': '#42321a',
   'Diogenes Laërtius': '#1d2c4a',
+  'Musonius Rufus': '#16304a',
   'Arnold': '#0f2e1a',
   'Stock': '#24304a',
   'Adam Smith': '#33301c',

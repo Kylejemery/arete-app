@@ -41,11 +41,11 @@
   },
   {
     "author": "Plato",
-    "work": "Republic",
+    "work": "The Republic",
     "tier": 1,
     "chunk_threshold": 150,
     "source_type": "public_domain",
-    "notes": "Foundation of Western philosophy of virtue and justice."
+    "notes": "Foundation of Western philosophy of virtue and justice. Work name aligned to corpus ('The Republic')."
   },
   {
     "author": "Plato",
@@ -209,5 +209,85 @@
     "chunk_threshold": 20,
     "source_type": "summary_only",
     "notes": "Via Diogenes Laertius Book VII. Founder of Stoicism — thin but important."
+  },
+  {
+    "author": "Seneca",
+    "work": "Clemency",
+    "tier": 1,
+    "chunk_threshold": 100,
+    "source_type": "public_domain",
+    "notes": "De Clementia. Stoic treatment of mercy and power. Already in corpus."
+  },
+  {
+    "author": "Seneca",
+    "work": "Morals",
+    "tier": 1,
+    "chunk_threshold": 100,
+    "source_type": "public_domain",
+    "notes": "Minor Dialogues / Morals. Already in corpus."
+  },
+  {
+    "author": "Seneca",
+    "work": "On Benefits",
+    "tier": 1,
+    "chunk_threshold": 80,
+    "source_type": "public_domain",
+    "notes": "De Beneficiis. Stoic ethics of giving and gratitude. Already in corpus."
+  },
+  {
+    "author": "Seneca",
+    "work": "Apocolocyntosis",
+    "tier": 3,
+    "chunk_threshold": 20,
+    "source_type": "public_domain",
+    "notes": "Menippean satire on the deification of Claudius. Minor/peripheral. Already in corpus."
+  },
+  {
+    "author": "Epictetus",
+    "work": "Golden Sayings",
+    "tier": 1,
+    "chunk_threshold": 50,
+    "source_type": "public_domain",
+    "notes": "Hastings Crossley selection of Epictetus. Already in corpus."
+  },
+  {
+    "author": "Cicero",
+    "work": "Definibus",
+    "tier": 2,
+    "chunk_threshold": 80,
+    "source_type": "public_domain",
+    "notes": "De Finibus Bonorum et Malorum. Major source on Stoic vs Epicurean ethics. Author/work names aligned to corpus (Cicero / Definibus). Already in corpus."
+  },
+  {
+    "author": "Xenophon",
+    "work": "Memorabilia",
+    "tier": 2,
+    "chunk_threshold": 80,
+    "source_type": "public_domain",
+    "notes": "Primary Socratic source alongside Plato. Already in corpus."
+  },
+  {
+    "author": "Aesop",
+    "work": "Fables",
+    "tier": 3,
+    "chunk_threshold": 30,
+    "source_type": "public_domain",
+    "notes": "Moral fables. Peripheral but useful for practical-wisdom illustration. Already in corpus."
+  },
+  {
+    "author": "Arnold",
+    "work": "Roman",
+    "tier": 3,
+    "chunk_threshold": 60,
+    "source_type": "public_domain",
+    "notes": "E. Vernon Arnold, Roman Stoicism (1911). Public-domain scholarship. Author/work names aligned to corpus (Arnold / Roman). Already in corpus."
+  },
+  {
+    "author": "Stock",
+    "work": "Guide",
+    "tier": 3,
+    "chunk_threshold": 40,
+    "source_type": "public_domain",
+    "notes": "St. George Stock, Stoicism (1908). Public-domain introductory guide. Author/work names aligned to corpus (Stock / Guide). Already in corpus."
   }
 ]
