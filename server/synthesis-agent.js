@@ -31,6 +31,14 @@ const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
 const DAY = 24 * 60 * 60 * 1000;
 
+// Generated syntheses are authored under this fixed name. The agent must never
+// ground a new synthesis on its own prior syntheses — that creates an echo
+// chamber where the corpus rewrites its own earlier output.
+const SYNTHESIS_AUTHOR = 'Arete Synthesis';
+// Cosine similarity at/above which two concept phrasings count as the same
+// concept (so near-paraphrases don't produce duplicate documents).
+const CONCEPT_DEDUP_THRESHOLD = 0.86;
+
 // Monday (UTC) of the current week, as YYYY-MM-DD — matches the other agents.
 function getMondayOfCurrentWeek() {
   const d = new Date();
@@ -58,6 +66,13 @@ async function embed(text) {
     console.error(`  embedding error for "${text}":`, e.message);
     return null;
   }
+}
+
+// Cosine similarity between two equal-length embedding vectors.
+function cosineSim(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
 }
 
 // --- 2a. Agent config ------------------------------------------------------
@@ -90,14 +105,16 @@ async function selectConceptsForSynthesis(config) {
     .eq('generation_week', generationWeek);
   const alreadySynthesized = new Set((alreadyThisWeek || []).map(r => r.concept));
 
-  // Already have an approved/ingested synthesis in the last 60 days — don't
-  // re-synthesize concepts with recent good coverage.
+  // Concepts synthesized in the last 60 days (any status except rejected) — used
+  // for exact-string dedup AND the semantic dedup pass below. A rejected concept
+  // stays eligible (the first attempt may simply have been poor).
   const { data: recentlySynthesized } = await supabase
     .from('synthesis_documents')
-    .select('concept')
-    .in('status', ['approved', 'ingested'])
+    .select('concept, status')
+    .neq('status', 'rejected')
     .gte('created_at', new Date(Date.now() - 60 * DAY).toISOString());
   const recentConcepts = new Set((recentlySynthesized || []).map(r => r.concept));
+  const recentConceptStrings = [...new Set((recentlySynthesized || []).map(r => r.concept).filter(Boolean))];
 
   // Top themes from journal_analysis (last 30 days) — user demand signal.
   const { data: analyses } = await supabase
@@ -119,19 +136,45 @@ async function selectConceptsForSynthesis(config) {
     }
   }
 
-  const candidates = Object.entries(themeCounts)
+  const ranked = Object.entries(themeCounts)
     .filter(([theme, count]) =>
       count >= config.min_user_frequency &&
       !alreadySynthesized.has(theme) &&
       !recentConcepts.has(theme)
     )
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, config.documents_per_week)
-    .map(([theme, count], index) => ({
+    .sort(([, a], [, b]) => b - a);
+
+  // Semantic dedup: embed recent synthesis concepts once, then walk the ranked
+  // candidates and skip any that paraphrase a recent concept or one already
+  // accepted this run. This stops two near-identical journal phrasings of the
+  // same idea from producing duplicate documents. (Skipped gracefully when
+  // embeddings are unavailable — falls back to the exact-string dedup above.)
+  const recentEmbeddings = [];
+  for (const c of recentConceptStrings) {
+    const e = await embed(c);
+    if (e) recentEmbeddings.push(e);
+  }
+
+  const candidates = [];
+  const acceptedEmbeddings = [];
+  for (const [theme, count] of ranked) {
+    if (candidates.length >= config.documents_per_week) break;
+    const emb = await embed(theme);
+    if (emb) {
+      const isDup = [...recentEmbeddings, ...acceptedEmbeddings]
+        .some(e => cosineSim(emb, e) >= CONCEPT_DEDUP_THRESHOLD);
+      if (isDup) {
+        console.log(`  ⤷ skipping "${theme}" — semantically duplicates an existing or already-selected concept`);
+        continue;
+      }
+      acceptedEmbeddings.push(emb);
+    }
+    candidates.push({
       concept: theme,
       userFrequency: count,
-      demandRank: index + 1,
-    }));
+      demandRank: candidates.length + 1,
+    });
+  }
 
   // If not enough user-demand concepts, fill with structural gaps: works the
   // significance map says matter, expressed as concept-level prompts.
@@ -162,12 +205,14 @@ async function selectConceptsForSynthesis(config) {
 // --- 2c. Source retrieval --------------------------------------------------
 
 async function getSourcePassages(concept) {
-  // First check concept_passage_map for human-approved passages.
+  // First check concept_passage_map for human-approved passages. Exclude the
+  // corpus's own syntheses so a new synthesis only grounds on primary texts.
   const { data: approved } = await supabase
     .from('concept_passage_map')
     .select('chunk_id, author, work, chunk_text, similarity_score')
     .eq('concept', concept)
     .eq('approved', true)
+    .neq('author', SYNTHESIS_AUTHOR)
     .order('similarity_score', { ascending: false })
     .limit(12);
 
@@ -194,9 +239,11 @@ async function getSourcePassages(concept) {
     match_count: 18,
   });
 
-  // Deduplicate by author — avoid 8 chunks from Seneca and nothing else.
+  // Deduplicate by author — avoid 8 chunks from Seneca and nothing else — and
+  // drop the corpus's own syntheses so grounding stays on primary texts.
   const byAuthor = {};
   for (const chunk of retrieved || []) {
+    if (chunk.author === SYNTHESIS_AUTHOR) continue;
     if (!byAuthor[chunk.author]) byAuthor[chunk.author] = [];
     if (byAuthor[chunk.author].length < 3) byAuthor[chunk.author].push(chunk);
   }
