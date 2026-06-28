@@ -120,7 +120,10 @@ async function getConceptPassages(concept) {
     .from('concept_passage_map')
     .select('chunk_id, author, work, chunk_text, approved, similarity_score')
     .eq('concept', concept)
-    .not('approved', 'is', false);
+    .not('approved', 'is', false)
+    // Coverage is about primary sources; the corpus's own syntheses must not
+    // count as coverage or appear as candidate source passages.
+    .neq('author', 'Arete Synthesis');
   return data || [];
 }
 
@@ -172,6 +175,10 @@ async function detectDemandGaps() {
         // Upsert newly retrieved passages as unreviewed (don't clobber prior
         // approvals — onConflict only fills the row if it's new).
         for (const chunk of retrieved || []) {
+          // Never surface the corpus's own syntheses as candidate source
+          // passages: they would mask real primary-source gaps, and the
+          // synthesis agent ignores synthesis-authored passages anyway.
+          if (chunk.author === 'Arete Synthesis') continue;
           const exists = passages.find(p => p.chunk_id === chunk.id);
           if (!exists) {
             await supabase
