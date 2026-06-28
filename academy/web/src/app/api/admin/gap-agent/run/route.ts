@@ -73,6 +73,9 @@ async function getConceptPassages(admin: Admin, concept: string): Promise<CPM[]>
     .select('chunk_id, author, work, chunk_text, approved, similarity_score')
     .eq('concept', concept)
     .not('approved', 'is', false)
+    // Coverage is about primary sources; the corpus's own syntheses must not
+    // count as coverage or appear as candidate source passages.
+    .neq('author', 'Arete Synthesis')
   return (data as CPM[]) || []
 }
 
@@ -120,6 +123,10 @@ async function detectDemandGaps(admin: Admin, startTime: number) {
         })
         searchedFresh = true
         for (const chunk of (retrieved as { id: string; author: string; work: string; chunk_text: string; similarity: number }[]) || []) {
+          // Never surface the corpus's own syntheses as candidate source
+          // passages: they would mask real primary-source gaps, and the
+          // synthesis agent ignores synthesis-authored passages anyway.
+          if (chunk.author === 'Arete Synthesis') continue
           if (!passages.find(p => p.chunk_id === chunk.id)) {
             await admin.from('concept_passage_map').upsert({
               concept: theme,
