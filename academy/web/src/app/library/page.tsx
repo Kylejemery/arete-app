@@ -874,12 +874,12 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
     // and how bright it sits; a deterministic phase keeps the field out of sync.
     const sz = nodes.map(n => sizeFor(n.c.magnitude));
     const breath = nodes.map((n, i) => {
-      const act = Math.max(0, Math.min(1, n.c.activity ?? (n.c.magnitude >= 3 ? 0.22 : n.c.magnitude === 2 ? 0.14 : 0.08)));
+      const act = Math.max(0, Math.min(1, n.c.activity ?? (n.c.magnitude >= 3 ? 0.35 : n.c.magnitude === 2 ? 0.25 : 0.18)));
       return {
-        freq: (0.0011 + act * 0.0023) / 1,   // rad/ms — stale ~5s period, active ~2.5s
-        amp: 0.05 + act * 0.11,
+        freq: (0.0016 + act * 0.0024) / 1,   // rad/ms — slow ~4s period, active ~2.5s
+        amp: 0.13 + act * 0.16,              // size pulse, 13%–29%
         phase: (i * 39 % 628) / 100,         // 0..2π-ish, deterministic
-        dim: 0.6 + act * 0.4,                // low-activity stars glow fainter
+        dim: 0.62 + act * 0.38,              // low-activity stars sit fainter
       };
     });
     const FLARE_MS = 2200;
