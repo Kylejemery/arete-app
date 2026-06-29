@@ -54,12 +54,14 @@ type Related = { id: string; author: string; work: string; title: string; reason
 
 type ObsConcept = {
   id: string; name: string; voices: string[]; passages: number; magnitude: number;
+  activity?: number; // 0..1 — how recently the corpus has worked this concept; drives breathing
   synthesis: { title: string; status: string; excerpt: string; divergence: string | null } | null;
   x?: number; y?: number;
 };
 type ObsData = {
   concepts: ObsConcept[];
   edges: [string, string][];
+  freshEdges?: [string, string][]; // edges touching a freshly-ingested concept; fire brighter
   recent: { mostAsked: string[]; tensions: { title: string; concept: string }[]; newIngests: { title: string; concept: string }[]; gaps: string[] };
 };
 
@@ -821,20 +823,34 @@ function sphere3D(concepts: ObsConcept[]): Node3D[] {
 // A rotatable / zoomable 3D star-field. The layout is projected imperatively in
 // a requestAnimationFrame loop (mutating element transforms directly) so it
 // stays at 60fps without re-rendering React on every frame.
-function Sky3D({ concepts, edges, activeId, onPick }: {
-  concepts: ObsConcept[]; edges: [string, string][]; activeId: string | null; onPick: (id: string) => void;
+function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
+  concepts: ObsConcept[]; edges: [string, string][]; freshEdges?: [string, string][]; activeId: string | null; onPick: (id: string) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const lineRefs = useRef<(SVGLineElement | null)[]>([]);
+  const pulseRefs = useRef<(SVGCircleElement | null)[]>([]);
+  // Per-node timestamp of the last live retrieval flare (performance.now()); 0 = none.
+  const flareStart = useRef<number[]>([]);
 
   const nodes = useMemo(() => sphere3D(concepts), [concepts]);
   const idx = useMemo(() => { const m = new Map<string, number>(); concepts.forEach((c, i) => m.set(c.id, i)); return m; }, [concepts]);
+  // Lower-cased concept name -> node index, for matching live pulse hits.
+  const nameToIndex = useMemo(() => { const m = new Map<string, number>(); concepts.forEach((c, i) => m.set(c.name.toLowerCase(), i)); return m; }, [concepts]);
   const edgePairs = useMemo(() =>
     edges.map(([a, b]) => [idx.get(a), idx.get(b)] as const).filter(p => p[0] != null && p[1] != null) as [number, number][],
     [edges, idx]);
+  // Which edge indices touch a freshly-ingested concept (fire brighter).
+  const freshSet = useMemo(() => {
+    const fe = freshEdges ?? [];
+    const key = (a: string, b: string) => a < b ? `${a}|${b}` : `${b}|${a}`;
+    const set = new Set(fe.map(([a, b]) => key(a, b)));
+    const out = new Set<number>();
+    edges.forEach(([a, b], i) => { if (set.has(key(a, b))) out.add(i); });
+    return out;
+  }, [edges, freshEdges]);
 
   const rot = useRef({ x: -0.12, y: 0.5 });
   const vel = useRef({ x: 0, y: 0 });
@@ -851,13 +867,29 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
   useEffect(() => {
     const wrap = wrapRef.current; if (!wrap) return;
     isMobile.current = window.matchMedia('(max-width: 760px)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const proj = nodes.map(() => ({ sx: 0, sy: 0, z: 0, p: 1 }));
+    if (flareStart.current.length !== nodes.length) flareStart.current = nodes.map(() => 0);
+    // Per-node breathing: activity (0..1) sets how fast & deep each star pulses
+    // and how bright it sits; a deterministic phase keeps the field out of sync.
+    const sz = nodes.map(n => sizeFor(n.c.magnitude));
+    const breath = nodes.map((n, i) => {
+      const act = Math.max(0, Math.min(1, n.c.activity ?? (n.c.magnitude >= 3 ? 0.22 : n.c.magnitude === 2 ? 0.14 : 0.08)));
+      return {
+        freq: (0.0011 + act * 0.0023) / 1,   // rad/ms — stale ~5s period, active ~2.5s
+        amp: 0.05 + act * 0.11,
+        phase: (i * 39 % 628) / 100,         // 0..2π-ish, deterministic
+        dim: 0.6 + act * 0.4,                // low-activity stars glow fainter
+      };
+    });
+    const FLARE_MS = 2200;
     let raf = 0;
 
     // One projection pass. Pulled out of the rAF loop so it can also run once
     // synchronously on mount — nodes are then placed correctly even before the
     // first animation frame, or in a backgrounded tab where rAF is paused.
     const project = () => {
+      const now = performance.now();
       const w = wrap.clientWidth, h = wrap.clientHeight;
       const cx = w / 2, cy = h / 2;
       const R = Math.min(w, h) * 0.36 * zoom.current;
@@ -878,7 +910,34 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
         const el = nodeRefs.current[i];
         if (el) { el.style.transform = `translate(-50%,-50%) translate(${sx}px,${sy}px)`; el.style.zIndex = String(Math.round(p * 1000)); el.style.opacity = String(0.5 + depth * 0.5); }
         const dot = dotRefs.current[i];
-        if (dot) dot.style.transform = `scale(${p.toFixed(3)})`;
+        if (dot) {
+          const bp = breath[i], s = sz[i];
+          const isActiveNode = activeRef.current === i;
+          // Live retrieval flare: a gold swell that eases out over ~2.2s.
+          const fStart = flareStart.current[i];
+          const fl = fStart ? Math.max(0, 1 - (now - fStart) / FLARE_MS) : 0;
+          const flare = fl * fl; // ease-out
+          let scale = p, dim = bp.dim;
+          if (!reduceMotion) {
+            scale = p * (1 + bp.amp * Math.sin(now * bp.freq + bp.phase) + flare * 0.6);
+            dim = Math.min(1, bp.dim + flare * 0.8);
+          } else if (flare) {
+            scale = p * (1 + flare * 0.5);
+            dim = Math.min(1, bp.dim + flare * 0.8);
+          }
+          dot.style.transform = `scale(${scale.toFixed(3)})`;
+          dot.style.opacity = dim.toFixed(3);
+          // Drive colour/halo every frame so the base (matching the JSX) is
+          // deterministic; a flare overrides it toward ivory with a wider halo.
+          if (flare > 0.01) {
+            const g = (isActiveNode ? s.glow + 10 : s.glow) + flare * 22;
+            dot.style.background = flare > 0.5 ? IVORY : GOLD_L;
+            dot.style.boxShadow = `0 0 ${g.toFixed(0)}px ${(s.spread + flare * 4).toFixed(0)}px rgba(227,199,122,${(0.45 + flare * 0.4).toFixed(2)})`;
+          } else {
+            dot.style.background = isActiveNode ? IVORY : GOLD_L;
+            dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`;
+          }
+        }
         const lab = labelRefs.current[i];
         if (lab) {
           const show = z2 > 0.08 && (isMobile.current ? n.c.magnitude >= 2 : true);
@@ -892,10 +951,31 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
         ln.setAttribute('x1', pa.sx.toFixed(1)); ln.setAttribute('y1', pa.sy.toFixed(1));
         ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
         const lit = aIdx >= 0 && (a === aIdx || b === aIdx);
+        const fresh = freshSet.has(e);
         const depth = ((pa.z + pb.z) / 2 + 1) / 2;
-        ln.setAttribute('stroke', lit ? 'rgb(227,199,122)' : 'rgb(201,168,76)');
-        ln.setAttribute('stroke-opacity', String(lit ? 0.9 : 0.22 + depth * 0.33));
-        ln.setAttribute('stroke-width', lit ? '1.6' : '1.1');
+        ln.setAttribute('stroke', lit || fresh ? 'rgb(227,199,122)' : 'rgb(201,168,76)');
+        ln.setAttribute('stroke-opacity', String(lit ? 0.9 : (0.22 + depth * 0.33) * (fresh ? 1.5 : 1)));
+        ln.setAttribute('stroke-width', lit ? '1.6' : fresh ? '1.4' : '1.1');
+
+        // A spark travelling a -> b, like a synapse firing. Fresh edges (a new
+        // synthesis just connected these concepts) fire a brighter, larger spark.
+        const cir = pulseRefs.current[e];
+        if (cir) {
+          if (reduceMotion) { cir.style.opacity = '0'; }
+          else {
+            const speed = 0.00015 + (e % 5) * 0.00002;
+            const frac = (now * speed + (e * 137 % 100) / 100) % 1;
+            const px = pa.sx + (pb.sx - pa.sx) * frac;
+            const py = pa.sy + (pb.sy - pa.sy) * frac;
+            const env = Math.sin(frac * Math.PI);          // fade at both ends
+            const base = (lit ? 0.85 : 0.28 + depth * 0.3) * env;
+            cir.setAttribute('cx', px.toFixed(1));
+            cir.setAttribute('cy', py.toFixed(1));
+            cir.setAttribute('r', (fresh ? 2.6 : 1.7).toFixed(1));
+            cir.setAttribute('fill', fresh || lit ? 'rgb(244,234,213)' : 'rgb(227,199,122)');
+            cir.style.opacity = (fresh ? Math.min(1, base + 0.3) : base).toFixed(2);
+          }
+        }
       }
     };
 
@@ -968,12 +1048,41 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs]);
+  }, [nodes, edgePairs, freshSet]);
+
+  // Live retrieval glow: short-poll which concepts the corpus has just answered
+  // from and flare those stars. Through the existing proxy; pauses when hidden.
+  useEffect(() => {
+    let since = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/library/observatory/pulse?since=${since}`);
+        if (res.ok) {
+          const json = await res.json();
+          if (typeof json.now === 'number') since = json.now;
+          const now = performance.now();
+          for (const name of (json.concepts ?? [])) {
+            const i = nameToIndex.get(String(name).toLowerCase());
+            if (i != null) flareStart.current[i] = now;
+          }
+        }
+      } catch { /* sky stays calm on a failed poll */ }
+      timer = undefined;
+      if (!cancelled && !document.hidden) timer = setTimeout(poll, 3000);
+    };
+    const onVis = () => { if (!document.hidden && !timer && !cancelled) poll(); };
+    if (!document.hidden) poll();
+    document.addEventListener('visibilitychange', onVis);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener('visibilitychange', onVis); };
+  }, [nameToIndex]);
 
   return (
     <div ref={wrapRef} className="lib-sky3d" style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}>
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
         {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.4} strokeWidth={1.1} />)}
+        {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.7} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
       </svg>
       {nodes.map((n, i) => {
         const s = sizeFor(n.c.magnitude);
@@ -1033,7 +1142,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
         {!loading && concepts.length > 0 && (
-          <Sky3D concepts={concepts} edges={data?.edges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} />
+          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} />
         )}
 
         {/* mobile-only: surface the dossier sheet */}

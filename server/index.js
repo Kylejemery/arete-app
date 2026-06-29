@@ -209,6 +209,78 @@ async function retrieveChunks(userMessage, counselorSlug, k = 3) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Library Observatory — live retrieval pulse
+// ---------------------------------------------------------------------------
+// Ephemeral, in-memory signal of which concepts the corpus has just answered
+// from. Each Cabinet retrieval maps its source chunks' authors to observatory
+// concepts and stamps them here; the Observatory front-end short-polls
+// /api/library/observatory/pulse and flares those stars in near-real-time.
+// Deliberately stateless across restarts — this is a "right now" signal, not
+// history (the weeks-scale baseline lives in the observatory payload instead).
+
+const obsPulses = [];            // { concepts: string[], ts: number }
+const OBS_PULSE_TTL = 12000;     // keep ~12s; clients poll every ~3s
+
+function recordObsPulse(conceptNames) {
+  if (!conceptNames || conceptNames.length === 0) return;
+  const ts = Date.now();
+  obsPulses.push({ concepts: conceptNames, ts });
+  const cutoff = ts - OBS_PULSE_TTL;
+  while (obsPulses.length && obsPulses[0].ts < cutoff) obsPulses.shift();
+}
+
+// Lazily-built, cached map of lower-cased author -> concept names they touch,
+// from concept_passage_map (the same table the observatory endpoint groups).
+let obsAuthorCache = null;       // { map: Map<string, string[]>, builtAt: number }
+const OBS_AUTHOR_TTL = 5 * 60 * 1000;
+
+async function getObsAuthorMap() {
+  if (obsAuthorCache && Date.now() - obsAuthorCache.builtAt < OBS_AUTHOR_TTL) {
+    return obsAuthorCache.map;
+  }
+  const { data: cpm } = await supabase.from('concept_passage_map').select('concept, author');
+  const sets = new Map();
+  for (const r of cpm || []) {
+    if (!r.concept || !r.author) continue;
+    const key = r.author.toLowerCase();
+    if (!sets.has(key)) sets.set(key, new Set());
+    sets.get(key).add(r.concept);
+  }
+  const map = new Map();
+  for (const [k, v] of sets) map.set(k, [...v]);
+  obsAuthorCache = { map, builtAt: Date.now() };
+  return map;
+}
+
+// Maps retrieved chunks -> the few most-relevant concepts and records a pulse.
+// Ranked by how many retrieved chunks touch each concept (so a flare lands on
+// the handful of concepts the answer leaned on, not every star a popular author
+// happens to touch); a light boost when a concept name appears in the question.
+// Best-effort — never throws, never blocks the chat response.
+async function pulseFromChunks(chunks, question) {
+  try {
+    if (!Array.isArray(chunks) || chunks.length === 0) return;
+    const authorMap = await getObsAuthorMap();
+    const q = (question || '').toLowerCase();
+    const score = new Map(); // concept name -> score
+    for (const c of chunks) {
+      const a = (c && c.author ? String(c.author) : '').toLowerCase();
+      if (!a || !authorMap.has(a)) continue;
+      for (const name of authorMap.get(a)) {
+        let s = (score.get(name) || 0) + 1;
+        if (q && q.includes(name.toLowerCase())) s += 2;
+        score.set(name, s);
+      }
+    }
+    if (score.size === 0) return;
+    const top = [...score.entries()].sort((x, y) => y[1] - x[1]).slice(0, 5).map(e => e[0]);
+    recordObsPulse(top);
+  } catch (err) {
+    console.warn('[observatory pulse] map failed:', err.message);
+  }
+}
+
 app.use(cors({
   origin: [
     'https://app.pursuearete.com',
@@ -533,6 +605,9 @@ app.post('/api/chat/counselor', async (req, res) => {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
     }
+
+    // Light up the Observatory: stamp the concepts this answer drew from.
+    pulseFromChunks(contextChunks, question);
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
@@ -3177,6 +3252,20 @@ ${ctxBlock(cb)}`;
 // real voices, co-occurrence edges (shared authors), the matching synthesis
 // (excerpt + divergence pulled from the document), and a "lately the corpus has
 // been thinking about" panel from journals, syntheses, and the gap report.
+// GET /api/library/observatory/pulse — concepts the corpus has answered from in
+// the last few seconds, so the Observatory can flare those stars in near-real
+// time. `?since=<ms>` returns only pulses newer than the client's last poll.
+app.get('/api/library/observatory/pulse', (req, res) => {
+  const since = Number(req.query.since) || 0;
+  const now = Date.now();
+  const cutoff = now - OBS_PULSE_TTL;
+  const names = new Set();
+  for (const p of obsPulses) {
+    if (p.ts > cutoff && p.ts > since) for (const n of p.concepts) names.add(n);
+  }
+  res.json({ now, concepts: [...names] });
+});
+
 app.get('/api/library/observatory', async (req, res) => {
   try {
     const [{ data: cpm }, { data: synth }, { data: journals }, { data: gapRows }] = await Promise.all([
@@ -3230,7 +3319,32 @@ app.get('/api/library/observatory', async (req, res) => {
         divergence: div ? div.trim().slice(0, 280) : null,
       };
     };
-    const concepts = conceptList.map(c => ({ ...c, synthesis: extractSynth(matchSynth(c.name)) }));
+    // Per-concept "activity" (0..1) drives how fast/bright each star breathes:
+    // recent synthesis ingestion decays over weeks, and concepts the community
+    // has been journaling about get a boost. A weight-based floor keeps even
+    // quiet stars faintly alive. Concepts touched in the last ~14 days are also
+    // flagged fresh, so the edges between them fire brighter.
+    const nowMs = Date.now();
+    const WEEK_MS = 7 * 24 * 3600 * 1000;
+    const FRESH_MS = 14 * 24 * 3600 * 1000;
+    const recentThemeWords = new Set();
+    for (const j of journals || []) for (const w of words(j.dominant_theme)) recentThemeWords.add(w);
+    const freshConceptIds = new Set();
+    const activityFor = (c, matched) => {
+      let a = c.magnitude >= 3 ? 0.22 : c.magnitude === 2 ? 0.14 : 0.08;
+      const ingestedAt = matched && matched.ingested_at ? new Date(matched.ingested_at).getTime() : 0;
+      if (ingestedAt) {
+        const ageWeeks = Math.max(0, (nowMs - ingestedAt) / WEEK_MS);
+        a = Math.max(a, Math.exp(-ageWeeks / 3));
+        if (nowMs - ingestedAt < FRESH_MS) freshConceptIds.add(c.id);
+      }
+      if (words(c.name).some(w => recentThemeWords.has(w))) a = a + 0.3;
+      return Math.max(0, Math.min(1, a));
+    };
+    const concepts = conceptList.map(c => {
+      const matched = matchSynth(c.name);
+      return { ...c, synthesis: extractSynth(matched), activity: activityFor(c, matched) };
+    });
 
     // Edges: concepts that share at least 3 voices (where thinkers answer one another).
     const edges = [];
@@ -3245,6 +3359,8 @@ app.get('/api/library/observatory', async (req, res) => {
     }
     edges.sort((x, y) => y.shared - x.shared);
     const topEdges = edges.slice(0, 18).map(e => [e.a, e.b]);
+    // Edges touching a freshly-ingested concept fire brighter in the sky.
+    const freshEdges = topEdges.filter(([a, b]) => freshConceptIds.has(a) || freshConceptIds.has(b));
 
     // "Lately the corpus has been thinking about"
     const seen = new Set();
@@ -3269,7 +3385,7 @@ app.get('/api/library/observatory', async (req, res) => {
       for (const r of (gap.recommended_additions || []).slice(0, 2)) if (r.author && r.work) gaps.push(`Wants ${r.author} — ${r.work}`);
     }
 
-    return res.json({ concepts, edges: topEdges, recent: { mostAsked, tensions, newIngests, gaps } });
+    return res.json({ concepts, edges: topEdges, freshEdges, recent: { mostAsked, tensions, newIngests, gaps } });
   } catch (err) {
     console.error('[/api/library/observatory] error:', err.message);
     return res.status(500).json({ error: 'The sky could not be charted' });
