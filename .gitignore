@@ -54,3 +54,14 @@ google-play-service-account.json
 
 # corpus source texts (large, not committed)
 academy/corpus-ingestion/source_texts/*.txt
+.vercel
+
+# OMC atomic-write temp files & locks (transient, must never be tracked)
+**/.omc/**/*.tmp.*
+**/.omc/*.tmp.*
+.omc/**/*.tmp.*
+**/.omc/project-memory.json.lock
+.omc/project-memory.json.lock
+
+# Per-machine Claude Code local settings (may contain tokens) — never track
+.claude/settings.local.json

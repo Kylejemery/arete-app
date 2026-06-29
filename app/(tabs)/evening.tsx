@@ -171,10 +171,25 @@ export default function EveningScreen() {
     if (allDone) await incrementStreak();
   };
 
-  const toggleTask = async (id: string) => {
+  const applyToggle = async (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
     setTasks(updated);
     await saveTasks(updated);
+  };
+
+  const toggleTask = async (id: string) => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    // Checking is a single tap; unchecking a completed discipline requires
+    // confirmation so a stray tap can't accidentally wipe it out.
+    if (task.done) {
+      Alert.alert('Uncheck this discipline?', `"${task.title}" is marked done.`, [
+        { text: 'Keep it done', style: 'cancel' },
+        { text: 'Uncheck', style: 'destructive', onPress: () => applyToggle(id) },
+      ]);
+      return;
+    }
+    await applyToggle(id);
   };
 
   const addTask = async () => {

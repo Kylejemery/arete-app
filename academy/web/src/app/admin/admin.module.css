@@ -584,19 +584,44 @@
 .textInput::placeholder { color: #bbb; }
 
 .bigTextarea {
-  min-height: 300px;
-  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 480px;
+  padding: 14px;
   border: 0.5px solid #ddd;
   border-radius: 8px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 13.5px;
+  line-height: 1.7;
   color: #1a1a1a;
   background: #fff;
   resize: vertical;
   outline: none;
 }
 .bigTextarea:focus { border-color: #AFA9EC; }
+
+/* Draft save/restore bar */
+.draftBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.draftBar .muted { font-size: 12px; }
+.draftNote {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 0.5px solid #C9C2F0;
+  border-radius: 8px;
+  background: #F4F2FE;
+  font-size: 12px;
+  color: #4A4A6A;
+}
 
 .modeOption {
   display: flex;
@@ -975,6 +1000,7 @@
   }
   .modeOption { color: #ccc; }
   .placeholder { color: #777; }
+  .draftNote { background: #1B1830; border-color: #3A3470; color: #CFCBF5; }
   .pdCheckbox { background: #2A2310; border-color: #5C4A1E; color: #E5C77A; }
   .successBanner { background: #0E3A2E; border-color: #1D6E56; color: #9FE1CB; }
   .errorBanner { background: #3A1414; border-color: #6E2929; color: #F0B5B5; }

@@ -82,13 +82,38 @@ async function fetchSourceText(url) {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`fetch returned ${res.status}`);
+
+  // An honest text/html content-type is an immediate reject. (Note: some
+  // archives/proxies mislabel HTML as text/plain, so this is necessary but
+  // not sufficient — the body sniff below is the real guard.)
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('text/html')) {
+    throw new Error(`source is HTML (content-type: ${contentType}), not plain text`);
+  }
+
   const body = await res.text();
   if (!body || body.length < 1000) {
     throw new Error(`fetched body too small (${body ? body.length : 0} bytes)`);
   }
-  const head = body.slice(0, 500).toLowerCase();
-  if (head.includes('<!doctype html') || head.includes('<html')) {
-    throw new Error('fetched an HTML page, not the expected text');
+
+  // Reject binary blobs (e.g. a PDF URL) before they get chunked into gibberish.
+  if (/^\s*%PDF-/.test(body) || body.slice(0, 4096).includes(String.fromCharCode(0))) {
+    throw new Error('source looks binary (e.g. a PDF) — supply the plain-text version');
+  }
+
+  // Reject HTML/markup even when it doesn't open with <!doctype>/<html>: many
+  // archive and Google-cache pages wrap the text in <base>/<table>/<font>, and
+  // those still chunk into useless tag-soup. We still allow PerseusDL TEI XML
+  // (grc/lat sources), which opens with <?xml or <TEI rather than HTML tags.
+  const head = body.slice(0, 1500).toLowerCase();
+  const looksXml = /^\s*<\?xml|^\s*<tei\b/.test(head);
+  const HTML_MARKERS = [
+    '<!doctype html', '<html', '<head>', '<head ', '<body', '<base ', '<base>',
+    '<table', '<div', '<span', '<font', '<script', '<style', '<meta ', '<link ',
+    '<td>', '<td ', '<tr>', '<tr ', '<a href',
+  ];
+  if (!looksXml && HTML_MARKERS.some(m => head.includes(m))) {
+    throw new Error('fetched an HTML/markup page, not the expected plain text');
   }
   return body;
 }
