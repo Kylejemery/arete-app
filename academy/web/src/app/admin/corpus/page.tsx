@@ -20,6 +20,31 @@ function countWords(s: string): number {
   return s.split(/\s+/).filter(Boolean).length
 }
 
+const DRAFT_KEY = 'corpus-ingest:draft'
+
+type Draft = {
+  inputText: string
+  author: string
+  work: string
+  section: string
+  pages: string
+  language: 'en' | 'grc' | 'lat'
+  courseRelevance: string
+  difficulty: string
+  mode: Mode
+  savedAt: number
+}
+
+function timeAgo(ts: number): string {
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 60) return 'just now'
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} min ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h} hr ago`
+  return new Date(ts).toLocaleString()
+}
+
 export default function CorpusIngestPage() {
   // Same admin gate as the main /admin page.
   const [authLoading, setAuthLoading] = useState(true)
@@ -45,6 +70,10 @@ export default function CorpusIngestPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [coverage, setCoverage] = useState<Coverage | null>(null)
 
+  // Draft state (saved to the browser so work isn't lost on refresh/navigation)
+  const [savedDraft, setSavedDraft] = useState<Draft | null>(null)
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL) {
@@ -68,6 +97,46 @@ export default function CorpusIngestPage() {
   useEffect(() => {
     if (authorized) loadCoverage()
   }, [authorized, loadCoverage])
+
+  // On load, surface any draft saved in this browser so it can be restored.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) return
+      const d = JSON.parse(raw) as Draft
+      if (d && (d.inputText || d.author || d.work)) setSavedDraft(d)
+    } catch {
+      // ignore malformed/unavailable storage
+    }
+  }, [])
+
+  const saveDraft = useCallback(() => {
+    const d: Draft = {
+      inputText, author, work, section, pages, language, courseRelevance, difficulty, mode,
+      savedAt: Date.now(),
+    }
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(d))
+      setDraftSavedAt(d.savedAt)
+      setSavedDraft(null) // current form now matches the saved draft
+    } catch {
+      // ignore quota/availability errors
+    }
+  }, [inputText, author, work, section, pages, language, courseRelevance, difficulty, mode])
+
+  function restoreDraft() {
+    if (!savedDraft) return
+    setInputText(savedDraft.inputText)
+    setAuthor(savedDraft.author)
+    setWork(savedDraft.work)
+    setSection(savedDraft.section)
+    setPages(savedDraft.pages)
+    setLanguage(savedDraft.language)
+    setCourseRelevance(savedDraft.courseRelevance)
+    setDifficulty(savedDraft.difficulty)
+    setMode(savedDraft.mode)
+    setSavedDraft(null)
+  }
 
   const canStart = author.trim() && work.trim() && inputText.trim().length > 0
 
@@ -160,6 +229,10 @@ export default function CorpusIngestPage() {
     setResult(null)
     setErrorMessage(null)
     setStatus('idle')
+    // Clear the saved draft once a passage has been ingested.
+    try { localStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ }
+    setSavedDraft(null)
+    setDraftSavedAt(null)
   }
 
   if (authLoading) {
@@ -184,6 +257,14 @@ export default function CorpusIngestPage() {
         {/* ── Left: source text ────────────────────────────── */}
         <div className={styles.card}>
           <div className={styles.sectionLabel}>Source text</div>
+
+          {savedDraft && (
+            <div className={styles.draftNote}>
+              <span>📝 Draft saved {timeAgo(savedDraft.savedAt)}{savedDraft.work ? ` — “${savedDraft.work}”` : ''}.</span>
+              <button type="button" className={styles.ghostBtn} onClick={restoreDraft}>Restore</button>
+              <button type="button" className={styles.ghostBtn} onClick={() => setSavedDraft(null)}>Dismiss</button>
+            </div>
+          )}
 
           <div className={styles.field}>
             <label className={styles.fieldLabel}>Author *</label>
@@ -263,7 +344,22 @@ export default function CorpusIngestPage() {
             <span className={styles.charCount}>{inputText.length.toLocaleString()} characters</span>
           </div>
 
-          <div className={styles.generateRow}>
+          <div className={styles.generateRow} style={{ justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div className={styles.draftBar}>
+              <button
+                type="button"
+                className={styles.ghostBtn}
+                onClick={saveDraft}
+                disabled={!inputText.trim() && !author.trim() && !work.trim()}
+              >
+                ⤓ Save draft
+              </button>
+              {draftSavedAt && (
+                <span className={styles.muted}>
+                  ✓ Saved {new Date(draftSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              )}
+            </div>
             <button
               className={styles.primaryBtn}
               disabled={!canStart || status === 'summarizing' || status === 'ingesting'}
