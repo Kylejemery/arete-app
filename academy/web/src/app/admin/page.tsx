@@ -39,6 +39,15 @@ type Overview = {
     recipients: number
     generatedToday: boolean
   } | null
+  reflection: {
+    week: string | null
+    title: string | null
+    generatedAt: string | null
+    anomalies: number
+    criticalAnomalies: number
+    agentsFired: number
+    agentsTotal: number
+  } | null
 }
 
 function timeAgo(iso: string | null): string {
@@ -112,6 +121,10 @@ const PIPELINE: { when: string; icon: string; name: string; tag: string; text: s
     when: 'continuous', icon: '📣', name: 'Content Scheduler', tag: 'social',
     text: 'Queues and publishes social posts (X, Bluesky, LinkedIn). The fleet’s outward voice; runs off content you approve.',
   },
+  {
+    when: '07:00 Sun', icon: '🪞', name: 'Self-Reflection', tag: 'meta',
+    text: 'The meta-agent. Once a week it reviews the whole fleet — corpus growth, whether each agent fired, engagement, dispatch delivery — detects anomalies, and writes one honest health report with specific recommended actions. Reads everything, changes nothing; its reader is you.',
+  },
 ]
 
 function FleetGuide() {
@@ -120,9 +133,10 @@ function FleetGuide() {
       <div className={styles.card}>
         <div className={styles.cardTitle}>How the fleet works</div>
         <p className={styles.muted} style={{ marginBottom: 14, lineHeight: 1.6 }}>
-          Six agents run on a nightly/weekly cadence (times in UTC). Each reads from shared
-          Supabase tables and feeds the next — together they grow the corpus, learn what the
-          community needs, and turn that into daily guidance.
+          Seven agents run on a nightly/weekly cadence (times in UTC). Each reads from shared
+          Supabase tables; six feed the next and a seventh reflects weekly on the whole —
+          together they grow the corpus, learn what the community needs, and turn that into
+          daily guidance.
         </p>
         {PIPELINE.map(s => (
           <div key={s.name} className={styles.guideStep}>
@@ -155,6 +169,11 @@ function FleetGuide() {
         <p className={styles.flowLine}>
           <strong>Corpus</strong> is the substrate everyone retrieves from; <strong>Dispatch</strong>{' '}
           is the daily output that reaches users.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>Self-Reflection</strong> sits above them all — each Sunday it reads every agent’s
+          output and the engagement tables to report on the health and trajectory of the whole
+          system. It feeds nothing back in; its reader is you.
         </p>
       </div>
 
@@ -296,6 +315,26 @@ export default function AdminOverviewPage() {
               ? `Today: ${data.dispatch.todayTitle.slice(0, 40)}${data.dispatch.todayTitle.length > 40 ? '…' : ''} · next 5:00 AM ET`
               : 'Not yet generated · next 5:00 AM ET'}
             href="/admin/dispatch"
+          />
+
+          <AgentCard
+            icon="🪞"
+            name="Self-Reflection"
+            status={!data.reflection ? 'no report' : data.reflection.criticalAnomalies > 0 ? 'action needed' : data.reflection.anomalies > 0 ? 'warnings' : 'healthy'}
+            statusKind={!data.reflection ? 'idle' : data.reflection.criticalAnomalies > 0 ? 'error' : data.reflection.anomalies > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Anomalies',
+                value: (data.reflection?.criticalAnomalies ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.reflection?.anomalies}</span>
+                  : (data.reflection?.anomalies ?? 0),
+              },
+              { label: 'Agents fired', value: data.reflection ? `${data.reflection.agentsFired}/${data.reflection.agentsTotal}` : '—' },
+            ]}
+            footer={data.reflection?.title
+              ? `Latest: ${data.reflection.title.slice(0, 40)}${data.reflection.title.length > 40 ? '…' : ''} · next Sun 7:00 AM UTC`
+              : 'No report yet · next Sun 7:00 AM UTC'}
+            href="/admin/reflection"
           />
 
           <AgentCard
