@@ -893,9 +893,9 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
         ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
         const lit = aIdx >= 0 && (a === aIdx || b === aIdx);
         const depth = ((pa.z + pb.z) / 2 + 1) / 2;
-        ln.setAttribute('stroke', lit ? 'rgba(227,199,122,0.6)' : 'rgba(201,168,76,0.5)');
-        ln.setAttribute('stroke-opacity', String(lit ? 0.6 : 0.08 + depth * 0.2));
-        ln.setAttribute('stroke-width', lit ? '1.4' : '0.8');
+        ln.setAttribute('stroke', lit ? 'rgb(227,199,122)' : 'rgb(201,168,76)');
+        ln.setAttribute('stroke-opacity', String(lit ? 0.9 : 0.22 + depth * 0.33));
+        ln.setAttribute('stroke-width', lit ? '1.6' : '1.1');
       }
     };
 
@@ -973,7 +973,7 @@ function Sky3D({ concepts, edges, activeId, onPick }: {
   return (
     <div ref={wrapRef} className="lib-sky3d" style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}>
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
-        {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgba(201,168,76,0.16)" strokeWidth={0.8} />)}
+        {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.4} strokeWidth={1.1} />)}
       </svg>
       {nodes.map((n, i) => {
         const s = sizeFor(n.c.magnitude);
