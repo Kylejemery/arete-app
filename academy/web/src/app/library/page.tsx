@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -796,16 +796,200 @@ function shortLabel(name: string): string {
   const head = name.split(':')[0].trim();
   return cap(head.length <= 30 ? head : head.slice(0, 28).trim() + '…');
 }
-function layoutConcepts(concepts: ObsConcept[]): ObsConcept[] {
-  const cx = 46, cy = 49;
+const sizeFor = (m: number) => m >= 3 ? { dot: 16, glow: 22, spread: 3, label: 14 }
+  : m === 2 ? { dot: 11, glow: 16, spread: 2, label: 12.5 }
+  : { dot: 7, glow: 11, spread: 1, label: 11.5 };
+
+type Node3D = { c: ObsConcept; x: number; y: number; z: number };
+
+// Distribute concepts over a sphere (Fibonacci spiral). Weightier concepts are
+// pulled toward the core so the cloud reads like a brain you can turn, not a
+// hollow shell. Deterministic, so the constellation is stable between visits.
+function sphere3D(concepts: ObsConcept[]): Node3D[] {
+  const N = concepts.length;
+  const GA = Math.PI * (3 - Math.sqrt(5));
   return concepts.map((c, i) => {
-    const ang = i * 2.39996 + 0.6;            // golden-angle spread, deterministic
-    const base = c.magnitude === 3 ? 15 : c.magnitude === 2 ? 27 : 37; // central = more central concept
-    const r = base + (((i * 53) % 9) - 4);
-    const x = Math.max(13, Math.min(80, cx + Math.cos(ang) * r * 1.15));
-    const y = Math.max(15, Math.min(85, cy + Math.sin(ang) * r * 0.8));
-    return { ...c, x, y };
+    const t = N > 1 ? i / (N - 1) : 0.5;
+    const y = 1 - t * 2;
+    const ring = Math.sqrt(Math.max(0, 1 - y * y));
+    const th = GA * i;
+    const rad = (c.magnitude >= 3 ? 0.55 : c.magnitude === 2 ? 0.82 : 1.0) * (0.92 + ((i * 37) % 13) / 100);
+    return { c, x: Math.cos(th) * ring * rad, y: y * rad, z: Math.sin(th) * ring * rad };
   });
+}
+
+// A rotatable / zoomable 3D star-field. The layout is projected imperatively in
+// a requestAnimationFrame loop (mutating element transforms directly) so it
+// stays at 60fps without re-rendering React on every frame.
+function Sky3D({ concepts, edges, activeId, onPick }: {
+  concepts: ObsConcept[]; edges: [string, string][]; activeId: string | null; onPick: (id: string) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const nodeRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const dotRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
+  const lineRefs = useRef<(SVGLineElement | null)[]>([]);
+
+  const nodes = useMemo(() => sphere3D(concepts), [concepts]);
+  const idx = useMemo(() => { const m = new Map<string, number>(); concepts.forEach((c, i) => m.set(c.id, i)); return m; }, [concepts]);
+  const edgePairs = useMemo(() =>
+    edges.map(([a, b]) => [idx.get(a), idx.get(b)] as const).filter(p => p[0] != null && p[1] != null) as [number, number][],
+    [edges, idx]);
+
+  const rot = useRef({ x: -0.12, y: 0.5 });
+  const vel = useRef({ x: 0, y: 0 });
+  const zoom = useRef(1);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const dragDist = useRef(0);
+  const pinch = useRef<{ dist: number; zoom: number } | null>(null);
+  const lastInteract = useRef(0);
+  const activeRef = useRef(-1);
+  const isMobile = useRef(false);
+
+  useEffect(() => { activeRef.current = activeId ? (idx.get(activeId) ?? -1) : -1; }, [activeId, idx]);
+
+  useEffect(() => {
+    const wrap = wrapRef.current; if (!wrap) return;
+    isMobile.current = window.matchMedia('(max-width: 760px)').matches;
+    const proj = nodes.map(() => ({ sx: 0, sy: 0, z: 0, p: 1 }));
+    let raf = 0;
+
+    // One projection pass. Pulled out of the rAF loop so it can also run once
+    // synchronously on mount — nodes are then placed correctly even before the
+    // first animation frame, or in a backgrounded tab where rAF is paused.
+    const project = () => {
+      const w = wrap.clientWidth, h = wrap.clientHeight;
+      const cx = w / 2, cy = h / 2;
+      const R = Math.min(w, h) * 0.36 * zoom.current;
+      const cam = 2.6;
+      const cyA = Math.cos(rot.current.y), syA = Math.sin(rot.current.y);
+      const cxA = Math.cos(rot.current.x), sxA = Math.sin(rot.current.x);
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+        const x1 = n.x * cyA + n.z * syA;
+        const z1 = -n.x * syA + n.z * cyA;
+        const y1 = n.y * cxA - z1 * sxA;
+        const z2 = n.y * sxA + z1 * cxA;
+        const p = cam / (cam - z2);
+        const sx = cx + x1 * R * p;
+        const sy = cy - y1 * R * p;
+        proj[i].sx = sx; proj[i].sy = sy; proj[i].z = z2; proj[i].p = p;
+        const depth = (z2 + 1) / 2;
+        const el = nodeRefs.current[i];
+        if (el) { el.style.transform = `translate(-50%,-50%) translate(${sx}px,${sy}px)`; el.style.zIndex = String(Math.round(p * 1000)); el.style.opacity = String(0.5 + depth * 0.5); }
+        const dot = dotRefs.current[i];
+        if (dot) dot.style.transform = `scale(${p.toFixed(3)})`;
+        const lab = labelRefs.current[i];
+        if (lab) {
+          const show = z2 > 0.08 && (isMobile.current ? n.c.magnitude >= 2 : true);
+          lab.style.opacity = show ? String(0.25 + depth * 0.75) : '0';
+        }
+      }
+      const aIdx = activeRef.current;
+      for (let e = 0; e < edgePairs.length; e++) {
+        const ln = lineRefs.current[e]; if (!ln) continue;
+        const [a, b] = edgePairs[e]; const pa = proj[a], pb = proj[b];
+        ln.setAttribute('x1', pa.sx.toFixed(1)); ln.setAttribute('y1', pa.sy.toFixed(1));
+        ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
+        const lit = aIdx >= 0 && (a === aIdx || b === aIdx);
+        const depth = ((pa.z + pb.z) / 2 + 1) / 2;
+        ln.setAttribute('stroke', lit ? 'rgba(227,199,122,0.6)' : 'rgba(201,168,76,0.5)');
+        ln.setAttribute('stroke-opacity', String(lit ? 0.6 : 0.08 + depth * 0.2));
+        ln.setAttribute('stroke-width', lit ? '1.4' : '0.8');
+      }
+    };
+
+    const frame = (ts: number) => {
+      const dragging = pointers.current.size > 0;
+      const idle = ts - lastInteract.current > 2400;
+      if (!dragging) {
+        rot.current.x += vel.current.x; rot.current.y += vel.current.y;
+        vel.current.x *= 0.92; vel.current.y *= 0.92;
+        if (Math.abs(vel.current.y) < 0.0005 && Math.abs(vel.current.x) < 0.0005 && idle) rot.current.y += 0.0015;
+      }
+      rot.current.x = Math.max(-1.15, Math.min(1.15, rot.current.x));
+      project();
+      raf = requestAnimationFrame(frame);
+    };
+
+    project();                              // correct first paint, rAF or not
+    raf = requestAnimationFrame(frame);
+
+    const onDown = (e: PointerEvent) => {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      dragDist.current = 0; vel.current = { x: 0, y: 0 }; lastInteract.current = performance.now();
+      if (pointers.current.size === 2) {
+        const [p1, p2] = [...pointers.current.values()];
+        pinch.current = { dist: Math.hypot(p1.x - p2.x, p1.y - p2.y), zoom: zoom.current };
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      const prev = pointers.current.get(e.pointerId); if (!prev) return;
+      pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      lastInteract.current = performance.now();
+      if (pointers.current.size >= 2 && pinch.current) {
+        const [p1, p2] = [...pointers.current.values()];
+        const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        zoom.current = Math.max(0.5, Math.min(3.4, pinch.current.zoom * d / pinch.current.dist));
+        dragDist.current += 20;
+        project();
+        return;
+      }
+      const dx = e.clientX - prev.x, dy = e.clientY - prev.y, k = 0.006;
+      rot.current.y += dx * k; rot.current.x += dy * k;
+      rot.current.x = Math.max(-1.15, Math.min(1.15, rot.current.x));
+      vel.current = { x: dy * k, y: dx * k };
+      dragDist.current += Math.abs(dx) + Math.abs(dy);
+      project();
+    };
+    const onUp = (e: PointerEvent) => {
+      pointers.current.delete(e.pointerId);
+      if (pointers.current.size < 2) pinch.current = null;
+      lastInteract.current = performance.now();
+    };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      zoom.current = Math.max(0.5, Math.min(3.4, zoom.current * (1 - e.deltaY * 0.0012)));
+      lastInteract.current = performance.now();
+      project();
+    };
+
+    wrap.addEventListener('pointerdown', onDown);
+    wrap.addEventListener('pointermove', onMove);
+    wrap.addEventListener('pointerup', onUp);
+    wrap.addEventListener('pointercancel', onUp);
+    wrap.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      cancelAnimationFrame(raf);
+      wrap.removeEventListener('pointerdown', onDown);
+      wrap.removeEventListener('pointermove', onMove);
+      wrap.removeEventListener('pointerup', onUp);
+      wrap.removeEventListener('pointercancel', onUp);
+      wrap.removeEventListener('wheel', onWheel);
+    };
+  }, [nodes, edgePairs]);
+
+  return (
+    <div ref={wrapRef} className="lib-sky3d" style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}>
+      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+        {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgba(201,168,76,0.16)" strokeWidth={0.8} />)}
+      </svg>
+      {nodes.map((n, i) => {
+        const s = sizeFor(n.c.magnitude);
+        const isActive = activeId === n.c.id;
+        return (
+          <button key={n.c.id} ref={el => { nodeRefs.current[i] = el; }}
+            onClick={() => { if (dragDist.current < 6) onPick(n.c.id); }}
+            className="lib-star3d"
+            style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%,-50%)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 6, willChange: 'transform, opacity' }}>
+            <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : GOLD_L, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`, willChange: 'transform' }} />
+            <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>{shortLabel(n.c.name)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
@@ -832,12 +1016,8 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
     return () => { cancelled = true; };
   }, []);
 
-  const concepts = data ? layoutConcepts(data.concepts) : [];
-  const posById = new Map(concepts.map(c => [c.id, c]));
+  const concepts = data?.concepts ?? [];
   const active = concepts.find(c => c.id === activeId) || null;
-  const sizeFor = (m: number) => m >= 3 ? { dot: 16, glow: 22, spread: 3, label: 14, tw: 4.5 }
-    : m === 2 ? { dot: 11, glow: 16, spread: 2, label: 12.5, tw: 5.5 }
-    : { dot: 7, glow: 11, spread: 1, label: 11.5, tw: 6.5 };
 
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
@@ -846,33 +1026,15 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         <div className="lib-obs-intro" style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
-          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched. Lines are where they share voices. Wander — tap a star.</p>
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched; lines are where they share voices. Drag to turn it, scroll or pinch to zoom — then tap a star.</p>
         </div>
 
         {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Charting the sky…</div>}
         {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
-        {/* edges */}
-        <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1, pointerEvents: 'none' }}>
-          {data?.edges.map(([a, b], i) => {
-            const ca = posById.get(a), cb = posById.get(b);
-            if (!ca || !cb) return null;
-            const lit = active && (active.id === a || active.id === b);
-            return <line key={i} x1={ca.x} y1={ca.y} x2={cb.x} y2={cb.y} stroke={lit ? 'rgba(201,168,76,0.4)' : 'rgba(201,168,76,0.14)'} strokeWidth={0.12} />;
-          })}
-        </svg>
-
-        {/* stars */}
-        {concepts.map(c => {
-          const s = sizeFor(c.magnitude);
-          const isActive = activeId === c.id;
-          return (
-            <button key={c.id} onClick={() => { setActiveId(c.id); setDossierOpen(true); }} className={`lib-star${c.magnitude >= 3 ? ' lib-star-key' : ''}${isActive ? ' lib-star-active' : ''}`} style={{ position: 'absolute', left: `${c.x}%`, top: `${c.y}%`, transform: 'translate(-50%,-50%)', zIndex: isActive ? 4 : 2, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, padding: 6 }}>
-              <span style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : GOLD_L, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`, animation: `lib-star-pulse ${s.tw}s ease-in-out infinite` }} />
-              <span className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.8)', opacity: isActive || c.magnitude >= 2 ? 1 : 0.7 }}>{shortLabel(c.name)}</span>
-            </button>
-          );
-        })}
+        {!loading && concepts.length > 0 && (
+          <Sky3D concepts={concepts} edges={data?.edges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} />
+        )}
 
         {/* mobile-only: surface the dossier sheet */}
         <button onClick={() => setDossierOpen(true)} className="lib-obs-toggle lib-mobile-only" style={{ position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 5, cursor: 'pointer', alignItems: 'center', gap: 8, background: 'rgba(12,20,40,0.92)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '10px 18px', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>✶ What the corpus is thinking</button>
@@ -1021,10 +1183,7 @@ button { background: none; border: none; font: inherit; }
   .lib-obs-dossier { position: fixed !important; left: 0; right: 0; bottom: 0; width: auto !important; max-height: 80vh; z-index: 40 !important; border-left: none !important; border-top: 1px solid rgba(201,168,76,0.3) !important; border-radius: 18px 18px 0 0; transform: translateY(100%); transition: transform .3s ease; box-shadow: 0 -12px 44px rgba(0,0,0,0.6); }
   .lib-obs-dossier.open { transform: translateY(0); }
 
-  /* observatory sky is crowded on a phone: label only the central stars
-     (plus whatever is tapped), and let those wrap rather than overlap */
-  .lib-star .lib-star-label { display: none; }
-  .lib-star-key .lib-star-label, .lib-star-active .lib-star-label { display: block !important; opacity: 1 !important; }
-  .lib-star-label { white-space: normal !important; max-width: 96px; text-align: center; line-height: 1.15; }
 }
+.lib-sky3d:active { cursor: grabbing; }
+.lib-star3d:hover .lib-star-label { color: #f4ead5 !important; }
 `;
