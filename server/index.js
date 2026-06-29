@@ -3006,20 +3006,32 @@ app.get('/api/library/texts', async (req, res) => {
   try {
     const { data, error } = await supabase.rpc('library_shelf');
     if (error) throw error;
-    const texts = (data || []).map(r => ({
-      id: `${r.author}::${r.work}`,
-      author: r.author,
-      work: r.work,
-      title: libraryHelpers.workTitle(r.work),
-      era: libraryHelpers.era(r.author, r.work),
-      textType: r.text_type,                                  // 'primary' | 'synthesis'
-      tradition: libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
-      passages: Number(r.chunk_count) || 0,
-      translator: r.translator || null,
-      sourceUrl: r.source_url || null,
-      spine: libraryHelpers.spine(r.author),
-      excerpt: (r.excerpt || '').trim().replace(/\s+/g, ' ').slice(0, 280),
-    }));
+
+    // Admin overrides (library_overrides): retitle, move shelf, set era, or hide
+    // a work — layered over the hardcoded defaults in library.js. Keyed by
+    // author::work. Best-effort: a failed read just falls back to defaults.
+    const ovMap = new Map();
+    const { data: ovs } = await supabase.from('library_overrides').select('*');
+    for (const o of ovs || []) ovMap.set(`${o.author}::${o.work}`, o);
+
+    const texts = (data || []).map(r => {
+      const ov = ovMap.get(`${r.author}::${r.work}`) || {};
+      return {
+        id: `${r.author}::${r.work}`,
+        author: r.author,
+        work: r.work,
+        title: ov.title || libraryHelpers.workTitle(r.work),
+        era: ov.era || libraryHelpers.era(r.author, r.work),
+        textType: r.text_type,                                  // 'primary' | 'synthesis'
+        tradition: ov.tradition || libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
+        passages: Number(r.chunk_count) || 0,
+        translator: r.translator || null,
+        sourceUrl: r.source_url || null,
+        spine: libraryHelpers.spine(r.author),
+        excerpt: (r.excerpt || '').trim().replace(/\s+/g, ' ').slice(0, 280),
+        hidden: !!ov.hidden,
+      };
+    }).filter(t => !t.hidden);
 
     // Count of syntheses awaiting admin review (not yet ingested, so not on a
     // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.
@@ -3070,6 +3082,16 @@ app.get('/api/library/text', async (req, res) => {
     if (error) throw error;
     if (!data || data.length === 0) return res.status(404).json({ error: 'Page not found' });
 
+    // Apply the admin override (retitle / shelf / era / hidden). A hidden work
+    // is off the public shelf, so it must not be directly readable either.
+    const { data: ov } = await supabase
+      .from('library_overrides')
+      .select('title, tradition, era, hidden')
+      .eq('author', author)
+      .eq('work', work)
+      .maybeSingle();
+    if (ov && ov.hidden) return res.status(404).json({ error: 'Text not found' });
+
     const body = libraryHelpers.stripGutenberg(
       data.map(c => (c.chunk_text || '').trim()).filter(Boolean).join('\n\n')
     );
@@ -3077,9 +3099,9 @@ app.get('/api/library/text', async (req, res) => {
     return res.json({
       author,
       work,
-      title: libraryHelpers.workTitle(work),
-      era: libraryHelpers.era(author, work),
-      tradition: libraryHelpers.tradition(author, data[0].text_type),
+      title: (ov && ov.title) || libraryHelpers.workTitle(work),
+      era: (ov && ov.era) || libraryHelpers.era(author, work),
+      tradition: (ov && ov.tradition) || libraryHelpers.tradition(author, data[0].text_type),
       translator: data[0].translator || null,
       sourceUrl: data[0].source_url || null,
       page,

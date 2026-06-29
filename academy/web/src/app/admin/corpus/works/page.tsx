@@ -13,12 +13,20 @@ type Passage = {
   created_at: string
   editable: boolean
 }
+type Override = {
+  title: string | null
+  tradition: string | null
+  era: string | null
+  hidden: boolean
+}
 type Work = {
   author: string
   work: string
   textType: string
   chunks: number
   passages: Passage[]
+  defaultTradition: string
+  override: Override | null
 }
 type EditState = {
   id: string
@@ -26,6 +34,13 @@ type EditState = {
   summaryText: string
   saving: boolean
   resummarizing: boolean
+  error: string | null
+}
+type ShelfState = {
+  title: string
+  tradition: string
+  hidden: boolean
+  saving: boolean
   error: string | null
 }
 
@@ -38,6 +53,7 @@ export default function ManageWorksPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [edit, setEdit] = useState<EditState | null>(null)
+  const [shelf, setShelf] = useState<ShelfState | null>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -64,6 +80,55 @@ export default function ManageWorksPage() {
   }, [authorized, load])
 
   const workKey = (w: Work) => `${w.author} — ${w.work}`
+
+  // Expand a work and seed the shelf/title editor from its current override
+  // (falling back to defaults). Collapsing clears both editors.
+  function toggleWork(w: Work, k: string, open: boolean) {
+    setEdit(null)
+    if (open) { setExpanded(null); setShelf(null); return }
+    setExpanded(k)
+    setShelf({
+      title: w.override?.title ?? '',
+      tradition: w.override?.tradition ?? w.defaultTradition,
+      hidden: w.override?.hidden ?? false,
+      saving: false,
+      error: null,
+    })
+  }
+
+  async function saveShelf(w: Work) {
+    if (!shelf) return
+    setShelf({ ...shelf, saving: true, error: null })
+    try {
+      // Choosing the default shelf clears the tradition override so it tracks defaults.
+      const tradition = shelf.tradition === w.defaultTradition ? '' : shelf.tradition
+      const res = await fetch('/api/corpus-ingest/works/override', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ author: w.author, work: w.work, title: shelf.title, tradition, hidden: shelf.hidden }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Save failed')
+      setShelf(null); setExpanded(null)
+      load()
+    } catch (e) {
+      setShelf(prev => prev && { ...prev, saving: false, error: e instanceof Error ? e.message : 'Save failed' })
+    }
+  }
+
+  async function deleteWork(w: Work) {
+    if (!confirm(`Permanently delete "${w.work}" by ${w.author}? This removes all ${w.chunks} chunks from the corpus (Reading Room AND Cabinet retrieval). This cannot be undone.`)) return
+    try {
+      const q = new URLSearchParams({ author: w.author, work: w.work })
+      const res = await fetch(`/api/corpus-ingest/works?${q.toString()}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Delete failed')
+      setExpanded(null); setShelf(null)
+      load()
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Delete failed')
+    }
+  }
 
   async function openEditor(p: Passage) {
     setEdit({ id: p.id, sourceText: '', summaryText: '', saving: false, resummarizing: false, error: null })
@@ -175,18 +240,67 @@ export default function ManageWorksPage() {
               <button
                 className={styles.cardTitle}
                 style={{ cursor: 'pointer', background: 'none', border: 'none', textAlign: 'left', padding: 0 }}
-                onClick={() => setExpanded(open ? null : k)}
+                onClick={() => toggleWork(w, k, open)}
               >
-                {open ? '▾' : '▸'} {w.author} — <em>{w.work}</em>
+                {open ? '▾' : '▸'} {w.author} — <em>{w.override?.title || w.work}</em>
               </button>
               <span className={styles.muted}>
-                {w.chunks} chunks · {w.textType === 'summary' ? 'summary' : 'verbatim'}
+                {(w.override?.tradition || w.defaultTradition) === 'stoic' ? 'Stoic' : (w.override?.tradition || w.defaultTradition) === 'wider' ? 'Wider' : 'Synthesis'} shelf
+                {w.override?.hidden ? ' · 🚫 hidden' : ''}
+                {' · '}{w.chunks} chunks · {w.textType === 'summary' ? 'summary' : 'verbatim'}
                 {w.passages.length > 0 ? ` · ${w.passages.length} passage${w.passages.length > 1 ? 's' : ''}` : ' · legacy'}
               </span>
             </div>
 
             {open && (
               <div style={{ marginTop: 10 }}>
+                {/* Reading Room presentation: shelf, title, visibility */}
+                {shelf && (
+                  <div style={{ background: '#f7f7fb', borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+                    <div className={styles.sectionLabel} style={{ marginBottom: 8 }}>Reading Room</div>
+                    {shelf.error && <div className={styles.errText} style={{ marginBottom: 8 }}>{shelf.error}</div>}
+                    <div className={styles.field}>
+                      <label className={styles.fieldLabel}>Display title</label>
+                      <input
+                        className={styles.textInput}
+                        value={shelf.title}
+                        placeholder={w.work}
+                        onChange={e => setShelf({ ...shelf, title: e.target.value })}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
+                      <label className={styles.fieldLabel} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        Shelf
+                        <select
+                          className={styles.textInput}
+                          style={{ width: 'auto' }}
+                          value={shelf.tradition}
+                          onChange={e => setShelf({ ...shelf, tradition: e.target.value })}
+                        >
+                          <option value="stoic">Stoic</option>
+                          <option value="wider">Wider tradition</option>
+                        </select>
+                      </label>
+                      <label className={styles.fieldLabel} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input type="checkbox" checked={shelf.hidden} onChange={e => setShelf({ ...shelf, hidden: e.target.checked })} />
+                        Hide from Reading Room
+                      </label>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
+                      <button className={styles.scheduleBtn} disabled={shelf.saving} onClick={() => saveShelf(w)}>
+                        {shelf.saving ? 'Saving…' : 'Save Reading Room settings'}
+                      </button>
+                      <button
+                        className={styles.ghostBtn}
+                        style={{ color: '#B23535', borderColor: '#B23535' }}
+                        onClick={() => deleteWork(w)}
+                      >
+                        Delete work permanently
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {w.passages.length === 0 && (
                   <p className={styles.muted} style={{ marginBottom: 10 }}>
                     Ingested before source tracking — no editable passages, but you can append chapters.
