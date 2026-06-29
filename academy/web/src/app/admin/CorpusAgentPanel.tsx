@@ -71,6 +71,8 @@ export default function CorpusAgentPanel({ onHealth }: { onHealth?: (h: Health) 
   const [data, setData] = useState<CorpusData | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -89,6 +91,22 @@ export default function CorpusAgentPanel({ onHealth }: { onHealth?: (h: Health) 
   }, [onHealth])
 
   useEffect(() => { load() }, [load])
+
+  const runNow = useCallback(async () => {
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/admin/corpus-agent/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
+      setRunMsg('✓ Ingestion started on Railway — it drains the queue and logs a run here. Refresh in a minute or two.')
+      // Give Railway a moment to spin up + create the run row, then refresh.
+      setTimeout(() => load(), 10000)
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
+    }
+    setRunning(false)
+  }, [load])
 
   if (loading && !data) {
     return (
@@ -132,8 +150,22 @@ export default function CorpusAgentPanel({ onHealth }: { onHealth?: (h: Health) 
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>RAG Corpus agent</h1>
-        <p>Nightly autonomous ingestion into the rag_corpus table.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>RAG Corpus agent</h1>
+            <p>Nightly autonomous ingestion into the rag_corpus table.</p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Trigger the nightly ingestion agent now (drains the queue)"
+          >
+            {running ? 'Starting…' : '▶ Run ingestion now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       {/* Last run */}
