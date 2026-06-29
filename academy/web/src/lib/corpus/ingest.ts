@@ -51,37 +51,63 @@ export type IngestMeta = {
   text_type: string // 'summary' | 'public_domain'
 }
 
+// Highest chunk_index already stored for this (author, work, program_id), or -1
+// if the work is new. New chunks start after it so a second passage APPENDS
+// instead of overwriting the first (the upsert key is
+// author,work,program_id,chunk_index — restarting at 0 would clobber).
+export async function maxChunkIndex(author: string, work: string): Promise<number> {
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('rag_corpus')
+    .select('chunk_index')
+    .eq('author', author)
+    .eq('work', work)
+    .eq('program_id', PROGRAM_ID)
+    .order('chunk_index', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return data ? data.chunk_index : -1
+}
+
 export async function ingestText(
   text: string,
   meta: IngestMeta
-): Promise<{ chunksCreated: number; wordCount: number }> {
+): Promise<{ chunksCreated: number; wordCount: number; chunkIds: string[] }> {
   const admin = createAdminClient()
   const chunks = chunkText(text)
+  const offset = (await maxChunkIndex(meta.author, meta.work)) + 1
+  const chunkIds: string[] = []
 
   for (let i = 0; i < chunks.length; i++) {
     const embedding = await embedChunk(chunks[i])
-    const { error } = await admin.from('rag_corpus').upsert(
-      {
-        chunk_text: chunks[i],
-        author: meta.author,
-        work: meta.work,
-        section_label: meta.section_label,
-        language: meta.language,
-        program_id: PROGRAM_ID,
-        course_relevance: meta.course_relevance,
-        difficulty: meta.difficulty,
-        text_type: meta.text_type,
-        source_url: null,
-        chunk_index: i,
-        word_count: wordCount(chunks[i]),
-        embedding,
-      },
-      { onConflict: 'author,work,program_id,chunk_index' }
-    )
-    if (error) throw new Error(`upsert chunk ${i}: ${error.message}`)
+    const { data, error } = await admin
+      .from('rag_corpus')
+      .upsert(
+        {
+          chunk_text: chunks[i],
+          author: meta.author,
+          work: meta.work,
+          section_label: meta.section_label,
+          language: meta.language,
+          program_id: PROGRAM_ID,
+          course_relevance: meta.course_relevance,
+          difficulty: meta.difficulty,
+          text_type: meta.text_type,
+          source_url: null,
+          chunk_index: offset + i,
+          word_count: wordCount(chunks[i]),
+          embedding,
+        },
+        { onConflict: 'author,work,program_id,chunk_index' }
+      )
+      .select('id')
+      .single()
+    if (error) throw new Error(`upsert chunk ${offset + i}: ${error.message}`)
+    if (data?.id) chunkIds.push(data.id)
   }
 
-  return { chunksCreated: chunks.length, wordCount: wordCount(text) }
+  return { chunksCreated: chunks.length, wordCount: wordCount(text), chunkIds }
 }
 
 // Live chunk count for a single author (for the post-ingest "coverage" line).

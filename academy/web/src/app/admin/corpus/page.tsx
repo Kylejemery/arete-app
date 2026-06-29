@@ -98,6 +98,20 @@ export default function CorpusIngestPage() {
     if (authorized) loadCoverage()
   }, [authorized, loadCoverage])
 
+  // Deep-link from "Manage Works → + Add chapter": prefill Author/Work (and an
+  // optional starting Section) so a new passage appends to an existing work.
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      const a = q.get('author'), w = q.get('work'), s = q.get('section')
+      if (a) setAuthor(a)
+      if (w) setWork(w)
+      if (s) setSection(s)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   // On load, surface any draft saved in this browser so it can be restored.
   useEffect(() => {
     try {
@@ -189,6 +203,10 @@ export default function CorpusIngestPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: summaryText,
+          // The original pasted passage — stored admin-only as the source of
+          // record (never shelved in the Reading Room). For verbatim it equals
+          // the summary; for summary mode it's the un-summarized source.
+          sourceText: inputText,
           mode,
           publicDomainConfirmed,
           author,
@@ -251,6 +269,11 @@ export default function CorpusIngestPage() {
       <div className={styles.header}>
         <h1>Corpus passage ingestion</h1>
         <p>Paste a passage, review the agent&apos;s summary, then approve it into the RAG corpus.</p>
+        <p style={{ marginTop: 4 }}>
+          <a href="/admin/corpus/works" className={styles.ghostBtn} style={{ display: 'inline-block' }}>
+            📚 Manage works — edit, append chapters, or remove
+          </a>
+        </p>
       </div>
 
       <div className={styles.corpusGrid}>

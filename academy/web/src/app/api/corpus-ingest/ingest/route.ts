@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import { ingestText, authorChunkCount, type IngestMeta } from '@/lib/corpus/ingest'
 
 export const dynamic = 'force-dynamic'
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const {
       text,
+      sourceText,
       mode,
       publicDomainConfirmed,
       author,
@@ -56,8 +58,33 @@ export async function POST(req: NextRequest) {
       text_type: mode === 'summary' ? 'summary' : 'public_domain',
     }
 
-    const { chunksCreated, wordCount } = await ingestText(text, meta)
+    const { chunksCreated, wordCount, chunkIds } = await ingestText(text, meta)
     const chunks = await authorChunkCount(meta.author)
+
+    // Record the source-of-record for this passage (original text + summary +
+    // the chunk ids it produced) so it can be re-opened, edited, or removed from
+    // the Manage Works view. Admin-only table; never read by the Reading Room.
+    // Best-effort: a failure here must not lose the (already-committed) ingest.
+    let sourceWarning: string | undefined
+    try {
+      const admin = createAdminClient()
+      const { error: srcErr } = await admin.from('corpus_sources').insert({
+        author: meta.author,
+        work: meta.work,
+        section_label: meta.section_label,
+        language: meta.language,
+        course_relevance: meta.course_relevance,
+        difficulty: meta.difficulty,
+        mode,
+        text_type: meta.text_type,
+        source_text: typeof sourceText === 'string' && sourceText.trim() ? sourceText : text,
+        summary_text: text,
+        rag_chunk_ids: chunkIds,
+      })
+      if (srcErr) sourceWarning = srcErr.message
+    } catch (e) {
+      sourceWarning = e instanceof Error ? e.message : 'source record failed'
+    }
 
     return NextResponse.json({
       success: true,
@@ -66,6 +93,7 @@ export async function POST(req: NextRequest) {
       author: meta.author,
       work: meta.work,
       authorChunkCount: chunks,
+      ...(sourceWarning ? { sourceWarning } : {}),
     })
   } catch (e) {
     return NextResponse.json(
