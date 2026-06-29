@@ -35,6 +35,54 @@ function yesterday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Add n days to a local YYYY-MM-DD string and return a YYYY-MM-DD string.
+function addDays(dateStr: string, n: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + n);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * The "Days of Discipline" streak breaks only after TWO consecutive
+ * fully-missed days — days on which neither the morning nor the evening
+ * routine was completed (a missing check-in row counts as fully missed).
+ * A single off-day is forgiven, and any day with partial engagement
+ * (e.g. morning only) keeps the chain alive.
+ *
+ * Examines every completed calendar day strictly after `lastDate` and
+ * strictly before today; today is in progress and never counts against you.
+ */
+async function streakBrokenSince(userId: string, lastDate: string): Promise<boolean> {
+  const todayStr = today();
+  let cursor = addDays(lastDate, 1);
+  if (cursor >= todayStr) return false; // no fully-elapsed days in between
+
+  const { data: rows } = await supabase
+    .from('check_ins')
+    .select('check_in_date, morning_done, evening_done')
+    .eq('user_id', userId)
+    .gt('check_in_date', lastDate)
+    .lt('check_in_date', todayStr);
+
+  const engaged = new Set<string>();
+  for (const r of rows ?? []) {
+    if (r.morning_done || r.evening_done) engaged.add(r.check_in_date as string);
+  }
+
+  let consecutiveMissed = 0;
+  while (cursor < todayStr) {
+    if (engaged.has(cursor)) {
+      consecutiveMissed = 0;
+    } else {
+      consecutiveMissed += 1;
+      if (consecutiveMissed >= 2) return true;
+    }
+    cursor = addDays(cursor, 1);
+  }
+  return false;
+}
+
 // ----------------------------------------------------------------
 // USER SETTINGS
 // ----------------------------------------------------------------
@@ -96,8 +144,8 @@ export async function getProfileStreak(): Promise<number> {
 }
 
 /**
- * Called on app load. If the last completed day was more than 1 day ago,
- * a full day was missed — reset the streak to 0.
+ * Called on app load. The streak resets to 0 only after two consecutive
+ * fully-missed days (see streakBrokenSince) — a single off-day is forgiven.
  * Does NOT touch morning_done / evening_done on check_ins.
  */
 export async function checkAndResetStreakIfMissed(): Promise<number> {
@@ -111,14 +159,17 @@ export async function checkAndResetStreakIfMissed(): Promise<number> {
       .single()
     if (error || !data) return 0
 
+    const streak = data.streak ?? 0
     const lastDate: string | null = data.streak_last_incremented_date
-    const yDate = yesterday()
 
-    // If never incremented, nothing to reset
-    if (!lastDate) return data.streak ?? 0
+    // Nothing to lose, or the streak was never started
+    if (streak === 0 || !lastDate) return streak
 
-    // If last increment was before yesterday, a full day was missed — reset
-    if (lastDate < yDate) {
+    // Completed yesterday or today — definitely safe, skip the lookup
+    if (lastDate >= yesterday()) return streak
+
+    // Otherwise only break the streak on two consecutive fully-missed days
+    if (await streakBrokenSince(userId, lastDate)) {
       await supabase
         .from('profiles')
         .update({ streak: 0 })
@@ -126,7 +177,7 @@ export async function checkAndResetStreakIfMissed(): Promise<number> {
       return 0
     }
 
-    return data.streak ?? 0
+    return streak
   } catch {
     return 0
   }
@@ -153,8 +204,11 @@ export async function incrementStreak(): Promise<void> {
     // Already incremented today — bail out
     if (profile?.streak_last_incremented_date === todayStr) return
 
-    // Streak continues only if yesterday was the last completed day
-    const streakContinues = profile?.streak_last_incremented_date === yesterday()
+    // Streak continues as long as it wasn't broken (two consecutive
+    // fully-missed days) since the last completed day; a single off-day is
+    // forgiven. Otherwise it restarts at 1.
+    const lastDate: string | null = profile?.streak_last_incremented_date ?? null
+    const streakContinues = !!lastDate && !(await streakBrokenSince(userId, lastDate))
     const newStreak = streakContinues ? (profile.streak ?? 0) + 1 : 1
 
     await supabase

@@ -136,8 +136,30 @@ export async function GET() {
     } catch { return null }
   })()
 
-  const [corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData] =
-    await Promise.all([corpus, journal, gap, synthesis, scheduler, dispatch])
+  // --- Self-reflection agent (Layer 6 meta-agent) ---
+  const reflection = (async () => {
+    try {
+      const { data: row } = await admin.from('system_reflections')
+        .select('reflection_week, report_title, anomalies, agent_status, generated_at')
+        .order('reflection_week', { ascending: false }).limit(1).maybeSingle()
+      if (!row) return null
+      const anomalies = Array.isArray(row.anomalies) ? row.anomalies : []
+      const status = row.agent_status && typeof row.agent_status === 'object' ? row.agent_status : {}
+      const fired = (Object.values(status) as Array<{ fired?: boolean }>)
+      return {
+        week: row.reflection_week,
+        title: row.report_title,
+        generatedAt: row.generated_at,
+        anomalies: anomalies.length,
+        criticalAnomalies: anomalies.filter((a: { severity?: string }) => a.severity === 'critical').length,
+        agentsFired: fired.filter(a => a?.fired).length,
+        agentsTotal: fired.length || 6,
+      }
+    } catch { return null }
+  })()
+
+  const [corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData] =
+    await Promise.all([corpus, journal, gap, synthesis, scheduler, dispatch, reflection])
 
   return NextResponse.json({
     week,
@@ -147,5 +169,6 @@ export async function GET() {
     synthesis: synthesisData,
     scheduler: schedulerData,
     dispatch: dispatchData,
+    reflection: reflectionData,
   })
 }

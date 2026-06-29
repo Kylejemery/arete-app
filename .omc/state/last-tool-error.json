@@ -1,7 +1,7 @@
 {
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\academy\\\\web\\\\src\\\\app\\\\api\\\\linkedin-callback\\\\route.ts\"}",
-  "error": "File does not exist. Note: your current working directory is C:\\Users\\kjemery\\Arete\\Arete.",
-  "timestamp": "2026-06-15T19:06:47.068Z",
+  "tool_name": "mcp__a6244408-a83e-4651-9b5f-92c59c412136__execute_sql",
+  "tool_input_preview": "{\"project_id\":\"jbqgkqxvtldnzixrwxsy\",\"query\":\"select column_name, data_type from information_schema.columns where table_name = 'concept_passage_map' order by ordinal_position;\"}",
+  "error": "{\"error\":{\"name\":\"McpError\",\"message\":\"MCP error -32600: You do not have permission to perform this action\"}}",
+  "timestamp": "2026-06-29T17:26:08.895Z",
   "retry_count": 1
 }
