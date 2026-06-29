@@ -11,6 +11,7 @@ const STOIC_AUTHORS = new Set([
   'Marcus Aurelius',
   'Epictetus',
   'Seneca',
+  'Zeno of Citium',  // founder of Stoicism
   'Cleanthes',
   'Cicero',
   'Diogenes Laërtius',
@@ -31,6 +32,7 @@ const SPINES = {
   'Marcus Aurelius': '#2d1b4e',
   'Epictetus': '#0f2744',
   'Seneca': '#3a2415',
+  'Zeno of Citium': '#0f2e1a',
   'Cleanthes': '#13324f',
   'Cicero': '#42321a',
   'Diogenes Laërtius': '#1d2c4a',
@@ -86,6 +88,7 @@ const ERAS = {
   'Epictetus|Discourses': 'Nicopolis · c. 108 AD',
   'Epictetus|Enchiridion': 'The Handbook · c. 125 AD',
   'Epictetus|Golden Sayings': 'Nicopolis · 2nd century AD',
+  'Zeno of Citium|Letter to King Antigonus': 'Athens · 3rd century BC',
   'Seneca|Letters': 'Rome · c. 65 AD',
   'Seneca|Shortness': 'Rome · c. 49 AD',
   'Seneca|Clemency': 'Rome · c. 55–56 AD',
