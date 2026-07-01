@@ -162,6 +162,33 @@ async function getGroundingPassages(communityThemes) {
   return Object.values(byAuthor).slice(0, 4);
 }
 
+// --- 3c-ii. World context --------------------------------------------------
+
+// Monday (UTC) of the current week, as YYYY-MM-DD — matches the World Agent's
+// observation_week keying.
+function getMondayOfCurrentWeek() {
+  const d = new Date();
+  const day = d.getUTCDay(); // 0=Sun .. 6=Sat
+  const diff = (day === 0 ? -6 : 1) - day;
+  d.setUTCDate(d.getUTCDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+// The World Agent's digest for this week — the "what's happening in the world"
+// layer — but only once it's cleared for use (auto-approved scientific signals,
+// or a signal Kyle has explicitly approved). Political/contested signals sit in
+// pending_review and are deliberately NOT injected until reviewed.
+async function getWorldContext() {
+  const { data } = await supabase
+    .from('world_observations')
+    .select('dispatch_context, dominant_signal')
+    .eq('observation_week', getMondayOfCurrentWeek())
+    .in('status', ['approved', 'auto_approved'])
+    .maybeSingle();
+
+  return data?.dispatch_context || null;
+}
+
 // --- 3d. Generation --------------------------------------------------------
 
 function buildSystemPrompt() {
@@ -217,7 +244,7 @@ async function callClaude(model, system, userPrompt) {
   return res.json();
 }
 
-async function generateDispatch(communityThemes, corpusContext, groundingPassages, config) {
+async function generateDispatch(communityThemes, corpusContext, groundingPassages, config, worldContext) {
   const today = new Date();
   const dayName = today.toLocaleDateString('en-US', { weekday: 'long' });
   const dateStr = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -236,6 +263,12 @@ async function generateDispatch(communityThemes, corpusContext, groundingPassage
     ? `The corpus recently synthesized a cross-thinker analysis of "${corpusContext.latestSynthesisConcept}".`
     : 'No recent synthesis available.';
 
+  // The World Agent's digest, when available and approved. Woven in as context,
+  // never quoted — it should inform the day's reflection, not headline it.
+  const worldBlock = worldContext
+    ? `\n[WORLD CONTEXT — what is happening in the world this week]\n${worldContext}\n[END WORLD CONTEXT]\n\nLet the world context inform today's reflection naturally — do not quote it or announce it as news. It is the "what's happening" layer beneath the philosophy.\n`
+    : '';
+
   const userPrompt = `Generate today's daily dispatch.
 
 Date: ${dayName}, ${dateStr}
@@ -248,7 +281,7 @@ ${corpusText}
 
 GROUNDING PASSAGES (from the corpus — use these to anchor the dispatch):
 ${passagesText}
-
+${worldBlock}
 Generate the dispatch now.`;
 
   const data = await callClaude(config.model, buildSystemPrompt(), userPrompt);
@@ -300,15 +333,16 @@ async function runDispatchGeneration() {
     return;
   }
 
-  const [communityThemes, corpusContext] = await Promise.all([
+  const [communityThemes, corpusContext, worldContext] = await Promise.all([
     getCommunityThemes(config.max_community_themes || 5),
     getCorpusContext(),
+    getWorldContext(),
   ]);
   const groundingPassages = await getGroundingPassages(communityThemes);
 
-  console.log(`Community themes: ${communityThemes.length} | Grounding passages: ${groundingPassages.length}`);
+  console.log(`Community themes: ${communityThemes.length} | Grounding passages: ${groundingPassages.length} | World context: ${worldContext ? 'yes' : 'none'}`);
 
-  const dispatch = await generateDispatch(communityThemes, corpusContext, groundingPassages, config);
+  const dispatch = await generateDispatch(communityThemes, corpusContext, groundingPassages, config, worldContext);
 
   // Store the dispatch.
   const { data: stored, error: storeErr } = await supabase
@@ -360,6 +394,7 @@ module.exports = {
   getCorpusContext,
   getCommunityThemes,
   getGroundingPassages,
+  getWorldContext,
   generateDispatch,
   runDispatchGeneration,
 };
