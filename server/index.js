@@ -32,6 +32,14 @@ const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 // agents/inquiry-agent.js`); Kyle adds the cron manually. Approved inquiries
 // with observatory_visible surface via GET /api/observatory/inquiries below.
 
+// Longitudinal User Model Agent
+// Railway cron: 30 4 * * 1 (Mondays 04:30 UTC — 30min after Journal Analysis)
+// Builds a persistent philosophical portrait per user from accumulated
+// journal_analysis data (server/longitudinal-user-model.js). Runs as its own
+// Railway cron service (`node longitudinal-user-model.js`); Kyle adds the cron
+// manually. Its output feeds getLongitudinalContext() below, which injects each
+// user's portrait into their Cabinet counselors' system prompts.
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
