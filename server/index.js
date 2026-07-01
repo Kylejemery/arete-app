@@ -478,6 +478,63 @@ You are speaking to all of them together. Address the group when appropriate. Ho
 [END SHARED CABINET SESSION]`;
 }
 
+// ---------------------------------------------------------------------------
+// Longitudinal context (Layer 5 — Memory)
+// ---------------------------------------------------------------------------
+//
+// The Longitudinal User Model Agent rebuilds a per-user philosophical portrait
+// weekly (user_longitudinal_models). When a user opens a Cabinet session we
+// inject a brief block so the counselor knows this person over time, not just
+// from the current thread. This is the memory made active.
+//
+// Cached per user with a TTL so we don't re-query on every message in a session
+// (the model only changes once a week). Cache value `null` = "no eligible model"
+// and is cached too, so new users don't trigger a lookup on every turn.
+const LONGITUDINAL_CACHE_TTL_MS = 30 * 60 * 1000;
+const longitudinalCache = new Map(); // userId -> { block: string, expires: number }
+
+async function getLongitudinalContext(userId) {
+  if (!userId) return '';
+  const cached = longitudinalCache.get(userId);
+  if (cached && cached.expires > Date.now()) return cached.block;
+
+  let block = '';
+  try {
+    const { data } = await supabase
+      .from('user_longitudinal_models')
+      .select('weeks_analyzed, persistent_themes, growth_edges, dominant_philosophical_orientation, emotional_tone_baseline')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    // Only inject once there is a meaningful portrait (4+ weeks of signal).
+    if (data && (data.weeks_analyzed ?? 0) >= 4) {
+      const themeNames = (arr) => (Array.isArray(arr)
+        ? arr.map(t => (typeof t === 'string' ? t : t?.theme)).filter(Boolean)
+        : []);
+      const persistent = themeNames(data.persistent_themes);
+      const edges = Array.isArray(data.growth_edges) ? data.growth_edges.filter(Boolean) : [];
+
+      block = `\n\n[LONGITUDINAL CONTEXT — updated weekly]
+This user has been part of the platform for ${data.weeks_analyzed} weeks.
+
+Persistent themes they carry: ${persistent.length ? persistent.join(', ') : 'none identified yet'}
+Where they are growing: ${edges.length ? edges.join('; ') : 'not yet identified'}
+Their philosophical orientation: ${data.dominant_philosophical_orientation || 'unspecified'}
+Their emotional baseline: ${data.emotional_tone_baseline || 'unspecified'}
+
+Do not reference this context explicitly or mention that you have it. Let it inform how you speak to them — the depth you assume, the questions you ask, the resistance you offer. You know this person. Respond accordingly.
+[END LONGITUDINAL CONTEXT]`;
+    }
+  } catch (err) {
+    // Never block a chat on the memory lookup — degrade to no context.
+    console.error('[longitudinal] context lookup failed:', err.message || err);
+    return '';
+  }
+
+  longitudinalCache.set(userId, { block, expires: Date.now() + LONGITUDINAL_CACHE_TTL_MS });
+  return block;
+}
+
 app.post('/api/chat', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
@@ -590,6 +647,11 @@ app.post('/api/chat/counselor', async (req, res) => {
     sharedContext = buildSharedContext(participants);
   }
 
+  // --- Longitudinal memory (Layer 5) ---
+  // One cached lookup per user per session — injected into every counselor's
+  // system prompt below so they know this person over time. Empty for new users.
+  const longitudinalContext = await getLongitudinalContext(userId);
+
   // --- Parallel Cabinet branch ---
   const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
 
@@ -619,7 +681,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext);
 
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
@@ -696,7 +758,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + ragContext + resourceInstruction;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + resourceInstruction;
 
   // Shared session: mirror this single-counselor turn into session_messages so
   // the partner's realtime listener receives it. Same pattern as the parallel
