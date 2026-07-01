@@ -65,6 +65,10 @@ type ObsData = {
   recent: { mostAsked: string[]; tensions: { title: string; concept: string }[]; newIngests: { title: string; concept: string }[]; gaps: string[] };
 };
 
+// An approved, publicly-surfaced open question from the Inquiry Agent.
+type OpenInquiry = { id: string; question: string; confidence: string | null; authorCount: number };
+type WorldResponse = { id: string; dominantSignal: string; tension: string | null; authors: string[]; week: string };
+
 type Master = {
   id: string;
   name: string;
@@ -1103,6 +1107,8 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
 
 function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
+  const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
+  const [world, setWorld] = useState<WorldResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
   // On a phone the dossier rides up from the bottom as a sheet instead of
@@ -1120,6 +1126,28 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         /* empty sky handled below */
       } finally {
         if (!cancelled) setLoading(false);
+      }
+    })();
+    // The Inquiry Agent's approved open questions ride alongside the sky data;
+    // a failed fetch just leaves the section empty.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/inquiries');
+        const json = await res.json();
+        if (!cancelled && res.ok && Array.isArray(json.inquiries)) setInquiries(json.inquiries);
+      } catch {
+        /* no open inquiries surfaced */
+      }
+    })();
+    // The World Agent's response to the outside world, when Kyle has approved it
+    // for the Observatory; a failed fetch just leaves the section empty.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/world');
+        const json = await res.json();
+        if (!cancelled && res.ok && json.world) setWorld(json.world);
+      } catch {
+        /* no world response surfaced */
       }
     })();
     return () => { cancelled = true; };
@@ -1164,6 +1192,47 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
               {data?.recent.newIngests.map((t, i) => <RecentCard key={`n${i}`} tag="New synthesis ingested" dot="#7a9a6a" text={t.title} />)}
               {data?.recent.gaps.map((t, i) => <RecentCard key={`g${i}`} tag="Coverage the corpus wants" dot="#6a8ad9" text={t} />)}
             </div>
+
+            {inquiries.length > 0 && (
+              <div style={{ marginTop: 26 }}>
+                {inquiries.map(inq => (
+                  <div key={inq.id} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 1px rgba(201,168,76,0.7)' }} />
+                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>Open inquiry</span>
+                    </div>
+                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: IVORY, margin: '0 0 7px' }}>{inq.question}</p>
+                    <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED }}>
+                      Pursued across {inq.authorCount} author{inq.authorCount === 1 ? '' : 's'}
+                      {inq.confidence ? <> · <span style={{ color: GOLD }}>{inq.confidence}</span></> : null}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {world && (
+              <div style={{ marginTop: 26, borderTop: '1px solid rgba(201,168,76,0.16)', paddingTop: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97a6a', boxShadow: '0 0 8px 1px rgba(217,122,106,0.7)' }} />
+                  <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>The corpus is responding to</span>
+                </div>
+                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: IVORY, margin: '0 0 10px' }}>{world.dominantSignal}</p>
+                {world.tension && (
+                  <p style={{ fontFamily: SERIF, fontSize: 14.5, lineHeight: 1.55, color: MUTED, margin: '0 0 12px' }}>{world.tension}</p>
+                )}
+                {world.authors.length > 0 && (
+                  <>
+                    <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 8 }}>This week&rsquo;s relevant voices</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {world.authors.map(a => (
+                        <span key={a} style={{ fontFamily: SERIF, fontSize: 13.5, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '4px 11px' }}>{a}</span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div className="lib-fade" style={{ padding: '26px 24px' }}>

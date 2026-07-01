@@ -24,6 +24,14 @@ const { runSynthesisAgent } = require('./synthesis-agent');
 // service manually; this require also backs the on-demand admin trigger below.
 const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 
+// Inquiry Agent
+// Railway cron: 30 6 * * 1 (Mondays 06:30 UTC — after the Synthesis Agent)
+// Generates philosophical questions the corpus raises but does not answer,
+// pursues them across the full corpus, and stores each as pending_review in
+// open_inquiries. Runs as its own Railway cron service (`node
+// agents/inquiry-agent.js`); Kyle adds the cron manually. Approved inquiries
+// with observatory_visible surface via GET /api/observatory/inquiries below.
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
@@ -3411,6 +3419,44 @@ app.get('/api/library/observatory', async (req, res) => {
   } catch (err) {
     console.error('[/api/library/observatory] error:', err.message);
     return res.status(500).json({ error: 'The sky could not be charted' });
+  }
+});
+
+// GET /api/observatory/inquiries — the Inquiry Agent's approved, publicly
+// surfaced open questions for the Observatory sidebar. Only inquiries Kyle has
+// approved AND marked observatory_visible are ever returned; most recent 3.
+// Public (no auth) — same posture as the other Observatory endpoints.
+app.get('/api/observatory/inquiries', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('open_inquiries')
+      .select('id, question, confidence, source_authors, pursuit_passages, inquiry_week')
+      .eq('status', 'approved')
+      .eq('observatory_visible', true)
+      .order('reviewed_at', { ascending: false })
+      .limit(3);
+    if (error) throw error;
+
+    const inquiries = (data || []).map(r => {
+      // "Pursued across N authors" — prefer the breadth of the pursuit itself,
+      // falling back to the seed authors when pursuit passages weren't stored.
+      const pursuitAuthors = Array.isArray(r.pursuit_passages)
+        ? new Set(r.pursuit_passages.map(p => p && p.author).filter(Boolean)).size
+        : 0;
+      const authorCount = pursuitAuthors || (r.source_authors || []).length;
+      return {
+        id: r.id,
+        question: r.question,
+        confidence: r.confidence,
+        authorCount,
+        week: r.inquiry_week,
+      };
+    });
+
+    return res.json({ inquiries });
+  } catch (err) {
+    console.error('[/api/observatory/inquiries] error:', err.message);
+    return res.status(500).json({ error: 'The open inquiries could not be read' });
   }
 });
 
