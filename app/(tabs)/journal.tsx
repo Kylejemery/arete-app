@@ -30,6 +30,13 @@ interface TodayDispatch {
     dispatch_date: string;
 }
 
+interface WeeklyInsight {
+    id: string;
+    insight_text: string;
+    dominant_theme: string | null;
+    analysis_week: string;
+}
+
 export interface UnifiedEntry {
     id: string;
     type: 'reflection' | 'quote' | 'belief' | 'idea';
@@ -113,6 +120,11 @@ export default function JournalScreen() {
     const [todayDispatch, setTodayDispatch] = useState<TodayDispatch | null>(null);
     const [dispatchDismissed, setDispatchDismissed] = useState(false);
 
+    // ── Weekly Insight card ──────────────────────────────────────────────────
+    const [weeklyInsight, setWeeklyInsight] = useState<WeeklyInsight | null>(null);
+    const [insightDismissed, setInsightDismissed] = useState(false);
+    const [insightExpanded, setInsightExpanded] = useState(false);
+
     // ── Goals state ──────────────────────────────────────────────────────────
     const [goals, setGoals] = useState<Goal[]>([]);
     const [goalsLoading, setGoalsLoading] = useState(true);
@@ -134,6 +146,7 @@ export default function JournalScreen() {
             loadGoals();
             loadBooks();
             loadDispatch();
+            loadInsight();
         }, [])
     );
 
@@ -161,6 +174,34 @@ export default function JournalScreen() {
             await AsyncStorage.setItem('dispatch_dismissed_date', todayDispatch.dispatch_date);
         }
         setDispatchDismissed(true);
+    };
+
+    // ── Weekly Insight ────────────────────────────────────────────────────────
+    // Fetched only when the journal tab is focused — the server marks the
+    // insight delivered on first fetch, so it must not be loaded in the
+    // background. Dismissal is keyed by analysis_week so next week's insight
+    // brings the card back.
+    const loadInsight = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) return;
+            const res = await fetch(`${API_BASE_URL}/api/user/insight`, {
+                headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            const data = await res.json().catch(() => ({}));
+            const insight: WeeklyInsight | null = data?.insight || null;
+            if (!insight?.insight_text) { setWeeklyInsight(null); return; }
+            setWeeklyInsight(insight);
+            const dismissedWeek = await AsyncStorage.getItem('insight_dismissed_week');
+            setInsightDismissed(dismissedWeek === insight.analysis_week);
+        } catch (e) { console.error('loadInsight error:', e); }
+    };
+
+    const dismissInsight = async () => {
+        if (weeklyInsight) {
+            await AsyncStorage.setItem('insight_dismissed_week', weeklyInsight.analysis_week);
+        }
+        setInsightDismissed(true);
     };
 
     // ── Journal functions ────────────────────────────────────────────────────
@@ -700,6 +741,34 @@ export default function JournalScreen() {
                             <Text style={styles.dispatchReadMore}>Read more →</Text>
                         </TouchableOpacity>
                     )}
+                    {weeklyInsight && !insightDismissed && (
+                        <TouchableOpacity
+                            activeOpacity={0.85}
+                            style={styles.insightCard}
+                            onPress={() => setInsightExpanded(prev => !prev)}
+                        >
+                            <View style={styles.dispatchHeaderRow}>
+                                <Text style={styles.dispatchEyebrow}>
+                                    🦉 Weekly Insight · Week of {new Date(weeklyInsight.analysis_week + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                                </Text>
+                                <TouchableOpacity onPress={dismissInsight} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                    <Ionicons name="close" size={16} color="#888" />
+                                </TouchableOpacity>
+                            </View>
+                            {weeklyInsight.dominant_theme ? (
+                                <Text style={styles.insightTheme}>{weeklyInsight.dominant_theme}</Text>
+                            ) : null}
+                            <Text
+                                style={styles.insightText}
+                                numberOfLines={insightExpanded ? undefined : 3}
+                            >
+                                {weeklyInsight.insight_text}
+                            </Text>
+                            <Text style={styles.dispatchReadMore}>
+                                {insightExpanded ? 'Show less' : 'Read insight →'}
+                            </Text>
+                        </TouchableOpacity>
+                    )}
                     {filteredEntries.length === 0 ? (
                         <View style={styles.emptyContainer}>
                             <Ionicons name="book-outline" size={52} color="#c9a84c22" />
@@ -1137,6 +1206,17 @@ const styles = StyleSheet.create({
     dispatchTitle: { color: '#fff', fontSize: 16, fontWeight: '700', lineHeight: 22, marginBottom: 4 },
     dispatchTeaser: { color: '#ccc', fontSize: 14, lineHeight: 21 },
     dispatchReadMore: { color: '#c9a84c', fontSize: 13, fontWeight: '700', marginTop: 10, textAlign: 'right' },
+
+    // ── Weekly Insight card ────────────────────────────────────────────────────
+    insightCard: {
+        backgroundColor: '#241f3d', borderRadius: 14, padding: 16,
+        marginBottom: 14, borderWidth: 1, borderColor: '#7b5ea755',
+    },
+    insightTheme: {
+        color: '#b39ddb', fontSize: 13, fontWeight: '700',
+        fontStyle: 'italic', marginBottom: 6,
+    },
+    insightText: { color: '#ccc', fontSize: 14, lineHeight: 22 },
 
     // ── Journal feed ─────────────────────────────────────────────────────────
     feedContent: { padding: 16, paddingTop: 10, paddingBottom: 100 },
