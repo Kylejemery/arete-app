@@ -292,6 +292,16 @@ function LoginForm() {
           </>
         )}
 
+        <p className="text-center mt-10">
+          <a
+            href="https://academy.pursuearete.com/library"
+            className="text-xs tracking-widest uppercase hover:opacity-80 transition-opacity"
+            style={{ color: 'rgba(201,168,76,0.55)' }}
+          >
+            Just browsing? Visit the Library →
+          </a>
+        </p>
+
       </div>
     </div>
   )

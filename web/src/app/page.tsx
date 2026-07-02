@@ -157,17 +157,29 @@ export default function HomePage() {
           >
             Arete
           </span>
-          <Link
-            href="/login"
-            className="px-4 py-2 rounded-full text-xs tracking-widest uppercase transition-opacity hover:opacity-80"
-            style={{
-              border: '1px solid rgba(201,168,76,0.4)',
-              color: '#c9a84c',
-              fontFamily: 'var(--font-mono, monospace)',
-            }}
-          >
-            Sign In
-          </Link>
+          <div className="flex items-center gap-5">
+            <a
+              href="https://academy.pursuearete.com/library"
+              className="text-xs tracking-widest uppercase transition-opacity hover:opacity-80"
+              style={{
+                color: 'rgba(201,168,76,0.75)',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              The Library
+            </a>
+            <Link
+              href="/login"
+              className="px-4 py-2 rounded-full text-xs tracking-widest uppercase transition-opacity hover:opacity-80"
+              style={{
+                border: '1px solid rgba(201,168,76,0.4)',
+                color: '#c9a84c',
+                fontFamily: 'var(--font-mono, monospace)',
+              }}
+            >
+              Sign In
+            </Link>
+          </div>
         </nav>
 
         {/* Cabinet Replay hero */}
@@ -194,9 +206,18 @@ export default function HomePage() {
           className="text-center py-6 text-xs tracking-widest"
           style={{ borderTop: '1px solid rgba(201,168,76,0.1)', color: 'rgba(255,255,255,0.2)', fontFamily: 'var(--font-mono, monospace)' }}
         >
-          <Link href="/privacy" className="hover:opacity-60 transition-opacity" style={{ color: 'rgba(201,168,76,0.4)' }}>
-            Privacy Policy
-          </Link>
+          <span className="flex items-center justify-center gap-6">
+            <a
+              href="https://academy.pursuearete.com/library"
+              className="hover:opacity-60 transition-opacity"
+              style={{ color: 'rgba(201,168,76,0.4)' }}
+            >
+              The Library
+            </a>
+            <Link href="/privacy" className="hover:opacity-60 transition-opacity" style={{ color: 'rgba(201,168,76,0.4)' }}>
+              Privacy Policy
+            </Link>
+          </span>
         </footer>
       </div>
     );
