@@ -223,6 +223,39 @@ async function getSeedPool(config) {
   return data || [];
 }
 
+// --- Tension seeding (downstream of the Tension Agent) ----------------------
+
+// Approved philosophical tensions are premium seed material for inquiry: their
+// source passages already hold a live contradiction the corpus does not
+// resolve. When any exist, one inquiry per run seeds from a random approved
+// tension's passages instead of random sampling. Fails soft — if the table is
+// missing or empty, random sampling proceeds as normal.
+async function getTensionSeed() {
+  try {
+    const { data: tensions, error } = await supabase
+      .from('philosophical_tensions')
+      .select('id, title, source_chunk_ids')
+      .eq('status', 'approved')
+      .not('source_chunk_ids', 'is', null);
+    if (error || !tensions || tensions.length === 0) return null;
+
+    const t = tensions[Math.floor(Math.random() * tensions.length)];
+    const ids = (t.source_chunk_ids || []).filter(Boolean).slice(0, 8);
+    if (ids.length < 2) return null;
+
+    const { data: chunks } = await supabase
+      .from('rag_corpus')
+      .select('id, chunk_text, author, work, text_type')
+      .in('id', ids);
+    const passages = (chunks || []).filter(c => c.author && c.chunk_text);
+    if (passages.length < 2 || new Set(passages.map(p => p.author)).size < 2) return null;
+
+    return { tension: t, passages };
+  } catch {
+    return null;
+  }
+}
+
 // --- Pass 1b. Question generation ------------------------------------------
 
 const QUESTION_SYSTEM_PROMPT = `You are a philosophical inquirer working with a corpus of primary texts. Your job is not to summarize or synthesize these passages. Your job is to find the question they collectively raise — the question that sits in the space between them that none of them fully answers.
@@ -423,6 +456,15 @@ async function runInquiryAgent(options = {}) {
     return { generated: 0, failures: 0, inquiries: [], reason: 'no_diverse_seed' };
   }
 
+  // Downstream of the Tension Agent: when an approved tension exists, its
+  // source passages replace one random seed — inquiry pursues the question a
+  // live contradiction raises rather than one found by chance.
+  const tensionSeed = await getTensionSeed();
+  if (tensionSeed) {
+    seeds[0] = tensionSeed.passages;
+    console.log(`[inquiry-agent] Inquiry 1 seeded from approved tension "${tensionSeed.tension.title}"`);
+  }
+
   let generated = 0;
   let failures = 0;
   const inquiries = [];
@@ -496,6 +538,7 @@ module.exports = {
   getMondayOfCurrentWeek,
   traditionFor,
   getAgentConfig,
+  getTensionSeed,
   buildSeeds,
   generateQuestion,
   retrievePursuitPassages,
