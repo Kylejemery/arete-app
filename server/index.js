@@ -49,6 +49,15 @@ const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 // Approved tensions with observatory_visible surface via GET
 // /api/observatory/tensions below, and seed the Inquiry Agent's pursuit.
 
+// Dreaming Agent
+// Railway cron: 30 23 * * 0 (Sundays 23:30 UTC — after the week settles, before the new cycle)
+// Generates corpus conjecture: aphorisms, thought experiments, propositions,
+// meditations (server/agents/dreaming-agent.js). Runs as its own Railway cron
+// service (`node agents/dreaming-agent.js`); Kyle adds the cron manually.
+// STRICT GATE: nothing surfaces without human review. Output is never ingested
+// into rag_corpus. Approved/starred dreams with observatory_visible surface
+// via GET /api/observatory/dreams below, under "The Corpus Imagines".
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
@@ -3651,6 +3660,46 @@ app.get('/api/observatory/tensions', async (req, res) => {
   } catch (err) {
     console.error('[/api/observatory/tensions] error:', err.message);
     return res.status(500).json({ error: 'The open tensions could not be read' });
+  }
+});
+
+// GET /api/observatory/dreams — the Dreaming Agent's approved, publicly
+// surfaced conjecture for the Observatory sidebar, under "The Corpus
+// Imagines". Only dreams Kyle has approved or starred AND marked
+// observatory_visible are ever returned; most recent 2. The label is
+// load-bearing: a dream is corpus conjecture, never a source text and never
+// the words of any historical thinker.
+// Public (no auth) — same posture as the other Observatory endpoints.
+app.get('/api/observatory/dreams', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('corpus_dreams')
+      .select('id, dream_type, title, content, seed_authors')
+      .in('status', ['approved', 'starred'])
+      .eq('observatory_visible', true)
+      .order('reviewed_at', { ascending: false })
+      .limit(2);
+    if (error) throw error;
+
+    const dreams = (data || []).map(r => {
+      // Aphorisms and propositions are short enough to show whole; thought
+      // experiments and meditations show title + first line only.
+      const short = r.dream_type === 'aphorism' || r.dream_type === 'proposition';
+      const firstLine = (r.content || '').split(/\n+/)[0].split(/(?<=[.!?])\s+/)[0] || '';
+      return {
+        id: r.id,
+        dreamType: r.dream_type,
+        title: r.title,
+        content: short ? r.content : null,
+        firstLine: short ? null : firstLine,
+        seedAuthors: r.seed_authors || [],
+      };
+    });
+
+    return res.json({ dreams });
+  } catch (err) {
+    console.error('[/api/observatory/dreams] error:', err.message);
+    return res.status(500).json({ error: 'The dreams could not be read' });
   }
 });
 
