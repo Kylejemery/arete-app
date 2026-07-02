@@ -67,6 +67,9 @@ type ObsData = {
 
 // An approved, publicly-surfaced open question from the Inquiry Agent.
 type OpenInquiry = { id: string; question: string; confidence: string | null; authorCount: number };
+// An approved, publicly-surfaced philosophical contradiction from the Tension
+// Agent — named, held open, never resolved.
+type OpenTension = { id: string; title: string; firstSentence: string; authors: string[] };
 type WorldResponse = { id: string; dominantSignal: string; tension: string | null; authors: string[]; week: string };
 
 type Master = {
@@ -1108,6 +1111,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
 function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
   const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
+  const [tensions, setTensions] = useState<OpenTension[]>([]);
   const [world, setWorld] = useState<WorldResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1137,6 +1141,17 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         if (!cancelled && res.ok && Array.isArray(json.inquiries)) setInquiries(json.inquiries);
       } catch {
         /* no open inquiries surfaced */
+      }
+    })();
+    // The Tension Agent's approved contradictions ride alongside too; a failed
+    // fetch just leaves the section empty.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/tensions');
+        const json = await res.json();
+        if (!cancelled && res.ok && Array.isArray(json.tensions)) setTensions(json.tensions);
+      } catch {
+        /* no open tensions surfaced */
       }
     })();
     // The World Agent's response to the outside world, when Kyle has approved it
@@ -1206,6 +1221,28 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
                       Pursued across {inq.authorCount} author{inq.authorCount === 1 ? '' : 's'}
                       {inq.confidence ? <> · <span style={{ color: GOLD }}>{inq.confidence}</span></> : null}
                     </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {tensions.length > 0 && (
+              <div style={{ marginTop: 26 }}>
+                {tensions.map(t => (
+                  <div key={t.id} style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97a6a', boxShadow: '0 0 8px 1px rgba(217,122,106,0.7)' }} />
+                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>Open tension</span>
+                    </div>
+                    <p style={{ fontFamily: SERIF, fontSize: 16.5, lineHeight: 1.4, color: IVORY, margin: '0 0 6px' }}>{t.title}</p>
+                    {t.firstSentence && (
+                      <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, lineHeight: 1.5, color: MUTED, margin: '0 0 7px' }}>{t.firstSentence}</p>
+                    )}
+                    {t.authors.length > 0 && (
+                      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED }}>
+                        {t.authors.join(' · ')}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

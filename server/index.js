@@ -40,6 +40,15 @@ const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 // manually. Its output feeds getLongitudinalContext() below, which injects each
 // user's portrait into their Cabinet counselors' system prompts.
 
+// Tension Agent
+// Railway cron: 30 5 * * 1 (Mondays 05:30 UTC — after Gap Agent, before Synthesis)
+// Hunts unresolved philosophical contradictions across the corpus — places
+// where two or more thinkers, read together, produce a genuine problem that
+// neither resolves (server/agents/tension-agent.js). Runs as its own Railway
+// cron service (`node agents/tension-agent.js`); Kyle adds the cron manually.
+// Approved tensions with observatory_visible surface via GET
+// /api/observatory/tensions below, and seed the Inquiry Agent's pursuit.
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
@@ -222,6 +231,51 @@ async function retrieveChunks(userMessage, counselorSlug, k = 3) {
   } catch (err) {
     console.error('RAG retrieval error:', err.message);
     return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Library catalog awareness
+// ---------------------------------------------------------------------------
+// Counselors only ever see the handful of passages retrieval surfaces for the
+// current message, so without this they cannot truthfully answer "do you have
+// access to <book>?". This builds a compact list of every visible work on the
+// Library shelves — same source of truth as /api/library/texts (library_shelf
+// RPC layered with admin overrides) — and caches it for 10 minutes.
+
+let libraryCatalogCache = { block: '', at: 0 };
+const LIBRARY_CATALOG_TTL_MS = 10 * 60 * 1000;
+
+async function getLibraryCatalogBlock() {
+  if (Date.now() - libraryCatalogCache.at < LIBRARY_CATALOG_TTL_MS) {
+    return libraryCatalogCache.block;
+  }
+  try {
+    const { data, error } = await supabase.rpc('library_shelf');
+    if (error) throw error;
+
+    const ovMap = new Map();
+    const { data: ovs } = await supabase.from('library_overrides').select('*');
+    for (const o of ovs || []) ovMap.set(`${o.author}::${o.work}`, o);
+
+    const lines = (data || [])
+      .map(r => {
+        const ov = ovMap.get(`${r.author}::${r.work}`) || {};
+        if (ov.hidden) return null;
+        return `- ${r.author} — ${ov.title || libraryHelpers.workTitle(r.work)}`;
+      })
+      .filter(Boolean);
+
+    const block = lines.length === 0 ? '' : `\n\n[THE LIBRARY OF ARETE — YOUR SOURCE CATALOG]
+These are the complete texts in the library you draw on. Passages from them are retrieved for you as the conversation unfolds. If the user asks whether you have access to, have read, or can reference a specific book or author, answer truthfully from this catalog: yes if it is listed below (name the exact title), no if it is not. Never claim access to a work that is not on this list.
+${lines.join('\n')}
+[END SOURCE CATALOG]`;
+
+    libraryCatalogCache = { block, at: Date.now() };
+    return block;
+  } catch (err) {
+    console.error('[Library catalog] load failed:', err.message);
+    return libraryCatalogCache.block || '';
   }
 }
 
@@ -764,9 +818,34 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
       `\n[END SOURCE TEXTS]`;
   }
 
+  // Library of Arete: corpus-wide retrieval plus the shelf catalog, so a solo
+  // counselor genuinely has the library (parallel Cabinet mode already does)
+  // and can answer truthfully when asked whether a given work is available.
+  let libraryContext = '';
+  if (process.env.OPENAI_API_KEY) {
+    try {
+      const embedding = await embedQuery(lastUserMessage);
+      const { data, error } = await supabase.rpc('match_rag_corpus', {
+        query_embedding: embedding,
+        match_count: 5,
+        filter_author: null,
+        filter_language: 'english',
+      });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        pulseFromChunks(data, lastUserMessage);
+        libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
+          data.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
+          `\n[END LIBRARY PASSAGES]`;
+      }
+    } catch (err) {
+      console.error('[Cabinet] Library retrieval error (single):', err.message);
+    }
+  }
+  const catalogBlock = await getLibraryCatalogBlock();
+
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + resourceInstruction;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction;
 
   // Shared session: mirror this single-counselor turn into session_messages so
   // the partner's realtime listener receives it. Same pattern as the parallel
@@ -2183,9 +2262,13 @@ async function fireParallelCounselors(question, counselors, history, contextChun
 
   const toneGuard = `\n\nTone: This is a spoken conversation among people in a room, not an exchange of essays. Use contractions. Address the user directly. Do not restate their question back to them. If one sharp sentence is the best response, give one sharp sentence and stop.`;
 
+  // Shelf catalog: lets every counselor answer truthfully when asked whether
+  // a specific work is in the library, beyond the few chunks retrieved above.
+  const catalogBlock = await getLibraryCatalogBlock();
+
   const contextBlock = (contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '') + voiceGuard + lengthGuard + toneGuard + (sharedContext || '');
+    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '');
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
@@ -3527,6 +3610,47 @@ app.get('/api/observatory/inquiries', async (req, res) => {
   } catch (err) {
     console.error('[/api/observatory/inquiries] error:', err.message);
     return res.status(500).json({ error: 'The open inquiries could not be read' });
+  }
+});
+
+// GET /api/observatory/tensions — the Tension Agent's approved, publicly
+// surfaced philosophical contradictions for the Observatory sidebar. Only
+// tensions Kyle has approved AND marked observatory_visible are ever returned;
+// most recent 4. (The synthesis-sourced "awaiting review" tension cards in
+// /api/library/observatory remain separate — these are the approved catalogue.)
+// Public (no auth) — same posture as the other Observatory endpoints.
+app.get('/api/observatory/tensions', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('philosophical_tensions')
+      .select('id, title, tension_statement, position_a, position_b, source_authors, tension_week')
+      .eq('status', 'approved')
+      .eq('observatory_visible', true)
+      .order('reviewed_at', { ascending: false })
+      .limit(4);
+    if (error) throw error;
+
+    const tensions = (data || []).map(r => {
+      // First sentence of the statement only — the sidebar names the tension,
+      // it does not argue it.
+      const firstSentence = (r.tension_statement || '').split(/(?<=[.!?])\s+/)[0] || '';
+      const authors = [
+        r.position_a?.author,
+        r.position_b?.author,
+      ].filter(Boolean);
+      return {
+        id: r.id,
+        title: r.title,
+        firstSentence,
+        authors: authors.length >= 2 ? authors : (r.source_authors || []).slice(0, 2),
+        week: r.tension_week,
+      };
+    });
+
+    return res.json({ tensions });
+  } catch (err) {
+    console.error('[/api/observatory/tensions] error:', err.message);
+    return res.status(500).json({ error: 'The open tensions could not be read' });
   }
 });
 
