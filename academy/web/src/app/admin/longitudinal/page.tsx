@@ -42,6 +42,8 @@ export default function LongitudinalPage() {
   const [data, setData] = useState<Aggregate | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -59,6 +61,24 @@ export default function LongitudinalPage() {
 
   useEffect(() => { load() }, [load])
 
+  const runNow = useCallback(async () => {
+    setRunning(true)
+    setRunMsg('Running — one model call per eligible user, this can take a minute or two…')
+    try {
+      const res = await fetch('/api/admin/longitudinal/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to run the agent')
+      setRunMsg(
+        `✓ Run complete — ${json.eligible ?? 0} eligible, ${json.updated ?? 0} portrait${(json.updated ?? 0) === 1 ? '' : 's'} updated, ` +
+        `${json.skipped ?? 0} skipped (users need 4+ weeks of journal history), ${json.failures ?? 0} failures.`
+      )
+      await load()
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to run the agent')
+    }
+    setRunning(false)
+  }, [load])
+
   const m = data?.metrics
   const themeMap = data?.theme_map ?? []
   const clusters = data?.growth_clusters ?? []
@@ -68,11 +88,25 @@ export default function LongitudinalPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Longitudinal</h1>
-        <p>
-          Aggregate, anonymized patterns across every user&rsquo;s living philosophical portrait.
-          Rebuilt weekly (Mondays 04:30 UTC). No individual portraits are shown here — those belong to the user.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Longitudinal</h1>
+            <p>
+              Aggregate, anonymized patterns across every user&rsquo;s living philosophical portrait.
+              Rebuilt weekly (Mondays 04:30 UTC). No individual portraits are shown here — those belong to the user.
+            </p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Rebuild portraits for all eligible users now instead of waiting for the Monday cron"
+          >
+            {running ? 'Running…' : '▶ Run model now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       {error && (

@@ -53,7 +53,9 @@ const { runJournalAnalysis } = require('./journal-analysis-agent');
 // journal_analysis data (server/longitudinal-user-model.js). Runs as its own
 // Railway cron service (`node longitudinal-user-model.js`); Kyle adds the cron
 // manually. Its output feeds getLongitudinalContext() below, which injects each
-// user's portrait into their Cabinet counselors' system prompts.
+// user's portrait into their Cabinet counselors' system prompts. This require
+// also backs the on-demand admin trigger POST /api/admin/longitudinal/run.
+const { runLongitudinalUserModel } = require('./longitudinal-user-model');
 
 // World Agent
 // Railway cron: 30 3 * * 1 (Mondays 03:30 UTC)
@@ -3298,6 +3300,40 @@ app.post('/api/admin/world/generate', async (req, res) => {
     worldGenerateRunning = false;
     console.error('[/api/admin/world/generate] error:', err.message);
     return res.status(500).json({ error: err.message || 'World generation failed' });
+  }
+});
+
+// POST /api/admin/longitudinal/run — run the Longitudinal User Model agent on
+// demand (admin only) instead of waiting for the Monday 04:30 UTC cron.
+// Awaited so the admin tab gets the run summary back — { eligible, skipped,
+// updated, failures } tells Kyle WHY nothing updated (users need 4+ weeks of
+// journal_analysis history to be eligible). Idempotent: one living row per
+// user, prior state snapshotted to history first. The env pre-check matters —
+// the agent process.exits on missing keys, which must never happen in-process.
+let longitudinalRunning = false;
+app.post('/api/admin/longitudinal/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for the longitudinal model' });
+    }
+    if (longitudinalRunning) {
+      return res.status(409).json({ error: 'A longitudinal model run is already in progress' });
+    }
+
+    longitudinalRunning = true;
+    try {
+      const result = await runLongitudinalUserModel();
+      return res.json({ ok: true, ...result });
+    } finally {
+      longitudinalRunning = false;
+    }
+  } catch (err) {
+    longitudinalRunning = false;
+    console.error('[/api/admin/longitudinal/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Longitudinal run failed' });
   }
 });
 
