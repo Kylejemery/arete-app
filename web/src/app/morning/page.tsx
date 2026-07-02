@@ -6,6 +6,7 @@ import {
   getUserSettings,
   getTodayCheckin,
   upsertTodayCheckin,
+  incrementStreak,
   getRoutineTemplates,
   addRoutineTemplate,
   deleteRoutineTemplate,
@@ -125,6 +126,7 @@ export default function MorningPage() {
     persistDone(updated);
     const allDone = updated.length > 0 && updated.every(t => t.done);
     await upsertTodayCheckin({ morning_tasks: updated, morning_done: allDone });
+    if (allDone) await incrementStreak();
   };
 
   const addTask = async () => {
@@ -157,6 +159,7 @@ export default function MorningPage() {
     try {
       const response = await sendCheckInToCabinet('morning');
       await upsertTodayCheckin({ cabinet_morning_response: response, morning_done: true });
+      await incrementStreak();
       setCheckInResponse(response);
       setCheckInDone(true);
     } catch {

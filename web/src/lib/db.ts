@@ -651,106 +651,136 @@ export async function encodeBelief(id: string): Promise<Belief> {
 // PROFILE STREAK
 // ----------------------------------------------------------------
 
-export async function getProfileStreak(): Promise<number> {
+/** Add n days to a YYYY-MM-DD string, returning YYYY-MM-DD (local). */
+function addDays(dateStr: string, n: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return localDateStr(dt)
+}
+
+/**
+ * The "Days of Discipline" streak breaks only after TWO consecutive
+ * fully-missed days — days on which neither the morning nor the evening
+ * routine was completed (a missing check-in row counts as fully missed).
+ * A single off-day is forgiven, and any day with partial engagement
+ * (e.g. morning only) keeps the chain alive.
+ *
+ * Examines every completed calendar day strictly after `lastDate` and
+ * strictly before today; today is in progress and never counts against you.
+ *
+ * Keep in sync with the mobile twin in lib/db.ts.
+ */
+async function streakBrokenSince(userId: string, lastDate: string): Promise<boolean> {
+  const todayStr = today()
+  let cursor = addDays(lastDate, 1)
+  if (cursor >= todayStr) return false // no fully-elapsed days in between
+
+  const { data: rows } = await supabase
+    .from('check_ins')
+    .select('check_in_date, morning_done, evening_done')
+    .eq('user_id', userId)
+    .gt('check_in_date', lastDate)
+    .lt('check_in_date', todayStr)
+
+  const engaged = new Set<string>()
+  for (const r of rows ?? []) {
+    if (r.morning_done || r.evening_done) engaged.add(r.check_in_date as string)
+  }
+
+  let consecutiveMissed = 0
+  while (cursor < todayStr) {
+    if (engaged.has(cursor)) {
+      consecutiveMissed = 0
+    } else {
+      consecutiveMissed += 1
+      if (consecutiveMissed >= 2) return true
+    }
+    cursor = addDays(cursor, 1)
+  }
+  return false
+}
+
+/**
+ * Called on page load. The streak resets to 0 only after two consecutive
+ * fully-missed days (see streakBrokenSince) — a single off-day is forgiven.
+ * Display/reset only: this never increments.
+ */
+export async function checkAndResetStreakIfMissed(): Promise<number> {
   const userId = await getUserId()
   if (!userId) return 0
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('streak')
+      .select('streak, streak_last_incremented_date')
       .eq('id', userId)
       .single()
-    if (error) return 0
-    return data?.streak ?? 0
+    if (error || !data) return 0
+
+    const streak = data.streak ?? 0
+    const lastDate: string | null = data.streak_last_incremented_date
+
+    // Nothing to lose, or the streak was never started
+    if (streak === 0 || !lastDate) return streak
+
+    // Completed yesterday or today — definitely safe, skip the lookup
+    if (lastDate >= yesterday()) return streak
+
+    // Otherwise only break the streak on two consecutive fully-missed days
+    if (await streakBrokenSince(userId, lastDate)) {
+      await supabase
+        .from('profiles')
+        .update({ streak: 0 })
+        .eq('id', userId)
+      return 0
+    }
+
+    return streak
   } catch {
     return 0
   }
 }
 
-/** Fetch the check-in row for yesterday (local date). */
-export async function getYesterdayCheckin(): Promise<Record<string, unknown> | null> {
-  const userId = await getUserId()
-  if (!userId) return null
-  try {
-    const { data, error } = await supabase
-      .from('check_ins')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('check_in_date', yesterday())
-      .maybeSingle()
-    if (error) {
-      console.error('getYesterdayCheckin error:', error)
-      return null
-    }
-    return data ?? null
-  } catch (e) {
-    console.error('getYesterdayCheckin exception:', e)
-    return null
-  }
-}
-
 /**
- * Atomically increment profiles.streak by 1 for today, guarded by
- * streak_last_incremented_date so multiple devices on the same calendar
- * day only increment once.
- *
- * Strategy:
- *   1. Read current streak + last incremented date.
- *   2. If already today → skip, return current value.
- *   3. UPDATE with a WHERE guard (date IS NULL OR date < today).
- *      Postgres evaluates this atomically: the second device to race
- *      will see date = today and update 0 rows.
- *   4. If 0 rows updated → another device won; re-fetch and return.
+ * Award today's streak day once BOTH routines are complete. Mirrors the
+ * mobile app (lib/db.ts) so both platforms agree on what earns a day:
+ * the increment happens at completion time, never on page load.
  */
-export async function incrementProfileStreak(): Promise<number> {
+export async function incrementStreak(): Promise<void> {
   const userId = await getUserId()
-  if (!userId) return 0
+  if (!userId) return
   try {
-    const todayStr = localDateStr()
+    const todayCheckin = await getTodayCheckin()
 
-    // Step 1 — read current values
-    const { data: cur, error: readErr } = await supabase
+    // Both routines must be complete
+    if (!todayCheckin?.morning_done || !todayCheckin?.evening_done) return
+
+    const todayStr = today()
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('streak, streak_last_incremented_date')
       .eq('id', userId)
       .single()
-    if (readErr || !cur) return 0
+    if (error) return
 
-    // Step 2 — already incremented today on another device
-    if (cur.streak_last_incremented_date === todayStr) {
-      return cur.streak ?? 0
-    }
+    // Already incremented today — bail out
+    if (profile?.streak_last_incremented_date === todayStr) return
 
-    const newStreak = (cur.streak ?? 0) + 1
+    // Streak continues as long as it wasn't broken (two consecutive
+    // fully-missed days) since the last completed day; a single off-day is
+    // forgiven. Otherwise it restarts at 1.
+    const lastDate: string | null = profile?.streak_last_incremented_date ?? null
+    const streakContinues = !!lastDate && !(await streakBrokenSince(userId, lastDate))
+    const newStreak = streakContinues ? (profile.streak ?? 0) + 1 : 1
 
-    // Step 3 — atomic update guarded by date
-    const { data: updated, error: writeErr } = await supabase
+    // WHERE guard keeps two devices racing on the same day to one increment
+    await supabase
       .from('profiles')
       .update({ streak: newStreak, streak_last_incremented_date: todayStr })
       .eq('id', userId)
       .or(`streak_last_incremented_date.is.null,streak_last_incremented_date.lt.${todayStr}`)
-      .select('streak')
-
-    if (writeErr) {
-      console.error('incrementProfileStreak write error:', writeErr)
-      return cur.streak ?? 0
-    }
-
-    // Step 4 — we won the race
-    if (updated && updated.length > 0) {
-      return (updated[0] as { streak: number }).streak ?? newStreak
-    }
-
-    // Another device already incremented — re-fetch the true current value
-    const { data: refetched } = await supabase
-      .from('profiles')
-      .select('streak')
-      .eq('id', userId)
-      .single()
-    return refetched?.streak ?? newStreak
   } catch (e) {
-    console.error('incrementProfileStreak exception:', e)
-    return 0
+    console.error('incrementStreak error:', e)
   }
 }
 

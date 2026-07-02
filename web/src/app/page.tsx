@@ -6,9 +6,7 @@ import Link from 'next/link';
 import {
   getUserSettings,
   hasCheckInToday,
-  getProfileStreak,
-  getYesterdayCheckin,
-  incrementProfileStreak,
+  checkAndResetStreakIfMissed,
   getDailyQuestionCache,
   upsertTodayCheckin,
   getKnowThyselfComplete,
@@ -94,7 +92,7 @@ export default function HomePage() {
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
-        getProfileStreak(),
+        checkAndResetStreakIfMissed(),
         getDailyQuestionCache(),
         getKnowThyselfComplete(),
       ]);
@@ -113,22 +111,10 @@ export default function HomePage() {
         if (!dismissed) setShowOnboardingBanner(true);
       }
 
-      // ── Streak increment (once per calendar day, atomic via DB) ──────
-      // The gate is now streak_last_incremented_date on profiles — atomic
-      // at the Postgres level, so multiple devices on the same day only
-      // increment once regardless of which device loads the home screen first.
-      {
-        const yCheckin = await getYesterdayCheckin();
-        const yTasks = (yCheckin?.morning_tasks as Array<{ done: boolean }> | null) ?? [];
-        // Threshold: at least 1 morning discipline completed yesterday.
-        const earnedStreak = yTasks.some(t => t.done) || Boolean(yCheckin?.morning_done);
-        if (earnedStreak) {
-          const incremented = await incrementProfileStreak();
-          setStreak(incremented);
-        } else {
-          setStreak(streakVal);
-        }
-      }
+      // Streak is awarded at routine-completion time (incrementStreak in
+      // the morning/evening flows), never on page load — loading the home
+      // screen mid-day must not tick the counter.
+      setStreak(streakVal);
 
       // Save today's counselor slug so mobile can verify cache validity
       if (!dqCache) {
@@ -388,8 +374,8 @@ export default function HomePage() {
             {streak <= 0
               ? 'Begin today.'
               : streak === 1
-              ? 'One morning.'
-              : `${numberToWords(streak)} mornings in a row.`}
+              ? 'One day of discipline.'
+              : `${numberToWords(streak)} days of discipline in a row.`}
           </div>
           <div
             className="italic text-[13px] mt-1"
