@@ -86,6 +86,12 @@ export default function GapAgentPage() {
   const [urlForm, setUrlForm] = useState({ author: '', work: '', url: '' })
   const [queuingUrl, setQueuingUrl] = useState(false)
   const [toast, setToast] = useState('')
+  const [pdfForm, setPdfForm] = useState({ author: '', work: '', section: '' })
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfText, setPdfText] = useState('')
+  const [pdfPublicDomain, setPdfPublicDomain] = useState(false)
+  const [pdfBusy, setPdfBusy] = useState<'extracting' | 'ingesting' | null>(null)
+  const [pdfMsg, setPdfMsg] = useState('')
 
   function showToast(msg: string) {
     setToast(msg)
@@ -162,6 +168,94 @@ export default function GapAgentPage() {
       showToast(e instanceof Error ? e.message : 'Failed to queue')
     }
     setQueuingUrl(false)
+  }
+
+  // ── PDF ingestion ─────────────────────────────────────────────────
+  // Text extraction happens in the browser (pdfjs) so there is no upload
+  // limit; only the extracted text travels to the existing ingest endpoint.
+
+  async function extractPdf(file: File) {
+    setPdfBusy('extracting')
+    setPdfMsg(`Extracting text from ${file.name}…`)
+    setPdfText('')
+    try {
+      const pdfjs = await import('pdfjs-dist')
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString()
+      const doc = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+      const parts: string[] = []
+      for (let p = 1; p <= doc.numPages; p++) {
+        const page = await doc.getPage(p)
+        const content = await page.getTextContent()
+        parts.push(content.items.map(it => ('str' in it ? it.str : '')).join(' '))
+      }
+      const text = parts.join('\n\n').replace(/[ \t]+/g, ' ').trim()
+      if (text.length < 200) {
+        throw new Error('Extraction produced almost no text — the PDF is likely scanned images. It needs OCR first.')
+      }
+      setPdfText(text)
+      const words = text.split(/\s+/).length
+      setPdfMsg(
+        `✓ Extracted ${doc.numPages} pages, ~${words.toLocaleString()} words.` +
+        (words > 20000 ? ' ⚠ Large work — if ingestion times out, split the PDF and ingest in sections.' : '')
+      )
+    } catch (e) {
+      setPdfMsg(e instanceof Error ? e.message : 'Failed to extract PDF text')
+    }
+    setPdfBusy(null)
+  }
+
+  async function ingestPdf() {
+    if (!pdfForm.author.trim() || !pdfForm.work.trim()) {
+      setPdfMsg('Author and Work are required')
+      return
+    }
+    if (!pdfText) {
+      setPdfMsg('Choose a PDF first — the text preview appears once it extracts')
+      return
+    }
+    if (!pdfPublicDomain) {
+      setPdfMsg('Confirm the text is public domain (or yours to ingest) first')
+      return
+    }
+    setPdfBusy('ingesting')
+    setPdfMsg('Ingesting — chunking, embedding, and upserting into the corpus. This can take a few minutes for large works…')
+    try {
+      const res = await fetch('/api/corpus-ingest/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: pdfText,
+          sourceText: pdfText,
+          mode: 'verbatim',
+          publicDomainConfirmed: true,
+          author: pdfForm.author,
+          work: pdfForm.work,
+          section: pdfForm.section,
+          language: 'en',
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Ingestion failed')
+      setPdfMsg(`✓ Ingested ${json.chunksCreated} chunks (${(json.wordCount ?? 0).toLocaleString()} words) — ${json.author} now has ${json.authorChunkCount} chunks in the corpus.`)
+      setPdfFile(null)
+      setPdfText('')
+      setPdfForm({ author: '', work: '', section: '' })
+      setPdfPublicDomain(false)
+      await Promise.all([load(), loadSigMap()])
+    } catch (e) {
+      setPdfMsg(e instanceof Error ? e.message : 'Ingestion failed')
+    }
+    setPdfBusy(null)
+  }
+
+  // Prefill the PDF form from a structural-gap row (e.g. summary-only works
+  // that can't be queued by URL).
+  function prefillPdf(author: string, work: string) {
+    setPdfForm(f => ({ ...f, author, work }))
+    showToast(`Filled "${author} / ${work}" in the PDF form — choose the file`)
   }
 
   // Map recommendations by author|||work so structural rows know their queue state.
@@ -305,6 +399,85 @@ export default function GapAgentPage() {
         </div>
       </div>
 
+      {/* ── Ingest a PDF directly into the corpus ──────────────────── */}
+      <div className={styles.card}>
+        <div className={styles.cardTitle}>Ingest a PDF</div>
+        <p className={styles.muted} style={{ marginBottom: 12 }}>
+          For works that only exist as PDFs (no plain-text URL). The text is extracted in your
+          browser, then chunked, embedded, and upserted into the corpus verbatim — same pipeline
+          as the paste box on the Corpus page. Scanned/image PDFs need OCR first. Author/Work must
+          match the significance-map names for a gap to clear.
+        </p>
+        <div className={styles.fieldRow}>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Author</label>
+            <input
+              className={styles.textInput}
+              value={pdfForm.author}
+              onChange={e => setPdfForm(f => ({ ...f, author: e.target.value }))}
+              placeholder="Michel de Montaigne"
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Work</label>
+            <input
+              className={styles.textInput}
+              value={pdfForm.work}
+              onChange={e => setPdfForm(f => ({ ...f, work: e.target.value }))}
+              placeholder="Essays"
+            />
+          </div>
+          <div className={styles.field}>
+            <label className={styles.fieldLabel}>Section (optional)</label>
+            <input
+              className={styles.textInput}
+              value={pdfForm.section}
+              onChange={e => setPdfForm(f => ({ ...f, section: e.target.value }))}
+              placeholder="Book I"
+            />
+          </div>
+        </div>
+        <div className={styles.field}>
+          <label className={styles.fieldLabel}>PDF file</label>
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            onChange={e => {
+              const f = e.target.files?.[0] ?? null
+              setPdfFile(f)
+              if (f) extractPdf(f)
+            }}
+            disabled={pdfBusy !== null}
+          />
+        </div>
+        {pdfText && (
+          <div style={{ margin: '10px 0', background: '#fafafa', border: '1px solid #eee', borderRadius: 8, padding: '10px 12px', fontSize: 12.5, color: '#555', maxHeight: 120, overflow: 'hidden' }}>
+            {pdfText.slice(0, 400)}…
+          </div>
+        )}
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#444', margin: '10px 0' }}>
+          <input
+            type="checkbox"
+            checked={pdfPublicDomain}
+            onChange={e => setPdfPublicDomain(e.target.checked)}
+          />
+          I confirm this text is public domain (or otherwise mine to ingest verbatim)
+        </label>
+        <div className={styles.actions}>
+          <button
+            className={styles.scheduleBtn}
+            onClick={ingestPdf}
+            disabled={pdfBusy !== null || !pdfText}
+          >
+            {pdfBusy === 'ingesting' ? 'Ingesting…' : pdfBusy === 'extracting' ? 'Extracting…' : '⇢ Ingest into corpus'}
+          </button>
+        </div>
+        {pdfMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{pdfMsg}</p>}
+        {pdfFile && !pdfText && pdfBusy === null && (
+          <p className={styles.errText} style={{ marginTop: 4 }}>No text extracted from {pdfFile.name}.</p>
+        )}
+      </div>
+
       {/* ── Section 1: Latest gap report ───────────────────────────── */}
       {report && (
         <>
@@ -345,17 +518,30 @@ export default function GapAgentPage() {
                           {queuing === `${g.author}|||${g.work}` ? 'Queuing…' : '+ Add to Queue'}
                         </button>
                       ) : g.source_type === 'public_domain' ? (
+                        <>
+                          <button
+                            className={styles.ghostBtn}
+                            style={{ height: 28, padding: '0 10px', fontSize: 12 }}
+                            onClick={() => prefillQueueUrl(g.author, g.work)}
+                          >
+                            + Queue by URL
+                          </button>
+                          <button
+                            className={styles.ghostBtn}
+                            style={{ height: 28, padding: '0 10px', fontSize: 12, marginLeft: 6 }}
+                            onClick={() => prefillPdf(g.author, g.work)}
+                          >
+                            📄 Ingest PDF
+                          </button>
+                        </>
+                      ) : (
                         <button
                           className={styles.ghostBtn}
                           style={{ height: 28, padding: '0 10px', fontSize: 12 }}
-                          onClick={() => prefillQueueUrl(g.author, g.work)}
+                          onClick={() => prefillPdf(g.author, g.work)}
                         >
-                          + Queue by URL
+                          📄 Ingest PDF
                         </button>
-                      ) : (
-                        <span className={styles.muted} style={{ fontSize: 12 }}>
-                          summary-only — ingest via corpus page
-                        </span>
                       )}
                     </div>
                   </div>

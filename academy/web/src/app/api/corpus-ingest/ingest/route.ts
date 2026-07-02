@@ -4,6 +4,9 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { ingestText, authorChunkCount, type IngestMeta } from '@/lib/corpus/ingest'
 
 export const dynamic = 'force-dynamic'
+// Whole works (PDF ingestion from the Gap tab) embed hundreds of chunks in one
+// request — allow the full five minutes rather than the platform default.
+export const maxDuration = 300
 
 // POST /api/corpus-ingest/ingest — chunk → embed → upsert the (summary or
 // verbatim) text into rag_corpus. Verbatim requires explicit public-domain
