@@ -48,6 +48,8 @@ export default function InquiryPage() {
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [showApproved, setShowApproved] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
 
   function showToast(msg: string) {
     setToast(msg)
@@ -70,6 +72,22 @@ export default function InquiryPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function runNow() {
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/admin/inquiry/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
+      setRunMsg('✓ Pursuing inquiries on the server — three questions, two model passes each, several minutes. They land here as pending review.')
+      setTimeout(() => load(), 90000)
+      setTimeout(() => load(), 240000)
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
+    }
+    setRunning(false)
+  }
 
   function toggleExpand(id: string) {
     setExpanded(prev => {
@@ -188,12 +206,26 @@ export default function InquiryPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Inquiry agent</h1>
-        <p>
-          The questions the corpus raises but does not answer — generated Mondays at 06:30 UTC, after synthesis.
-          Review each inquiry, then approve (optionally surfacing it in the Observatory), reject, or queue its
-          suggested reading for the corpus. The pursuit is speculative inquiry, never ingested as source text.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Inquiry agent</h1>
+            <p>
+              The questions the corpus raises but does not answer — generated Mondays at 06:30 UTC, after synthesis.
+              Review each inquiry, then approve (optionally surfacing it in the Observatory), reject, or queue its
+              suggested reading for the corpus. The pursuit is speculative inquiry, never ingested as source text.
+            </p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Generate and pursue inquiries now instead of waiting for the Monday cron"
+          >
+            {running ? 'Starting…' : '▶ Run agent now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       {error && (

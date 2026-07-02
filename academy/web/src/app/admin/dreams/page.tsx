@@ -62,6 +62,8 @@ export default function DreamsPage() {
   const [provenanceOpen, setProvenanceOpen] = useState<Set<string>>(new Set())
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
 
   const [typeFilter, setTypeFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -89,6 +91,22 @@ export default function DreamsPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function runNow() {
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/admin/dreams/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
+      setRunMsg('✓ The corpus is dreaming on the server — four dreams, a couple of minutes. They land here as pending review; hollow ones are stored too.')
+      setTimeout(() => load(), 60000)
+      setTimeout(() => load(), 150000)
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
+    }
+    setRunning(false)
+  }
 
   function toggleProvenance(id: string) {
     setProvenanceOpen(prev => {
@@ -216,13 +234,27 @@ export default function DreamsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Dreaming agent</h1>
-        <p>
-          The corpus dreams Sundays at 23:30 UTC — after the week settles, before the new cycle. It generates what
-          the corpus implies but never stated: aphorisms, thought experiments, propositions, meditations. All of it
-          is conjecture, none of it is attributed, none of it ever enters the corpus. This is the strictest gate in
-          the system: nothing surfaces anywhere without your per-dream approval. Star the genuinely good ones.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Dreaming agent</h1>
+            <p>
+              The corpus dreams Sundays at 23:30 UTC — after the week settles, before the new cycle. It generates what
+              the corpus implies but never stated: aphorisms, thought experiments, propositions, meditations. All of it
+              is conjecture, none of it is attributed, none of it ever enters the corpus. This is the strictest gate in
+              the system: nothing surfaces anywhere without your per-dream approval. Star the genuinely good ones.
+            </p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Let the corpus dream now instead of waiting for Sunday night"
+          >
+            {running ? 'Starting…' : '▶ Dream now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       {error && (

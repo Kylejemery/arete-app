@@ -46,6 +46,8 @@ const { runJournalAnalysis } = require('./journal-analysis-agent');
 // open_inquiries. Runs as its own Railway cron service (`node
 // agents/inquiry-agent.js`); Kyle adds the cron manually. Approved inquiries
 // with observatory_visible surface via GET /api/observatory/inquiries below.
+// This require backs the on-demand admin trigger POST /api/admin/inquiry/run.
+const { runInquiryAgent } = require('./agents/inquiry-agent');
 
 // Longitudinal User Model Agent
 // Railway cron: 30 4 * * 1 (Mondays 04:30 UTC — 30min after Journal Analysis)
@@ -77,6 +79,8 @@ const { runWorldAgent } = require('./world-agent');
 // cron service (`node agents/tension-agent.js`); Kyle adds the cron manually.
 // Approved tensions with observatory_visible surface via GET
 // /api/observatory/tensions below, and seed the Inquiry Agent's pursuit.
+// This require backs the on-demand admin trigger POST /api/admin/tensions/run.
+const { runTensionAgent } = require('./agents/tension-agent');
 
 // Dreaming Agent
 // Railway cron: 30 23 * * 0 (Sundays 23:30 UTC — after the week settles, before the new cycle)
@@ -86,6 +90,8 @@ const { runWorldAgent } = require('./world-agent');
 // STRICT GATE: nothing surfaces without human review. Output is never ingested
 // into rag_corpus. Approved/starred dreams with observatory_visible surface
 // via GET /api/observatory/dreams below, under "The Corpus Imagines".
+// This require backs the on-demand admin trigger POST /api/admin/dreams/run.
+const { runDreamingAgent } = require('./agents/dreaming-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -3336,6 +3342,53 @@ app.post('/api/admin/longitudinal/run', async (req, res) => {
     return res.status(500).json({ error: err.message || 'Longitudinal run failed' });
   }
 });
+
+// The three "thinking chain" agents share one on-demand trigger shape: admin
+// gate, env pre-check (each agent process.exits on missing keys — must never
+// happen in-process), overlap latch, fire-and-forget 202 (multi-candidate
+// model calls can run for minutes; the tabs poll their pending lists).
+function makeAgentRunEndpoint(name, latch, runFn) {
+  return async (req, res) => {
+    try {
+      const userId = await getAuthenticatedUserId(req);
+      if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+      if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY || !process.env.OPENAI_API_KEY) {
+        return res.status(500).json({ error: `Server not configured for the ${name} agent` });
+      }
+      if (latch.running) {
+        return res.status(409).json({ error: `A ${name} run is already in progress` });
+      }
+
+      latch.running = true;
+      runFn()
+        .then(result => {
+          console.log(`[/api/admin/${name}/run] finished:`, JSON.stringify(result));
+        })
+        .catch(err => {
+          console.error(`[/api/admin/${name}/run] run failed:`, err.message);
+        })
+        .finally(() => {
+          latch.running = false;
+        });
+
+      return res.status(202).json({ ok: true, started: true });
+    } catch (err) {
+      latch.running = false;
+      console.error(`[/api/admin/${name}/run] error:`, err.message);
+      return res.status(500).json({ error: err.message || `Failed to start the ${name} agent` });
+    }
+  };
+}
+
+// POST /api/admin/tensions/run — hunt tensions now instead of Monday 05:30 UTC.
+app.post('/api/admin/tensions/run', makeAgentRunEndpoint('tension', { running: false }, runTensionAgent));
+
+// POST /api/admin/inquiry/run — generate + pursue inquiries now instead of Monday 06:30 UTC.
+app.post('/api/admin/inquiry/run', makeAgentRunEndpoint('inquiry', { running: false }, runInquiryAgent));
+
+// POST /api/admin/dreams/run — let the corpus dream now instead of Sunday 23:30 UTC.
+app.post('/api/admin/dreams/run', makeAgentRunEndpoint('dreams', { running: false }, runDreamingAgent));
 
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.

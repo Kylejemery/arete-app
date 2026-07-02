@@ -63,6 +63,8 @@ export default function TensionsPage() {
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [mergeTarget, setMergeTarget] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<string | null>(null)
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
   const [showApproved, setShowApproved] = useState(true)
   const [approvedSort, setApprovedSort] = useState<ApprovedSort>('week')
 
@@ -87,6 +89,22 @@ export default function TensionsPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function runNow() {
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/admin/tensions/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
+      setRunMsg('✓ Hunting tensions on the server — four candidate pairings, a few minutes. New tensions land in the pending queue; storing zero is an honest outcome.')
+      setTimeout(() => load(), 60000)
+      setTimeout(() => load(), 180000)
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
+    }
+    setRunning(false)
+  }
 
   async function patch(id: string, body: Record<string, unknown>): Promise<Tension> {
     const res = await fetch(`/api/admin/tensions/${id}`, {
@@ -227,13 +245,27 @@ export default function TensionsPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Tension agent</h1>
-        <p>
-          Unresolved philosophical contradictions across the corpus — places where two or more thinkers, read
-          together, produce a genuine problem that neither resolves. Generated Mondays at 05:30 UTC, between the
-          Gap Agent and Synthesis. Genuine tensions are never resolved: review each one, then approve (optionally
-          surfacing it in the Observatory), reject, or merge a duplicate into the existing catalogue.
-        </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Tension agent</h1>
+            <p>
+              Unresolved philosophical contradictions across the corpus — places where two or more thinkers, read
+              together, produce a genuine problem that neither resolves. Generated Mondays at 05:30 UTC, between the
+              Gap Agent and Synthesis. Genuine tensions are never resolved: review each one, then approve (optionally
+              surfacing it in the Observatory), reject, or merge a duplicate into the existing catalogue.
+            </p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Hunt for tensions now instead of waiting for the Monday cron"
+          >
+            {running ? 'Starting…' : '▶ Run agent now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       {error && (

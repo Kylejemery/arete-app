@@ -145,6 +145,8 @@ export default function ReflectionPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expandedWeek, setExpandedWeek] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [genMsg, setGenMsg] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -163,6 +165,21 @@ export default function ReflectionPage() {
 
   useEffect(() => { load() }, [load])
 
+  async function generateNow() {
+    setGenerating(true)
+    setGenMsg('Generating this week’s reflection — the agent reads the whole fleet, ~1 minute…')
+    try {
+      const res = await fetch('/api/admin/reflection/generate', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to generate')
+      setGenMsg('✓ Reflection generated. Re-running in the same week overwrites the same report.')
+      await load()
+    } catch (e) {
+      setGenMsg(e instanceof Error ? e.message : 'Failed to generate')
+    }
+    setGenerating(false)
+  }
+
   const anomalies = current?.anomalies || []
   const criticalCount = anomalies.filter(a => a.severity === 'critical').length
   const warningCount = anomalies.filter(a => a.severity === 'warning').length
@@ -172,8 +189,22 @@ export default function ReflectionPage() {
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Self-reflection</h1>
-        <p>The meta-agent&rsquo;s weekly read on the health of the whole system. Generated Sundays 07:00 UTC.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Self-reflection</h1>
+            <p>The meta-agent&rsquo;s weekly read on the health of the whole system. Generated Sundays 07:00 UTC.</p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={generateNow}
+            disabled={generating}
+            style={{ flexShrink: 0 }}
+            title="Generate this week's reflection now instead of waiting for Sunday"
+          >
+            {generating ? 'Generating… (~1 min)' : '▶ Generate now'}
+          </button>
+        </div>
+        {genMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{genMsg}</p>}
       </div>
 
       {error && (
