@@ -55,6 +55,18 @@ const { runJournalAnalysis } = require('./journal-analysis-agent');
 // manually. Its output feeds getLongitudinalContext() below, which injects each
 // user's portrait into their Cabinet counselors' system prompts.
 
+// World Agent
+// Railway cron: 30 3 * * 1 (Mondays 03:30 UTC)
+// The only outward-facing agent: weekly web search across philosophically
+// relevant categories, picks the dominant signal by real corpus retrieval, and
+// has the corpus respond to it (server/world-agent.js). Purely-scientific
+// signals auto-approve; political/contested ones wait for Kyle. Runs as its
+// own Railway cron service (`node world-agent.js`); Kyle adds the cron
+// manually. This require also backs the on-demand admin trigger below.
+// Approved weeks surface via GET /api/observatory/world and inject
+// [WORLD CONTEXT] into dispatch generation.
+const { runWorldAgent } = require('./world-agent');
+
 // Tension Agent
 // Railway cron: 30 5 * * 1 (Mondays 05:30 UTC — after Gap Agent, before Synthesis)
 // Hunts unresolved philosophical contradictions across the corpus — places
@@ -3256,6 +3268,39 @@ app.post('/api/admin/journal/run', async (req, res) => {
   }
 });
 
+// POST /api/admin/world/generate — run the World Agent on demand (admin only)
+// instead of waiting for the Monday 03:30 UTC cron. Awaited (web search + two
+// model passes, typically 1-2 minutes; the Vercel proxy allows 300s) so the
+// admin World tab gets the run summary back. Idempotent per week: the agent
+// upserts on observation_week. The env pre-check matters — the agent
+// process.exits on missing keys, which must never happen inside the server.
+let worldGenerateRunning = false;
+app.post('/api/admin/world/generate', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY || !process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for the World Agent' });
+    }
+    if (worldGenerateRunning) {
+      return res.status(409).json({ error: 'A world observation run is already in progress' });
+    }
+
+    worldGenerateRunning = true;
+    try {
+      const result = await runWorldAgent();
+      return res.json({ ok: true, ...result });
+    } finally {
+      worldGenerateRunning = false;
+    }
+  } catch (err) {
+    worldGenerateRunning = false;
+    console.error('[/api/admin/world/generate] error:', err.message);
+    return res.status(500).json({ error: err.message || 'World generation failed' });
+  }
+});
+
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
 // Stoic-focused, but every primary text is viewable, readable, and discussable.
@@ -3752,6 +3797,40 @@ app.get('/api/observatory/tensions', async (req, res) => {
   } catch (err) {
     console.error('[/api/observatory/tensions] error:', err.message);
     return res.status(500).json({ error: 'The open tensions could not be read' });
+  }
+});
+
+// GET /api/observatory/world — the World Agent's approved response to the
+// outside world for the Observatory sidebar ("The corpus is responding to").
+// Only observations Kyle has approved (or that auto-approved as purely
+// scientific) AND marked observatory_visible are ever returned; most recent 1.
+// Public (no auth) — same posture as the other Observatory endpoints.
+app.get('/api/observatory/world', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('world_observations')
+      .select('id, observation_week, dominant_signal, world_corpus_tension, relevant_authors')
+      .in('status', ['approved', 'auto_approved'])
+      .eq('observatory_visible', true)
+      .order('observation_week', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+
+    const row = (data || [])[0];
+    if (!row) return res.json({ world: null });
+
+    return res.json({
+      world: {
+        id: row.id,
+        dominantSignal: row.dominant_signal,
+        tension: row.world_corpus_tension,
+        authors: row.relevant_authors || [],
+        week: row.observation_week,
+      },
+    });
+  } catch (err) {
+    console.error('[/api/observatory/world] error:', err.message);
+    return res.status(500).json({ error: 'The world response could not be read' });
   }
 });
 

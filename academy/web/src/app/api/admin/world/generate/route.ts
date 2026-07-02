@@ -35,6 +35,20 @@ export async function POST() {
       },
     })
     const body = await upstream.text()
+    // A 404/error page from the backend (e.g. endpoint not deployed yet) is
+    // HTML — wrap it in JSON instead of letting the panel choke on <!DOCTYPE.
+    try {
+      JSON.parse(body)
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            `The World Agent endpoint returned ${upstream.status} with a non-JSON body — ` +
+            'the Railway server is likely running an older deploy without POST /api/admin/world/generate. Redeploy it.',
+        },
+        { status: 502 }
+      )
+    }
     return new NextResponse(body, {
       status: upstream.status,
       headers: { 'Content-Type': 'application/json' },
