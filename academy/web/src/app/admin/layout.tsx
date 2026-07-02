@@ -16,6 +16,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/synthesis', label: 'Synthesis' },
   { href: '/admin/inquiry', label: 'Inquiry' },
   { href: '/admin/tensions', label: 'Tensions' },
+  { href: '/admin/dreams', label: 'Dreams' },
   { href: '/admin/dispatch', label: 'Dispatch' },
   { href: '/admin/reflection', label: 'Self-Reflection' },
   { href: '/admin/longitudinal', label: 'Longitudinal' },
