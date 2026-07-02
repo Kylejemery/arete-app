@@ -27,9 +27,11 @@ export async function GET() {
     const week = mondayUTC()
 
     const [recentRes, totalRes, weekRes, deliveredRes, distressRes] = await Promise.all([
+      // insight_text + themes let the admin read each analysis in place.
+      // Deliberately no user_id / email — analyses render anonymously.
       admin
         .from('journal_analysis')
-        .select('analysis_week, dominant_theme, delivered, distress_flagged, created_at')
+        .select('id, analysis_week, dominant_theme, themes, insight_text, weeks_analyzed, delivered, distress_flagged, created_at')
         .order('created_at', { ascending: false })
         .limit(10),
       admin.from('journal_analysis').select('id', { count: 'exact', head: true }),

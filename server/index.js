@@ -32,6 +32,13 @@ const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 // POST /api/admin/corpus/run below.
 const { runCorpusIngestion } = require('./corpus-agent');
 
+// Journal Analysis Agent
+// Railway cron: nightly (its own service, `node journal-analysis-agent.js`).
+// This require backs the on-demand admin trigger POST /api/admin/journal/run
+// below — Railway cron services don't execute on deploy, so "Run now" runs it
+// in-process here.
+const { runJournalAnalysis } = require('./journal-analysis-agent');
+
 // Inquiry Agent
 // Railway cron: 30 6 * * 1 (Mondays 06:30 UTC — after the Synthesis Agent)
 // Generates philosophical questions the corpus raises but does not answer,
@@ -3207,6 +3214,45 @@ app.post('/api/admin/corpus/run', async (req, res) => {
   } catch (err) {
     console.error('[/api/admin/corpus/run] error:', err.message);
     return res.status(500).json({ error: err.message || 'Failed to start ingestion' });
+  }
+});
+
+// POST /api/admin/journal/run — run the Journal Analysis agent on demand
+// (admin only), instead of waiting for the nightly cron. One Claude call per
+// active user, so a run can take minutes: fire-and-forget, the panel's
+// analyses list shows the new rows. Idempotent per week: the agent upserts on
+// (user_id, analysis_week), so re-running overwrites this week's rows.
+// The CLAUDE_API_KEY pre-check matters — the agent process.exits without it,
+// which must never happen inside the server process.
+let journalAnalysisRunning = false;
+app.post('/api/admin/journal/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY || !process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for journal analysis' });
+    }
+    if (journalAnalysisRunning) {
+      return res.status(409).json({ error: 'A journal analysis run is already in progress' });
+    }
+
+    journalAnalysisRunning = true;
+    runJournalAnalysis()
+      .then(result => {
+        console.log('[/api/admin/journal/run] finished:', JSON.stringify(result));
+      })
+      .catch(err => {
+        console.error('[/api/admin/journal/run] run failed:', err.message);
+      })
+      .finally(() => {
+        journalAnalysisRunning = false;
+      });
+
+    return res.status(202).json({ ok: true, started: true });
+  } catch (err) {
+    console.error('[/api/admin/journal/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to start journal analysis' });
   }
 });
 

@@ -6,9 +6,15 @@ import styles from './admin.module.css'
 
 export type Health = 'loading' | 'ok' | 'warn' | 'error' | 'idle'
 
+type Theme = { theme?: string; count?: number; weeksSeen?: number }
+
 type Analysis = {
+  id: string
   analysis_week: string
   dominant_theme: string | null
+  themes: Theme[] | null
+  insight_text: string | null
+  weeks_analyzed: number | null
   delivered: boolean
   distress_flagged: boolean
   created_at: string
@@ -46,6 +52,9 @@ export default function JournalAgentPanel({ onHealth }: { onHealth?: (h: Health)
   const [data, setData] = useState<JournalData | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,6 +73,31 @@ export default function JournalAgentPanel({ onHealth }: { onHealth?: (h: Health)
   }, [onHealth])
 
   useEffect(() => { load() }, [load])
+
+  const runNow = useCallback(async () => {
+    setRunning(true)
+    setRunMsg('')
+    try {
+      const res = await fetch('/api/admin/journal-agent/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
+      setRunMsg('✓ Analysis running on the server — one Claude call per active user, so give it a minute or two. Re-running in the same week overwrites that week’s rows.')
+      setTimeout(() => load(), 15000)
+      setTimeout(() => load(), 60000)
+    } catch (e) {
+      setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
+    }
+    setRunning(false)
+  }, [load])
+
+  function toggleExpand(id: string) {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   if (loading && !data) {
     return <div className={styles.page}><p className={styles.muted}>Loading journal agent status…</p></div>
@@ -87,8 +121,22 @@ export default function JournalAgentPanel({ onHealth }: { onHealth?: (h: Health)
   return (
     <div className={styles.page}>
       <div className={styles.header}>
-        <h1>Journal Analysis agent</h1>
-        <p>Nightly cross-source analysis of journals + Cabinet, delivering a weekly insight.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+          <div>
+            <h1>Journal Analysis agent</h1>
+            <p>Nightly cross-source analysis of journals + Cabinet, delivering a weekly insight.</p>
+          </div>
+          <button
+            className={styles.primaryBtn}
+            onClick={runNow}
+            disabled={running}
+            style={{ flexShrink: 0 }}
+            title="Analyze all active users now instead of waiting for the nightly cron"
+          >
+            {running ? 'Starting…' : '▶ Run analysis now'}
+          </button>
+        </div>
+        {runMsg && <p className={styles.muted} style={{ marginTop: 8 }}>{runMsg}</p>}
       </div>
 
       <div className={styles.card}>
@@ -114,6 +162,11 @@ export default function JournalAgentPanel({ onHealth }: { onHealth?: (h: Health)
             <div className={styles.statLabel}>Distress pending</div>
           </div>
         </div>
+        <p className={styles.muted} style={{ marginTop: 10, fontSize: 12 }}>
+          &ldquo;Delivered&rdquo; counts insights a user has actually opened in the mobile app
+          (GET /api/user/insight marks them on first fetch). Pending insights are generated and
+          waiting — they deliver the moment the user views their weekly insight.
+        </p>
       </div>
 
       {data.distressPending > 0 && (
@@ -129,18 +182,52 @@ export default function JournalAgentPanel({ onHealth }: { onHealth?: (h: Health)
 
       <div className={styles.card}>
         <div className={styles.cardTitle}>Recent analyses</div>
+        <p className={styles.muted} style={{ marginBottom: 10, fontSize: 12 }}>
+          Shown anonymously — no user identities. Expand a row to read the full insight the user
+          will see.
+        </p>
         {data.recent.length === 0 ? (
           <p className={styles.muted}>No analyses yet. The agent writes one per active user each week.</p>
         ) : (
-          data.recent.map((a, i) => (
-            <div key={i} className={styles.rowItem}>
-              <span>{a.dominant_theme || <span className={styles.muted}>(no theme)</span>}</span>
-              <span className={styles.muted}>
-                {a.analysis_week}
-                {a.distress_flagged ? ' · ⚠ flagged' : a.delivered ? ' · delivered' : ' · pending'}
-              </span>
-            </div>
-          ))
+          data.recent.map(a => {
+            const isOpen = expanded.has(a.id)
+            const themes = (a.themes || []).map(t => t?.theme).filter(Boolean) as string[]
+            return (
+              <div key={a.id} style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+                  <span>{a.dominant_theme || <span className={styles.muted}>(no theme)</span>}</span>
+                  <span className={styles.muted}>
+                    {a.analysis_week}
+                    {a.distress_flagged ? ' · ⚠ flagged' : a.delivered ? ' · delivered' : ' · pending'}
+                    {' · '}
+                    <button
+                      onClick={() => toggleExpand(a.id)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#534AB7', fontSize: 12, padding: 0 }}
+                    >
+                      {isOpen ? 'Hide ↑' : 'Read ↓'}
+                    </button>
+                  </span>
+                </div>
+                {isOpen && (
+                  <div style={{ marginTop: 8 }}>
+                    {themes.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                        {themes.map(t => (
+                          <span key={t} style={{ fontSize: 12, color: '#6b5a1e', background: '#FBF6EC', border: '1px solid #E8DFC8', borderRadius: 999, padding: '2px 10px' }}>{t}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.6, color: '#2a2a2a', background: '#fafafa', border: '1px solid #eee', borderRadius: 8, padding: '12px 14px' }}>
+                      {a.insight_text || '—'}
+                    </div>
+                    {a.weeks_analyzed ? (
+                      <p className={styles.muted} style={{ marginTop: 6, fontSize: 12 }}>Built on {a.weeks_analyzed} week{a.weeks_analyzed === 1 ? '' : 's'} of history</p>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )
+          })
         )}
       </div>
 

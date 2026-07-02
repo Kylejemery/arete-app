@@ -309,9 +309,17 @@ async function runJournalAnalysis() {
   console.log(`\n=== Run Complete ===`);
   console.log(`Succeeded: ${succeeded} | Failed: ${failed} | Distress flagged: ${distressFlagged}`);
   console.log('===================');
+
+  return { users: userIds.length, succeeded, failed, distressFlagged };
 }
 
-runJournalAnalysis().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+// Exported for the on-demand admin trigger in index.js (POST
+// /api/admin/journal/run); the Railway cron still runs this file directly.
+module.exports = { runJournalAnalysis };
+
+if (require.main === module) {
+  runJournalAnalysis().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
+}
