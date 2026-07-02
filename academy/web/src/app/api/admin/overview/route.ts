@@ -158,8 +158,100 @@ export async function GET() {
     } catch { return null }
   })()
 
-  const [corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData] =
-    await Promise.all([corpus, journal, gap, synthesis, scheduler, dispatch, reflection])
+  // --- Tension agent ---
+  const tension = (async () => {
+    try {
+      const [{ count: pending }, { count: approved }, { count: visible }] = await Promise.all([
+        admin.from('philosophical_tensions').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        admin.from('philosophical_tensions').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+        admin.from('philosophical_tensions').select('id', { count: 'exact', head: true }).eq('status', 'approved').eq('observatory_visible', true),
+      ])
+      const { data: latest } = await admin.from('philosophical_tensions')
+        .select('title, generated_at').order('generated_at', { ascending: false }).limit(1).maybeSingle()
+      return {
+        pending: pending ?? 0,
+        approved: approved ?? 0,
+        inObservatory: visible ?? 0,
+        latestTitle: latest?.title ?? null,
+        lastGeneratedAt: latest?.generated_at ?? null,
+      }
+    } catch { return null }
+  })()
+
+  // --- Inquiry agent ---
+  const inquiry = (async () => {
+    try {
+      const [{ count: pending }, { count: approved }] = await Promise.all([
+        admin.from('open_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        admin.from('open_inquiries').select('id', { count: 'exact', head: true }).in('status', ['approved', 'queued_for_corpus']),
+      ])
+      const { data: latest } = await admin.from('open_inquiries')
+        .select('question, generated_at').order('generated_at', { ascending: false }).limit(1).maybeSingle()
+      return {
+        pending: pending ?? 0,
+        approved: approved ?? 0,
+        latestQuestion: latest?.question ?? null,
+        lastGeneratedAt: latest?.generated_at ?? null,
+      }
+    } catch { return null }
+  })()
+
+  // --- Dreaming agent ---
+  const dreams = (async () => {
+    try {
+      const [{ count: pending }, { count: starred }, { count: total }] = await Promise.all([
+        admin.from('corpus_dreams').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        admin.from('corpus_dreams').select('id', { count: 'exact', head: true }).eq('status', 'starred'),
+        admin.from('corpus_dreams').select('id', { count: 'exact', head: true }),
+      ])
+      const { data: latest } = await admin.from('corpus_dreams')
+        .select('generated_at').order('generated_at', { ascending: false }).limit(1).maybeSingle()
+      return {
+        pending: pending ?? 0,
+        starred: starred ?? 0,
+        total: total ?? 0,
+        lastGeneratedAt: latest?.generated_at ?? null,
+      }
+    } catch { return null }
+  })()
+
+  // --- Longitudinal user model agent ---
+  const longitudinal = (async () => {
+    try {
+      const { count: modeled } = await admin.from('user_longitudinal_models')
+        .select('id', { count: 'exact', head: true })
+      const { data: latest } = await admin.from('user_longitudinal_models')
+        .select('last_analyzed_at').order('last_analyzed_at', { ascending: false }).limit(1).maybeSingle()
+      return { usersModeled: modeled ?? 0, lastRunAt: latest?.last_analyzed_at ?? null }
+    } catch { return null }
+  })()
+
+  // --- World agent ---
+  const world = (async () => {
+    try {
+      const [{ count: pending }, { data: latest }] = await Promise.all([
+        admin.from('world_observations').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        admin.from('world_observations')
+          .select('observation_week, status, dominant_signal, generated_at')
+          .order('observation_week', { ascending: false }).limit(1).maybeSingle(),
+      ])
+      return {
+        pending: pending ?? 0,
+        latestWeek: latest?.observation_week ?? null,
+        latestStatus: latest?.status ?? null,
+        latestSignal: latest?.dominant_signal ?? null,
+        lastGeneratedAt: latest?.generated_at ?? null,
+      }
+    } catch { return null }
+  })()
+
+  const [
+    corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData,
+    tensionData, inquiryData, dreamsData, longitudinalData, worldData,
+  ] = await Promise.all([
+    corpus, journal, gap, synthesis, scheduler, dispatch, reflection,
+    tension, inquiry, dreams, longitudinal, world,
+  ])
 
   return NextResponse.json({
     week,
@@ -170,5 +262,10 @@ export async function GET() {
     scheduler: schedulerData,
     dispatch: dispatchData,
     reflection: reflectionData,
+    tension: tensionData,
+    inquiry: inquiryData,
+    dreams: dreamsData,
+    longitudinal: longitudinalData,
+    world: worldData,
   })
 }

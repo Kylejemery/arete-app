@@ -48,6 +48,33 @@ type Overview = {
     agentsFired: number
     agentsTotal: number
   } | null
+  tension: {
+    pending: number
+    approved: number
+    inObservatory: number
+    latestTitle: string | null
+    lastGeneratedAt: string | null
+  } | null
+  inquiry: {
+    pending: number
+    approved: number
+    latestQuestion: string | null
+    lastGeneratedAt: string | null
+  } | null
+  dreams: {
+    pending: number
+    starred: number
+    total: number
+    lastGeneratedAt: string | null
+  } | null
+  longitudinal: { usersModeled: number; lastRunAt: string | null } | null
+  world: {
+    pending: number
+    latestWeek: string | null
+    latestStatus: string | null
+    latestSignal: string | null
+    lastGeneratedAt: string | null
+  } | null
 }
 
 function timeAgo(iso: string | null): string {
@@ -102,20 +129,36 @@ const PIPELINE: { when: string; icon: string; name: string; tag: string; text: s
     text: 'Pulls queued primary texts, chunks + embeds them into rag_corpus. The shared substrate every other agent retrieves from.',
   },
   {
+    when: '03:30 Mon', icon: '🌍', name: 'World', tag: 'outward-facing',
+    text: 'The only agent that looks outward. Weekly web search across philosophically relevant categories, picks the dominant signal, and has the corpus respond to it. Purely scientific signals auto-approve; anything political or contested waits for you. Approved weeks inject [WORLD CONTEXT] into the Dispatch and surface in the Observatory.',
+  },
+  {
     when: '04:00 daily', icon: '📓', name: 'Journal Analysis', tag: 'demand signal',
     text: 'Reads each user’s journal entries + Cabinet conversations and writes weekly themes and a personal insight to journal_analysis. Flags distress for human review — never auto-surfaced. This is what tells the rest of the fleet what the community is wrestling with.',
+  },
+  {
+    when: '04:30 Mon', icon: '🧠', name: 'Longitudinal Model', tag: 'memory',
+    text: 'Rebuilds a persistent philosophical portrait per user from all accumulated journal analysis — persistent/emerging/fading themes, growth edges, a prose portrait. Injected into each user’s Cabinet counselors so they remember the person across sessions. Admin sees aggregates only, never individual portraits.',
   },
   {
     when: '05:00 Mon', icon: '🧭', name: 'Coverage Gap', tag: 'Mondays',
     text: 'Compares community demand (Journal themes) against what the corpus actually covers, then recommends authors/works to add. Approved recommendations become the Corpus agent’s ingestion queue.',
   },
   {
+    when: '05:30 Mon', icon: '⚖️', name: 'Tension', tag: 'holds contradictions',
+    text: 'Hunts unresolved philosophical contradictions — places where two thinkers, read together, produce a problem neither resolves. Classifies honestly (genuine vs. terminological), steelmans both sides, and never resolves a genuine tension. Runs just before Synthesis so fresh tensions inform that morning’s work.',
+  },
+  {
     when: '06:00 Mon', icon: '🧩', name: 'Synthesis', tag: 'Mondays',
     text: 'Generates cross-thinker documents on in-demand concepts (mapping tensions, never resolving them). Once you approve one, it’s ingested back into the corpus as new source material — the corpus thinking about itself.',
   },
   {
+    when: '06:30 Mon', icon: '❓', name: 'Inquiry', tag: 'open questions',
+    text: 'Generates the questions the corpus raises but does not answer, pursues each across the full body of texts, and states honestly where the corpus runs out. Approved tensions become premium seed material. Its suggested reading feeds the corpus queue.',
+  },
+  {
     when: '10:00 daily', icon: '☀️', name: 'Daily Dispatch', tag: 'hourly delivery',
-    text: 'Blends the top community themes + the latest synthesis + the day into one ~175-word reflection with a concrete practice, then delivers it as a push notification at each user’s local 7 AM.',
+    text: 'Blends the top community themes + the latest synthesis + the week’s world context into one ~175-word reflection with a concrete practice, then delivers it as a push notification at each user’s local 7 AM.',
   },
   {
     when: 'continuous', icon: '📣', name: 'Content Scheduler', tag: 'social',
@@ -125,6 +168,10 @@ const PIPELINE: { when: string; icon: string; name: string; tag: string; text: s
     when: '07:00 Sun', icon: '🪞', name: 'Self-Reflection', tag: 'meta',
     text: 'The meta-agent. Once a week it reviews the whole fleet — corpus growth, whether each agent fired, engagement, dispatch delivery — detects anomalies, and writes one honest health report with specific recommended actions. Reads everything, changes nothing; its reader is you.',
   },
+  {
+    when: '23:30 Sun', icon: '🌙', name: 'Dreaming', tag: 'conjecture',
+    text: 'The corpus dreams at night. Seeds on approved tensions, approved inquiries, or semantic strangeness and generates what the corpus implies but never stated — aphorisms, thought experiments, propositions, meditations. Everything it produces is conjecture behind the strictest gate in the system: never attributed, never ingested, never surfaced without your per-dream approval.',
+  },
 ]
 
 function FleetGuide() {
@@ -133,10 +180,11 @@ function FleetGuide() {
       <div className={styles.card}>
         <div className={styles.cardTitle}>How the fleet works</div>
         <p className={styles.muted} style={{ marginBottom: 14, lineHeight: 1.6 }}>
-          Seven agents run on a nightly/weekly cadence (times in UTC). Each reads from shared
-          Supabase tables; six feed the next and a seventh reflects weekly on the whole —
-          together they grow the corpus, learn what the community needs, and turn that into
-          daily guidance.
+          Twelve agents run on a nightly/weekly cadence (times in UTC). Each reads from shared
+          Supabase tables and feeds the next: the daily agents grow the corpus and read the
+          community, the Monday chain turns that into gaps, tensions, syntheses, and open
+          questions, the Dispatch carries it to users each morning — and on Sunday the fleet
+          reflects on itself, then dreams.
         </p>
         {PIPELINE.map(s => (
           <div key={s.name} className={styles.guideStep}>
@@ -155,20 +203,39 @@ function FleetGuide() {
       <div className={styles.card}>
         <div className={styles.cardTitle}>How they interact</div>
         <p className={styles.flowLine}>
+          <strong>Corpus</strong> is the substrate everyone retrieves from;{' '}
           <strong>Journal Analysis</strong> is the demand signal — it tells Coverage Gap,
-          Synthesis, and Dispatch what members are actually wrestling with.
+          Synthesis, Dispatch, the Longitudinal Model, and the Tension agent what members are
+          actually wrestling with.
         </p>
         <p className={styles.flowLine}>
           <strong>Coverage Gap → Corpus:</strong> turns coverage holes into the ingestion queue,
-          so the corpus grows toward what the community needs.
+          so the corpus grows toward what the community needs. <strong>Inquiry</strong> feeds the
+          same queue from the other side — its suggested reading names what the corpus lacks.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>Tension → Synthesis → Inquiry → Dreaming:</strong> the Monday thinking chain.
+          Tension surfaces contradictions just before Synthesis maps concepts; approved tensions
+          seed Inquiry’s open questions; approved tensions and inquiries become the Dreaming
+          agent’s richest material on Sunday night.
         </p>
         <p className={styles.flowLine}>
           <strong>Synthesis → Corpus:</strong> approved cross-thinker documents are ingested back
-          as retrievable source material.
+          as retrievable source material — the only agent output that ever enters the corpus.
+          Dreams never do.
         </p>
         <p className={styles.flowLine}>
-          <strong>Corpus</strong> is the substrate everyone retrieves from; <strong>Dispatch</strong>{' '}
-          is the daily output that reaches users.
+          <strong>Longitudinal Model → Cabinet:</strong> each user’s portrait is injected into
+          their counselors’ prompts, so the Cabinet remembers the person across sessions.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>World → Dispatch:</strong> the approved week’s world context is woven into the
+          daily reflection, so the Dispatch knows what this week actually feels like.
+        </p>
+        <p className={styles.flowLine}>
+          <strong>The Observatory</strong> is the public window: approved-and-visible tensions,
+          inquiries, world responses, and dreams surface there — nothing appears without your
+          per-item approval.
         </p>
         <p className={styles.flowLine}>
           <strong>Self-Reflection</strong> sits above them all — each Sunday it reads every agent’s
@@ -185,12 +252,17 @@ function FleetGuide() {
         </p>
         <ul className={styles.respList}>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Review &amp; approve Synthesis documents</strong> — nothing is auto-ingested into the corpus. (Synthesis tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Review Tensions</strong> — approve, reject, or merge duplicates into the living catalogue. Genuine tensions are never resolved, only held open. (Tensions tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Review Inquiries</strong> — approve open questions and queue their suggested reading for the corpus. (Inquiry tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Judge the Dreams</strong> — the strictest gate in the system. Approve, star the genuinely good, reject the hollow. Dreams are never attributed, never ingested, never surfaced without you. (Dreams tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Review World observations</strong> — purely scientific signals auto-approve; political or contested ones wait for your call before touching the Dispatch. (World tab)</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Control Observatory visibility</strong> — approved tensions, inquiries, world responses, and dreams only reach the public sky when you toggle each one visible.</span></li>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Triage distress flags</strong> from Journal Analysis — these route to a review queue, never auto-shown to users. (Distress / Journal tab)</span></li>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Approve Coverage Gap recommendations</strong> — you decide what actually gets queued for ingestion. (Gap tab)</span></li>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Curate the corpus ingestion queue</strong> — add and manage source texts. (Corpus Ingestion tab)</span></li>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Approve &amp; schedule social posts.</strong> (Scheduler tab)</span></li>
           <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Spot-check the daily Dispatch</strong> and tune each agent’s config (enable/disable, parameters). Config changes apply on the next run — no redeploy.</span></li>
-          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Keep API keys valid</strong> (rotate Claude/OpenAI keys on the Railway services as needed).</span></li>
+          <li className={styles.respItem}><span className={styles.respMark}>✓</span><span><strong>Keep the Railway services healthy</strong> — schedule each agent’s cron manually and rotate Claude/OpenAI keys as needed.</span></li>
         </ul>
       </div>
     </>
@@ -269,6 +341,39 @@ export default function AdminOverviewPage() {
           />
 
           <AgentCard
+            icon="🌍"
+            name="World"
+            status={!data.world ? 'no data' : data.world.pending > 0 ? 'review needed' : data.world.latestStatus ? data.world.latestStatus.replace('_', ' ') : 'no observation'}
+            statusKind={!data.world ? 'idle' : data.world.pending > 0 ? 'warn' : data.world.latestStatus ? 'ok' : 'idle'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.world?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.world?.pending}</span>
+                  : 0,
+              },
+              { label: 'Latest week', value: data.world?.latestWeek ?? '—' },
+            ]}
+            footer={data.world?.latestSignal
+              ? `Responding to: ${data.world.latestSignal.slice(0, 38)}${data.world.latestSignal.length > 38 ? '…' : ''} · next Mon 03:30 UTC`
+              : 'No observation yet · next Mon 03:30 UTC'}
+            href="/admin/world"
+          />
+
+          <AgentCard
+            icon="🧠"
+            name="Longitudinal Model"
+            status={!data.longitudinal ? 'no data' : data.longitudinal.usersModeled > 0 ? 'modeling' : 'no models yet'}
+            statusKind={!data.longitudinal ? 'idle' : data.longitudinal.usersModeled > 0 ? 'ok' : 'idle'}
+            metrics={[
+              { label: 'Users modeled', value: data.longitudinal?.usersModeled ?? 0 },
+              { label: 'Last run', value: timeAgo(data.longitudinal?.lastRunAt ?? null) },
+            ]}
+            footer="Aggregate view only · next Mon 04:30 UTC"
+            href="/admin/longitudinal"
+          />
+
+          <AgentCard
             icon="🧭"
             name="Coverage Gap"
             status={data.gap?.reportWeek ? (data.gap.status ?? 'idle') : 'no report'}
@@ -280,6 +385,27 @@ export default function AdminOverviewPage() {
             ]}
             footer={data.gap?.reportWeek ? `Report week of ${data.gap.reportWeek} · next Mon 5:00 AM ET` : 'Next Mon 5:00 AM ET'}
             href="/admin/gap-agent"
+          />
+
+          <AgentCard
+            icon="⚖️"
+            name="Tension"
+            status={!data.tension ? 'no data' : data.tension.pending > 0 ? 'review needed' : 'idle'}
+            statusKind={!data.tension ? 'idle' : data.tension.pending > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.tension?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.tension?.pending}</span>
+                  : 0,
+              },
+              { label: 'Catalogue', value: data.tension?.approved ?? 0 },
+              { label: 'In Observatory', value: data.tension?.inObservatory ?? 0 },
+            ]}
+            footer={data.tension?.latestTitle
+              ? `Latest: ${data.tension.latestTitle.slice(0, 38)}${data.tension.latestTitle.length > 38 ? '…' : ''} · next Mon 05:30 UTC`
+              : 'No tensions yet · next Mon 05:30 UTC'}
+            href="/admin/tensions"
           />
 
           <AgentCard
@@ -300,6 +426,26 @@ export default function AdminOverviewPage() {
               ? `Latest: ${data.synthesis.latestTitle.slice(0, 40)}${data.synthesis.latestTitle.length > 40 ? '…' : ''} · next Mon 6:00 AM ET`
               : 'Next Mon 6:00 AM ET'}
             href="/admin/synthesis"
+          />
+
+          <AgentCard
+            icon="❓"
+            name="Inquiry"
+            status={!data.inquiry ? 'no data' : data.inquiry.pending > 0 ? 'review needed' : 'idle'}
+            statusKind={!data.inquiry ? 'idle' : data.inquiry.pending > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.inquiry?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.inquiry?.pending}</span>
+                  : 0,
+              },
+              { label: 'Approved', value: data.inquiry?.approved ?? 0 },
+            ]}
+            footer={data.inquiry?.latestQuestion
+              ? `Latest: ${data.inquiry.latestQuestion.slice(0, 38)}${data.inquiry.latestQuestion.length > 38 ? '…' : ''} · next Mon 06:30 UTC`
+              : 'No inquiries yet · next Mon 06:30 UTC'}
+            href="/admin/inquiry"
           />
 
           <AgentCard
@@ -335,6 +481,25 @@ export default function AdminOverviewPage() {
               ? `Latest: ${data.reflection.title.slice(0, 40)}${data.reflection.title.length > 40 ? '…' : ''} · next Sun 7:00 AM UTC`
               : 'No report yet · next Sun 7:00 AM UTC'}
             href="/admin/reflection"
+          />
+
+          <AgentCard
+            icon="🌙"
+            name="Dreaming"
+            status={!data.dreams ? 'no data' : data.dreams.pending > 0 ? 'review needed' : data.dreams.total > 0 ? 'idle' : 'no dreams yet'}
+            statusKind={!data.dreams ? 'idle' : data.dreams.pending > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.dreams?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.dreams?.pending}</span>
+                  : 0,
+              },
+              { label: 'Starred', value: data.dreams?.starred ?? 0 },
+              { label: 'Total dreamed', value: data.dreams?.total ?? 0 },
+            ]}
+            footer={`Last dreamed ${timeAgo(data.dreams?.lastGeneratedAt ?? null)} · next Sun 23:30 UTC`}
+            href="/admin/dreams"
           />
 
           <AgentCard
