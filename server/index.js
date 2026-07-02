@@ -1253,6 +1253,36 @@ app.get('/api/dispatch/today', async (req, res) => {
     console.error('[/api/dispatch/today] error:', error.message);
     return res.status(500).json({ error: 'Failed to load dispatch' });
   }
+
+  // An in-app read counts as delivery: flip this user's pending delivery row
+  // to 'read' (atomic on status='pending', so the hourly push agent won't
+  // double-send and concurrent fetches can't double-count) and roll it into
+  // delivered_count. Best-effort — a failure never blocks the read itself.
+  if (data) {
+    try {
+      const { data: flipped } = await supabase
+        .from('dispatch_deliveries')
+        .update({ status: 'read', sent_at: new Date().toISOString() })
+        .eq('dispatch_id', data.id)
+        .eq('user_id', userId)
+        .eq('status', 'pending')
+        .select('id');
+      if (flipped && flipped.length > 0) {
+        const { data: d } = await supabase
+          .from('daily_dispatches')
+          .select('delivered_count')
+          .eq('id', data.id)
+          .single();
+        await supabase
+          .from('daily_dispatches')
+          .update({ delivered_count: (d?.delivered_count || 0) + flipped.length })
+          .eq('id', data.id);
+      }
+    } catch (e) {
+      console.error('[/api/dispatch/today] read-marking failed:', e.message);
+    }
+  }
+
   return res.json({ dispatch: data || null });
 });
 
