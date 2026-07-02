@@ -99,9 +99,11 @@ export default function CorpusAgentPanel({ onHealth }: { onHealth?: (h: Health) 
       const res = await fetch('/api/admin/corpus-agent/run', { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to start the agent')
-      setRunMsg('✓ Ingestion started on Railway — it drains the queue and logs a run here. Refresh in a minute or two.')
-      // Give Railway a moment to spin up + create the run row, then refresh.
-      setTimeout(() => load(), 10000)
+      setRunMsg('✓ Ingestion running on the server — it drains the pending queue and logs a run below. This can take a few minutes for large works.')
+      // The run row appears as 'running' almost immediately; refresh soon and
+      // again later to catch completion.
+      setTimeout(() => load(), 5000)
+      setTimeout(() => load(), 60000)
     } catch (e) {
       setRunMsg(e instanceof Error ? e.message : 'Failed to start the agent')
     }

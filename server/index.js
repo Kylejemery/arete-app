@@ -24,6 +24,14 @@ const { runSynthesisAgent } = require('./synthesis-agent');
 // service manually; this require also backs the on-demand admin trigger below.
 const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 
+// RAG Corpus Agent (on-demand twin)
+// The nightly ingestion runs as its own Railway cron service rooted at
+// academy/corpus-ingestion (08:00 UTC). Railway cron services don't execute on
+// deploy, so the admin "Run ingestion now" button runs this in-process port
+// instead (server/corpus-agent.js — keep in sync with the cron twin). Backs
+// POST /api/admin/corpus/run below.
+const { runCorpusIngestion } = require('./corpus-agent');
+
 // Inquiry Agent
 // Railway cron: 30 6 * * 1 (Mondays 06:30 UTC — after the Synthesis Agent)
 // Generates philosophical questions the corpus raises but does not answer,
@@ -3161,6 +3169,44 @@ app.post('/api/admin/reflection/generate', async (req, res) => {
     reflectionRunning = false;
     console.error('[/api/admin/reflection/generate] error:', err.message);
     return res.status(500).json({ error: err.message || 'Reflection failed' });
+  }
+});
+
+// POST /api/admin/corpus/run — run RAG corpus ingestion on demand (admin only).
+// Drains up to CORPUS_AGENT_BATCH_SIZE pending queue sources right now instead
+// of waiting for the nightly 08:00 UTC cron. Fire-and-forget: a batch can embed
+// for many minutes, so we start the run and return immediately — the agent
+// writes a 'running' row to corpus_ingestion_runs at start, which is what the
+// admin panel polls.
+let corpusIngestRunning = false;
+app.post('/api/admin/corpus/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for corpus ingestion' });
+    }
+    if (corpusIngestRunning) {
+      return res.status(409).json({ error: 'An ingestion run is already in progress' });
+    }
+
+    corpusIngestRunning = true;
+    runCorpusIngestion()
+      .then(result => {
+        console.log('[/api/admin/corpus/run] finished:', JSON.stringify(result));
+      })
+      .catch(err => {
+        console.error('[/api/admin/corpus/run] run failed:', err.message);
+      })
+      .finally(() => {
+        corpusIngestRunning = false;
+      });
+
+    return res.status(202).json({ ok: true, started: true });
+  } catch (err) {
+    console.error('[/api/admin/corpus/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to start ingestion' });
   }
 });
 
