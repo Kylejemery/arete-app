@@ -99,6 +99,27 @@ const MASTERS: Master[] = [
     greeting: 'I keep this journal to steady myself, not to instruct anyone. But sit — let us try to see the thing clearly together.' },
   { id: 'seneca', name: 'Seneca', voice: 'Warm, worldly', initial: 'S', accent: '#3a2415', textColor: GOLD_L, oracleAuthor: 'Seneca',
     greeting: 'Speak as you would to a friend who has time for you. What weighs on you tonight?' },
+  { id: 'montaigne', name: 'Michel de Montaigne', voice: 'Curious, candid, essayist of the self', initial: 'M', accent: '#41302a', textColor: GOLD_L, oracleAuthor: 'Michel de Montaigne',
+    greeting: 'I have spent a lifetime studying the one subject I can observe up close — myself — and I am still routinely surprised. Come, let us examine yours together.' },
+];
+
+// Who can take the chairs in a staged debate. Ids must match the server's
+// DEBATE_MASTERS map; every debater is grounded in their own corpus passages.
+const DEBATERS: { id: string; name: string }[] = [
+  { id: 'socrates',  name: 'Socrates' },
+  { id: 'zeno',      name: 'Zeno of Citium' },
+  { id: 'epictetus', name: 'Epictetus' },
+  { id: 'marcus',    name: 'Marcus Aurelius' },
+  { id: 'seneca',    name: 'Seneca' },
+  { id: 'musonius',  name: 'Musonius Rufus' },
+  { id: 'cicero',    name: 'Cicero' },
+  { id: 'plato',     name: 'Plato' },
+  { id: 'aristotle', name: 'Aristotle' },
+  { id: 'plutarch',  name: 'Plutarch' },
+  { id: 'montaigne', name: 'Michel de Montaigne' },
+  { id: 'confucius', name: 'Confucius' },
+  { id: 'laozi',     name: 'Laozi' },
+  { id: 'suntzu',    name: 'Sun Tzu' },
 ];
 const masterById = (id: string) => MASTERS.find(m => m.id === id) || MASTERS[0];
 
@@ -113,6 +134,8 @@ const DEBATE_QS = [
   { text: 'Should the wise person ever feel grief?', a: 'seneca', b: 'epictetus', pair: 'Seneca vs Epictetus' },
   { text: 'Is it enough to endure — or must we act?', a: 'epictetus', b: 'marcus', pair: 'Epictetus vs Marcus' },
   { text: 'Does loving fate make us passive?', a: 'marcus', b: 'seneca', pair: 'Marcus vs Seneca' },
+  { text: 'Can a person ever truly know themselves?', a: 'montaigne', b: 'socrates', pair: 'Montaigne vs Socrates' },
+  { text: 'Is the good life found in effort or in ease?', a: 'confucius', b: 'laozi', pair: 'Confucius vs Laozi' },
 ];
 
 const MURMURS = [
@@ -638,6 +661,13 @@ function Symposium(props: {
     remaining, sendSit, openWork, scrollRef, debateInput, setDebateInput, debateQ, debateNote, debateLines,
     debatePair, debateLoading, debateRunning, runDebate, resetDebate } = props;
 
+  // Which two thinkers take the chairs for a custom question. Picking the same
+  // thinker for both chairs swaps them instead of allowing a self-debate.
+  const [debA, setDebA] = useState('seneca');
+  const [debB, setDebB] = useState('epictetus');
+  const pickA = (id: string) => { if (id === debB) setDebB(debA); setDebA(id); };
+  const pickB = (id: string) => { if (id === debA) setDebA(debB); setDebB(id); };
+
   // The masters rail is a fixed column on desktop; on a phone it slides in as a
   // drawer so the conversation gets the full width.
   const [railOpen, setRailOpen] = useState(false);
@@ -750,12 +780,21 @@ function Symposium(props: {
                       </button>
                     ))}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: 540, margin: '20px auto 0', background: 'rgba(16,24,48,0.8)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 14, padding: '8px 8px 8px 16px' }}>
-                    <input value={debateInput} onChange={e => setDebateInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && debateInput.trim()) { e.preventDefault(); runDebate(debateInput.trim(), 'seneca', 'epictetus'); } }}
-                      placeholder="…or pose your own question to the house" style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 14, color: IVORY, padding: '6px 0' }} />
-                    <button onClick={() => { if (debateInput.trim()) runDebate(debateInput.trim(), 'seneca', 'epictetus'); }} style={{ border: 'none', background: GOLD, color: '#0a1020', borderRadius: 9, padding: '8px 14px', cursor: 'pointer', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Convene</button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, maxWidth: 540, margin: '22px auto 0', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED }}>The chairs:</span>
+                    <select value={debA} onChange={e => pickA(e.target.value)} style={{ background: 'rgba(16,24,48,0.9)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 9, padding: '7px 10px', fontFamily: SANS, fontSize: 13, color: IVORY, cursor: 'pointer' }}>
+                      {DEBATERS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                    <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>vs</span>
+                    <select value={debB} onChange={e => pickB(e.target.value)} style={{ background: 'rgba(16,24,48,0.9)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 9, padding: '7px 10px', fontFamily: SANS, fontSize: 13, color: IVORY, cursor: 'pointer' }}>
+                      {DEBATERS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
                   </div>
-                  <div style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.08em', color: MUTED, marginTop: 10, opacity: 0.7 }}>Custom questions are argued by Seneca and Epictetus.</div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: 540, margin: '12px auto 0', background: 'rgba(16,24,48,0.8)', border: '1px solid rgba(201,168,76,0.25)', borderRadius: 14, padding: '8px 8px 8px 16px' }}>
+                    <input value={debateInput} onChange={e => setDebateInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && debateInput.trim()) { e.preventDefault(); runDebate(debateInput.trim(), debA, debB); } }}
+                      placeholder="…or pose your own question to the house" style={{ flex: 1, minWidth: 0, background: 'none', border: 'none', outline: 'none', fontFamily: SANS, fontSize: 14, color: IVORY, padding: '6px 0' }} />
+                    <button onClick={() => { if (debateInput.trim()) runDebate(debateInput.trim(), debA, debB); }} style={{ border: 'none', background: GOLD, color: '#0a1020', borderRadius: 9, padding: '8px 14px', cursor: 'pointer', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase' }}>Convene</button>
+                  </div>
                 </div>
               )}
 

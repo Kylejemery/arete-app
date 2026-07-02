@@ -3062,9 +3062,13 @@ Keep responses to 3-5 paragraphs. End with a single short Stoic principle in ita
 Do not mention that you are an AI. Do not break character.`;
 
     const systemPromptBase =
-      author === 'Marcus Aurelius' ? MARCUS_PROMPT :
-      author === 'Epictetus'       ? EPICTETUS_PROMPT :
-      author === 'Seneca'          ? SENECA_PROMPT :
+      author === 'Marcus Aurelius'     ? MARCUS_PROMPT :
+      author === 'Epictetus'           ? EPICTETUS_PROMPT :
+      author === 'Seneca'              ? SENECA_PROMPT :
+      // Montaigne sits in the Symposium too — reuse his Cabinet voice so the
+      // sit-with-a-master dialogue sounds like him, grounded on his Essays.
+      author === 'Michel de Montaigne'
+        ? (CABINET_COUNSELORS.find(c => c.id === 'montaigne')?.systemPrompt || oraclePrompt) :
       oraclePrompt;
 
     const systemPrompt = `${systemPromptBase}
@@ -3590,12 +3594,25 @@ app.post('/api/library/related', async (req, res) => {
 // each grounded in their own author's passages. The corpus surfaces the tension
 // and refuses to resolve it. Returns the full exchange; the client reveals it
 // turn by turn. Shares the Oracle's IP rate limit.
+// Any two of these can take the chairs. `ground` is the rag_corpus author whose
+// passages anchor that debater's side (Socrates and Zeno speak through their
+// biographers). Every entry must have real corpus coverage — that's why
+// Theodore Roosevelt (cabinet counselor, zero corpus texts) is not here yet.
 const DEBATE_MASTERS = {
-  socrates:  { name: 'Socrates',          ground: 'Xenophon' },
-  zeno:      { name: 'Zeno of Citium',    ground: 'Diogenes Laërtius' },
-  epictetus: { name: 'Epictetus',         ground: 'Epictetus' },
-  marcus:    { name: 'Marcus Aurelius',   ground: 'Marcus Aurelius' },
-  seneca:    { name: 'Seneca',            ground: 'Seneca' },
+  socrates:  { name: 'Socrates',            ground: 'Xenophon' },
+  zeno:      { name: 'Zeno of Citium',      ground: 'Diogenes Laërtius' },
+  epictetus: { name: 'Epictetus',           ground: 'Epictetus' },
+  marcus:    { name: 'Marcus Aurelius',     ground: 'Marcus Aurelius' },
+  seneca:    { name: 'Seneca',              ground: 'Seneca' },
+  musonius:  { name: 'Musonius Rufus',      ground: 'Gaius Musonius Rufus' },
+  cicero:    { name: 'Cicero',              ground: 'Cicero' },
+  plato:     { name: 'Plato',               ground: 'Plato' },
+  aristotle: { name: 'Aristotle',           ground: 'Aristotle' },
+  plutarch:  { name: 'Plutarch',            ground: 'Plutarch' },
+  montaigne: { name: 'Michel de Montaigne', ground: 'Michel de Montaigne' },
+  confucius: { name: 'Confucius',           ground: 'Confucius' },
+  laozi:     { name: 'Laozi',               ground: 'Laozi' },
+  suntzu:    { name: 'Sun Tzu',             ground: 'Sun Tzu' },
 };
 
 app.post('/api/library/debate', async (req, res) => {
@@ -3619,6 +3636,9 @@ app.post('/api/library/debate', async (req, res) => {
     }
     const A = DEBATE_MASTERS[a] || DEBATE_MASTERS.seneca;
     const B = DEBATE_MASTERS[b] || DEBATE_MASTERS.epictetus;
+    if (A === B) {
+      return res.status(400).json({ error: 'A debate needs two different chairs — choose two thinkers.' });
+    }
 
     const [ca, cb] = await Promise.all([
       getStoicContext(question.trim(), 4, A.ground).catch(() => []),
