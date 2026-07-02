@@ -38,6 +38,9 @@ export default function LandingPage() {
           <span className="font-serif text-cream/60 text-sm tracking-[0.15em] uppercase">Academy</span>
         </div>
         <div className="flex items-center gap-6">
+          <Link href="/library" className="text-cream/50 text-sm hover:text-gold transition-colors tracking-wider">
+            The Library
+          </Link>
           <Link href="/login" className="text-cream/50 text-sm hover:text-gold transition-colors tracking-wider">
             Sign In
           </Link>
@@ -133,6 +136,12 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
+            <Link
+              href="/library"
+              className="inline-block mt-8 text-gold/80 text-xs tracking-widest uppercase hover:text-gold transition-colors"
+            >
+              Browse the Library &rarr;
+            </Link>
           </div>
 
         </div>
@@ -213,6 +222,9 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-navy-border px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-cream/30 text-xs tracking-widest uppercase">
         <span className="font-serif text-gold/50 text-sm tracking-[0.2em]">Arete Academy</span>
+        <Link href="/library" className="hover:text-gold transition-colors">
+          The Library
+        </Link>
         <a
           href="https://pursuearete.com"
           target="_blank"

@@ -103,6 +103,28 @@ export default function ScrollsTab() {
         </TouchableOpacity>
       </View>
 
+      {/* The Library of Arete — public reading rooms over the corpus */}
+      <View style={styles.libraryRow}>
+        <TouchableOpacity
+          style={styles.libraryCard}
+          activeOpacity={0.85}
+          onPress={() => router.push('/library' as any)}
+        >
+          <Ionicons name="library-outline" size={20} color="#c9a84c" />
+          <Text style={styles.libraryCardTitle}>Reading Room</Text>
+          <Text style={styles.libraryCardSubtitle}>The primary texts, in full</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.libraryCard}
+          activeOpacity={0.85}
+          onPress={() => router.push('/observatory' as any)}
+        >
+          <Ionicons name="telescope-outline" size={20} color="#c9a84c" />
+          <Text style={styles.libraryCardTitle}>Observatory</Text>
+          <Text style={styles.libraryCardSubtitle}>What the corpus is thinking</Text>
+        </TouchableOpacity>
+      </View>
+
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator color="#c9a84c" size="large" />
@@ -229,6 +251,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   requestButtonText: { color: '#1a1a2e', fontWeight: '700', fontSize: 13 },
+  libraryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
+  libraryCard: {
+    flex: 1,
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#c9a84c22',
+    gap: 4,
+  },
+  libraryCardTitle: { color: '#fff', fontSize: 14, fontWeight: '700', marginTop: 4 },
+  libraryCardSubtitle: { color: '#666', fontSize: 11, lineHeight: 15 },
   centerContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   emptyContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyContainer: { alignItems: 'center', gap: 14 },
