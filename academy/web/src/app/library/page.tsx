@@ -994,9 +994,11 @@ function sphere3D(concepts: ObsConcept[]): Node3D[] {
 // A rotatable / zoomable 3D star-field. The layout is projected imperatively in
 // a requestAnimationFrame loop (mutating element transforms directly) so it
 // stays at 60fps without re-rendering React on every frame.
-function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 }: {
+function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1, tensionPairs, birthIds }: {
   concepts: ObsConcept[]; edges: [string, string][]; freshEdges?: [string, string][]; activeId: string | null; onPick: (id: string) => void;
   breathScale?: number; // circadian multiplier — dreaming slows every breath
+  tensionPairs?: [string, string][]; // approved unresolved tensions — taut amber edges between their poles
+  birthIds?: Set<string>; // concepts whose author was first ingested <48h ago — nebula condenses on load
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -1020,6 +1022,13 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 
   const edgePairs = useMemo(() =>
     edges.map(([a, b]) => [idx.get(a), idx.get(b)] as const).filter(p => p[0] != null && p[1] != null) as [number, number][],
     [edges, idx]);
+  // Approved tension poles resolved to node indices — drawn as taut amber
+  // edges with a slow strain oscillation. Disappear with the tension.
+  const tensionIdx = useMemo(() =>
+    (tensionPairs ?? []).map(([a, b]) => [idx.get(a), idx.get(b)] as const)
+      .filter(p => p[0] != null && p[1] != null) as [number, number][],
+    [tensionPairs, idx]);
+  const tensionRefs = useRef<(SVGLineElement | null)[]>([]);
   // Which edge indices touch a freshly-ingested concept (fire brighter).
   const freshSet = useMemo(() => {
     const fe = freshEdges ?? [];
@@ -1163,6 +1172,19 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 
           }
         }
       }
+
+      // Tension edges: taut amber lines between the two poles of each
+      // unresolved approved tension, with a slow strain oscillation (~9s).
+      for (let t = 0; t < tensionIdx.length; t++) {
+        const ln = tensionRefs.current[t]; if (!ln) continue;
+        const [a, b] = tensionIdx[t]; const pa = proj[a], pb = proj[b];
+        ln.setAttribute('x1', pa.sx.toFixed(1)); ln.setAttribute('y1', pa.sy.toFixed(1));
+        ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
+        const depth = ((pa.z + pb.z) / 2 + 1) / 2;
+        const strain = reduceMotion ? 0 : Math.sin(now * 0.0007 + t * 1.9);
+        ln.setAttribute('stroke-opacity', ((0.3 + depth * 0.2) + strain * 0.12).toFixed(2));
+        ln.setAttribute('stroke-width', (1.3 + (strain + 1) * 0.25).toFixed(2));
+      }
     };
 
     const frame = (ts: number) => {
@@ -1234,7 +1256,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs, freshSet, pRange, breathScale]);
+  }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx]);
 
   // Live retrieval glow: short-poll which concepts the corpus has just answered
   // from and flare those stars. Through the existing proxy; pauses when hidden.
@@ -1269,6 +1291,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
         {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.4} strokeWidth={1.1} />)}
         {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.7} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
+        {tensionIdx.map((_, t) => <line key={`t${t}`} ref={el => { tensionRefs.current[t] = el; }} stroke="rgb(217,144,74)" strokeOpacity={0.35} strokeWidth={1.3} />)}
       </svg>
       {nodes.map((n, i) => {
         const s = sizeFor(n.c.passages || 0, pRange.min, pRange.max);
@@ -1279,6 +1302,10 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 
             onClick={() => { if (dragDist.current < 6) onPick(n.c.id); }}
             className="lib-star3d"
             style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%,-50%)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 6, willChange: 'transform, opacity' }}>
+            {birthIds?.has(n.c.id) && (
+              /* nebula birth: a new voice condenses into its star over ~6s */
+              <span className="lib-nebula" style={{ position: 'absolute', left: '50%', top: 6 + s.dot / 2, width: 64, height: 64, marginLeft: -32, marginTop: -32, borderRadius: '50%', pointerEvents: 'none' }} />
+            )}
             <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : col.base, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`, willChange: 'transform' }} />
             <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : col.label, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>{shortLabel(n.c.name)}</span>
           </button>
@@ -1410,6 +1437,60 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   }, [data, obsState]);
   const active = concepts.find(c => c.id === activeId) || null;
 
+  // ---- event grammar mappings ----
+  // A tension pole ({author, concept}) or a birth ({author}) lands on the
+  // nearest matching star: exact/substring concept-name match first, else the
+  // first concept the author's voice touches. No match = layer skipped, silently.
+  const nodeFor = useCallback((author: string | null, conceptStr: string | null, excludeId?: string | null): string | null => {
+    const ok = (c: ObsConcept) => c.id !== excludeId;
+    const cs = (conceptStr || '').toLowerCase().trim();
+    if (cs) {
+      const exact = concepts.find(c => ok(c) && c.name.toLowerCase() === cs);
+      if (exact) return exact.id;
+      const part = concepts.find(c => ok(c) && (c.name.toLowerCase().includes(cs) || cs.includes(c.name.toLowerCase())));
+      if (part) return part.id;
+    }
+    const a = (author || '').toLowerCase().trim();
+    if (a) {
+      const byVoice = concepts.find(c => ok(c) && c.voices.some(v => v.toLowerCase() === a));
+      if (byVoice) return byVoice.id;
+    }
+    return null;
+  }, [concepts]);
+
+  // Unresolved approved tensions whose two poles both resolve to (distinct)
+  // stars — rendered by Sky3D as taut amber edges.
+  const tensionPairs = useMemo(() => {
+    const out: [string, string][] = [];
+    for (const t of obsState?.tensions ?? []) {
+      const a = nodeFor(t.poleA.author, t.poleA.concept);
+      // The second pole must land on a different star — a tension needs two
+      // ends. Excluding pole A's star finds the author's next-nearest concept.
+      const b = nodeFor(t.poleB.author, t.poleB.concept, a);
+      if (a && b && a !== b) out.push([a, b]);
+    }
+    return out;
+  }, [obsState, nodeFor]);
+
+  // Authors/works first ingested in the last 48h: their star condenses out of
+  // a nebula on load, with a quiet caption naming the new light.
+  const births = useMemo(() => {
+    const ids = new Set<string>();
+    const labels: string[] = [];
+    for (const b of obsState?.births ?? []) {
+      const id = nodeFor(b.author, null);
+      if (id) {
+        ids.add(id);
+        if (!labels.includes(b.author)) labels.push(b.author);
+      }
+    }
+    return { ids, labels: labels.slice(0, 3) };
+  }, [obsState, nodeFor]);
+
+  // Aurora: plays once on load over THE CORPUS IMAGINES, only when a dream
+  // was actually starred in the last 7 days (and the section is present).
+  const auroraOn = (obsState?.dreams?.length ?? 0) > 0;
+
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
       {/* sky — the whole canvas carries a barely-perceptible ~9s heartbeat */}
@@ -1432,7 +1513,19 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
         {!loading && concepts.length > 0 && (
-          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} />
+          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} />
+        )}
+
+        {/* comets: one per open inquiry from the last 7 days, once per session */}
+        <Comets inquiries={obsState?.inquiries ?? []} />
+
+        {/* nebula caption: name the new light, quietly, then let it fade */}
+        {births.labels.length > 0 && (
+          <div className="lib-birth-caption" style={{ position: 'absolute', left: 26, bottom: 20, zIndex: 3, pointerEvents: 'none' }}>
+            {births.labels.map(a => (
+              <div key={a} style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: GOLD_L, marginTop: 4 }}>new light: {a}</div>
+            ))}
+          </div>
         )}
 
         {/* dreaming: faint motes drift while the corpus dreams */}
@@ -1512,7 +1605,9 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
             )}
 
             {dreams.length > 0 && (
-              <div style={{ marginTop: 26 }}>
+              <div style={{ marginTop: 26, position: 'relative' }}>
+                {/* aurora: a single brief wash, only when a dream was starred this week */}
+                {auroraOn && <div className="lib-aurora" style={{ position: 'absolute', inset: -10, borderRadius: 14, pointerEvents: 'none' }} />}
                 {dreams.map((d, di) => (
                   <div key={d.id} style={{ marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
@@ -1609,6 +1704,37 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         )}
       </aside>
     </main>
+  );
+}
+
+// A comet crosses the canvas for each inquiry the corpus opened in the last
+// 7 days, settling toward the sidebar where the OPEN INQUIRY cards live.
+// Once per page session per inquiry (sessionStorage-guarded), max 3, staggered.
+function Comets({ inquiries }: { inquiries: { id: string; created_at: string }[] }) {
+  const [show, setShow] = useState<string[]>([]);
+  useEffect(() => {
+    if (!inquiries || inquiries.length === 0) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const due = inquiries
+      .filter(i => i.created_at && new Date(i.created_at).getTime() > weekAgo)
+      .filter(i => { try { return !sessionStorage.getItem(`lib-comet-${i.id}`); } catch { return true; } })
+      .slice(0, 3);
+    if (due.length === 0) return;
+    for (const i of due) { try { sessionStorage.setItem(`lib-comet-${i.id}`, '1'); } catch { /* private mode */ } }
+    setShow(due.map(i => i.id));
+  }, [inquiries]);
+  if (show.length === 0) return null;
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2, overflow: 'hidden' }}>
+      {show.map((id, i) => (
+        <span key={id} className="lib-comet" style={{
+          ['--y0' as string]: `${12 + i * 9}%`,
+          ['--y1' as string]: `${26 + i * 11}%`,
+          animationDelay: `${0.8 + i * 2.6}s`,
+        }} />
+      ))}
+    </div>
   );
 }
 
@@ -1730,8 +1856,55 @@ button { background: none; border: none; font: inherit; }
   background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(201,168,76,0.10), transparent 70%);
   animation: lib-ripple-k 2.2s ease-out both;
 }
+/* ---- event grammar ---- */
+/* Comet: crosses the sky and settles toward the sidebar. One per fresh open
+   inquiry, staggered, once per session. */
+@keyframes lib-comet-k {
+  0% { left: -4%; top: var(--y0, 14%); opacity: 0; }
+  8% { opacity: 0.95; }
+  82% { opacity: 0.75; }
+  100% { left: 95%; top: var(--y1, 30%); opacity: 0; }
+}
+.lib-comet {
+  position: absolute; width: 3px; height: 3px; border-radius: 50%;
+  background: #f4ead5; box-shadow: 0 0 10px 2px rgba(227,199,122,0.9);
+  animation: lib-comet-k 4.4s ease-in-out both;
+}
+.lib-comet::before {
+  content: ''; position: absolute; right: 2px; top: 1px; width: 92px; height: 1.5px;
+  background: linear-gradient(90deg, transparent, rgba(227,199,122,0.75));
+  transform-origin: right center; transform: rotate(6deg);
+}
+/* Nebula birth: a newly-ingested voice condenses into its star over ~6s. */
+@keyframes lib-nebula-k {
+  0% { opacity: 0; transform: scale(2.8); filter: blur(16px); }
+  25% { opacity: 0.55; }
+  100% { opacity: 0; transform: scale(0.5); filter: blur(2px); }
+}
+.lib-nebula {
+  background: radial-gradient(circle, rgba(227,199,122,0.5), rgba(122,148,201,0.28) 55%, transparent 78%);
+  animation: lib-nebula-k 6s ease-out both;
+}
+/* Birth caption: fades in, holds quietly, lets go. */
+@keyframes lib-birthcap-k { 0% { opacity: 0; } 6% { opacity: 0.85; } 82% { opacity: 0.85; } 100% { opacity: 0; } }
+.lib-birth-caption { animation: lib-birthcap-k 16s ease both; }
+/* Aurora: one brief wash over THE CORPUS IMAGINES when a dream was starred
+   this week. */
+@keyframes lib-aurora-k {
+  0% { opacity: 0; transform: translateY(10px); }
+  30% { opacity: 0.55; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+.lib-aurora {
+  background: linear-gradient(115deg, rgba(122,201,168,0.18), rgba(154,122,217,0.20) 45%, rgba(201,168,76,0.14) 82%);
+  filter: blur(7px);
+  animation: lib-aurora-k 4.8s ease-out both;
+}
 @media (prefers-reduced-motion: reduce) {
   .lib-heartbeat { animation: none; }
   .lib-obs-ripple { display: none; }
+  .lib-comet { display: none; }
+  .lib-nebula { display: none; }
+  .lib-aurora { display: none; }
 }
 `;
