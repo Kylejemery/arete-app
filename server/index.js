@@ -15,6 +15,11 @@ const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
 const libraryHelpers = require('./library');
+
+// Observatory Living Sky — all new /api/observatory/* routes live in their own
+// module to keep the merge surface of this shared file minimal. recordRetrieval
+// is the fire-and-forget retrieval-event logger the retrieval paths below call.
+const observatory = require('./routes/observatory');
 const { runDispatchGeneration } = require('./dispatch-generation-agent');
 const { runSynthesisAgent } = require('./synthesis-agent');
 
@@ -375,6 +380,9 @@ async function getObsAuthorMap() {
 async function pulseFromChunks(chunks, question) {
   try {
     if (!Array.isArray(chunks) || chunks.length === 0) return;
+    // Durable twin of this ephemeral pulse: log the retrieval so the
+    // Observatory's breathing rates reflect real activity. Fire-and-forget.
+    observatory.recordRetrieval(chunks, 'cabinet');
     const authorMap = await getObsAuthorMap();
     const q = (question || '').toLowerCase();
     const score = new Map(); // concept name -> score
@@ -404,6 +412,7 @@ app.use(cors({
   ]
 }));
 app.use(express.json());
+app.use(observatory.router);
 
 // ---------------------------------------------------------------------------
 // Local datetime helper
@@ -1967,6 +1976,7 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
       console.error('match_rag_corpus RPC error:', error.message);
       return [];
     }
+    observatory.recordRetrieval(data ?? [], 'academy'); // fire-and-forget log
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
     return (data ?? []).map(r => ({
@@ -2793,6 +2803,7 @@ async function getStoicContext(query, topK = 5, authorFilter = null) {
   });
 
   if (error) throw new Error(`RAG retrieval failed: ${error.message}`);
+  observatory.recordRetrieval(chunks || [], 'oracle'); // fire-and-forget log
   return chunks || [];
 }
 
