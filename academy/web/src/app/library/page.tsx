@@ -975,10 +975,54 @@ function skyStateFor(now: Date, schedule?: AgentWindow[] | null): SkyState {
 
 type Node3D = { c: ObsConcept; x: number; y: number; z: number };
 
+// ---- chronology depth axis ----
+// When the author_chronology table exists (Epistemic Boundaries build), each
+// concept gets an era depth 0..1 — ancient voices sit deeper in the field and
+// fainter, modern scholarship nearer and brighter, so zooming in is time
+// travel. When the table is absent this returns null and the layout is
+// byte-for-byte the flat one: zero visual difference, no placeholder.
+function chronoAuthor(row: Record<string, unknown>): string | null {
+  for (const k of ['author', 'author_name', 'name']) {
+    const v = row[k];
+    if (typeof v === 'string' && v.trim()) return v;
+  }
+  return null;
+}
+function chronoYear(row: Record<string, unknown>): number | null {
+  for (const k of ['epistemic_cutoff_year', 'cutoff_year', 'death_year', 'floruit_year', 'era_year', 'year']) {
+    const v = row[k];
+    if (typeof v === 'number' && isFinite(v)) return v;
+  }
+  return null;
+}
+function eraDepthMap(concepts: ObsConcept[], chronology: Record<string, unknown>[] | null | undefined): Map<string, number> | null {
+  if (!chronology || chronology.length === 0) return null;
+  const yearByAuthor = new Map<string, number>();
+  for (const row of chronology) {
+    const a = chronoAuthor(row); const y = chronoYear(row);
+    if (a && y != null) yearByAuthor.set(a.toLowerCase(), y);
+  }
+  if (yearByAuthor.size === 0) return null;
+  const meanYears = new Map<string, number>();
+  for (const c of concepts) {
+    const ys = c.voices.map(v => yearByAuthor.get(v.toLowerCase())).filter((y): y is number => y != null);
+    if (ys.length > 0) meanYears.set(c.id, ys.reduce((s, y) => s + y, 0) / ys.length);
+  }
+  const vals = [...meanYears.values()];
+  if (vals.length < 2) return null;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  if (max - min < 1) return null;
+  const out = new Map<string, number>();
+  for (const [id, y] of meanYears) out.set(id, (y - min) / (max - min));
+  return out;
+}
+
 // Distribute concepts over a sphere (Fibonacci spiral). Weightier concepts are
 // pulled toward the core so the cloud reads like a brain you can turn, not a
 // hollow shell. Deterministic, so the constellation is stable between visits.
-function sphere3D(concepts: ObsConcept[]): Node3D[] {
+// With an era map, radius also carries time: modern voices ride the outer
+// shell, the ancients sit deep — zooming in descends toward antiquity.
+function sphere3D(concepts: ObsConcept[], eraDepth?: Map<string, number> | null): Node3D[] {
   const N = concepts.length;
   const GA = Math.PI * (3 - Math.sqrt(5));
   return concepts.map((c, i) => {
@@ -986,7 +1030,8 @@ function sphere3D(concepts: ObsConcept[]): Node3D[] {
     const y = 1 - t * 2;
     const ring = Math.sqrt(Math.max(0, 1 - y * y));
     const th = GA * i;
-    const rad = (c.magnitude >= 3 ? 0.55 : c.magnitude === 2 ? 0.82 : 1.0) * (0.92 + ((i * 37) % 13) / 100);
+    const eraF = eraDepth ? (0.55 + 0.45 * (eraDepth.get(c.id) ?? 0.6)) : 1;
+    const rad = (c.magnitude >= 3 ? 0.55 : c.magnitude === 2 ? 0.82 : 1.0) * (0.92 + ((i * 37) % 13) / 100) * eraF;
     return { c, x: Math.cos(th) * ring * rad, y: y * rad, z: Math.sin(th) * ring * rad };
   });
 }
@@ -994,11 +1039,12 @@ function sphere3D(concepts: ObsConcept[]): Node3D[] {
 // A rotatable / zoomable 3D star-field. The layout is projected imperatively in
 // a requestAnimationFrame loop (mutating element transforms directly) so it
 // stays at 60fps without re-rendering React on every frame.
-function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1, tensionPairs, birthIds }: {
+function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1, tensionPairs, birthIds, eraDepth }: {
   concepts: ObsConcept[]; edges: [string, string][]; freshEdges?: [string, string][]; activeId: string | null; onPick: (id: string) => void;
   breathScale?: number; // circadian multiplier — dreaming slows every breath
   tensionPairs?: [string, string][]; // approved unresolved tensions — taut amber edges between their poles
   birthIds?: Set<string>; // concepts whose author was first ingested <48h ago — nebula condenses on load
+  eraDepth?: Map<string, number> | null; // 0 ancient .. 1 modern — chronology depth axis (null = flat layout)
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -1009,7 +1055,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
   // Per-node timestamp of the last live retrieval flare (performance.now()); 0 = none.
   const flareStart = useRef<number[]>([]);
 
-  const nodes = useMemo(() => sphere3D(concepts), [concepts]);
+  const nodes = useMemo(() => sphere3D(concepts, eraDepth), [concepts, eraDepth]);
   // Corpus-depth range for node sizing (min/max clamped inside sizeFor).
   const pRange = useMemo(() => {
     let min = Infinity, max = -Infinity;
@@ -1072,7 +1118,9 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
         freq: (0.0013 + heat * 0.0019) * breathScale, // rad/ms — quiet ~4.8s period, hot ~2s; slower while dreaming
         amp: 0.12 + heat * 0.15,             // size pulse, 12%–27%
         phase: (i * 39 % 628) / 100,         // 0..2π-ish, deterministic
-        dim: 0.62 + act * 0.38,              // low-activity stars sit fainter
+        // Low-activity stars sit fainter; with a chronology, ancient voices
+        // sit fainter still (deeper in time). No chronology = no difference.
+        dim: (0.62 + act * 0.38) * (eraDepth ? 0.72 + 0.28 * (eraDepth.get(n.c.id) ?? 0.6) : 1),
       };
     });
     const FLARE_MS = 2200;
@@ -1256,7 +1304,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx]);
+  }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx, eraDepth]);
 
   // Live retrieval glow: short-poll which concepts the corpus has just answered
   // from and flare those stars. Through the existing proxy; pauses when hidden.
@@ -1506,6 +1554,10 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   // was actually starred in the last 7 days (and the section is present).
   const auroraOn = (obsState?.dreams?.length ?? 0) > 0;
 
+  // Chronology depth axis: only when author_chronology exists server-side.
+  // Null keeps the flat layout with zero visual difference.
+  const eraDepth = useMemo(() => eraDepthMap(concepts, obsState?.chronology), [concepts, obsState]);
+
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
       {/* sky — the whole canvas carries a barely-perceptible ~9s heartbeat */}
@@ -1536,7 +1588,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
         {!loading && concepts.length > 0 && (
-          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} />
+          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} eraDepth={eraDepth} />
         )}
 
         {/* comets: one per open inquiry from the last 7 days, once per session */}
