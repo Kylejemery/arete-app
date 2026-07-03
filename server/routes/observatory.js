@@ -132,10 +132,50 @@ function recordRetrieval(chunks, source) {
   })();
 }
 
-// Part 8 wires SSE broadcasting through here; until then it is a quiet no-op
-// placeholder so recordRetrieval has a single seam.
-let emitRetrieval = () => {};
-function setRetrievalEmitter(fn) { emitRetrieval = typeof fn === 'function' ? fn : () => {}; }
+// ---------------------------------------------------------------------------
+// GET /api/observatory/live — Server-Sent Events. Every real retrieval is
+// broadcast to connected Observatories so the matching star can flare gold:
+// someone, somewhere, just asked the corpus something. Connection count is
+// capped and dead connections are swept on write; a broadcast failure can
+// never affect retrieval.
+// ---------------------------------------------------------------------------
+const liveClients = new Set();
+const LIVE_MAX_CLIENTS = 200;
+const LIVE_HEARTBEAT_MS = 25 * 1000;
+
+router.get('/api/observatory/live', (req, res) => {
+  if (liveClients.size >= LIVE_MAX_CLIENTS) {
+    return res.status(503).json({ error: 'The sky is at capacity just now.' });
+  }
+  res.set({
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  });
+  res.flushHeaders();
+  res.write(':connected\n\n');
+  liveClients.add(res);
+
+  const cleanup = () => { clearInterval(hb); liveClients.delete(res); };
+  const hb = setInterval(() => {
+    try { res.write(':hb\n\n'); } catch { cleanup(); }
+  }, LIVE_HEARTBEAT_MS);
+  req.on('close', cleanup);
+});
+
+function emitRetrieval(rows) {
+  try {
+    if (liveClients.size === 0 || !Array.isArray(rows)) return;
+    const concepts = [...new Set(rows.map(r => r.concept).filter(Boolean))];
+    const authors = [...new Set(rows.map(r => r.author).filter(Boolean))];
+    if (concepts.length === 0 && authors.length === 0) return;
+    const frame = `data: ${JSON.stringify({ concepts, authors, ts: Date.now() })}\n\n`;
+    for (const client of [...liveClients]) {
+      try { client.write(frame); } catch { liveClients.delete(client); }
+    }
+  } catch { /* a broadcast failure must never affect retrieval */ }
+}
 
 // ---------------------------------------------------------------------------
 // GET /api/observatory/state — one payload for the whole living sky,
@@ -476,4 +516,4 @@ router.post('/api/observatory/passage', async (req, res) => {
   }
 });
 
-module.exports = { router, recordRetrieval, setRetrievalEmitter };
+module.exports = { router, recordRetrieval };

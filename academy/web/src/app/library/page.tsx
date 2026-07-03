@@ -14,6 +14,10 @@ const SERIF = 'var(--font-cormorant), Georgia, serif';
 const SANS = 'var(--font-inter), system-ui, sans-serif';
 const MONO = 'var(--font-jetbrains), monospace';
 
+// The Railway backend, addressed directly for the one thing the Next proxy
+// cannot carry well: the Observatory's Server-Sent Events stream.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://arete-app-production.up.railway.app';
+
 const GOLD = '#c9a84c';
 const GOLD_L = '#e3c77a';
 const IVORY = '#f4ead5';
@@ -1306,32 +1310,72 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
     };
   }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx, eraDepth]);
 
-  // Live retrieval glow: short-poll which concepts the corpus has just answered
-  // from and flare those stars. Through the existing proxy; pauses when hidden.
+  // Live retrieval glow. Preferred path: an SSE stream straight from the
+  // Railway backend — every real retrieval broadcasts, and the matching star
+  // flares gold for ~2s. If the stream never opens (old backend, blocked
+  // origin, flaky proxy) it degrades to the original 3s pulse polling.
   useEffect(() => {
     let since = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
+    let es: EventSource | null = null;
+    let polling = false;
+
+    const flare = (names: unknown[]) => {
+      const now = performance.now();
+      for (const name of names) {
+        const i = nameToIndex.get(String(name).toLowerCase());
+        if (i != null) flareStart.current[i] = now;
+      }
+    };
+
     const poll = async () => {
       try {
         const res = await fetch(`/api/library/observatory/pulse?since=${since}`);
         if (res.ok) {
           const json = await res.json();
           if (typeof json.now === 'number') since = json.now;
-          const now = performance.now();
-          for (const name of (json.concepts ?? [])) {
-            const i = nameToIndex.get(String(name).toLowerCase());
-            if (i != null) flareStart.current[i] = now;
-          }
+          flare(json.concepts ?? []);
         }
       } catch { /* sky stays calm on a failed poll */ }
       timer = undefined;
-      if (!cancelled && !document.hidden) timer = setTimeout(poll, 3000);
+      if (!cancelled && polling && !document.hidden) timer = setTimeout(poll, 3000);
     };
-    const onVis = () => { if (!document.hidden && !timer && !cancelled) poll(); };
-    if (!document.hidden) poll();
+    const startPolling = () => {
+      if (polling || cancelled) return;
+      polling = true;
+      if (!document.hidden) poll();
+    };
+    const onVis = () => { if (!document.hidden && polling && !timer && !cancelled) poll(); };
     document.addEventListener('visibilitychange', onVis);
-    return () => { cancelled = true; if (timer) clearTimeout(timer); document.removeEventListener('visibilitychange', onVis); };
+
+    try {
+      es = new EventSource(`${API_BASE}/api/observatory/live`);
+      let opened = false;
+      es.onopen = () => { opened = true; };
+      es.onmessage = ev => {
+        try {
+          const j = JSON.parse(ev.data);
+          if (Array.isArray(j.concepts)) flare(j.concepts);
+        } catch { /* malformed frame — ignore */ }
+      };
+      es.onerror = () => {
+        // Never connected: this backend/origin cannot stream — fall back to
+        // polling for the session. Connected before: EventSource reconnects
+        // by itself; leave it alone.
+        if (!opened && es) { es.close(); es = null; startPolling(); }
+      };
+    } catch {
+      startPolling();
+    }
+
+    return () => {
+      cancelled = true;
+      polling = false;
+      if (timer) clearTimeout(timer);
+      if (es) es.close();
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [nameToIndex]);
 
   return (
