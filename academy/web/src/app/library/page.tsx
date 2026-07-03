@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -1867,7 +1868,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
                 <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD, marginBottom: 20 }}>
                   {[passage.p.author, passage.p.work, passage.p.section].filter(Boolean).join(' · ')}
                 </div>
-                <a href="/" className="lib-discuss" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 11, padding: 12, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Read the whole tradition at the Academy →</a>
+                <Link href="/" className="lib-discuss" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 11, padding: 12, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Read the whole tradition at the Academy →</Link>
               </>
             )}
             {!passage.loading && !passage.p && (
