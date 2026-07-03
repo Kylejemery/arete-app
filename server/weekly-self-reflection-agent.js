@@ -30,8 +30,18 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 // Tier 1 authors whose absence is a critical corpus failure (per the spec).
 const TIER1_AUTHORS = ['Marcus Aurelius', 'Epictetus', 'Seneca', 'Plato', 'Aristotle'];
 
-// The six agents in the fleet this report covers. Keys match agent_status.
-const FLEET = ['corpus', 'journal', 'gap', 'synthesis', 'dispatch', 'self_reflection'];
+// The full agent fleet this report covers. Keys match agent_status.
+const FLEET = [
+  'corpus', 'journal', 'gap', 'synthesis', 'dispatch',
+  'world', 'longitudinal', 'tension', 'inquiry', 'dreaming',
+  'self_reflection',
+];
+
+// Weekly agents whose Railway crons are not scheduled yet — Kyle runs them by
+// hand, so a quiet week is expected rather than a failure. Their "did not
+// fire" anomaly is a warning, not a critical, until the crons exist. Remove
+// an agent from this set when its cron is scheduled.
+const MANUAL_AGENTS = new Set(['world', 'longitudinal', 'tension', 'inquiry', 'dreaming']);
 
 // Monday (UTC) of the current week, as YYYY-MM-DD — matches the other agents.
 function getMondayOfCurrentWeek() {
@@ -90,6 +100,11 @@ async function getFleetEnabledState() {
     gap: byName['gap_agent']?.enabled ?? true,
     synthesis: byName['synthesis_agent']?.enabled ?? true,
     dispatch: byName['dispatch_agent']?.enabled ?? true,
+    world: byName['world-agent']?.enabled ?? true,
+    longitudinal: byName['longitudinal-user-model']?.enabled ?? true,
+    tension: byName['tension-agent']?.enabled ?? true,
+    inquiry: byName['inquiry-agent']?.enabled ?? true,
+    dreaming: byName['dreaming-agent']?.enabled ?? true,
     self_reflection: byName['weekly-self-reflection']?.enabled ?? true,
   };
 }
@@ -172,6 +187,11 @@ async function gatherAgentAndEngagement(sinceISO) {
     dispatches,
     distressRows,
     distressUnresolved,
+    worldRows,
+    longitudinalRows,
+    tensionRows,
+    inquiryRows,
+    dreamRows,
   ] = await Promise.all([
     supabase.from('journal_analysis')
       .select('user_id, delivered, created_at').gte('created_at', sinceISO),
@@ -187,6 +207,17 @@ async function gatherAgentAndEngagement(sinceISO) {
       .select('status, created_at, reviewed_at').gte('created_at', sinceISO),
     supabase.from('distress_review_queue')
       .select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    // The weekly agents: "fired" means their output table gained rows this week.
+    supabase.from('world_observations')
+      .select('generated_at').gte('generated_at', sinceISO),
+    supabase.from('user_longitudinal_models')
+      .select('portrait_updated_at').gte('portrait_updated_at', sinceISO),
+    supabase.from('philosophical_tensions')
+      .select('generated_at').gte('generated_at', sinceISO),
+    supabase.from('open_inquiries')
+      .select('generated_at').gte('generated_at', sinceISO),
+    supabase.from('corpus_dreams')
+      .select('generated_at').gte('generated_at', sinceISO),
   ]);
 
   const journal = journalRows.data || [];
@@ -230,6 +261,17 @@ async function gatherAgentAndEngagement(sinceISO) {
   const lastSynth = synth.map(r => r.created_at).sort().pop() || null;
   const lastDispatch = dsp.map(r => r.created_at).sort().pop() || null;
 
+  const world = worldRows.data || [];
+  const longitudinal = longitudinalRows.data || [];
+  const tensions = tensionRows.data || [];
+  const inquiries = inquiryRows.data || [];
+  const dreams = dreamRows.data || [];
+  const lastWorld = world.map(r => r.generated_at).sort().pop() || null;
+  const lastLongitudinal = longitudinal.map(r => r.portrait_updated_at).sort().pop() || null;
+  const lastTension = tensions.map(r => r.generated_at).sort().pop() || null;
+  const lastInquiry = inquiries.map(r => r.generated_at).sort().pop() || null;
+  const lastDream = dreams.map(r => r.generated_at).sort().pop() || null;
+
   return {
     synthesis_docs_generated: synthGenerated,
     synthesis_docs_approved: synthApproved,
@@ -248,12 +290,22 @@ async function gatherAgentAndEngagement(sinceISO) {
       gap: gaps.length > 0,
       synthesis: synth.length > 0,
       dispatch: dsp.length > 0,
+      world: world.length > 0,
+      longitudinal: longitudinal.length > 0,
+      tension: tensions.length > 0,
+      inquiry: inquiries.length > 0,
+      dreaming: dreams.length > 0,
     },
     _lastRun: {
       journal: lastJournal,
       gap: lastGap,
       synthesis: lastSynth,
       dispatch: lastDispatch,
+      world: lastWorld,
+      longitudinal: lastLongitudinal,
+      tension: lastTension,
+      inquiry: lastInquiry,
+      dreaming: lastDream,
     },
   };
 }
@@ -269,11 +321,18 @@ function detectAnomalies(metrics, agentStatus, enabled, config) {
   const distressThreshold = config.anomaly_critical_threshold_distress_unresolved ?? 3;
   const synthBacklogThreshold = config.anomaly_warning_threshold_synthesis_backlog ?? 5;
 
-  // CRITICAL — any enabled agent that did not fire at all this week.
+  // Any enabled agent that did not fire at all this week. CRITICAL for
+  // cron-scheduled agents; only a WARNING for the manually-run agents
+  // (MANUAL_AGENTS) whose crons are not scheduled yet — a quiet week there
+  // is Kyle not pressing the button, not a system failure.
   for (const key of FLEET) {
     if (key === 'self_reflection') continue; // it's firing right now by definition
     if (enabled[key] && agentStatus[key] && agentStatus[key].fired === false) {
-      crit('agents', `The ${key} agent did not fire at all this week (0 runs).`);
+      if (MANUAL_AGENTS.has(key)) {
+        warn('agents', `The ${key} agent did not fire this week (manually run — its cron is not scheduled yet).`);
+      } else {
+        crit('agents', `The ${key} agent did not fire at all this week (0 runs).`);
+      }
     }
   }
 
@@ -423,6 +482,11 @@ async function runWeeklySelfReflection() {
     gap: { fired: perf._fired.gap, failures: 0, last_run: perf._lastRun.gap },
     synthesis: { fired: perf._fired.synthesis, failures: 0, last_run: perf._lastRun.synthesis },
     dispatch: { fired: perf._fired.dispatch, failures: 0, last_run: perf._lastRun.dispatch },
+    world: { fired: perf._fired.world, failures: 0, last_run: perf._lastRun.world },
+    longitudinal: { fired: perf._fired.longitudinal, failures: 0, last_run: perf._lastRun.longitudinal },
+    tension: { fired: perf._fired.tension, failures: 0, last_run: perf._lastRun.tension },
+    inquiry: { fired: perf._fired.inquiry, failures: 0, last_run: perf._lastRun.inquiry },
+    dreaming: { fired: perf._fired.dreaming, failures: 0, last_run: perf._lastRun.dreaming },
     self_reflection: { fired: true, failures: 0, last_run: new Date().toISOString() },
   };
   const agentsFired = FLEET.filter(k => agentStatus[k].fired).length;

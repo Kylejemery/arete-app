@@ -55,7 +55,7 @@ function fmtWeek(d: string | null): string {
 
 function agentsFired(status: Record<string, AgentStat> | null): { fired: number; total: number } {
   const entries = status ? Object.values(status) : []
-  return { fired: entries.filter(a => a?.fired).length, total: entries.length || 6 }
+  return { fired: entries.filter(a => a?.fired).length, total: entries.length || 11 }
 }
 
 function deliveryLabel(rate: number | null): string {

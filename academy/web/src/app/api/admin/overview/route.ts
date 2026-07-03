@@ -153,7 +153,7 @@ export async function GET() {
         anomalies: anomalies.length,
         criticalAnomalies: anomalies.filter((a: { severity?: string }) => a.severity === 'critical').length,
         agentsFired: fired.filter(a => a?.fired).length,
-        agentsTotal: fired.length || 6,
+        agentsTotal: fired.length || 11,
       }
     } catch { return null }
   })()
