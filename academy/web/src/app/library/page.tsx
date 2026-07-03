@@ -54,9 +54,26 @@ type Related = { id: string; author: string; work: string; title: string; reason
 
 type ObsConcept = {
   id: string; name: string; voices: string[]; passages: number; magnitude: number;
-  activity?: number; // 0..1 — how recently the corpus has worked this concept; drives breathing
+  activity?: number; // 0..1 — how recently the corpus has worked this concept; drives brightness
+  weekRetrievals?: number; // real retrieval count, last 7 days — drives breathing RATE
+  tradition?: Tradition;   // dominant tradition among its voices — drives color
   synthesis: { title: string; status: string; excerpt: string; divergence: string | null } | null;
   x?: number; y?: number;
+};
+
+// The living-sky state payload (GET /api/observatory/state). Every field is
+// optional-by-absence: a database missing the agent tables returns empty
+// arrays / nulls and the corresponding visual layer is simply not drawn.
+type ObsState = {
+  generatedAt: string;
+  corpus: { totalChunks: number; authorCount: number; byAuthor: Record<string, number>; byConcept: Record<string, number> };
+  recentActivity: { day: Record<string, number>; week: Record<string, number>; weekByAuthor: Record<string, number> };
+  inquiries: { id: string; question: string; created_at: string }[];
+  tensions: { id: string; title: string; poleA: { author: string | null; concept: string | null }; poleB: { author: string | null; concept: string | null }; created_at: string }[];
+  dreams: { id: string; dream_type: string; created_at: string }[];
+  births: { author: string; work: string; firstChunkAt: string }[];
+  agentPulse: { schedule: { agent: string; dow?: number; daily?: boolean; hour: number; minute: number; caption: string }[]; lastRuns: Record<string, string> };
+  chronology: Record<string, unknown>[] | null;
 };
 type ObsData = {
   concepts: ObsConcept[];
@@ -847,9 +864,54 @@ function shortLabel(name: string): string {
   const head = name.split(':')[0].trim();
   return cap(head.length <= 30 ? head : head.slice(0, 28).trim() + '…');
 }
-const sizeFor = (m: number) => m >= 3 ? { dot: 16, glow: 22, spread: 3, label: 14 }
-  : m === 2 ? { dot: 11, glow: 16, spread: 2, label: 12.5 }
-  : { dot: 7, glow: 11, spread: 1, label: 11.5 };
+
+// Node size is proportional to corpus depth (passage count behind the
+// concept), clamped so small stars stay clickable and deep ones never
+// dominate. sqrt keeps the mid-range legible.
+function sizeFor(passages: number, minP: number, maxP: number) {
+  const t = maxP > minP ? (passages - minP) / (maxP - minP) : 0.5;
+  const u = Math.sqrt(Math.max(0, Math.min(1, t)));
+  return { dot: 7 + u * 10, glow: 11 + u * 11, spread: 1 + u * 2, label: 11.5 + u * 3 };
+}
+
+// ---- tradition color ----
+// Muted families on the deep navy: differences are felt, not loud. Stoics keep
+// the house gold; each other tradition sits a quiet step away from it.
+type Tradition = 'stoic' | 'platonic' | 'eastern' | 'modern' | 'other';
+const TRADITION_STYLE: Record<Tradition, { base: string; glow: string; label: string }> = {
+  stoic:    { base: '#e3c77a', glow: 'rgba(201,168,76,',  label: '#c9a84c' },
+  platonic: { base: '#aabde0', glow: 'rgba(122,148,201,', label: '#93a8cf' },
+  eastern:  { base: '#9ecfb4', glow: 'rgba(106,170,138,', label: '#88b8a0' },
+  modern:   { base: '#c9cfda', glow: 'rgba(150,162,186,', label: '#a9b3c4' },
+  other:    { base: '#d8c6a6', glow: 'rgba(178,156,118,', label: '#bfa984' },
+};
+const TRADITION_OF: Record<string, Tradition> = {
+  'marcus aurelius': 'stoic', 'epictetus': 'stoic', 'seneca': 'stoic',
+  'zeno of citium': 'stoic', 'cleanthes': 'stoic', 'chrysippus': 'stoic',
+  'musonius rufus': 'stoic', 'gaius musonius rufus': 'stoic',
+  'antipater of tarsus': 'stoic', 'cicero': 'stoic', 'diogenes laërtius': 'stoic',
+  'plato': 'platonic', 'socrates': 'platonic', 'aristotle': 'platonic',
+  'xenophon': 'platonic', 'plutarch': 'platonic',
+  'confucius': 'eastern', 'laozi': 'eastern', 'sun tzu': 'eastern',
+  'arnold': 'modern', 'stock': 'modern', 'st. george william joseph stock': 'modern',
+  'eduard zeller': 'modern', 'john sellar': 'modern', 'john sellars': 'modern',
+  'pierre hadot': 'modern', 'hadot': 'modern', 'john c. joy': 'modern',
+  'henry steel olcott': 'modern', 'arete synthesis': 'modern',
+};
+function traditionFor(voices: string[]): Tradition {
+  const tally: Partial<Record<Tradition, number>> = {};
+  for (const v of voices || []) {
+    const t = TRADITION_OF[(v || '').toLowerCase()] || 'other';
+    tally[t] = (tally[t] || 0) + 1;
+  }
+  let best: Tradition = 'other', bestN = 0;
+  (Object.keys(tally) as Tradition[]).forEach(t => {
+    const n = tally[t] || 0;
+    // ties break toward the house tradition, then alphabetical stability
+    if (n > bestN || (n === bestN && t === 'stoic')) { best = t; bestN = n; }
+  });
+  return bestN === 0 ? 'other' : best;
+}
 
 type Node3D = { c: ObsConcept; x: number; y: number; z: number };
 
@@ -885,6 +947,12 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
   const flareStart = useRef<number[]>([]);
 
   const nodes = useMemo(() => sphere3D(concepts), [concepts]);
+  // Corpus-depth range for node sizing (min/max clamped inside sizeFor).
+  const pRange = useMemo(() => {
+    let min = Infinity, max = -Infinity;
+    concepts.forEach(c => { min = Math.min(min, c.passages || 0); max = Math.max(max, c.passages || 0); });
+    return isFinite(min) ? { min, max } : { min: 0, max: 1 };
+  }, [concepts]);
   const idx = useMemo(() => { const m = new Map<string, number>(); concepts.forEach((c, i) => m.set(c.id, i)); return m; }, [concepts]);
   // Lower-cased concept name -> node index, for matching live pulse hits.
   const nameToIndex = useMemo(() => { const m = new Map<string, number>(); concepts.forEach((c, i) => m.set(c.name.toLowerCase(), i)); return m; }, [concepts]);
@@ -919,14 +987,20 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const proj = nodes.map(() => ({ sx: 0, sy: 0, z: 0, p: 1 }));
     if (flareStart.current.length !== nodes.length) flareStart.current = nodes.map(() => 0);
-    // Per-node breathing: activity (0..1) sets how fast & deep each star pulses
-    // and how bright it sits; a deterministic phase keeps the field out of sync.
-    const sz = nodes.map(n => sizeFor(n.c.magnitude));
+    // Per-node breathing. RATE is caused by real data: the concept's 7-day
+    // retrieval count (log-scaled against the hottest concept). Zero
+    // retrievals = slowest baseline breath — never static. Brightness still
+    // follows the server's activity signal; a deterministic phase keeps the
+    // field out of sync.
+    const sz = nodes.map(n => sizeFor(n.c.passages || 0, pRange.min, pRange.max));
+    const colors = nodes.map(n => TRADITION_STYLE[n.c.tradition ?? 'stoic'] || TRADITION_STYLE.stoic);
+    const maxWeek = Math.max(1, ...nodes.map(n => n.c.weekRetrievals ?? 0));
     const breath = nodes.map((n, i) => {
       const act = Math.max(0, Math.min(1, n.c.activity ?? (n.c.magnitude >= 3 ? 0.35 : n.c.magnitude === 2 ? 0.25 : 0.18)));
+      const heat = Math.log(1 + (n.c.weekRetrievals ?? 0)) / Math.log(1 + maxWeek); // 0 when unretrieved
       return {
-        freq: (0.0016 + act * 0.0024) / 1,   // rad/ms — slow ~4s period, active ~2.5s
-        amp: 0.13 + act * 0.16,              // size pulse, 13%–29%
+        freq: 0.0013 + heat * 0.0019,        // rad/ms — quiet ~4.8s period, hot ~2s
+        amp: 0.12 + heat * 0.15,             // size pulse, 12%–27%
         phase: (i * 39 % 628) / 100,         // 0..2π-ish, deterministic
         dim: 0.62 + act * 0.38,              // low-activity stars sit fainter
       };
@@ -977,14 +1051,16 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
           dot.style.transform = `scale(${scale.toFixed(3)})`;
           dot.style.opacity = dim.toFixed(3);
           // Drive colour/halo every frame so the base (matching the JSX) is
-          // deterministic; a flare overrides it toward ivory with a wider halo.
+          // deterministic. The resting tint is the node's tradition; a live
+          // retrieval flare overrides it toward gold-ivory with a wider halo.
+          const col = colors[i];
           if (flare > 0.01) {
             const g = (isActiveNode ? s.glow + 10 : s.glow) + flare * 22;
             dot.style.background = flare > 0.5 ? IVORY : GOLD_L;
             dot.style.boxShadow = `0 0 ${g.toFixed(0)}px ${(s.spread + flare * 4).toFixed(0)}px rgba(227,199,122,${(0.45 + flare * 0.4).toFixed(2)})`;
           } else {
-            dot.style.background = isActiveNode ? IVORY : GOLD_L;
-            dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`;
+            dot.style.background = isActiveNode ? IVORY : col.base;
+            dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`;
           }
         }
         const lab = labelRefs.current[i];
@@ -1097,7 +1173,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs, freshSet]);
+  }, [nodes, edgePairs, freshSet, pRange]);
 
   // Live retrieval glow: short-poll which concepts the corpus has just answered
   // from and flare those stars. Through the existing proxy; pauses when hidden.
@@ -1134,15 +1210,16 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
         {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.7} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
       </svg>
       {nodes.map((n, i) => {
-        const s = sizeFor(n.c.magnitude);
+        const s = sizeFor(n.c.passages || 0, pRange.min, pRange.max);
+        const col = TRADITION_STYLE[n.c.tradition ?? 'stoic'] || TRADITION_STYLE.stoic;
         const isActive = activeId === n.c.id;
         return (
           <button key={n.c.id} ref={el => { nodeRefs.current[i] = el; }}
             onClick={() => { if (dragDist.current < 6) onPick(n.c.id); }}
             className="lib-star3d"
             style={{ position: 'absolute', left: 0, top: 0, transform: 'translate(-50%,-50%)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: 6, willChange: 'transform, opacity' }}>
-            <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : GOLD_L, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px rgba(201,168,76,0.5)`, willChange: 'transform' }} />
-            <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : GOLD, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>{shortLabel(n.c.name)}</span>
+            <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : col.base, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`, willChange: 'transform' }} />
+            <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : col.label, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>{shortLabel(n.c.name)}</span>
           </button>
         );
       })}
@@ -1152,6 +1229,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
 
 function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
+  const [obsState, setObsState] = useState<ObsState | null>(null);
   const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
   const [tensions, setTensions] = useState<OpenTension[]>([]);
   const [dreams, setDreams] = useState<OpenDream[]>([]);
@@ -1174,6 +1252,18 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         /* empty sky handled below */
       } finally {
         if (!cancelled) setLoading(false);
+      }
+    })();
+    // The living-sky state: real corpus depth, retrieval activity, agent
+    // pulse, births. Every visual it drives degrades to stillness if the
+    // fetch fails — the sky renders on the base payload alone.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/state');
+        const json = await res.json();
+        if (!cancelled && res.ok && json && json.corpus) setObsState(json);
+      } catch {
+        /* the sky breathes at baseline without it */
       }
     })();
     // The Inquiry Agent's approved open questions ride alongside the sky data;
@@ -1223,7 +1313,18 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
     return () => { cancelled = true; };
   }, []);
 
-  const concepts = data?.concepts ?? [];
+  // Enrich each concept with its tradition (from its real voices) and its
+  // 7-day retrieval count (from retrieval_events, via the state API) — the
+  // two causes behind color and breathing rate.
+  const concepts = useMemo(() => {
+    const base = data?.concepts ?? [];
+    const week = obsState?.recentActivity?.week ?? {};
+    return base.map(c => ({
+      ...c,
+      tradition: traditionFor(c.voices),
+      weekRetrievals: week[c.name] ?? 0,
+    }));
+  }, [data, obsState]);
   const active = concepts.find(c => c.id === activeId) || null;
 
   return (
