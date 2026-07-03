@@ -7,8 +7,11 @@ import type { NextRequest } from 'next/server'
 //
 // The Library of Arete is a public surface: the immersive page, its data
 // proxies (/api/library/*), and the Oracle are reachable without a session.
+// The Observatory proxies (/api/observatory/*) are public for the same
+// reason — they surface only approved, observatory_visible data and the
+// Railway backend rate-limits the one interactive route (passage).
 const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
-const PUBLIC_PREFIXES = ['/api/library/']
+const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
