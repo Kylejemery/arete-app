@@ -913,6 +913,66 @@ function traditionFor(voices: string[]): Tradition {
   return bestN === 0 ? 'other' : best;
 }
 
+// ---- circadian rhythm ----
+// The sky keeps the corpus's real UTC choreography. The server sends the
+// schedule inside agentPulse; this local copy is the fallback so the rhythm
+// holds even if the state fetch fails.
+type AgentWindow = { agent: string; dow?: number; daily?: boolean; hour: number; minute: number; caption: string };
+const DEFAULT_SCHEDULE: AgentWindow[] = [
+  { agent: 'dreaming',     dow: 0, hour: 23, minute: 30, caption: 'the corpus is dreaming' },
+  { agent: 'ingestion',    dow: 1, hour: 3,  minute: 0,  caption: 'the corpus is reading new texts' },
+  { agent: 'world',        dow: 1, hour: 3,  minute: 30, caption: 'the corpus is looking at the world' },
+  { agent: 'journal',      dow: 1, hour: 4,  minute: 0,  caption: 'the corpus is reading its users' },
+  { agent: 'longitudinal', dow: 1, hour: 4,  minute: 30, caption: 'the corpus is remembering its people' },
+  { agent: 'gap',          dow: 1, hour: 5,  minute: 0,  caption: 'the corpus is finding what it lacks' },
+  { agent: 'tension',      dow: 1, hour: 5,  minute: 30, caption: 'the corpus is holding contradictions open' },
+  { agent: 'synthesis',    dow: 1, hour: 6,  minute: 0,  caption: 'the corpus is writing across its sources' },
+  { agent: 'inquiry',      dow: 1, hour: 6,  minute: 30, caption: 'the corpus is asking what it cannot answer' },
+  { agent: 'dispatch',     daily: true, hour: 10, minute: 0, caption: 'the corpus is composing the dispatch' },
+];
+
+type SkyState = {
+  mode: 'dreaming' | 'waking' | 'awake';
+  dim: number;        // canvas opacity, 1 = full
+  breathScale: number; // multiplier on breathing frequency (dreaming slows it)
+  wakeStep: number;    // 0..7 — which agent-window boundary we are past while waking
+  caption: string | null; // "the corpus is thinking" line, when a window is active
+};
+
+// Derived purely from the clock against the choreography — never invented.
+// Dreaming: Sun 23:30 → Mon 03:00 UTC. Waking: Mon 03:00 → 06:30 UTC,
+// brightening stepwise at each half-hour agent boundary. Awake otherwise.
+function skyStateFor(now: Date, schedule?: AgentWindow[] | null): SkyState {
+  const sched = schedule && schedule.length > 0 ? schedule : DEFAULT_SCHEDULE;
+  const wm = now.getUTCDay() * 1440 + now.getUTCHours() * 60 + now.getUTCMinutes(); // minutes into UTC week, Sun 00:00 = 0
+  const DREAM_START = 1410;  // Sun 23:30
+  const WAKE_START = 1620;   // Mon 03:00
+  const WAKE_END = 1830;     // Mon 06:30 (inquiry window opens; fully awake after)
+
+  // Which agent window (start .. start+30min) is active right now?
+  let caption: string | null = null;
+  for (const w of sched) {
+    const startInDay = w.hour * 60 + w.minute;
+    const starts = w.daily
+      ? [0, 1, 2, 3, 4, 5, 6].map(d => d * 1440 + startInDay)
+      : [(w.dow ?? 0) * 1440 + startInDay];
+    for (const s of starts) {
+      const delta = (wm - s + 10080) % 10080; // week wraps
+      if (delta >= 0 && delta < 30) { caption = w.caption; break; }
+    }
+    if (caption) break;
+  }
+
+  if (wm >= DREAM_START && wm < WAKE_START) {
+    return { mode: 'dreaming', dim: 0.8, breathScale: 0.55, wakeStep: 0, caption: caption ?? 'the corpus is dreaming' };
+  }
+  if (wm >= WAKE_START && wm < WAKE_END) {
+    const step = Math.min(7, Math.floor((wm - WAKE_START) / 30) + 1); // 1..7
+    return { mode: 'waking', dim: 0.8 + 0.2 * (step / 7), breathScale: 0.7 + 0.3 * (step / 7), wakeStep: step, caption };
+  }
+  return { mode: 'awake', dim: 1, breathScale: 1, wakeStep: 0, caption };
+}
+
 type Node3D = { c: ObsConcept; x: number; y: number; z: number };
 
 // Distribute concepts over a sphere (Fibonacci spiral). Weightier concepts are
@@ -934,8 +994,9 @@ function sphere3D(concepts: ObsConcept[]): Node3D[] {
 // A rotatable / zoomable 3D star-field. The layout is projected imperatively in
 // a requestAnimationFrame loop (mutating element transforms directly) so it
 // stays at 60fps without re-rendering React on every frame.
-function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
+function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1 }: {
   concepts: ObsConcept[]; edges: [string, string][]; freshEdges?: [string, string][]; activeId: string | null; onPick: (id: string) => void;
+  breathScale?: number; // circadian multiplier — dreaming slows every breath
 }) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const nodeRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -999,7 +1060,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
       const act = Math.max(0, Math.min(1, n.c.activity ?? (n.c.magnitude >= 3 ? 0.35 : n.c.magnitude === 2 ? 0.25 : 0.18)));
       const heat = Math.log(1 + (n.c.weekRetrievals ?? 0)) / Math.log(1 + maxWeek); // 0 when unretrieved
       return {
-        freq: 0.0013 + heat * 0.0019,        // rad/ms — quiet ~4.8s period, hot ~2s
+        freq: (0.0013 + heat * 0.0019) * breathScale, // rad/ms — quiet ~4.8s period, hot ~2s; slower while dreaming
         amp: 0.12 + heat * 0.15,             // size pulse, 12%–27%
         phase: (i * 39 % 628) / 100,         // 0..2π-ish, deterministic
         dim: 0.62 + act * 0.38,              // low-activity stars sit fainter
@@ -1173,7 +1234,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick }: {
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs, freshSet, pRange]);
+  }, [nodes, edgePairs, freshSet, pRange, breathScale]);
 
   // Live retrieval glow: short-poll which concepts the corpus has just answered
   // from and flare those stars. Through the existing proxy; pauses when hidden.
@@ -1240,6 +1301,28 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   // On a phone the dossier rides up from the bottom as a sheet instead of
   // taking a side column; tapping a star opens it.
   const [dossierOpen, setDossierOpen] = useState(false);
+
+  // ---- circadian rhythm ----
+  // A slow clock tick (30s) re-derives the sky state from UTC against the
+  // corpus's real choreography: dreaming (Sun 23:30–Mon 03:00), waking
+  // (Mon 03:00–06:30, brightening at each agent boundary), awake otherwise.
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const sky = useMemo(
+    () => skyStateFor(new Date(nowTick), obsState?.agentPulse?.schedule),
+    [nowTick, obsState],
+  );
+  // A brief ripple crosses the canvas at each agent-window boundary while the
+  // corpus wakes — keyed so the animation replays exactly once per boundary.
+  const [rippleKey, setRippleKey] = useState(0);
+  const lastStep = useRef(0);
+  useEffect(() => {
+    if (sky.mode === 'waking' && sky.wakeStep !== lastStep.current) setRippleKey(k => k + 1);
+    lastStep.current = sky.mode === 'waking' ? sky.wakeStep : 0;
+  }, [sky.mode, sky.wakeStep]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1329,19 +1412,43 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
 
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
-      {/* sky */}
-      <section style={{ flex: 1, position: 'relative', minWidth: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
+      {/* sky — the whole canvas carries a barely-perceptible ~9s heartbeat */}
+      <section className="lib-heartbeat" style={{ flex: 1, position: 'relative', minWidth: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
+        {/* circadian dim: dreaming sits ~20% darker; waking brightens stepwise */}
+        <div style={{ position: 'absolute', inset: 0, opacity: sky.dim, transition: 'opacity 2.5s ease' }}>
         <div className="lib-obs-intro" style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
           <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched; lines are where they share voices. Drag to turn it, scroll or pinch to zoom — then tap a star.</p>
+          {sky.caption && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12 }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 2.6s ease-in-out infinite' }} />
+              <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: MUTED }}>{sky.caption}</span>
+            </div>
+          )}
         </div>
 
         {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Charting the sky…</div>}
         {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
         {!loading && concepts.length > 0 && (
-          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} />
+          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} />
+        )}
+
+        {/* dreaming: faint motes drift while the corpus dreams */}
+        {sky.mode === 'dreaming' && (
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
+            {DREAM_MOTES.map((m, i) => (
+              <span key={i} style={{ position: 'absolute', left: m.l, top: m.t, width: m.s, height: m.s, borderRadius: '50%',
+                background: 'rgba(201,168,76,0.22)', animation: `${m.a} ${m.d}s ease-in-out infinite` }} />
+            ))}
+          </div>
+        )}
+        </div>
+
+        {/* waking: one brief ripple per agent-window boundary */}
+        {rippleKey > 0 && (
+          <div key={rippleKey} className="lib-obs-ripple" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }} />
         )}
 
         {/* mobile-only: surface the dossier sheet */}
@@ -1518,6 +1625,17 @@ function RecentCard({ tag, dot, text }: { tag: string; dot: string; text: string
 }
 
 /* ========================= ambient motes + CSS ========================= */
+// Motes that drift only while the corpus dreams (Sun 23:30–Mon 03:00 UTC) —
+// they are caused by the dreaming window, not decoration.
+const DREAM_MOTES = [
+  { l: '16%', t: '30%', s: 2, a: 'lib-drift-a', d: 34 },
+  { l: '38%', t: '58%', s: 3, a: 'lib-drift-b', d: 40 },
+  { l: '58%', t: '24%', s: 2, a: 'lib-drift-c', d: 37 },
+  { l: '74%', t: '66%', s: 2, a: 'lib-drift-a', d: 42 },
+  { l: '30%', t: '78%', s: 2, a: 'lib-drift-b', d: 38 },
+  { l: '84%', t: '40%', s: 3, a: 'lib-drift-c', d: 36 },
+];
+
 const MOTES = [
   { l: '12%', t: '22%', s: 2, c: 'rgba(244,234,213,0.5)', a: 'lib-drift-a', d: 22, delay: 0 },
   { l: '28%', t: '64%', s: 3, c: 'rgba(201,168,76,0.45)', a: 'lib-drift-b', d: 28, delay: 0 },
@@ -1596,4 +1714,24 @@ button { background: none; border: none; font: inherit; }
 }
 .lib-sky3d:active { cursor: grabbing; }
 .lib-star3d:hover .lib-star-label { color: #f4ead5 !important; }
+
+/* ---- circadian rhythm ---- */
+/* Whole-canvas heartbeat: ~9s, barely perceptible by design — if it can be
+   consciously noticed it is too strong. */
+@keyframes lib-heartbeat-k { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.025); } }
+.lib-heartbeat { animation: lib-heartbeat-k 9s ease-in-out infinite; }
+/* Waking ripple: one soft radial wash per agent-window boundary. */
+@keyframes lib-ripple-k {
+  0% { opacity: 0; transform: scale(0.2); }
+  30% { opacity: 0.5; }
+  100% { opacity: 0; transform: scale(1.6); }
+}
+.lib-obs-ripple {
+  background: radial-gradient(ellipse 60% 60% at 50% 50%, rgba(201,168,76,0.10), transparent 70%);
+  animation: lib-ripple-k 2.2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .lib-heartbeat { animation: none; }
+  .lib-obs-ripple { display: none; }
+}
 `;
