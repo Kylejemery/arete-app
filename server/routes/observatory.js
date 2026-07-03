@@ -396,4 +396,84 @@ router.get('/api/observatory/greeting', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// POST /api/observatory/passage — touch a star, draw one passage.
+// Runs the existing match_rag_corpus retrieval with the concept as the query
+// and returns ONE passage with author, work, and section attribution.
+// Rate-limited 10/day per IP via upsert_observatory_rate_limit (same pattern
+// as the Oracle's limiter, its own table) — this is a taste, not a service.
+// ---------------------------------------------------------------------------
+const PASSAGE_DAILY_LIMIT = 10;
+
+router.post('/api/observatory/passage', async (req, res) => {
+  try {
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = String(rawIp).split(',')[0].trim() || 'unknown';
+
+    const concept = typeof req.body?.concept === 'string' ? req.body.concept.trim() : '';
+    if (!concept) return res.status(400).json({ error: 'concept is required' });
+    if (concept.length > 200) return res.status(400).json({ error: 'concept must be 200 characters or fewer' });
+
+    const { data: limitData, error: limitError } = await supabase.rpc(
+      'upsert_observatory_rate_limit', { p_ip: ip });
+    if (limitError) {
+      console.error('[/api/observatory/passage] rate limit error:', limitError.message);
+      // Fail open — same posture as the Oracle limiter.
+    } else if (limitData > PASSAGE_DAILY_LIMIT) {
+      return res.status(429).json({
+        error: 'Daily limit reached',
+        message: 'You have drawn ten passages from the sky today. Return tomorrow, or read the sources in full at the Academy.',
+      });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ error: 'The star does not answer just now.' });
+    }
+
+    const embRes = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({ model: 'text-embedding-3-small', input: concept }),
+    });
+    const embData = await embRes.json();
+    const embedding = embData.data?.[0]?.embedding;
+    if (!embedding) throw new Error('embedding failed');
+
+    const { data: chunks, error } = await supabase.rpc('match_rag_corpus', {
+      query_embedding: embedding,
+      match_count: 1,
+      filter_author: null,
+      filter_language: 'english',
+    });
+    if (error) throw new Error(error.message);
+    const chunk = (chunks || [])[0];
+    if (!chunk) return res.status(404).json({ error: 'The star holds no passage yet.' });
+
+    recordRetrieval([chunk], 'observatory'); // a touch is a real retrieval
+
+    // Section attribution lives on the row itself, not in the RPC's shape.
+    const sectionRows = await guarded('rag_corpus section', () => supabase
+      .from('rag_corpus').select('section_label')
+      .eq('author', chunk.author).eq('work', chunk.work)
+      .eq('chunk_text', chunk.chunk_text).limit(1));
+    const section = sectionRows && sectionRows[0] ? sectionRows[0].section_label : null;
+
+    return res.json({
+      passage: {
+        text: chunk.chunk_text,
+        author: chunk.author || null,
+        work: chunk.work || null,
+        section: section || null,
+      },
+      remaining: Math.max(0, PASSAGE_DAILY_LIMIT - (limitData || 1)),
+    });
+  } catch (err) {
+    console.error('[/api/observatory/passage] error:', err.message);
+    return res.status(500).json({ error: 'The star could not be read just now.' });
+  }
+});
+
 module.exports = { router, recordRetrieval, setRetrievalEmitter };

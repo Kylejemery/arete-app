@@ -1558,6 +1558,34 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   // Null keeps the flat layout with zero visual difference.
   const eraDepth = useMemo(() => eraDepthMap(concepts, obsState?.chronology), [concepts, obsState]);
 
+  // ---- touch a star: one passage, attributed ----
+  type Passage = { text: string; author: string | null; work: string | null; section: string | null };
+  const [passage, setPassage] = useState<{ loading: boolean; concept: string; p: Passage | null; note: string | null } | null>(null);
+  const touchStar = useCallback(async (conceptName: string) => {
+    setPassage({ loading: true, concept: conceptName, p: null, note: null });
+    try {
+      const res = await fetch('/api/observatory/passage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concept: conceptName }),
+      });
+      const json = await res.json();
+      if (res.ok && json.passage) {
+        setPassage({ loading: false, concept: conceptName, p: json.passage, note: null });
+      } else {
+        setPassage({ loading: false, concept: conceptName, p: null, note: json.message || json.error || 'The star could not be read just now.' });
+      }
+    } catch {
+      setPassage({ loading: false, concept: conceptName, p: null, note: 'The star could not be read just now.' });
+    }
+  }, []);
+  useEffect(() => {
+    if (!passage) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPassage(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [passage]);
+
   return (
     <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
       {/* sky — the whole canvas carries a barely-perceptible ~9s heartbeat */}
@@ -1772,12 +1800,38 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <button onClick={() => touchStar(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L }}>✶ Touch the star — draw one passage</button>
               <button onClick={() => onDebate(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Stage a debate on this →</button>
               <button onClick={() => go('reading')} className="lib-related" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Read the sources →</button>
             </div>
           </div>
         )}
       </aside>
+
+      {/* touch-a-star modal: one passage, attributed, then back to the sky */}
+      {passage && (
+        <div onClick={() => setPassage(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(4,8,18,0.7)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} className="lib-fade" style={{ maxWidth: 560, width: '100%', maxHeight: '80vh', overflowY: 'auto', background: 'linear-gradient(170deg,rgba(18,27,54,0.97),rgba(10,16,34,0.97))', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 16, padding: '26px 28px', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+              <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD }}>The star answers</div>
+              <button onClick={() => setPassage(null)} aria-label="Close" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+            </div>
+            {passage.loading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: MUTED, margin: 0 }}>Drawing a passage from “{cap(passage.concept)}”…</p>}
+            {!passage.loading && passage.p && (
+              <>
+                <p style={{ fontFamily: SERIF, fontSize: 18.5, lineHeight: 1.65, color: IVORY, margin: '0 0 16px', whiteSpace: 'pre-wrap' }}>{passage.p.text}</p>
+                <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD, marginBottom: 20 }}>
+                  {[passage.p.author, passage.p.work, passage.p.section].filter(Boolean).join(' · ')}
+                </div>
+                <a href="/" className="lib-discuss" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 11, padding: 12, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Read the whole tradition at the Academy →</a>
+              </>
+            )}
+            {!passage.loading && !passage.p && (
+              <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16, lineHeight: 1.5, color: MUTED, margin: 0 }}>{passage.note}</p>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
