@@ -1318,6 +1318,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
 function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
   const [obsState, setObsState] = useState<ObsState | null>(null);
+  const [greeting, setGreeting] = useState<{ line: string; plaque: string } | null>(null);
   const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
   const [tensions, setTensions] = useState<OpenTension[]>([]);
   const [dreams, setDreams] = useState<OpenDream[]>([]);
@@ -1374,6 +1375,20 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         if (!cancelled && res.ok && json && json.corpus) setObsState(json);
       } catch {
         /* the sky breathes at baseline without it */
+      }
+    })();
+    // The Observatory's voice: one or two present-tense sentences composed
+    // daily from live state, always ending in the plaque line. Silence on
+    // failure — the sky needs no caption to stand.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/greeting');
+        const json = await res.json();
+        if (!cancelled && res.ok && typeof json.plaque === 'string') {
+          setGreeting({ line: json.line || '', plaque: json.plaque });
+        }
+      } catch {
+        /* the sky stays quiet */
       }
     })();
     // The Inquiry Agent's approved open questions ride alongside the sky data;
@@ -1500,6 +1515,14 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
         <div className="lib-obs-intro" style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
+          {greeting && (
+            <div style={{ margin: '10px 0 10px' }}>
+              {greeting.line && (
+                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: GOLD_L, margin: '0 0 6px' }}>{greeting.line}</p>
+              )}
+              <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', color: GOLD, opacity: 0.85 }}>{greeting.plaque}</div>
+            </div>
+          )}
           <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched; lines are where they share voices. Drag to turn it, scroll or pinch to zoom — then tap a star.</p>
           {sky.caption && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12 }}>

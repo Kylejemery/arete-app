@@ -268,17 +268,131 @@ async function buildState() {
   };
 }
 
+async function getState() {
+  if (stateCache.payload && Date.now() - stateCache.at < STATE_TTL_MS) {
+    return stateCache.payload;
+  }
+  const payload = await buildState();
+  stateCache = { at: Date.now(), payload };
+  return payload;
+}
+
 router.get('/api/observatory/state', async (req, res) => {
   try {
-    if (stateCache.payload && Date.now() - stateCache.at < STATE_TTL_MS) {
-      return res.json(stateCache.payload);
-    }
-    const payload = await buildState();
-    stateCache = { at: Date.now(), payload };
-    return res.json(payload);
+    return res.json(await getState());
   } catch (err) {
     console.error('[/api/observatory/state] error:', err.message);
     return res.status(500).json({ error: 'The sky state could not be read' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/observatory/greeting — the Observatory's voice. One or two
+// present-tense sentences composed from live state by claude-haiku, cached
+// for the UTC day in memory and in system_greetings (so it survives
+// redeploys), always followed by the plaque line. If the model is
+// unreachable the plaque alone speaks — the Observatory always has a voice.
+// ---------------------------------------------------------------------------
+let greetingCache = { date: '', line: '' };
+
+const GREETING_SYSTEM = `You compose a one-to-two sentence greeting for the Library of Arete's Observatory — a quiet public star map of what a philosophical corpus is working through.
+
+Rules, all absolute:
+- Present tense only.
+- No hype, no exclamation marks, no first person, no addressing the reader.
+- State only facts present in the JSON you are given. Never invent an event; if a field is empty, say nothing about it.
+- Prefer the most alive facts: what the corpus dreamed about, what it is wondering, what tension it holds, what new voice arrived, what people asked it about this week.
+- Lowercase quiet register is welcome; proper nouns keep their case.
+- Do NOT include any counts of passages, voices, or open questions — a plaque line after your sentences carries those.
+- Return only the sentences, nothing else.`;
+
+function plaqueLine(state) {
+  const chunks = state?.corpus?.totalChunks ?? 0;
+  const authors = state?.corpus?.authorCount ?? 0;
+  const inquiries = (state?.inquiries ?? []).length;
+  return `${chunks.toLocaleString('en-US')} passages · ${authors} voices · ${inquiries} open question${inquiries === 1 ? '' : 's'}`;
+}
+
+// The compact fact sheet the model may draw on — nothing else exists to it.
+function greetingFacts(state) {
+  const week = state?.recentActivity?.week ?? {};
+  const hot = Object.entries(week).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
+  return {
+    openInquiries: (state?.inquiries ?? []).slice(0, 2).map(i => i.question),
+    openTensions: (state?.tensions ?? []).slice(0, 2).map(t => ({
+      title: t.title, between: [t.poleA?.author, t.poleB?.author].filter(Boolean),
+    })),
+    dreamsStarredThisWeek: (state?.dreams ?? []).map(d => d.dream_type),
+    newVoicesLast48h: (state?.births ?? []).map(b => b.author),
+    mostRetrievedConceptsThisWeek: hot,
+    lastAgentRuns: state?.agentPulse?.lastRuns ?? {},
+  };
+}
+
+router.get('/api/observatory/greeting', async (req, res) => {
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const state = await getState();
+    const plaque = plaqueLine(state);
+
+    if (greetingCache.date === today && greetingCache.line) {
+      return res.json({ line: greetingCache.line, plaque });
+    }
+
+    // Durable copy from a previous process today?
+    const stored = await guarded('system_greetings', () => supabase
+      .from('system_greetings').select('line').eq('greeting_date', today).limit(1));
+    if (stored && stored[0] && stored[0].line) {
+      greetingCache = { date: today, line: stored[0].line };
+      return res.json({ line: stored[0].line, plaque });
+    }
+
+    if (!process.env.CLAUDE_API_KEY) {
+      return res.json({ line: '', plaque });
+    }
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 200,
+        system: GREETING_SYSTEM,
+        messages: [{ role: 'user', content: `Today's state JSON:\n${JSON.stringify(greetingFacts(state))}` }],
+      }),
+    });
+    if (!response.ok) {
+      console.warn('[/api/observatory/greeting] Claude error:', response.status);
+      return res.json({ line: '', plaque });
+    }
+    const data = await response.json();
+    let line = (data.content?.find(b => b.type === 'text')?.text ?? '').trim();
+    // Enforce the register even if the model slips: no exclamations, no
+    // newlines, bounded length.
+    line = line.replace(/!/g, '.').replace(/\s+/g, ' ').slice(0, 320).trim();
+
+    if (line) {
+      greetingCache = { date: today, line };
+      const { error } = await supabase.from('system_greetings')
+        .upsert({ greeting_date: today, line }, { onConflict: 'greeting_date' });
+      if (error && !MISSING_RE.test(error.message || '')) {
+        console.warn('[/api/observatory/greeting] store failed:', error.message);
+      }
+    }
+    return res.json({ line, plaque });
+  } catch (err) {
+    console.error('[/api/observatory/greeting] error:', err.message);
+    // Even here, try to speak the plaque.
+    try {
+      const state = await getState();
+      return res.json({ line: '', plaque: plaqueLine(state) });
+    } catch {
+      return res.status(500).json({ error: 'The Observatory is silent' });
+    }
   }
 });
 
