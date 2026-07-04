@@ -119,6 +119,128 @@ function stripGutenberg(text) {
   return t.trim();
 }
 
+// --- Reader assembly ------------------------------------------------------
+// rag_corpus chunks were cut for retrieval, not reading: consecutive chunks
+// overlap by a few hundred characters, carry no paragraph breaks, and keep
+// the source transcription's markup (_emphasis_, [12] footnote refs,
+// [Sidenote: …]). These helpers turn a run of chunks back into a readable
+// text: dedupe the overlaps, scrub the artifacts, and re-paragraph.
+
+// Drop the prefix of `next` that repeats the tail of `prev` (the RAG overlap
+// window). Probe with the first characters of `next`; if that probe appears
+// in prev's tail and the full suffix/prefix match verifies, cut it.
+const OVERLAP_PROBE = 32;
+function dedupeOverlap(prev, next) {
+  if (!prev || next.length < OVERLAP_PROBE) return next;
+  const tail = prev.slice(-1600);
+  const p = tail.lastIndexOf(next.slice(0, OVERLAP_PROBE));
+  if (p === -1) return next;
+  const overlap = tail.length - p;
+  if (overlap >= next.length) return tail.endsWith(next) ? '' : next;
+  return tail.endsWith(next.slice(0, overlap)) ? next.slice(overlap) : next;
+}
+
+// Join consecutive chunks into one flowing text, cutting each chunk's
+// duplicated overlap against the chunk before it. `context` is the chunk just
+// before the first one shown (the previous page's last chunk): it is used to
+// trim the first chunk's leading overlap but is not itself included.
+function stitchChunks(chunks, context = null) {
+  let out = '';
+  let prev = (context || '').trim();
+  for (const raw of chunks) {
+    const t = (raw || '').trim();
+    if (!t) continue;
+    const add = dedupeOverlap(prev, t).trim();
+    prev = t;
+    if (!add) continue;
+    out = out ? `${out} ${add}` : add;
+  }
+  return out;
+}
+
+// Common abbreviations that end with a period mid-sentence; never treat them
+// as sentence boundaries when re-paragraphing.
+const ABBREVS = new Set([
+  'mr', 'mrs', 'dr', 'st', 'jr', 'sr', 'prof', 'rev', 'hon',
+  'etc', 'viz', 'cf', 'vs', 'ib', 'ibid', 'seq', 'al',
+  'i.e', 'e.g', 'chap', 'ch', 'sec', 'vol', 'no', 'nos', 'p', 'pp', 'fl',
+]);
+
+// Split flowing prose into sentences, conservatively: break after .!?… (plus
+// closing quotes/parens) followed by whitespace and a capital or opening
+// quote — unless the word before the period is a known abbreviation or a
+// single-letter initial ("M. Antoninus").
+function splitSentences(text) {
+  const out = [];
+  const re = /[.!?…]["'”’)\]]*\s+(?=[“"'‘(\[]?[A-Z0-9])/g;
+  let start = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    const end = m.index + m[0].length;
+    const before = text.slice(start, m.index);
+    const lastWord = (before.match(/([A-Za-z.]+)$/) || [])[1] || '';
+    const w = lastWord.replace(/\.+$/, '').toLowerCase();
+    if (ABBREVS.has(w) || /^[a-z]$/.test(w)) continue;
+    out.push(text.slice(start, end).trimEnd());
+    start = end;
+  }
+  if (start < text.length) out.push(text.slice(start).trim());
+  return out.filter(Boolean);
+}
+
+// Group sentences into paragraphs of a comfortable reading size.
+const PARA_TARGET = 550;
+function paragraphize(text) {
+  if (text.length <= PARA_TARGET * 1.5) return [text];
+  const sentences = splitSentences(text);
+  const paras = [];
+  let cur = '';
+  for (const s of sentences) {
+    cur = cur ? `${cur} ${s}` : s;
+    if (cur.length >= PARA_TARGET) { paras.push(cur); cur = ''; }
+  }
+  if (cur) {
+    // never leave a stub paragraph at the end
+    if (cur.length < 140 && paras.length) paras[paras.length - 1] += ` ${cur}`;
+    else paras.push(cur);
+  }
+  return paras;
+}
+
+// Make one stitched, flat text readable: scrub transcription artifacts, open
+// paragraph breaks at the source's own section markers (CHAP. II., LETTER
+// XLIV., numbered aphorisms, bare roman numerals), then split what remains
+// into paragraph-sized groups of sentences.
+function formatReadable(text) {
+  let t = text || '';
+
+  // transcription artifacts
+  t = t.replace(/\[Sidenote:[^\]]*\]/gi, ' ');
+  t = t.replace(/\[Illustration[^\]]*\]/gi, ' ');
+  t = t.replace(/\[\d+\]/g, '');
+  t = t.replace(/\{\d+\}/g, '');
+  t = t.replace(/_([^_]{1,240}?)_/g, '$1'); // _emphasis_ → plain
+  t = t.replace(/_/g, '');                  // stray unpaired underscores
+  t = t.replace(/\s+/g, ' ').replace(/ ([,.;:!?])/g, '$1').trim();
+
+  // section markers → paragraph breaks. All require a sentence end just
+  // before, so numbers and numerals inside running prose are left alone.
+  const SENT_END = `(?<=[^\\d][.!?…]["'”’]*) `;
+  t = t.replace(new RegExp(`${SENT_END}(CHAP\\.\\s+[IVXLCDM]+\\.)`, 'g'), '\n\n$1');
+  t = t.replace(new RegExp(`${SENT_END}((?:CHAPTER|LETTER|BOOK|PART|SECTION)\\s+(?:THE\\s+)?[IVXLCDM0-9]+\\.?)(?= ?[A-Z“"'])`, 'g'), '\n\n$1');
+  // all-caps source headings ("OF SENECA’S WRITINGS.") stand on their own line
+  t = t.replace(new RegExp(`${SENT_END}([A-Z][A-Z’']+(?: [A-Z][A-Z’']+){1,5}\\.)(?= [“"']?[A-Z])`, 'g'), '\n\n$1\n\n');
+  t = t.replace(new RegExp(`${SENT_END}(?<!(?:CHAP|CHAPTER|LETTER|BOOK|PART|SECTION)\\. )([IVXLCDM]{2,}\\.?)(?= [“"']?[A-Z])`, 'g'), '\n\n$1');
+  // numbered aphorisms/verses: "29. As thou…", "10. 1. When…" — but not
+  // numbers in citations ("v. 197.", "p. 12.", "vol. 3.")
+  t = t.replace(new RegExp(`${SENT_END}(?<!\\b(?:v|p|pp|No|no|vol|Vol|ch|sec)\\. )(\\d{1,3}\\.(?: \\d{1,3}\\.)?)(?= [“"']?[A-Z])`, 'g'), '\n\n$1');
+
+  // re-paragraph each block to reading size
+  return t.split(/\n\n+/)
+    .map(b => b.trim()).filter(Boolean)
+    .flatMap(paragraphize)
+    .join('\n\n');
+}
+
 module.exports = {
   STOIC_AUTHORS,
   tradition,
@@ -126,4 +248,6 @@ module.exports = {
   workTitle,
   era,
   stripGutenberg,
+  stitchChunks,
+  formatReadable,
 };

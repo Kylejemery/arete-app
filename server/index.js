@@ -3510,18 +3510,25 @@ app.get('/api/library/text', async (req, res) => {
     const total = count || 0;
     if (total === 0) return res.status(404).json({ error: 'Text not found' });
     const totalPages = Math.max(1, Math.ceil(total / LIBRARY_PAGE_CHUNKS));
+    if (page >= totalPages) return res.status(404).json({ error: 'Page not found' });
     const from = page * LIBRARY_PAGE_CHUNKS;
     const to = from + LIBRARY_PAGE_CHUNKS - 1;
 
-    const { data, error } = await supabase
+    // On pages after the first, also fetch the previous page's last chunk: the
+    // first chunk shown overlaps its tail (RAG overlap window) and stitchChunks
+    // needs it as context to trim the duplicate.
+    const fetchFrom = page > 0 ? from - 1 : from;
+    const { data: rows, error } = await supabase
       .from('rag_corpus')
       .select('chunk_index, chunk_text, section_label, translator, source_url, text_type')
       .eq('author', author)
       .eq('work', work)
       .order('chunk_index', { ascending: true })
-      .range(from, to);
+      .range(fetchFrom, to);
     if (error) throw error;
-    if (!data || data.length === 0) return res.status(404).json({ error: 'Page not found' });
+    const context = page > 0 ? (rows && rows[0] && rows[0].chunk_text) || null : null;
+    const data = page > 0 ? (rows || []).slice(1) : (rows || []);
+    if (data.length === 0) return res.status(404).json({ error: 'Page not found' });
 
     // Apply the admin override (retitle / shelf / era / hidden). A hidden work
     // is off the public shelf, so it must not be directly readable either.
@@ -3533,9 +3540,9 @@ app.get('/api/library/text', async (req, res) => {
       .maybeSingle();
     if (ov && ov.hidden) return res.status(404).json({ error: 'Text not found' });
 
-    const body = libraryHelpers.stripGutenberg(
-      data.map(c => (c.chunk_text || '').trim()).filter(Boolean).join('\n\n')
-    );
+    const body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
+      libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
+    ));
 
     return res.json({
       author,

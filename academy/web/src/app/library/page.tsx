@@ -559,6 +559,9 @@ function ReadingRoom(props: {
 
   if (active) {
     const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
+    // Standalone section headings from the server's reader pipeline
+    // ("CHAP. XV.", "BOOK II. WEI CHANG."): short, no lowercase letters.
+    const isHeading = (p: string) => p.length <= 64 && !/[a-z]/.test(p);
     return (
       <main style={{ height: '100%', overflowY: 'auto' }}>
         <div className="lib-fade lib-reader-grid" style={{ maxWidth: 1140, margin: '0 auto', padding: '30px 32px 60px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 38, alignItems: 'start' }}>
@@ -574,7 +577,11 @@ function ReadingRoom(props: {
             <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: 30 }}>
               {readerLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Pulling the text from the shelf…</p>}
               {!readerLoading && reader && paras.map((p, i) => (
-                <p key={i} style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1.72, color: i === 0 ? IVORY : TEXT, opacity: i === 0 ? 1 : 0.9, margin: '0 0 20px' }}>{p}</p>
+                isHeading(p) ? (
+                  <div key={i} style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, margin: '34px 0 18px' }}>{p}</div>
+                ) : (
+                  <p key={i} style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1.72, color: i === 0 ? IVORY : TEXT, opacity: i === 0 ? 1 : 0.9, margin: '0 0 20px' }}>{p}</p>
+                )
               ))}
               {!readerLoading && !reader && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>This text could not be opened just now.</p>}
             </div>
