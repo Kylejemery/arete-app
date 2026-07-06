@@ -1703,68 +1703,74 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   }, [passage]);
 
   return (
-    <main style={{ height: '100%', display: 'flex', minHeight: 0 }}>
-      {/* sky — the whole canvas carries a barely-perceptible ~9s heartbeat */}
-      <section className="lib-heartbeat" style={{ flex: 1, position: 'relative', minWidth: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
-        {/* circadian dim: dreaming sits ~20% darker; waking brightens stepwise */}
-        <div style={{ position: 'absolute', inset: 0, opacity: sky.dim, transition: 'opacity 2.5s ease' }}>
-        <div className="lib-obs-intro" style={{ position: 'absolute', top: 22, left: 28, zIndex: 3, maxWidth: 360, pointerEvents: 'none' }}>
+    <main className="lib-obs-room" style={{ height: '100%', display: 'flex', minHeight: 0 }}>
+      <section style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        {/* header — a solid-background section stacked ABOVE the canvas in
+            document flow; the sky never renders behind this copy */}
+        <div className="lib-obs-header" style={{ flexShrink: 0, padding: '18px 28px 16px', background: 'rgba(8,13,28,0.96)', borderBottom: '1px solid rgba(201,168,76,0.16)' }}>
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>The Observatory</div>
-          <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px' }}>A sky of what the corpus is working through</h1>
+          <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 30, lineHeight: 1.08, color: IVORY, margin: '0 0 6px', maxWidth: 560 }}>A sky of what the corpus is working through</h1>
           {greeting && (
             <div style={{ margin: '10px 0 10px' }}>
               {greeting.line && (
-                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: GOLD_L, margin: '0 0 6px' }}>{greeting.line}</p>
+                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: GOLD_L, margin: '0 0 6px', maxWidth: 560 }}>{greeting.line}</p>
               )}
               <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', color: GOLD, opacity: 0.85 }}>{greeting.plaque}</div>
             </div>
           )}
-          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0 }}>Each star is a concept many thinkers touched; lines are where they share voices. Drag to turn it, scroll or pinch to zoom — then tap a star.</p>
+          <p className="lib-obs-instr-desktop" style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, lineHeight: 1.45, color: MUTED, margin: 0, maxWidth: 560 }}>Each star is a concept many thinkers touched; lines are where they share voices. Drag to turn it, scroll or pinch to zoom — then tap a star.</p>
+          <p className="lib-obs-instr-mobile" style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, lineHeight: 1.45, color: MUTED, margin: 0 }}>Drag to turn, pinch to zoom, tap a star.</p>
           {sky.caption && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 2.6s ease-in-out infinite' }} />
               <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: MUTED }}>{sky.caption}</span>
             </div>
           )}
         </div>
 
-        {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Charting the sky…</div>}
-        {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
+        {/* sky — the canvas carries a barely-perceptible ~9s heartbeat */}
+        <div className="lib-heartbeat lib-obs-canvas" style={{ flex: 1, position: 'relative', minHeight: 0, overflow: 'hidden', background: 'radial-gradient(ellipse 70% 70% at 40% 40%, rgba(20,30,62,0.5), transparent 70%)' }}>
+          {/* circadian dim: dreaming sits ~20% darker; waking brightens stepwise */}
+          <div style={{ position: 'absolute', inset: 0, opacity: sky.dim, transition: 'opacity 2.5s ease' }}>
+          {loading && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Charting the sky…</div>}
+          {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
-        {!loading && concepts.length > 0 && (
-          <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} eraDepth={eraDepth} />
-        )}
+          {!loading && concepts.length > 0 && (
+            <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} eraDepth={eraDepth} />
+          )}
 
-        {/* comets: one per open inquiry from the last 7 days, once per session */}
-        <Comets inquiries={obsState?.inquiries ?? []} />
+          {/* comets: one per open inquiry from the last 7 days, once per session */}
+          <Comets inquiries={obsState?.inquiries ?? []} />
 
-        {/* nebula caption: name the new light, quietly, then let it fade */}
-        {births.labels.length > 0 && (
-          <div className="lib-birth-caption" style={{ position: 'absolute', left: 26, bottom: 20, zIndex: 3, pointerEvents: 'none' }}>
-            {births.labels.map(a => (
-              <div key={a} style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: GOLD_L, marginTop: 4 }}>new light: {a}</div>
-            ))}
+          {/* nebula caption: name the new light, quietly, then let it fade */}
+          {births.labels.length > 0 && (
+            <div className="lib-birth-caption" style={{ position: 'absolute', left: 26, bottom: 20, zIndex: 3, pointerEvents: 'none' }}>
+              {births.labels.map(a => (
+                <div key={a} style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.16em', color: GOLD_L, marginTop: 4 }}>new light: {a}</div>
+              ))}
+            </div>
+          )}
+
+          {/* dreaming: faint motes drift while the corpus dreams */}
+          {sky.mode === 'dreaming' && (
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
+              {DREAM_MOTES.map((m, i) => (
+                <span key={i} style={{ position: 'absolute', left: m.l, top: m.t, width: m.s, height: m.s, borderRadius: '50%',
+                  background: 'rgba(201,168,76,0.22)', animation: `${m.a} ${m.d}s ease-in-out infinite` }} />
+              ))}
+            </div>
+          )}
           </div>
-        )}
 
-        {/* dreaming: faint motes drift while the corpus dreams */}
-        {sky.mode === 'dreaming' && (
-          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
-            {DREAM_MOTES.map((m, i) => (
-              <span key={i} style={{ position: 'absolute', left: m.l, top: m.t, width: m.s, height: m.s, borderRadius: '50%',
-                background: 'rgba(201,168,76,0.22)', animation: `${m.a} ${m.d}s ease-in-out infinite` }} />
-            ))}
-          </div>
-        )}
+          {/* waking: one brief ripple per agent-window boundary */}
+          {rippleKey > 0 && (
+            <div key={rippleKey} className="lib-obs-ripple" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }} />
+          )}
         </div>
 
-        {/* waking: one brief ripple per agent-window boundary */}
-        {rippleKey > 0 && (
-          <div key={rippleKey} className="lib-obs-ripple" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }} />
-        )}
-
-        {/* mobile-only: surface the dossier sheet */}
-        <button onClick={() => setDossierOpen(true)} className="lib-obs-toggle lib-mobile-only" style={{ position: 'absolute', left: '50%', bottom: 18, transform: 'translateX(-50%)', zIndex: 5, cursor: 'pointer', alignItems: 'center', gap: 8, background: 'rgba(12,20,40,0.92)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '10px 18px', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>✶ What the corpus is thinking</button>
+        {/* mobile-only: the dossier CTA sits in flow BELOW the capped canvas,
+            always reachable without fighting the sky for the viewport */}
+        <button onClick={() => setDossierOpen(true)} className="lib-obs-toggle lib-mobile-only" style={{ flexShrink: 0, alignSelf: 'center', margin: '12px auto 14px', cursor: 'pointer', alignItems: 'center', gap: 8, background: 'rgba(12,20,40,0.92)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 999, padding: '10px 18px', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, boxShadow: '0 6px 20px rgba(0,0,0,0.5)' }}>✶ What the corpus is thinking</button>
       </section>
 
       {dossierOpen && <div className="lib-drawer-scrim" onClick={() => setDossierOpen(false)} />}
@@ -2049,6 +2055,8 @@ button { background: none; border: none; font: inherit; }
 /* ---- responsive: phones & small tablets ---- */
 .lib-mobile-only { display: none; }
 .lib-drawer-scrim { display: none; }
+/* observatory instruction line: one short sentence on phones */
+.lib-obs-instr-mobile { display: none; }
 @media (max-width: 760px) {
   .lib-mobile-only { display: flex !important; }
 
@@ -2076,9 +2084,16 @@ button { background: none; border: none; font: inherit; }
   .lib-masters-rail { position: fixed !important; top: 0; left: 0; bottom: 0; z-index: 40 !important; width: 82% !important; max-width: 290px !important; transform: translateX(-100%); transition: transform .3s ease; box-shadow: 0 0 40px rgba(0,0,0,0.6); }
   .lib-masters-rail.open { transform: translateX(0); }
 
+  /* observatory: the room scrolls as a page; header stacks above a capped
+     canvas (~60vh) so the dossier CTA below stays reachable */
+  .lib-obs-room { display: block !important; overflow-y: auto !important; }
+  .lib-obs-header { padding: 14px 16px 12px !important; }
+  .lib-obs-header h1 { font-size: 22px !important; }
+  .lib-obs-canvas { flex: none !important; height: 60vh !important; }
+  .lib-obs-instr-desktop { display: none !important; }
+  .lib-obs-instr-mobile { display: block !important; }
+
   /* observatory: dossier rises from the bottom as a sheet */
-  .lib-obs-intro { max-width: 78% !important; top: 14px !important; left: 16px !important; }
-  .lib-obs-intro h1 { font-size: 22px !important; }
   .lib-obs-dossier { position: fixed !important; left: 0; right: 0; bottom: 0; width: auto !important; max-height: 80vh; z-index: 40 !important; border-left: none !important; border-top: 1px solid rgba(201,168,76,0.3) !important; border-radius: 18px 18px 0 0; transform: translateY(100%); transition: transform .3s ease; box-shadow: 0 -12px 44px rgba(0,0,0,0.6); }
   .lib-obs-dossier.open { transform: translateY(0); }
 
