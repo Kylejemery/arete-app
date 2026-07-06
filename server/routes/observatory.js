@@ -356,10 +356,11 @@ let greetingCache = { date: '', line: '' };
 const GREETING_SYSTEM = `You compose a one-to-two sentence greeting for the Library of Arete's Observatory — a quiet public star map of what a philosophical corpus is working through.
 
 Rules, all absolute:
-- Present tense only.
-- No hype, no exclamation marks, no first person, no addressing the reader.
+- Present tense only. Maximum two sentences.
+- No em dashes, no en dashes, no semicolons, no exclamation marks.
+- No hype, no first person, no addressing the reader.
 - State only facts present in the JSON you are given. Never invent an event; if a field is empty, say nothing about it.
-- Prefer the most alive facts: what the corpus dreamed about, what it is wondering, what tension it holds, what new voice arrived, what people asked it about this week.
+- Prefer the most alive facts: what the corpus dreamed (by type only), what it is asking, what new voice arrived, which agents have been at work.
 - Lowercase quiet register is welcome; proper nouns keep their case.
 - Do NOT include any counts of passages, voices, or open questions — a plaque line after your sentences carries those.
 - Return only the sentences, nothing else.`;
@@ -372,19 +373,71 @@ function plaqueLine(state) {
 }
 
 // The compact fact sheet the model may draw on — nothing else exists to it.
+//
+// PRIVACY BOUNDARY, enforced at the code level so no prompt failure can leak:
+// only system-level facts may enter this object — corpus counts, new authors
+// ingested, approved dream activity BY TYPE ONLY, open inquiry count and
+// topics (inquiries are corpus-derived), agent activity. User-derived
+// material must NEVER be added here: journal analysis themes, longitudinal
+// model content, gap analysis themes, tension titles (tension seeds inherit
+// from user themes), and retrieval concepts (retrieval_events concepts
+// inherit from journal/gap themes) are all excluded.
 function greetingFacts(state) {
-  const week = state?.recentActivity?.week ?? {};
-  const hot = Object.entries(week).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([c]) => c);
   return {
+    openInquiryCount: (state?.inquiries ?? []).length,
     openInquiries: (state?.inquiries ?? []).slice(0, 2).map(i => i.question),
-    openTensions: (state?.tensions ?? []).slice(0, 2).map(t => ({
-      title: t.title, between: [t.poleA?.author, t.poleB?.author].filter(Boolean),
-    })),
     dreamsStarredThisWeek: (state?.dreams ?? []).map(d => d.dream_type),
     newVoicesLast48h: (state?.births ?? []).map(b => b.author),
-    mostRetrievedConceptsThisWeek: hot,
     lastAgentRuns: state?.agentPulse?.lastRuns ?? {},
   };
+}
+
+// Exception path, disabled by default (GREETING_USER_THEMES_ENABLED !== 'true'):
+// a user-derived theme may be mentioned only when it appears across at least
+// GREETING_THEME_MIN_USERS distinct users in the last 30 days. Ships OFF.
+const USER_THEMES_ENABLED = process.env.GREETING_USER_THEMES_ENABLED === 'true';
+const GREETING_THEME_MIN_USERS = 5;
+
+async function crossUserThemes() {
+  const since = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+  const rows = await guarded('journal_analysis cross-user themes', () => supabase
+    .from('journal_analysis').select('user_id, themes').gte('created_at', since));
+  const byTheme = new Map(); // theme -> Set<user_id>
+  for (const r of rows || []) {
+    if (!r.user_id) continue;
+    for (const t of Array.isArray(r.themes) ? r.themes : []) {
+      const theme = String((t && t.theme) || '').toLowerCase().trim();
+      if (!theme) continue;
+      if (!byTheme.has(theme)) byTheme.set(theme, new Set());
+      byTheme.get(theme).add(r.user_id);
+    }
+  }
+  return [...byTheme.entries()]
+    .filter(([, users]) => users.size >= GREETING_THEME_MIN_USERS)
+    .map(([theme]) => theme);
+}
+
+// Style enforcement even when the model slips: no exclamations, no em or en
+// dashes, no semicolons, at most two sentences, one line, bounded length.
+function sanitizeGreeting(raw) {
+  let line = String(raw || '').replace(/\s+/g, ' ').trim();
+  line = line.replace(/!/g, '.');
+  line = line.replace(/\s*[—–]\s*/g, ', ');
+  line = line.replace(/;/g, ',');
+  return line.split(/(?<=[.?])\s+/).slice(0, 2).join(' ').slice(0, 320).trim();
+}
+
+// Consistency guard: a greeting that contradicts the plaque's numbers never
+// ships — if it implies open questions while the count is 0 (or dreams,
+// or new voices, likewise), the plaque line speaks alone instead.
+function violatesFacts(line, state) {
+  const inquiries = (state?.inquiries ?? []).length;
+  const dreams = (state?.dreams ?? []).length;
+  const births = (state?.births ?? []).length;
+  if (inquiries === 0 && /\b(question|inquir|wonder|ask)/i.test(line)) return true;
+  if (dreams === 0 && /\bdream/i.test(line)) return true;
+  if (births === 0 && /\b(new voice|new light|arriv|join)/i.test(line)) return true;
+  return false;
 }
 
 router.get('/api/observatory/greeting', async (req, res) => {
@@ -393,20 +446,32 @@ router.get('/api/observatory/greeting', async (req, res) => {
     const state = await getState();
     const plaque = plaqueLine(state);
 
-    if (greetingCache.date === today && greetingCache.line) {
+    if (greetingCache.date === today) {
       return res.json({ line: greetingCache.line, plaque });
     }
 
-    // Durable copy from a previous process today?
+    // Durable copy from a previous process today? It must pass today's rules
+    // — a stored line that violates the style or contradicts the plaque is
+    // discarded and regenerated.
     const stored = await guarded('system_greetings', () => supabase
       .from('system_greetings').select('line').eq('greeting_date', today).limit(1));
     if (stored && stored[0] && stored[0].line) {
-      greetingCache = { date: today, line: stored[0].line };
-      return res.json({ line: stored[0].line, plaque });
+      const line = sanitizeGreeting(stored[0].line);
+      if (line && !violatesFacts(line, state)) {
+        greetingCache = { date: today, line };
+        return res.json({ line, plaque });
+      }
     }
 
     if (!process.env.CLAUDE_API_KEY) {
       return res.json({ line: '', plaque });
+    }
+
+    const facts = greetingFacts(state);
+    if (USER_THEMES_ENABLED) {
+      // Only themes shared by ≥5 distinct users may cross the boundary, and
+      // only when the flag is explicitly on (it ships off).
+      facts.communityThemes = await crossUserThemes();
     }
 
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -420,7 +485,7 @@ router.get('/api/observatory/greeting', async (req, res) => {
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 200,
         system: GREETING_SYSTEM,
-        messages: [{ role: 'user', content: `Today's state JSON:\n${JSON.stringify(greetingFacts(state))}` }],
+        messages: [{ role: 'user', content: `Today's state JSON:\n${JSON.stringify(facts)}` }],
       }),
     });
     if (!response.ok) {
@@ -428,13 +493,16 @@ router.get('/api/observatory/greeting', async (req, res) => {
       return res.json({ line: '', plaque });
     }
     const data = await response.json();
-    let line = (data.content?.find(b => b.type === 'text')?.text ?? '').trim();
-    // Enforce the register even if the model slips: no exclamations, no
-    // newlines, bounded length.
-    line = line.replace(/!/g, '.').replace(/\s+/g, ' ').slice(0, 320).trim();
+    let line = sanitizeGreeting(data.content?.find(b => b.type === 'text')?.text ?? '');
+    if (line && violatesFacts(line, state)) {
+      console.warn('[/api/observatory/greeting] consistency guard tripped — plaque speaks alone:', line);
+      line = '';
+    }
 
+    // Cache even an empty (guard-tripped) result for the day so a failing
+    // generation is not retried on every request; only real lines persist.
+    greetingCache = { date: today, line };
     if (line) {
-      greetingCache = { date: today, line };
       const { error } = await supabase.from('system_greetings')
         .upsert({ greeting_date: today, line }, { onConflict: 'greeting_date' });
       if (error && !MISSING_RE.test(error.message || '')) {
