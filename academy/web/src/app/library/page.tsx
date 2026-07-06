@@ -874,12 +874,15 @@ function Symposium(props: {
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 
 // Node size is proportional to corpus depth (passage count behind the
-// concept), clamped so small stars stay clickable and deep ones never
-// dominate. sqrt keeps the mid-range legible.
+// concept), clamped hard: a star is a point of light, not a bokeh blob.
+// Cores run 2.5–6.5px at default zoom (largest stays under 8px on a phone)
+// with a tight halo no wider than ~3x the core radius. sqrt keeps the
+// mid-range legible. The button's padding keeps small stars tappable.
 function sizeFor(passages: number, minP: number, maxP: number) {
   const t = maxP > minP ? (passages - minP) / (maxP - minP) : 0.5;
   const u = Math.sqrt(Math.max(0, Math.min(1, t)));
-  return { dot: 7 + u * 10, glow: 11 + u * 11, spread: 1 + u * 2, label: 10 + u * 1.5 };
+  const dot = 2.5 + u * 4;
+  return { dot, glow: dot * 1.4, spread: 0.5 + u * 0.5, label: 10 + u * 1.5 };
 }
 
 // Number of persistent star labels: only the deepest concepts speak
@@ -1205,12 +1208,12 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
           // retrieval flare overrides it toward gold-ivory with a wider halo.
           const col = colors[i];
           if (flare > 0.01) {
-            const g = (isActiveNode ? s.glow + 10 : s.glow) + flare * 22;
+            const g = (isActiveNode ? s.glow + 4 : s.glow) + flare * 10;
             dot.style.background = flare > 0.5 ? IVORY : GOLD_L;
-            dot.style.boxShadow = `0 0 ${g.toFixed(0)}px ${(s.spread + flare * 4).toFixed(0)}px rgba(227,199,122,${(0.45 + flare * 0.4).toFixed(2)})`;
+            dot.style.boxShadow = `0 0 ${g.toFixed(0)}px ${(s.spread + flare * 2).toFixed(1)}px rgba(227,199,122,${(0.45 + flare * 0.4).toFixed(2)})`;
           } else {
             dot.style.background = isActiveNode ? IVORY : col.base;
-            dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`;
+            dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 4 : s.glow}px ${s.spread}px ${col.glow}0.5)`;
           }
         }
       }
@@ -1262,9 +1265,10 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
         const lit = aIdx >= 0 && (a === aIdx || b === aIdx);
         const fresh = freshSet.has(e);
         const depth = ((pa.z + pb.z) / 2 + 1) / 2;
+        // Edges recede behind stars: thin and faint, never competing.
         ln.setAttribute('stroke', lit || fresh ? 'rgb(227,199,122)' : 'rgb(201,168,76)');
-        ln.setAttribute('stroke-opacity', String(lit ? 0.9 : (0.22 + depth * 0.33) * (fresh ? 1.5 : 1)));
-        ln.setAttribute('stroke-width', lit ? '1.6' : fresh ? '1.4' : '1.1');
+        ln.setAttribute('stroke-opacity', String(lit ? 0.6 : (0.10 + depth * 0.16) * (fresh ? 1.5 : 1)));
+        ln.setAttribute('stroke-width', lit ? '1' : fresh ? '0.8' : '0.55');
 
         // A spark travelling a -> b, like a synapse firing. Fresh edges (a new
         // synthesis just connected these concepts) fire a brighter, larger spark.
@@ -1280,7 +1284,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
             const base = (lit ? 0.85 : 0.28 + depth * 0.3) * env;
             cir.setAttribute('cx', px.toFixed(1));
             cir.setAttribute('cy', py.toFixed(1));
-            cir.setAttribute('r', (fresh ? 2.6 : 1.7).toFixed(1));
+            cir.setAttribute('r', (fresh ? 1.8 : 1.1).toFixed(1));
             cir.setAttribute('fill', fresh || lit ? 'rgb(244,234,213)' : 'rgb(227,199,122)');
             cir.style.opacity = (fresh ? Math.min(1, base + 0.3) : base).toFixed(2);
           }
@@ -1296,8 +1300,8 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
         ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
         const depth = ((pa.z + pb.z) / 2 + 1) / 2;
         const strain = reduceMotion ? 0 : Math.sin(now * 0.0007 + t * 1.9);
-        ln.setAttribute('stroke-opacity', ((0.3 + depth * 0.2) + strain * 0.12).toFixed(2));
-        ln.setAttribute('stroke-width', (1.3 + (strain + 1) * 0.25).toFixed(2));
+        ln.setAttribute('stroke-opacity', ((0.2 + depth * 0.14) + strain * 0.08).toFixed(2));
+        ln.setAttribute('stroke-width', (0.8 + (strain + 1) * 0.15).toFixed(2));
       }
     };
 
@@ -1443,9 +1447,9 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
   return (
     <div ref={wrapRef} className="lib-sky3d" style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}>
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
-        {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.4} strokeWidth={1.1} />)}
-        {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.7} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
-        {tensionIdx.map((_, t) => <line key={`t${t}`} ref={el => { tensionRefs.current[t] = el; }} stroke="rgb(217,144,74)" strokeOpacity={0.35} strokeWidth={1.3} />)}
+        {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.2} strokeWidth={0.55} />)}
+        {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.1} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
+        {tensionIdx.map((_, t) => <line key={`t${t}`} ref={el => { tensionRefs.current[t] = el; }} stroke="rgb(217,144,74)" strokeOpacity={0.25} strokeWidth={0.9} />)}
       </svg>
       {nodes.map((n, i) => {
         const s = sizeFor(n.c.passages || 0, pRange.min, pRange.max);
@@ -1460,7 +1464,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
               /* nebula birth: a new voice condenses into its star over ~6s */
               <span className="lib-nebula" style={{ position: 'absolute', left: '50%', top: 6 + s.dot / 2, width: 64, height: 64, marginLeft: -32, marginTop: -32, borderRadius: '50%', pointerEvents: 'none' }} />
             )}
-            <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : col.base, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`, willChange: 'transform' }} />
+            <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : col.base, boxShadow: `0 0 ${isActive ? s.glow + 4 : s.glow}px ${s.spread}px ${col.glow}0.5)`, willChange: 'transform' }} />
             {/* Label typography: the body sans, small, muted warm white — the
                 serif belongs to headings and the greeting. The active node's
                 label renders as a tooltip chip anchored to its star. */}
