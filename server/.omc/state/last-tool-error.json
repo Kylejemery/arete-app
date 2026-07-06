@@ -1,7 +1,7 @@
 {
-  "tool_name": "mcp__a6244408-a83e-4651-9b5f-92c59c412136__execute_sql",
-  "tool_input_preview": "{\"project_id\":\"zhaarabzemhantyxxckq\",\"query\":\"WITH since AS (SELECT now() - interval '7 days' AS s)\\nSELECT\\n  -- corpus\\n  (SELECT ingestion_runs := count(*) FROM corpus_ingestion_runs, since WHERE r...",
-  "error": "{\"error\":{\"name\":\"HttpException\",\"message\":\"Failed to run sql query: ERROR:  42601: syntax error at or near \\\":=\\\"\\nLINE 4:   (SELECT ingestion_runs := count(*) FROM corpus_ingestion_runs, since WHERE run_started_at >= s) AS ingestion_runs_7d,\\n                                 ^\\n\"}}",
-  "timestamp": "2026-06-29T14:01:42.269Z",
-  "retry_count": 1
+  "tool_name": "PowerShell",
+  "tool_input_preview": "{\"command\":\"Copy-Item \\\"C:\\\\Users\\\\kjemery\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-kjemery-Arete-Arete\\\\75ace128-19bf-41aa-9adf-59b256b6255d\\\\scratchpad\\\\test-catalog.js\\\" C:\\\\Users\\\\kjemery\\\\Arete\\\\A...",
+  "error": "Exit code 1\nC:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:146\r\n\tif (!trimmedUrl) throw new Error(\"supabaseUrl is required.\");\r\n\t                 ^\r\n\r\nError: supabaseUrl is required.\r\n    at validateSupabaseUrl (C:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:146:25)\r\n    at new SupabaseClient (C:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:362:19)\r\n    at createClient (C:\\Users\\kj...",
+  "timestamp": "2026-07-02T00:24:39.206Z",
+  "retry_count": 2
 }

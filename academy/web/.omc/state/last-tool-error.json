@@ -1,7 +1,7 @@
 {
-  "tool_name": "Read",
-  "tool_input_preview": "{\"file_path\":\"\\\\tmp\\\\framework-extract\\\\framework-page\\\\page.tsx\"}",
-  "error": "File does not exist. Note: your current working directory is C:\\Users\\kjemery\\Arete\\Arete\\academy\\web.",
-  "timestamp": "2026-06-24T13:04:15.182Z",
+  "tool_name": "mcp__Claude_Preview__preview_eval",
+  "tool_input_preview": "{\"serverId\":\"1ab716b8-7429-4ba3-b6d2-2d56aa35711b\",\"expression\":\"(async () => { const find = (t) => [...document.querySelectorAll('button')].find(x => x.textContent.trim() === t); const waitStars = as...",
+  "error": "preview_eval timed out after 30s. The preview window may be stuck (modal dialog, navigation hang, or unresponsive renderer). Check preview_console_logs for errors.",
+  "timestamp": "2026-07-03T14:16:55.734Z",
   "retry_count": 1
 }
