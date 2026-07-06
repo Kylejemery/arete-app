@@ -872,10 +872,6 @@ function Symposium(props: {
 
 /* ========================= OBSERVATORY ========================= */
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-function shortLabel(name: string): string {
-  const head = name.split(':')[0].trim();
-  return cap(head.length <= 30 ? head : head.slice(0, 28).trim() + '…');
-}
 
 // Node size is proportional to corpus depth (passage count behind the
 // concept), clamped so small stars stay clickable and deep ones never
@@ -883,8 +879,13 @@ function shortLabel(name: string): string {
 function sizeFor(passages: number, minP: number, maxP: number) {
   const t = maxP > minP ? (passages - minP) / (maxP - minP) : 0.5;
   const u = Math.sqrt(Math.max(0, Math.min(1, t)));
-  return { dot: 7 + u * 10, glow: 11 + u * 11, spread: 1 + u * 2, label: 11.5 + u * 3 };
+  return { dot: 7 + u * 10, glow: 11 + u * 11, spread: 1 + u * 2, label: 10 + u * 1.5 };
 }
+
+// Number of persistent star labels: only the deepest concepts speak
+// unprompted; everything else is unlabeled until tapped.
+const LABEL_BUDGET_MOBILE = 5;
+const LABEL_BUDGET_DESKTOP = 10;
 
 // ---- tradition color ----
 // Muted families on the deep navy: differences are felt, not loud. Stoics keep
@@ -1097,6 +1098,25 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
     return out;
   }, [edges, freshEdges]);
 
+  // Label discipline (Part 2): only the top nodes by corpus depth carry a
+  // persistent label — 5 on phones, 10 on desktop. Everything else stays
+  // unlabeled until tapped, when its label shows as a tooltip chip.
+  const [mobileVp] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches);
+  const labelOrder = useMemo(() => {
+    const budget = mobileVp ? LABEL_BUDGET_MOBILE : LABEL_BUDGET_DESKTOP;
+    return concepts
+      .map((c, i) => [i, c.passages || 0] as const)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, budget)
+      .map(([i]) => i);
+  }, [concepts, mobileVp]);
+  // Measured label widths for collision boxes (offsetWidth ignores transforms).
+  const labelW = useRef<number[]>([]);
+  useEffect(() => {
+    labelW.current = labelRefs.current.map(el => (el ? el.offsetWidth : 0));
+  }, [concepts]);
+
   const rot = useRef({ x: -0.12, y: 0.5 });
   const vel = useRef({ x: 0, y: 0 });
   const zoom = useRef(1);
@@ -1193,12 +1213,46 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
             dot.style.boxShadow = `0 0 ${isActiveNode ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`;
           }
         }
-        const lab = labelRefs.current[i];
-        if (lab) {
-          const show = z2 > 0.08 && (isMobile.current ? n.c.magnitude >= 2 : true);
-          lab.style.opacity = show ? String(0.25 + depth * 0.75) : '0';
+      }
+
+      // ---- label pass (Part 2) ----
+      // Persistent labels only for the label budget (deepest concepts), the
+      // active node's tooltip always first. Before painting, each label's
+      // bounding box is checked against those already painted — on overlap it
+      // is skipped, never stacked or shrunk. Boxes are anchored inward so no
+      // label ever clips the canvas edge.
+      {
+        const EDGE = 6;
+        const LABEL_H = 18;
+        const placed: { x: number; y: number; w: number; h: number }[] = [];
+        const order = activeRef.current >= 0 && !labelOrder.includes(activeRef.current)
+          ? [activeRef.current, ...labelOrder]
+          : [...labelOrder].sort((a, b) => (a === activeRef.current ? -1 : b === activeRef.current ? 1 : 0));
+        for (let i = 0; i < nodes.length; i++) {
+          const lab = labelRefs.current[i];
+          if (lab && !order.includes(i)) lab.style.opacity = '0';
+        }
+        for (const i of order) {
+          const lab = labelRefs.current[i]; if (!lab) continue;
+          const isActiveNode = activeRef.current === i;
+          const z2 = proj[i].z;
+          if (!isActiveNode && z2 <= 0.08) { lab.style.opacity = '0'; continue; }
+          const wLab = labelW.current[i] || lab.offsetWidth || 60;
+          const natural = proj[i].sx - wLab / 2;              // centered under the star
+          const yLab = proj[i].sy + sz[i].dot / 2 + 4;
+          const xLab = Math.max(EDGE, Math.min(w - EDGE - wLab, natural)); // anchor inward
+          if (yLab + LABEL_H > h - EDGE) { lab.style.opacity = '0'; continue; }
+          const box = { x: xLab, y: yLab, w: wLab, h: LABEL_H };
+          const collides = placed.some(b =>
+            !(box.x + box.w < b.x || b.x + b.w < box.x || box.y + box.h < b.y || b.y + b.h < box.y));
+          if (collides && !isActiveNode) { lab.style.opacity = '0'; continue; }
+          placed.push(box);
+          lab.style.transform = `translateX(${(xLab - natural).toFixed(1)}px)`;
+          const depth = (z2 + 1) / 2;
+          lab.style.opacity = isActiveNode ? '1' : String(0.45 + depth * 0.55);
         }
       }
+
       const aIdx = activeRef.current;
       for (let e = 0; e < edgePairs.length; e++) {
         const ln = lineRefs.current[e]; if (!ln) continue;
@@ -1316,7 +1370,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
       wrap.removeEventListener('pointercancel', onUp);
       wrap.removeEventListener('wheel', onWheel);
     };
-  }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx, eraDepth]);
+  }, [nodes, edgePairs, freshSet, pRange, breathScale, tensionIdx, eraDepth, labelOrder]);
 
   // Live retrieval glow. Preferred path: an SSE stream straight from the
   // Railway backend — every real retrieval broadcasts, and the matching star
@@ -1407,7 +1461,17 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
               <span className="lib-nebula" style={{ position: 'absolute', left: '50%', top: 6 + s.dot / 2, width: 64, height: 64, marginLeft: -32, marginTop: -32, borderRadius: '50%', pointerEvents: 'none' }} />
             )}
             <span ref={el => { dotRefs.current[i] = el; }} style={{ width: s.dot, height: s.dot, borderRadius: '50%', background: isActive ? IVORY : col.base, boxShadow: `0 0 ${isActive ? s.glow + 10 : s.glow}px ${s.spread}px ${col.glow}0.5)`, willChange: 'transform' }} />
-            <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{ fontFamily: SERIF, fontSize: s.label, color: isActive ? IVORY : col.label, whiteSpace: 'nowrap', textShadow: '0 1px 8px rgba(0,0,0,0.85)' }}>{shortLabel(n.c.name)}</span>
+            {/* Label typography: the body sans, small, muted warm white — the
+                serif belongs to headings and the greeting. The active node's
+                label renders as a tooltip chip anchored to its star. */}
+            <span ref={el => { labelRefs.current[i] = el; }} className="lib-star-label" style={{
+              fontFamily: SANS, fontSize: s.label, fontWeight: 500, letterSpacing: '0.02em',
+              color: isActive ? '#0a1020' : 'rgba(244,234,213,0.72)',
+              background: isActive ? 'rgba(227,199,122,0.95)' : 'none',
+              borderRadius: isActive ? 7 : 0, padding: isActive ? '3px 9px' : 0,
+              whiteSpace: 'nowrap', opacity: 0,
+              textShadow: isActive ? 'none' : '0 1px 8px rgba(0,0,0,0.85)',
+              willChange: 'transform, opacity' }}>{cap(n.c.name)}</span>
           </button>
         );
       })}
