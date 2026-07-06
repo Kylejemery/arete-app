@@ -20,6 +20,12 @@ const libraryHelpers = require('./library');
 // module to keep the merge surface of this shared file minimal. recordRetrieval
 // is the fire-and-forget retrieval-event logger the retrieval paths below call.
 const observatory = require('./routes/observatory');
+
+// Canonical concept layer (Observatory repair Part 1) — every raw theme label
+// maps through concept_aliases to one canonical concept; the Observatory only
+// ever speaks canonical names. Unmapped labels resolve lazily and are never
+// shown raw.
+const canonicalConcepts = require('./lib/canonical-concepts');
 const { runDispatchGeneration } = require('./dispatch-generation-agent');
 const { runSynthesisAgent } = require('./synthesis-agent');
 
@@ -359,13 +365,20 @@ async function getObsAuthorMap() {
     return obsAuthorCache.map;
   }
   const { data: cpm } = await supabase.from('concept_passage_map').select('concept, author');
+  // Pulses speak canonical names only — raw labels map through the alias
+  // layer; unmapped ones are queued for resolution and skipped for now.
+  const aliases = await canonicalConcepts.getAliasMap().catch(() => new Map());
+  const unmapped = new Set();
   const sets = new Map();
   for (const r of cpm || []) {
     if (!r.concept || !r.author) continue;
+    const hit = aliases.get(r.concept);
+    if (!hit) { unmapped.add(r.concept); continue; }
     const key = r.author.toLowerCase();
     if (!sets.has(key)) sets.set(key, new Set());
-    sets.get(key).add(r.concept);
+    sets.get(key).add(hit.name);
   }
+  canonicalConcepts.resolveConceptsLazily([...unmapped]);
   const map = new Map();
   for (const [k, v] of sets) map.set(k, [...v]);
   obsAuthorCache = { map, builtAt: Date.now() };
@@ -3761,28 +3774,40 @@ app.get('/api/library/observatory', async (req, res) => {
       supabase.from('corpus_gap_reports').select('demand_gaps, recommended_additions, report_week').order('report_week', { ascending: false }).limit(1),
     ]);
 
-    // Group passages into concepts with their distinct voices.
-    const byConcept = new Map();
+    // Group passages into CANONICAL concepts (Part 1): raw labels map through
+    // concept_aliases and counts aggregate across every merged raw theme.
+    // Unmapped raw labels are queued for lazy resolution and never shown raw.
+    const aliases = await canonicalConcepts.getAliasMap().catch(() => new Map());
+    const unmappedLabels = new Set();
+    const byConcept = new Map(); // canonical id -> { name, authors, passages, raws }
     for (const r of cpm || []) {
       if (!r.concept) continue;
-      let g = byConcept.get(r.concept);
-      if (!g) { g = { authors: new Set(), passages: 0 }; byConcept.set(r.concept, g); }
+      const hit = aliases.get(r.concept);
+      if (!hit) { unmappedLabels.add(r.concept); continue; }
+      let g = byConcept.get(hit.id);
+      if (!g) { g = { name: hit.name, authors: new Set(), passages: 0, raws: new Set() }; byConcept.set(hit.id, g); }
       g.passages++;
+      g.raws.add(r.concept);
       if (r.author) g.authors.add(r.author);
     }
 
-    const conceptList = [...byConcept.entries()].map(([name, g], i) => {
+    const conceptList = [...byConcept.entries()].map(([id, g]) => {
       const voices = [...g.authors].sort();
       const magnitude = voices.length >= 5 ? 3 : voices.length >= 3 ? 2 : 1;
-      return { id: `c${i}`, name, voices, passages: g.passages, magnitude };
+      return { id, name: g.name, voices, passages: g.passages, magnitude, raws: [...g.raws] };
     }).sort((a, b) => b.magnitude - a.magnitude || b.voices.length - a.voices.length);
 
-    // Attach the matching synthesis document (exact concept, else keyword overlap).
+    // Attach the matching synthesis document: canonical hit first (a synthesis
+    // whose raw concept aliases to this star), else keyword overlap against
+    // the canonical name plus its merged raw labels.
     const words = s => (s || '').toLowerCase().replace(/[^a-z ]/g, ' ').split(/\s+/).filter(w => w.length > 3);
-    const matchSynth = (name) => {
-      const exact = (synth || []).find(s => (s.concept || '').toLowerCase() === name.toLowerCase());
-      if (exact) return exact;
-      const nw = new Set(words(name));
+    const matchSynth = (c) => {
+      const viaAlias = (synth || []).find(s => {
+        const hit = s.concept ? aliases.get(s.concept) : null;
+        return hit && hit.id === c.id;
+      });
+      if (viaAlias) return viaAlias;
+      const nw = new Set([...words(c.name), ...c.raws.flatMap(rl => words(rl))]);
       let best = null, bestScore = 0;
       for (const s of synth || []) {
         const score = words(s.concept).filter(w => nw.has(w)).length;
@@ -3824,20 +3849,23 @@ app.get('/api/library/observatory', async (req, res) => {
         a = Math.max(a, Math.exp(-ageWeeks / 3));
         if (nowMs - ingestedAt < FRESH_MS) freshConceptIds.add(c.id);
       }
-      if (words(c.name).some(w => recentThemeWords.has(w))) a = a + 0.3;
+      // The raw labels ARE the recent journal phrasings — match against them
+      // as well as the canonical name so the activity boost still lands.
+      if ([...words(c.name), ...c.raws.flatMap(rl => words(rl))].some(w => recentThemeWords.has(w))) a = a + 0.3;
       return Math.max(0, Math.min(1, a));
     };
     const concepts = conceptList.map(c => {
-      const matched = matchSynth(c.name);
-      return { ...c, synthesis: extractSynth(matched), activity: activityFor(c, matched) };
+      const matched = matchSynth(c);
+      const { raws, ...pub } = c;
+      return { ...pub, synthesis: extractSynth(matched), activity: activityFor(c, matched) };
     });
 
     // Edges: concepts that share at least 3 voices (where thinkers answer one another).
     const edges = [];
     for (let i = 0; i < conceptList.length; i++) {
       for (let j = i + 1; j < conceptList.length; j++) {
-        const a = byConcept.get(conceptList[i].name).authors;
-        const b = byConcept.get(conceptList[j].name).authors;
+        const a = byConcept.get(conceptList[i].id).authors;
+        const b = byConcept.get(conceptList[j].id).authors;
         let shared = 0;
         for (const x of a) if (b.has(x)) shared++;
         if (shared >= 3) edges.push({ a: conceptList[i].id, b: conceptList[j].id, shared });
@@ -3848,14 +3876,19 @@ app.get('/api/library/observatory', async (req, res) => {
     // Edges touching a freshly-ingested concept fire brighter in the sky.
     const freshEdges = topEdges.filter(([a, b]) => freshConceptIds.has(a) || freshConceptIds.has(b));
 
-    // "Lately the corpus has been thinking about"
+    // "Lately the corpus has been thinking about" — journal themes are user
+    // phrasing, so only their CANONICAL names ever surface; unmapped themes
+    // are queued for resolution and skipped.
     const seen = new Set();
     const mostAsked = [];
     for (const j of journals || []) {
       const t = (j.dominant_theme || '').trim();
-      if (!t || seen.has(t.toLowerCase())) continue;
-      seen.add(t.toLowerCase());
-      mostAsked.push(t);
+      if (!t) continue;
+      const hit = aliases.get(t);
+      if (!hit) { unmappedLabels.add(t); continue; }
+      if (seen.has(hit.name.toLowerCase())) continue;
+      seen.add(hit.name.toLowerCase());
+      mostAsked.push(hit.name);
       if (mostAsked.length >= 4) break;
     }
     const cleanTitle = t => (t || '').replace(/^#+\s*/, '').trim();
@@ -3867,9 +3900,20 @@ app.get('/api/library/observatory', async (req, res) => {
     const gap = (gapRows || [])[0];
     const gaps = [];
     if (gap) {
-      for (const d of (gap.demand_gaps || []).slice(0, 2)) if (d.theme) gaps.push(`Thin coverage on “${d.theme}”`);
+      // Demand-gap themes are journal-derived user phrasing too — canonical
+      // names only, same rule as mostAsked.
+      for (const d of (gap.demand_gaps || []).slice(0, 4)) {
+        if (!d.theme) continue;
+        const hit = aliases.get(d.theme);
+        if (!hit) { unmappedLabels.add(d.theme); continue; }
+        if (gaps.length < 2) gaps.push(`Thin coverage on “${hit.name}”`);
+      }
       for (const r of (gap.recommended_additions || []).slice(0, 2)) if (r.author && r.work) gaps.push(`Wants ${r.author} — ${r.work}`);
     }
+
+    // Anything raw that reached this endpoint unmapped gets resolved in the
+    // background — it joins the sky (canonically named) on a later build.
+    canonicalConcepts.resolveConceptsLazily([...unmappedLabels]);
 
     return res.json({ concepts, edges: topEdges, freshEdges, recent: { mostAsked, tensions, newIngests, gaps } });
   } catch (err) {

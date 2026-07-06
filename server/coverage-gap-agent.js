@@ -19,6 +19,10 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+// Canonical concept layer — every journal theme this agent admits into the
+// system is mapped to (or becomes) a canonical concept, so the public
+// Observatory never fragments into near-duplicate stars.
+const { resolveConcept } = require('./lib/canonical-concepts');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -158,6 +162,13 @@ async function detectDemandGaps() {
   const demandGaps = [];
 
   for (const { theme, count } of topThemes) {
+    // Ongoing canonicalization rule: a theme entering the system maps to an
+    // existing canonical concept at similarity ≥ threshold, else becomes a
+    // new one. The learning layer below still keys on the raw theme.
+    try { await resolveConcept(theme); } catch (e) {
+      console.error(`  canonical resolution failed for "${theme}":`, e.message);
+    }
+
     // Consult the learning layer first.
     let passages = await getConceptPassages(theme);
     let searchedFresh = false;

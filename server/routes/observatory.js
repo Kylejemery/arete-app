@@ -14,6 +14,9 @@
 // ---------------------------------------------------------------------------
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
+// Canonical concept layer (Part 1) — the Observatory only ever speaks
+// canonical names; raw theme labels map through concept_aliases.
+const canonicalConcepts = require('../lib/canonical-concepts');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -83,13 +86,21 @@ async function getAuthorConceptMap() {
   }
   const rows = await guarded('concept_passage_map', () =>
     supabase.from('concept_passage_map').select('concept, author'));
+  // retrieval_events log canonical names from here on (old raw rows still
+  // aggregate correctly — the counting RPC joins the alias table).
+  let aliases = new Map();
+  try { aliases = await canonicalConcepts.getAliasMap(); } catch { /* degrade to empty sky mapping */ }
+  const unmapped = new Set();
   const sets = new Map();
   for (const r of rows || []) {
     if (!r.concept || !r.author) continue;
+    const hit = aliases.get(r.concept);
+    if (!hit) { unmapped.add(r.concept); continue; }
     const key = r.author.toLowerCase();
     if (!sets.has(key)) sets.set(key, new Set());
-    sets.get(key).add(r.concept);
+    sets.get(key).add(hit.name);
   }
+  canonicalConcepts.resolveConceptsLazily([...unmapped]);
   const map = new Map();
   for (const [k, v] of sets) map.set(k, [...v]);
   authorConceptCache = { map, at: Date.now() };
@@ -258,6 +269,13 @@ async function buildState() {
     return v || null;
   };
 
+  // Tension poles carry raw concept labels; the payload speaks canonical
+  // names only (null when unmapped — the client then falls back to the
+  // author's star, which is the existing behavior for missing concepts).
+  let aliasMap = new Map();
+  try { aliasMap = await canonicalConcepts.getAliasMap(); } catch { /* plaque still speaks */ }
+  const toCanonical = raw => (raw && aliasMap.get(raw) ? aliasMap.get(raw).name : null);
+
   const lastRuns = {};
   const put = (agent, ts) => { if (ts) lastRuns[agent] = ts; };
   put('ingestion', firstTs(lastIngestion, 'run_started_at'));
@@ -291,11 +309,11 @@ async function buildState() {
       title: r.title,
       poleA: {
         author: (r.position_a && r.position_a.author) || (r.source_authors || [])[0] || null,
-        concept: (r.position_a && r.position_a.concept) || null,
+        concept: toCanonical(r.position_a && r.position_a.concept),
       },
       poleB: {
         author: (r.position_b && r.position_b.author) || (r.source_authors || [])[1] || null,
-        concept: (r.position_b && r.position_b.concept) || null,
+        concept: toCanonical(r.position_b && r.position_b.concept),
       },
       created_at: r.generated_at,
     })),
