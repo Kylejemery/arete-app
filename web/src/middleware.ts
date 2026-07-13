@@ -11,6 +11,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  // Stripe calls the webhook server-to-server with no session cookie; it must
+  // never be auth-redirected. Signature verification is its authentication.
+  if (pathname === '/api/stripe-webhook') {
+    return NextResponse.next()
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 

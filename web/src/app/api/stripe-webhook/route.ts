@@ -26,13 +26,13 @@ const GRANT_STATUSES = ['active', 'trialing']
 const REVOKE_STATUSES = ['canceled', 'unpaid', 'incomplete_expired', 'paused']
 
 export async function POST(req: NextRequest) {
-  const stripe = getStripe()
-
   const rawBody = await req.text()
   const signature = req.headers.get('stripe-signature')
   if (!signature) {
     return NextResponse.json({ error: 'Missing stripe-signature' }, { status: 400 })
   }
+
+  const stripe = getStripe()
 
   let event: Stripe.Event
   try {
