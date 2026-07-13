@@ -420,6 +420,11 @@ export default function CorpusIngestPage() {
 
               {status === 'ready' && (
                 <>
+                  {!courseRelevance.trim() && (
+                    <p style={{ margin: '0 0 8px', fontSize: 13, color: '#8a6d1e', background: '#FBF6EC', border: '1px solid #E8DFC8', borderRadius: 8, padding: '8px 12px' }}>
+                      ⚠ No course mapping set — this won&apos;t surface in course-filtered retrieval. Ingestion is not blocked.
+                    </p>
+                  )}
                   <div className={styles.actions}>
                     <button className={styles.ghostBtn} onClick={() => { setSummaryText(''); setStatus('idle') }}>✗ Discard</button>
                     <button className={styles.scheduleBtn} onClick={handleIngest} disabled={verbatimBlocked || summaryText.trim().length < 50}>
