@@ -91,11 +91,18 @@ export default function CabinetMindsPage() {
               Upgrade to Arete Premium to choose which AI model powers each counselor.
             </p>
             <button
-              onClick={() => router.push('/cabinet')}
-              className="font-semibold px-6 py-3 rounded-lg hover:opacity-90"
+              onClick={() => router.push('/upgrade')}
+              className="w-full font-semibold px-6 py-3 rounded-lg hover:opacity-90 mb-3"
               style={{ background: '#c9a84c', color: '#0f1724' }}
             >
-              Got it
+              Upgrade
+            </button>
+            <button
+              onClick={() => router.push('/cabinet')}
+              className="w-full text-sm py-2 hover:opacity-80"
+              style={{ color: '#9aa0a6' }}
+            >
+              Not now
             </button>
           </div>
         </div>

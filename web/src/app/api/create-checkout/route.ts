@@ -21,14 +21,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     }
 
-    const { priceId } = await req.json()
-    const allowedPrices = [
-      requireEnv('STRIPE_PRICE_MONTHLY'),
-      requireEnv('STRIPE_PRICE_YEARLY'),
-      requireEnv('STRIPE_PRICE_PRO'),
-    ]
-    if (!priceId || !allowedPrices.includes(priceId)) {
-      return NextResponse.json({ error: 'Invalid priceId' }, { status: 400 })
+    // The client sends a plan key; the price ids live in server-only env.
+    // A raw priceId is also accepted as long as it matches one of the three.
+    const body = await req.json()
+    const planPrices: Record<string, string> = {
+      monthly: requireEnv('STRIPE_PRICE_MONTHLY'),
+      yearly: requireEnv('STRIPE_PRICE_YEARLY'),
+      pro: requireEnv('STRIPE_PRICE_PRO'),
+    }
+    const priceId: string | undefined =
+      typeof body.plan === 'string' ? planPrices[body.plan] : undefined
+    const resolvedPriceId =
+      priceId ??
+      (Object.values(planPrices).includes(body.priceId) ? (body.priceId as string) : undefined)
+    if (!resolvedPriceId) {
+      return NextResponse.json({ error: 'Invalid plan or priceId' }, { status: 400 })
     }
 
     const stripe = getStripe()
@@ -72,7 +79,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: resolvedPriceId, quantity: 1 }],
       success_url: `${appUrl}/upgrade?status=success`,
       cancel_url: `${appUrl}/upgrade?status=cancelled`,
       client_reference_id: user.id,

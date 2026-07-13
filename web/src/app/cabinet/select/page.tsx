@@ -87,10 +87,16 @@ export default function CabinetSelectPage() {
               Upgrade to Arete Premium to build a custom cabinet from the full counselor library.
             </p>
             <button
-              onClick={() => router.push('/cabinet')}
-              className="bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90"
+              onClick={() => router.push('/upgrade')}
+              className="w-full bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90 mb-3"
             >
-              Got it
+              Upgrade
+            </button>
+            <button
+              onClick={() => router.push('/cabinet')}
+              className="w-full text-arete-muted hover:text-arete-text text-sm py-2"
+            >
+              Not now
             </button>
           </div>
         </div>
