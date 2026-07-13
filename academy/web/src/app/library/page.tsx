@@ -178,7 +178,7 @@ const MURMURS = [
 
 type SitMsg =
   | { role: 'user'; text: string }
-  | { role: 'master'; masterId: string; text: string; rec: { author: string; work: string; title: string } | null };
+  | { role: 'master'; masterId: string; text: string; rec: { author: string; work: string; title: string; url?: string | null } | null };
 
 type DebateLine = { who: 'a' | 'b'; speaker: string; text: string };
 
@@ -323,7 +323,13 @@ export default function LibraryOfArete() {
       }
       if (typeof data.remaining === 'number') setRemaining(data.remaining);
       const src = (data.sources || [])[0];
-      const rec = src ? { author: src.author, work: src.work, title: src.work } : null;
+      // Paper summaries are not shelf works: link to the actual PDF when we
+      // have one, and show no card at all when we don't (an uploaded paper
+      // has nothing readable to open in the Reading Room).
+      const isPaper = src?.textType === 'paper_summary';
+      const rec = src && (!isPaper || src.sourceUrl)
+        ? { author: src.author, work: src.work, title: src.work, url: isPaper ? src.sourceUrl : null }
+        : null;
       setMessages(prev => [...prev, { role: 'master', masterId: symMaster, text: data.answer || 'The Oracle is silent.', rec }]);
     } catch {
       setMessages(prev => [...prev, { role: 'master', masterId: symMaster, text: 'The Oracle is unreachable. Please try again.', rec: null }]);
@@ -773,12 +779,17 @@ function Symposium(props: {
                       <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>{masterById(m.masterId).name}</span>
                     </div>
                     <div style={{ background: 'linear-gradient(160deg,rgba(16,24,48,0.78),rgba(10,16,32,0.78))', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '4px 18px 18px 18px', padding: '14px 18px', fontFamily: SERIF, fontSize: 18.5, lineHeight: 1.6, color: IVORY, whiteSpace: 'pre-wrap' }}>{m.text}</div>
-                    {m.rec && (
+                    {m.rec && (m.rec.url ? (
+                      <a href={m.rec.url} target="_blank" rel="noopener noreferrer" className="lib-readnext" style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8, background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.22)', borderRadius: 11, padding: '10px 14px', cursor: 'pointer', textAlign: 'left', textDecoration: 'none' }}>
+                        <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD, whiteSpace: 'nowrap' }}>Source paper ↗</span>
+                        <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: TEXT }}>{m.rec.author} · {m.rec.title}</span>
+                      </a>
+                    ) : (
                       <button onClick={() => openWork(m.rec!.author, m.rec!.work, m.rec!.title)} className="lib-readnext" style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 8, background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.22)', borderRadius: 11, padding: '10px 14px', cursor: 'pointer', textAlign: 'left' }}>
                         <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD, whiteSpace: 'nowrap' }}>Read next →</span>
                         <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: TEXT }}>{m.rec.author} · {m.rec.title}</span>
                       </button>
-                    )}
+                    ))}
                   </div>
                 ))}
                 {symThinking && (

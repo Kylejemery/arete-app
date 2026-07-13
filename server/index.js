@@ -3068,9 +3068,11 @@ app.post('/oracle', async (req, res) => {
     // 4. RETRIEVE FROM CORPUS (embed + search via getStoicContext)
     const chunks = await getStoicContext(question.trim(), 7, author || null);
 
-    // 5. BUILD CONTEXT BLOCK
+    // 5. BUILD CONTEXT BLOCK — section_label carries the fuller citation
+    // (chapter/pages for shelf works; venue — year for paper summaries), so
+    // the model can cite where and when, not just who and what.
     const contextBlock = (chunks || [])
-      .map(c => `${c.author}, ${c.work}:\n${c.chunk_text}`)
+      .map(c => `${c.author}, ${c.work}${c.section_label ? ` (${c.section_label})` : ''}:\n${c.chunk_text}`)
       .join('\n\n---\n\n');
 
     // 7. CLAUDE CALL — build per-author system prompt
@@ -3129,7 +3131,9 @@ ${contextBlock}
     const claudeData = await claudeRes.json();
     const answer = claudeData.content?.[0]?.text || '';
 
-    // 8. DEDUPLICATE SOURCES
+    // 8. DEDUPLICATE SOURCES — sectionLabel/sourceUrl/textType let the UI
+    // render a full citation and link paper summaries to the actual PDF
+    // instead of the Reading Room (paper summaries are not shelf works).
     const seen = new Set();
     const sources = (chunks || [])
       .filter(c => {
@@ -3138,7 +3142,13 @@ ${contextBlock}
         seen.add(key);
         return true;
       })
-      .map(c => ({ author: c.author, work: c.work }));
+      .map(c => ({
+        author: c.author,
+        work: c.work,
+        sectionLabel: c.section_label || null,
+        sourceUrl: c.source_url || null,
+        textType: c.text_type || null,
+      }));
 
     return res.json({ answer, sources, remaining });
 
