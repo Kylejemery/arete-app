@@ -107,7 +107,6 @@ const { runDreamingAgent } = require('./agents/dreaming-agent');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-console.log('Key starts with:', CLAUDE_API_KEY?.slice(0, 15));
 
 // ---------------------------------------------------------------------------
 // Parallel Cabinet feature flags
@@ -4036,22 +4035,46 @@ app.get('/api/observatory/world', async (req, res) => {
 });
 
 // GET /api/observatory/dreams — the Dreaming Agent's approved, publicly
-// surfaced conjecture for the Observatory sidebar, under "The Corpus
-// Imagines". Only dreams Kyle has approved or starred AND marked
-// observatory_visible are ever returned; most recent 2. The label is
-// load-bearing: a dream is corpus conjecture, never a source text and never
-// the words of any historical thinker.
+// surfaced conjecture for the Observatory, under "The Corpus Imagines".
+// Only dreams Kyle has approved or starred AND marked observatory_visible
+// are ever returned. The label is load-bearing: a dream is corpus
+// conjecture — a thought FROM the corpus — never a source text and never
+// the words of any historical thinker. Dreams are never in rag_corpus;
+// this endpoint is the only place their text reaches readers.
+// Default: most recent 2, long forms truncated (the sidebar teaser).
+// ?all=1: the dream ledger — every visible dream with its FULL text,
+// starred first (the reviewer's mark, not a ranking), then newest.
 // Public (no auth) — same posture as the other Observatory endpoints.
 app.get('/api/observatory/dreams', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const wantAll = req.query.all === '1';
+    let query = supabase
       .from('corpus_dreams')
-      .select('id, dream_type, title, content, seed_authors')
+      .select('id, dream_type, title, content, seed_authors, seed_summary, status, dream_week')
       .in('status', ['approved', 'starred'])
       .eq('observatory_visible', true)
-      .order('reviewed_at', { ascending: false })
-      .limit(2);
+      .order('reviewed_at', { ascending: false });
+    if (!wantAll) query = query.limit(2);
+    const { data, error } = await query;
     if (error) throw error;
+
+    if (wantAll) {
+      // Full text always; starred lead, newest first within each group
+      // (the base ordering is by reviewed_at desc and this sort is stable).
+      const dreams = (data || [])
+        .sort((a, b) => (b.status === 'starred' ? 1 : 0) - (a.status === 'starred' ? 1 : 0))
+        .map(r => ({
+          id: r.id,
+          dreamType: r.dream_type,
+          title: r.title,
+          content: r.content,
+          seedAuthors: r.seed_authors || [],
+          seedSummary: r.seed_summary || null,
+          starred: r.status === 'starred',
+          dreamWeek: r.dream_week || null,
+        }));
+      return res.json({ dreams });
+    }
 
     const dreams = (data || []).map(r => {
       // Aphorisms and propositions are short enough to show whole; thought
