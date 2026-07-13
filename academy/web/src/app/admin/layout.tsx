@@ -26,6 +26,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/dreams', label: 'Dreams' },
   { href: '/admin/scheduler', label: 'Scheduler' },
   { href: '/admin/corpus', label: 'Corpus Ingestion' },
+  { href: '/admin/papers', label: 'Papers' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

@@ -3294,6 +3294,40 @@ app.post('/api/admin/corpus/run', async (req, res) => {
   }
 });
 
+// POST /api/admin/papers/run — summarize queued scholarly PDFs now (admin
+// only). Fire-and-forget like the corpus run: reading and summarizing a PDF
+// takes a minute or two per paper, so we start the agent and return 202; rows
+// move queued → summarizing → pending_review and the papers panel polls them.
+const { processPaperSubmissions } = require('./agents/paper-agent');
+let paperAgentRunning = false;
+app.post('/api/admin/papers/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (paperAgentRunning) {
+      return res.status(409).json({ error: 'The paper agent is already running' });
+    }
+
+    paperAgentRunning = true;
+    processPaperSubmissions()
+      .then(result => {
+        console.log('[/api/admin/papers/run] finished:', JSON.stringify(result));
+      })
+      .catch(err => {
+        console.error('[/api/admin/papers/run] run failed:', err.message);
+      })
+      .finally(() => {
+        paperAgentRunning = false;
+      });
+
+    return res.status(202).json({ ok: true, started: true });
+  } catch (err) {
+    console.error('[/api/admin/papers/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to start the paper agent' });
+  }
+});
+
 // POST /api/admin/journal/run — run the Journal Analysis agent on demand
 // (admin only), instead of waiting for the nightly cron. One Claude call per
 // active user, so a run can take minutes: fire-and-forget, the panel's
@@ -3475,7 +3509,7 @@ app.get('/api/library/texts', async (req, res) => {
         work: r.work,
         title: ov.title || libraryHelpers.workTitle(r.work),
         era: ov.era || libraryHelpers.era(r.author, r.work),
-        textType: r.text_type,                                  // 'primary' | 'synthesis'
+        textType: r.text_type,                                  // 'primary' | 'synthesis' ('paper_summary' filtered below)
         tradition: ov.tradition || libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
         passages: Number(r.chunk_count) || 0,
         translator: r.translator || null,
@@ -3484,7 +3518,9 @@ app.get('/api/library/texts', async (req, res) => {
         excerpt: (r.excerpt || '').trim().replace(/\s+/g, ' ').slice(0, 280),
         hidden: !!ov.hidden,
       };
-    }).filter(t => !t.hidden);
+    // Paper summaries are retrieval-only: counselors quote them, but they are
+    // summaries of copyrighted scholarship, not readable works — no shelf.
+    }).filter(t => !t.hidden && t.textType !== 'paper_summary');
 
     // Count of syntheses awaiting admin review (not yet ingested, so not on a
     // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.
