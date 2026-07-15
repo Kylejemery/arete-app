@@ -1,8 +1,8 @@
 // PHIL 705 — Stoic Logic & Epistemology
-// 20-session seminar course. Content for Sessions 2–8 is entered faithfully
-// from the Cabinet source documents (PHIL_705_Sessions_2_6 / 7_8).
-// Sessions 1 and 9–20 are locked stubs awaiting source documents — no
-// content is fabricated for them.
+// 20-session seminar course, fully authored. Sessions 2–10 and 16–20 are
+// entered faithfully from the Cabinet source documents
+// (PHIL_705_Sessions_2_6 / 7_8 / 9_10 / 16_20 in data/reference/);
+// sessions 11–15 were authored directly to the same format.
 //
 // The seminar session view reuses the language-course renderer
 // (LanguageLessonContent). `phil705ToLesson` adapts a Phil705Session into

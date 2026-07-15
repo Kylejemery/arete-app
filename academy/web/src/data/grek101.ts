@@ -2404,4 +2404,956 @@ export const GREK_101_SESSIONS: LanguageSession[] = [
       { greek: 'ἐλεύθερος, -α, -ον', transliteration: 'eleutheros', english: 'free' },
     ],
   },
+
+  // ── SESSION 21 ─────────────────────────────────────────────────────────────
+  {
+    id: 21,
+    title: 'The Optative Mood',
+    subtitle: 'Wishes, possibilities, and the grammar of what might be — γένοιτο',
+    objectives: [
+      'Form the present and aorist optative, active and middle',
+      'Use the optative of wish (εἴθε, εἰ γάρ + optative)',
+      'Use the potential optative (optative + ἄν) for “could” and “would”',
+      'Distinguish the optative from the subjunctive in form and function',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Optative: Action as Wished or Possible',
+        body: 'The subjunctive (Session 20) refers to action as purposed or anticipated. The optative steps one degree further from actuality: it refers to action as wished for or merely possible.\n\nThe optative has two independent uses. The optative of wish, often introduced by εἴθε or εἰ γάρ, expresses a wish for the future: εἴθε σοφὸς εἴην — “would that I were wise.” The potential optative, always accompanied by the particle ἄν, expresses what could or would happen: γένοιτο ἄν — “it could come to pass.”\n\nThe single most famous optative in later Greek is the bare γένοιτο — “may it be so.” For the Stoic reader the optative is philosophically charged territory: it is the grammar of desire projected onto the world. Epictetus’ counsel (Ench. 8) is precisely a discipline of the optative: do not wish that events happen as you want; want them as they happen.',
+        callout: {
+          label: 'Recognizing the optative',
+          text: 'The optative is the mood of the diphthongs οι and αι: λύοιμι, λύοις, λύοι · λύσαιμι, λύσαις, λύσαι. If a verb form contains -οι- or -αι- where you expect the thematic vowel, suspect the optative.',
+        },
+      },
+      {
+        heading: 'Part 2 — Forming the Present and Aorist Optative',
+        body: 'The present optative is built on the present stem with the mood suffix -οι- plus secondary endings. The aorist optative is built on the aorist stem (no augment — the augment belongs to the indicative only) with -αι-.',
+        paradigms: [
+          {
+            title: 'Present Optative of λύω',
+            headers: ['Person', 'Active', 'Middle/Passive'],
+            rows: [
+              ['1st sg.', 'λύ-οιμι', 'λυ-οίμην'],
+              ['2nd sg.', 'λύ-οις', 'λύ-οιο'],
+              ['3rd sg.', 'λύ-οι', 'λύ-οιτο'],
+              ['1st pl.', 'λύ-οιμεν', 'λυ-οίμεθα'],
+              ['2nd pl.', 'λύ-οιτε', 'λύ-οισθε'],
+              ['3rd pl.', 'λύ-οιεν', 'λύ-οιντο'],
+            ],
+          },
+          {
+            title: 'Aorist Optative Active of λύω · Present Optative of εἰμί',
+            headers: ['Person', 'Aorist Optative (λύω)', 'εἰμί'],
+            rows: [
+              ['1st sg.', 'λύσαιμι', 'εἴην'],
+              ['2nd sg.', 'λύσαις (λύσειας)', 'εἴης'],
+              ['3rd sg.', 'λύσαι (λύσειε)', 'εἴη'],
+              ['1st pl.', 'λύσαιμεν', 'εἶμεν'],
+              ['2nd pl.', 'λύσαιτε', 'εἶτε'],
+              ['3rd pl.', 'λύσαιεν (λύσειαν)', 'εἶεν'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — The Optative in Subordinate Clauses',
+        body: 'Beyond wish and potential, the optative replaces the subjunctive in subordinate clauses when the main verb is in a past (secondary) tense. A purpose clause after a present-tense verb takes ἵνα + subjunctive: ἀσκεῖ ἵνα ἐλεύθερος ᾖ — “he practices so that he may be free.” After a past-tense verb, the same clause shifts to the optative: ἤσκει ἵνα ἐλεύθερος εἴη — “he was practicing so that he might be free.”\n\nThis is called the optative of secondary sequence. It softens the vividness of the subjunctive to match the remoteness of past time — Greek grammar keeping precise account of how far a purpose stands from present actuality. You will meet it constantly in the narrative portions of the Discourses, where Epictetus reports what someone did and why.',
+        callout: {
+          label: 'Subjunctive vs. optative at a glance',
+          text: 'Subjunctive: lengthened vowels ω/η — anticipated, vivid, tied to the present. Optative: diphthongs οι/αι — wished, possible, or shifted into the past. Purpose after a present verb → subjunctive; purpose after a past verb → optative.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '21.1',
+        prompt: 'Form the optative — give the present optative active, 3rd singular and 3rd plural, of: λέγω, ἀσκέω (contract: -οίη/-οῖεν), ἔχω',
+        answer: 'λέγοι, λέγοιεν · ἀσκοίη, ἀσκοῖεν · ἔχοι, ἔχοιεν',
+      },
+      {
+        number: '21.2',
+        prompt: 'Wish or potential? Classify each and translate: (a) εἴθε ἐλεύθερος εἴην. (b) γένοιτο ἄν. (c) εἰ γὰρ ἀσκοίης. (d) λέγοι ἄν τις ὅτι…',
+        answer: '(a) Wish — “Would that I were free.” (b) Potential — “It could come to pass.” (c) Wish — “If only you would practice.” (d) Potential — “Someone might say that…” (the standard move for introducing an objection).',
+      },
+      {
+        number: '21.3',
+        prompt: 'Sequence shift — rewrite in secondary sequence: ἀσκοῦμεν ἵνα μὴ ταρασσώμεθα (“we practice so that we may not be disturbed”). Change the main verb to the imperfect and shift the mood.',
+        answer: 'ἠσκοῦμεν ἵνα μὴ ταρασσοίμεθα — “we were practicing so that we might not be disturbed.” The subjunctive ταρασσώμεθα becomes optative ταρασσοίμεθα after the past-tense main verb.',
+      },
+      {
+        number: '21.4',
+        prompt: 'Reflection — Epictetus (Ench. 8) commands: do not seek that events happen as you wish. Given what the optative expresses, why might a Stoic say the discipline of desire is a discipline of the optative mood? Answer in 3–4 sentences.',
+        answer: 'Open response. Strong answers: the optative projects wish onto the world — “may it be so.” Epictetus does not forbid the mood but redirects its object: instead of wishing the world matched desire, the prokopton wishes to assent well, act well, desire rightly — things that are up to us. γένοιτο aimed at externals is bondage; aimed at one’s own character it is the whole program.',
+      },
+    ],
+    quiz: [
+      { question: 'The optative mood characteristically shows which vowels?', options: ['ω and η', 'The diphthongs οι and αι', 'ει and ου', 'Augmented initial vowels'], correct: 1 },
+      { question: 'εἴθε σοφὸς εἴην means:', options: ['I am certainly wise.', 'Would that I were wise.', 'I was wise once.', 'Am I wise?'], correct: 1 },
+      { question: 'The potential optative always appears with which particle?', options: ['μή', 'ἵνα', 'ἄν', 'δέ'], correct: 2 },
+      { question: 'γένοιτο ἄν is best translated:', options: ['It has come to pass.', 'Let it never happen.', 'It could come to pass.', 'It is coming to pass.'], correct: 2 },
+      { question: 'The aorist optative of λύω is built on:', options: ['The augmented aorist stem (ἐλυσα-)', 'The unaugmented aorist stem + -αι- (λύσαι-)', 'The perfect stem (λελυκ-)', 'The present stem + ω/η'], correct: 1 },
+      { question: 'Give the present optative 3rd singular of εἰμί.', options: ['ᾖ', 'εἴη', 'ἦν', 'ἔστω'], correct: 1 },
+      { question: 'After a past-tense main verb, a purpose clause takes:', options: ['ἵνα + subjunctive', 'ἵνα + optative (secondary sequence)', 'ἵνα + indicative', 'The infinitive only'], correct: 1 },
+      { question: 'Translate: ἤσκει ἵνα ἐλεύθερος εἴη.', options: ['He practices in order to be free.', 'He was practicing so that he might be free.', 'If only he would practice freedom.', 'He could practice freely.'], correct: 1 },
+      { question: 'λέγοι ἄν τις (“someone might say”) is which use of the optative?', options: ['Optative of wish', 'Potential optative', 'Secondary-sequence optative', 'Imperatival optative'], correct: 1 },
+      { question: 'Why is the optative philosophically significant for the discipline of desire?', options: ['It is the mood the sage uses exclusively', 'It is the grammar of wish — and Stoic training redirects wish from externals to one’s own judgments', 'It expresses only past regret', 'It cannot be negated'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'εἴθε', transliteration: 'eithe', english: 'would that, if only (introduces a wish)' },
+      { greek: 'γένοιτο', transliteration: 'genoito', english: 'may it come to pass (aor. opt. of γίγνομαι)' },
+      { greek: 'ἄν', transliteration: 'an', english: 'particle of potentiality (untranslatable alone)' },
+      { greek: 'εὔχομαι', transliteration: 'euchomai', english: 'to pray, to wish for' },
+      { greek: 'τύχη', transliteration: 'tychē', english: 'fortune, chance' },
+      { greek: 'ἴσως', transliteration: 'isōs', english: 'perhaps, probably' },
+    ],
+  },
+
+  // ── SESSION 22 ─────────────────────────────────────────────────────────────
+  {
+    id: 22,
+    title: 'Conditions',
+    subtitle: 'If it is up to us, if it were up to us — the complete Greek conditional system',
+    targetText: ENCHEIRIDION_1,
+    objectives: [
+      'Identify and translate the principal Greek conditional types',
+      'Distinguish ἐάν + subjunctive from εἰ + indicative and εἰ + optative',
+      'Form and translate contrary-to-fact conditions with ἄν',
+      'Read Stoic conditional reasoning in its original grammatical dress',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — A System of Distance from Fact',
+        body: 'English marks conditions crudely: “if” plus a shift of tense. Greek deploys mood, tense, and the particle ἄν to grade a condition by its distance from actuality — from open questions of fact, through generalities and future possibilities, down to what is contrary to fact.\n\nStoic ethics lives in conditional form. The Encheiridion’s core arguments are chains of conditionals: if a thing is not up to us, it is nothing to us; if you desire what is not up to you, you will be hindered. To feel the exact force of these claims — is Epictetus stating a fact, a general law, or a warning about a possible future? — you must read the mood of the protasis.',
+      },
+      {
+        heading: 'Part 2 — The Conditional Types',
+        body: 'A condition has two parts: the protasis (the if-clause) and the apodosis (the then-clause). The principal types:',
+        paradigms: [
+          {
+            title: 'The Greek Conditional System',
+            headers: ['Type', 'Protasis', 'Apodosis', 'English feel'],
+            rows: [
+              ['Simple present', 'εἰ + pres. indic.', 'pres. indic.', 'if it is (open fact) … it is'],
+              ['Simple past', 'εἰ + past indic.', 'past indic.', 'if it was … it was'],
+              ['Present general', 'ἐάν + subjunctive', 'pres. indic.', 'if ever / whenever … (as a rule)'],
+              ['Past general', 'εἰ + optative', 'imperfect indic.', 'if ever (in the past) … used to'],
+              ['Future more vivid', 'ἐάν + subjunctive', 'future indic.', 'if (as may well happen) … will'],
+              ['Future less vivid', 'εἰ + optative', 'optative + ἄν', 'if (you) should … would'],
+              ['Present contrary-to-fact', 'εἰ + imperfect', 'imperfect + ἄν', 'if it were (but it isn’t) … would'],
+              ['Past contrary-to-fact', 'εἰ + aorist', 'aorist + ἄν', 'if it had been (but it wasn’t) … would have'],
+            ],
+          },
+        ],
+        callout: {
+          label: 'Two signals to watch',
+          text: 'ἐάν (= εἰ + ἄν) always takes the subjunctive — general or vivid-future conditions. Bare εἰ with a past indicative plus ἄν in the apodosis is contrary to fact: εἰ + imperfect for present unreality, εἰ + aorist for past unreality.',
+        },
+      },
+      {
+        heading: 'Part 3 — Stoic Conditionals in the Wild',
+        body: 'Epictetus prefers ἐάν + subjunctive: his warnings are general laws that hold whenever the case arises. ἐὰν ὀρέγῃ τῶν οὐκ ἐφ᾿ ἡμῖν, ἀτυχήσεις — “if ever you desire the things not up to us, you will fail” — this is how the world reliably works.\n\nThe contrary-to-fact appears at a famous moment you will read in full in Session 30. Encheiridion 5: death is nothing terrible — ἐπεὶ καὶ Σωκράτει ἂν ἐφαίνετο, “since it would have appeared so even to Socrates.” The imperfect ἐφαίνετο with ἄν: if death were terrible (it is not), it would appear terrible to Socrates (it did not). One particle carries the whole counterfactual argument.\n\nNotice, finally, what this session shares with PHIL 705: Chrysippus’ conflict criterion asks when “if P then Q” genuinely holds. Greek grammar asks a prior question — what kind of holding is being claimed. The two disciplines meet in the same sentence.',
+      },
+    ],
+    exercises: [
+      {
+        number: '22.1',
+        prompt: 'Classify each condition by type: (a) ἐὰν ἀσκῇς, προκόψεις. (b) εἰ σοφὸς ἦν, οὐκ ἂν ἐταράσσετο. (c) εἰ ἀσκοίης, προκόπτοις ἄν. (d) εἰ ταῦτα λέγει, ἁμαρτάνει.',
+        answer: '(a) Future more vivid — “If you practice, you will make progress.” (b) Present contrary-to-fact — “If he were wise, he would not be disturbed” (but he is not wise). (c) Future less vivid — “If you should practice, you would make progress.” (d) Simple present — “If he says these things, he errs” (open question of fact).',
+      },
+      {
+        number: '22.2',
+        prompt: 'Build the contrary-to-fact — render into Greek using ταράσσω (disturb): “If death were up to us (ἐφ᾿ ἡμῖν), it would not disturb us.”',
+        answer: 'εἰ ὁ θάνατος ἐφ᾿ ἡμῖν ἦν, οὐκ ἂν ἡμᾶς ἐτάρασσεν. — εἰ + imperfect (ἦν) in the protasis, imperfect + ἄν (ἐτάρασσεν) in the apodosis: present contrary-to-fact.',
+      },
+      {
+        number: '22.3',
+        prompt: 'Parse the mood logic — Epictetus writes general laws with ἐάν + subjunctive rather than εἰ + present indicative. What is the philosophical difference between “if you desire externals, you suffer” as an open factual claim versus a general law? 3–4 sentences.',
+        answer: 'Open response. Strong answers: εἰ + indicative treats a single case as an open question of fact; ἐάν + subjunctive legislates over every occurrence — whenever the antecedent arises, the consequent follows. Epictetus’ psychology is offered as law-like: the failure is not incidental but built into the structure of desire directed at what is not up to us. The grammar itself claims necessity — which is exactly what Chrysippus’ conflict criterion demands of a genuine conditional.',
+      },
+      {
+        number: '22.4',
+        prompt: 'Translate: ἐὰν τὴν ἔκκλισιν ἔχῃς πρὸς μόνα τὰ ἐφ᾿ ἡμῖν, οὐδέποτε δυστυχήσεις.',
+        answer: '“If you direct aversion only toward the things that are up to us, you will never meet misfortune.” Future more vivid: ἐάν + subjunctive (ἔχῃς), future indicative (δυστυχήσεις). This is the argument of Encheiridion 2, which you read in full in Session 24.',
+      },
+    ],
+    quiz: [
+      { question: 'The two parts of a condition are called:', options: ['Subject and predicate', 'Protasis (if-clause) and apodosis (then-clause)', 'Antecedent and relative', 'Thesis and antithesis'], correct: 1 },
+      { question: 'ἐάν always takes which mood?', options: ['Indicative', 'Optative', 'Subjunctive', 'Imperative'], correct: 2 },
+      { question: 'A future-more-vivid condition is formed with:', options: ['εἰ + optative, optative + ἄν', 'ἐάν + subjunctive, future indicative', 'εἰ + imperfect, imperfect + ἄν', 'εἰ + present, present'], correct: 1 },
+      { question: 'εἰ σοφὸς ἦν, οὐκ ἂν ἐταράσσετο is which type?', options: ['Simple past', 'Future less vivid', 'Present contrary-to-fact', 'Present general'], correct: 2 },
+      { question: 'The signal of a contrary-to-fact apodosis is:', options: ['ἵνα + subjunctive', 'A past indicative with ἄν', 'A future indicative', 'The bare optative'], correct: 1 },
+      { question: 'Present contrary-to-fact uses which tense in both clauses?', options: ['Aorist', 'Perfect', 'Imperfect', 'Future'], correct: 2 },
+      { question: 'A “future less vivid” (should/would) condition is formed with:', options: ['εἰ + optative in the protasis, optative + ἄν in the apodosis', 'ἐάν + subjunctive, future indicative', 'εἰ + aorist, aorist + ἄν', 'εἰ + present, imperative'], correct: 0 },
+      { question: 'In Ench. 5, ἐπεὶ καὶ Σωκράτει ἂν ἐφαίνετο (“since it would have appeared so even to Socrates”), the ἄν + imperfect signals:', options: ['A general law', 'A contrary-to-fact claim — death is not terrible, so it did not appear terrible to Socrates', 'A vivid future prediction', 'An optative of wish'], correct: 1 },
+      { question: 'Translate: ἐὰν ἀσκῇς, προκόψεις.', options: ['If you had practiced, you would have progressed.', 'If you practice, you will make progress.', 'If only you would practice!', 'Since you practice, you progress.'], correct: 1 },
+      { question: 'Why does Epictetus prefer ἐάν + subjunctive for his ethical warnings?', options: ['It is easier to pronounce', 'It frames them as general laws holding for every occurrence, not claims about a single case', 'It is the only mood available with negatives', 'It marks the statements as doubtful'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'εἰ', transliteration: 'ei', english: 'if' },
+      { greek: 'ἐάν', transliteration: 'ean', english: 'if (ever) — εἰ + ἄν, with subjunctive' },
+      { greek: 'κωλύω', transliteration: 'kōlyō', english: 'to hinder, to prevent' },
+      { greek: 'ἀναγκάζω', transliteration: 'anankazō', english: 'to compel, to force' },
+      { greek: 'βλάπτω', transliteration: 'blaptō', english: 'to harm, to damage' },
+      { greek: 'μέμφομαι', transliteration: 'memphomai', english: 'to blame, to find fault with' },
+      { greek: 'δυστυχέω', transliteration: 'dystycheō', english: 'to meet misfortune' },
+    ],
+  },
+
+  // ── SESSION 23 ─────────────────────────────────────────────────────────────
+  {
+    id: 23,
+    title: 'Indirect Statement',
+    subtitle: 'He says that… — the grammar of reported judgment',
+    objectives: [
+      'Use ὅτι/ὡς + finite verb after verbs of saying',
+      'Use the accusative + infinitive construction after φημί and verbs of thinking',
+      'Use the accusative + participle after verbs of knowing and perceiving',
+      'Conjugate φημί and recognize its role in philosophical prose',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Three Ways to Report a Thought',
+        body: 'Greek has three constructions for indirect statement — reporting what someone says, thinks, or perceives — and the choice depends on the introducing verb.\n\n(1) ὅτι or ὡς + a finite verb, after most verbs of saying: λέγει ὅτι ὁ θάνατος οὐδὲν δεινόν ἐστιν — “he says that death is nothing terrible.” The reported clause keeps its own moods and tenses; this is the closest to English “that.”\n\n(2) Accusative + infinitive, after φημί (“say, assert”) and verbs of thinking (νομίζω, οἴομαι, ἡγέομαι): φησὶ τὸν θάνατον οὐδὲν δεινὸν εἶναι — literally “he asserts death to be nothing terrible.” The subject of the reported statement goes into the accusative; its verb becomes an infinitive.\n\n(3) Accusative + participle, after verbs of knowing and perceiving (οἶδα, ὁράω, ἀκούω): οἶδα σε ἀσκοῦντα — “I know you practicing,” i.e., “I know that you practice.” Perception verbs report what is directly grasped, and the participle keeps the reported fact vivid and present.',
+        callout: {
+          label: 'Why three constructions?',
+          text: 'The construction encodes epistemic distance. ὅτι reports words; the infinitive reports a claim held as content; the participle reports what is known or perceived as fact. Greek marks in its syntax what modern epistemology marks with labels — saying, believing, knowing.',
+        },
+      },
+      {
+        heading: 'Part 2 — The Verb φημί',
+        body: 'φημί (“I say, I assert”) is an irregular -μι verb of the highest frequency in philosophical prose — it is how doctrines are attributed: οἱ Στωικοί φασι… “the Stoics assert…”',
+        paradigms: [
+          {
+            title: 'φημί — Present and Imperfect',
+            headers: ['Person', 'Present', 'Imperfect'],
+            rows: [
+              ['1st sg.', 'φημί', 'ἔφην'],
+              ['2nd sg.', 'φῄς', 'ἔφης (ἔφησθα)'],
+              ['3rd sg.', 'φησί(ν)', 'ἔφη'],
+              ['1st pl.', 'φαμέν', 'ἔφαμεν'],
+              ['2nd pl.', 'φατέ', 'ἔφατε'],
+              ['3rd pl.', 'φασί(ν)', 'ἔφασαν'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'ἔφη — “he said” — is the workhorse of the Discourses, which are Arrian’s transcripts of Epictetus talking. When you see ἔφη dropped into the middle of a sentence, it marks reported speech, exactly like English “, he said,”.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Grammar of Assent',
+        body: 'Indirect statement is where Greek grammar touches the Stoic theory of judgment most directly. A δόγμα — a judgment, the thing Encheiridion 5 says actually disturbs us — has the form of a statement held as true: “death is terrible.” The discipline of assent asks you to notice when you have moved from perceiving to asserting.\n\nGreek syntax keeps the ledger. ὁρῶ τὸν ἄνθρωπον ἀποθνῄσκοντα — “I see the man dying” (participle: perception). νομίζω τὸν θάνατον δεινὸν εἶναι — “I judge death to be terrible” (infinitive: a claim I hold). The second sentence is where the Stoic locates the error — and the grammar shows the exact point where the impression became an assertion. δοκεῖ μοι — “it seems to me” — is the impression itself, not yet assented to.\n\nReading Epictetus with this distinction in view turns grammatical analysis into a spiritual exercise: every indirect statement is somebody’s assent, laid open for inspection.',
+      },
+    ],
+    exercises: [
+      {
+        number: '23.1',
+        prompt: 'Identify the construction (ὅτι-clause, acc. + infinitive, or acc. + participle) and translate: (a) λέγει ὅτι ἀσκεῖ. (b) φησὶ τὴν ἀρετὴν μόνην ἀγαθὸν εἶναι. (c) οἶδα τὸν σοφὸν οὐ ταρασσόμενον. (d) νομίζουσι τὰ ἐκτὸς ἀγαθὰ εἶναι.',
+        answer: '(a) ὅτι-clause — “He says that he practices.” (b) Acc. + inf. — “He asserts that virtue alone is good” (the core Stoic value thesis). (c) Acc. + part. — “I know that the wise man is not disturbed.” (d) Acc. + inf. — “They think that externals are goods” (the diagnosis of the many, per the Stoics: a false δόγμα).',
+      },
+      {
+        number: '23.2',
+        prompt: 'Convert direct to indirect — turn each direct statement into indirect statement after the given verb: (a) ὁ θάνατος οὐδὲν δεινόν ἐστιν. → φησὶ… (b) ἀσκῶ. → λέγει ὅτι… (c) προκόπτεις. → οἶδα…',
+        answer: '(a) φησὶ τὸν θάνατον οὐδὲν δεινὸν εἶναι. (b) λέγει ὅτι ἀσκεῖ. (note the person shift: “I practice” → “he says that he practices”) (c) οἶδα σε προκόπτοντα. — “I know that you are making progress.”',
+      },
+      {
+        number: '23.3',
+        prompt: 'Conjugation drill — give the 3rd singular and 3rd plural, present and imperfect, of φημί.',
+        answer: 'Present: φησί(ν), φασί(ν). Imperfect: ἔφη, ἔφασαν. The imperfect 3rd singular ἔφη (“he said”) is among the most frequent verb forms in the Discourses.',
+      },
+      {
+        number: '23.4',
+        prompt: 'Reflection — using the three constructions, explain in Greek-grammar terms the Stoic distinction between receiving an impression and assenting to it. Which construction corresponds to each stage? 3–5 sentences.',
+        answer: 'Open response. Strong answers: perception verbs + participle (ὁρῶ… ἀποθνῄσκοντα) report the impression — what strikes the soul before evaluation; δοκεῖ μοι frames it as mere seeming. Verbs of thinking + infinitive (νομίζω… εἶναι) mark assent: the content is now held as a claim about how things are. The Stoic discipline is to linger in the first construction — to see, and to say “it seems” — before granting the infinitive of judgment.',
+      },
+    ],
+    quiz: [
+      { question: 'After λέγω, indirect statement is most commonly expressed by:', options: ['Accusative + infinitive', 'ὅτι or ὡς + a finite verb', 'Accusative + participle', 'The optative alone'], correct: 1 },
+      { question: 'After φημί, indirect statement takes:', options: ['ὅτι + indicative', 'Accusative + infinitive', 'Accusative + participle', 'ἵνα + subjunctive'], correct: 1 },
+      { question: 'After verbs of knowing and perceiving (οἶδα, ὁράω), indirect statement takes:', options: ['Accusative + participle', 'ὅτι + optative only', 'The bare infinitive', 'ἐάν + subjunctive'], correct: 0 },
+      { question: 'φησὶ τὸν θάνατον οὐδὲν δεινὸν εἶναι means:', options: ['He fears that death is terrible.', 'He asserts that death is nothing terrible.', 'He knows death, which is terrible.', 'Say that death is nothing terrible!'], correct: 1 },
+      { question: 'The 3rd singular imperfect of φημί — the “he said” of the Discourses — is:', options: ['φησί', 'ἔφη', 'ἔφασαν', 'φάτε'], correct: 1 },
+      { question: 'In acc. + infinitive, the subject of the reported statement appears in the:', options: ['Nominative', 'Genitive', 'Dative', 'Accusative'], correct: 3 },
+      { question: 'οἶδα σε ἀσκοῦντα means:', options: ['I know that you practice.', 'I say that you practiced.', 'Practice, so that I may know you!', 'I think you should practice.'], correct: 0 },
+      { question: 'δοκεῖ μοι (“it seems to me”) corresponds to which stage of Stoic psychology?', options: ['Assent (synkatathesis)', 'The impression (phantasia), prior to assent', 'Impulse (hormē)', 'Virtue itself'], correct: 1 },
+      { question: 'οἱ Στωικοί φασι τὴν ἀρετὴν μόνην ἀγαθὸν εἶναι reports:', options: ['A perception', 'The Stoic assertion that virtue alone is good', 'A wish about virtue', 'A condition contrary to fact'], correct: 1 },
+      { question: 'Why does the choice among the three constructions matter philosophically?', options: ['It is purely stylistic', 'It encodes epistemic distance: reported words (ὅτι), held claims (infinitive), and known or perceived facts (participle)', 'Only the infinitive construction can be negated', 'The participle construction is later Christian Greek'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'φημί', transliteration: 'phēmi', english: 'to say, to assert (acc. + inf.)' },
+      { greek: 'νομίζω', transliteration: 'nomizō', english: 'to think, to believe, to hold as custom' },
+      { greek: 'οἴομαι / οἶμαι', transliteration: 'oiomai / oimai', english: 'to suppose, to imagine' },
+      { greek: 'ἡγέομαι', transliteration: 'hēgeomai', english: 'to consider, to lead' },
+      { greek: 'οἶδα', transliteration: 'oida', english: 'to know (perfect in form, present in meaning)' },
+      { greek: 'δοκέω', transliteration: 'dokeō', english: 'to seem; δοκεῖ μοι — it seems to me' },
+      { greek: 'δόγμα, -ατος, τό', transliteration: 'dogma', english: 'judgment, opinion, doctrine' },
+    ],
+  },
+
+  // ── SESSION 24 ─────────────────────────────────────────────────────────────
+  {
+    id: 24,
+    title: 'Encheiridion §§2–3 — New Passage',
+    subtitle: 'Desire and aversion in the original — your second sustained reading',
+    isMilestone: true,
+    targetText:
+      'Μέμνησο, ὅτι ὀρέξεως ἐπαγγελία ἐπιτυχία, οὗ ὀρέγῃ, ἐκκλίσεως ἐπαγγελία τὸ μὴ περιπεσεῖν ἐκείνῳ, ὃ ἐκκλίνεται, καὶ ὁ μὲν ἐν ὀρέξει ἀποτυγχάνων ἀτυχής, ὁ δὲ ἐν ἐκκλίσει περιπίπτων δυστυχής.',
+    objectives: [
+      'Read Encheiridion §2 in Greek with full grammatical comprehension',
+      'Read the pot-and-kiss passage of Encheiridion §3',
+      'Recognize ἄν (= ἐάν) + subjunctive and the genitive absolute in real text',
+      'Master the vocabulary of desire (ὄρεξις) and aversion (ἔκκλισις)',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — From Paradigms to Text',
+        body: 'Session 10 gave you Encheiridion §1: some things are up to us, some are not. Sessions 11–23 have been armament — voices, tenses, moods, participles, conditions, indirect statement. This session is the second milestone: §§2–3, where Epictetus draws the practical consequence of §1 for desire and aversion.\n\nRead the way you were trained: find the verb, find its subject, group each article with its noun, then let the particles (μέν… δέ…) show you the architecture. §2 is built on a strict μέν/δέ symmetry between ὄρεξις (desire, reaching-toward) and ἔκκλισις (aversion, leaning-away) — the two movements of the soul that the discipline of desire trains.',
+        callout: {
+          label: 'The two movements',
+          text: 'ὄρεξις — desire, from ὀρέγω, “stretch out, reach for” (it takes a genitive object: ὀρέγῃ τινός, “you reach for something”). ἔκκλισις — aversion, from ἐκκλίνω, “lean away from.” All of Stoic moral psychology begins as the management of these two vectors.',
+        },
+      },
+      {
+        heading: 'Part 2 — Encheiridion §2: The Promise of Desire',
+        body: 'Μέμνησο, ὅτι ὀρέξεως ἐπαγγελία ἐπιτυχία, οὗ ὀρέγῃ, ἐκκλίσεως ἐπαγγελία τὸ μὴ περιπεσεῖν ἐκείνῳ, ὃ ἐκκλίνεται, καὶ ὁ μὲν ἐν ὀρέξει ἀποτυγχάνων ἀτυχής, ὁ δὲ ἐν ἐκκλίσει περιπίπτων δυστυχής.\n\n“Remember that the promise of desire is the attainment of what you desire; the promise of aversion is not to fall into what is avoided; and the one who fails in desire is unfortunate (ἀτυχής), while the one who falls into what he avoids is miserable (δυστυχής).”\n\nEpictetus then turns the screw with a condition you can now parse on sight: ἂν μὲν οὖν μόνα ἐκκλίνῃς τὰ παρὰ φύσιν τῶν ἐπὶ σοί, οὐδενί, ὧν ἐκκλίνεις, περιπεσῇ — “if, then, you avoid only what is contrary to nature among the things that are up to you, you will fall into nothing that you avoid.” But — νόσον δ᾿ ἂν ἐκκλίνῃς ἢ θάνατον ἢ πενίαν, δυστυχήσεις — “if you try to avoid sickness or death or poverty, you will be miserable.” The conclusion is a command built from Session 13 vocabulary: lift your aversion away from everything not up to us.',
+        paradigms: [
+          {
+            title: 'Encheiridion §2 — Clause-by-Clause Parse',
+            headers: ['Greek', 'Form', 'Reading'],
+            rows: [
+              ['Μέμνησο', 'perf. mid. imperative of μιμνῄσκω', '“Remember!” — perfect: hold in a completed state of memory'],
+              ['ὀρέξεως ἐπαγγελία ἐπιτυχία', 'three nominatives/genitives, no verb', 'nominal sentence: “the promise of desire [is] attainment”'],
+              ['οὗ ὀρέγῃ', 'gen. relative + 2nd sg. middle', '“of that which you reach for” — ὀρέγομαι takes the genitive'],
+              ['τὸ μὴ περιπεσεῖν ἐκείνῳ', 'articular aorist infinitive + dative', '“the not-falling-into that” — the infinitive as noun'],
+              ['ὁ μὲν… ἀποτυγχάνων / ὁ δὲ… περιπίπτων', 'articular present participles', '“the one failing… the one falling-into” — participles as subjects'],
+              ['ἂν ἐκκλίνῃς… περιπεσῇ / δυστυχήσεις', 'ἄν + subj. → future', 'future more vivid — the general law of Session 22'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Encheiridion §3: The Pot and the Kiss',
+        body: 'ἂν χύτραν στέργῃς, ὅτι “χύτραν στέργω”. κατεαγείσης γὰρ αὐτῆς οὐ ταραχθήσῃ· ἂν παιδίον σαυτοῦ καταφιλῇς ἢ γυναῖκα, ὅτι ἄνθρωπον καταφιλεῖς· ἀποθανόντος γὰρ οὐ ταραχθήσῃ.\n\n“If you are fond of a pot, say ‘it is a pot I am fond of’ — for when it is broken, you will not be disturbed. If you kiss your own child or your wife, say that you are kissing a human being — for when they die, you will not be disturbed.”\n\nTwo grammatical jewels here. First, κατεαγείσης αὐτῆς and ἀποθανόντος are genitive absolutes — a participle and its subject set off in the genitive, giving attendant circumstance: “it having been broken,” “the person having died.” Second, οὐ ταραχθήσῃ is the future passive of ταράσσω — the verb of Encheiridion 5. The whole aim of the practice is stated in a single future-passive verb: you will not be disturbed.\n\nThis is the most notorious passage in the Encheiridion — kiss your child while rehearsing their mortality. Read precisely, it is an exercise in the discipline of assent (Session 23): say what the thing is (ὁποῖόν ἐστιν), beginning from the smallest cases (ἀπὸ τῶν σμικροτάτων ἀρξάμενος), so that your love does not silently smuggle in the false judgment that the beloved is a permanent possession.',
+        callout: {
+          label: 'Genitive absolute',
+          text: 'A participle whose subject is not part of the main clause goes into the genitive along with its subject: ἀποθανόντος (αὐτοῦ) — “he having died” → “when he dies.” You will meet it in nearly every paragraph of real Greek prose from here on.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '24.1',
+        prompt: 'Parse fully: ὀρέξεως — ἐκκλίνῃς — περιπεσεῖν — ἀποτυγχάνων — ταραχθήσῃ.',
+        answer: 'ὀρέξεως: gen. sg. of ὄρεξις (3rd decl.), “of desire.” ἐκκλίνῃς: pres. subjunctive act. 2nd sg. of ἐκκλίνω (after ἄν), “you avoid.” περιπεσεῖν: aorist infinitive of περιπίπτω, “to fall into.” ἀποτυγχάνων: pres. act. participle, nom. masc. sg., “failing to obtain.” ταραχθήσῃ: future passive 2nd sg. of ταράσσω, “you will be disturbed.”',
+      },
+      {
+        number: '24.2',
+        prompt: 'The μέν/δέ symmetry — lay out §2’s opening as a two-column table: what is the promise (ἐπαγγελία) of desire, and of aversion? Who is ἀτυχής and who is δυστυχής, and what is the difference?',
+        answer: 'Desire (ὄρεξις): promises attainment (ἐπιτυχία) of what you reach for; the one who fails (ἀποτυγχάνων) is ἀτυχής — unfortunate, he missed. Aversion (ἔκκλισις): promises not falling into (μὴ περιπεσεῖν) what is avoided; the one who falls in (περιπίπτων) is δυστυχής — miserable, he got what he dreaded. The asymmetry matters: failed desire merely disappoints; failed aversion delivers you into the very thing you fear. That is why Epictetus’ first instruction is to retrain aversion, not desire.',
+      },
+      {
+        number: '24.3',
+        prompt: 'Genitive absolute — identify both genitive absolutes in §3, parse them, and translate the clauses they govern.',
+        answer: 'κατεαγείσης αὐτῆς: aorist passive participle (κατάγνυμι, “break”) + pronoun, both genitive — “it having been broken” → “for when it is broken, you will not be disturbed” (οὐ ταραχθήσῃ). ἀποθανόντος: aorist active participle of ἀποθνῄσκω, genitive, subject understood — “(the person) having died” → “for when they die, you will not be disturbed.”',
+      },
+      {
+        number: '24.4',
+        prompt: 'Reflection — the instruction of §3 is to “say over” (ἐπιλέγειν) what a thing is, starting from the smallest things. Using the grammar of indirect statement from Session 23, explain what kind of speech-act ἐπιλέγειν names, and why starting with a pot rather than a child is pedagogically essential. 4–5 sentences.',
+        answer: 'Open response. Strong answers: ἐπιλέγειν is deliberate self-addressed assertion — supplying, in words, the true description (“it is a pot,” “it is a mortal human”) before the false judgment (“it is mine forever”) can be assented to silently. It is assent made explicit and therefore inspectable. Starting from the pot trains the mechanism where the stakes are trivial and the judgment is easy to correct; the same grammatical and psychological move must already be habitual before it can hold under the weight of a child’s mortality. The order of practice is itself Stoic pedagogy: paradigms before texts, pots before persons.',
+      },
+    ],
+    quiz: [
+      { question: 'ὄρεξις and ἔκκλισις are, respectively:', options: ['Assent and impulse', 'Desire (reaching-toward) and aversion (leaning-away)', 'Virtue and vice', 'Pleasure and pain'], correct: 1 },
+      { question: 'Μέμνησο is:', options: ['A present infinitive', 'A perfect middle imperative — “remember!”', 'An aorist subjunctive', 'A future indicative'], correct: 1 },
+      { question: 'ὀρέγομαι (“I reach for, desire”) takes its object in the:', options: ['Accusative', 'Dative', 'Genitive', 'Nominative'], correct: 2 },
+      { question: 'The one who fails in desire (ὁ ἐν ὀρέξει ἀποτυγχάνων) is called:', options: ['δυστυχής', 'ἀτυχής', 'σοφός', 'ἐλεύθερος'], correct: 1 },
+      { question: 'ἂν ἐκκλίνῃς νόσον ἢ θάνατον, δυστυχήσεις is which conditional type?', options: ['Present contrary-to-fact', 'Future more vivid', 'Past general', 'Future less vivid'], correct: 1 },
+      { question: 'κατεαγείσης αὐτῆς (“it having been broken”) is:', options: ['A dative of respect', 'A genitive absolute', 'An accusative + infinitive', 'A vocative phrase'], correct: 1 },
+      { question: 'ταραχθήσῃ is:', options: ['Present middle, 3rd singular', 'Future passive, 2nd singular — “you will be disturbed”', 'Aorist active, 1st singular', 'Perfect passive participle'], correct: 1 },
+      { question: 'In §3, Epictetus instructs you to say of your child that you kiss:', options: ['A blessing (εὐλογίαν)', 'A possession (κτῆμα)', 'A human being (ἄνθρωπον)', 'A gift of fortune (δῶρον τύχης)'], correct: 2 },
+      { question: 'The articular infinitive τὸ μὴ περιπεσεῖν functions as:', options: ['A command', 'A noun — “the not-falling-into”', 'A question', 'A genitive absolute'], correct: 1 },
+      { question: 'Why does Epictetus say to begin ἀπὸ τῶν σμικροτάτων — from the smallest things?', options: ['Small things are more valuable', 'The habit of true description must be built where stakes are low before it can hold where they are high', 'Large things cannot be described in Greek', 'The gods forbid practicing on people'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'ὄρεξις, -εως, ἡ', transliteration: 'orexis', english: 'desire, reaching-toward' },
+      { greek: 'ἔκκλισις, -εως, ἡ', transliteration: 'ekklisis', english: 'aversion, leaning-away' },
+      { greek: 'ἐπαγγελία, -ας, ἡ', transliteration: 'epangelia', english: 'promise, profession' },
+      { greek: 'ἀποτυγχάνω', transliteration: 'apotynchanō', english: 'to fail to obtain (+ gen.)' },
+      { greek: 'περιπίπτω', transliteration: 'peripiptō', english: 'to fall into, to encounter (+ dat.)' },
+      { greek: 'ἀτυχής / δυστυχής', transliteration: 'atychēs / dystychēs', english: 'unfortunate / miserable' },
+      { greek: 'χύτρα, -ας, ἡ', transliteration: 'chytra', english: 'earthen pot' },
+      { greek: 'στέργω', transliteration: 'stergō', english: 'to be fond of, to love (of affection)' },
+      { greek: 'καταφιλέω', transliteration: 'kataphileō', english: 'to kiss' },
+      { greek: 'ταράσσω', transliteration: 'tarassō', english: 'to disturb, to trouble' },
+    ],
+  },
+
+  // ── SESSION 25 ─────────────────────────────────────────────────────────────
+  {
+    id: 25,
+    title: 'The Perfect Tense',
+    subtitle: 'πεπαίδευμαι — the grammar of formed character',
+    objectives: [
+      'Form the perfect active with reduplication (λέλυκα)',
+      'Form the perfect middle/passive (λέλυμαι)',
+      'Distinguish the perfect (present state from completed action) from the aorist (simple past event)',
+      'Recognize the perfect as the tense of Stoic hexis — settled character',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — What the Perfect Means',
+        body: 'The Greek perfect is not a past tense. It denotes a present state resulting from a completed action. ἔμαθον (aorist) — “I learned” (an event, over). μεμάθηκα (perfect) — “I have learned,” i.e., “I now stand in the state of one who learned”: I know.\n\nThis is why οἶδα (“I know”) is perfect in form with present meaning — knowing is the standing result of having seen. And it is why the perfect is philosophically the most Stoic of tenses. The goal of askēsis is not to have done exercises (aorist) but to be, now, the kind of person the exercises produced — a hexis, a settled disposition. πεπαίδευμαι: I have been educated, and I stand educated. γεγύμνασμαι: I stand trained. πέπεισμαι: I stand convinced — assent that has hardened into character.',
+        callout: {
+          label: 'Aorist vs. perfect',
+          text: 'Aorist: the event happened (snapshot). Perfect: the result stands now (state). “Marcus wrote the Meditations” — aorist. “It stands written” (γέγραπται) — perfect. When Epictetus asks whether you have merely done philosophy or been changed by it, he is asking an aorist-versus-perfect question.',
+        },
+      },
+      {
+        heading: 'Part 2 — Forming the Perfect',
+        body: 'The perfect active is marked by reduplication + stem + κα endings. Reduplication: an initial consonant is doubled with ε (λύω → λέ-λυκα; παιδεύω → πε-παίδευκα). An initial aspirate reduplicates with its unaspirated partner (φιλέω → πε-φίληκα; θύω → τέ-θυκα). Verbs beginning with a vowel lengthen it instead (ἀσκέω → ἤσκηκα).\n\nThe perfect middle/passive adds the personal endings directly to the reduplicated stem, with no thematic vowel: λέλυμαι, λέλυσαι, λέλυται…',
+        paradigms: [
+          {
+            title: 'Perfect of λύω — Active and Middle/Passive',
+            headers: ['Person', 'Perfect Active', 'Perfect Mid./Pass.'],
+            rows: [
+              ['1st sg.', 'λέλυκα', 'λέλυμαι'],
+              ['2nd sg.', 'λέλυκας', 'λέλυσαι'],
+              ['3rd sg.', 'λέλυκε(ν)', 'λέλυται'],
+              ['1st pl.', 'λελύκαμεν', 'λελύμεθα'],
+              ['2nd pl.', 'λελύκατε', 'λέλυσθε'],
+              ['3rd pl.', 'λελύκασι(ν)', 'λέλυνται'],
+            ],
+          },
+          {
+            title: 'Philosophically Loaded Perfects',
+            headers: ['Present', 'Perfect', 'Meaning of the perfect'],
+            rows: [
+              ['παιδεύω (educate)', 'πεπαίδευμαι', 'I stand educated'],
+              ['γυμνάζω (train)', 'γεγύμνασμαι', 'I stand trained'],
+              ['πείθω (persuade)', 'πέπεισμαι', 'I stand convinced'],
+              ['κτάομαι (acquire)', 'κέκτημαι', 'I possess (having acquired)'],
+              ['μανθάνω (learn)', 'μεμάθηκα', 'I know (having learned)'],
+              ['γράφω (write)', 'γέγραπται', 'it stands written'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — The Perfect and the Stoic Hexis',
+        body: 'κέκτημαι — the perfect of κτάομαι, “acquire” — means simply “I possess.” The acquisition is past; the possession is the present state. You will meet exactly this verb in Session 29, where Epictetus asks which faculty κέκτηται τὸ θεωρητικόν — “possesses the power of contemplation.”\n\nThe Stoics analyzed character the same way the perfect tense analyzes action. A virtue is not a series of good acts (aorists); it is the standing condition (hexis) that those acts built and that now produces new acts effortlessly. When Seneca says he is not yet wise but is making progress, the grammar of his claim is that the perfects are not yet true of him: he is being trained (present) but cannot yet say γεγύμνασμαι without qualification.\n\nAsk yourself, in Greek, at the end of each study session: τί μεμάθηκα; — what have I learned, such that I now stand knowing it? The perfect tense is a daily examination built into the language.',
+      },
+    ],
+    exercises: [
+      {
+        number: '25.1',
+        prompt: 'Form the perfect — give the perfect active 1st singular of: παιδεύω, φιλέω, ἀσκέω, μανθάνω (irregular: μεμάθηκα).',
+        answer: 'πεπαίδευκα · πεφίληκα (aspirate φ reduplicates as π) · ἤσκηκα (initial vowel lengthens — no consonant reduplication) · μεμάθηκα.',
+      },
+      {
+        number: '25.2',
+        prompt: 'Aorist or perfect? Choose the correct tense for each meaning and give the form of πείθω (mid./pass.): (a) “He was persuaded (at that moment).” (b) “He stands convinced.”',
+        answer: '(a) Aorist passive: ἐπείσθη — the event of persuasion. (b) Perfect middle/passive: πέπεισται — the standing state of conviction. The Stoic point: assent that matters is (b), not (a) — a conviction that persists as character, not a momentary yielding.',
+      },
+      {
+        number: '25.3',
+        prompt: 'Translate and comment: ὁ σοφὸς γεγύμνασται· ἡμεῖς δὲ ἔτι γυμναζόμεθα.',
+        answer: '“The wise man stands trained; but we are still training.” Perfect (γεγύμνασται) versus present (γυμναζόμεθα): the sage possesses the completed state; the prokopton is inside the ongoing process. One sentence, two tenses, the entire Stoic distinction between the sage and the student.',
+      },
+      {
+        number: '25.4',
+        prompt: 'Reflection — why is οἶδα (“I know”) perfect in form? Connect the grammar to the Stoic distinction between katalepsis (secure grasp) and mere opinion. 3–4 sentences.',
+        answer: 'Open response. Strong answers: οἶδα is the standing result of having seen (the root is that of εἶδον, “I saw”) — knowledge as the state left behind by a completed act of grasping. The Stoics defined epistēmē as katalepsis that is secure and unshakable by argument — precisely a perfect-tense condition: not the event of grasping but the abiding grip. Opinion (doxa) is grammatically present-tense — it wavers with each new impression; knowledge is perfective — settled, reduplicated into the structure of the soul.',
+      },
+    ],
+    quiz: [
+      { question: 'The Greek perfect tense denotes:', options: ['A simple past event', 'A present state resulting from a completed action', 'A future possibility', 'Repeated past action'], correct: 1 },
+      { question: 'The perfect active of λύω is:', options: ['ἔλυσα', 'λέλυκα', 'λύσω', 'ἐλυόμην'], correct: 1 },
+      { question: 'Reduplication of an initial aspirate (φ, θ, χ) uses:', options: ['The same aspirate (φε-, θε-, χε-)', 'The corresponding unaspirated stop (πε-, τε-, κε-)', 'The vowel η', 'No reduplication at all'], correct: 1 },
+      { question: 'The perfect of a vowel-initial verb like ἀσκέω is formed by:', options: ['Consonant reduplication (σέσκηκα)', 'Lengthening the initial vowel (ἤσκηκα)', 'Adding the augment ἐ-', 'Using the aorist stem'], correct: 1 },
+      { question: 'κέκτημαι (perfect of κτάομαι) means:', options: ['I acquired long ago and lost', 'I possess — the standing result of having acquired', 'I will acquire', 'I am acquiring'], correct: 1 },
+      { question: 'οἶδα is perfect in form because:', options: ['It is an irregular aorist', 'Knowing is the standing state left by a completed act of seeing/grasping', 'It was borrowed from Latin', 'All -μι verbs are perfect'], correct: 1 },
+      { question: 'πέπεισμαι means:', options: ['I am being persuaded right now', 'I stand convinced — persuasion hardened into a settled state', 'I persuaded someone else', 'I refuse to be persuaded'], correct: 1 },
+      { question: 'γέγραπται (“it stands written”) is:', options: ['Perfect middle/passive, 3rd singular', 'Aorist active, 3rd plural', 'Future passive, 2nd singular', 'Present subjunctive'], correct: 0 },
+      { question: 'The perfect 3rd plural active ending is:', options: ['-ουσι(ν) on the present stem', '-κασι(ν): λελύκασι(ν)', '-σαν: ἐλύκεσαν', '-νται: λέλυνται'], correct: 1 },
+      { question: 'Why is the perfect “the tense of Stoic hexis”?', options: ['The Stoics wrote only in the perfect', 'Character, like the perfect, is a present standing state produced by completed past actions', 'The perfect is easier than the aorist', 'Hexis is a perfect-tense verb'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'παιδεύω / πεπαίδευμαι', transliteration: 'paideuō / pepaideumai', english: 'to educate / I stand educated' },
+      { greek: 'γυμνάζω / γεγύμνασμαι', transliteration: 'gymnazō / gegymnasmai', english: 'to train / I stand trained' },
+      { greek: 'πείθω / πέπεισμαι', transliteration: 'peithō / pepeismai', english: 'to persuade / I stand convinced' },
+      { greek: 'κτάομαι / κέκτημαι', transliteration: 'ktaomai / kektēmai', english: 'to acquire / I possess' },
+      { greek: 'μανθάνω / μεμάθηκα', transliteration: 'manthanō / memathēka', english: 'to learn / I know (having learned)' },
+      { greek: 'ἕξις, -εως, ἡ', transliteration: 'hexis', english: 'settled state, disposition, character' },
+    ],
+  },
+
+  // ── SESSION 26 ─────────────────────────────────────────────────────────────
+  {
+    id: 26,
+    title: 'Compound Verbs & Prefixes',
+    subtitle: 'προαίρεσις, συγκατάθεσις, προκοπή — the anatomy of the Stoic vocabulary',
+    objectives: [
+      'Recognize the common prepositional prefixes and their force',
+      'Apply the rules of assimilation (συν + κατά → συγκατα-)',
+      'Decompose the core Stoic technical terms into prefix + root',
+      'Use the alpha-privative (ἀ-/ἀν-) to read negated abstracts like ἀπάθεια and ἀταραξία',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Greek Builds Words Like Arguments',
+        body: 'Greek philosophical vocabulary is not a list of arbitrary labels — it is built, transparently, from prepositions and roots. Once you know a dozen prefixes, hundreds of technical terms open on sight.\n\nThe main prefixes and their force: ἀπο- (away from), κατα- (down, against, thoroughly), συν- (with, together), παρα- (beside, aside, amiss), ἐπι- (upon, toward, in addition), προ- (before, forward), ἐκ- (out of), ἀνα- (up, again), ὑπο- (under), περι- (around, beyond).\n\nWhen a prefix meets the verb, sounds assimilate: συν + κατά + τίθημι gives συγκατατίθεμαι (ν → γ before κ); συν + λαμβάνω gives συλλαμβάνω (ν → λ before λ); ἐν + πίπτω gives ἐμπίπτω (ν → μ before π). Assimilation is why the dictionary form sometimes hides the prefix — you must learn to see through it.',
+        callout: {
+          label: 'The augment goes inside',
+          text: 'In compound verbs the augment sits between prefix and root: προκόπτω → imperfect προὔκοπτον / aorist προὔκοψα (προ + ε contracts), ἐκκλίνω → ἐξέκλινον. If a verb seems to have its augment in the middle, it is a compound.',
+        },
+      },
+      {
+        heading: 'Part 2 — Decomposing the Stoic Lexicon',
+        body: 'Now take apart the words you have been using all year. Each one is a compressed philosophical claim:',
+        paradigms: [
+          {
+            title: 'The Stoic Technical Terms, Decomposed',
+            headers: ['Term', 'Anatomy', 'Literal sense', 'Technical sense'],
+            rows: [
+              ['προαίρεσις', 'προ (before) + αἵρεσις (choosing)', 'choosing-before', 'the faculty of choice; moral character'],
+              ['συγκατάθεσις', 'συν + κατά + θέσις (placing)', 'placing-down-together-with', 'assent — the mind setting itself with a proposition'],
+              ['προκοπή', 'προ (forward) + κοπή (cutting)', 'cutting forward (as through forest)', 'moral progress; hence προκόπτων, the one making progress'],
+              ['ἔκκλισις', 'ἐκ (out/away) + κλίσις (leaning)', 'leaning away', 'aversion'],
+              ['ἐπιμέλεια', 'ἐπι (upon) + μέλει (it is a care)', 'care directed upon', 'attentive care — Socrates’ care of the soul'],
+              ['ἀπάθεια', 'ἀ- (not) + πάθος (passion)', 'un-passion', 'freedom from pathological passion — not numbness'],
+              ['ἀταραξία', 'ἀ- (not) + ταραχή (disturbance)', 'un-disturbedness', 'tranquility — ταράσσω defeated'],
+            ],
+          },
+        ],
+        callout: {
+          label: 'The alpha-privative',
+          text: 'ἀ- (ἀν- before vowels) negates: θάνατος/ἀθάνατος (deathless), δίκαιος/ἄδικος (unjust), πάθος/ἀπάθεια. English borrowed the device in “a-moral,” “an-archy.” Reading ἀπάθεια as “apathy” is exactly the mistake this session inoculates against: the word means the passions are absent, not that care is.',
+        },
+      },
+      {
+        heading: 'Part 3 — Reading with X-Ray Vision',
+        body: 'Consider συγκατάθεσις one more time. Zeno’s image (reported by Cicero) was the open hand closing: the impression arrives (φαντασία), the hand begins to close (assent, συγκατάθεσις), the fist grips (κατάληψις, from κατά + λαμβάνω — “grasping down”), and knowledge (ἐπιστήμη, from ἐπί + ἵστημι — “standing upon”) is the grip that the other hand cannot pry loose. The entire Stoic epistemology is written into four compound nouns.\n\nOr take προαίρεσις, Epictetus’ favorite word for what you fundamentally are. It is not mere “will”: it is προ-αίρεσις, the choosing that stands before every particular choice — the standing policy of the soul from which individual decisions issue. When Epictetus says the tyrant can chain your leg but not your προαίρεσις, the word itself explains why: the leg is downstream; the choosing-before is upstream, where chains do not reach.\n\nFrom now on, when you meet an unfamiliar philosophical term, do not reach for the lexicon first. Cut it at the prefix, name the root, and guess. Then check. This is how fluent readers of philosophical Greek actually operate.',
+      },
+    ],
+    exercises: [
+      {
+        number: '26.1',
+        prompt: 'Decompose and gloss: ἐπισκοπέω — ἀποθνῄσκω — περιπίπτω — ἀναβαίνω — ὑπομένω.',
+        answer: 'ἐπισκοπέω: ἐπι (upon) + σκοπέω (look) — “inspect, examine” (root of “episcopal” — the overseer). ἀποθνῄσκω: ἀπο (away/off) + θνῄσκω (die) — “die off,” the standard prose verb for dying. περιπίπτω: περι (around/into) + πίπτω (fall) — “fall in with, encounter” (Ench. 2!). ἀναβαίνω: ἀνα (up) + βαίνω (step) — “go up, ascend.” ὑπομένω: ὑπο (under) + μένω (remain) — “remain under,” i.e., endure — the Stoic ἀνέχου (bear) in one compound.',
+      },
+      {
+        number: '26.2',
+        prompt: 'Assimilation — apply the sound rules: συν + κατατίθεμαι; συν + λογίζομαι; ἐν + πίπτω; συν + βαίνω.',
+        answer: 'συγκατατίθεμαι (ν → γ before κ) — “I assent.” συλλογίζομαι (ν → λ before λ) — “I reckon together, reason” — the root of “syllogism.” ἐμπίπτω (ν → μ before π) — “I fall into.” συμβαίνω (ν → μ before β) — “I come together, happen” — τὰ συμβαίνοντα, “the things that happen,” Epictetus’ phrase for events.',
+      },
+      {
+        number: '26.3',
+        prompt: 'Alpha-privative — build and translate the negated form: θάνατος (death) → ; δίκαιος (just) → ; ταραχή (disturbance) → ; πάθος (passion) → .',
+        answer: 'ἀθάνατος — deathless, immortal. ἄδικος — unjust. ἀταραξία — undisturbedness, tranquility. ἀπάθεια — freedom from passion. Note the last two are the twin goals of Stoic practice, and both are grammatically negative: the Greek names the goal by what is absent — the storm, not the calm, is the marked term.',
+      },
+      {
+        number: '26.4',
+        prompt: 'Reflection — Epictetus says the tyrant chains the leg, not the προαίρεσις. Using the decomposition προ + αἵρεσις, explain in 3–4 sentences why the compound structure of the word itself carries the argument.',
+        answer: 'Open response. Strong answers: αἵρεσις is a particular act of choosing; the prefix προ- places the faculty before all such acts — a standing disposition upstream of every situation. What is upstream of situations cannot be seized by anything that operates within situations (chains, tyrants, prisons). The word’s architecture — before + choosing — locates the self outside the reach of circumstance, which is precisely the claim of the dichotomy of control.',
+      },
+    ],
+    quiz: [
+      { question: 'The prefix συν- means:', options: ['Away from', 'With, together', 'Before', 'Under'], correct: 1 },
+      { question: 'συν + κατά + τίθημι assimilates to:', options: ['συνκατατίθεμαι', 'συγκατατίθεμαι', 'συλκατατίθεμαι', 'σακατατίθεμαι'], correct: 1 },
+      { question: 'προαίρεσις decomposes as:', options: ['πρός (toward) + αἴρω (lift)', 'προ (before) + αἵρεσις (choosing)', 'προ (before) + ἔρις (strife)', 'περί (around) + αἵρεσις'], correct: 1 },
+      { question: 'προκοπή (progress) literally means:', options: ['Walking in circles', 'Cutting forward — as through obstruction', 'Climbing upward', 'Speaking beforehand'], correct: 1 },
+      { question: 'The alpha-privative ἀ-/ἀν-:', options: ['Intensifies the root', 'Negates the root: πάθος → ἀπάθεια', 'Makes the root plural', 'Marks the aorist'], correct: 1 },
+      { question: 'ἀπάθεια properly means:', options: ['Apathy — not caring about anything', 'Freedom from pathological passion — the passions absent, not care', 'Inability to feel pain', 'Hatred of pleasure'], correct: 1 },
+      { question: 'In compound verbs, the augment appears:', options: ['Before the prefix (ἐπροκοπτον)', 'Between prefix and root (προὔκοπτον, ἐξέκλινον)', 'At the end of the word', 'Compounds take no augment'], correct: 1 },
+      { question: 'κατάληψις (cognitive grasp) decomposes as:', options: ['κατά (down) + λῆψις (grasping) — “grasping down,” Zeno’s closing fist', 'κατά + λέξις (speech)', 'κάτω (below) + ἄληψις', 'It is not a compound'], correct: 0 },
+      { question: 'συλλογίζομαι (reason together — root of “syllogism”) shows which assimilation?', options: ['ν → γ before κ', 'ν → λ before λ', 'ν → μ before π', 'Loss of the prefix'], correct: 1 },
+      { question: 'τὰ συμβαίνοντα — Epictetus’ word for “events” — literally means:', options: ['The things sent by the gods', 'The things that step together / come to pass', 'The things that fall from above', 'The things outside us'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'προαίρεσις, -εως, ἡ', transliteration: 'prohairesis', english: 'moral choice, the choosing faculty' },
+      { greek: 'συγκατατίθεμαι', transliteration: 'synkatatithemai', english: 'to assent to (+ dat.)' },
+      { greek: 'προκόπτω / προκοπή', transliteration: 'prokoptō / prokopē', english: 'to make progress / progress' },
+      { greek: 'ἐπισκοπέω', transliteration: 'episkopeō', english: 'to examine, to inspect' },
+      { greek: 'ὑπομένω', transliteration: 'hypomenō', english: 'to endure, to stand firm under' },
+      { greek: 'συμβαίνω', transliteration: 'symbainō', english: 'to happen, to come to pass' },
+      { greek: 'ἀταραξία, -ας, ἡ', transliteration: 'ataraxia', english: 'tranquility, undisturbedness' },
+    ],
+  },
+
+  // ── SESSION 27 ─────────────────────────────────────────────────────────────
+  {
+    id: 27,
+    title: 'Numbers & Time Expressions',
+    subtitle: 'ὄρθρου — at dawn: the grammar of the Stoic day',
+    objectives: [
+      'Decline εἷς, μία, ἕν and use the cardinals one through ten',
+      'Use ordinals (πρῶτος, δεύτερος, τρίτος…)',
+      'Express time when (dative), time within which (genitive), and duration (accusative)',
+      'Read the temporal expressions that frame Stoic daily practice',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Cardinals and Ordinals',
+        body: 'Greek numbers one through four decline; five through ten do not. The number one — εἷς, μία, ἕν — declines like a 3-1-3 adjective and matters philosophically: it is the word in claims of unity (one cosmos, one logos, one good).',
+        paradigms: [
+          {
+            title: 'εἷς, μία, ἕν — “one”',
+            headers: ['Case', 'Masc.', 'Fem.', 'Neut.'],
+            rows: [
+              ['Nom.', 'εἷς', 'μία', 'ἕν'],
+              ['Gen.', 'ἑνός', 'μιᾶς', 'ἑνός'],
+              ['Dat.', 'ἑνί', 'μιᾷ', 'ἑνί'],
+              ['Acc.', 'ἕνα', 'μίαν', 'ἕν'],
+            ],
+          },
+          {
+            title: 'Cardinals and Ordinals, 1–10',
+            headers: ['Number', 'Cardinal', 'Ordinal'],
+            rows: [
+              ['1', 'εἷς, μία, ἕν', 'πρῶτος, -η, -ον'],
+              ['2', 'δύο', 'δεύτερος'],
+              ['3', 'τρεῖς, τρία', 'τρίτος'],
+              ['4', 'τέτταρες, τέτταρα', 'τέταρτος'],
+              ['5', 'πέντε', 'πέμπτος'],
+              ['6', 'ἕξ', 'ἕκτος'],
+              ['7', 'ἑπτά', 'ἕβδομος'],
+              ['8', 'ὀκτώ', 'ὄγδοος'],
+              ['9', 'ἐννέα', 'ἔνατος'],
+              ['10', 'δέκα', 'δέκατος'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'οὐδείς, οὐδεμία, οὐδέν — “no one, nothing” — is simply οὐδέ + εἷς: “not even one.” You have been reading it since Session 10: οὐδὲν δεινόν, “nothing terrible.” Watch for it declined: οὐδενί (dative), οὐδεμίαν (accusative feminine) — a form that anchors the reading in Session 29.',
+        },
+      },
+      {
+        heading: 'Part 2 — The Three Cases of Time',
+        body: 'Greek expresses time by bare case, without a preposition, and the case choice is meaningful:\n\nDative — time when (a point): τῇ τρίτῃ ἡμέρᾳ, “on the third day.” τῇ ὑστεραίᾳ, “on the next day.”\n\nGenitive — time within which (a container): νυκτός, “by night / during the night.” ὄρθρου, “at dawn” (literally “within the dawn-time”). χειμῶνος, “in winter.”\n\nAccusative — duration (an extent): τρεῖς ἡμέρας, “for three days.” ὅλην τὴν νύκτα, “the whole night through.”\n\nThe logic is the cases you already know: the dative locates (as with place), the genitive partitions (a slice out of a stretch), the accusative measures extent (as the direct object measures the verb’s reach).',
+      },
+      {
+        heading: 'Part 3 — The Grammar of the Stoic Day',
+        body: 'Stoic practice is scheduled — morning preparation, daytime attention, evening review — and its texts are full of bare-case time expressions.\n\nMarcus Aurelius opens Meditations 5.1 with a genitive of time: Ὄρθρου, ὅταν δυσόκνως ἐξεγείρῃ, πρόχειρον ἔστω ὅτι ἐπὶ ἀνθρώπου ἔργον ἐγείρομαι — “At dawn, when you rise reluctantly, let this be at hand: I am rising for the work of a human being.” One genitive (ὄρθρου) sets the scene; the ὅταν-clause (ὅταν + subjunctive — Session 20’s indefinite construction) generalizes it to every morning.\n\nSeneca describes the evening examination: each night, review the day — ordinal by ordinal. τί πρῶτον ἐποίησας; τί δεύτερον; τί τρίτον; What did you do first? Second? Third? The ordinals turn a day into an examinable sequence.\n\nAnd duration marks the standard of practice: not οἴνῳ μιᾷ ἡμέρᾳ — “on one day” — but πάσας τὰς ἡμέρας, “all one’s days.” Philosophy, Epictetus insists, is not for τρεῖς ἡμέρας (three days, accusative of duration — the enthusiasm of the beginner) but for a lifetime.',
+        callout: {
+          label: 'ὅταν + subjunctive',
+          text: 'ὅταν (= ὅτε + ἄν, “whenever”) takes the subjunctive exactly as ἐάν does — the indefinite temporal clause: ὅταν ἐξεγείρῃ, “whenever you wake.” Session 20’s grammar, now telling time.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '27.1',
+        prompt: 'Decline οὐδείς in the masculine, all four cases, and translate οὐδενὶ περιπεσῇ (cf. Ench. 2).',
+        answer: 'οὐδείς, οὐδενός, οὐδενί, οὐδένα. οὐδενὶ περιπεσῇ — “you will fall into nothing” (dative with περιπίπτω): the promise of correctly aimed aversion.',
+      },
+      {
+        number: '27.2',
+        prompt: 'Choose the case — translate into Greek using ἡμέρα (day) and νύξ (night): (a) “on the third day” (b) “for three days” (c) “during the night”.',
+        answer: '(a) τῇ τρίτῃ ἡμέρᾳ — dative of time when. (b) τρεῖς ἡμέρας — accusative of duration. (c) νυκτός — genitive of time within which.',
+      },
+      {
+        number: '27.3',
+        prompt: 'Read Marcus — parse Ὄρθρου and ὅταν δυσόκνως ἐξεγείρῃ in Meditations 5.1, and explain what each construction contributes to the sentence’s force.',
+        answer: 'Ὄρθρου: genitive of time within which — “at dawn / in the dawn-hours.” ὅταν … ἐξεγείρῃ: ὅταν + present subjunctive — indefinite temporal clause, “whenever you wake (reluctantly).” The genitive stamps the scene at its hardest hour; the indefinite subjunctive makes the instruction stand for every morning, not one. The grammar generalizes the exercise into a rule of life.',
+      },
+      {
+        number: '27.4',
+        prompt: 'The evening review — write, in Greek, the three questions of Seneca’s nightly examination using ordinals: “What did you do first? What second? What third?” (use ποιέω in the aorist).',
+        answer: 'τί πρῶτον ἐποίησας; τί δεύτερον; τί τρίτον; — aorist ἐποίησας because each act is a completed event under review; the ordinals partition the day into a sequence the ruling faculty can audit.',
+      },
+    ],
+    quiz: [
+      { question: 'The Greek numbers that decline are:', options: ['All numbers one through ten', 'One through four; five through ten are indeclinable', 'Only “one”', 'None — Greek numbers never decline'], correct: 1 },
+      { question: 'οὐδείς is built from:', options: ['οὐ + δεῖ (“it is not necessary”)', 'οὐδέ + εἷς — “not even one”', 'οὖς + δίς (“twice an ear”)', 'A Persian loanword'], correct: 1 },
+      { question: 'Time when (a point in time) takes the:', options: ['Genitive', 'Dative', 'Accusative', 'Nominative'], correct: 1 },
+      { question: 'Time within which takes the:', options: ['Genitive', 'Dative', 'Accusative', 'Vocative'], correct: 0 },
+      { question: 'Duration of time takes the:', options: ['Genitive', 'Dative', 'Accusative', 'Nominative'], correct: 2 },
+      { question: 'τρεῖς ἡμέρας means:', options: ['On the third day', 'For three days', 'Within three days', 'Every third day'], correct: 1 },
+      { question: 'Ὄρθρου at the opening of Meditations 5.1 is:', options: ['A vocative — “O dawn!”', 'A genitive of time — “at dawn”', 'The name of a god', 'An accusative of duration'], correct: 1 },
+      { question: 'ὅταν takes which mood?', options: ['Indicative always', 'Subjunctive — indefinite temporal clause (“whenever”)', 'Optative always', 'Imperative'], correct: 1 },
+      { question: 'The ordinal “third” is:', options: ['τρεῖς', 'τρία', 'τρίτος', 'τριάς'], correct: 2 },
+      { question: 'The dative of time parallels which spatial use of the dative?', options: ['Possession', 'Location at a point', 'Instrument', 'Indirect object'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'εἷς, μία, ἕν', transliteration: 'heis, mia, hen', english: 'one' },
+      { greek: 'οὐδείς, οὐδεμία, οὐδέν', transliteration: 'oudeis', english: 'no one, nothing' },
+      { greek: 'ἡμέρα, -ας, ἡ', transliteration: 'hēmera', english: 'day' },
+      { greek: 'νύξ, νυκτός, ἡ', transliteration: 'nyx', english: 'night' },
+      { greek: 'ὄρθρος, -ου, ὁ', transliteration: 'orthros', english: 'dawn, daybreak' },
+      { greek: 'χρόνος, -ου, ὁ', transliteration: 'chronos', english: 'time (duration)' },
+      { greek: 'καιρός, -οῦ, ὁ', transliteration: 'kairos', english: 'the right moment, occasion' },
+    ],
+  },
+
+  // ── SESSION 28 ─────────────────────────────────────────────────────────────
+  {
+    id: 28,
+    title: 'Relative Clauses',
+    subtitle: 'ὅσα ἡμέτερα ἔργα — the things which are up to us',
+    targetText: ENCHEIRIDION_1,
+    objectives: [
+      'Decline the relative pronoun ὅς, ἥ, ὅ',
+      'Apply the agreement rule: gender and number from the antecedent, case from the relative clause',
+      'Use ὅστις (indefinite relative) and ὅσος (“as much/many as”)',
+      'Re-read Encheiridion §§1–2 with full command of their relative constructions',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Relative Pronoun',
+        body: 'A relative clause packs a full sentence into an adjective’s job: “the things which are up to us.” The relative pronoun ὅς, ἥ, ὅ looks like the article without the initial τ (and with rough breathing and accent): ὅς, οὗ, ᾧ, ὅν…\n\nThe agreement rule is the hinge of the whole construction: the relative takes its gender and number from its antecedent, but its case from its own function inside the relative clause. ὁ σοφός, ὃν ὁρᾷς — “the wise man whom you see”: masculine singular from ὁ σοφός, but accusative because he is the object of ὁρᾷς.',
+        paradigms: [
+          {
+            title: 'The Relative Pronoun ὅς, ἥ, ὅ',
+            headers: ['Case', 'Masc. sg.', 'Fem. sg.', 'Neut. sg.', 'Masc. pl.', 'Fem. pl.', 'Neut. pl.'],
+            rows: [
+              ['Nom.', 'ὅς', 'ἥ', 'ὅ', 'οἵ', 'αἵ', 'ἅ'],
+              ['Gen.', 'οὗ', 'ἧς', 'οὗ', 'ὧν', 'ὧν', 'ὧν'],
+              ['Dat.', 'ᾧ', 'ᾗ', 'ᾧ', 'οἷς', 'αἷς', 'οἷς'],
+              ['Acc.', 'ὅν', 'ἥν', 'ὅ', 'οὕς', 'ἅς', 'ἅ'],
+            ],
+          },
+        ],
+        callout: {
+          label: 'Relative vs. article',
+          text: 'ὁ (article) has no accent; ὅ (relative) is accented. οἱ (article) vs. οἵ (relative). The breathing and accent are the entire visible difference — one more reason the diacriticals of Session 1 were never optional.',
+        },
+      },
+      {
+        heading: 'Part 2 — Omitted Antecedents, ὅστις, and ὅσος',
+        body: 'Greek freely omits a general antecedent: instead of “the things which are up to us,” simply ἃ ἐφ᾿ ἡμῖν — “what is up to us.” The neuter plural relative alone carries the sense “the things that…”.\n\nThe indefinite relative ὅστις, ἥτις, ὅ τι (“whoever, whatever”) declines both halves: οὗτινος, ᾧτινι… It generalizes: ὅστις ἀσκεῖ, προκόπτει — “whoever practices, progresses.”\n\nὅσος, -η, -ον means “as much as, as many as” — quantity rather than identity. This is the relative of the Encheiridion’s opening: καὶ ἁπλῶς ὅσα ἡμέτερα ἔργα — “and, in a word, as many things as are our own doings.” Epictetus does not enumerate what is up to us and close the list; ὅσα leaves the class open — everything, however much there is, that is our own work.\n\nOne refinement you have already met without knowing it: attraction. A relative that should be accusative is often pulled into the case of its genitive or dative antecedent. And verbs govern their relatives’ cases directly: in Ench. 2, οὗ ὀρέγῃ — “what you reach for” — is genitive because ὀρέγομαι takes the genitive (Session 24), not because of the antecedent.',
+      },
+      {
+        heading: 'Part 3 — Re-Reading §1 with Open Eyes',
+        body: 'Return to the sentence this course is built around: ἐφ᾿ ἡμῖν μὲν ὑπόληψις, ὁρμή, ὄρεξις, ἔκκλισις, καὶ ἁπλῶς ὅσα ἡμέτερα ἔργα· οὐκ ἐφ᾿ ἡμῖν δὲ σῶμα, κτῆσις, δόξα, ἀρχή, καὶ ἁπλῶς ὅσα οὐχ ἡμέτερα ἔργα.\n\nThe architecture is now completely transparent: two μέν/δέ lists, each closed by ὅσα + a nominal clause. The four powers up to us — judgment (ὑπόληψις), impulse (ὁρμή), desire (ὄρεξις), aversion (ἔκκλισις) — are named; then ὅσα ἡμέτερα ἔργα sweeps in everything of the same kind. The four externals — body, possessions, reputation, office — are named; then ὅσα οὐχ ἡμέτερα ἔργα closes that class too.\n\nThe philosophical work is done by the relative of quantity. Epictetus’ dichotomy is not two lists but two open classes, and the criterion of membership is stated inside the relative clause itself: is it ἡμέτερον ἔργον — our own doing? Grammar and doctrine are here the same thing: master the relative clause and you have mastered the sentence; master the sentence and you have the whole Stoic map of responsibility.',
+      },
+    ],
+    exercises: [
+      {
+        number: '28.1',
+        prompt: 'Apply the agreement rule — supply the correct form of the relative and translate: (a) ἡ ἀρετή, ___ διώκομεν (“virtue, which we pursue”) (b) ὁ φιλόσοφος, ___ ὁ λόγος ἀληθής (“the philosopher, whose account is true”) (c) τὰ πράγματα, ___ οὐκ ἐφ᾿ ἡμῖν (“the things, which are not up to us”).',
+        answer: '(a) ἣν — feminine singular (from ἡ ἀρετή), accusative (object of διώκομεν). (b) οὗ — masculine singular, genitive (possession: “of whom the account is true”). (c) ἅ — neuter plural (from τὰ πράγματα), nominative in its clause.',
+      },
+      {
+        number: '28.2',
+        prompt: 'Omitted antecedent — translate: ἃ ἐφ᾿ ἡμῖν, ταῦτα φύσει ἐλεύθερα· ὧν δὲ οὐκ ἐφ᾿ ἡμῖν ὀρέγῃ, δουλεύσεις.',
+        answer: '“What is up to us — these things are by nature free; but if you reach for what is not up to us (literally: of-the-things which are not up to us, if you desire [them]), you will be a slave.” ἃ: neuter plural relative with omitted antecedent. ὧν: genitive plural because ὀρέγομαι governs the genitive — the verb inside the clause, not the antecedent, fixes the case.',
+      },
+      {
+        number: '28.3',
+        prompt: 'ὅσος at work — in Ench. 1, why does Epictetus close each list with ὅσα (“as many as”) rather than a definite ἅ (“the ones which”)? What does the quantity-relative do philosophically? 3–4 sentences.',
+        answer: 'Open response. Strong answers: ἅ would refer to a determinate, closed set — as if the four named items plus some known remainder exhausted the class. ὅσα leaves the class open and criterion-governed: however many things are our own doings, all of them fall on this side. The dichotomy is thereby a rule for sorting any future case, not a finished inventory — which is exactly what a daily practice needs: you meet a new situation and ask which side of ὅσα it falls on.',
+      },
+      {
+        number: '28.4',
+        prompt: 'Distinguish the forms — article or relative? ὁ λόγος / ὃ λέγεις / οἱ σοφοί / οἵ ἀσκοῦσιν. Translate each.',
+        answer: 'ὁ λόγος — article: “the account/reason.” ὃ λέγεις — relative (accent!): “what you say.” οἱ σοφοί — article: “the wise.” οἵ ἀσκοῦσιν — relative: “who practice.” The accent and breathing are the only visible difference; the syntax confirms it (a relative introduces a clause with its own verb).',
+      },
+    ],
+    quiz: [
+      { question: 'The relative pronoun takes its gender and number from ___ and its case from ___:', options: ['Its own clause; the antecedent', 'The antecedent; its function in its own clause', 'The verb; the subject', 'The article; the noun'], correct: 1 },
+      { question: 'In ἡ ἀρετή, ἣν διώκομεν, the relative is accusative because:', options: ['ἀρετή is accusative', 'It is the object of διώκομεν inside the relative clause', 'All feminine relatives are accusative', 'It agrees with διώκομεν in case'], correct: 1 },
+      { question: 'The visible difference between ὁ (article) and ὅ (relative) is:', options: ['Nothing — context alone decides', 'The accent (and rough breathing on the relative)', 'The relative is always capitalized', 'The article is enclitic'], correct: 1 },
+      { question: 'ὅσα in καὶ ἁπλῶς ὅσα ἡμέτερα ἔργα means:', options: ['The ones which (definite)', 'As many things as — an open, criterion-governed class', 'Whichever one (singular)', 'Because'], correct: 1 },
+      { question: 'ὅστις differs from ὅς in that ὅστις is:', options: ['Plural only', 'Indefinite — “whoever, whatever”', 'Interrogative', 'Used only in poetry'], correct: 1 },
+      { question: 'A general antecedent (“the things”) may be:', options: ['Repeated twice for emphasis', 'Omitted — ἃ ἐφ᾿ ἡμῖν, “what is up to us”', 'Placed after the relative clause only', 'Expressed only with ὅστις'], correct: 1 },
+      { question: 'In Ench. 2’s οὗ ὀρέγῃ, the relative is genitive because:', options: ['Its antecedent is genitive', 'ὀρέγομαι takes a genitive object — the verb inside the clause governs the case', 'All relatives after ὅτι are genitive', 'It is a genitive absolute'], correct: 1 },
+      { question: 'The genitive plural of the relative — identical in all three genders — is:', options: ['οἷς', 'ὧν', 'ἅς', 'οὗ'], correct: 1 },
+      { question: 'The four powers Ench. 1 names as up to us are:', options: ['Body, possessions, reputation, office', 'Judgment (ὑπόληψις), impulse (ὁρμή), desire (ὄρεξις), aversion (ἔκκλισις)', 'Wisdom, courage, justice, temperance', 'Logic, physics, ethics, rhetoric'], correct: 1 },
+      { question: 'Why is the relative clause the grammatical heart of the dichotomy of control?', options: ['It makes the sentence longer and more solemn', 'The membership criterion (ἡμέτερα ἔργα — our own doings) is stated inside the relative clause, turning the dichotomy into a rule for sorting any case', 'Relative clauses were sacred to the Stoics', 'It avoids naming the gods'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'ὅς, ἥ, ὅ', transliteration: 'hos, hē, ho', english: 'who, which, that' },
+      { greek: 'ὅστις, ἥτις, ὅ τι', transliteration: 'hostis', english: 'whoever, whatever' },
+      { greek: 'ὅσος, -η, -ον', transliteration: 'hosos', english: 'as much as, as many as' },
+      { greek: 'ὑπόληψις, -εως, ἡ', transliteration: 'hypolēpsis', english: 'judgment, opinion, assumption' },
+      { greek: 'ὁρμή, -ῆς, ἡ', transliteration: 'hormē', english: 'impulse toward action' },
+      { greek: 'κτῆσις, -εως, ἡ', transliteration: 'ktēsis', english: 'possession, property' },
+      { greek: 'ἕκαστος, -η, -ον', transliteration: 'hekastos', english: 'each, every' },
+    ],
+  },
+
+  // ── SESSION 29 ─────────────────────────────────────────────────────────────
+  {
+    id: 29,
+    title: 'Reading Workshop — Discourses I.1',
+    subtitle: 'Sustained reading: the faculty that examines itself',
+    isMilestone: true,
+    targetText:
+      'Τῶν ἄλλων δυνάμεων οὐδεμίαν εὑρήσετε αὐτὴν αὑτῆς θεωρητικήν, οὐ τοίνυν οὐδὲ δοκιμαστικὴν ἢ ἀποδοκιμαστικήν.',
+    objectives: [
+      'Read the opening of Discourses I.1 with grammatical control',
+      'Apply the full toolkit — future, perfect, articular infinitive, reflexives — to unadapted prose',
+      'Practice the professional reading method: verb first, then subject, then structure',
+      'Understand why Epictetus begins the Discourses with the self-examining faculty',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — How to Attack a Real Paragraph',
+        body: 'Everything before this session was preparation; this is the event. The Discourses are unadapted, spoken, argumentative Greek — Arrian’s transcript of Epictetus teaching. The chapter you are entering carries the title Περὶ τῶν ἐφ᾿ ἡμῖν καὶ οὐκ ἐφ᾿ ἡμῖν — “On the things that are up to us and not up to us.” You have been reading that phrase since Session 10; now you read the seminar it names.\n\nThe method, fixed as ritual: (1) Find the finite verb — person, number, tense, mood. (2) Find its subject — check the agreement. (3) Group every article with its noun before translating anything. (4) Set particles (μέν, δέ, γάρ, οὖν, τοίνυν) as signposts, not words to translate. (5) Only then render the sentence. Fluent readers do not read word-by-word left to right; they read grammatically, in one orbit around the verb.',
+      },
+      {
+        heading: 'Part 2 — Discourses I.1.1: The Opening Sentence',
+        body: 'Τῶν ἄλλων δυνάμεων οὐδεμίαν εὑρήσετε αὐτὴν αὑτῆς θεωρητικήν, οὐ τοίνυν οὐδὲ δοκιμαστικὴν ἢ ἀποδοκιμαστικήν.\n\n“Of the other faculties, you will find none that is contemplative of itself — none, therefore, that approves or disapproves (of itself).”\n\nWork the method. The verb: εὑρήσετε — future active, 2nd plural, of εὑρίσκω: “you will find.” The object: οὐδεμίαν — accusative feminine of οὐδείς (Session 27): “not one” (agreeing with an understood δύναμιν). The frame: τῶν ἄλλων δυνάμεων — partitive genitive standing first for emphasis: “of the other faculties.” Then the predicate accusatives: αὐτὴν αὑτῆς θεωρητικήν — “itself contemplative of itself” — note the rough breathing on αὑτῆς: this is the reflexive (of itself), not the plain pronoun. Finally the particle τοίνυν (“therefore, accordingly”) extends the point: no other faculty is self-examining, and so none is δοκιμαστική — approving — or ἀποδοκιμαστική — disapproving. The -ικός adjectives are capacity-words: “able to examine,” “able to approve.”',
+        paradigms: [
+          {
+            title: 'Discourses I.1.1 — Word-by-Word Anatomy',
+            headers: ['Greek', 'Form', 'Function'],
+            rows: [
+              ['Τῶν ἄλλων δυνάμεων', 'gen. pl.', 'partitive genitive, fronted: “of the other faculties”'],
+              ['οὐδεμίαν', 'acc. fem. sg. of οὐδείς', 'object of εὑρήσετε; understand δύναμιν'],
+              ['εὑρήσετε', 'fut. act. 2nd pl., εὑρίσκω', 'main verb: “you will find”'],
+              ['αὐτὴν αὑτῆς', 'acc. + reflexive gen.', '“itself … of itself” — the reflexive marks self-relation'],
+              ['θεωρητικήν', 'acc. fem. sg., -ικός adj.', 'predicate: “contemplative (of)” + gen.'],
+              ['οὐ τοίνυν οὐδέ', 'particles', '“accordingly not even” — the inference marker'],
+              ['δοκιμαστικὴν ἢ ἀποδοκιμαστικήν', 'acc. fem. sg.', '“approving or disapproving” — δοκιμάζω + -ικός'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — The Argument Unfolds: Grammar, Music, and the Rational Faculty',
+        body: 'Epictetus continues by interrogating the arts one by one. ἡ γραμματικὴ μέχρι τίνος κέκτηται τὸ θεωρητικόν; — “Grammar: how far does it possess the power of contemplation?” μέχρι τοῦ διαγνῶναι τὰ γράμματα — “as far as discriminating the letters.” ἡ μουσική; — “And music?” μέχρι τοῦ διαγνῶναι τὸ μέλος — “as far as discriminating the melody.”\n\nEvery tool of the course is on this surface. κέκτηται — the perfect of κτάομαι (Session 25): grammar stands possessing its power. μέχρι τοῦ διαγνῶναι — the articular infinitive in the genitive after μέχρι (“up to the point of discriminating”): the infinitive-as-noun from Session 18, now governed by a preposition. τὸ θεωρητικόν — the neuter adjective with article as abstract noun: “the contemplative (capacity).”\n\nGrammar can parse a sentence commanding you to write to a friend — Epictetus’ own example — but it cannot tell you whether now is the time to write. Music can tune the lyre; it cannot tell you whether now is the time to sing or to be silent. Only one faculty examines both itself and all the others, approves and disapproves, uses impressions and judges its own use of them: ἡ δύναμις ἡ λογική — the rational faculty. That is why it, alone of all things, is ἐφ᾿ ἡμῖν — and why the Discourses open here. The book’s first argument is a proof, from the self-application of reason, of the dichotomy you met in Session 10. You have now read it as its first students heard it.',
+        callout: {
+          label: 'αὐτοῦ vs. αὑτοῦ',
+          text: 'Smooth breathing αὐτοῦ = “of him/it” (plain pronoun). Rough breathing αὑτοῦ = “of himself/itself” (contracted reflexive, ἑαυτοῦ). In I.1.1, αὑτῆς is what makes the faculty self-examining. An entire philosophy of reflexivity rides on one breathing mark — the payoff of Session 1’s diacritical drills.',
+        },
+      },
+    ],
+    exercises: [
+      {
+        number: '29.1',
+        prompt: 'Method drill — for Discourses I.1.1, execute steps 1–3 of the reading method in writing: name the finite verb with full parsing, its subject, and every article-noun group in the sentence.',
+        answer: 'Verb: εὑρήσετε — future active indicative, 2nd person plural, of εὑρίσκω (“you will find”). Subject: “you” (the students), contained in the verb ending — no expressed subject. Article-noun groups: τῶν ἄλλων δυνάμεων (“of the other faculties”). οὐδεμίαν stands alone (its noun δύναμιν is understood); θεωρητικήν, δοκιμαστικήν, ἀποδοκιμαστικήν are predicate adjectives on the understood δύναμιν.',
+      },
+      {
+        number: '29.2',
+        prompt: 'Parse the perfect — κέκτηται: identify tense, voice, person; name the present-tense dictionary form; explain why the perfect matters to the sense.',
+        answer: 'κέκτηται: perfect middle, 3rd singular, of κτάομαι (“acquire”). The perfect of acquiring is possessing (Session 25): grammar stands in possession of its contemplative power. Epictetus is not narrating that grammar once got a capacity (aorist) but stating what capacity it now has — the standing endowment that his question μέχρι τίνος; (“up to what point?”) then measures.',
+      },
+      {
+        number: '29.3',
+        prompt: 'The articular infinitive — analyze μέχρι τοῦ διαγνῶναι τὰ γράμματα word by word, and explain how the construction works.',
+        answer: 'μέχρι — preposition, “up to, as far as,” governing the genitive. τοῦ διαγνῶναι — articular infinitive: the aorist infinitive διαγνῶναι (διαγιγνώσκω, “discriminate, distinguish”) made a noun by the article, in the genitive as μέχρι requires: “the act of discriminating.” τὰ γράμματα — accusative, object of the infinitive: “the letters.” Whole: “up to the point of discriminating the letters” — the infinitive functions as a noun while keeping its own object, the signature double life of the articular infinitive.',
+      },
+      {
+        number: '29.4',
+        prompt: 'Reflection — Epictetus opens his whole teaching with the claim that only the rational faculty is θεωρητικὴ αὑτῆς — contemplative of itself. Why must the faculty that judges impressions be self-examining for the dichotomy of control to hold? Connect the grammar (the reflexive αὑτῆς) to the doctrine. 4–6 sentences.',
+        answer: 'Open response. Strong answers: the dichotomy of control claims that judgment, impulse, desire, and aversion are up to us. But a faculty’s acts are only fully ours if the faculty can audit them — otherwise its errors would be invisible to it and correction impossible. Reason alone turns back on itself (the reflexive αὑτῆς is the grammatical trace of that turning): it can examine its own use of impressions, approve or disapprove its own assents. Self-examination is therefore the mechanism that makes self-governance possible; the reflexive pronoun is carrying the entire possibility of moral progress. Grammar can judge letters and music can judge melodies, but neither judges itself — which is why neither is free, and reason is.',
+      },
+    ],
+    quiz: [
+      { question: 'The chapter title of Discourses I.1 is:', options: ['Περὶ ἀρετῆς — On Virtue', 'Περὶ τῶν ἐφ᾿ ἡμῖν καὶ οὐκ ἐφ᾿ ἡμῖν — On what is up to us and not up to us', 'Περὶ θανάτου — On Death', 'Περὶ λόγου — On Reason'], correct: 1 },
+      { question: 'εὑρήσετε is:', options: ['Aorist middle, 3rd plural', 'Future active, 2nd plural — “you will find”', 'Perfect active, 2nd singular', 'Present subjunctive, 1st plural'], correct: 1 },
+      { question: 'οὐδεμίαν in I.1.1 is:', options: ['Nominative — the subject', 'Accusative feminine of οὐδείς — the object, with δύναμιν understood', 'A genitive absolute', 'An adverb'], correct: 1 },
+      { question: 'τῶν ἄλλων δυνάμεων, fronted at the head of the sentence, is:', options: ['A dative of respect', 'A partitive genitive — “(none) of the other faculties”', 'The subject of the verb', 'A vocative address'], correct: 1 },
+      { question: 'The difference between αὐτῆς and αὑτῆς is:', options: ['Dialect only', 'Smooth breathing = plain “of her/it”; rough breathing = reflexive “of herself/itself”', 'Singular versus plural', 'There is no difference'], correct: 1 },
+      { question: 'Adjectives in -ικός (θεωρητικός, δοκιμαστικός) express:', options: ['Past completion', 'Capacity or aptitude — “able to contemplate, able to examine”', 'Negation', 'Endearment'], correct: 1 },
+      { question: 'κέκτηται (of grammar’s power) is:', options: ['Perfect middle of κτάομαι — “stands possessing”', 'Aorist of κεντέω', 'Future of κτείνω', 'Imperfect of καλέω'], correct: 0 },
+      { question: 'In μέχρι τοῦ διαγνῶναι, the infinitive is:', options: ['A command', 'An articular infinitive in the genitive, governed by μέχρι — “up to the point of discriminating”', 'Indirect statement after φημί', 'A genitive absolute'], correct: 1 },
+      { question: 'Epictetus’ examples of faculties that cannot examine themselves are:', options: ['Sight and hearing', 'Grammar and music', 'Courage and justice', 'Memory and imagination'], correct: 1 },
+      { question: 'Why does the argument of I.1 ground the dichotomy of control?', options: ['Because the gods decreed it', 'Because only the self-examining rational faculty can audit and govern its own acts — so only its acts are fully up to us', 'Because the other faculties are illusions', 'Because reason is the strongest faculty physically'], correct: 1 },
+    ],
+    vocabulary: [
+      { greek: 'δύναμις, -εως, ἡ', transliteration: 'dynamis', english: 'faculty, power, capacity' },
+      { greek: 'εὑρίσκω / εὑρήσω', transliteration: 'heuriskō / heurēsō', english: 'to find / I will find' },
+      { greek: 'θεωρητικός, -ή, -όν', transliteration: 'theōrētikos', english: 'contemplative, able to examine' },
+      { greek: 'δοκιμάζω', transliteration: 'dokimazō', english: 'to test, to approve' },
+      { greek: 'διαγιγνώσκω', transliteration: 'diagignōskō', english: 'to discriminate, to distinguish' },
+      { greek: 'χρῆσις, -εως, ἡ', transliteration: 'chrēsis', english: 'use, employment' },
+      { greek: 'φαντασία, -ας, ἡ', transliteration: 'phantasia', english: 'impression, appearance' },
+    ],
+  },
+
+  // ── SESSION 30 ─────────────────────────────────────────────────────────────
+  {
+    id: 30,
+    title: 'Final Examination & Translation',
+    subtitle: 'Ταράσσει τοὺς ἀνθρώπους οὐ τὰ πράγματα — the unseen passage',
+    isMilestone: true,
+    targetText:
+      'Ταράσσει τοὺς ἀνθρώπους οὐ τὰ πράγματα, ἀλλὰ τὰ περὶ τῶν πραγμάτων δόγματα.',
+    objectives: [
+      'Translate an unseen passage from the Stoic corpus with lexicon support',
+      'Demonstrate command of the full grammar: declensions, tenses, moods, participles, conditions, indirect statement',
+      'Parse any form encountered in Encheiridion-level prose',
+      'Complete GREK 101 — and know exactly what to read next',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Shape of the Examination',
+        body: 'The final examination has four parts, taken in conversation with the drill agent or the Proctor.\n\nPart I — Parsing (ten forms). You will be given ten forms drawn from Encheiridion 1–5 and Discourses I.1 and asked for a full parse: part of speech, and for verbs — person, number, tense, voice, mood; for nouns and adjectives — case, number, gender, and the dictionary form.\n\nPart II — Unseen translation. A short passage you have not officially read, translated with a lexicon. This session’s Part 2 below is a full dress rehearsal.\n\nPart III — Grammar synthesis. Short questions requiring you to explain constructions: why this mood, why this case, what this particle signals.\n\nPart IV — Composition. Four English sentences to render into Greek using course vocabulary — the inverse skill, which proves the grammar is productive, not just recognized.',
+      },
+      {
+        heading: 'Part 2 — The Unseen: Encheiridion 5',
+        body: 'Here is your rehearsal unseen — the most famous sentence in the Encheiridion, and the sentence behind everything this Academy teaches about judgment:\n\nΤαράσσει τοὺς ἀνθρώπους οὐ τὰ πράγματα, ἀλλὰ τὰ περὶ τῶν πραγμάτων δόγματα· οἷον ὁ θάνατος οὐδὲν δεινόν, ἐπεὶ καὶ Σωκράτει ἂν ἐφαίνετο, ἀλλὰ τὸ δόγμα τὸ περὶ τοῦ θανάτου, διότι δεινόν, ἐκεῖνο τὸ δεινόν ἐστιν.\n\n“It is not things that disturb human beings, but their judgments about things. Death, for instance, is nothing terrible — else it would have appeared so even to Socrates — but the judgment about death, that it is terrible: that is the terrible thing.”\n\nAttack it with the method. Verb first: Ταράσσει — present active, 3rd singular; its subject is the neuter plural τὰ δόγματα (neuter plurals take singular verbs — Session 5), with τὰ πράγματα as the negated alternative subject: “not things… but judgments… disturb.” The sandwiched attributive: τὰ περὶ τῶν πραγμάτων δόγματα — the prepositional phrase seated between article and noun (“the about-things judgments”). Then the counterfactual you were promised in Session 22: ἐπεὶ καὶ Σωκράτει ἂν ἐφαίνετο — ἄν + imperfect, present contrary-to-fact, with the dative Σωκράτει: “since (if it were terrible) it would appear so even to Socrates.” Finally διότι δεινόν — “namely that it is terrible” — the judgment quoted in miniature, and the emphatic demonstrative close: ἐκεῖνο τὸ δεινόν ἐστιν — “that is the terrible thing.”',
+        paradigms: [
+          {
+            title: 'Encheiridion 5 — Examination-Standard Parse',
+            headers: ['Greek', 'Parse', 'Rendering'],
+            rows: [
+              ['Ταράσσει', 'pres. act. indic., 3rd sg.', '“disturbs” — neuter pl. subject, sg. verb'],
+              ['τοὺς ἀνθρώπους', 'acc. masc. pl.', 'object: “human beings”'],
+              ['τὰ πράγματα', 'nom. neut. pl.', 'negated subject: “not things”'],
+              ['τὰ περὶ τῶν πραγμάτων δόγματα', 'nom. neut. pl., attributive sandwich', 'true subject: “the judgments about things”'],
+              ['οἷον', 'adverbial', '“for instance”'],
+              ['ἐπεὶ … ἂν ἐφαίνετο', 'ἄν + impf. — contrary-to-fact', '“since it would (otherwise) have appeared so”'],
+              ['Σωκράτει', 'dat. sg.', '“to Socrates” — dative with φαίνομαι'],
+              ['ἐκεῖνο τὸ δεινόν ἐστιν', 'demonstrative + pred.', '“that is the terrible thing”'],
+            ],
+          },
+        ],
+        callout: {
+          label: 'Why this sentence is the course',
+          text: 'Session 1 gave you the alphabet to spell δόγμα. Session 5 explained the article in τὰ περὶ τῶν πραγμάτων δόγματα. Session 22 armed you for ἂν ἐφαίνετο. Session 23 taught you what a δόγμα grammatically is — an assented statement. Thirty sessions converge on one sentence about where disturbance actually lives.',
+        },
+      },
+      {
+        heading: 'Part 3 — Where You Stand, and What to Read Next',
+        body: 'Completing GREK 101 means you can parse and translate Encheiridion-level prose with a lexicon, and read it — increasingly — without one. You have read Encheiridion 1, 2, 3, and 5 in the original, and the opening argument of the Discourses as its first hearers met it.\n\nThe path forward is a reading program, not more paradigms. First: finish the Encheiridion — fifty-three short chapters, most no harder than what you have read; a chapter a day with Liddell & Scott is a complete daily practice. Second: Discourses I.1 whole, then I.2 (Περὶ τοῦ πῶς ἄν τις σῴζοι τὸ κατὰ πρόσωπον ἐν παντί — how one may preserve one’s proper character in everything). Third: Marcus — the Meditations are harder Greek (compressed, private, allusive), but Book II is approachable and Session 27 has already given you its dawn. Keep Smyth’s Grammar within reach for constructions this course deferred.\n\nτί οὖν μεμάθηκας; — what, then, do you stand having learned? Not Greek “about” Stoicism: the actual sentences. From here, every hour with the lexicon is an hour inside the texts themselves — ὧν οὐδείς σε ἀφαιρήσεται: which no one will take from you.',
+      },
+    ],
+    exercises: [
+      {
+        number: '30.1',
+        prompt: 'PART I REHEARSAL — Parse fully: ταράσσει · ἐφαίνετο · Σωκράτει · μεμάθηκας · ἐκκλίνῃς · γένοιτο · οὗ · ἀποθανόντος · εὑρήσετε · μέμνησο.',
+        answer: 'ταράσσει: pres. act. indic. 3rd sg. (ταράσσω). ἐφαίνετο: impf. mid./pass. 3rd sg. (φαίνομαι) — with ἄν, contrary-to-fact. Σωκράτει: dat. sg. of Σωκράτης (3rd decl.). μεμάθηκας: perf. act. 2nd sg. (μανθάνω) — “you stand having learned.” ἐκκλίνῃς: pres. act. subjunctive 2nd sg. (ἐκκλίνω), after ἄν/ἐάν. γένοιτο: aor. mid. optative 3rd sg. (γίγνομαι) — wish. οὗ: gen. sg. relative pronoun (ὅς). ἀποθανόντος: aor. act. participle, gen. sg. (ἀποθνῄσκω) — genitive absolute. εὑρήσετε: fut. act. 2nd pl. (εὑρίσκω). μέμνησο: perf. mid. imperative 2nd sg. (μιμνῄσκω) — “remember!”',
+      },
+      {
+        number: '30.2',
+        prompt: 'PART II REHEARSAL — Translate Encheiridion 5 (given in Part 2 above) without looking at the provided rendering, then compare. Note every place your version differs and identify the grammatical point at stake.',
+        answer: 'Model: “It is not things that disturb human beings, but their judgments about things. Death, for instance, is nothing terrible — since (if it were) it would have appeared so even to Socrates — but the judgment about death, that it is terrible: that is what is terrible.” Key checkpoints: (1) neuter plural subject with singular verb; (2) the attributive sandwich τὰ περὶ τῶν πραγμάτων δόγματα as a single noun phrase; (3) ἂν ἐφαίνετο as contrary-to-fact, not a plain past; (4) ἐκεῖνο picking out the judgment, not death, as the referent of “terrible.”',
+      },
+      {
+        number: '30.3',
+        prompt: 'PART III REHEARSAL — Answer in one or two sentences each: (a) Why is the verb Ταράσσει singular when its subject is plural? (b) What does ἄν contribute to ἐφαίνετο? (c) Why is Σωκράτει dative? (d) In τὸ δόγμα τὸ περὶ τοῦ θανάτου, why is the article repeated?',
+        answer: '(a) Neuter plural subjects take singular verbs — the classic Greek concord rule (Session 5). (b) ἄν converts the imperfect from a past statement into a present contrary-to-fact: “would appear” (it does not, because death is not terrible). (c) φαίνομαι takes a dative of the person to whom something appears: “would have appeared to Socrates.” (d) The repeated article (τὸ… τὸ…) is the attributive position for the prepositional phrase: “the judgment — the one about death” — binding περὶ τοῦ θανάτου inside the noun phrase.',
+      },
+      {
+        number: '30.4',
+        prompt: 'PART IV REHEARSAL — Composition. Render into Greek: (a) “Some things are up to us.” (b) “If you practice, you will make progress.” (c) “The wise man says that death is nothing terrible.” (d) “Remember that you are kissing a human being.”',
+        answer: '(a) τὰ μέν ἐστιν ἐφ᾿ ἡμῖν. (or: ἔνια ἐφ᾿ ἡμῖν ἐστιν.) (b) ἐὰν ἀσκῇς, προκόψεις. (c) ὁ σοφὸς φησὶ τὸν θάνατον οὐδὲν δεινὸν εἶναι. (or: λέγει ὅτι ὁ θάνατος οὐδὲν δεινόν ἐστιν.) (d) μέμνησο ὅτι ἄνθρωπον καταφιλεῖς. Reasonable variants accepted — what is graded is the construction: μέν/δέ or ἔνια, ἐάν + subjunctive with future apodosis, acc. + infinitive after φημί, μέμνησο ὅτι + indicative.',
+      },
+    ],
+    quiz: [
+      { question: 'In Ταράσσει τοὺς ἀνθρώπους οὐ τὰ πράγματα…, the verb is singular because:', options: ['Epictetus wrote hastily', 'Neuter plural subjects take singular verbs in Greek', 'τὰ πράγματα is actually singular', 'The verb agrees with τοὺς ἀνθρώπους'], correct: 1 },
+      { question: 'τὰ περὶ τῶν πραγμάτων δόγματα is best translated:', options: ['The things concerning judged matters', 'The judgments about things — a prepositional phrase in attributive position', 'Judgments and things together', 'The practical judgments'], correct: 1 },
+      { question: 'ἐπεὶ καὶ Σωκράτει ἂν ἐφαίνετο functions as:', options: ['A vivid future warning', 'A contrary-to-fact argument: if death were terrible, it would have appeared so to Socrates — it did not', 'A wish for Socrates’ return', 'Indirect statement after φημί'], correct: 1 },
+      { question: 'The word δόγμα is grammatically related to which verb?', options: ['δίδωμι (give)', 'δοκέω (seem, think) — a δόγμα is a seeming assented to', 'διώκω (pursue)', 'δουλεύω (be a slave)'], correct: 1 },
+      { question: 'μέμνησο (Ench. 2’s “Remember!”) is which form?', options: ['Aorist infinitive', 'Perfect middle imperative — hold in completed memory', 'Future indicative', 'Present optative'], correct: 1 },
+      { question: 'Which construction requires ἄν? (Select the necessary pairing.)', options: ['Purpose clause with ἵνα', 'Potential optative and contrary-to-fact apodoses', 'Indirect statement with ὅτι', 'The genitive absolute'], correct: 1 },
+      { question: 'οἶδα σε προκόπτοντα uses which indirect-statement construction?', options: ['ὅτι + finite verb', 'Accusative + infinitive', 'Accusative + participle — after a verb of knowing', 'The optative of secondary sequence'], correct: 2 },
+      { question: 'ὅσα ἡμέτερα ἔργα closes each half of Ench. 1 with:', options: ['A closed list of four items', 'An open, criterion-governed class — “as many things as are our own doings”', 'A rhetorical question', 'A genitive absolute'], correct: 1 },
+      { question: 'After GREK 101, the recommended next reading is:', options: ['Homer’s Iliad', 'The remaining chapters of the Encheiridion, then Discourses I.1–I.2, then Meditations Book II', 'Plato’s complete works', 'The Septuagint'], correct: 1 },
+      { question: 'The final sentence of the course’s farewell — ὧν οὐδείς σε ἀφαιρήσεται — means:', options: ['Which no one will take from you', 'Which everyone will admire', 'Which you must never forget', 'Which the gods have given'], correct: 0 },
+    ],
+    vocabulary: [
+      { greek: 'πρᾶγμα, -ατος, τό', transliteration: 'pragma', english: 'thing, matter, affair' },
+      { greek: 'δόγμα, -ατος, τό', transliteration: 'dogma', english: 'judgment, opinion' },
+      { greek: 'δεινός, -ή, -όν', transliteration: 'deinos', english: 'terrible, fearsome; clever' },
+      { greek: 'θάνατος, -ου, ὁ', transliteration: 'thanatos', english: 'death' },
+      { greek: 'φαίνομαι', transliteration: 'phainomai', english: 'to appear, to seem (+ dat. of person)' },
+      { greek: 'ἐπεί', transliteration: 'epei', english: 'since, because' },
+      { greek: 'ἀφαιρέω', transliteration: 'aphaireō', english: 'to take away from' },
+    ],
+  },
 ];
