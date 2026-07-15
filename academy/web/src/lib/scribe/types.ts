@@ -88,6 +88,13 @@ export interface ScribeDraftVerification {
   results: ScribeCitationVerification[]
 }
 
+export interface ScribeDraftMeta {
+  subject_lines?: string[]
+  preview_text?: string
+  pull_quotes?: string[]
+  posts?: { platform: 'x' | 'linkedin' | 'bluesky'; text: string }[]
+}
+
 export interface ScribeDraft {
   id: string
   project_id: string
@@ -96,6 +103,7 @@ export interface ScribeDraft {
   content: string
   citations: ScribeCitation[]
   verification: ScribeDraftVerification | null
+  meta: ScribeDraftMeta | null
   model_notes: string | null
   token_usage: Record<string, { input: number; output: number; model: string }> | null
   created_at: string

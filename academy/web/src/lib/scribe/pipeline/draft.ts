@@ -18,6 +18,7 @@ import type {
 
 const CITATIONS_SENTINEL = '===CITATIONS==='
 const META_SENTINEL = '===META==='
+const POSTS_SENTINEL = '===POSTS==='
 
 const BASE_SYSTEM = `You are Scribe, the writing agent of Arete — you turn the author's rough notes into publication-ready drafts grounded in real sources.
 
@@ -39,7 +40,9 @@ OUTPUT PROTOCOL — follow exactly:
       "quote": true|false,  — true when the draft quotes this chunk verbatim
       "quote_text": "<when quote is true: the COMPLETE quoted text exactly as it appears in the draft, without the surrounding quotation marks; omit otherwise>" }]
 4. If a META block is requested: a line containing only ${META_SENTINEL} followed by
-   { "subject_lines": [3 options], "preview_text": "<one sentence>" }`
+   { "subject_lines": [up to 3 options], "preview_text": "<one sentence>", "pull_quotes": [verbatim sentences from your draft, when requested] }
+5. If a POSTS block is requested: a line containing only ${POSTS_SENTINEL} followed by
+   [{ "platform": "x" | "linkedin" | "bluesky", "text": "<the exact post text>" }] — X thread as one entry per post, in order.`
 
 function bundleBlock(bundles: ClaimBundle[]): string {
   const parts: string[] = []
@@ -60,81 +63,21 @@ function bundleBlock(bundles: ClaimBundle[]): string {
   return parts.join('\n\n────────\n\n')
 }
 
-export interface DraftResult {
-  content: string
-  citations: ScribeCitation[]
-  droppedHandles: string[]
-  meta: { subject_lines?: string[]; preview_text?: string } | null
-  usage: StageUsage
+export interface RawCitation {
+  marker: string
+  handle: string
+  locator: string | null
+  quote: boolean
+  quote_text?: string
 }
 
-export async function draft(
-  format: ScribeFormat,
-  brief: ScribeBrief,
-  notes: ScribeNote[],
-  bundles: ClaimBundle[],
-  style: ScribeStyleProfile | null
-): Promise<DraftResult> {
-  const profile = getProfile(format)
-
-  let system = `${BASE_SYSTEM}\n\n${profile.systemFragment}`
-  if (style) {
-    const exemplars = (style.exemplar_refs ?? [])
-      .map((e, i) => `--- exemplar ${i + 1}: ${e.title} ---\n${e.text}`)
-      .join('\n\n')
-    if (exemplars) {
-      system += `\n\nSTYLE EXEMPLARS — learn the author's voice from these (rhythm, diction, paragraph length, how they open and close). Do not copy their content:\n\n${exemplars}`
-    }
-    if (style.guidance) system += `\n\nSTYLE GUIDANCE: ${style.guidance}`
-  }
-
-  const notesBlock = notes.map((n, i) => `--- note ${i + 1} ---\n${n.content}`).join('\n\n')
-
-  const user = `THE BRIEF (author-approved):
-Thesis: ${brief.thesis}
-Audience: ${brief.audience}
-Key claims:
-${brief.key_claims.map((c, i) => `${i + 1}. ${c}`).join('\n')}
-Known gaps (write these in the author's voice, no citations): ${brief.gaps.join('; ') || 'none'}
-
-THE AUTHOR'S NOTES (verbatim — reuse strong phrasing):
-${notesBlock}
-
-RETRIEVAL BUNDLES (the ONLY citable material):
-${bundleBlock(bundles)}
-
-${profile.wantsMeta ? 'Include the META block.' : 'Do not include a META block.'}
-
-Write the draft now.`
-
-  const { text, usage } = await runStage('draft', system, user)
-
-  // Split the protocol sections.
-  const citIdx = text.indexOf(CITATIONS_SENTINEL)
-  const metaIdx = text.indexOf(META_SENTINEL)
-  const content = (citIdx === -1 ? text : text.slice(0, citIdx)).trim()
-
-  let rawCitations: { marker: string; handle: string; locator: string | null; quote: boolean; quote_text?: string }[] = []
-  if (citIdx !== -1) {
-    const citText = text.slice(citIdx + CITATIONS_SENTINEL.length, metaIdx === -1 ? undefined : metaIdx)
-    try {
-      rawCitations = extractJson(citText)
-    } catch {
-      rawCitations = []
-    }
-  }
-
-  let meta: DraftResult['meta'] = null
-  if (metaIdx !== -1) {
-    try {
-      meta = extractJson(text.slice(metaIdx + META_SENTINEL.length))
-    } catch {
-      meta = null
-    }
-  }
-
-  // Resolve handles → real chunk ids. Unknown handles are dropped and
-  // reported — the invariant "no citation without a chunk" is enforced here.
+// Resolve model-cited handles to real chunk ids. Exported for the mocked
+// pipeline test: a planted fake handle must come back in droppedHandles,
+// never in citations.
+export function resolveCitations(
+  rawCitations: RawCitation[],
+  bundles: ClaimBundle[]
+): { citations: ScribeCitation[]; droppedHandles: string[] } {
   const handleMap = new Map<string, BundleChunk>()
   for (const b of bundles) for (const c of b.chunks) handleMap.set(c.handle, c)
 
@@ -155,6 +98,122 @@ Write the draft now.`
       ...(rc.quote_text ? { quote_text: rc.quote_text } : {}),
     })
   }
+  return { citations, droppedHandles }
+}
+
+export interface SocialPost {
+  platform: 'x' | 'linkedin' | 'bluesky'
+  text: string
+}
+
+export interface DraftMeta {
+  subject_lines?: string[]
+  preview_text?: string
+  pull_quotes?: string[]
+  posts?: SocialPost[]
+}
+
+export interface DraftResult {
+  content: string
+  citations: ScribeCitation[]
+  droppedHandles: string[]
+  meta: DraftMeta | null
+  usage: StageUsage
+}
+
+export interface PriorDraft {
+  content: string
+  feedback: string
+}
+
+export async function draft(
+  format: ScribeFormat,
+  brief: ScribeBrief,
+  notes: ScribeNote[],
+  bundles: ClaimBundle[],
+  style: ScribeStyleProfile | null,
+  prior?: PriorDraft
+): Promise<DraftResult> {
+  const profile = getProfile(format)
+
+  let system = `${BASE_SYSTEM}\n\n${profile.systemFragment}`
+  if (style) {
+    const exemplars = (style.exemplar_refs ?? [])
+      .map((e, i) => `--- exemplar ${i + 1}: ${e.title} ---\n${e.text}`)
+      .join('\n\n')
+    if (exemplars) {
+      system += `\n\nSTYLE EXEMPLARS — learn the author's voice from these (rhythm, diction, paragraph length, how they open and close). Do not copy their content:\n\n${exemplars}`
+    }
+    if (style.guidance) system += `\n\nSTYLE GUIDANCE: ${style.guidance}`
+  }
+
+  const notesBlock = notes.map((n, i) => `--- note ${i + 1} ---\n${n.content}`).join('\n\n')
+
+  const priorBlock = prior
+    ? `\n\nPRIOR DRAFT — the author reviewed this version and wants changes. Revise rather than restart: keep what works, apply the feedback throughout, and keep every citation rule in force.\n\nAUTHOR FEEDBACK: ${prior.feedback}\n\n--- prior draft ---\n${prior.content}\n--- end prior draft ---`
+    : ''
+
+  const user = `THE BRIEF (author-approved):
+Thesis: ${brief.thesis}
+Audience: ${brief.audience}
+Key claims:
+${brief.key_claims.map((c, i) => `${i + 1}. ${c}`).join('\n')}
+Known gaps (write these in the author's voice, no citations): ${brief.gaps.join('; ') || 'none'}
+
+THE AUTHOR'S NOTES (verbatim — reuse strong phrasing):
+${notesBlock}
+
+RETRIEVAL BUNDLES (the ONLY citable material):
+${bundleBlock(bundles)}${priorBlock}
+
+${profile.wantsMeta ? 'Include the META block.' : 'Do not include a META block.'}
+${profile.wantsPosts ? 'Include the POSTS block.' : 'Do not include a POSTS block.'}
+
+Write the draft now.`
+
+  const { text, usage } = await runStage('draft', system, user)
+
+  // Split the protocol sections (sentinels may appear in any order after the draft).
+  const citIdx = text.indexOf(CITATIONS_SENTINEL)
+  const metaIdx = text.indexOf(META_SENTINEL)
+  const postsIdx = text.indexOf(POSTS_SENTINEL)
+  const tailIdxs = [citIdx, metaIdx, postsIdx].filter(i => i !== -1)
+  const contentEnd = tailIdxs.length ? Math.min(...tailIdxs) : text.length
+  const content = text.slice(0, contentEnd).trim()
+
+  const sectionEnd = (start: number) => {
+    const others = tailIdxs.filter(i => i > start)
+    return others.length ? Math.min(...others) : text.length
+  }
+
+  let rawCitations: RawCitation[] = []
+  if (citIdx !== -1) {
+    try {
+      rawCitations = extractJson(text.slice(citIdx + CITATIONS_SENTINEL.length, sectionEnd(citIdx)))
+    } catch {
+      rawCitations = []
+    }
+  }
+
+  let meta: DraftMeta | null = null
+  if (metaIdx !== -1) {
+    try {
+      meta = extractJson(text.slice(metaIdx + META_SENTINEL.length, sectionEnd(metaIdx)))
+    } catch {
+      meta = null
+    }
+  }
+
+  if (postsIdx !== -1) {
+    try {
+      const posts = extractJson<SocialPost[]>(text.slice(postsIdx + POSTS_SENTINEL.length, sectionEnd(postsIdx)))
+      meta = { ...(meta ?? {}), posts }
+    } catch {
+      // posts stay absent; the markdown body still shows the variants
+    }
+  }
+
+  const { citations, droppedHandles } = resolveCitations(rawCitations, bundles)
 
   return { content, citations, droppedHandles, meta, usage }
 }

@@ -3,7 +3,9 @@ import { requireAdmin } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { distill } from '@/lib/scribe/pipeline/distill'
 import { retrieveForClaims } from '@/lib/scribe/pipeline/retrieve'
-import { draft } from '@/lib/scribe/pipeline/draft'
+import { draft, type PriorDraft } from '@/lib/scribe/pipeline/draft'
+import { buildReferences } from '@/lib/scribe/references'
+import { getProfile } from '@/lib/scribe/formats'
 import type { ScribeBrief, ScribeStyleProfile } from '@/lib/scribe/types'
 import type { StageUsage } from '@/lib/scribe/anthropic'
 
@@ -14,10 +16,14 @@ export const maxDuration = 300
 
 type Ctx = { params: Promise<{ id: string }> }
 
-// POST /api/admin/scribe/projects/[id]/draft — Stages B + C.
-// Body (all optional): { brief } — the user-edited brief to use (also saved);
-// without one, the project's saved brief is used, or Stage A runs first
-// (the "just write it" path).
+// POST /api/admin/scribe/projects/[id]/draft — Stages B + C (+ E packaging).
+// Body (all optional):
+//   { brief }    — the user-edited brief to use (also saved); without one, the
+//                  project's saved brief is used, or Stage A runs first
+//                  (the "just write it" path).
+//   { feedback } — regeneration: the latest draft is fed back to Stage C with
+//                  this feedback and revised rather than restarted.
+//   { referenceStyle } — 'apa' (default) | 'chicago' for generated reference lists.
 export async function POST(req: NextRequest, ctx: Ctx) {
   const denied = await requireAdmin()
   if (denied) return denied
@@ -63,7 +69,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // Stage B — retrieval bundles for each key claim.
     const bundles = await retrieveForClaims(brief.key_claims)
 
-    // Style profile: one default for now (step 6 adds management UI).
+    // Style profile: most recently updated one wins.
     const { data: styleRow } = await admin
       .from('scribe_style_profiles')
       .select('*')
@@ -72,24 +78,39 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       .maybeSingle()
     const style = (styleRow as ScribeStyleProfile | null) ?? null
 
-    // Stage C — the draft.
-    const result = await draft(project.format, brief, notes, bundles, style)
-    usage.draft = result.usage
-
+    // Regeneration: feed the latest draft + feedback back into Stage C.
+    let prior: PriorDraft | undefined
     const { data: last } = await admin
       .from('scribe_drafts')
-      .select('version')
+      .select('version, content')
       .eq('project_id', id)
       .order('version', { ascending: false })
       .limit(1)
       .maybeSingle()
+    if (body.feedback?.trim() && last?.content) {
+      prior = { content: last.content, feedback: body.feedback.trim() }
+    }
+
+    // Stage C — the draft.
+    const result = await draft(project.format, brief, notes, bundles, style, prior)
+    usage.draft = result.usage
+
+    // Stage E — deterministic reference list for the formats that carry one.
+    let content = result.content
+    if (getProfile(project.format).appendReferences && result.citations.length > 0) {
+      content += await buildReferences(
+        result.citations,
+        body.referenceStyle === 'chicago' ? 'chicago' : 'apa'
+      )
+    }
+
     const version = (last?.version ?? 0) + 1
 
     const unsupported = bundles.filter(b => !b.supported).map(b => b.claim)
     const modelNotes = [
-      result.meta ? `META: ${JSON.stringify(result.meta)}` : null,
       unsupported.length ? `UNSUPPORTED CLAIMS (author's voice, uncited): ${unsupported.join(' | ')}` : null,
       result.droppedHandles.length ? `DROPPED UNKNOWN HANDLES: ${result.droppedHandles.join(', ')}` : null,
+      prior ? `REGENERATED from v${last?.version} with feedback: ${prior.feedback}` : null,
     ]
       .filter(Boolean)
       .join('\n')
@@ -100,8 +121,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         project_id: id,
         version,
         format: project.format,
-        content: result.content,
+        content,
         citations: result.citations,
+        meta: result.meta,
         model_notes: modelNotes || null,
         token_usage: usage,
       })

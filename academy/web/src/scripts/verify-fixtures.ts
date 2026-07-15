@@ -2,6 +2,9 @@
 // Run: npx tsx src/scripts/verify-fixtures.ts   (exits 1 on any failure)
 
 import { normalizeQuote, quoteMatchesChunk, checkLocator } from '../lib/scribe/pipeline/verify'
+import { resolveCitations } from '../lib/scribe/pipeline/draft'
+import { _test as refs } from '../lib/scribe/references'
+import type { ClaimBundle } from '../lib/scribe/pipeline/retrieve'
 import type { ScribeCitation } from '../lib/scribe/types'
 
 let failures = 0
@@ -70,6 +73,67 @@ expect('paper locator without page_hint → unverified', checkLocator(paperCitat
 
 // normalizeQuote sanity
 expect('normalizeQuote straightens curly quotes', normalizeQuote('“up to us”'), '"up to us"')
+
+// ── Citation resolution: a fabricated handle cannot survive ──────
+const bundles: ClaimBundle[] = [
+  {
+    claim: 'test claim',
+    supported: true,
+    chunks: [
+      { handle: 'R1', chunk_table: 'rag_corpus', chunk_id: 'real-uuid-1', content: 'x', similarity: 0.5 },
+      { handle: 'S1', chunk_table: 'scribe_source_chunks', chunk_id: 'real-uuid-2', content: 'y', similarity: 0.5 },
+    ],
+  },
+]
+const resolved = resolveCitations(
+  [
+    { marker: 'good rag cite', handle: 'R1', locator: null, quote: false },
+    { marker: 'good paper cite', handle: 'S1', locator: 'p. 3', quote: false },
+    { marker: 'PLANTED FAKE', handle: 'R99', locator: 'Meditations 1.1', quote: true, quote_text: 'invented' },
+  ],
+  bundles
+)
+expect('valid handles resolve', resolved.citations.length, 2)
+expect('resolved citation carries real chunk id', resolved.citations[0].chunk_id, 'real-uuid-1')
+expect('planted fake handle is dropped', resolved.droppedHandles.length, 1)
+expect('dropped handle is the fake one', resolved.droppedHandles[0], 'R99')
+expect('fake citation absent from citations', resolved.citations.some(c => c.marker === 'PLANTED FAKE'), false)
+
+// ── Reference formatting ─────────────────────────────────────────
+expect(
+  'APA modern reference',
+  refs.formatModern(
+    { authors: [{ family: 'Hadot', given: 'Pierre' }], year: '1995', title: 'Philosophy as a Way of Life', venue: 'Blackwell', doi: null, url: null },
+    'apa'
+  ),
+  'Hadot, P. (1995). Philosophy as a Way of Life. *Blackwell*.'
+)
+expect(
+  'Chicago modern reference',
+  refs.formatModern(
+    { authors: [{ family: 'Hadot', given: 'Pierre' }], year: '1995', title: 'Philosophy as a Way of Life', venue: 'Blackwell', doi: null, url: null },
+    'chicago'
+  ),
+  'Hadot, Pierre. 1995. "Philosophy as a Way of Life." *Blackwell*.'
+)
+expect(
+  'APA falls back to plain author string (paper_summary rows)',
+  refs.formatModern(
+    { authors: [], authorFallback: 'David Forman', year: '2008', title: 'Free Will and The Freedom of the Sage', venue: 'History of Philosophy Quarterly', doi: null, url: null },
+    'apa'
+  ),
+  'David Forman (2008). Free Will and The Freedom of the Sage. *History of Philosophy Quarterly*.'
+)
+expect(
+  'Classical reference credits the translation',
+  refs.formatClassical({ author: 'Marcus Aurelius', work: 'Meditations', translator: 'George Long' }),
+  'Marcus Aurelius. *Meditations*. Translated by George Long.'
+)
+expect(
+  'Classical reference without translator',
+  refs.formatClassical({ author: 'Epictetus', work: 'Discourses', translator: null }),
+  'Epictetus. *Discourses*.'
+)
 
 console.log(failures === 0 ? '\nAll fixtures pass.' : `\n${failures} FAILURES`)
 process.exit(failures === 0 ? 0 : 1)

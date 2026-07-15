@@ -56,6 +56,11 @@ export default function ScribeProjectPage() {
   const [openChunk, setOpenChunk] = useState<number | null>(null)
   const [chunkCache, setChunkCache] = useState<Record<string, { content: string; source: string }>>({})
 
+  // Regeneration + scheduler handoff
+  const [feedback, setFeedback] = useState('')
+  const [scheduleAt, setScheduleAt] = useState('')
+  const [queueing, setQueueing] = useState(false)
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(''), 5000)
@@ -167,26 +172,66 @@ export default function ScribeProjectPage() {
     setDistilling(false)
   }
 
-  async function runDraft() {
+  async function runDraft(withFeedback = false) {
     setDrafting(true)
     try {
       const editedBrief = brief
         ? { ...brief, key_claims: claimsText.split('\n').map(s => s.trim()).filter(Boolean) }
         : undefined
+      const payload: Record<string, unknown> = {}
+      if (editedBrief) payload.brief = editedBrief
+      if (withFeedback && feedback.trim()) payload.feedback = feedback.trim()
       const res = await fetch(`/api/admin/scribe/projects/${projectId}/draft`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editedBrief ? { brief: editedBrief } : {}),
+        body: JSON.stringify(payload),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Draft failed')
       setViewDraft(json.draft)
+      if (withFeedback) setFeedback('')
       showToast(`Draft v${json.draft.version} generated — ${json.draft.citations.length} citations`)
       await load()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Draft failed')
     }
     setDrafting(false)
+  }
+
+  function downloadDraft() {
+    if (!viewDraft || !project) return
+    const blob = new Blob([viewDraft.content], { type: 'text/markdown' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `${project.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-v${viewDraft.version}.md`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  async function sendToScheduler() {
+    if (!viewDraft || !scheduleAt) { showToast('Pick a schedule time first'); return }
+    setQueueing(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/drafts/${viewDraft.id}/to-scheduler`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scheduled_at: new Date(scheduleAt).toISOString() }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Handoff failed')
+      showToast(`${json.queued} post(s) queued for ${new Date(json.scheduled_at).toLocaleString()}${json.errors?.length ? ` — ${json.errors.length} failed` : ''}`)
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Handoff failed')
+    }
+    setQueueing(false)
+  }
+
+  function draftCost(d: ScribeDraft): string | null {
+    if (!d.token_usage) return null
+    const parts = Object.entries(d.token_usage).map(
+      ([stage, u]) => `${stage} ${u.input.toLocaleString()}→${u.output.toLocaleString()}`
+    )
+    return parts.length ? `tokens: ${parts.join(' · ')}` : null
   }
 
   async function openDraft(draftId: string) {
@@ -296,7 +341,7 @@ export default function ScribeProjectPage() {
           </button>
           <button
             className={styles.primaryBtn}
-            onClick={runDraft}
+            onClick={() => runDraft(false)}
             disabled={drafting || distilling || notes.length === 0}
             title={brief ? 'Draft from the brief below' : 'Just write it — distills silently, then drafts'}
           >
@@ -356,6 +401,7 @@ export default function ScribeProjectPage() {
             </h2>
             <span>
               <button className={styles.ghostBtn} onClick={copyDraft}>Copy markdown</button>{' '}
+              <button className={styles.ghostBtn} onClick={downloadDraft}>Download .md</button>{' '}
               <button className={styles.ghostBtn} onClick={runVerify} disabled={verifying}>
                 {verifying ? 'Verifying…' : 'Verify citations'}
               </button>{' '}
@@ -372,9 +418,60 @@ export default function ScribeProjectPage() {
           {viewDraft.model_notes && (
             <p className={styles.muted} style={{ whiteSpace: 'pre-wrap' }}>{viewDraft.model_notes}</p>
           )}
+          {draftCost(viewDraft) && <p className={styles.muted}>{draftCost(viewDraft)}</p>}
+
+          {viewDraft.meta?.subject_lines && viewDraft.meta.subject_lines.length > 0 && (
+            <p className={styles.muted}>
+              <strong>{viewDraft.format === 'article' ? 'Titles' : 'Subject lines'}:</strong>{' '}
+              {viewDraft.meta.subject_lines.join(' · ')}
+              {viewDraft.meta.preview_text && <> — <em>{viewDraft.meta.preview_text}</em></>}
+            </p>
+          )}
+          {viewDraft.meta?.pull_quotes && viewDraft.meta.pull_quotes.length > 0 && (
+            <p className={styles.muted}>
+              <strong>Pull quotes:</strong> {viewDraft.meta.pull_quotes.map(q => `“${q}”`).join(' · ')}
+            </p>
+          )}
+
           <div className={styles.summaryArea} style={{ whiteSpace: 'pre-wrap' }}>
             {viewDraft.content}
           </div>
+
+          {/* Regenerate with feedback — back to Stage C with the prior draft */}
+          <div className={styles.fieldRow}>
+            <input
+              className={styles.textInput}
+              placeholder="Feedback for regeneration — e.g. “shorter, punchier, drop section 3”"
+              value={feedback}
+              onChange={e => setFeedback(e.target.value)}
+            />
+            <button
+              className={styles.ghostBtn}
+              onClick={() => runDraft(true)}
+              disabled={drafting || !feedback.trim()}
+            >
+              {drafting ? 'Regenerating…' : 'Regenerate'}
+            </button>
+          </div>
+
+          {/* Scheduler handoff — social drafts only, always user-scheduled */}
+          {viewDraft.format === 'social' && (viewDraft.meta?.posts?.length ?? 0) > 0 && (
+            <div className={styles.fieldRow}>
+              <span className={styles.fieldLabel}>
+                Send {viewDraft.meta!.posts!.length} post(s) to the scheduler at
+              </span>
+              <input
+                type="datetime-local"
+                className={styles.textInput}
+                value={scheduleAt}
+                onChange={e => setScheduleAt(e.target.value)}
+                style={{ maxWidth: 220 }}
+              />
+              <button className={styles.primaryBtn} onClick={sendToScheduler} disabled={queueing || !scheduleAt}>
+                {queueing ? 'Queueing…' : 'Send to scheduler'}
+              </button>
+            </div>
+          )}
           <div className={styles.sectionLabel}>
             Citations ({viewDraft.citations.length})
             {viewDraft.verification && ` — checked ${new Date(viewDraft.verification.checked_at).toLocaleString()}`}

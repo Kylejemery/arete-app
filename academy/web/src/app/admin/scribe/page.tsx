@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import styles from '../admin.module.css'
-import type { ScribeProject, ScribeSource, ScribeFormat } from '@/lib/scribe/types'
+import type { ScribeProject, ScribeSource, ScribeFormat, ScribeStyleProfile } from '@/lib/scribe/types'
 
 type UnlinkedPaper = {
   id: string
@@ -47,6 +47,13 @@ export default function ScribePage() {
   const [pFormat, setPFormat] = useState<ScribeFormat>('substack')
   const [creating, setCreating] = useState(false)
 
+  // Style profiles (the voice)
+  const [styles_, setStyles_] = useState<ScribeStyleProfile[]>([])
+  const [exTitle, setExTitle] = useState('')
+  const [exText, setExText] = useState('')
+  const [guidance, setGuidance] = useState('')
+  const [savingStyle, setSavingStyle] = useState(false)
+
   function showToast(msg: string) {
     setToast(msg)
     setTimeout(() => setToast(''), 4000)
@@ -56,17 +63,22 @@ export default function ScribePage() {
     setLoading(true)
     setError('')
     try {
-      const [pRes, sRes] = await Promise.all([
+      const [pRes, sRes, stRes] = await Promise.all([
         fetch('/api/admin/scribe/projects', { cache: 'no-store' }),
         fetch('/api/admin/scribe/sources', { cache: 'no-store' }),
+        fetch('/api/admin/scribe/styles', { cache: 'no-store' }),
       ])
       const pJson = await pRes.json()
       const sJson = await sRes.json()
+      const stJson = await stRes.json()
       if (!pRes.ok) throw new Error(pJson.error || 'Failed to load projects')
       if (!sRes.ok) throw new Error(sJson.error || 'Failed to load sources')
       setProjects(pJson.projects || [])
       setSources(sJson.sources || [])
       setUnlinkedPapers(sJson.unlinkedPapers || [])
+      const sts: ScribeStyleProfile[] = stJson.styles || []
+      setStyles_(sts)
+      if (sts[0]) setGuidance(sts[0].guidance ?? '')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     }
@@ -111,6 +123,79 @@ export default function ScribePage() {
       showToast(e instanceof Error ? e.message : 'Import failed')
     }
     setBusy(null)
+  }
+
+  // The active profile is the most recently updated one (what drafting uses).
+  const activeStyle = styles_[0] ?? null
+
+  async function addExemplar() {
+    if (!exTitle.trim() || !exText.trim()) { showToast('Exemplar needs a title and the post text'); return }
+    setSavingStyle(true)
+    try {
+      if (!activeStyle) {
+        const res = await fetch('/api/admin/scribe/styles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: 'default',
+            guidance: guidance || null,
+            exemplar_refs: [{ title: exTitle.trim(), text: exText.trim() }],
+          }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error || 'Create failed')
+      } else {
+        const refs = [...(activeStyle.exemplar_refs ?? []), { title: exTitle.trim(), text: exText.trim() }]
+        const res = await fetch(`/api/admin/scribe/styles/${activeStyle.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ exemplar_refs: refs }),
+        })
+        if (!res.ok) throw new Error((await res.json()).error || 'Save failed')
+      }
+      setExTitle('')
+      setExText('')
+      showToast('Exemplar saved — drafts now learn from it')
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed')
+    }
+    setSavingStyle(false)
+  }
+
+  async function removeExemplar(index: number) {
+    if (!activeStyle) return
+    setSavingStyle(true)
+    try {
+      const refs = (activeStyle.exemplar_refs ?? []).filter((_, i) => i !== index)
+      const res = await fetch(`/api/admin/scribe/styles/${activeStyle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ exemplar_refs: refs }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Remove failed')
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Remove failed')
+    }
+    setSavingStyle(false)
+  }
+
+  async function saveGuidance() {
+    if (!activeStyle) { showToast('Add an exemplar first — that creates the profile'); return }
+    setSavingStyle(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/styles/${activeStyle.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ guidance: guidance || null }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed')
+      showToast('Guidance saved')
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed')
+    }
+    setSavingStyle(false)
   }
 
   async function makeQuotable(sourceId: string) {
@@ -242,6 +327,60 @@ export default function ScribePage() {
             ))}
           </>
         )}
+      </div>
+
+      {/* ── Voice (style profile) ────────────────────────────────── */}
+      <div className={styles.card}>
+        <div className={styles.cardTitleRow}>
+          <h2 className={styles.cardTitle}>Voice</h2>
+        </div>
+        <p className={styles.muted}>
+          Paste 3–6 of your past Substack posts. Drafts learn rhythm, diction, and structure from
+          these exemplars — voice comes from your writing, not from adjectives in a prompt.
+        </p>
+
+        {(activeStyle?.exemplar_refs ?? []).map((e, i) => (
+          <div key={i} className={styles.rowItem}>
+            <strong>{e.title}</strong>
+            <span className={styles.muted}> · {e.text.split(/\s+/).length.toLocaleString()} words</span>{' '}
+            <button className={styles.iconBtn} onClick={() => removeExemplar(i)} disabled={savingStyle} title="Remove exemplar">✕</button>
+          </div>
+        ))}
+
+        <div className={styles.field}>
+          <input
+            className={styles.textInput}
+            placeholder="Exemplar title (e.g. the post's headline)…"
+            value={exTitle}
+            onChange={e => setExTitle(e.target.value)}
+          />
+        </div>
+        <textarea
+          className={styles.bigTextarea}
+          placeholder="Paste the full post text…"
+          rows={5}
+          value={exText}
+          onChange={e => setExText(e.target.value)}
+        />
+        <div className={styles.actions}>
+          <button className={styles.primaryBtn} onClick={addExemplar} disabled={savingStyle || !exTitle.trim() || !exText.trim()}>
+            {savingStyle ? 'Saving…' : 'Add exemplar'}
+          </button>
+        </div>
+
+        <div className={styles.field}>
+          <span className={styles.fieldLabel}>Standing guidance (optional — sharpen, don’t replace, the exemplars)</span>
+          <textarea
+            className={styles.bigTextarea}
+            rows={2}
+            placeholder="e.g. Never use the word ‘journey’. Prefer short paragraphs."
+            value={guidance}
+            onChange={e => setGuidance(e.target.value)}
+          />
+          <div className={styles.actions}>
+            <button className={styles.ghostBtn} onClick={saveGuidance} disabled={savingStyle}>Save guidance</button>
+          </div>
+        </div>
       </div>
     </div>
   )
