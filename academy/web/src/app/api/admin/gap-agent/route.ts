@@ -35,7 +35,7 @@ export async function GET() {
       if (concepts.length > 0) {
         const { data: passages } = await admin
           .from('concept_passage_map')
-          .select('id, concept, chunk_id, author, work, chunk_text, similarity_score, approved')
+          .select('id, concept, chunk_id, author, work, chunk_text, similarity_score, approved, triage_verdict, triage_note')
           .in('concept', concepts)
           .order('similarity_score', { ascending: false })
 

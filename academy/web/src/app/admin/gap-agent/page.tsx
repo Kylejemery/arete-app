@@ -55,6 +55,19 @@ type Passage = {
   chunk_text: string
   similarity_score: number | null
   approved: boolean | null
+  triage_verdict: 'strong' | 'partial' | 'off_topic' | null
+  triage_note: string | null
+}
+
+// Advisory sort: argued-strong first, then partial, then untriaged, with
+// off-topic sinking to the bottom; similarity breaks ties within a band.
+const VERDICT_RANK: Record<string, number> = { strong: 0, partial: 1, off_topic: 3 }
+const VERDICT_LABEL: Record<string, string> = { strong: 'strong', partial: 'partial', off_topic: 'off-topic' }
+function sortPassages(list: Passage[]): Passage[] {
+  return [...list].sort((a, b) =>
+    (VERDICT_RANK[a.triage_verdict ?? ''] ?? 2) - (VERDICT_RANK[b.triage_verdict ?? ''] ?? 2) ||
+    (b.similarity_score || 0) - (a.similarity_score || 0)
+  )
 }
 
 type SigRow = {
@@ -79,6 +92,8 @@ export default function GapAgentPage() {
   const [passagesByConcept, setPassagesByConcept] = useState<Record<string, Passage[]>>({})
   const [sigRows, setSigRows] = useState<SigRow[]>([])
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [triaging, setTriaging] = useState<Set<string>>(new Set())
+  const [fullText, setFullText] = useState<Set<string>>(new Set())
   const [queuing, setQueuing] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -311,9 +326,43 @@ export default function GapAgentPage() {
   }
 
   function toggleExpand(theme: string) {
+    const opening = !expanded.has(theme)
     setExpanded(prev => {
       const next = new Set(prev)
       if (next.has(theme)) next.delete(theme); else next.add(theme)
+      return next
+    })
+    // Opening a theme with unreviewed, untriaged candidates fires the
+    // advisory triage pass — verdicts and bridge lines land in a few seconds.
+    if (opening && (passagesByConcept[theme] || []).some(p => p.approved === null && !p.triage_verdict)) {
+      triageTheme(theme)
+    }
+  }
+
+  async function triageTheme(theme: string) {
+    setTriaging(prev => new Set(prev).add(theme))
+    try {
+      const res = await fetch('/api/admin/gap-agent/triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ theme }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Triage failed')
+      // Refresh passages quietly — no full-page loading flash.
+      const r = await fetch('/api/admin/gap-agent', { cache: 'no-store' })
+      const j = await r.json()
+      if (r.ok) setPassagesByConcept(j.passagesByConcept || {})
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Triage failed')
+    }
+    setTriaging(prev => { const next = new Set(prev); next.delete(theme); return next })
+  }
+
+  function togglePassageText(id: string) {
+    setFullText(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
       return next
     })
   }
@@ -585,17 +634,45 @@ export default function GapAgentPage() {
                         ) : (
                           <>
                             <p className={styles.muted} style={{ marginBottom: 8 }}>
-                              Approve passages that genuinely address this theme:
+                              Approve passages that genuinely address this theme.
+                              {triaging.has(d.theme)
+                                ? ' The triage pass is arguing each passage now…'
+                                : ' Verdicts and bridge lines are advisory — the call is yours.'}
                             </p>
-                            {passages.map(p => (
-                              <div key={p.id} className={styles.passageRow}>
+                            {sortPassages(passages).map(p => (
+                              <div key={p.id} className={styles.passageRow} style={p.triage_verdict === 'off_topic' && p.approved === null ? { opacity: 0.55 } : undefined}>
                                 <div className={styles.passageHead}>
                                   <span className={styles.passageSource}>{p.author} — {p.work}</span>
-                                  <span className={styles.muted}>
-                                    {p.similarity_score != null ? p.similarity_score.toFixed(2) : '—'}
+                                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {p.triage_verdict && (
+                                      <span className={`${styles.pill} ${p.triage_verdict === 'strong' ? styles.pillOk : p.triage_verdict === 'partial' ? styles.pillRunning : styles.pillFailed}`}>
+                                        {VERDICT_LABEL[p.triage_verdict]}
+                                      </span>
+                                    )}
+                                    <span className={styles.muted}>
+                                      {p.similarity_score != null ? p.similarity_score.toFixed(2) : '—'}
+                                    </span>
                                   </span>
                                 </div>
-                                <p className={styles.passageText}>{p.chunk_text}</p>
+                                {p.triage_note && (
+                                  <p style={{ margin: '6px 0 4px', fontSize: 13, fontStyle: 'italic', color: '#8a6d1e' }}>
+                                    {p.triage_note}
+                                  </p>
+                                )}
+                                <p className={styles.passageText}>
+                                  {fullText.has(p.id) || p.chunk_text.length <= 280
+                                    ? p.chunk_text
+                                    : `${p.chunk_text.slice(0, 280)}…`}
+                                  {p.chunk_text.length > 280 && (
+                                    <button
+                                      className={styles.ghostBtn}
+                                      style={{ height: 22, padding: '0 8px', fontSize: 11, marginLeft: 8, verticalAlign: 'baseline' }}
+                                      onClick={() => togglePassageText(p.id)}
+                                    >
+                                      {fullText.has(p.id) ? 'less ↑' : 'read full ↓'}
+                                    </button>
+                                  )}
+                                </p>
                                 <div className={styles.passageActions}>
                                   <button
                                     className={`${styles.iconBtn} ${p.approved === true ? styles.iconApproved : ''}`}
