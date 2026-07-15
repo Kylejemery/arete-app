@@ -16,7 +16,9 @@ import type {
 //   4. Paraphrase support for non-quote citations (haiku, one batched call).
 
 // Normalization: quotes must be verbatim up to typography — curly vs straight
-// quotes, dash styles, and whitespace collapse. Case is preserved.
+// quotes, dash styles, markdown emphasis, and whitespace collapse. Case is
+// preserved. (Markdown *emphasis* inside a quote is presentation, not
+// content — the smoke run caught exactly this on a Meditations quote.)
 export function normalizeQuote(s: string): string {
   return s
     .replace(/[‘’‚′]/g, "'")
@@ -24,6 +26,7 @@ export function normalizeQuote(s: string): string {
     .replace(/[–—]/g, '-')
     .replace(/-{2,}/g, '-')
     .replace(/…/g, '...')
+    .replace(/[*_]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -165,7 +168,7 @@ export async function verifyDraft(
           .filter(Boolean)
           .join(' ')
       }
-      if (!content.includes(c.marker.slice(0, 40))) {
+      if (!normalizeQuote(content).includes(normalizeQuote(c.marker).slice(0, 40))) {
         note = [note, 'Marker text not found in the draft.'].filter(Boolean).join(' ')
       }
     }

@@ -37,6 +37,13 @@ expect('fabricated quote fails', quoteMatchesChunk('The obstacle is the way, as 
 // Trivially short segments alone do not count as a match
 expect('too-short quote fails', quoteMatchesChunk('things', CHUNK), false)
 
+// Markdown emphasis inside a quote is presentation, not content (smoke-run regression)
+expect(
+  'markdown-emphasized quote matches',
+  quoteMatchesChunk('It is not *things* that disturb human beings, but their _judgments_ about things.', CHUNK),
+  true
+)
+
 // ── Locator checks ────────────────────────────────────────────────
 const ragCitation = (locator: string | null): ScribeCitation => ({
   marker: 'm', chunk_table: 'rag_corpus', chunk_id: 'x', locator, quote: false,
