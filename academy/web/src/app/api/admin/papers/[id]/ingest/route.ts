@@ -28,7 +28,7 @@ export async function POST(
 
     const { data: paper, error } = await admin
       .from('paper_submissions')
-      .select('id, author, work, year, venue, summary_text, source_url, status')
+      .select('id, author, work, year, venue, summary_text, source_url, status, key_concepts')
       .eq('id', id)
       .maybeSingle()
     if (error) throw new Error(error.message)
@@ -43,7 +43,35 @@ export async function POST(
       return NextResponse.json({ error: 'Paper has no summary to ingest' }, { status: 400 })
     }
 
-    const { chunksCreated, chunkIds } = await ingestPaperSummary(paper)
+    const { chunksCreated, chunkIds, chunks } = await ingestPaperSummary(paper)
+
+    // Approving a paper also plants its key concepts in concept_passage_map —
+    // the curated layer the Observatory sky is built from — so the scholar
+    // becomes a voice on those stars and can form shared-voice connections.
+    // Still human-gated: the concepts are on the review card Kyle just
+    // approved. Anchored to the first chunk; the FK cascades on de-ingest, so
+    // removing the paper removes its stars' claim on these concepts too.
+    // Best-effort: a failure here must not lose the committed ingest.
+    let conceptWarning: string | undefined
+    const labels = (paper.key_concepts || [])
+      .map((k: unknown) => String(k).trim().toLowerCase())
+      .filter((k: string) => k.length > 1)
+      .slice(0, 6)
+    if (labels.length > 0 && chunkIds.length > 0) {
+      const rows = labels.map((concept: string) => ({
+        concept,
+        chunk_id: chunkIds[0],
+        author: paper.author,
+        work: paper.work,
+        chunk_text: chunks[0],
+        approved: true,
+        approved_at: new Date().toISOString(),
+      }))
+      const { error: cpmErr } = await admin
+        .from('concept_passage_map')
+        .upsert(rows, { onConflict: 'concept,chunk_id' })
+      if (cpmErr) conceptWarning = cpmErr.message
+    }
 
     const { error: updErr } = await admin
       .from('paper_submissions')
@@ -57,7 +85,13 @@ export async function POST(
       .eq('id', id)
     if (updErr) throw new Error(updErr.message)
 
-    return NextResponse.json({ success: true, chunksCreated, chunkIds })
+    return NextResponse.json({
+      success: true,
+      chunksCreated,
+      chunkIds,
+      conceptsPlanted: labels,
+      ...(conceptWarning ? { conceptWarning } : {}),
+    })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Paper ingestion failed' },

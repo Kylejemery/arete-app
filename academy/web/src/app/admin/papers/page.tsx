@@ -193,7 +193,8 @@ export default function PapersPage() {
       const res = await fetch(`/api/admin/papers/${p.id}/ingest`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Ingestion failed')
-      showToast(`Ingested — ${json.chunksCreated} chunk${json.chunksCreated === 1 ? '' : 's'} now retrievable`)
+      const planted = (json.conceptsPlanted || []).length
+      showToast(`Ingested — ${json.chunksCreated} chunk${json.chunksCreated === 1 ? '' : 's'} retrievable${planted ? ` · ${planted} concept${planted === 1 ? '' : 's'} planted in the Observatory` : ''}`)
       await load()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Failed to ingest')
@@ -249,7 +250,7 @@ export default function PapersPage() {
         </div>
         {(p.key_concepts || []).length > 0 && (
           <div style={{ marginTop: 12, fontSize: 12.5, color: '#8a6d1e' }}>
-            Works through: {(p.key_concepts || []).join(' · ')}
+            Works through: {(p.key_concepts || []).join(' · ')} — approving plants these in the Observatory sky
           </div>
         )}
       </div>

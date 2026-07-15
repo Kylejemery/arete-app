@@ -27,7 +27,7 @@ export type PaperForIngest = {
 
 export async function ingestPaperSummary(
   paper: PaperForIngest
-): Promise<{ chunksCreated: number; chunkIds: string[] }> {
+): Promise<{ chunksCreated: number; chunkIds: string[]; chunks: string[] }> {
   const admin = createAdminClient()
   const chunks = chunkText(paper.summary_text)
   if (chunks.length === 0) {
@@ -64,5 +64,5 @@ export async function ingestPaperSummary(
     if (data?.id) chunkIds.push(data.id)
   }
 
-  return { chunksCreated: chunks.length, chunkIds }
+  return { chunksCreated: chunks.length, chunkIds, chunks }
 }
