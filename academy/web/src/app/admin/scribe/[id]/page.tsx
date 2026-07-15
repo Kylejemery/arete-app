@@ -4,7 +4,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import styles from '../../admin.module.css'
-import type { ScribeProject, ScribeNote, ScribeFormat } from '@/lib/scribe/types'
+import type {
+  ScribeProject,
+  ScribeNote,
+  ScribeFormat,
+  ScribeBrief,
+  ScribeDraft,
+} from '@/lib/scribe/types'
 
 type DraftMeta = {
   id: string
@@ -36,9 +42,23 @@ export default function ScribeProjectPage() {
   const [adding, setAdding] = useState(false)
   const [busyNote, setBusyNote] = useState<string | null>(null)
 
+  // Brief (Stage A) — held as editable local state.
+  const [brief, setBrief] = useState<ScribeBrief | null>(null)
+  const [claimsText, setClaimsText] = useState('')
+  const [distilling, setDistilling] = useState(false)
+
+  // Draft (Stages B+C)
+  const [drafting, setDrafting] = useState(false)
+  const [viewDraft, setViewDraft] = useState<ScribeDraft | null>(null)
+
+  // Verification (Stage D) + chunk reveal cards
+  const [verifying, setVerifying] = useState(false)
+  const [openChunk, setOpenChunk] = useState<number | null>(null)
+  const [chunkCache, setChunkCache] = useState<Record<string, { content: string; source: string }>>({})
+
   function showToast(msg: string) {
     setToast(msg)
-    setTimeout(() => setToast(''), 4000)
+    setTimeout(() => setToast(''), 5000)
   }
 
   const load = useCallback(async () => {
@@ -51,6 +71,10 @@ export default function ScribeProjectPage() {
       setProject(json.project)
       setNotes(json.notes || [])
       setDrafts(json.drafts || [])
+      if (json.project.brief) {
+        setBrief(json.project.brief)
+        setClaimsText((json.project.brief.key_claims || []).join('\n'))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     }
@@ -59,6 +83,7 @@ export default function ScribeProjectPage() {
 
   useEffect(() => { load() }, [load])
 
+  // ── Notes ──────────────────────────────────────────────────────
   async function addNote() {
     if (!newNote.trim()) return
     setAdding(true)
@@ -82,10 +107,7 @@ export default function ScribeProjectPage() {
     setBusyNote(noteId)
     try {
       const res = await fetch(`/api/admin/scribe/notes/${noteId}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const json = await res.json()
-        throw new Error(json.error || 'Delete failed')
-      }
+      if (!res.ok) throw new Error((await res.json()).error || 'Delete failed')
       setNotes(prev => prev.filter(n => n.id !== noteId))
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Delete failed')
@@ -129,6 +151,102 @@ export default function ScribeProjectPage() {
     })
   }
 
+  // ── Pipeline ───────────────────────────────────────────────────
+  async function runDistill() {
+    setDistilling(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/projects/${projectId}/distill`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Distill failed')
+      setBrief(json.brief)
+      setClaimsText((json.brief.key_claims || []).join('\n'))
+      showToast('Brief ready — edit it, then Draft')
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Distill failed')
+    }
+    setDistilling(false)
+  }
+
+  async function runDraft() {
+    setDrafting(true)
+    try {
+      const editedBrief = brief
+        ? { ...brief, key_claims: claimsText.split('\n').map(s => s.trim()).filter(Boolean) }
+        : undefined
+      const res = await fetch(`/api/admin/scribe/projects/${projectId}/draft`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedBrief ? { brief: editedBrief } : {}),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Draft failed')
+      setViewDraft(json.draft)
+      showToast(`Draft v${json.draft.version} generated — ${json.draft.citations.length} citations`)
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Draft failed')
+    }
+    setDrafting(false)
+  }
+
+  async function openDraft(draftId: string) {
+    try {
+      const res = await fetch(`/api/admin/scribe/drafts/${draftId}`, { cache: 'no-store' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to load draft')
+      setViewDraft(json.draft)
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to load draft')
+    }
+  }
+
+  function copyDraft() {
+    if (!viewDraft) return
+    navigator.clipboard.writeText(viewDraft.content)
+    showToast('Markdown copied — paste into Substack')
+  }
+
+  async function runVerify() {
+    if (!viewDraft) return
+    setVerifying(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/drafts/${viewDraft.id}/verify`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Verification failed')
+      setViewDraft({ ...viewDraft, verification: json.verification })
+      showToast(json.passes ? 'Verification passed — eligible for Ready' : 'Verification found issues — see the panel')
+      await load()
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Verification failed')
+    }
+    setVerifying(false)
+  }
+
+  async function toggleChunk(i: number) {
+    if (openChunk === i) { setOpenChunk(null); return }
+    setOpenChunk(i)
+    const c = viewDraft?.citations[i]
+    if (!c) return
+    const key = `${c.chunk_table}:${c.chunk_id}`
+    if (chunkCache[key]) return
+    try {
+      const res = await fetch(`/api/admin/scribe/chunks?table=${c.chunk_table}&id=${c.chunk_id}`, { cache: 'no-store' })
+      const json = await res.json()
+      if (res.ok) setChunkCache(prev => ({ ...prev, [key]: json.chunk }))
+    } catch { /* card shows loading state */ }
+  }
+
+  async function markReady() {
+    if (!project) return
+    await fetch(`/api/admin/scribe/projects/${projectId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ready' }),
+    })
+    setProject({ ...project, status: 'ready' })
+    showToast('Marked ready')
+  }
+
   if (loading) {
     return <div className={styles.page}><p className={styles.muted}>Loading…</p></div>
   }
@@ -168,15 +286,133 @@ export default function ScribeProjectPage() {
               <option key={v} value={v}>{l}</option>
             ))}
           </select>
-          <button className={styles.primaryBtn} disabled title="Coming next: Stage A — distill the notes into an editable brief">
-            Distill
+          <button
+            className={styles.ghostBtn}
+            onClick={runDistill}
+            disabled={distilling || drafting || notes.length === 0}
+            title="Stage A: distill the notes into an editable brief"
+          >
+            {distilling ? 'Distilling…' : 'Distill'}
           </button>
-          <button className={styles.ghostBtn} disabled title="Coming next: Stage C — generate a cited draft">
-            Draft
+          <button
+            className={styles.primaryBtn}
+            onClick={runDraft}
+            disabled={drafting || distilling || notes.length === 0}
+            title={brief ? 'Draft from the brief below' : 'Just write it — distills silently, then drafts'}
+          >
+            {drafting ? 'Drafting… (this takes a minute)' : brief ? 'Draft' : 'Just write it'}
           </button>
-          <span className={styles.muted}>Pipeline lands in the next build step — notes and sources are live now.</span>
         </div>
       </div>
+
+      {/* ── Brief (Stage A output, editable) ─────────────────────── */}
+      {brief && (
+        <div className={styles.card}>
+          <div className={styles.cardTitleRow}>
+            <h2 className={styles.cardTitle}>The brief</h2>
+          </div>
+          <p className={styles.muted}>Edit anything — the draft is built from this, not from thin air.</p>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Thesis</span>
+            <textarea
+              className={styles.bigTextarea}
+              rows={2}
+              value={brief.thesis}
+              onChange={e => setBrief({ ...brief, thesis: e.target.value })}
+            />
+          </div>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Key claims (one per line — each gets its own retrieval pass)</span>
+            <textarea
+              className={styles.bigTextarea}
+              rows={Math.max(4, claimsText.split('\n').length)}
+              value={claimsText}
+              onChange={e => setClaimsText(e.target.value)}
+            />
+          </div>
+          <div className={styles.field}>
+            <span className={styles.fieldLabel}>Audience</span>
+            <input
+              className={styles.textInput}
+              value={brief.audience}
+              onChange={e => setBrief({ ...brief, audience: e.target.value })}
+            />
+          </div>
+          {brief.gaps.length > 0 && (
+            <p className={styles.muted}>
+              <strong>Gaps the notes don’t support yet:</strong> {brief.gaps.join(' · ')} — these
+              will be written in your voice, uncited.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── Draft viewer ─────────────────────────────────────────── */}
+      {viewDraft && (
+        <div className={styles.card}>
+          <div className={styles.cardTitleRow}>
+            <h2 className={styles.cardTitle}>
+              Draft v{viewDraft.version} · {FORMAT_LABEL[viewDraft.format]}
+            </h2>
+            <span>
+              <button className={styles.ghostBtn} onClick={copyDraft}>Copy markdown</button>{' '}
+              <button className={styles.ghostBtn} onClick={runVerify} disabled={verifying}>
+                {verifying ? 'Verifying…' : 'Verify citations'}
+              </button>{' '}
+              <button
+                className={styles.primaryBtn}
+                onClick={markReady}
+                disabled={!viewDraft.verification || project.status === 'ready'}
+                title={!viewDraft.verification ? 'Run verification first' : 'Mark this project ready'}
+              >
+                Mark ready
+              </button>
+            </span>
+          </div>
+          {viewDraft.model_notes && (
+            <p className={styles.muted} style={{ whiteSpace: 'pre-wrap' }}>{viewDraft.model_notes}</p>
+          )}
+          <div className={styles.summaryArea} style={{ whiteSpace: 'pre-wrap' }}>
+            {viewDraft.content}
+          </div>
+          <div className={styles.sectionLabel}>
+            Citations ({viewDraft.citations.length})
+            {viewDraft.verification && ` — checked ${new Date(viewDraft.verification.checked_at).toLocaleString()}`}
+          </div>
+          {viewDraft.citations.map((c, i) => {
+            const v = viewDraft.verification?.results[i]
+            const key = `${c.chunk_table}:${c.chunk_id}`
+            const status = !v
+              ? '·'
+              : !v.chunk_resolves || v.quote_match === false || v.locator === 'mismatch' || v.support === 'not'
+                ? '✗'
+                : v.locator === 'unverified' && c.locator
+                  ? '⚠'
+                  : v.support === 'partial'
+                    ? '⚠'
+                    : '✓'
+            return (
+              <div key={i} className={styles.rowItem}>
+                <span title={v?.note ?? ''}>{status}</span>{' '}
+                <span className={styles.chip}>{c.chunk_table === 'rag_corpus' ? 'corpus' : 'paper'}</span>{' '}
+                <button className={styles.viewLink} onClick={() => toggleChunk(i)} title="Show the underlying source chunk">
+                  {c.marker.slice(0, 90)}
+                </button>
+                {c.locator && <span> · {c.locator}</span>}
+                {c.quote && <span className={styles.chip}> quote</span>}
+                {v?.note && <div className={styles.muted} style={{ marginLeft: 24 }}>{v.note}</div>}
+                {openChunk === i && (
+                  <div className={styles.summaryArea} style={{ marginLeft: 24, whiteSpace: 'pre-wrap' }}>
+                    {chunkCache[key]
+                      ? <><strong>{chunkCache[key].source}</strong>{'\n'}{chunkCache[key].content}</>
+                      : 'Loading chunk…'}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* ── Notes pane ───────────────────────────────────────────── */}
       <div className={styles.card}>
@@ -224,11 +460,13 @@ export default function ScribeProjectPage() {
           <h2 className={styles.cardTitle}>Drafts</h2>
         </div>
         {drafts.length === 0 ? (
-          <p className={styles.muted}>No drafts yet — the Draft stage arrives in the next build step.</p>
+          <p className={styles.muted}>No drafts yet.</p>
         ) : (
           drafts.map(d => (
             <div key={d.id} className={styles.rowItem}>
-              v{d.version} · {FORMAT_LABEL[d.format]} ·{' '}
+              <button className={styles.viewLink} onClick={() => openDraft(d.id)}>
+                v{d.version} · {FORMAT_LABEL[d.format]}
+              </button>{' '}
               <span className={styles.muted}>{new Date(d.created_at).toLocaleString()}</span>
             </div>
           ))

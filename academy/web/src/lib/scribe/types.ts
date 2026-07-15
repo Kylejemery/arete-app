@@ -68,6 +68,7 @@ export interface ScribeCitation {
   chunk_id: string
   locator: string | null // canonical passage / page hint as the model rendered it
   quote: boolean // true when the draft quotes the chunk verbatim
+  quote_text?: string // the complete quoted text (quotes only) — what gets string-matched
 }
 
 export type LocatorStatus = 'verified' | 'unverified' | 'mismatch'
