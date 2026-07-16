@@ -43,8 +43,24 @@ export function quoteMatchesChunk(quoteText: string, chunkContent: string): bool
   return segments.every(seg => chunk.includes(seg))
 }
 
-function normalizeLabel(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9.]+/g, ' ').trim()
+// Passage labels from the enrichment pass (label-passages.ts) are numeric
+// dotted refs, possibly a range across a chunk boundary: "5", "1.24",
+// "4.49–5.1". Sentinel labels mark non-citable regions.
+const SENTINEL_LABELS = ['front matter', 'end matter', 'duplicate ingestion']
+
+function parseRef(s: string): number[] | null {
+  const m = s.match(/^\d+(\.\d+)*$/)
+  return m ? s.split('.').map(Number) : null
+}
+
+// Compare dotted refs component-wise at their shared depth; a shorter ref
+// equal on shared components counts as equal (book-level cites book).
+function cmpRef(a: number[], b: number[]): number {
+  const depth = Math.min(a.length, b.length)
+  for (let i = 0; i < depth; i++) {
+    if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1
+  }
+  return 0
 }
 
 export function checkLocator(
@@ -55,10 +71,26 @@ export function checkLocator(
 
   if (citation.chunk_table === 'rag_corpus') {
     const label = chunkMeta.section_label?.trim()
-    if (!label) return 'unverified' // primary texts lack passage metadata (v1)
-    const a = normalizeLabel(citation.locator)
-    const b = normalizeLabel(label)
-    return a.includes(b) || b.includes(a) ? 'verified' : 'mismatch'
+    if (!label) return 'unverified' // work has no passage metadata yet
+    if (SENTINEL_LABELS.some(s => label.includes(s))) {
+      // A canonical locator pointing at front matter / license boilerplate /
+      // a duplicate ingestion is wrong by construction.
+      return 'mismatch'
+    }
+
+    // Range like "4.49–5.1" or single ref like "1.24".
+    const parts = label.split(/[–—-]/).map(s => parseRef(s.trim())).filter((r): r is number[] => !!r)
+    if (parts.length === 0) return 'unverified' // legacy non-passage label — cannot adjudicate
+
+    // The cited passage: the last dotted-numeric token in the locator
+    // ("Discourses 1.24.1" → 1.24.1; "Enchiridion 5" → 5).
+    const tokens = citation.locator.match(/\d+(?:\.\d+)*/g)
+    if (!tokens?.length) return 'unverified'
+    const cited = tokens[tokens.length - 1].split('.').map(Number)
+
+    const lo = parts[0]
+    const hi = parts[parts.length - 1]
+    return cmpRef(cited, lo) >= 0 && cmpRef(cited, hi) <= 0 ? 'verified' : 'mismatch'
   }
 
   // scribe_source_chunks: locator like "p. 12" vs the chunk's page_hint.

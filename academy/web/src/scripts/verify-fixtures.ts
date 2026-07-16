@@ -59,11 +59,18 @@ const paperCitation = (locator: string | null): ScribeCitation => ({
 expect('rag locator with no metadata → unverified', checkLocator(ragCitation('Meditations 4.3'), { section_label: '' }), 'unverified')
 expect('rag locator, no locator given → unverified', checkLocator(ragCitation(null), { section_label: 'Book 4' }), 'unverified')
 
-// Metadata present and consistent → verified
-expect('rag locator consistent with section_label → verified', checkLocator(ragCitation('Lives Book7 (Stoics)'), { section_label: 'Stoics' }), 'verified')
+// Numeric passage labels (from the enrichment pass) verify by range
+expect('exact passage match → verified', checkLocator(ragCitation('Discourses 1.24'), { section_label: '1.24' }), 'verified')
+expect('deeper cite within chapter → verified', checkLocator(ragCitation('Discourses 1.24.1'), { section_label: '1.24' }), 'verified')
+expect('cite inside a spanning range → verified', checkLocator(ragCitation('Meditations 5.1'), { section_label: '4.49–5.1' }), 'verified')
+expect('Enchiridion chapter match → verified', checkLocator(ragCitation('Enchiridion 5'), { section_label: '5' }), 'verified')
+expect('wrong chapter → mismatch (substring would falsely pass)', checkLocator(ragCitation('Discourses 1.2'), { section_label: '1.24' }), 'mismatch')
+expect('cite outside range → mismatch', checkLocator(ragCitation('Meditations 6.13'), { section_label: '4.49–5.1' }), 'mismatch')
+expect('canonical cite pointing at front matter → mismatch', checkLocator(ragCitation('Meditations 4.3'), { section_label: 'front matter' }), 'mismatch')
+expect('canonical cite pointing at duplicate ingestion → mismatch', checkLocator(ragCitation('Meditations 12.36'), { section_label: 'duplicate ingestion' }), 'mismatch')
 
-// Metadata present and contradictory → mismatch
-expect('rag locator contradicting section_label → mismatch', checkLocator(ragCitation('Book 12'), { section_label: 'Stoics' }), 'mismatch')
+// Legacy non-passage labels cannot be adjudicated
+expect('legacy junk label → unverified', checkLocator(ragCitation('Lives 7.87'), { section_label: 'Stoics' }), 'unverified')
 
 // Paper page hints: within ±1 verified, off by more mismatch, missing hint unverified
 expect('paper locator p.12 vs page_hint 12 → verified', checkLocator(paperCitation('p. 12'), { page_hint: 12 }), 'verified')
