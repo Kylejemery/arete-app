@@ -2,13 +2,14 @@
 // Full content build — Sessions 1–11.
 //
 // Mirrors the PHIL 701 architecture: each session carries a pre-seminar
-// briefing, three lesson parts, a 10-question short-answer quiz, and a
-// practice assignment. The session view reuses the language-course renderer
+// briefing, three lesson parts, a 10-question quiz, and a practice
+// assignment. The session view reuses the language-course renderer
 // (LanguageLessonContent); `phil702ToLesson` adapts a Phil702Session into the
-// shape that renderer consumes. The short-answer quiz is rendered separately
-// as reveal cards (Phil702SessionContent), exactly as in PHIL 701.
+// shape that renderer consumes. The quiz lives on the course page's Quiz tab
+// (StudentQuiz), where submissions are graded by the Proctor.
 
 import type { LanguageSession } from '@/data/grek101';
+import type { QuizQuestion } from '@/components/StudentQuiz';
 
 export interface Phil702Session {
   id: number;                 // 1–11
@@ -19,10 +20,9 @@ export interface Phil702Session {
     title: string;
     content: string[];        // one paragraph per element
   }>;
-  quiz: Array<{
-    question: string;
-    answer: string;
-  }>;
+  // open (question + reference answer, graded by the Proctor), mc (multiple
+  // choice), or msq (select all that apply) — see StudentQuiz.
+  quiz: QuizQuestion[];
   practiceAssignment: {
     coreIdea: string;
     assignment: string;

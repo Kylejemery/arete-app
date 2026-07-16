@@ -754,88 +754,53 @@ function PracticeAssignmentBlock({ pa }: {
   );
 }
 
+// Quiz call-to-action shown at the end of a lesson. The questions and answers
+// are deliberately NOT rendered in the lesson — the examination lives on the
+// Quiz tab, where the Proctor grades submissions.
+function QuizCta({ count, onQuizClick }: { count: number; onQuizClick?: () => void }) {
+  if (!onQuizClick) return null;
+  return (
+    <section className="mt-10 border-t border-academy-gold/20 pt-6">
+      <h2 className="font-serif text-xl text-academy-text mb-1">Session Examination</h2>
+      <p className="text-academy-muted text-sm mb-4 leading-relaxed">
+        {count} questions on this session. Your written answers are graded by the Proctor
+        against the course material — you&rsquo;ll receive your score, the correct answers,
+        and feedback immediately. Pass to unlock the next session.
+      </p>
+      <button
+        onClick={onQuizClick}
+        className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
+      >
+        Take the Quiz &rarr;
+      </button>
+    </section>
+  );
+}
+
 // PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
-// content (parts + exercises); the short-answer quiz is rendered below it as
-// reveal cards for self-study. onQuizClick switches the tab to the submission
-// interface when the student is ready to submit for grading.
+// content (parts + exercises). The quiz is not shown in the lesson — the CTA
+// switches to the Quiz tab where the Proctor grades the submission.
 function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Session; onQuizClick?: () => void }) {
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
-      {session.isSeminar && session.practiceAssignment && (
+      {session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} />
       )}
-      {session.quiz.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
-          <p className="text-academy-muted text-xs mb-5 italic">
-            Review each question, attempt your answer, then reveal.
-          </p>
-          {session.quiz.map((q, i) => (
-            <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
-          ))}
-
-          {onQuizClick && (
-            <div className="mt-8 border-t border-academy-gold/20 pt-6">
-              <p className="text-academy-muted text-sm mb-4 leading-relaxed">
-                When you have worked through all ten questions, submit your written answers to the faculty for review.
-              </p>
-              <button
-                onClick={onQuizClick}
-                className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
-              >
-                Submit Quiz for Review &rarr;
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-      {!session.isSeminar && session.practiceAssignment && (
-        <PracticeAssignmentBlock pa={session.practiceAssignment} />
-      )}
+      {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
     </>
   );
 }
 
-// PHIL 702 sessions 1–11: same rendering contract as PHIL 701. Lesson parts
-// render through the language renderer; the 10-question short-answer quiz is
-// rendered below as reveal cards for self-study, with the practice assignment
-// before the quiz for the seminar (session 11) and after it for all others.
+// PHIL 702 and 703 (shared shape): same rendering contract as PHIL 701.
 function Phil702SessionContent({ session, onQuizClick }: { session: Phil702Session; onQuizClick?: () => void }) {
   return (
     <>
       <LanguageLessonContent session={phil702ToLesson(session)} />
-      {session.isSeminar && session.practiceAssignment && (
+      {session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} />
       )}
-      {session.quiz.length > 0 && (
-        <section className="mt-10">
-          <h2 className="font-serif text-xl text-academy-text mb-1">Quiz &mdash; Ten Questions</h2>
-          <p className="text-academy-muted text-xs mb-5 italic">
-            Review each question, attempt your answer, then reveal.
-          </p>
-          {session.quiz.map((q, i) => (
-            <ExerciseCard key={i} ex={{ number: '', prompt: q.question, answer: q.answer }} />
-          ))}
-
-          {onQuizClick && (
-            <div className="mt-8 border-t border-academy-gold/20 pt-6">
-              <p className="text-academy-muted text-sm mb-4 leading-relaxed">
-                When you have worked through all ten questions, submit your written answers to the faculty for review.
-              </p>
-              <button
-                onClick={onQuizClick}
-                className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
-              >
-                Submit Quiz for Review &rarr;
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-      {!session.isSeminar && session.practiceAssignment && (
-        <PracticeAssignmentBlock pa={session.practiceAssignment} />
-      )}
+      {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
     </>
   );
 }
