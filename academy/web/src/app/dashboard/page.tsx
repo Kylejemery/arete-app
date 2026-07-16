@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { getEnrollment, getRecentSessions, getPapers, getProfile } from '@/lib/db';
 import { Card, CardLabel } from '@/components/ui/Card';
 import Topbar from '@/components/navigation/Topbar';
+import AdvisorPanel from '@/components/AdvisorPanel';
 import type { Enrollment, SeminarSession, Paper } from '@/types';
 
 const COURSE_TITLES: Record<string, string> = {
@@ -14,13 +15,6 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-702': 'PHIL 702 — Living the Practice — Marcus Aurelius',
   'phil-703': 'PHIL 703 — The School of Epictetus',
   'phil-704': 'PHIL 704 — The Examined Correspondence — Seneca',
-};
-
-const COURSE_SESSION_INFO: Record<string, { title: string; subtitle: string }> = {
-  'phil-701': { title: 'The Art of Living — Foundations', subtitle: 'Session I — What is Philosophy For?' },
-  'phil-702': { title: 'Living the Practice — Marcus Aurelius', subtitle: 'Session I — The Man and His Book' },
-  'phil-703': { title: 'The School of Epictetus', subtitle: 'Session I — The Former Slave and His School' },
-  'phil-704': { title: 'The Examined Correspondence — Seneca', subtitle: 'Session I — How to Live with Time' },
 };
 
 type ExamSignal = { label: string; href: string } | { done: true } | null;
@@ -120,7 +114,6 @@ export default function DashboardPage() {
 
   const currentCourse = enrollment?.current_course ?? 'phil-701';
   const courseTitle = COURSE_TITLES[currentCourse] ?? currentCourse;
-  const sessionInfo = COURSE_SESSION_INFO[currentCourse];
 
   return (
     <div>
@@ -177,24 +170,8 @@ export default function DashboardPage() {
         </p>
       )}
 
-      {/* Next Session CTA */}
-      <Card gold className="mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardLabel>Next Seminar</CardLabel>
-            <h3 className="font-serif text-xl text-academy-text mb-1">{sessionInfo?.title ?? courseTitle}</h3>
-            <p className="text-academy-muted text-sm">
-              {sessionInfo?.subtitle ?? 'Your Socratic Proctor is ready.'}
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/courses/${currentCourse}`}
-            className="flex-shrink-0 bg-academy-gold text-academy-bg font-semibold px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity whitespace-nowrap"
-          >
-            Enter Seminar →
-          </Link>
-        </div>
-      </Card>
+      {/* The Paidagōgos — academic advisor: completed work, next task, readings due */}
+      <AdvisorPanel userName={userName} />
 
       {/* Program Curriculum */}
       <div className="mb-8">
@@ -253,6 +230,39 @@ export default function DashboardPage() {
                     Living the Practice — Marcus Aurelius
                   </p>
                   <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 701</p>
+                </div>
+                <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            </Card>
+          )}
+
+          {/* PHIL 703 */}
+          {isAdmin ? (
+            <Link href="/dashboard/courses/phil-703">
+              <Card className="hover:border-academy-gold transition-colors cursor-pointer">
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                  PHIL 703
+                </p>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  The School of Epictetus
+                </p>
+                <p className="text-academy-muted text-xs">Session I — The Former Slave and His School</p>
+                <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="opacity-50">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                    PHIL 703
+                  </p>
+                  <p className="font-serif text-academy-text text-base mb-1">
+                    The School of Epictetus
+                  </p>
+                  <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 702</p>
                 </div>
                 <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />

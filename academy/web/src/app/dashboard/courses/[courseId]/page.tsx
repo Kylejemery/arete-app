@@ -17,6 +17,8 @@ import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Sessio
 import { PHIL_701_SESSIONS, phil701ToLesson, type Phil701Session } from '@/data/phil701';
 import { PHIL_702_SESSIONS, phil702ToLesson, type Phil702Session } from '@/data/phil702';
 import { PHIL702_READING } from '@/data/phil702_reading';
+import { PHIL_703_SESSIONS, type Phil703Session } from '@/data/phil703';
+import { PHIL703_READING } from '@/data/phil703_reading';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
@@ -61,15 +63,17 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
     { id: 11, title: 'Qualifying Conversation — The Examined Emperor',             locked: true },
   ],
   'phil-703': [
-    { id: 1,  title: 'The Former Slave and His School — Introduction',       locked: false },
-    { id: 2,  title: 'The Three Disciplines — Desire, Action, Assent',      locked: true },
-    { id: 3,  title: 'Book I — On Freedom',                                 locked: true },
-    { id: 4,  title: 'Book II — On Steadfastness',                          locked: true },
-    { id: 5,  title: 'Book III — On Social Duties',                         locked: true },
-    { id: 6,  title: 'Book IV — On Progress',                               locked: true },
-    { id: 7,  title: 'The Enchiridion as Distillation',                     locked: true },
-    { id: 8,  title: 'Paper Workshop with the Writing Supervisor',           locked: true },
-    { id: 9,  title: 'Final Seminar — Synthesis and Objections',            locked: true },
+    { id: 1,  title: 'The Former Slave and His School — Introduction',      locked: false },
+    { id: 2,  title: 'The Socratic Inheritance — On Progress and Affection', locked: true },
+    { id: 3,  title: 'Logic in the Service of Life',                        locked: true },
+    { id: 4,  title: 'Freedom and the Good — Confidence and Caution',       locked: true },
+    { id: 5,  title: 'Character and Roles — Who Will You Be?',              locked: true },
+    { id: 6,  title: 'Living Among Others — Training for Society',          locked: true },
+    { id: 7,  title: 'God, Providence, and the Fields of Training',         locked: true },
+    { id: 8,  title: 'The Cynic Ideal and the Inviolable Self',             locked: true },
+    { id: 9,  title: 'On Freedom — The Longest Discourse',                  locked: true },
+    { id: 10, title: 'The Enchiridion as Distillation',                     locked: true },
+    { id: 11, title: 'Qualifying Conversation — The School Examined',       locked: true },
   ],
   'phil-704': [
     { id: 1,  title: 'How to Live with Time — Introduction',                locked: false },
@@ -259,6 +263,10 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_702_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-703') {
+    const s = PHIL_703_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   return false;
 }
 
@@ -268,6 +276,9 @@ function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
   }
   if (courseId === 'phil-702') {
     return PHIL_702_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-703') {
+    return PHIL_703_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
   }
   return [];
 }
@@ -1147,6 +1158,17 @@ function SeminarPage() {
   const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
   const [activeTab, setActiveTab] = useState<'lesson' | 'quiz'>('lesson');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Deep link: /dashboard/courses/<id>?session=N (used by the dashboard
+  // advisor). Read from window.location to avoid a useSearchParams Suspense
+  // boundary; runs once on mount.
+  useEffect(() => {
+    const n = Number(new URLSearchParams(window.location.search).get('session'));
+    if (Number.isInteger(n) && n >= 1 && n <= (COURSE_SESSIONS[courseId]?.length ?? 0)) {
+      setActiveSessionId(n);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Keep a ref to latest widths so onDragEnd closures always save the current value
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
@@ -1176,6 +1198,10 @@ function SeminarPage() {
   // practice assignment) for all 11 sessions — same contract as PHIL 701.
   const phil702Session = courseId === 'phil-702'
     ? PHIL_702_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
+  // PHIL 703 shares the Phil702Session shape and rendering contract.
+  const phil703Session: Phil703Session | undefined = courseId === 'phil-703'
+    ? PHIL_703_SESSIONS.find(s => s.id === activeSessionId)
     : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
@@ -1459,6 +1485,24 @@ function SeminarPage() {
                           />
                           <Phil702SessionContent
                             session={phil702Session}
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil703Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-703-${activeSessionId}`}
+                            courseId="phil-703"
+                            session={activeSessionId}
+                            title={phil703Session.title}
+                            problem={phil703Session.briefing}
+                            whyItMatters=""
+                            watchFor={[]}
+                            yourTask=""
+                            requiredReading={PHIL703_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil703Session}
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>
