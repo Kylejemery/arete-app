@@ -1,6 +1,7 @@
 // LATN 101 — Latin for Philosophers
-// Sessions 1-10 · Unit I: The Grammar Foundation
-// Target text: Seneca, Epistulae Morales I.1
+// Sessions 1–30 · Unit I: The Grammar Foundation (1–10) · Unit II: The Verb
+// System & First Readings (11–20) · Unit III: Completion & Sustained Reading (21–30)
+// Target texts: Seneca, Epistulae Morales I.1, I.2, I.4, I.5; De Brevitate Vitae 1
 
 import type { LanguageSession } from './grek101';
 
@@ -2326,6 +2327,955 @@ export const LATN_101_SESSIONS: LatinSession[] = [
       { latin: 'fugax, fugacis', pronunciation: 'FU-gaks', english: 'fleeting, swift to flee (adj.)' },
       { latin: 'pretiosus, -a, -um', pronunciation: 'pre-ti-O-sus', english: 'precious, valuable' },
       { latin: 'stultitia, stultitiae', pronunciation: 'stul-TI-ti-a', english: 'foolishness, folly (f.)' },
+    ],
+  },
+
+  // ── SESSION 21 ─────────────────────────────────────────────────────────────
+  {
+    id: 21,
+    title: 'Fourth & Fifth Declension Nouns',
+    subtitle: 'manus, usus, res, dies, spes — the last two declensions, and Seneca’s most loaded words',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Decline fourth declension nouns (manus, usus, fructus) in all cases',
+      'Decline fifth declension nouns (res, dies, spes, fides) in all cases',
+      'Distinguish 4th declension -us forms from 2nd declension -us nouns',
+      'Read res, dies, and usus as the philosophical vocabulary of Seneca’s ethics of time',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Fourth Declension',
+        body: 'The fourth declension is built on -u- stems. Most are masculine in -us (manus, “hand,” is a famous feminine exception); a few neuters end in -u (cornu, genu). The dangerous feature is surface collision: manus (4th) and animus (2nd) both end in -us in the nominative, but decline completely differently. The genitive singular tells you everything — animi (2nd) vs. manus (4th, long u). Always learn the genitive.\n\nKey 4th declension nouns in Stoic Latin: usus (use, practice — the noun of utor), fructus (fruit, enjoyment), sensus (sense, perception), motus (motion, emotion — motus animi is Seneca’s term for a passion), casus (fall, chance, accident — the Latin behind “case” and a standing name for fortune’s work), cursus (course, running).',
+        paradigms: [
+          {
+            title: 'Fourth Declension — manus, manus (f.) — hand; usus (m.) — use',
+            headers: ['Case', 'Singular', 'Plural', 'Function'],
+            rows: [
+              ['Nominative', 'manus', 'manus', 'subject'],
+              ['Genitive', 'manus', 'manuum', 'of the hand(s)'],
+              ['Dative', 'manui', 'manibus', 'to/for the hand(s)'],
+              ['Accusative', 'manum', 'manus', 'direct object'],
+              ['Ablative', 'manu', 'manibus', 'by/with the hand(s)'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'motus animi — “a movement of the soul” — is Seneca’s standard term for an emotion or passion. The 4th declension noun of movere (to move) names the very thing the disciplines train: what moves in you when an impression strikes.',
+        },
+      },
+      {
+        heading: 'Part 2 — The Fifth Declension',
+        body: 'The fifth declension is small — built on -e- stems, genitive in -ei — but it contains two of the most important nouns in the entire Latin language: res (thing, matter, affair, reality) and dies (day). Add spes (hope) and fides (faith, trust, reliability) and you hold the working vocabulary of Roman ethics. Only res and dies are fully declined in the plural; the others live mostly in the singular.\n\ndies is usually masculine, but feminine when it means an appointed day. res is the widest word in Latin: res publica (the commonwealth), rerum natura (the nature of things/the universe), res adversae (adversity), res secundae (prosperity). When Seneca writes about what is truly yours, the question is always: quae res tua est? — which thing is yours?',
+        paradigms: [
+          {
+            title: 'Fifth Declension — res, rei (f.) — thing; dies, diei (m.) — day',
+            headers: ['Case', 'res (sg.)', 'res (pl.)', 'dies (sg.)', 'dies (pl.)'],
+            rows: [
+              ['Nominative', 'res', 'res', 'dies', 'dies'],
+              ['Genitive', 'rei', 'rerum', 'diei', 'dierum'],
+              ['Dative', 'rei', 'rebus', 'diei', 'diebus'],
+              ['Accusative', 'rem', 'res', 'diem', 'dies'],
+              ['Ablative', 're', 'rebus', 'die', 'diebus'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Seneca, Ep. 12: unus dies par omni est — “one day is equal to every day.” The whole doctrine of the complete day (Session 20’s milestone theme) hangs on a fifth declension noun. Learn dies in every case; Seneca uses them all.',
+        },
+      },
+      {
+        heading: 'Part 3 — res and the Stoic Map of Reality',
+        body: 'The Stoics divide reality into what is up to us and what is not — and in Latin both sides are res. res externae (external things) stand against the one interior res that cannot be confiscated. Seneca’s omnia aliena sunt, tempus tantum nostrum est (Ep. I.4) performs the division with fifth declension grammar: omnia (all things) are aliena; the single res that is nostra is tempus.\n\nNote also the idiom re vera (“in the thing as it truly is” — in fact, really) and the phrase in rebus adversis (in adversity). When you meet rebus, rerum, rei in Seneca, slow down: the sentence is usually drawing the map of what is real and what is owned.',
+      },
+    ],
+    exercises: [
+      {
+        number: '21.1',
+        prompt: 'Decline res in the singular and dies in the plural, all five cases.',
+        answer: 'res: res, rei, rei, rem, re. dies (pl.): dies, dierum, diebus, dies, diebus.',
+      },
+      {
+        number: '21.2',
+        prompt: 'Second or Fourth? Give the declension and genitive singular: 1. animus  2. manus  3. usus  4. verbum  5. sensus',
+        answer: '1. 2nd — animi. 2. 4th — manus (long u). 3. 4th — usus. 4. 2nd — verbi. 5. 4th — sensus. Rule: the genitive decides; nominative -us is ambiguous between 2nd and 4th.',
+      },
+      {
+        number: '21.3',
+        prompt: 'Translate: 1. unus dies par omni est.  2. motus animi rationi parere debent.  3. in rebus adversis sapiens constat.',
+        answer: '1. One day is equal to every day. 2. The movements of the soul (the emotions) ought to obey reason. (motus — nom. pl. 4th decl.; rationi — dative with parere) 3. In adversity (in adverse things) the wise man stands firm.',
+      },
+      {
+        number: '21.4',
+        prompt: 'res and the dichotomy — using this session’s vocabulary, express in Latin: “All things belong to others; time alone is ours,” and identify the declension of each noun.',
+        answer: 'omnia aliena sunt, tempus tantum nostrum est (Seneca, Ep. I.4). omnia — neuter plural (2nd decl. adjective used as noun, “all things”); tempus — 3rd declension neuter (tempus, temporis). If recast with res: omnes res alienae sunt — res is 5th declension. The map of ownership is drawn in nouns: many res, one tempus.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the genitive singular of manus?', options: ['mani', 'manus', 'manui', 'manuum'], correct: 1 },
+      { question: 'How do you distinguish 4th declension manus from 2nd declension animus?', options: ['You cannot', 'By the genitive: manus (4th) vs. animi (2nd)', 'By the nominative plural only', 'Manus is always plural'], correct: 1 },
+      { question: 'What is the dative plural of res?', options: ['reis', 'rerum', 'rebus', 'res'], correct: 2 },
+      { question: 'What gender is manus?', options: ['Masculine, like most -us nouns', 'Feminine — a famous 4th declension exception', 'Neuter', 'It varies freely'], correct: 1 },
+      { question: 'What does motus animi mean in Seneca?', options: ['The soul’s hand', 'A movement of the soul — an emotion or passion', 'The death of the soul', 'A day of the soul'], correct: 1 },
+      { question: 'What is the genitive plural of dies?', options: ['diebus', 'dierum', 'diei', 'dies'], correct: 1 },
+      { question: 'Translate: unus dies par omni est.', options: ['One god is equal to all.', 'One day is equal to every day.', 'Every day is unequal.', 'The first day is the best day.'], correct: 1 },
+      { question: 'Which noun is 5th declension?', options: ['virtus', 'spes', 'usus', 'verbum'], correct: 1 },
+      { question: 'What does casus mean, and why does it matter philosophically?', options: ['“House” — the sage’s dwelling', '“Fall, chance, accident” — a standing Latin name for fortune’s work', '“Case” in the legal sense only', '“Song” — Stoic hymns'], correct: 1 },
+      { question: 'What does res mean in rerum natura?', options: ['“Kings” — the nature of kings', '“Things/reality” — the nature of things, the universe', '“Words” — the nature of language', '“Days” — the nature of time'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'res, rei', pronunciation: 'RAYS, RE-i', english: 'thing, matter, affair, reality (f., 5th decl.)' },
+      { latin: 'dies, diei', pronunciation: 'DI-ays, di-E-i', english: 'day (m., 5th decl.)' },
+      { latin: 'spes, spei', pronunciation: 'SPAYS, SPE-i', english: 'hope (f., 5th decl.)' },
+      { latin: 'fides, fidei', pronunciation: 'FI-days, fi-DE-i', english: 'faith, trust, reliability (f., 5th decl.)' },
+      { latin: 'usus, usus', pronunciation: 'U-sus', english: 'use, practice, experience (m., 4th decl.)' },
+      { latin: 'motus, motus', pronunciation: 'MO-tus', english: 'motion; motus animi = emotion (m., 4th decl.)' },
+      { latin: 'casus, casus', pronunciation: 'KA-sus', english: 'fall, chance, accident (m., 4th decl.)' },
+    ],
+  },
+
+  // ── SESSION 22 ─────────────────────────────────────────────────────────────
+  {
+    id: 22,
+    title: 'Future, Pluperfect & Future Perfect',
+    subtitle: 'Completing the indicative system — the grammar of premeditation',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the future indicative in all four conjugations (two different systems)',
+      'Form the pluperfect indicative (perfect stem + -eram)',
+      'Form the future perfect indicative (perfect stem + -ero) and recognize it in conditions',
+      'Read si volueris in Epistula I.1 as a future perfect and explain its force',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Future: Two Systems',
+        body: 'Latin builds the future two different ways, and confusing them is the classic intermediate error. Conjugations 1 and 2 add -bo, -bis, -bit to the present stem: amabo, amabis, amabit (I shall love…); monebo. Conjugations 3 and 4 instead change the stem vowel: -am, -es, -et, -emus, -etis, -ent: regam, reges, reget; audiam, audies, audiet.\n\nThe trap: reges could be future of rego (“you will rule”) — and regam looks like a subjunctive. Context and conjugation class decide. The future of esse is its own paradigm: ero, eris, erit, erimus, eritis, erunt.',
+        paradigms: [
+          {
+            title: 'Future Active Indicative — All Four Conjugations + esse',
+            headers: ['Person', 'amare (1st)', 'monere (2nd)', 'regere (3rd)', 'audire (4th)', 'esse'],
+            rows: [
+              ['1st sg.', 'amabo', 'monebo', 'regam', 'audiam', 'ero'],
+              ['2nd sg.', 'amabis', 'monebis', 'reges', 'audies', 'eris'],
+              ['3rd sg.', 'amabit', 'monebit', 'reget', 'audiet', 'erit'],
+              ['1st pl.', 'amabimus', 'monebimus', 'regemus', 'audiemus', 'erimus'],
+              ['3rd pl.', 'amabunt', 'monebunt', 'regent', 'audient', 'erunt'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 2 — Pluperfect and Future Perfect',
+        body: 'Both are built on the perfect stem (3rd principal part minus -i). Pluperfect = perfect stem + imperfect of esse: amaveram, amaveras, amaverat — “I had loved”: action completed before a past reference point. Future perfect = perfect stem + future of esse (except 3rd pl. -erint): amavero, amaveris, amaverit — “I shall have loved”: action completed before a future reference point.\n\nThe future perfect is rare in English but everywhere in Latin conditions: si volueris attendere (Ep. I.1) — “if you are willing (literally: will have been willing) to pay attention.” Latin is precise about the order of future events; the condition completes before the consequence begins.',
+        paradigms: [
+          {
+            title: 'Perfect System of amare (indicative)',
+            headers: ['Person', 'Perfect', 'Pluperfect', 'Future Perfect'],
+            rows: [
+              ['1st sg.', 'amavi', 'amaveram', 'amavero'],
+              ['2nd sg.', 'amavisti', 'amaveras', 'amaveris'],
+              ['3rd sg.', 'amavit', 'amaverat', 'amaverit'],
+              ['1st pl.', 'amavimus', 'amaveramus', 'amaverimus'],
+              ['3rd pl.', 'amaverunt', 'amaverant', 'amaverint'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Target-text payoff: et si volueris attendere… (Ep. I.1). volueris is future perfect of volo — “if you will have been willing to attend.” Seneca puts the reader’s decision grammatically before its reward: first the completed act of attention, then the seeing.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Grammar of Premeditation',
+        body: 'The future tenses are the grammar of premeditatio futurorum malorum — the rehearsal of future adversity you have practiced since PHIL 702. The exercise is conducted in the future indicative: occurrent adversa — “adversities will come”; morieris — “you will die” (future of the deponent morior); and its Stoic answer in the future perfect: paratus ero — “I shall have been prepared.”\n\nSeneca’s most compressed future-tense sentence is the daily vow of Ep. 12: cras vivam is the fool’s sentence (“I shall live tomorrow” — life deferred to a tense that never arrives); vixi — the perfect “I have lived” — is the sage’s. The tense system is the moral system: the occupati live in the future indicative; the wise live in the perfect.',
+      },
+    ],
+    exercises: [
+      {
+        number: '22.1',
+        prompt: 'Give the future 3rd singular and 3rd plural of: 1. amo  2. moneo  3. rego  4. audio  5. sum',
+        answer: '1. amabit / amabunt. 2. monebit / monebunt. 3. reget / regent. 4. audiet / audient. 5. erit / erunt.',
+      },
+      {
+        number: '22.2',
+        prompt: 'Parse and translate: 1. amaverat  2. vixero  3. volueris  4. erimus',
+        answer: '1. Pluperfect active 3rd sg. — “he had loved.” 2. Future perfect active 1st sg. of vivo — “I shall have lived.” 3. Future perfect active 2nd sg. of volo — “you will have been willing” (as in si volueris, Ep. I.1). 4. Future active 1st pl. of sum — “we shall be.”',
+      },
+      {
+        number: '22.3',
+        prompt: 'Translate: 1. mors veniet — paratus ero.  2. si attenderis, videbis.  3. multa amiseram; tempus non amittam.',
+        answer: '1. Death will come — I shall be prepared. (future + future) 2. If you pay attention (will have attended — fut. perf.), you will see. 3. I had lost many things (pluperfect); I shall not lose time (future).',
+      },
+      {
+        number: '22.4',
+        prompt: 'Tense and Ethics — explain why cras vivam is, for Seneca, the fool’s sentence, and what tense the sage’s sentence uses.',
+        answer: 'cras vivam — “tomorrow I shall live” — defers life into the future indicative, a tense whose reference point never arrives: when tomorrow comes it is today, and the deferrer says the sentence again (dum differtur vita transcurrit, Ep. I.1/I.4). The sage’s sentence is Ep. 12’s vixi — perfect indicative, “I have lived”: the day completed and banked. Grammatically, the fool lives in an unrealized tense, the sage in a completed one; the future perfect (paravero, “I shall have prepared”) is the practitioner’s bridge — future adversity met by completed preparation.',
+      },
+    ],
+    quiz: [
+      { question: 'How do the 1st and 2nd conjugations form the future?', options: ['Stem + -am, -es, -et', 'Stem + -bo, -bis, -bit', 'Perfect stem + -ero', 'They have no future'], correct: 1 },
+      { question: 'How do the 3rd and 4th conjugations form the future?', options: ['Stem + -bo, -bis, -bit', 'Stem vowel change: -am, -es, -et…', 'Reduplication', 'Perfect stem + -eram'], correct: 1 },
+      { question: 'What is the future 3rd plural of sum?', options: ['sunt', 'erant', 'erunt', 'erint'], correct: 2 },
+      { question: 'What is the pluperfect built from?', options: ['Present stem + -bam', 'Perfect stem + -eram, -eras, -erat…', 'Perfect stem + -ero', 'Supine + esse'], correct: 1 },
+      { question: 'What does the future perfect express?', options: ['Simple future action', 'Action that will be completed before a future reference point', 'Past habitual action', 'A wish'], correct: 1 },
+      { question: 'Parse volueris in si volueris attendere (Ep. I.1).', options: ['Present subjunctive of volo', 'Future perfect indicative 2nd sg. of volo — “you will have been willing”', 'Imperfect of volo', 'Perfect infinitive'], correct: 1 },
+      { question: 'Translate: mors veniet.', options: ['Death has come.', 'Death will come.', 'Death had come.', 'May death come.'], correct: 1 },
+      { question: 'What is amaverint?', options: ['Pluperfect 3rd pl.', 'Future perfect 3rd pl. — “they will have loved”', 'Perfect 3rd pl.', 'Present subjunctive'], correct: 1 },
+      { question: 'Why does Latin use the future perfect in conditions like si volueris?', options: ['Random variation', 'Latin marks that the condition completes before its consequence begins', 'The future perfect is more polite', 'volo has no simple future'], correct: 1 },
+      { question: 'Which tense pair captures Seneca’s ethics of time?', options: ['cras vivam (fool’s future) vs. vixi (sage’s perfect)', 'amabam vs. amabo', 'ero vs. eram', 'rego vs. regor'], correct: 0 },
+    ],
+    vocabulary: [
+      { latin: 'velle (volo, volui)', pronunciation: 'WEL-le', english: 'to wish, to be willing (irregular)' },
+      { latin: 'attendere', pronunciation: 'at-TEN-de-re', english: 'to pay attention, attend to (3rd conj.)' },
+      { latin: 'amittere', pronunciation: 'a-MIT-te-re', english: 'to lose, let go (3rd conj.)' },
+      { latin: 'parare', pronunciation: 'pa-RA-re', english: 'to prepare (1st conj.); paratus = prepared' },
+      { latin: 'cras', pronunciation: 'KRAHS', english: 'tomorrow (adverb)' },
+      { latin: 'hodie', pronunciation: 'HO-di-ay', english: 'today (adverb)' },
+    ],
+  },
+
+  // ── SESSION 23 ─────────────────────────────────────────────────────────────
+  {
+    id: 23,
+    title: 'Comparison of Adjectives & Adverbs',
+    subtitle: 'melior, optimus, turpissima — the grammar of the Stoic maxim',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form the comparative (-ior/-ius) and superlative (-issimus) of regular adjectives',
+      'Master the irregular comparisons: bonus/melior/optimus, malus/peior/pessimus, magnus/maior/maximus, parvus/minor/minimus',
+      'Use quam and the ablative of comparison correctly',
+      'Read turpissima… iactura in Epistula I.1 as a superlative making a moral ranking',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — Regular Comparison',
+        body: 'The comparative adds -ior (m./f.) / -ius (n.) to the adjective base and declines as a third declension adjective: fortis → fortior, fortius (“braver”). The superlative adds -issimus, -a, -um and declines like bonus: fortissimus (“bravest/very brave”). Adjectives in -er superlative in -errimus (miser → miserrimus); facilis and five friends superlative in -illimus (facillimus).\n\nThe superlative has two forces: true superlative (“the bravest of all”) and intensive (“very brave”). Latin also uses the comparative absolutely: fortior = “rather brave, too brave.” Context decides.',
+        paradigms: [
+          {
+            title: 'Irregular Comparison — the Big Five',
+            headers: ['Positive', 'Comparative', 'Superlative', 'Meaning'],
+            rows: [
+              ['bonus', 'melior, melius', 'optimus', 'good / better / best'],
+              ['malus', 'peior, peius', 'pessimus', 'bad / worse / worst'],
+              ['magnus', 'maior, maius', 'maximus', 'great / greater / greatest'],
+              ['parvus', 'minor, minus', 'minimus', 'small / smaller / smallest'],
+              ['multus', 'plus (n.)', 'plurimus', 'much / more / most'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 2 — quam and the Ablative of Comparison',
+        body: 'Two ways to say “than”: (1) quam + the same case as the first term: virtus melior est quam divitiae — “virtue is better than riches”; (2) the ablative of comparison, dropping quam and putting the second term in the ablative: nihil est virtute melius — “nothing is better than virtue.”\n\nWith superlatives, quam + superlative = “as X as possible”: quam celerrime — “as quickly as possible.” The partitive genitive names the group: omnium sapientissimus — “wisest of all.” Adverbs compare too: the comparative adverb is the neuter -ius (fortius — “more bravely”), the superlative in -issime (fortissime).',
+        paradigms: [
+          {
+            title: 'Comparison in Stoic Sentences',
+            headers: ['Latin', 'Translation', 'Construction'],
+            rows: [
+              ['nihil est virtute melius.', 'Nothing is better than virtue.', 'ablative of comparison (virtute)'],
+              ['virtus melior est quam divitiae.', 'Virtue is better than riches.', 'quam + same case'],
+              ['turpissima est iactura quae per neglegentiam fit.', 'Most shameful is the loss that happens through negligence.', 'superlative (Ep. I.1)'],
+              ['maior pars mortalium…', 'The greater part of mortals…', 'comparative (De Brevitate 1)'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Target-text payoff: Turpissima tamen est iactura quae per neglegentiam fit (Ep. I.1). Seneca ranks the three losses of time with a superlative — snatched and stolen time have culprits; seeped time is turpissima, MOST shameful, because the only culprit is you.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Maxim Runs on Comparison',
+        body: 'The Stoic maxim is a ranking machine, and comparison is its engine. The entire doctrine of value is a comparative claim: virtue is not merely good but better than every external, and the only optimum. Seneca’s prose style leans on this grammar constantly — non qui parum habet, sed qui plus cupit, pauper est (“it is not he who has little, but he who desires more, that is poor,” Ep. 2): the whole sentence pivots on plus.\n\nWhen you meet a comparative or superlative in Seneca, ask the Stoic question: on what scale? Rankings of externals (richer, more famous, larger) are rankings of indifferents — grammatically loud, axiologically empty. Rankings on the scale of honestum (more shameful, better, best) are the real cargo. The grammar is identical; the discipline of assent tells them apart.',
+      },
+    ],
+    exercises: [
+      {
+        number: '23.1',
+        prompt: 'Give comparative and superlative: 1. fortis  2. miser  3. facilis  4. bonus  5. magnus',
+        answer: '1. fortior / fortissimus. 2. miserior / miserrimus (-er → -errimus). 3. facilior / facillimus. 4. melior / optimus (irregular). 5. maior / maximus (irregular).',
+      },
+      {
+        number: '23.2',
+        prompt: 'Translate both ways — express “virtue is better than pleasure” with quam and with the ablative of comparison.',
+        answer: 'virtus melior est quam voluptas. / virtus voluptate melior est. (voluptate — ablative of comparison)',
+      },
+      {
+        number: '23.3',
+        prompt: 'Translate: 1. nihil est virtute melius.  2. quam celerrime ad philosophiam veni.  3. omnium sapientissimus erat Socrates.',
+        answer: '1. Nothing is better than virtue. 2. Come to philosophy as quickly as possible. (quam + superlative adverb) 3. Socrates was the wisest of all. (partitive genitive omnium)',
+      },
+      {
+        number: '23.4',
+        prompt: 'The Superlative Verdict — explain why Seneca calls negligent loss of time turpissima in Ep. I.1: what do the other two losses have that this one lacks, and why does the grammar carry the ethics?',
+        answer: 'Ep. I.1 names three losses: tempora eripiuntur (snatched — an external culprit demands it), subducuntur (stolen — a thief takes it unnoticed), effluunt (it flows away — pure inattention). The first two have external agents; the third has none: per neglegentiam fit, it happens through your own negligence. The superlative turpissima ranks the three on the moral scale — turpis (shameful) measures agency, and full agency means full shame. The grammar carries the ethics because only a superlative can make a ranking absolute: not “rather shameful” (comparative) but most shameful of all losses — the one loss where the account book shows a single signature: yours.',
+      },
+    ],
+    quiz: [
+      { question: 'How is the regular comparative formed?', options: ['Stem + -issimus', 'Stem + -ior (m./f.) / -ius (n.)', 'Stem + -errimus', 'quam + positive'], correct: 1 },
+      { question: 'What is the superlative of bonus?', options: ['bonissimus', 'melior', 'optimus', 'maximus'], correct: 2 },
+      { question: 'What is the comparative of malus?', options: ['malior', 'peior, peius', 'pessimus', 'minor'], correct: 1 },
+      { question: 'How does miser form its superlative?', options: ['miserissimus', 'miserrimus (-er adjectives double the r)', 'misillimus', 'miserior'], correct: 1 },
+      { question: 'Translate: nihil est virtute melius.', options: ['Nothing is worse than virtue.', 'Nothing is better than virtue. (ablative of comparison)', 'Virtue is nothing better.', 'Virtue has no equal in vice.'], correct: 1 },
+      { question: 'What does quam + superlative mean (quam celerrime)?', options: ['“More quickly than”', '“As quickly as possible”', '“Rather quickly”', '“Too quickly”'], correct: 1 },
+      { question: 'In turpissima est iactura quae per neglegentiam fit, what is turpissima?', options: ['A comparative — “rather shameful”', 'A superlative — “most shameful”', 'A positive adjective', 'An adverb'], correct: 1 },
+      { question: 'What case follows quam in a comparison?', options: ['Always the accusative', 'The same case as the first term of the comparison', 'Always the ablative', 'The genitive'], correct: 1 },
+      { question: 'What is the comparative adverb of fortis?', options: ['fortissime', 'fortius — the neuter comparative used adverbially', 'fortiter', 'quam fortis'], correct: 1 },
+      { question: 'Why does Seneca rank negligent loss as MOST shameful?', options: ['It involves the most money', 'It is the only loss with no external culprit — full agency, full shame', 'It happens most rarely', 'The superlative is merely decorative'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'melior, melius', pronunciation: 'ME-li-or', english: 'better (comparative of bonus)' },
+      { latin: 'optimus, -a, -um', pronunciation: 'OP-ti-mus', english: 'best (superlative of bonus)' },
+      { latin: 'peior, peius', pronunciation: 'PAY-yor', english: 'worse (comparative of malus)' },
+      { latin: 'maior, maius', pronunciation: 'MAH-yor', english: 'greater (comparative of magnus)' },
+      { latin: 'turpis, turpe', pronunciation: 'TUR-pis', english: 'shameful, disgraceful (3rd decl. adj.)' },
+      { latin: 'iactura, iacturae', pronunciation: 'yak-TU-ra', english: 'loss, throwing away (f.)' },
+      { latin: 'quam', pronunciation: 'KWAM', english: 'than; (+ superlative) as … as possible' },
+    ],
+  },
+
+  // ── SESSION 24 ─────────────────────────────────────────────────────────────
+  {
+    id: 24,
+    title: 'Demonstrative & Intensive Pronouns',
+    subtitle: 'hic, ille, iste, is, ipse, idem — pointing, honoring, and dismissing in Latin',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Decline hic (this), ille (that), and is (he/she/it; that) in all genders',
+      'Use iste with its pejorative force and ille with its honorific force',
+      'Distinguish ipse (himself — intensive) from se (himself — reflexive) and use idem (the same)',
+      'Read pronoun choice in Seneca as a signal of moral distance',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — hic and ille: Near and Far',
+        body: 'hic, haec, hoc points near the speaker: “this (here).” ille, illa, illud points away: “that (there).” Both share the irregular genitive -ius and dative -i of the pronoun class. is, ea, id is the weak, all-purpose third pronoun: “he, she, it, that” — the default word for picking up something already mentioned, and the standard antecedent of the relative (is qui — “the one who”).',
+        paradigms: [
+          {
+            title: 'hic and ille — Singular',
+            headers: ['Case', 'hic (m.)', 'haec (f.)', 'hoc (n.)', 'ille (m.)', 'illa (f.)', 'illud (n.)'],
+            rows: [
+              ['Nominative', 'hic', 'haec', 'hoc', 'ille', 'illa', 'illud'],
+              ['Genitive', 'huius', 'huius', 'huius', 'illius', 'illius', 'illius'],
+              ['Dative', 'huic', 'huic', 'huic', 'illi', 'illi', 'illi'],
+              ['Accusative', 'hunc', 'hanc', 'hoc', 'illum', 'illam', 'illud'],
+              ['Ablative', 'hoc', 'hac', 'hoc', 'illo', 'illa', 'illo'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Plurals are regular on the stems h- and ill-: hi, hae, haec; horum, harum, horum; his (dat./abl. both numbers uses his) — and illi, illae, illa; illorum; illis.',
+        },
+      },
+      {
+        heading: 'Part 2 — The Moral Color of Pronouns',
+        body: 'Latin demonstratives carry tone. ille, pointing at the distant and famous, is honorific: Cato ille — “the great Cato,” “Cato of renown.” iste, ista, istud (“that of yours”) points at what belongs to the person addressed — and in argument it sneers: ista lectio (Ep. 2) — “that reading habit of yours.” When Seneca writes ista, he is holding something of Lucilius’s at arm’s length for inspection.\n\nipse, ipsa, ipsum intensifies: “himself, herself, itself, the very.” Do not confuse it with the reflexive se. se is an object referring back to the subject (se vincit — “he conquers himself”); ipse is an emphasizer agreeing with any noun (ipse dixit — “he himself said it”; res ipsa — “the thing itself”). The strongest Stoic sentence combines them: se ipsum vincere — “to conquer one’s very self.” Finally idem, eadem, idem (is + -dem): “the same” — the word of Seneca’s eadem sunt omnia (Ep. 77): “all things are the same,” the argument that more years only repeat the show.',
+        paradigms: [
+          {
+            title: 'The Pronoun Toolkit in Stoic Sentences',
+            headers: ['Latin', 'Translation', 'Pronoun at work'],
+            rows: [
+              ['hoc in nostra potestate est.', 'This is in our power.', 'hoc — near: the thing at hand'],
+              ['Cato ille libertatem defendit.', 'The great Cato defended liberty.', 'ille — honorific distance'],
+              ['ista iactatio aegri animi est.', 'That restlessness of yours belongs to a sick mind.', 'iste — pejorative (Ep. 2)'],
+              ['se ipsum vincere maxima victoria est.', 'To conquer one’s very self is the greatest victory.', 'se + ipse combined'],
+              ['eadem sunt omnia.', 'All things are the same.', 'idem — the sameness argument (Ep. 77)'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — Pronouns and the Dichotomy',
+        body: 'Watch how Seneca deploys the near/far axis philosophically. hic marks what is present and yours to govern: hic dies — this day, the one you can complete; hoc tempus — this time, the only real one. ille marks the distant, the deferred, the admired-from-afar: illa felicitas — that happiness (always somewhere else); ille sapiens — the sage (the far ideal). The occupati of De Brevitate live among illa — distant retirements, future leisures; the practitioner lives in hoc.\n\nThis is not decoration. In a language without articles, the demonstrative is how Latin marks attention — and attention (prosochē, Latin attentio/intentio) is the first Stoic discipline. Where your pronouns point, your desire points. Reading Seneca closely means noticing when he moves something from ille to hic: from admired distance into present practice.',
+      },
+    ],
+    exercises: [
+      {
+        number: '24.1',
+        prompt: 'Decline hic in the neuter singular and ille in the feminine singular, all five cases.',
+        answer: 'hoc, huius, huic, hoc, hoc. — illa, illius, illi, illam, illa.',
+      },
+      {
+        number: '24.2',
+        prompt: 'Translate, noting the pronoun’s tone: 1. Cato ille mortem non timuit.  2. ista lectio animum distrahit.  3. hoc tempus tuum est.',
+        answer: '1. The great Cato did not fear death. (ille — honorific) 2. That reading habit of yours distracts the mind. (ista — pejorative, holding Lucilius’s habit at arm’s length) 3. This time is yours. (hoc — near, present, governable)',
+      },
+      {
+        number: '24.3',
+        prompt: 'ipse vs. se — translate and explain the difference: 1. sapiens se vincit.  2. sapiens ipse dixit.  3. se ipsum vincere.',
+        answer: '1. The wise man conquers himself. (se — reflexive object) 2. The wise man himself said it. (ipse — intensive, agreeing with the subject) 3. To conquer one’s very self. (se the reflexive object + ipsum intensifying it — the two combined)',
+      },
+      {
+        number: '24.4',
+        prompt: 'Pronouns and Attention — using Part 3, explain the philosophical difference between hic dies and illa felicitas in Senecan prose.',
+        answer: 'hic dies — “this day” — points near: the present, governable unit of life, the one thing that can be completed (unus dies par omni est). illa felicitas — “that happiness” — points far: the deferred, admired-from-a-distance good that the occupati chase into a future that never arrives. In a language without articles, the demonstrative marks where attention falls; Seneca’s ethics is the discipline of moving life from ille to hic — from distant objects of desire to the present object of practice. The pronoun axis near/far is the grammar of the dichotomy between what is in your power now and what merely glitters elsewhere.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the genitive singular of hic (all genders)?', options: ['hici', 'huius', 'huic', 'horum'], correct: 1 },
+      { question: 'What is the dative singular of ille?', options: ['illo', 'illius', 'illi', 'illum'], correct: 2 },
+      { question: 'What tone does iste typically carry?', options: ['Honorific — “the great”', 'Pejorative — “that (thing) of yours,” held at arm’s length', 'Neutral', 'Affectionate'], correct: 1 },
+      { question: 'What does Cato ille mean?', options: ['“That awful Cato”', '“The great/famous Cato” — ille is honorific', '“This Cato here”', '“Cato himself”'], correct: 1 },
+      { question: 'What is the difference between se and ipse?', options: ['None — they are interchangeable', 'se is the reflexive object; ipse is an intensifier (“himself/the very”) agreeing with a noun', 'ipse is plural of se', 'se is emphatic, ipse reflexive'], correct: 1 },
+      { question: 'Translate: se ipsum vincere.', options: ['To conquer him', 'To conquer one’s very self', 'He conquers alone', 'To be conquered by oneself'], correct: 1 },
+      { question: 'What does idem, eadem, idem mean?', options: ['“Each”', '“The same”', '“Another”', '“Something”'], correct: 1 },
+      { question: 'Translate: eadem sunt omnia (Ep. 77).', options: ['All things are equal to the gods.', 'All things are the same. — more years only repeat the show', 'Everything belongs to others.', 'All the same, everything exists.'], correct: 1 },
+      { question: 'What is the accusative masculine singular of hic?', options: ['hoc', 'hunc', 'huic', 'hanc'], correct: 1 },
+      { question: 'Philosophically, what does the hic/ille axis mark in Seneca?', options: ['Nothing — pure style', 'Attention: hic = the present and governable; ille = the distant and deferred. Practice moves life from ille to hic', 'Social class of the referent', 'Grammatical gender only'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'hic, haec, hoc', pronunciation: 'HIK, HYKE, HOK', english: 'this (near demonstrative)' },
+      { latin: 'ille, illa, illud', pronunciation: 'IL-le', english: 'that; (honorific) the famous' },
+      { latin: 'iste, ista, istud', pronunciation: 'IS-te', english: 'that of yours (often pejorative)' },
+      { latin: 'is, ea, id', pronunciation: 'IS, E-a, ID', english: 'he, she, it; that (weak demonstrative)' },
+      { latin: 'ipse, ipsa, ipsum', pronunciation: 'IP-se', english: 'himself, herself, itself (intensive)' },
+      { latin: 'idem, eadem, idem', pronunciation: 'I-dem', english: 'the same' },
+    ],
+  },
+
+  // ── SESSION 25 ─────────────────────────────────────────────────────────────
+  {
+    id: 25,
+    title: 'Relative Clauses',
+    subtitle: 'qui, quae, quod — the clause that defines, and the target text’s own grammar',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Decline the relative pronoun qui, quae, quod in full',
+      'Apply the agreement rule: gender and number from the antecedent, case from the relative’s own clause',
+      'Recognize the connecting relative at sentence openings (Quod si…, Qui cum…)',
+      'Use the relative clause of characteristic with the subjunctive (est qui dicat)',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Relative Pronoun',
+        body: 'The relative pronoun qui, quae, quod introduces a clause that modifies a noun: tempus quod effluit — “the time which flows away.” Its declension shares the pronoun signature (genitive cuius, dative cui) and must be memorized cold, because Seneca uses a relative clause in nearly every sentence.',
+        paradigms: [
+          {
+            title: 'qui, quae, quod — Full Declension',
+            headers: ['Case', 'm. sg.', 'f. sg.', 'n. sg.', 'm. pl.', 'f. pl.', 'n. pl.'],
+            rows: [
+              ['Nominative', 'qui', 'quae', 'quod', 'qui', 'quae', 'quae'],
+              ['Genitive', 'cuius', 'cuius', 'cuius', 'quorum', 'quarum', 'quorum'],
+              ['Dative', 'cui', 'cui', 'cui', 'quibus', 'quibus', 'quibus'],
+              ['Accusative', 'quem', 'quam', 'quod', 'quos', 'quas', 'quae'],
+              ['Ablative', 'quo', 'qua', 'quo', 'quibus', 'quibus', 'quibus'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 2 — The Agreement Rule',
+        body: 'The one rule that governs every relative clause: the relative takes its GENDER and NUMBER from its antecedent, but its CASE from its function inside its own clause. In tempus quod adhuc auferebatur (Ep. I.1 — your target text), quod is neuter singular because tempus is neuter singular; it is nominative because it is the subject of auferebatur inside its own clause.\n\nTwo idioms extend the system. The connecting relative: Latin loves to begin a sentence with a relative referring back to the previous sentence — Quod si verum est… — “But if this is true…” (literally “which if is true”); translate it as a demonstrative (“this/that”). And is qui: the weak demonstrative is sets up the relative as its antecedent — is qui virtutem amat — “the one who loves virtue.”',
+        callout: {
+          text: 'Target-text payoff: tempus quod adhuc auferebatur aut diripiebatur aut excidebat — “the time which until now was being taken away, or plundered, or slipping loose.” The relative clause holds all three imperfect passives of loss in one grammatical hand. You have been reading a relative clause since Session 1.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Relative Clause of Characteristic',
+        body: 'With an indefinite or generalized antecedent, the relative clause takes the SUBJUNCTIVE and describes the KIND of person or thing: est qui dicat — “there is (the sort of) someone who would say”; nemo est qui nesciat — “there is no one who does not know”; dignus est qui laudetur — “he is worthy to be praised” (worthy of the kind who…). Compare the indicative: est qui dicit — “there is a (specific) man who says.” The mood marks the difference between pointing at an individual and characterizing a type.\n\nSeneca’s most famous relative sentence uses the indicative because it names an actual, all-too-real type made specific: nusquam est qui ubique est (Ep. 2) — “he who is everywhere is nowhere.” Hold that sentence; you will parse its letter in the next session.',
+        paradigms: [
+          {
+            title: 'Relative Clauses in Stoic Sentences',
+            headers: ['Latin', 'Translation', 'Type'],
+            rows: [
+              ['tempus quod effluit serva.', 'Save the time which flows away.', 'plain relative (indicative)'],
+              ['is qui se vincit liber est.', 'The one who conquers himself is free.', 'is qui + indicative'],
+              ['nemo est qui mortem effugiat.', 'There is no one who escapes death.', 'characteristic (subjunctive)'],
+              ['nusquam est qui ubique est.', 'He who is everywhere is nowhere.', 'generalizing relative (Ep. 2)'],
+            ],
+          },
+        ],
+      },
+    ],
+    exercises: [
+      {
+        number: '25.1',
+        prompt: 'Fill in the relative and explain: 1. vita ___ bene agitur longa est. (life which is lived well)  2. homo ___ virtutem amat. (the man whom virtue loves… vs. the man who loves virtue — give both)  3. tempora ___ perdidimus.',
+        answer: '1. vita QUAE bene agitur longa est — quae: f. sg. from vita, nominative as subject of agitur. 2. homo QUI virtutem amat (who loves virtue — qui nominative subject) vs. homo QUEM virtus amat (whom virtue loves — quem accusative object). 3. tempora QUAE perdidimus — quae: n. pl. from tempora, accusative as object of perdidimus.',
+      },
+      {
+        number: '25.2',
+        prompt: 'Parse the target text’s relative clause: tempus quod adhuc auferebatur aut diripiebatur aut excidebat.',
+        answer: 'quod — relative pronoun, neuter singular (agreeing with tempus), nominative (subject of its own clause). The clause holds three imperfect verbs of ongoing loss: auferebatur (imperfect passive of aufero — “was being carried off”), diripiebatur (imperfect passive of diripio — “was being plundered”), excidebat (imperfect active of excido — “was slipping/falling out”). Gender/number from the antecedent; case from the clause: the agreement rule exactly.',
+      },
+      {
+        number: '25.3',
+        prompt: 'Indicative or Subjunctive? Choose the mood and explain: 1. nemo est qui semper (vivit / vivat).  2. hic est homo qui heri (venit / veniat).',
+        answer: '1. vivat — subjunctive: relative clause of characteristic with the indefinite antecedent nemo (“there is no one of the sort who lives forever”). 2. venit — indicative: the antecedent is a specific man (“this is the man who came yesterday”), a fact about an individual, not a type.',
+      },
+      {
+        number: '25.4',
+        prompt: 'nusquam est qui ubique est — translate the maxim literally, then explain its philosophy using PHIL 704’s Session 1 (Ep. 2’s advice on reading and travel).',
+        answer: 'Literally: “he who is everywhere is nowhere.” Two relative structures pivot on the correlatives ubique (everywhere) / nusquam (nowhere). Philosophy: Ep. 2’s theme — the reader who wanders among many books, like the traveler among many places, is present in none of them; scattered attention is absent attention. The cure is settling: few authors, digested daily (unum aliquid — one thing a day). The maxim compresses the whole discipline of attention into six words, and its grammar — a definition by relative clause — is the form Stoic maxims use to characterize a life by its habit.',
+      },
+    ],
+    quiz: [
+      { question: 'What is the genitive singular of qui (all genders)?', options: ['quius', 'cuius', 'cui', 'quorum'], correct: 1 },
+      { question: 'State the agreement rule for relatives.', options: ['Case, gender, and number all from the antecedent', 'Gender and number from the antecedent; case from the relative’s function in its own clause', 'Case from the antecedent; gender from its own clause', 'Relatives do not agree with anything'], correct: 1 },
+      { question: 'In tempus quod effluit, why is quod nominative?', options: ['Because tempus is nominative', 'Because quod is the subject of effluit within its own clause', 'Neuter relatives are always nominative', 'It is actually accusative'], correct: 1 },
+      { question: 'What is the dative plural of qui?', options: ['quis', 'quibus', 'quorum', 'cui'], correct: 1 },
+      { question: 'What is the connecting relative?', options: ['A relative with no antecedent at all', 'A sentence-opening relative referring to the previous sentence — translate as “this/that” (Quod si… = “But if this…”)', 'A conjunction meaning “and”', 'A relative in a question'], correct: 1 },
+      { question: 'What does is qui set up?', options: ['A question', 'The weak demonstrative as antecedent: is qui… = “the one who…”', 'An indirect statement', 'A command'], correct: 1 },
+      { question: 'What mood does the relative clause of characteristic take?', options: ['Indicative', 'Subjunctive — it characterizes a type rather than pointing at an individual', 'Imperative', 'Infinitive'], correct: 1 },
+      { question: 'Translate: nemo est qui mortem effugiat.', options: ['No one is dead who flees.', 'There is no one who escapes death.', 'Someone escapes death.', 'Death escapes no one’s notice.'], correct: 1 },
+      { question: 'Translate: nusquam est qui ubique est.', options: ['He who is nowhere is everywhere.', 'He who is everywhere is nowhere.', 'Nowhere and everywhere are the same.', 'The everywhere man is everything.'], correct: 1 },
+      { question: 'What is the accusative feminine singular of the relative?', options: ['quae', 'quam', 'qua', 'cuius'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'qui, quae, quod', pronunciation: 'KWEE, KWYE, KWOD', english: 'who, which, that (relative pronoun)' },
+      { latin: 'auferre (aufero)', pronunciation: 'ow-FER-re', english: 'to carry off, take away (irregular)' },
+      { latin: 'diripere', pronunciation: 'di-RI-pe-re', english: 'to plunder, tear apart (3rd conj. -io)' },
+      { latin: 'excidere', pronunciation: 'eks-KI-de-re', english: 'to fall out, slip away (3rd conj.)' },
+      { latin: 'ubique', pronunciation: 'u-BI-kwe', english: 'everywhere (adverb)' },
+      { latin: 'nusquam', pronunciation: 'NUS-kwam', english: 'nowhere (adverb)' },
+    ],
+  },
+
+  // ── SESSION 26 ─────────────────────────────────────────────────────────────
+  {
+    id: 26,
+    title: 'Milestone III — Epistulae Morales I.2 Reading',
+    subtitle: 'The letter on settled reading — nusquam est qui ubique est, parsed in full',
+    isMilestone: true,
+    targetText: SENECA_I_1,
+    objectives: [
+      'Read the opening of Epistula I.2 with full grammatical control',
+      'Parse relative clauses, the ACI, and the genitive of quality in continuous prose',
+      'Analyze ne + subjunctive after a verb of watching/warning',
+      'Connect the letter’s doctrine of reading to the grammar that carries it',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Passage',
+        body: 'Seneca, Epistulae Morales I.2 (opening):\n\nEx iis quae mihi scribis et ex iis quae audio bonam spem de te concipio: non discurris nec locorum mutationibus inquietaris. aegri animi ista iactatio est: primum argumentum compositae mentis existimo posse consistere et secum morari. Illud autem vide, ne ista lectio auctorum multorum et omnis generis voluminum habeat aliquid vagum et instabile. […] nusquam est qui ubique est.\n\nTranslation: “From the things you write to me and from the things I hear, I conceive good hope of you: you do not run about, nor do you unsettle yourself with changes of place. That restlessness of yours is the tossing of a sick mind: I judge the first proof of a composed mind to be the ability to stand still and linger with oneself. But watch this — that that reading of yours, of many authors and volumes of every kind, not have in it something wandering and unstable. […] He who is everywhere is nowhere.”',
+      },
+      {
+        heading: 'Part 2 — The Parse, Sentence by Sentence',
+        body: 'Sentence 1 opens with paired relative clauses on the connecting frame ex iis quae… et ex iis quae… — “from those things which…” — is as antecedent, quae neuter plural accusative… no: nominative? Check the rule: inside its clause, quae is the object of scribis (you write WHAT) — accusative neuter plural. Session 25’s agreement rule, twice in ten words. concipio governs bonam spem (5th declension spes in the accusative — Session 21).\n\nSentence 2: aegri animi ista iactatio est — the genitive of quality/possession fronted for the diagnosis: “of a sick mind is that tossing of yours.” Note ista (Session 24’s pejorative): the restlessness belongs to Lucilius and is being held at arm’s length. Then the ACI (Session 17): existimo + accusative subject understood + posse consistere — “I judge (it) to be the first proof of a composed mind to be able to stand still.” compositae mentis — genitive of quality again. secum = cum + se: “with oneself” — the reflexive of Session 24, and the whole aim of the letter: a self one can stay with.',
+        paradigms: [
+          {
+            title: 'Constructions in Play (Sessions 15–25)',
+            headers: ['Text', 'Construction', 'Session'],
+            rows: [
+              ['ex iis quae scribis', 'is qui + relative, case from own clause', '25'],
+              ['aegri animi… est', 'genitive of quality as predicate', '6'],
+              ['existimo posse consistere', 'ACI after a verb of judging', '17'],
+              ['inquietaris', '2nd sg. present passive', '11'],
+              ['vide, ne… habeat', 'ne + subjunctive after a verb of watching', '13'],
+              ['nusquam est qui ubique est', 'generalizing relative', '25'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Illud autem vide, ne… habeat — vide (“see to it”) takes ne + present subjunctive like a verb of fearing/warning: “watch that that reading NOT have something wandering in it.” The subjunctive habeat marks the feared possibility, not a fact.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Doctrine in the Grammar',
+        body: 'The letter’s teaching — settle with few books, as with few places — is performed by its grammar. The sick mind is described in passives and frequentatives (discurris, inquietaris, iactatio): things churn in it and it is churned. The composed mind gets active infinitives of self-command: posse consistere, secum morari — to be able to stand, to linger with oneself (morari — deponent, Session 16). The disease is grammatical passivity dressed as motion; the cure is a quiet active voice.\n\nAnd the maxim that seals it — nusquam est qui ubique est — is a definition by relative clause: a life characterized by its habit. Note the Stoic economy: Seneca does not forbid books (or travel); he forbids scattering. probatos semper lege — “read the proven ones, always”; and if you visit others, redi — return. The milestone of this session is not just parsing the Latin; it is recognizing that you now read Seneca making an argument about reading, in the original, with every construction accounted for.',
+      },
+    ],
+    exercises: [
+      {
+        number: '26.1',
+        prompt: 'Unaided Translation — translate the passage in Part 1 without notes.',
+        answer: 'See the translation in Part 1. Key movements: paired relatives (ex iis quae… quae…); the diagnosis by genitive of quality (aegri animi ista iactatio est); the ACI of judgment (primum argumentum… existimo posse consistere et secum morari); the warning with ne + subjunctive (vide ne… habeat); the sealing maxim (nusquam est qui ubique est).',
+      },
+      {
+        number: '26.2',
+        prompt: 'Parse on Demand: 1. inquietaris  2. habeat  3. morari  4. quae (in ex iis quae scribis)',
+        answer: '1. Present passive 2nd sg. of inquieto — “you are (not) unsettled.” 2. Present subjunctive 3rd sg. of habeo — in the ne-clause after vide. 3. Present infinitive of the deponent moror — “to linger” (active meaning). 4. Relative pronoun, neuter plural (antecedent iis), accusative — object of scribis inside its own clause.',
+      },
+      {
+        number: '26.3',
+        prompt: 'Structural Analysis — identify the genitive of quality in the passage and explain how it delivers Seneca’s diagnosis.',
+        answer: 'aegri animi ista iactatio est — “that tossing (of yours) is (the mark) of a sick mind” — and compositae mentis in the next clause (“of a composed mind”). The genitive of quality assigns a phenomenon to the character that produces it: restlessness is not an event that happens to Lucilius but a property OF a certain kind of mind. Fronting aegri animi makes the diagnosis land before the symptom is even named — Seneca’s clinical word order.',
+      },
+      {
+        number: '26.4',
+        prompt: 'The Milestone Reflection — how does Ep. I.2’s doctrine of reading (few authors, digested) apply to your own study of this course, and how does the grammar enforce it?',
+        answer: 'Ep. I.2 prescribes settled reading: probatos semper lege — stay with proven authors; distilled daily (Ep. 2 continues: aliquid cotidie adversus paupertatem, adversus mortem — one thing each day against poverty, against death). Applied to this course: thirty sessions with one author and two target texts, each construction revisited until owned, is the letter’s method enacted — depth against dispersal. The grammar enforces it because Latin cannot be skimmed: every relative, ACI, and subjunctive must be resolved before the sentence yields, which makes close reading the only possible reading. nusquam est qui ubique est: the student of many tabs is present in none of them.',
+      },
+    ],
+    quiz: [
+      { question: 'In ex iis quae mihi scribis, what case is quae and why?', options: ['Nominative — subject of scribis', 'Accusative — object of scribis within its own clause (gender/number from iis)', 'Ablative after ex', 'Genitive of quality'], correct: 1 },
+      { question: 'What is aegri animi in aegri animi ista iactatio est?', options: ['Dative of interest', 'A genitive of quality — “(the mark) of a sick mind”', 'Nominative subject', 'Ablative of means'], correct: 1 },
+      { question: 'What construction follows existimo?', options: ['ne + subjunctive', 'The ACI — accusative + infinitive of judgment (posse consistere)', 'A purpose clause', 'An ablative absolute'], correct: 1 },
+      { question: 'Parse habeat in vide, ne ista lectio… habeat.', options: ['Present indicative', 'Present subjunctive after ne with a verb of watching/warning — the feared possibility', 'Future indicative', 'Imperfect subjunctive'], correct: 1 },
+      { question: 'What does secum morari mean?', options: ['To die alone', 'To linger with oneself — cum + se, with the deponent moror', 'To delay others', 'To speak to oneself'], correct: 1 },
+      { question: 'Why is ista in ista iactatio pointed?', options: ['It is honorific', 'It is Session 24’s pejorative iste: “that restlessness of YOURS,” held at arm’s length', 'It is a misspelling of ipsa', 'It marks a question'], correct: 1 },
+      { question: 'What does Seneca name the first proof of a composed mind?', options: ['Reading many authors', 'Being able to stand still and linger with oneself', 'Traveling to new places', 'Writing letters daily'], correct: 1 },
+      { question: 'What is the letter’s prescription for reading?', options: ['Read everything published', 'Settle with proven authors and digest a little daily; visits elsewhere end with return', 'Read only in Greek', 'Stop reading entirely'], correct: 1 },
+      { question: 'morari is a deponent. What does that mean here?', options: ['Passive form, passive meaning', 'Passive in form, active in meaning: “to linger”', 'Active in form only', 'It is actually the noun mora'], correct: 1 },
+      { question: 'What makes this session a milestone?', options: ['New grammar is introduced', 'Sustained real prose read with every construction accounted for — Sessions 6–25 deployed together on an actual letter', 'It is the final exam', 'The passage is in Greek'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'discurrere', pronunciation: 'dis-KUR-re-re', english: 'to run about, dash around (3rd conj.)' },
+      { latin: 'inquietare', pronunciation: 'in-kwi-e-TA-re', english: 'to disturb, unsettle (1st conj.)' },
+      { latin: 'iactatio, iactationis', pronunciation: 'yak-TA-ti-o', english: 'a tossing, restlessness (f.)' },
+      { latin: 'consistere', pronunciation: 'kon-SIS-te-re', english: 'to stand still, take a stand (3rd conj.)' },
+      { latin: 'morari', pronunciation: 'mo-RA-ri', english: 'to linger, delay (1st conj. deponent)' },
+      { latin: 'vagus, -a, -um', pronunciation: 'WA-gus', english: 'wandering, unsettled' },
+      { latin: 'probatus, -a, -um', pronunciation: 'pro-BA-tus', english: 'proven, tested, approved' },
+    ],
+  },
+
+  // ── SESSION 27 ─────────────────────────────────────────────────────────────
+  {
+    id: 27,
+    title: 'Conditions — The si Clauses',
+    subtitle: 'si vis amari, ama — the six conditionals and the grammar of the possible',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Identify and translate simple conditions (si + indicative)',
+      'Form future more vivid (future/future perfect indicative) and future less vivid (present subjunctive) conditions',
+      'Form present and past contrary-to-fact conditions (imperfect / pluperfect subjunctive)',
+      'Read si volueris (Ep. I.1) and si tota bene collocaretur (De Brevitate 1) as conditions doing philosophy',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Conditional System',
+        body: 'A condition has a protasis (the si/if clause) and an apodosis (the conclusion). Latin’s system is beautifully regular: INDICATIVE conditions treat the case as real or expected; SUBJUNCTIVE conditions mark it as imagined — possible (present subjunctive) or contrary to fact (imperfect subjunctive = present unreality; pluperfect subjunctive = past unreality). nisi = “if not, unless”; sin = “but if.”',
+        paradigms: [
+          {
+            title: 'The Six Conditions',
+            headers: ['Type', 'Protasis', 'Apodosis', 'Example'],
+            rows: [
+              ['Simple present', 'si + pres. indic.', 'pres. indic.', 'si vis, potes. — If you want to, you can.'],
+              ['Simple past', 'si + perf. indic.', 'perf. indic.', 'si hoc dixit, erravit. — If he said this, he erred.'],
+              ['Future more vivid', 'si + fut. / fut. perf. indic.', 'fut. indic.', 'si volueris, videbis. — If you are willing, you will see.'],
+              ['Future less vivid', 'si + pres. subj.', 'pres. subj.', 'si velis, possis. — Should you wish, you would be able.'],
+              ['Present contrary-to-fact', 'si + impf. subj.', 'impf. subj.', 'si attenderes, videres. — If you were paying attention (but you aren’t), you would see.'],
+              ['Past contrary-to-fact', 'si + plupf. subj.', 'plupf. subj.', 'si attendisses, vidisses. — If you had paid attention, you would have seen.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 2 — The Conditions in the Texts',
+        body: 'Your two anchor texts each run on a condition. Ep. I.1: et si volueris attendere, magna pars vitae elabitur male agentibus — future more vivid with the future perfect volueris (Session 22): Seneca treats your willingness to attend as a real future event that completes before its reward. He is not speculating; he is scheduling.\n\nDe Brevitate 1 (next session’s reading) turns the key the other way: satis longa vita… data est, si tota bene collocaretur — “life given is long enough, IF it were all well invested.” The imperfect subjunctive collocaretur is present contrary-to-fact: it is NOT well invested — the grammar itself delivers the indictment. Seneca’s two most famous claims about time differ by exactly one mood: the reader who will attend (indicative, expected) versus mankind that does not invest (subjunctive, contrary to fact).',
+        callout: {
+          text: 'Hecato’s maxim, quoted by Seneca in Ep. 9: si vis amari, ama — “if you wish to be loved, love.” A simple present condition: no subjunctive, no hedging. The recipe is stated as fact because it is one — the passive infinitive amari (Session 11) balanced against the bare imperative ama.',
+        },
+      },
+      {
+        heading: 'Part 3 — Conditions as Stoic Instruments',
+        body: 'The conditional is the Stoic’s working tool in three distinct ways. Premeditation runs on future conditions: si morieris — hodie paratus es? Better, the Stoic converts fearful futures into future more vivid plans: si accidet, feram — “if it happens, I will bear it”: indicative, scheduled, already answered.\n\nContrary-to-fact conditions are the grammar of regret and of self-examination: si attendissem, non perdidissem — “had I attended, I would not have lost.” The evening review (Session 12 of PHIL 701’s practice) is conducted in the pluperfect subjunctive — and then closed, because the Stoic does not live there. And the future less vivid is the mood of premeditated equanimity about mere possibilities: si omnia amittam… — “should I lose everything…” — rehearsed gently, in the subjunctive, before fortune makes it indicative. Learn to hear the mood: Latin tells you, in every condition, exactly how real the speaker takes the danger to be.',
+      },
+    ],
+    exercises: [
+      {
+        number: '27.1',
+        prompt: 'Classify and translate: 1. si vis amari, ama.  2. si volueris attendere, videbis.  3. si attenderes, videres.  4. si attendisses, vidisses.',
+        answer: '1. Simple present — “If you wish to be loved, love.” 2. Future more vivid (fut. perf. + future) — “If you are willing to attend, you will see.” 3. Present contrary-to-fact (imperfect subjunctives) — “If you were attending (but you are not), you would see.” 4. Past contrary-to-fact (pluperfect subjunctives) — “If you had attended, you would have seen.”',
+      },
+      {
+        number: '27.2',
+        prompt: 'Compose in Latin: “Should you lose everything (future less vivid), you would still be free.”',
+        answer: 'si omnia amittas, tamen liber sis. (present subjunctives amittas / sis — the gentle mood of rehearsed possibility)',
+      },
+      {
+        number: '27.3',
+        prompt: 'Parse the condition in satis longa vita data est, si tota bene collocaretur, and explain what the mood asserts about mankind.',
+        answer: 'Protasis: si + collocaretur, imperfect subjunctive passive of colloco — present contrary-to-fact. Apodosis: data est (perfect indicative — the gift is real). Mixed condition: the giving is fact; the good investing is contrary to fact. The mood asserts the indictment without a single accusatory word: life IS long enough — and is NOT being well invested. The subjunctive carries the entire thesis of De Brevitate Vitae.',
+      },
+      {
+        number: '27.4',
+        prompt: 'The Moods of Fear — rewrite “I will lose my position” three ways: as a fear rehearsed gently (future less vivid), as a plan (future more vivid with the answer), and as a closed regret (past contrary-to-fact). Explain what each mood does to the fear.',
+        answer: 'Gentle rehearsal: si locum amittam, feram — “should I lose my position, I would bear it” (possibility held at subjunctive distance for premeditation). Plan: si locum amisero, feram — “if I (will have) lost my position, I will bear it” (future perfect + future: the event scheduled and pre-answered; fear converted into logistics). Closed regret: si attendissem, locum non amisissem — “had I attended, I would not have lost it” (pluperfect subjunctive: examined once in the evening review, then closed). The mood system is exposure therapy with grammar: the same event moved from imagined, to scheduled, to archived — never left as a free-floating terror.',
+      },
+    ],
+    quiz: [
+      { question: 'What are the two parts of a condition called?', options: ['Subject and predicate', 'Protasis (si-clause) and apodosis (conclusion)', 'Thesis and antithesis', 'Cause and effect'], correct: 1 },
+      { question: 'What does si + present subjunctive express?', options: ['A real present fact', 'Future less vivid — “should/would”: an imagined possibility', 'Past regret', 'A command'], correct: 1 },
+      { question: 'What does si + imperfect subjunctive express?', options: ['Future more vivid', 'Present contrary-to-fact — “if X were so (but it is not)”', 'Simple past', 'Purpose'], correct: 1 },
+      { question: 'What does si + pluperfect subjunctive express?', options: ['Past contrary-to-fact — “if X had happened (but it did not)”', 'Future possibility', 'Present fact', 'Indirect question'], correct: 0 },
+      { question: 'Classify: si vis amari, ama (Ep. 9).', options: ['Future less vivid', 'Simple present condition with indicative — stated as plain fact', 'Contrary-to-fact', 'Result clause'], correct: 1 },
+      { question: 'Classify si volueris attendere… (Ep. I.1).', options: ['Contrary-to-fact', 'Future more vivid — future perfect protasis: willingness treated as a real, completable future event', 'Future less vivid', 'Simple past'], correct: 1 },
+      { question: 'In si tota bene collocaretur (De Brevitate 1), what does the imperfect subjunctive assert?', options: ['Life is well invested', 'Present contrary-to-fact: life is NOT being well invested — the grammar is the indictment', 'A future plan', 'A question'], correct: 1 },
+      { question: 'What does nisi mean?', options: ['“But if”', '“If not, unless”', '“Even if”', '“Because”'], correct: 1 },
+      { question: 'Translate: si accidet, feram.', options: ['If it should happen, I might bear it.', 'If it happens, I will bear it. — the fear converted into a scheduled plan', 'Had it happened, I would have borne it.', 'It happens because I bear it.'], correct: 1 },
+      { question: 'Which mood does the Stoic evening review use for regret — and what happens next?', options: ['Present indicative, repeated all night', 'Pluperfect subjunctive (si attendissem…) — examined once, then closed', 'Future indicative', 'Imperative'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'si', pronunciation: 'SEE', english: 'if' },
+      { latin: 'nisi', pronunciation: 'NI-si', english: 'if not, unless' },
+      { latin: 'ferre (fero, tuli, latum)', pronunciation: 'FER-re', english: 'to bear, carry, endure (irregular)' },
+      { latin: 'accidere', pronunciation: 'ak-KI-de-re', english: 'to happen, befall (3rd conj.)' },
+      { latin: 'collocare', pronunciation: 'kol-lo-KA-re', english: 'to place, invest (1st conj.)' },
+      { latin: 'amari', pronunciation: 'a-MA-ri', english: 'to be loved (present passive infinitive)' },
+    ],
+  },
+
+  // ── SESSION 28 ─────────────────────────────────────────────────────────────
+  {
+    id: 28,
+    title: 'Indirect Questions & Impersonal Verbs',
+    subtitle: 'quid sit summum bonum — asking inside a sentence, and the verbs with no subject',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Form indirect questions with an interrogative word + subjunctive',
+      'Apply the sequence of tenses to indirect questions',
+      'Use the core impersonal verbs: licet, oportet, decet, iuvat, placet, necesse est, refert/interest',
+      'Read quantum pereat (Ep. I.4) and non refert quam multos… (Ep. 45) as both constructions combined',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Indirect Question',
+        body: 'A direct question stands alone: quid est summum bonum? — “what is the highest good?” Fold it inside another verb and it becomes an indirect question, and its verb goes into the SUBJUNCTIVE: quaeris quid sit summum bonum — “you ask what the highest good is.” Any interrogative word can lead one: quid (what), quis (who), cur (why), quomodo (how), quantum (how much), quando (when), utrum… an (whether… or), num (whether).\n\nDo not confuse the indirect question (interrogative + subjunctive) with the relative clause (antecedent + indicative): scio quid facias — “I know what you are doing” (indirect question, subjunctive) vs. facio id quod facis — “I do that which you do” (relative, indicative).',
+        paradigms: [
+          {
+            title: 'Sequence of Tenses in Indirect Questions',
+            headers: ['Main verb', 'Same time / later', 'Earlier', 'Example'],
+            rows: [
+              ['Primary (present, future)', 'present subj.', 'perfect subj.', 'quaero quid facias / quid feceris — I ask what you are doing / what you did'],
+              ['Secondary (past)', 'imperfect subj.', 'pluperfect subj.', 'quaesivi quid faceres / quid fecisses — I asked what you were doing / had done'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Session 20 flagged it; now you own it: et si volueris attendere, videbis… quantum pereat (Ep. I.4 family) — quantum + subjunctive pereat is an indirect question after a verb of seeing: “you will see HOW MUCH is lost.” Seneca’s audits are conducted in indirect questions.',
+        },
+      },
+      {
+        heading: 'Part 2 — The Impersonal Verbs',
+        body: 'A small set of Latin verbs runs only in the third person singular with no personal subject — the impersonals. They are the backbone of Roman moral language, because obligation, permission, and fittingness are stated about situations, not persons. The person affected appears in the dative or accusative; the action follows as an infinitive or clause.',
+        paradigms: [
+          {
+            title: 'Core Impersonals',
+            headers: ['Verb', 'Construction', 'Meaning', 'Stoic example'],
+            rows: [
+              ['licet', '+ dat. + infin.', 'it is permitted', 'licet nemini peccare impune. — no one may do wrong with impunity'],
+              ['oportet', '+ ACI or infin.', 'it is right/one ought', 'oportet virtutem colere. — one ought to cultivate virtue'],
+              ['decet', '+ acc. + infin.', 'it befits', 'sapientem decet pauca loqui. — it befits the wise man to speak little'],
+              ['iuvat', '+ acc. + infin.', 'it pleases/delights', 'iuvat vixisse. — it is a joy to have lived'],
+              ['placet', '+ dat.', 'it pleases; (philos.) it is one’s position', 'Stoicis placet solam virtutem bonum esse.'],
+              ['necesse est', '+ dat. + infin. / subj.', 'it is necessary', 'necesse est multis timeat quem multi timent.'],
+              ['refert / interest', '+ gen. or mea/tua + ind. question', 'it matters', 'non refert quam multos libros habeas, sed quam bonos.'],
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Part 3 — The Two Constructions Together',
+        body: 'Seneca’s bookshelf maxim (Ep. 45, compressed) welds this session into one sentence: non refert quam multos libros habeas, sed quam bonos — “it does not matter how many books you have, but how good.” refert is the impersonal (“it matters”); quam multos… habeas and (understood) quam bonos habeas are indirect questions with the subjunctive. One line of Latin, both constructions, and the whole doctrine of Ep. I.2 restated as an audit question.\n\nNote also placet as the verb of philosophical positions: Stoicis placet — “it is the Stoics’ view (it pleases the Stoics)…” — the standard formula in doxography. And necesse est carries Seneca’s hardest political epigram (De Clementia’s territory in PHIL 704): multis timeat necesse est quem multi timent — “he whom many fear must fear many.” The impersonal states the law; the relative clause supplies the tyrant.',
+      },
+    ],
+    exercises: [
+      {
+        number: '28.1',
+        prompt: 'Make each direct question indirect after quaero (“I ask”): 1. quid est virtus?  2. cur times?  3. quantum temporis perdidisti?',
+        answer: '1. quaero quid sit virtus. (present subj. — same time, primary sequence) 2. quaero cur timeas. 3. quaero quantum temporis perdideris. (perfect subj. — earlier action, primary sequence; quantum + partitive genitive temporis)',
+      },
+      {
+        number: '28.2',
+        prompt: 'Translate: 1. sapientem decet pauca loqui.  2. licet nemini peccare impune.  3. iuvat vixisse.',
+        answer: '1. It befits the wise man to speak little. (decet + acc. + infin.; loqui — deponent) 2. No one is permitted to do wrong with impunity. (licet + dative nemini) 3. It is a joy to have lived. (iuvat + perfect infinitive — the vixi doctrine of Session 22 in impersonal form)',
+      },
+      {
+        number: '28.3',
+        prompt: 'Parse the maxim: non refert quam multos libros habeas, sed quam bonos.',
+        answer: 'refert — impersonal, “it matters,” negated. quam multos libros habeas — indirect question (quam multos “how many” + present subjunctive habeas) serving as the subject of refert. sed quam bonos (habeas) — second indirect question with the verb gapped. Translation: “It does not matter how many books you have, but how good.” The audit of Ep. I.2 in a single line.',
+      },
+      {
+        number: '28.4',
+        prompt: 'The Grammar of Obligation — Latin states duty impersonally (oportet, decet, necesse est) rather than with a personal “you must.” Using Part 2, explain what this grammar implies about Stoic ethics.',
+        answer: 'The impersonals locate obligation in the situation, not in a commander: oportet virtutem colere — “it is right (in the nature of things) to cultivate virtue” — states a fact about the order of the world, the way physics states a law. No speaker issues the demand; reason reads it off reality. This matches Stoic ethics exactly: duty (kathēkon, officium) is what the situation and one’s roles objectively call for, discovered rather than commanded (PHIL 703 Session 5’s role ethics). The dative of the person (licet MIHI) marks who stands under the law, but the law itself is subjectless — as impersonal as gravity, and as non-negotiable.',
+      },
+    ],
+    quiz: [
+      { question: 'What mood does the verb of an indirect question take?', options: ['Indicative', 'Subjunctive', 'Imperative', 'Infinitive'], correct: 1 },
+      { question: 'Translate: quaeris quid sit summum bonum.', options: ['You ask what the highest good is.', 'What is the highest good?', 'You know the highest good.', 'The highest good asks you.'], correct: 0 },
+      { question: 'In primary sequence, which subjunctive marks EARLIER action in an indirect question?', options: ['Present', 'Perfect', 'Imperfect', 'Pluperfect'], correct: 1 },
+      { question: 'scio quid facias vs. facio id quod facis — what distinguishes them?', options: ['Nothing', 'The first is an indirect question (subjunctive); the second a relative clause (indicative)', 'The first is a command', 'The second is ungrammatical'], correct: 1 },
+      { question: 'What construction does licet take?', options: ['Accusative + participle', 'Dative + infinitive — licet mihi ire, “I may go”', 'Genitive + gerund', 'Nominative + indicative'], correct: 1 },
+      { question: 'What does oportet virtutem colere mean?', options: ['Virtue cultivates opportunity.', 'One ought to cultivate virtue.', 'It is forbidden to cultivate virtue.', 'Virtue happens by chance.'], correct: 1 },
+      { question: 'What does Stoicis placet introduce in philosophical prose?', options: ['A pleasure of the body', 'The school’s position: “it is the Stoics’ view that…”', 'A legal permission', 'A prayer'], correct: 1 },
+      { question: 'Parse habeas in non refert quam multos libros habeas.', options: ['Present indicative', 'Present subjunctive — verb of the indirect question after refert', 'Future', 'Imperative'], correct: 1 },
+      { question: 'Translate: multis timeat necesse est quem multi timent.', options: ['Many fears are necessary.', 'He whom many fear must (necessarily) fear many.', 'Fear nothing and no one.', 'It is necessary that many be feared by him.'], correct: 1 },
+      { question: 'Why does Latin state obligation impersonally (oportet, decet)?', options: ['Stylistic accident', 'Obligation is located in the nature of the situation, discovered by reason — not issued by a personal commander', 'Latin lacks a word for “you”', 'Only slaves had duties'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'licet', pronunciation: 'LI-ket', english: 'it is permitted (+ dat. + infin.)' },
+      { latin: 'oportet', pronunciation: 'o-POR-tet', english: 'it is right, one ought (+ ACI)' },
+      { latin: 'decet', pronunciation: 'DE-ket', english: 'it befits (+ acc. + infin.)' },
+      { latin: 'iuvat', pronunciation: 'YU-wat', english: 'it pleases, it delights' },
+      { latin: 'refert', pronunciation: 'RE-fert', english: 'it matters, it makes a difference' },
+      { latin: 'necesse est', pronunciation: 'ne-KES-se est', english: 'it is necessary' },
+      { latin: 'quomodo', pronunciation: 'KWO-mo-do', english: 'how, in what way' },
+    ],
+  },
+
+  // ── SESSION 29 ─────────────────────────────────────────────────────────────
+  {
+    id: 29,
+    title: 'Reading Workshop — De Brevitate Vitae 1',
+    subtitle: 'The most famous opening in Stoic Latin, parsed with everything you have',
+    targetText: SENECA_I_1,
+    objectives: [
+      'Read the opening chapter of De Brevitate Vitae with full grammatical control',
+      'Track quod-clauses, result clauses, and a present contrary-to-fact condition in extended prose',
+      'Parse deponents, comparatives, and indirect questions in context',
+      'Translate the thesis sentences: non exiguum temporis habemus… and vita, si uti scias, longa est',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Passage',
+        body: 'Seneca, De Brevitate Vitae 1 (abridged):\n\nMaior pars mortalium, Pauline, de naturae malignitate conqueritur, quod in exiguum aevi gignimur, quod haec tam velociter, tam rapide dati nobis temporis spatia decurrant, adeo ut exceptis admodum paucis ceteros in ipso vitae apparatu vita destituat. […] non exiguum temporis habemus, sed multum perdidimus. Satis longa vita et in maximarum rerum consummationem large data est, si tota bene collocaretur. […] non accepimus brevem vitam sed fecimus, nec inopes eius sed prodigi sumus. […] vita, si uti scias, longa est.\n\nTranslation: “The greater part of mortals, Paulinus, complains about nature’s spite: that we are born into a scant span of life, that these stretches of time given to us run down so swiftly, so rapidly, that — a very few excepted — life deserts the rest in the very preparation for living. […] It is not that we have a short amount of time, but that we have wasted much of it. Life is long enough, and given generously for the accomplishment of the greatest things, if the whole of it were well invested. […] We have not received a short life but made it so; we are not paupers in it but prodigals. […] Life, if you know how to use it, is long.”',
+      },
+      {
+        heading: 'Part 2 — The Parse, Movement by Movement',
+        body: 'Movement 1 — the complaint. Maior pars mortalium: comparative maior (Session 23) + partitive genitive mortalium (Session 6). conqueritur: deponent, “complains” (Session 16). The complaint’s content arrives in two quod-clauses (“that…”): gignimur — present passive, “we are born” (Session 11) — and decurrant — subjunctive, because the reported reason is the complainers’ claim, not Seneca’s assertion. Then the result: adeo ut… vita destituat (Session 19) — “to such a degree that life deserts them,” with the bitter ablative in ipso vitae apparatu — “in the very preparation for living” (ipso — Session 24).\n\nMovement 2 — the reversal. non exiguum temporis habemus, sed multum perdidimus: partitive genitive temporis after both exiguum and multum; the perfect perdidimus lands the verdict — the waste is completed fact. Then the thesis condition (Session 27): satis longa vita… data est, si tota bene collocaretur — perfect indicative gift, contrary-to-fact investment. Movement 3 — the epigrams: non accepimus brevem vitam sed fecimus — accepimus/fecimus, the perfect-tense antithesis of receiving versus making; inopes/prodigi — paupers/prodigals, the financial register of Ep. I.1 returning; and the closing condition si uti scias — uti the deponent (Session 16) governing the understood ablative (vita), scias present subjunctive in a generalizing “if ever you know” — vita longa est: indicative, flat, final.',
+        paradigms: [
+          {
+            title: 'Everything Deployed (the Unit III synthesis)',
+            headers: ['Text', 'Construction', 'Session'],
+            rows: [
+              ['maior pars mortalium', 'comparative + partitive genitive', '23 / 6'],
+              ['conqueritur', 'deponent — “complains”', '16'],
+              ['quod… gignimur / decurrant', 'quod-clauses; subjunctive of reported reason', '13 / 19'],
+              ['adeo ut… destituat', 'result clause', '19'],
+              ['in ipso vitae apparatu', 'ipse the intensive', '24'],
+              ['si tota bene collocaretur', 'present contrary-to-fact', '27'],
+              ['si uti scias', 'condition + deponent uti (+ abl.)', '27 / 16'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Note the moods of the two si-clauses: collocaretur (imperfect subjunctive — mankind does NOT invest well: contrary to fact) but scias (present subjunctive, generalizing — knowing how to use life is open to you). The indictment and the invitation differ by one degree of mood. That is Senecan prose at maximum compression.',
+        },
+      },
+      {
+        heading: 'Part 3 — Why This Text, and What You Can Now Do',
+        body: 'You read this essay in translation in PHIL 704 Session 6. Now you have read its opening in Latin, and the translation’s losses become visible: “the greater part of mortals” flattens the sneer of maior pars mortalium with its echo of maior in Session 23’s rankings; “wasted” loses the completed-account finality of perdidimus; “if you know how to use it” cannot show that uti is the same deponent verb whose ablative object made virtute uti — “to use virtue” — in Session 16. The financial metaphors (inopes, prodigi, collocaretur — investment language) are a single sustained register in Latin that English scatters.\n\nThis is the payoff the course promised in Session 1: not Latin for its own sake, but Seneca without an intermediary. One session remains — the final examination, and the reading program that turns thirty sessions of grammar into a lifetime habit.',
+      },
+    ],
+    exercises: [
+      {
+        number: '29.1',
+        prompt: 'Unaided Translation — translate the abridged passage in Part 1 without notes.',
+        answer: 'See the translation in Part 1. The four movements: the mortals’ complaint (two quod-clauses + result clause), Seneca’s reversal (non exiguum… sed multum perdidimus), the thesis condition (si tota bene collocaretur — contrary to fact), and the epigrams (accepimus/fecimus; inopes/prodigi; vita, si uti scias, longa est).',
+      },
+      {
+        number: '29.2',
+        prompt: 'Parse on Demand: 1. conqueritur  2. gignimur  3. destituat  4. collocaretur  5. scias',
+        answer: '1. Present 3rd sg. of the deponent conqueror — “complains” (active meaning). 2. Present passive 1st pl. of gigno — “we are born/begotten.” 3. Present subjunctive 3rd sg. of destituo — in the result clause after adeo ut. 4. Imperfect subjunctive passive 3rd sg. of colloco — present contrary-to-fact protasis. 5. Present subjunctive 2nd sg. of scio — generalizing condition (“if ever you know”).',
+      },
+      {
+        number: '29.3',
+        prompt: 'The Financial Register — list the words in the passage drawn from the language of money and accounting, and explain what the register argues.',
+        answer: 'exiguum temporis / multum (quantities on account), perdidimus (lost/squandered — a completed loss entry), collocaretur (colloco — to invest/place capital), inopes (paupers), prodigi (prodigals, big spenders), and behind them Ep. I.1’s impensae and ratio of time. The register argues by frame: time is capital under management, every person is a fund manager of a fixed endowment, and the complaint against nature is an embezzler blaming his salary. The metaphor does the ethics: waste is not misfortune but mismanagement — and mismanagement has an accountable manager.',
+      },
+      {
+        number: '29.4',
+        prompt: 'Two si-clauses, two moods — contrast si tota bene collocaretur with si uti scias: parse both and explain why Seneca changes mood between the indictment and the invitation.',
+        answer: 'si tota bene collocaretur: imperfect subjunctive — present contrary-to-fact: as things stand, life is NOT well invested; the clause indicts mankind collectively, and the mood declares the failure an existing fact. si uti scias: present subjunctive in a generalizing/less-vivid condition addressed to the reader: knowing how to use life is a live possibility — not asserted as fact, but open. The mood shift is the essay’s pivot from diagnosis to prescription: mankind’s case is closed (subjunctive of unreality); yours is open (subjunctive of possibility). Grammar carries the exhortation: move yourself from the first clause to the second.',
+      },
+    ],
+    quiz: [
+      { question: 'Parse conqueritur.', options: ['Present passive of conquiro', 'Present 3rd sg. of the deponent conqueror — “complains”', 'Perfect of conquero', 'Imperfect subjunctive'], correct: 1 },
+      { question: 'What is mortalium in maior pars mortalium?', options: ['Accusative object', 'Partitive genitive — “the greater part OF mortals”', 'Dative of interest', 'Ablative of comparison'], correct: 1 },
+      { question: 'What construction is adeo ut… vita destituat?', options: ['Purpose clause', 'Result clause — “to such a degree that life deserts (them)”', 'Indirect question', 'Ablative absolute'], correct: 1 },
+      { question: 'Translate: non exiguum temporis habemus, sed multum perdidimus.', options: ['We have little time and lost little.', 'It is not that we have a short amount of time, but that we have wasted much of it.', 'Time is not ours to have or lose.', 'We neither have nor lose time.'], correct: 1 },
+      { question: 'What does the imperfect subjunctive collocaretur assert?', options: ['Life is well invested', 'Present contrary-to-fact: life is NOT being well invested', 'Life will be invested', 'A command to invest'], correct: 1 },
+      { question: 'Translate: non accepimus brevem vitam sed fecimus.', options: ['We accepted a short life gladly.', 'We have not received a short life but made it (short).', 'A short life receives us.', 'We neither receive nor make life.'], correct: 1 },
+      { question: 'What do inopes and prodigi mean?', options: ['Rich and poor', 'Paupers (in life) and prodigals (of it) — the financial register', 'Wise and foolish', 'Young and old'], correct: 1 },
+      { question: 'In vita, si uti scias, longa est, what does uti govern?', options: ['An accusative', 'An understood ablative (vita) — utor takes the ablative (Session 16)', 'A genitive', 'Nothing'], correct: 1 },
+      { question: 'Why is scias subjunctive in si uti scias?', options: ['Contrary to fact — no one knows how', 'A generalizing/open condition: knowing how to use life is a live possibility for the reader', 'Indirect question', 'Attraction to longa'], correct: 1 },
+      { question: 'What is the essay’s thesis, in its own Latin?', options: ['ars longa, vita brevis', 'vita, si uti scias, longa est — life, if you know how to use it, is long', 'omnia mors poscit', 'tempus fugit'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'conqueri', pronunciation: 'KON-kwe-ri', english: 'to complain (3rd conj. deponent)' },
+      { latin: 'gigni', pronunciation: 'GIG-ni', english: 'to be born (passive of gigno)' },
+      { latin: 'exiguus, -a, -um', pronunciation: 'ek-SI-gu-us', english: 'scant, small, meager' },
+      { latin: 'destituere', pronunciation: 'de-sti-TU-e-re', english: 'to desert, abandon (3rd conj.)' },
+      { latin: 'inops, inopis', pronunciation: 'IN-ops', english: 'poor, destitute (adj.)' },
+      { latin: 'prodigus, -a, -um', pronunciation: 'PRO-di-gus', english: 'wasteful, prodigal' },
+      { latin: 'brevitas, brevitatis', pronunciation: 'BRE-wi-tas', english: 'shortness, brevity (f.)' },
+    ],
+  },
+
+  // ── SESSION 30 ─────────────────────────────────────────────────────────────
+  {
+    id: 30,
+    title: 'FINAL — Unit III Examination & the Road Ahead',
+    subtitle: 'Unseen Seneca at sight · the complete grammar synthesized · your Latin reading program',
+    isMilestone: true,
+    targetText: SENECA_I_1,
+    objectives: [
+      'Translate unseen Senecan prose (Epistula I.5) at sight',
+      'Parse any form from the complete grammar of Sessions 1–29 on demand',
+      'Compose simple Stoic Latin using conditions, the ACI, and the gerundive',
+      'Leave with a structured program for reading Seneca independently',
+    ],
+    parts: [
+      {
+        heading: 'Part 1 — The Sight Passage: Epistula I.5',
+        body: 'Read at sight, then check against the translation. Seneca, Ep. I.5 (on not performing philosophy — the letter behind PHIL 704 Session 1):\n\nIllud autem te admoneo, ne eorum more qui non proficere sed conspici cupiunt facias aliqua quae in habitu tuo aut genere vitae notabilia sint. […] Intus omnia dissimilia sint, frons populo nostra conveniat.\n\nTranslation: “But I warn you of this: do not — in the manner of those who desire not to make progress but to be noticed — do things that would be conspicuous in your dress or way of life. […] Inwardly let everything be different; let our outward face fit the crowd.”\n\nThe constructions at sight: admoneo ne + subjunctive (warning clause); eorum more — “in the manner of those” — with the relative qui… cupiunt; the infinitives proficere / conspici (active vs. PASSIVE infinitive — to make progress vs. to be seen: the letter’s whole ethics in one voice contrast); quae… notabilia sint — relative clause of characteristic (Session 25); and the closing jussive subjunctives sint / conveniat (Session 13) — “let everything be… let our face fit.”',
+      },
+      {
+        heading: 'Part 2 — The Grammar, Complete',
+        body: 'Thirty sessions, one system. Nouns: all five declensions (vita, animus, ratio/virtus/corpus, manus/usus, res/dies). Verbs: four conjugations plus esse and the irregulars, active and passive, indicative complete (present, imperfect, future, perfect, pluperfect, future perfect), subjunctive complete (present, imperfect, perfect, pluperfect), infinitives in three tenses and two voices, participles in three tenses, gerund and gerundive, deponents. Syntax: the case uses, the ablative absolute, the ACI, purpose/result/cum clauses, indirect commands and questions, conditions in six types, relative clauses plain and characteristic, comparison, impersonals.\n\nThat is not “some Latin.” That is the entire grammatical machinery of Senecan prose. What remains between you and fluent reading is not grammar but mileage: vocabulary acquired in context, and speed acquired by volume.',
+        paradigms: [
+          {
+            title: 'The Reading Program — Your Next Year of Latin',
+            headers: ['Stage', 'Text', 'Why'],
+            rows: [
+              ['1 (now)', 'Epistulae Morales 1–12, one per week', 'Short, thematically sequenced, and you have read 1, 2, 4, and 5 in class'],
+              ['2', 'De Brevitate Vitae entire', 'You hold its opening; the essay sustains the financial register throughout'],
+              ['3', 'Epistulae 13–30 + De Providentia', 'Longer arguments; the theodicy you know from PHIL 704 Session 8'],
+              ['4', 'De Tranquillitate Animi; then Ep. 90, 92', 'The dialogues’ conversational Latin, then the hard theoretical letters'],
+              ['5 (stretch)', 'Marcus Aurelius in Greek — GREK 101 track', 'The other half of the bilingual Stoa'],
+            ],
+          },
+        ],
+        callout: {
+          text: 'Method for every stage, from Ep. I.2: probatos semper lege — read the proven authors, always; a little daily, digested (unum aliquid in dies); and when you wander to others, redi — return. Fifteen minutes of Latin a day outreads three-hour bursts. The grammar of this course decays without contact; with daily contact it compounds.',
+        },
+      },
+      {
+        heading: 'Part 3 — The Examination',
+        body: 'The exercises below are the Unit III final: sight translation, parse battery, construction identification, and Latin composition. Work them closed-book, then check. The standard is Ep. I.1’s: si volueris attendere — the future perfect condition you can now parse names the only requirement there ever was.\n\nAnd mark what the two milestone sentences of this course say when set side by side. Session 1 gave you vindica te tibi — claim yourself for yourself. Session 29 gave you vita, si uti scias, longa est — life, if you know how to use it, is long. Thirty sessions of Latin grammar sit between a command and its justification. You can now read both without an intermediary — and the texts they open were written, Seneca says in Ep. 8, exactly for you: posterorum negotium ago — “I am doing the business of later generations.” You are the later generation. The correspondence is delivered.',
+      },
+    ],
+    exercises: [
+      {
+        number: '30.1',
+        prompt: 'FINAL, Part A — Sight translation: translate the Ep. I.5 passage in Part 1 without notes, then explain the force of proficere vs. conspici.',
+        answer: 'See Part 1 for the translation. proficere (active infinitive — to make progress) vs. conspici (PASSIVE infinitive — to be looked at): the poser’s whole error is grammatical voice — he trades the active work of progress for the passive state of being seen. Seneca’s intus/frons antithesis then assigns the difference its geography: inwardly everything different, outwardly conformed.',
+      },
+      {
+        number: '30.2',
+        prompt: 'FINAL, Part B — Parse battery: 1. conveniat  2. volueris  3. collocaretur  4. cuius  5. amaverint  6. uti  7. habeas (after non refert quam multos…)  8. locutus est',
+        answer: '1. Present subjunctive 3rd sg. (jussive) of convenio — “let (our face) fit.” 2. Future perfect 2nd sg. of volo (si volueris, Ep. I.1). 3. Imperfect subjunctive passive 3rd sg. of colloco — contrary-to-fact protasis (Brev. 1). 4. Genitive singular of the relative qui/quae/quod. 5. Future perfect 3rd pl. of amo. 6. Present infinitive of the deponent utor (+ ablative). 7. Present subjunctive 2nd sg. of habeo — indirect question after refert. 8. Perfect 3rd sg. of the deponent loquor — “he spoke” (active meaning).',
+      },
+      {
+        number: '30.3',
+        prompt: 'FINAL, Part C — Identify the construction and cite its session: 1. vide ne lectio habeat aliquid vagum.  2. dicit se liberum esse.  3. omnia aliena sunt.  4. nemo est qui mortem effugiat.  5. philosophandum est.',
+        answer: '1. ne + subjunctive after a verb of watching/warning (Sessions 13/26). 2. ACI with reflexive se — “he says that he himself is free” (Session 17). 3. Predicate adjective with esse — the map of ownership (Sessions 5/20). 4. Relative clause of characteristic with subjunctive (Session 25). 5. Impersonal passive periphrastic (gerundive) — “one must philosophize” (Session 18).',
+      },
+      {
+        number: '30.4',
+        prompt: 'FINAL, Part D — Composition: render into Latin, using the constructions named: 1. “If you are willing (fut. perf.), you will learn.” 2. “The Stoics think that virtue alone is good” (ACI). 3. “Time must be saved” (gerundive). 4. “Claim yourself for yourself.”',
+        answer: '1. si volueris, disces. 2. Stoici putant virtutem solam esse bonum. 3. tempus servandum est. 4. vindica te tibi. — If your versions differ in word order, Latin permits it; check case, mood, and construction, not sequence.',
+      },
+    ],
+    quiz: [
+      { question: 'In admoneo ne… facias, what is facias?', options: ['Present indicative', 'Present subjunctive in a negative warning/command clause after admoneo ne', 'Future', 'Imperative'], correct: 1 },
+      { question: 'What voice contrast carries Ep. I.5’s ethics?', options: ['amare vs. amari generally', 'proficere (active — to progress) vs. conspici (passive — to be seen)', 'esse vs. fuisse', 'loqui vs. dicere'], correct: 1 },
+      { question: 'Parse sint in Intus omnia dissimilia sint.', options: ['Present indicative 3rd pl.', 'Jussive present subjunctive — “LET everything be different”', 'Imperfect subjunctive', 'Future'], correct: 1 },
+      { question: 'What are the five declensions’ model nouns in this course?', options: ['amo, moneo, rego, audio, sum', 'vita; animus/verbum; ratio/virtus/corpus; manus/usus; res/dies', 'hic, ille, iste, is, qui', 'Seneca, Lucilius, Cato, Paulinus, Nero'], correct: 1 },
+      { question: 'Which is NOT yet in your grammar after 30 sessions?', options: ['The ACI', 'Conditions in six types', 'The gerundive', 'None — the machinery of Senecan prose is complete; what remains is vocabulary and mileage'], correct: 3 },
+      { question: 'What is the reading program’s first stage?', options: ['The Aeneid', 'Epistulae Morales 1–12, one per week — four already read in class', 'Cicero’s speeches', 'Medieval Latin'], correct: 1 },
+      { question: 'What method does Ep. I.2 prescribe for that program?', options: ['Read as many authors as possible', 'probatos semper lege — proven authors, a little daily, digested; wanderings end with return', 'Read only translations', 'Memorize whole letters'], correct: 1 },
+      { question: 'Translate: posterorum negotium ago (Ep. 8).', options: ['I do business with the ancients.', 'I am doing the business of later generations — Seneca writing for you', 'Posterity does my business.', 'I abandon future concerns.'], correct: 1 },
+      { question: 'Compose: “Time must be saved.”', options: ['tempus servare est', 'tempus servandum est — gerundive of obligation', 'tempus servatur', 'serva tempus est'], correct: 1 },
+      { question: 'The course’s two milestone sentences, side by side, are:', options: ['cogito ergo sum / carpe diem', 'vindica te tibi (Ep. I.1) and vita, si uti scias, longa est (Brev. 1) — the command and its justification', 'memento mori / amor fati', 'ars longa / vita brevis'], correct: 1 },
+    ],
+    vocabulary: [
+      { latin: 'admonere', pronunciation: 'ad-mo-NE-re', english: 'to warn, advise (2nd conj.)' },
+      { latin: 'proficere', pronunciation: 'pro-FI-ke-re', english: 'to make progress (3rd conj. -io)' },
+      { latin: 'conspici', pronunciation: 'kon-SPI-ki', english: 'to be noticed, be looked at (passive infin.)' },
+      { latin: 'frons, frontis', pronunciation: 'FRONS', english: 'forehead, outward face, front (f.)' },
+      { latin: 'intus', pronunciation: 'IN-tus', english: 'inwardly, within (adverb)' },
+      { latin: 'posteri, posterorum', pronunciation: 'POS-te-ri', english: 'later generations, posterity (m. pl.)' },
     ],
   },
 ];
