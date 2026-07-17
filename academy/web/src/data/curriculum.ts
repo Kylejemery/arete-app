@@ -9,6 +9,9 @@ import { PHIL_701_SESSIONS } from './phil701';
 import { PHIL_702_SESSIONS } from './phil702';
 import { PHIL_703_SESSIONS } from './phil703';
 import { PHIL_704_SESSIONS } from './phil704';
+import { GREK_101_SESSIONS } from './grek101';
+import { LATN_101_SESSIONS } from './latn101';
+import { PHIL_705_SESSIONS } from './phil705';
 import { PHIL702_READING, type ReadingItem } from './phil702_reading';
 import { PHIL703_READING } from './phil703_reading';
 import { PHIL704_READING } from './phil704_reading';
@@ -85,5 +88,44 @@ export const PHIL_CURRICULUM: CurriculumCourse[] = [
       hasQuiz: (s.quiz?.length ?? 0) > 0,
     })),
     readings: PHIL704_READING,
+  },
+];
+
+// The parallel tracks — open-access (no completion gating), but quiz results
+// are recorded to session_progress by the language QuizSection, so the
+// advisor can show standing. `hasQuiz` marks recordable sessions.
+export const PARALLEL_CURRICULUM: CurriculumCourse[] = [
+  {
+    id: 'grek-101',
+    code: 'GREK 101',
+    title: 'Ancient Greek for Philosophers',
+    sessions: GREK_101_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: {},
+  },
+  {
+    id: 'latn-101',
+    code: 'LATN 101',
+    title: 'Latin for Philosophers',
+    sessions: LATN_101_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: {},
+  },
+  {
+    id: 'phil-705',
+    code: 'PHIL 705',
+    title: 'The Logic of Clear Seeing',
+    sessions: PHIL_705_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: {},
   },
 ];

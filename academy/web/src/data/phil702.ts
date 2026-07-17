@@ -78,16 +78,22 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "It is the repetition of an athlete: knowledge without practice disappears. The recurrence shows Marcus reinforcing principles he has not yet fully internalized — practice, not redundancy.",
       },
       {
-        question: "4. What does Hadot mean by 'spiritual exercises,' and name three.",
-        answer: "Concrete daily practices for transforming the self, not metaphors. Examples include the morning review, the evening examination, the premeditation of adversity, the view from above, the contemplation of death, and the practice of attention (prosochē).",
+        type: 'msq',
+        question: "4. Which of the following are among Hadot's 'spiritual exercises'?",
+        options: ["The morning review and evening examination", "Accumulating doctrines for debate", "The premeditation of adversity", "The view from above", "Winning arguments against rival schools", "The contemplation of death"],
+        correct: [0, 2, 3, 5],
+        explanation: "Spiritual exercises are concrete daily practices for transforming the self — review, premeditation, the view from above, memento mori, and attention (prosochē). Doctrine-collection and debate are precisely what they are not.",
       },
       {
         question: "5. On Hadot's account, what was ancient philosophy primarily for?",
         answer: "It was primarily a set of practices for transforming the self, not a body of doctrines to be believed. The school was a place to be trained, and the texts were instruments of transformation rather than objects of study.",
       },
       {
-        question: "6. When Marcus anticipates meeting 'meddling, ungrateful' people, what exercise is he performing, and what is its function?",
-        answer: "The premeditation of adversity — anticipating difficulty in advance to reduce its shock when it arrives. He is training his impressions before the day begins; the act of performing the exercise matters as much as its content.",
+        type: 'mc',
+        question: "6. When Marcus anticipates meeting 'meddling, ungrateful' people, what exercise is he performing?",
+        options: ["The evening examination", "The premeditation of adversity", "The view from above", "Amor fati"],
+        correct: 1,
+        explanation: "The premeditation of adversity — anticipating difficulty in advance to reduce its shock. He trains his impressions before the day begins; performing the exercise matters as much as its content.",
       },
       {
         question: "7. Why does Hadot say the Meditations lack system, argument, and topical organization?",
@@ -146,8 +152,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. Name the three disciplines and the Greek term Epictetus associated with each.",
-        answer: "The discipline of desire (orexis), the discipline of action (hormē), and the discipline of assent (synkatathesis).",
+        type: 'msq',
+        question: "1. Which of the following are the three disciplines, with their Greek terms?",
+        options: ["The discipline of desire (orexis)", "The discipline of wealth (ploutos)", "The discipline of action (hormē)", "The discipline of rhetoric (rhētorikē)", "The discipline of assent (synkatathesis)"],
+        correct: [0, 2, 4],
+        explanation: "Desire (orexis), action (hormē), assent (synkatathesis) — the three-part framework beneath every entry in the Meditations. Wealth and rhetoric are objects of the disciplines, not disciplines.",
       },
       {
         question: "2. What does the discipline of desire train you to want and to avoid?",
@@ -158,8 +167,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Because they are three dimensions applied simultaneously to every situation — desire, action, and assent are each questioned at once in any given moment, not practised in isolation.",
       },
       {
-        question: "4. Classify Book IV.3 ('Men seek retreats…') by discipline and explain why.",
-        answer: "Discipline of desire. Marcus reminds himself the retreat he needs is internal, not geographical; the external retreat is an indifferent he should not desire.",
+        type: 'mc',
+        question: "4. Book IV.3 ('Men seek retreats for themselves…') belongs to which discipline?",
+        options: ["The discipline of desire", "The discipline of action", "The discipline of assent", "It fits none of the three"],
+        correct: 0,
+        explanation: "Desire: Marcus reminds himself the retreat he needs is internal, not geographical — the external retreat is an indifferent he should not desire.",
       },
       {
         question: "5. Classify Book VIII.7 ('Do not disturb yourself by picturing your life as a whole') by discipline and explain why.",
@@ -231,16 +243,22 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "The only thing worth genuinely wanting is virtue, the full exercise of reason in every situation. It is not 'want things moderately' and not merely 'be prepared to lose what you have' — everything external is a preferred indifferent.",
       },
       {
-        question: "2. Define orexis and explain how misdirected desire produces suffering.",
-        answer: "Orexis is the soul's reaching-out movement toward what it takes to be good. When the soul wrongly identifies an external as a genuine good, it reaches with full desire; when that external is threatened or lost, the soul suffers in proportion to the desire.",
+        type: 'mc',
+        question: "2. What is orexis?",
+        options: ["The faculty of assent", "The soul's reaching-out movement toward what it takes to be good", "A pre-passion preceding emotion", "The reserve clause attached to intentions"],
+        correct: 1,
+        explanation: "Orexis is desire — the soul's reaching toward an apparent good. Misdirected at an external, it reaches with full force, and the soul suffers in proportion when that external is threatened or lost.",
       },
       {
         question: "3. Why is the discipline of desire described as a redirection rather than an elimination of desire?",
         answer: "The Stoics did not advocate killing desire but aiming it at the only thing genuinely good and within your power — virtue. Desire is reoriented, not extinguished.",
       },
       {
-        question: "4. What is the difference between genuine Stoic indifference and carelessness, using health as the example?",
-        answer: "Health is a preferred indifferent: not a genuine good, but worth pursuing all else equal. Genuine indifference still pursues health fully; carelessness neglects it. The Stoic pursues it without requiring it for equanimity.",
+        type: 'mc',
+        question: "4. For the Stoic, health is:",
+        options: ["A genuine good, required for happiness", "A preferred indifferent — pursued fully, but not required for equanimity", "A genuine evil that distracts from virtue", "An illusion to be ignored entirely"],
+        correct: 1,
+        explanation: "Health is a preferred indifferent: worth pursuing all else equal — genuine Stoic indifference still pursues it fully; carelessness neglects it. What the Stoic refuses is making it a condition of peace.",
       },
       {
         question: "5. Why does Marcus, as emperor, not withdraw from responsibilities that concern externals?",
@@ -307,16 +325,22 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. In the archer image, what is the archer's actual job, and what is the indifferent?",
-        answer: "The archer's job is to aim carefully and release well — that is up to him. Whether the arrow hits the target depends on wind, distance, and the bow, which are indifferents outside his control.",
+        type: 'mc',
+        question: "1. In the archer image, what is the archer's actual job?",
+        options: ["Hitting the target", "Aiming carefully and releasing well", "Choosing a windless day", "Winning the competition"],
+        correct: 1,
+        explanation: "Aim and release are up to him; whether the arrow strikes depends on wind, distance, and the bow — indifferents. Staking his peace on the hit is the error the discipline of action corrects.",
       },
       {
         question: "2. What mistake does the archer make if he stakes his peace on hitting the target?",
         answer: "He attaches his equanimity to an outcome that is not fully up to him. His job is the aim and the release; making the result the condition of his peace is the error the discipline of action corrects.",
       },
       {
-        question: "3. Define hupexairesis and give the everyday example from the lesson.",
-        answer: "The reserve clause — the mental reservation attached to every intention: pursue the goal 'if nothing prevents it.' Example: 'I will be home for dinner — if nothing prevents it.' The effort is unconditional; the outcome is held lightly.",
+        type: 'mc',
+        question: "3. What is hupexairesis?",
+        options: ["The soul's reaching toward the good", "The reserve clause — pursuing every goal 'if nothing prevents it'", "The refusal to make plans at all", "A formal vow taken before undertaking duties"],
+        correct: 1,
+        explanation: "The reserve clause attaches to every intention: 'I will be home for dinner — if nothing prevents it.' The effort is unconditional; the outcome is held lightly.",
       },
       {
         question: "4. What is kathēkon, and why was remaining emperor Marcus's kathēkon?",
@@ -387,8 +411,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. What is the hēgemonikon, where did the Stoics locate it, and what does it do?",
-        answer: "The ruling or commanding faculty — located in the heart, not the brain. It receives impressions, examines them, gives or withholds assent, forms intentions, and directs action. Everything genuinely up to you happens there.",
+        type: 'mc',
+        question: "1. What is the hēgemonikon?",
+        options: ["The body's vital breath", "The ruling faculty — receiving impressions, giving or withholding assent, directing action", "Fate as it operates within a person", "The seat of the passions, opposed to reason"],
+        correct: 1,
+        explanation: "The ruling or commanding faculty (which the Stoics located in the heart): it receives impressions, examines them, assents or withholds, forms intentions, directs action. Everything genuinely up to you happens there.",
       },
       {
         question: "2. What does hupolēpsis mean, and what is Marcus claiming in 'life is opinion' (III.16)?",
@@ -411,8 +438,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Undisciplined phantasia is unchecked imagination, the source of most unnecessary suffering. Cutting it short means refusing to let the impression elaborate into catastrophe before it has been examined.",
       },
       {
+        type: 'mc',
         question: "7. Where, according to the lesson, does 'all philosophical practice live'?",
-        answer: "In the pause between impression and assent — the space where the impression can be examined before it is accepted.",
+        options: ["In the library, among the doctrines", "In the pause between impression and assent", "In public debate with rival schools", "In withdrawal from society"],
+        correct: 1,
+        explanation: "In the pause between impression and assent — the space where an impression can be examined before it is accepted. Every discipline operates inside that gap.",
       },
       {
         question: "8. Why is the discipline of assent uniquely difficult to practise?",
@@ -468,12 +498,18 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. What is the 'view from above,' and what are its two main forms?",
-        answer: "The practice of mentally zooming out from your immediate situation to an increasingly vast perspective. Its two forms are spatial (seeing the earth from a height) and temporal (placing the situation against the vast sweep of time).",
+        type: 'mc',
+        question: "1. What are the two main forms of the 'view from above'?",
+        options: ["Moral and legal", "Spatial (zooming out over the earth) and temporal (against the sweep of time)", "Public and private", "Optimistic and pessimistic"],
+        correct: 1,
+        explanation: "The practice zooms out from the immediate situation along two axes: spatial (the earth from a height) and temporal (the situation against vast time) — both to restore proportion.",
       },
       {
+        type: 'mc',
         question: "2. What does the 'Alexander and his mule-driver' passage (VI.24) illustrate?",
-        answer: "That Alexander the Great and his mule-driver ended in the same place — death levels distinctions of rank and achievement. It is a form of the view from above used to restore proportion.",
+        options: ["That rank outlasts death for the truly great", "That death levels distinctions of rank and achievement — both ended in the same place", "That mule-drivers should aspire to conquest", "That Alexander regretted his campaigns"],
+        correct: 1,
+        explanation: "Alexander the Great and his mule-driver ended alike — death levels rank and achievement. A form of the view from above, used to restore proportion.",
       },
       {
         question: "3. Why is the view from above explicitly NOT nihilism?",
@@ -549,8 +585,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. List three things the Stoic contemplation of death is NOT.",
-        answer: "It is not pessimism, not an invitation to despair, not romanticization of mortality, and not an argument that life is not worth living or that effort is pointless.",
+        type: 'msq',
+        question: "1. Which of the following is the Stoic contemplation of death NOT? (select all that apply)",
+        options: ["Pessimism", "A clarifying lens for decisions", "An invitation to despair", "A romanticization of mortality", "A practice for living fully in the present"],
+        correct: [0, 2, 3],
+        explanation: "The meletē thanatou is neither pessimism, despair, nor romance with death — those are its counterfeits. It IS a clarifying lens and a practice for present-moment living.",
       },
       {
         question: "2. What is the meletē thanatou, and name two functions it serves.",
@@ -561,8 +600,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "When uncertain whether something is worth his energy, he asks how it will look from the perspective of death; and when tempted to defer the philosophical life, he uses the thought of death to interrupt the deferral.",
       },
       {
-        question: "4. What does Book II.14 ('no one loses any other life than the one they are now living') teach about the present?",
-        answer: "However long you live, the only life you can lose is the present one — so the contemplation of death is a practice for living fully now, the only place where the ruling faculty can operate.",
+        type: 'mc',
+        question: "4. What does Book II.14 ('no one loses any other life than the one they are now living') teach?",
+        options: ["The old lose more in dying than the young", "The only life you can lose is the present one — so live fully now", "Past achievements survive death", "Death takes the future but spares the past"],
+        correct: 1,
+        explanation: "However long you live, only the present can be lost — the contemplation of death is therefore a practice for living fully now, the only place the ruling faculty operates.",
       },
       {
         question: "5. Explain death as 'the great leveler' and how Marcus uses it.",
@@ -631,8 +673,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. State the principle of Book V.20 in your own words.",
-        answer: "The impediment to action advances action — what stands in the way becomes the way. An obstacle does not merely have to be endured; it can be used as the material for virtuous action.",
+        type: 'mc',
+        question: "1. What is the principle of Book V.20?",
+        options: ["Obstacles must be endured in silence", "The impediment to action advances action — what stands in the way becomes the way", "Wise planning avoids all obstacles", "Obstacles are punishments for vice"],
+        correct: 1,
+        explanation: "The obstacle is not merely endured but used — it becomes the material for the virtuous action the new situation calls for.",
       },
       {
         question: "2. How does the reserve clause make the obstacle-as-way principle work?",
@@ -647,8 +692,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "It was defined by obstacles he could not prevent — the Antonine Plague, the Marcomannic Wars, the betrayal of Avidius Cassius. He could only ask what the appropriate action was in each and perform it without requiring the obstacle to vanish first.",
       },
       {
-        question: "5. Define amor fati and explain how it goes beyond mere acceptance.",
-        answer: "Amor fati is love of fate: the practitioner does not merely accept what happens but actively loves it — not because it is pleasant but because it is the expression of rational providence, the logos working through events. It happens because of the rational order, not despite it.",
+        type: 'mc',
+        question: "5. How does amor fati go beyond mere acceptance?",
+        options: ["It does not — they are the same attitude", "The practitioner actively loves what happens as the expression of rational providence, not merely tolerates it", "It accepts only pleasant events", "It replaces action with resignation"],
+        correct: 1,
+        explanation: "Acceptance endures; amor fati affirms — what happens is the logos working through events, happening because of the rational order, not despite it.",
       },
       {
         question: "6. What do Books IV.23 and X.21 reveal about the universe's relation to the practitioner?",
@@ -712,8 +760,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. State the Socratic principle Marcus adopts and explain what it claims about wrongdoers.",
-        answer: "Nobody does wrong willingly: every person who acts badly believes at that moment they are pursuing a genuine good. Their belief about the good is false, but they are not acting against their own values — the cause is mistaken judgment, not malice.",
+        type: 'mc',
+        question: "1. What is the Socratic principle Marcus adopts about wrongdoers?",
+        options: ["Wrongdoers are malicious and deserve hatred", "Nobody does wrong willingly — bad acts stem from false beliefs about what is good", "Only the ignorant can be forgiven; the educated wrongdoer cannot", "Wrongdoing is fated and no one is responsible"],
+        correct: 1,
+        explanation: "Every person acting badly believes, at that moment, they are pursuing a genuine good. The belief is false, but the cause is mistaken judgment, not malice — which changes the appropriate response.",
       },
       {
         question: "2. In Book II.1, what is the significance of the phrase 'through ignorance'?",
@@ -724,8 +775,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Because you do not hate someone for being ill; you act appropriately given the illness. You may still set limits or protect yourself, but the emotional coloring shifts from contempt to clear-eyed engagement.",
       },
       {
-        question: "4. Marcus treats anger as a failure of which discipline, and why?",
-        answer: "The discipline of desire. Anger arises when something you wanted — cooperation, gratitude, respect — is withheld; it is proportional to the desire for that external. Properly disciplined desire removes what the anger attaches to.",
+        type: 'mc',
+        question: "4. Marcus treats anger as a failure of which discipline?",
+        options: ["The discipline of assent only", "The discipline of desire — anger attaches to a frustrated want for an external", "The discipline of action only", "No discipline — anger is natural and blameless"],
+        correct: 1,
+        explanation: "Anger arises when something wanted — cooperation, gratitude, respect — is withheld, in proportion to the desire. Disciplined desire removes what anger fastens onto (with assent examining the impression of injury).",
       },
       {
         question: "5. Why does not requiring others' cooperation 'reduce anger at its root'?",
@@ -794,8 +848,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. What is the inner citadel, and what are its 'walls'?",
-        answer: "The inviolable core — the ruling faculty and its operations (judgment, assent, desire, action) that cannot be taken by anything external. The three disciplines (desire, action, assent) are its walls.",
+        type: 'mc',
+        question: "1. What are the 'walls' of the inner citadel?",
+        options: ["Stoic doctrines memorized verbatim", "The three disciplines — desire, action, and assent", "Withdrawal from public life", "Wealth sufficient to guarantee independence"],
+        correct: 1,
+        explanation: "The citadel is the ruling faculty and its operations; its walls are the three disciplines, practiced daily. They don't stop the world from happening — they stop it from reaching and corrupting the ruling faculty.",
       },
       {
         question: "2. Is the citadel a metaphor for withdrawal from the world? Explain.",
@@ -806,8 +863,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Pain harms the body, humiliation harms reputation, loss harms circumstances — none touches the capacity for virtue. The ruling faculty can only be harmed by its own operations: false assent, misdirected desire, failure to act appropriately.",
       },
       {
-        question: "4. Why does it follow that 'genuine harm is entirely within your control'?",
-        answer: "Because genuine harm is corruption of the ruling faculty, and that occurs only through its own operations — which are up to you. Therefore the only real harm is self-inflicted and so is within your control to prevent.",
+        type: 'mc',
+        question: "4. What alone can genuinely harm the ruling faculty?",
+        options: ["Extreme physical pain", "Its own operations — false assent, misdirected desire, failure to act appropriately", "Other people's contempt", "Prolonged misfortune"],
+        correct: 1,
+        explanation: "Pain harms the body, humiliation the reputation, loss the circumstances — none touches the capacity for virtue. Genuine harm is self-inflicted, and therefore entirely within your control to prevent.",
       },
       {
         question: "5. Why is this claim described as both uncomfortable and liberating?",
@@ -874,8 +934,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
     ],
     quiz: [
       {
-        question: "1. Across the whole course, what is Marcus's single underlying framework, and what are its three parts?",
-        answer: "The three disciplines, which structure all of his practice: the discipline of desire (orexis), the discipline of action (hormē), and the discipline of assent (synkatathesis).",
+        type: 'msq',
+        question: "1. Across the whole course, Marcus's single underlying framework is the three disciplines. Which are they?",
+        options: ["The discipline of desire (orexis)", "The discipline of endurance (karteria)", "The discipline of action (hormē)", "The discipline of memory (mnēmē)", "The discipline of assent (synkatathesis)"],
+        correct: [0, 2, 4],
+        explanation: "Desire, action, assent — the framework that structures every entry in the Meditations and all of Marcus's practice. Endurance and memory serve the disciplines; they are not the framework.",
       },
       {
         question: "2. What does Marcus's lifelong repetition of the same principles reveal about the nature of philosophical progress?",
@@ -906,8 +969,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Because intentions are held with reservation, an obstacle merely changes the situation requiring appropriate action; and because amor fati treats events as the logos's instruction, the obstacle is the very material in which virtue is now exercised — the lesson rather than the interruption.",
       },
       {
+        type: 'mc',
         question: "9. What is the standard the whole course sets — captured by Epictetus's 'surgery' and 'arge nu logoi'?",
-        answer: "That philosophy must change how you live, not merely what you know. You should leave having felt something change; 'enough big words' demands practice and behavioral change over theoretical accumulation.",
+        options: ["Mastery of Stoic vocabulary and doctrine", "Philosophy must change how you live, not merely what you know", "Eloquence in defending Stoicism against critics", "Daily reading of the Meditations"],
+        correct: 1,
+        explanation: "The school is a surgery — you should leave having felt something change; 'enough big words' demands practice and behavioral change over theoretical accumulation.",
       },
       {
         question: "10. What distinguishes having studied PHIL 702 from having practised it?",

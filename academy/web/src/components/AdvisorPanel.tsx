@@ -11,7 +11,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { PHIL_CURRICULUM, type CurriculumCourse, type ReadingItem } from '@/data/curriculum';
+import { PHIL_CURRICULUM, PARALLEL_CURRICULUM, type CurriculumCourse, type ReadingItem } from '@/data/curriculum';
 
 const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 const toRoman = (n: number) => ROMANS[n - 1] ?? String(n);
@@ -108,6 +108,8 @@ function ReadingList({ items }: { items: ReadingItem[] }) {
 
 export default function AdvisorPanel({ userName }: { userName: string }) {
   const [standings, setStandings] = useState<CourseStanding[] | null>(null);
+  const [parallel, setParallel] = useState<CourseStanding[] | null>(null);
+  const [vocabDue, setVocabDue] = useState<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -116,14 +118,24 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
         // No session (shouldn't happen behind the dashboard middleware) —
         // render the fresh-student view rather than loading forever.
         setStandings(PHIL_CURRICULUM.map(c => computeStanding(c, [])));
+        setParallel(PARALLEL_CURRICULUM.map(c => computeStanding(c, [])));
         return;
       }
-      const { data } = await supabase
-        .from('session_progress')
-        .select('course_id, session_id, status')
-        .eq('user_id', user.id);
+      const [{ data }, dueRes] = await Promise.all([
+        supabase
+          .from('session_progress')
+          .select('course_id, session_id, status')
+          .eq('user_id', user.id),
+        supabase
+          .from('vocab_progress')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', user.id)
+          .lte('due_at', new Date().toISOString()),
+      ]);
       const rows = (data ?? []) as ProgressRow[];
       setStandings(PHIL_CURRICULUM.map(c => computeStanding(c, rows)));
+      setParallel(PARALLEL_CURRICULUM.map(c => computeStanding(c, rows)));
+      setVocabDue(dueRes.count ?? 0);
     }
     load();
   }, []);
@@ -239,11 +251,46 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
             </Link>
           ))}
         </div>
-        <p className="text-academy-muted text-xs mt-4 italic">
-          Parallel tracks — <Link href="/dashboard/courses/grek-101" className="underline hover:text-academy-text">GREK 101</Link> and{' '}
-          <Link href="/dashboard/courses/latn-101" className="underline hover:text-academy-text">LATN 101</Link> — stay open for daily drill;{' '}
-          <Link href="/dashboard/courses/phil-705" className="underline hover:text-academy-text">PHIL 705</Link> (Stoic Logic) runs alongside Year 2.
-        </p>
+        {/* Parallel tracks — open access, quiz scores recorded */}
+        {parallel && (
+          <div className="mt-5 pt-4 border-t border-academy-border/60">
+            <p className="text-academy-muted text-xs font-semibold uppercase tracking-widest mb-3">
+              Parallel Tracks
+            </p>
+            <div className="space-y-2.5">
+              {parallel.map(s => (
+                <Link key={s.course.id} href={`/dashboard/courses/${s.course.id}`} className="block group">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <p className="text-academy-muted group-hover:text-academy-text transition-colors">
+                      <span className="font-semibold text-academy-text">{s.course.code}</span> · {s.course.title}
+                    </p>
+                    <p className="text-academy-muted whitespace-nowrap ml-3">
+                      {s.complete ? (
+                        <span className="text-academy-gold font-semibold">Complete ✓</span>
+                      ) : (
+                        <>{s.passed} / {s.gated}</>
+                      )}
+                    </p>
+                  </div>
+                  <div className="h-1 rounded-full bg-navy overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-academy-gold/50 transition-all"
+                      style={{ width: `${s.gated === 0 ? 0 : Math.round((s.passed / s.gated) * 100)}%` }}
+                    />
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <Link href="/dashboard/drill" className="mt-3 flex items-center justify-between text-xs group">
+              <span className="text-academy-muted group-hover:text-academy-text transition-colors">
+                <span className="font-semibold text-academy-text">Vocabulary Drill</span> · Greek &amp; Latin, spaced repetition
+              </span>
+              <span className="text-academy-gold font-semibold whitespace-nowrap ml-3">
+                {vocabDue === null ? '' : vocabDue > 0 ? `${vocabDue} due →` : 'Begin →'}
+              </span>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Counsel of the day */}

@@ -6,8 +6,14 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getProfile } from '@/lib/db';
 import { PHIL_701_SESSIONS } from '@/data/phil701';
+import { PHIL_702_SESSIONS } from '@/data/phil702';
+import { PHIL_703_SESSIONS } from '@/data/phil703';
+import { PHIL_704_SESSIONS } from '@/data/phil704';
+import type { QuizQuestion } from '@/components/StudentQuiz';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+
+type SubmittedAnswer = string | number | number[] | null;
 
 interface ProgressRow {
   id: string;
@@ -15,23 +21,48 @@ interface ProgressRow {
   course_id: string;
   session_id: number;
   status: 'completed' | 'passed' | 'failed';
-  submitted_answers: string[] | null;
+  submitted_answers: SubmittedAnswer[] | null;
   submitted_at: string | null;
   graded_at: string | null;
   graded_by: string | null;
   admin_notes: string | null;
+  score: number | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getReferenceAnswers(
-  courseId: string,
-  sessionId: number,
-): Array<{ question: string; answer: string }> {
-  if (courseId === 'phil-701') {
-    return PHIL_701_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+function getReferenceAnswers(courseId: string, sessionId: number): QuizQuestion[] {
+  switch (courseId) {
+    case 'phil-701': return PHIL_701_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+    case 'phil-702': return PHIL_702_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+    case 'phil-703': return PHIL_703_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+    case 'phil-704': return PHIL_704_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+    default: return [];
   }
-  return [];
+}
+
+// Render a submitted answer as text, resolving choice indices to option text.
+function renderAnswer(ref: QuizQuestion | undefined, answer: SubmittedAnswer): string {
+  if (answer == null || answer === '') return '';
+  if (ref && ref.type === 'mc' && typeof answer === 'number') {
+    return ref.options[answer] ?? String(answer);
+  }
+  if (ref && ref.type === 'msq' && Array.isArray(answer)) {
+    return answer.map(i => ref.options[i] ?? String(i)).join(' · ');
+  }
+  return typeof answer === 'string' ? answer : JSON.stringify(answer);
+}
+
+// The correct/reference answer for any question type.
+function referenceText(ref: QuizQuestion | undefined): string {
+  if (!ref) return '';
+  if (ref.type === 'mc') {
+    return `${ref.options[ref.correct]}${ref.explanation ? ` — ${ref.explanation}` : ''}`;
+  }
+  if (ref.type === 'msq') {
+    return `${ref.correct.map(i => ref.options[i]).join(' · ')}${ref.explanation ? ` — ${ref.explanation}` : ''}`;
+  }
+  return ref.answer;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -230,11 +261,15 @@ export default function AdminSubmissionsPage() {
               <div className="space-y-10 mb-12">
                 {(selected.submitted_answers ?? []).map((answer, i) => {
                   const ref = refs[i];
+                  const studentText = renderAnswer(ref, answer);
+                  const refText = referenceText(ref);
                   return (
                     <div key={i} className="border-l-2 border-academy-gold/30 pl-5">
                       <p className="text-academy-text text-sm font-medium leading-relaxed mb-4">
                         <span className="text-academy-gold font-mono mr-2">{i + 1}.</span>
                         {ref?.question ?? `Question ${i + 1}`}
+                        {ref && ref.type === 'mc' && <span className="text-academy-muted text-xs ml-2">(multiple choice)</span>}
+                        {ref && ref.type === 'msq' && <span className="text-academy-muted text-xs ml-2">(select all)</span>}
                       </p>
 
                       {/* Student answer */}
@@ -243,18 +278,18 @@ export default function AdminSubmissionsPage() {
                           Student Answer
                         </p>
                         <p className="text-academy-text text-sm leading-relaxed bg-navy border border-academy-border rounded-lg px-4 py-3 whitespace-pre-line">
-                          {answer || <span className="italic text-academy-muted">No answer provided</span>}
+                          {studentText || <span className="italic text-academy-muted">No answer provided</span>}
                         </p>
                       </div>
 
                       {/* Reference answer */}
-                      {ref?.answer && (
+                      {refText && (
                         <div>
                           <p className="font-mono text-academy-muted text-[10px] uppercase tracking-widest mb-2">
-                            Reference Answer
+                            {ref && (ref.type === 'mc' || ref.type === 'msq') ? 'Correct Answer' : 'Reference Answer'}
                           </p>
                           <p className="text-academy-muted text-sm leading-relaxed italic border-l-2 border-academy-gold/20 pl-3 whitespace-pre-line">
-                            {ref.answer}
+                            {refText}
                           </p>
                         </div>
                       )}

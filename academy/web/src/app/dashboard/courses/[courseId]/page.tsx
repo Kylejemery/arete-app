@@ -576,15 +576,75 @@ function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
   );
 }
 
-function QuizSection({ quiz }: { quiz: LanguageSession['quiz'] }) {
+// When courseId/sessionId are provided, quiz results are recorded to
+// session_progress (best score kept; >= 70% marks the session 'passed').
+// Language tracks stay open-access — recording is for the advisor's
+// standing, not for gating.
+function QuizSection({ quiz, courseId, sessionId }: {
+  quiz: LanguageSession['quiz'];
+  courseId?: string;
+  sessionId?: number;
+}) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [best, setBest] = useState<{ score: number; status: string } | null>(null);
   const score = quiz.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0);
+
+  useEffect(() => {
+    if (!courseId || sessionId == null) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from('session_progress')
+        .select('score, status')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .eq('session_id', sessionId)
+        .maybeSingle();
+      if (!cancelled && data && typeof data.score === 'number') {
+        setBest({ score: data.score, status: data.status as string });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [courseId, sessionId]);
+
+  const recordResult = async (correct: number) => {
+    if (!courseId || sessionId == null) return;
+    const pct = Math.round((correct / quiz.length) * 100);
+    if (best && best.score >= pct) return; // keep the best attempt
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const status = pct >= 70 ? 'passed' : 'failed';
+    const { error } = await supabase
+      .from('session_progress')
+      .upsert(
+        {
+          user_id: user.id,
+          course_id: courseId,
+          session_id: sessionId,
+          status,
+          score: pct,
+          submitted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id,course_id,session_id' }
+      );
+    if (!error) setBest({ score: pct, status });
+  };
 
   return (
     <section className="mt-10">
       <h2 className="font-serif text-xl text-academy-text mb-1">Session Quiz</h2>
-      <p className="text-academy-muted text-xs mb-5">{quiz.length} questions · select one answer each</p>
+      <p className="text-academy-muted text-xs mb-5">
+        {quiz.length} questions · select one answer each
+        {best && (
+          <span className={`ml-3 font-semibold ${best.status === 'passed' ? 'text-green-400' : 'text-academy-gold'}`}>
+            Best recorded: {best.score}%{best.status === 'passed' ? ' · Passed' : ''}
+          </span>
+        )}
+      </p>
       <div className="space-y-5">
         {quiz.map((q, qi) => (
           <div key={qi}>
@@ -624,7 +684,7 @@ function QuizSection({ quiz }: { quiz: LanguageSession['quiz'] }) {
       <div className="mt-6 flex items-center gap-4">
         {!submitted ? (
           <button
-            onClick={() => setSubmitted(true)}
+            onClick={() => { setSubmitted(true); recordResult(score); }}
             disabled={Object.keys(answers).length < quiz.length}
             className="bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
           >
@@ -648,7 +708,7 @@ function QuizSection({ quiz }: { quiz: LanguageSession['quiz'] }) {
   );
 }
 
-function LanguageLessonContent({ session, mono = false }: { session: LessonSession; mono?: boolean }) {
+function LanguageLessonContent({ session, mono = false, courseId }: { session: LessonSession; mono?: boolean; courseId?: string }) {
   return (
     <article>
       <div className="flex items-center gap-2 mb-2">
@@ -723,7 +783,9 @@ function LanguageLessonContent({ session, mono = false }: { session: LessonSessi
       </section>
 
       {/* Quiz */}
-      {session.quiz.length > 0 && <QuizSection quiz={session.quiz} />}
+      {session.quiz.length > 0 && (
+        <QuizSection quiz={session.quiz} courseId={courseId} sessionId={session.id} />
+      )}
     </article>
   );
 }
@@ -1083,7 +1145,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         {/* CENTER: Lesson */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-6 py-10">
-            <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} />
+            <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} courseId={courseId} />
           </div>
         </div>
 
@@ -1950,7 +2012,7 @@ function Phil705CoursePage() {
             ) : activeSession.isFinalExam ? (
               <Phil705ExamContent session={activeSession} />
             ) : (
-              <LanguageLessonContent session={phil705ToLesson(activeSession)} />
+              <LanguageLessonContent session={phil705ToLesson(activeSession)} courseId="phil-705" />
             )}
           </div>
         </div>
