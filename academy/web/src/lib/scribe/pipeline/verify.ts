@@ -63,6 +63,50 @@ function cmpRef(a: number[], b: number[]): number {
   return 0
 }
 
+// Essay labels carry a title + ref: "On Providence 3", ranges repeat the
+// title ("On Anger 1.5–On Anger 1.6"). The title must overlap the locator on
+// a distinctive word (Latin equivalents aliased) before the numbers are
+// compared — otherwise the honest answer is 'unverified', never a false
+// verify across same-numbered chapters of different essays.
+const TITLE_STOPWORDS = new Set(['on', 'of', 'the', 'a', 'to', 'de', 'life', 'vita'])
+const LATIN_ALIASES: Record<string, string[]> = {
+  anger: ['ira'],
+  providence: ['providentia'],
+  clemency: ['clementia'],
+  constancy: ['constantia'],
+  shortness: ['brevitate', 'brevitatis'],
+  happy: ['beata'],
+  leisure: ['otio'],
+  peace: ['tranquillitate', 'tranquillitatis'],
+  mind: ['animi'],
+}
+
+function checkEssayLocator(locator: string, label: string): LocatorStatus {
+  const partRe = /^(.*?)\s+(\d+(?:\.\d+)*)$/
+  const parts = label
+    .split(/[–—]/)
+    .map(s => s.trim().match(partRe))
+    .filter((m): m is RegExpMatchArray => !!m)
+  if (parts.length === 0) return 'unverified' // legacy non-passage label
+
+  const titleWords = parts[0][1]
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(w => w && !TITLE_STOPWORDS.has(w))
+  const loc = locator.toLowerCase()
+  const titleMatches = titleWords.some(
+    w => loc.includes(w) || (LATIN_ALIASES[w] ?? []).some(alias => loc.includes(alias))
+  )
+  if (!titleMatches) return 'unverified' // different naming tradition — cannot adjudicate
+
+  const tokens = locator.match(/\d+(?:\.\d+)*/g)
+  if (!tokens?.length) return 'unverified'
+  const cited = tokens[tokens.length - 1].split('.').map(Number)
+  const lo = parts[0][2].split('.').map(Number)
+  const hi = parts[parts.length - 1][2].split('.').map(Number)
+  return cmpRef(cited, lo) >= 0 && cmpRef(cited, hi) <= 0 ? 'verified' : 'mismatch'
+}
+
 export function checkLocator(
   citation: ScribeCitation,
   chunkMeta: { section_label?: string | null; page_hint?: number | null }
@@ -80,7 +124,11 @@ export function checkLocator(
 
     // Range like "4.49–5.1" or single ref like "1.24".
     const parts = label.split(/[–—-]/).map(s => parseRef(s.trim())).filter((r): r is number[] => !!r)
-    if (parts.length === 0) return 'unverified' // legacy non-passage label — cannot adjudicate
+    if (parts.length === 0) {
+      // Essay-titled labels from the Minor Dialogues layer:
+      // "On Providence 3" · "On Anger 1.5–On Anger 1.6".
+      return checkEssayLocator(citation.locator, label)
+    }
 
     // The cited passage: the last dotted-numeric token in the locator
     // ("Discourses 1.24.1" → 1.24.1; "Enchiridion 5" → 5).

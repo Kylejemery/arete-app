@@ -50,12 +50,14 @@ interface Boundary {
 
 // Walk the file line by line, tracking the cumulative word count, and let a
 // per-work matcher decide when a line starts a new passage.
+type MatcherState = Record<string, number | string>
+
 function findBoundaries(
   lines: string[],
-  matcher: (line: string, state: Record<string, number>) => string | null
+  matcher: (line: string, state: MatcherState) => string | null
 ): Boundary[] {
   const boundaries: Boundary[] = [{ offset: 0, label: 'front matter' }]
-  const state: Record<string, number> = {}
+  const state: MatcherState = {}
   let offset = 0
   for (const line of lines) {
     const label = matcher(line, state)
@@ -65,12 +67,80 @@ function findBoundaries(
   return boundaries
 }
 
+function findTokenBoundaries(
+  tokens: string[],
+  tokenMatcher: (tokens: string[], i: number, state: MatcherState) => string | null
+): Boundary[] {
+  const boundaries: Boundary[] = [{ offset: 0, label: 'front matter' }]
+  const state: MatcherState = {}
+  for (let i = 0; i < tokens.length; i++) {
+    const label = tokenMatcher(tokens, i, state)
+    if (label !== null) boundaries.push({ offset: i, label })
+  }
+  return boundaries
+}
+
+// Rebuild the exact ingested word stream from the stored chunks: chunk 0 in
+// full, then each subsequent chunk minus its 50-word overlap. The overlap is
+// verified word-for-word, so the reconstruction is provably identical to the
+// original text.
+function reconstructWords(chunks: { chunk_index: number; chunk_text: string }[]): string[] {
+  const OVERLAP = 50
+  let words: string[] = []
+  for (const c of chunks) {
+    const w = c.chunk_text.split(/\s+/).filter(Boolean)
+    if (c.chunk_index === 0) {
+      words = w
+      continue
+    }
+    const tail = words.slice(-OVERLAP).join(' ')
+    const head = w.slice(0, OVERLAP).join(' ')
+    if (tail !== head) {
+      throw new Error(`reconstruction overlap mismatch at chunk ${c.chunk_index}`)
+    }
+    words = words.concat(w.slice(OVERLAP))
+  }
+  return words
+}
+
 interface WorkSpec {
   author: string
   work: string
-  file: string
+  file: string | null // null → reconstruct the text from the chunks themselves
   translator: string
-  matcher: (line: string, state: Record<string, number>) => string | null
+  matcher?: (line: string, state: MatcherState) => string | null
+  // Word-stream matcher for reconstructed texts (no line structure survives
+  // chunking): called per token, returns a label when a passage starts here.
+  tokenMatcher?: (tokens: string[], i: number, state: MatcherState) => string | null
+}
+
+// Stewart's Minor Dialogues: twelve dialogue "books", each one essay (De Ira
+// spans dialogue-books III–V as its books 1–3), then On Clemency I–II. The
+// same fixed table serves both ingested copies of the collection.
+const ORDINALS = ['', 'FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', 'SEVENTH', 'EIGHTH', 'NINTH', 'TENTH', 'ELEVENTH', 'TWELFTH']
+const DIALOGUE_ESSAYS = ['', 'On Providence', 'On Constancy', 'On Anger 1', 'On Anger 2', 'On Anger 3', 'Consolation to Marcia', 'On a Happy Life', 'On Leisure', 'On Peace of Mind', 'On the Shortness of Life', 'Consolation to Polybius', 'Consolation to Helvia']
+
+function minorDialoguesMatcher(line: string, state: Record<string, number | string>): string | null {
+  const bookHead = line.match(/^THE ([A-Z]+) BOOK OF THE DIALOGUES/)
+  if (bookHead) {
+    const n = ORDINALS.indexOf(bookHead[1])
+    if (n > 0) state.essay = DIALOGUE_ESSAYS[n]
+    return null // the first chapter line carries the label
+  }
+  if (/^ON CLEMENCY\.\s*$/.test(line)) {
+    state.clemencyBook = ((state.clemencyBook as number) ?? 0) + 1
+    state.essay = `On Clemency ${state.clemencyBook}`
+    return null
+  }
+  if (/\*\*\* END OF/.test(line)) { state.essay = ''; return 'end matter' }
+  if (!state.essay) return null
+  const ch = line.match(/^([IVXL]+)\.\s/)
+  if (!ch) return null
+  const essay = state.essay as string
+  const n = romanToInt(ch[1])
+  // Essays whose name ends in a book number join with '.', others with space:
+  // "On Anger 1.5" · "On Providence 3"
+  return /\d$/.test(essay) ? `${essay}.${n}` : `${essay} ${n}`
 }
 
 const WORKS: WorkSpec[] = [
@@ -102,8 +172,8 @@ const WORKS: WorkSpec[] = [
       if (book) {
         const n = romanToInt(book[1])
         if (n === 1) {
-          state.bookOneSeen = (state.bookOneSeen ?? 0) + 1
-          if (state.bookOneSeen < 2) return null // TOC "Book I"
+          state.bookOneSeen = Number(state.bookOneSeen ?? 0) + 1
+          if (Number(state.bookOneSeen) < 2) return null // TOC "Book I"
         }
         if (!state.inBody && n !== 1) return null // TOC "Book II"–"Book IV"
         state.book = n
@@ -139,6 +209,67 @@ const WORKS: WorkSpec[] = [
       return sec ? `${state.book}.${sec[1]}` : null
     },
   },
+  {
+    author: 'Seneca',
+    work: 'On Benefits',
+    file: 'Seneca_OnBenefits_English.txt',
+    translator: 'Aubrey Stewart',
+    matcher: (line, state) => {
+      const book = line.match(/^BOOK ([IVX]+)\.\s*$/)
+      if (book) {
+        state.book = romanToInt(book[1])
+        state.inBody = 1
+        return null
+      }
+      if (/\*\*\* END OF/.test(line)) { state.inBody = 0; return 'end matter' }
+      if (!state.inBody) return null
+      const ch = line.match(/^([IVXL]+)\.\s/)
+      return ch ? `${state.book}.${romanToInt(ch[1])}` : null
+    },
+  },
+  {
+    // Gutenberg #64576 — Stewart's Minor Dialogues, ingested under the
+    // (misleading) work name 'Shortness'. Essay-aware labels correct the
+    // attribution at citation level without re-ingesting.
+    author: 'Seneca',
+    work: 'Shortness',
+    file: 'Seneca_Shortness_English.txt',
+    translator: 'Aubrey Stewart',
+    matcher: minorDialoguesMatcher,
+  },
+  {
+    // The other Gutenberg production of the SAME Stewart collection,
+    // ingested under 'Clemency' — a full duplicate of 'Shortness'.
+    author: 'Seneca',
+    work: 'Clemency',
+    file: 'Seneca_Clemency_Providence_Happy_Life_English.txt',
+    translator: 'Aubrey Stewart',
+    matcher: minorDialoguesMatcher,
+  },
+  {
+    // Sophia Project text — no source file on disk; the word stream is
+    // reconstructed exactly from the stored chunks. Sections are strictly
+    // sequential "N." tokens, which the sequence constraint enforces.
+    author: 'Seneca',
+    work: 'On Anger',
+    file: null,
+    translator: 'Aubrey Stewart',
+    tokenMatcher: (tokens, i, state) => {
+      if (tokens[i] === 'BOOK' && /^[123]$/.test(tokens[i + 1] ?? '')) {
+        state.book = parseInt(tokens[i + 1], 10)
+        state.next = 1
+        return null // the "1." token right after carries the label
+      }
+      if (!state.book) return null
+      const m = tokens[i].match(/^(\d+)\.$/)
+      if (m && parseInt(m[1], 10) === state.next) {
+        const n = state.next as number
+        state.next = n + 1
+        return `${state.book}.${n}`
+      }
+      return null
+    },
+  },
 ]
 
 const STRIDE = 350 // CHUNK_SIZE 400 − OVERLAP 50
@@ -170,11 +301,6 @@ async function main() {
 
   for (const spec of WORKS) {
     console.log(`\n════ ${spec.author}, ${spec.work} ════`)
-    const raw = readFileSync(join(SOURCE_DIR, spec.file), 'utf8')
-    const words = raw.split(/\s+/).filter(Boolean)
-    const boundaries = findBoundaries(raw.split(/\n/), spec.matcher)
-    const real = boundaries.filter(b => !['front matter', 'end matter'].includes(b.label))
-    console.log(`file: ${words.length.toLocaleString()} words · ${real.length} passages (${real[0]?.label} … ${real[real.length - 1]?.label})`)
 
     const { data: chunks, error } = await admin
       .from('rag_corpus')
@@ -185,6 +311,22 @@ async function main() {
       .order('chunk_index')
     if (error) throw new Error(error.message)
     if (!chunks?.length) { console.log('no chunks — skipped'); continue }
+
+    let words: string[]
+    let boundaries: Boundary[]
+    if (spec.file) {
+      const raw = readFileSync(join(SOURCE_DIR, spec.file), 'utf8')
+      words = raw.split(/\s+/).filter(Boolean)
+      boundaries = findBoundaries(raw.split(/\n/), spec.matcher!)
+    } else {
+      // No source file on disk — rebuild the word stream from the chunks
+      // (overlap-verified, so alignment is exact by construction).
+      words = reconstructWords(chunks)
+      boundaries = findTokenBoundaries(words, spec.tokenMatcher!)
+      console.log('source: reconstructed from stored chunks')
+    }
+    const real = boundaries.filter(b => !['front matter', 'end matter'].includes(b.label))
+    console.log(`text: ${words.length.toLocaleString()} words · ${real.length} passages (${real[0]?.label} … ${real[real.length - 1]?.label})`)
 
     // Chunks beyond the file's own coverage are later APPENDED ingestions
     // (ingestText appends after maxChunkIndex — Meditations has 36 such

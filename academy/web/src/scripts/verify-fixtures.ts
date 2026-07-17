@@ -72,6 +72,14 @@ expect('canonical cite pointing at duplicate ingestion → mismatch', checkLocat
 // Legacy non-passage labels cannot be adjudicated
 expect('legacy junk label → unverified', checkLocator(ragCitation('Lives 7.87'), { section_label: 'Stoics' }), 'unverified')
 
+// Essay-titled labels (Minor Dialogues layer)
+expect('essay label exact → verified', checkLocator(ragCitation('On Providence 3'), { section_label: 'On Providence 3' }), 'verified')
+expect('essay label Latin alias → verified', checkLocator(ragCitation('De Ira 2.10'), { section_label: 'On Anger 2.10' }), 'verified')
+expect('essay range contains cite → verified', checkLocator(ragCitation('On the Shortness of Life 9.4'), { section_label: 'On the Shortness of Life 9–On the Shortness of Life 10' }), 'verified')
+expect('essay number outside range → mismatch', checkLocator(ragCitation('On Anger 2.5'), { section_label: 'On Anger 1.5' }), 'mismatch')
+expect('same number, different essay → unverified (never false-verify)', checkLocator(ragCitation('On the Shortness of Life 9'), { section_label: 'On a Happy Life 9' }), 'unverified')
+expect('Seneca Letters range → verified', checkLocator(ragCitation('Letters 91.4'), { section_label: '90–91' }), 'verified')
+
 // Paper page hints: within ±1 verified, off by more mismatch, missing hint unverified
 expect('paper locator p.12 vs page_hint 12 → verified', checkLocator(paperCitation('p. 12'), { page_hint: 12 }), 'verified')
 expect('paper locator p.12 vs page_hint 13 → verified (chunk spans pages)', checkLocator(paperCitation('p. 12'), { page_hint: 13 }), 'verified')
