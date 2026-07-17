@@ -8,8 +8,10 @@
 import { PHIL_701_SESSIONS } from './phil701';
 import { PHIL_702_SESSIONS } from './phil702';
 import { PHIL_703_SESSIONS } from './phil703';
+import { PHIL_704_SESSIONS } from './phil704';
 import { PHIL702_READING, type ReadingItem } from './phil702_reading';
 import { PHIL703_READING } from './phil703_reading';
+import { PHIL704_READING } from './phil704_reading';
 import { SEMINARS } from './seminars';
 
 export type { ReadingItem };
@@ -35,9 +37,7 @@ const phil701Readings: Record<number, ReadingItem[]> = {
   ),
 };
 
-// The doctoral seminar sequence, in program order. PHIL 704 (Seneca) has no
-// session content yet and is intentionally absent — the advisor announces it
-// as "in preparation" once PHIL 703 is complete.
+// The doctoral seminar sequence, in program order.
 export const PHIL_CURRICULUM: CurriculumCourse[] = [
   {
     id: 'phil-701',
@@ -74,5 +74,16 @@ export const PHIL_CURRICULUM: CurriculumCourse[] = [
       hasQuiz: (s.quiz?.length ?? 0) > 0,
     })),
     readings: PHIL703_READING,
+  },
+  {
+    id: 'phil-704',
+    code: 'PHIL 704',
+    title: 'The Examined Correspondence — Seneca',
+    sessions: PHIL_704_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: PHIL704_READING,
   },
 ];

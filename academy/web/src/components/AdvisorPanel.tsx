@@ -160,7 +160,7 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
         </h2>
         <p className="text-academy-muted text-sm mt-1 leading-relaxed">
           {programComplete ? (
-            <>Every session examination in the current sequence is passed — {totalPassed} of {totalGated}. PHIL 704 (Seneca) is in preparation; until it opens, the language tracks and the library are yours.</>
+            <>Every session examination in the doctoral sequence is passed — {totalPassed} of {totalGated}, PHIL 701 through 704. The seminar year is yours: the language tracks, PHIL 705, and the library remain open.</>
           ) : (
             <>
               You have passed {totalPassed} of {totalGated} session examinations in the doctoral sequence.

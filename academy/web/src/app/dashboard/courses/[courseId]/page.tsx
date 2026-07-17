@@ -19,6 +19,8 @@ import { PHIL_702_SESSIONS, phil702ToLesson, type Phil702Session } from '@/data/
 import { PHIL702_READING } from '@/data/phil702_reading';
 import { PHIL_703_SESSIONS, type Phil703Session } from '@/data/phil703';
 import { PHIL703_READING } from '@/data/phil703_reading';
+import { PHIL_704_SESSIONS, type Phil704Session } from '@/data/phil704';
+import { PHIL704_READING } from '@/data/phil704_reading';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
@@ -76,15 +78,17 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
     { id: 11, title: 'Qualifying Conversation — The School Examined',       locked: true },
   ],
   'phil-704': [
-    { id: 1,  title: 'How to Live with Time — Introduction',                locked: false },
-    { id: 2,  title: 'Letters I–XX — On Friendship, Time, and the Self',    locked: true },
-    { id: 3,  title: 'Letters XXI–XL — On Retirement and the Examined Life',locked: true },
-    { id: 4,  title: 'Letters XLI–LX — On God and Nature',                 locked: true },
-    { id: 5,  title: 'Letters LXI–LXXX — On Death and Dying Well',         locked: true },
-    { id: 6,  title: 'On the Shortness of Life — Close Reading',            locked: true },
-    { id: 7,  title: 'Seneca\'s Life as Counter-Evidence',                  locked: true },
-    { id: 8,  title: 'Paper Workshop with the Writing Supervisor',           locked: true },
-    { id: 9,  title: 'Final Seminar — Synthesis and Objections',            locked: true },
+    { id: 1,  title: 'Claim Yourself — The Correspondence Begins',           locked: false },
+    { id: 2,  title: 'Transformation — Crowds, Friends, and Old Age',        locked: true },
+    { id: 3,  title: 'The God Within and the Slave at Your Table',           locked: true },
+    { id: 4,  title: 'The Open Door — On Dying Well',                        locked: true },
+    { id: 5,  title: 'What Wisdom Makes — Philosophy and Civilization',      locked: true },
+    { id: 6,  title: 'On the Shortness of Life',                             locked: true },
+    { id: 7,  title: 'On Tranquility of Mind',                               locked: true },
+    { id: 8,  title: 'On Providence — Why the Good Suffer',                  locked: true },
+    { id: 9,  title: "On the Happy Life — The Hypocrite's Defense",          locked: true },
+    { id: 10, title: 'On Mercy — Philosophy Advises Power',                  locked: true },
+    { id: 11, title: 'Qualifying Conversation — The Examined Correspondence', locked: true },
   ],
 };
 
@@ -267,6 +271,10 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_703_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-704') {
+    const s = PHIL_704_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   return false;
 }
 
@@ -279,6 +287,9 @@ function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
   }
   if (courseId === 'phil-703') {
     return PHIL_703_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-704') {
+    return PHIL_704_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
   }
   return [];
 }
@@ -1168,6 +1179,10 @@ function SeminarPage() {
   const phil703Session: Phil703Session | undefined = courseId === 'phil-703'
     ? PHIL_703_SESSIONS.find(s => s.id === activeSessionId)
     : undefined;
+  // PHIL 704 shares the same shape and contract.
+  const phil704Session: Phil704Session | undefined = courseId === 'phil-704'
+    ? PHIL_704_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
@@ -1468,6 +1483,24 @@ function SeminarPage() {
                           />
                           <Phil702SessionContent
                             session={phil703Session}
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil704Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-704-${activeSessionId}`}
+                            courseId="phil-704"
+                            session={activeSessionId}
+                            title={phil704Session.title}
+                            problem={phil704Session.briefing}
+                            whyItMatters=""
+                            watchFor={[]}
+                            yourTask=""
+                            requiredReading={PHIL704_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil704Session}
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>
