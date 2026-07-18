@@ -25,6 +25,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/reflection', label: 'Self-Reflection' },
   { href: '/admin/dreams', label: 'Dreams' },
   { href: '/admin/scribe', label: 'Scribe' },
+  { href: '/admin/scribe/chat', label: 'Scribe Chat' },
   { href: '/admin/scheduler', label: 'Scheduler' },
   { href: '/admin/corpus', label: 'Corpus Ingestion' },
   { href: '/admin/papers', label: 'Papers' },
@@ -56,8 +57,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
   if (!authorized) return null
 
-  const isActive = (href: string) =>
-    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
+  // Longest matching tab wins, so /admin/scribe/chat doesn't also light the
+  // Scribe tab (and /admin only matches exactly).
+  const activeHref = TABS
+    .filter(t => (t.href === '/admin' ? pathname === '/admin' : pathname.startsWith(t.href)))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href
+  const isActive = (href: string) => href === activeHref
 
   return (
     <div>
