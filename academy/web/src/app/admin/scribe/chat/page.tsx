@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import admin from '../../admin.module.css'
 import styles from './chat.module.css'
+import { withAttribution } from '@/lib/scribe/attribution'
 
 type Entry = { id: string; title: string | null; raw_text: string; created_at: string; updated_at: string }
 type Source = {
@@ -252,7 +253,7 @@ export default function ScribeChatPage() {
   async function exportDraft() {
     if (!draftShown) return
     const title = entry?.title ? `# ${entry.title}\n\n` : ''
-    await navigator.clipboard.writeText(`${title}${draftShown}`)
+    await navigator.clipboard.writeText(withAttribution(`${title}${draftShown}`))
     showToast('Draft copied — retype by hand before publishing')
   }
 
