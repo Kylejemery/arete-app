@@ -40,8 +40,25 @@ interface CourseStanding {
   gated: number;         // gated (quiz-bearing) sessions total
   awaiting: number;      // submissions awaiting faculty review
   complete: boolean;
+  // Qualifying Examination (oral viva) — recorded as course_id `<id>-viva`.
+  vivaPassed: boolean;
   // First session not yet passed — the working frontier of the course.
   frontier: { id: number; title: string; underReview: boolean } | null;
+}
+
+// Consecutive-day practice streak from practice_log dates (any assignment).
+function computeStreak(dates: string[]): { streak: number; loggedToday: boolean } {
+  const set = new Set(dates);
+  const iso = (d: Date) => d.toISOString().slice(0, 10);
+  const cur = new Date();
+  const loggedToday = set.has(iso(cur));
+  if (!loggedToday) cur.setDate(cur.getDate() - 1); // an unbroken streak may end yesterday
+  let streak = 0;
+  while (set.has(iso(cur))) {
+    streak++;
+    cur.setDate(cur.getDate() - 1);
+  }
+  return { streak, loggedToday };
 }
 
 function computeStanding(course: CurriculumCourse, rows: ProgressRow[]): CourseStanding {
@@ -68,7 +85,11 @@ function computeStanding(course: CurriculumCourse, rows: ProgressRow[]): CourseS
         underReview: byId.get(frontierSession!.id) === 'completed',
       };
 
-  return { course, passed, gated: gatedSessions.length, awaiting, complete, frontier };
+  const vivaPassed = rows.some(
+    r => r.course_id === `${course.id}-viva` && r.status === 'passed'
+  );
+
+  return { course, passed, gated: gatedSessions.length, awaiting, complete, vivaPassed, frontier };
 }
 
 function greeting(): string {
@@ -110,6 +131,7 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
   const [standings, setStandings] = useState<CourseStanding[] | null>(null);
   const [parallel, setParallel] = useState<CourseStanding[] | null>(null);
   const [vocabDue, setVocabDue] = useState<number | null>(null);
+  const [practice, setPractice] = useState<{ streak: number; loggedToday: boolean } | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -121,7 +143,9 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
         setParallel(PARALLEL_CURRICULUM.map(c => computeStanding(c, [])));
         return;
       }
-      const [{ data }, dueRes] = await Promise.all([
+      const since = new Date();
+      since.setDate(since.getDate() - 90);
+      const [{ data }, dueRes, practiceRes] = await Promise.all([
         supabase
           .from('session_progress')
           .select('course_id, session_id, status')
@@ -131,11 +155,17 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
           .select('id', { count: 'exact', head: true })
           .eq('user_id', user.id)
           .lte('due_at', new Date().toISOString()),
+        supabase
+          .from('practice_log')
+          .select('log_date')
+          .eq('user_id', user.id)
+          .gte('log_date', since.toISOString().slice(0, 10)),
       ]);
       const rows = (data ?? []) as ProgressRow[];
       setStandings(PHIL_CURRICULUM.map(c => computeStanding(c, rows)));
       setParallel(PARALLEL_CURRICULUM.map(c => computeStanding(c, rows)));
       setVocabDue(dueRes.count ?? 0);
+      setPractice(computeStreak((practiceRes.data ?? []).map(r => r.log_date as string)));
     }
     load();
   }, []);
@@ -153,7 +183,9 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
   const totalPassed = standings.reduce((n, s) => n + s.passed, 0);
   const totalGated = standings.reduce((n, s) => n + s.gated, 0);
   const totalAwaiting = standings.reduce((n, s) => n + s.awaiting, 0);
-  const focus = standings.find(s => !s.complete) ?? null;
+  // A course is finished when its quizzes are passed AND its viva is passed.
+  const focus = standings.find(s => !(s.complete && s.vivaPassed)) ?? null;
+  const vivaPending = focus !== null && focus.complete && !focus.vivaPassed;
   const programComplete = focus === null;
   const readingsDue = focus?.frontier ? (focus.course.readings[focus.frontier.id] ?? []) : [];
 
@@ -172,7 +204,8 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
         </h2>
         <p className="text-academy-muted text-sm mt-1 leading-relaxed">
           {programComplete ? (
-            <>Every session examination in the doctoral sequence is passed — {totalPassed} of {totalGated}, PHIL 701 through 704. The seminar year is yours: the language tracks, PHIL 705, and the library remain open.</>
+            <>Every examination and viva in the doctoral sequence is passed — {totalPassed} of {totalGated}, PHIL 701 through 704, defended aloud. What remains is the summit:{' '}
+              <Link href="/dashboard/dissertation" className="text-academy-gold underline hover:opacity-80">the dissertation</Link>.</>
           ) : (
             <>
               You have passed {totalPassed} of {totalGated} session examinations in the doctoral sequence.
@@ -183,10 +216,52 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
             </>
           )}
         </p>
+        {practice && (practice.streak > 0 || !practice.loggedToday) && (
+          <p className="text-xs mt-2">
+            {practice.streak > 0 && (
+              <span className="text-academy-gold font-semibold">
+                Practice streak: {practice.streak} day{practice.streak === 1 ? '' : 's'}
+              </span>
+            )}
+            {!practice.loggedToday && (
+              <span className="text-academy-muted">
+                {practice.streak > 0 ? ' — not yet logged today. ' : 'No practice logged today. '}
+                Count the days (Discourses II.18).
+              </span>
+            )}
+          </p>
+        )}
       </div>
 
+      {/* Direction — viva pending */}
+      {vivaPending && focus && (
+        <div className="px-6 py-5 border-b border-academy-gold/15">
+          <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">
+            Your Next Task
+          </p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="font-serif text-lg text-academy-text leading-snug">
+                The Qualifying Examination — {focus.course.code}
+              </p>
+              <p className="text-academy-muted text-sm mt-1 leading-relaxed">
+                Every session examination is passed. What remains is the viva: six questions
+                from the Examiner, and a verdict on your record. The course is not finished
+                until you have defended it aloud.
+              </p>
+            </div>
+            <Link
+              href={`/dashboard/viva/${focus.course.id}`}
+              className="flex-shrink-0 bg-academy-gold text-academy-bg font-semibold px-5 py-2.5 rounded-lg text-sm hover:opacity-90 transition-opacity whitespace-nowrap"
+            >
+              Sit the Examination &rarr;
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Direction */}
-      {!programComplete && focus.frontier && (
+      {!programComplete && !vivaPending && focus.frontier && (
         <div className="px-6 py-5 border-b border-academy-gold/15">
           <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-2">
             {focus.frontier.underReview ? 'While You Wait' : 'Your Next Task'}
@@ -235,10 +310,12 @@ export default function AdvisorPanel({ userName }: { userName: string }) {
                   <span className="text-academy-muted"> · {s.course.title}</span>
                 </p>
                 <p className="text-academy-muted text-xs whitespace-nowrap ml-3">
-                  {s.complete ? (
-                    <span className="text-academy-gold font-semibold">Complete ✓</span>
+                  {s.complete && s.vivaPassed ? (
+                    <span className="text-academy-gold font-semibold">Complete · Viva ✓</span>
+                  ) : s.complete ? (
+                    <span className="text-academy-gold font-semibold">Viva remaining</span>
                   ) : (
-                    <>{s.passed} / {s.gated} passed{s.awaiting > 0 ? ` · ${s.awaiting} in review` : ''}</>
+                    <>{s.passed} / {s.gated} passed{s.awaiting > 0 ? ` · ${s.awaiting} in review` : ''}{s.vivaPassed ? ' · Viva ✓' : ''}</>
                   )}
                 </p>
               </div>

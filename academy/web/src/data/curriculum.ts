@@ -11,6 +11,8 @@ import { PHIL_703_SESSIONS } from './phil703';
 import { PHIL_704_SESSIONS } from './phil704';
 import { GREK_101_SESSIONS } from './grek101';
 import { LATN_101_SESSIONS } from './latn101';
+import { GREK_201_SESSIONS } from './grek201';
+import { LATN_201_SESSIONS } from './latn201';
 import { PHIL_705_SESSIONS } from './phil705';
 import { PHIL702_READING, type ReadingItem } from './phil702_reading';
 import { PHIL703_READING } from './phil703_reading';
@@ -122,6 +124,28 @@ export const PARALLEL_CURRICULUM: CurriculumCourse[] = [
     code: 'PHIL 705',
     title: 'The Logic of Clear Seeing',
     sessions: PHIL_705_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: {},
+  },
+  {
+    id: 'grek-201',
+    code: 'GREK 201',
+    title: 'Reading the Stoics in Greek',
+    sessions: GREK_201_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: {},
+  },
+  {
+    id: 'latn-201',
+    code: 'LATN 201',
+    title: 'Reading Seneca',
+    sessions: LATN_201_SESSIONS.map(s => ({
       id: s.id,
       title: s.title,
       hasQuiz: (s.quiz?.length ?? 0) > 0,

@@ -79,19 +79,42 @@ const COURSES: Course[] = [
       { title: 'Epistulae Morales I', author: 'Seneca', sourceSlug: 'seneca' },
     ],
   },
+  {
+    id: 'grek-201',
+    code: 'GREK 201',
+    title: 'Reading the Stoics in Greek',
+    description: 'Guided readings of Marcus Aurelius and Epictetus in the original — one passage per session, from the morning premeditation of Meditations II.1 to the exit speech of XII.36, closing with sight translation.',
+    term: 'Year 2',
+    assignedTexts: [
+      { title: 'Meditations (selections)', author: 'Marcus Aurelius', sourceSlug: 'marcus-aurelius' },
+      { title: 'Enchiridion §§5, 8, 53', author: 'Epictetus', sourceSlug: 'epictetus' },
+    ],
+  },
+  {
+    id: 'latn-201',
+    code: 'LATN 201',
+    title: 'Reading Seneca',
+    description: 'Guided readings of the Epistulae Morales and essays in the original — friendship, the crowd, the complete day, De Providentia, the hypocrite’s defense, and Cleanthes in Latin, closing with sight translation.',
+    term: 'Year 2',
+    assignedTexts: [
+      { title: 'Epistulae Morales (selections)', author: 'Seneca', sourceSlug: 'seneca' },
+    ],
+  },
 ];
 
 const TIER_RANK: Record<Tier, number> = { auditor: 0, scholar: 1, fellow: 2 };
 
 // Courses accessible to every tier (no Scholar+ gate). PHIL 702–704 remain
 // tier-gated unless the admin bypass is active.
-const OPEN_ACCESS = new Set(['phil-701', 'phil-705', 'grek-101', 'latn-101']);
+const OPEN_ACCESS = new Set(['phil-701', 'phil-705', 'grek-101', 'latn-101', 'grek-201', 'latn-201']);
 
 // Track badge by course id. PHIL 701–704 show no track badge (unchanged).
 const TRACK_BADGE: Record<string, { label: string; color: string }> = {
   'phil-705': { label: 'Logic', color: '#C9A84C' },
   'grek-101': { label: 'Language', color: '#1a5c38' },
   'latn-101': { label: 'Language', color: '#4a2060' },
+  'grek-201': { label: 'Language', color: '#1a5c38' },
+  'latn-201': { label: 'Language', color: '#4a2060' },
 };
 
 export default function CoursesPage() {

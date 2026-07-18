@@ -13,6 +13,8 @@ import LessonParagraph from '@/components/LessonParagraph';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
+import { GREK_201_SESSIONS } from '@/data/grek201';
+import { LATN_201_SESSIONS } from '@/data/latn201';
 import { PHIL_705_SESSIONS, PHIL_705_BLOCKS, phil705ToLesson, type Phil705Session } from '@/data/phil705';
 import { PHIL_701_SESSIONS, phil701ToLesson, type Phil701Session } from '@/data/phil701';
 import { PHIL_702_SESSIONS, phil702ToLesson, type Phil702Session } from '@/data/phil702';
@@ -498,6 +500,18 @@ const LANGUAGE_COURSES: Record<string, LanguageCourseMeta> = {
     sessions: LATN_101_SESSIONS,
     badge: { label: 'LA', color: '#4a2060' },
   },
+  'grek-201': {
+    code: 'GREK 201',
+    shortTitle: 'Reading the Stoics\nin Greek',
+    sessions: GREK_201_SESSIONS,
+    badge: { label: 'GK2', color: '#1a5c38' },
+  },
+  'latn-201': {
+    code: 'LATN 201',
+    shortTitle: 'Reading\nSeneca',
+    sessions: LATN_201_SESSIONS,
+    badge: { label: 'LA2', color: '#4a2060' },
+  },
 };
 
 // ── Language Course Components ────────────────────────────────────────────────
@@ -792,9 +806,60 @@ function LanguageLessonContent({ session, mono = false, courseId }: { session: L
 
 // ── Practice Assignment block ─────────────────────────────────────────────────
 
-function PracticeAssignmentBlock({ pa }: {
+// When courseId/sessionId are provided, the block includes the practice log:
+// one check-in per day per assignment, recorded to practice_log. Streaks are
+// surfaced by the advisor ("count the days" — Discourses II.18).
+function PracticeAssignmentBlock({ pa, courseId, sessionId }: {
   pa: { coreIdea: string; assignment: string; duration: string; greekTerms?: string };
+  courseId?: string;
+  sessionId?: number;
 }) {
+  const [loggedDays, setLoggedDays] = useState<number | null>(null);
+  const [loggedToday, setLoggedToday] = useState(false);
+  const [logging, setLogging] = useState(false);
+
+  useEffect(() => {
+    if (!courseId || sessionId == null) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from('practice_log')
+        .select('log_date')
+        .eq('user_id', user.id)
+        .eq('course_id', courseId)
+        .eq('session_id', sessionId);
+      if (cancelled) return;
+      const dates = (data ?? []).map(r => r.log_date as string);
+      setLoggedDays(dates.length);
+      const today = new Date().toISOString().slice(0, 10);
+      setLoggedToday(dates.includes(today));
+    })();
+    return () => { cancelled = true; };
+  }, [courseId, sessionId]);
+
+  const logToday = async () => {
+    if (!courseId || sessionId == null || logging || loggedToday) return;
+    setLogging(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase.from('practice_log').insert({
+        user_id: user.id,
+        course_id: courseId,
+        session_id: sessionId,
+        log_date: new Date().toISOString().slice(0, 10),
+      });
+      if (!error) {
+        setLoggedToday(true);
+        setLoggedDays(d => (d ?? 0) + 1);
+      }
+    } finally {
+      setLogging(false);
+    }
+  };
+
   return (
     <div className="mt-8" style={{ borderLeft: '2px solid #C9A84C', paddingLeft: '1rem' }}>
       <p
@@ -823,7 +888,47 @@ function PracticeAssignmentBlock({ pa }: {
           Key terms: {pa.greekTerms}
         </p>
       )}
+      {courseId && sessionId != null && loggedDays !== null && (
+        <div className="mt-4 flex items-center gap-3">
+          {loggedToday ? (
+            <span className="text-green-400 text-xs font-semibold">✓ Practice logged today</span>
+          ) : (
+            <button
+              onClick={logToday}
+              disabled={logging}
+              className="border border-academy-gold/50 text-academy-gold rounded-lg px-3.5 py-1.5 text-xs font-semibold hover:bg-academy-gold/10 disabled:opacity-40 transition-colors"
+            >
+              {logging ? 'Logging…' : 'Log today’s practice'}
+            </button>
+          )}
+          <span className="text-academy-muted text-xs font-mono">
+            {loggedDays} day{loggedDays === 1 ? '' : 's'} logged
+          </span>
+        </div>
+      )}
     </div>
+  );
+}
+
+// ── Qualifying Examination CTA (seminar sessions) ─────────────────────────────
+
+function VivaCta({ courseId }: { courseId?: string }) {
+  if (!courseId) return null;
+  return (
+    <section className="mt-10 border-t border-academy-gold/20 pt-6">
+      <h2 className="font-serif text-xl text-academy-text mb-1">The Qualifying Examination</h2>
+      <p className="text-academy-muted text-sm mb-4 leading-relaxed">
+        This course closes with an assessed oral examination: six questions from the Examiner,
+        one at a time, across the whole course. No evaluation until it ends — then a verdict
+        and a written assessment, on your record. Recitation does not pass a viva.
+      </p>
+      <Link
+        href={`/dashboard/viva/${courseId}`}
+        className="inline-flex items-center gap-2 bg-academy-gold text-navy font-semibold rounded-lg px-5 py-2.5 text-sm hover:opacity-90 transition-opacity"
+      >
+        Sit the Examination &rarr;
+      </Link>
+    </section>
   );
 }
 
@@ -852,28 +957,31 @@ function QuizCta({ count, onQuizClick }: { count: number; onQuizClick?: () => vo
 
 // PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
 // content (parts + exercises). The quiz is not shown in the lesson — the CTA
-// switches to the Quiz tab where the Proctor grades the submission.
-function Phil701SessionContent({ session, onQuizClick }: { session: Phil701Session; onQuizClick?: () => void }) {
+// switches to the Quiz tab where the Proctor grades the submission. Seminar
+// sessions additionally offer the Qualifying Examination (viva).
+function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Phil701Session; courseId?: string; onQuizClick?: () => void }) {
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
       {session.practiceAssignment && (
-        <PracticeAssignmentBlock pa={session.practiceAssignment} />
+        <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
       {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
+      {session.isSeminar && <VivaCta courseId={courseId} />}
     </>
   );
 }
 
-// PHIL 702 and 703 (shared shape): same rendering contract as PHIL 701.
-function Phil702SessionContent({ session, onQuizClick }: { session: Phil702Session; onQuizClick?: () => void }) {
+// PHIL 702, 703, and 704 (shared shape): same rendering contract as PHIL 701.
+function Phil702SessionContent({ session, courseId, onQuizClick }: { session: Phil702Session; courseId?: string; onQuizClick?: () => void }) {
   return (
     <>
       <LanguageLessonContent session={phil702ToLesson(session)} />
       {session.practiceAssignment && (
-        <PracticeAssignmentBlock pa={session.practiceAssignment} />
+        <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
       {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
+      {session.isSeminar && <VivaCta courseId={courseId} />}
     </>
   );
 }
@@ -1509,6 +1617,7 @@ function SeminarPage() {
                           />
                           <Phil701SessionContent
                             session={phil701Session}
+                            courseId="phil-701"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>
@@ -1527,6 +1636,7 @@ function SeminarPage() {
                           />
                           <Phil702SessionContent
                             session={phil702Session}
+                            courseId="phil-702"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>
@@ -1545,6 +1655,7 @@ function SeminarPage() {
                           />
                           <Phil702SessionContent
                             session={phil703Session}
+                            courseId="phil-703"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>
@@ -1563,6 +1674,7 @@ function SeminarPage() {
                           />
                           <Phil702SessionContent
                             session={phil704Session}
+                            courseId="phil-704"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>

@@ -4,6 +4,8 @@
 
 import { GREK_101_SESSIONS } from './grek101';
 import { LATN_101_SESSIONS } from './latn101';
+import { GREK_201_SESSIONS } from './grek201';
+import { LATN_201_SESSIONS } from './latn201';
 
 export interface VocabCard {
   id: string;
@@ -36,6 +38,28 @@ export const VOCAB_DECK: VocabCard[] = [
       back: v.english,
       session: s.id,
       courseCode: 'LATN 101',
+    }))
+  ),
+  ...GREK_201_SESSIONS.flatMap(s =>
+    (s.vocabulary ?? []).map((v, i) => ({
+      id: `g2-${s.id}-${i}`,
+      language: 'greek' as const,
+      front: v.greek,
+      hint: v.transliteration,
+      back: v.english,
+      session: s.id,
+      courseCode: 'GREK 201',
+    }))
+  ),
+  ...LATN_201_SESSIONS.flatMap(s =>
+    (s.vocabulary ?? []).map((v, i) => ({
+      id: `l2-${s.id}-${i}`,
+      language: 'latin' as const,
+      front: v.latin,
+      hint: v.pronunciation,
+      back: v.english,
+      session: s.id,
+      courseCode: 'LATN 201',
     }))
   ),
 ];
