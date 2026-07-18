@@ -63,7 +63,7 @@ const COURSES: Course[] = [
     id: 'grek-101',
     code: 'GREK 101',
     title: 'Ancient Greek for Philosophers',
-    description: 'The Greek of the Stoics, from alphabet to philosophy. Ten sessions building toward a full grammatical reading of Epictetus Enchiridion §1.',
+    description: 'The Greek of the Stoics, from alphabet to philosophy. Thirty sessions — alphabet, full grammar, and graded readings — closing with a final examination on Epictetus in the original.',
     term: 'Year 1',
     assignedTexts: [
       { title: 'Enchiridion §1', author: 'Epictetus', sourceSlug: 'epictetus' },
@@ -73,7 +73,7 @@ const COURSES: Course[] = [
     id: 'latn-101',
     code: 'LATN 101',
     title: 'Latin for Philosophers',
-    description: 'The Latin of Seneca, from alphabet to philosophy. Ten sessions building toward a reading of Epistulae Morales I.',
+    description: 'The Latin of Seneca, from alphabet to philosophy. Thirty sessions — alphabet, full grammar, and milestone readings of the Epistulae Morales and De Brevitate Vitae — closing with a sight-translation final.',
     term: 'Year 1',
     assignedTexts: [
       { title: 'Epistulae Morales I', author: 'Seneca', sourceSlug: 'seneca' },

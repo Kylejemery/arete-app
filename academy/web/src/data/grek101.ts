@@ -1,5 +1,6 @@
 // GREK 101 — Ancient Greek for Philosophers
-// Sessions 1-10 · Unit I: The Grammar Foundation
+// Sessions 1–30: Unit I (grammar foundation), Unit II (verb system & readings),
+// Unit III (advanced grammar, Encheiridion readings, final exam).
 // Target text: Epictetus, Encheiridion §1
 
 export type LanguageSession = {

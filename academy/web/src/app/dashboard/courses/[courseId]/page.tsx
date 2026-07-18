@@ -359,57 +359,21 @@ function SessionContent({ content, sessionId, sessions }: { content: SessionCont
 
 // ── Lecture Video Block ───────────────────────────────────────────────────────
 
-function LectureVideoBlock({ sessionId, videoUrl }: { sessionId: number; videoUrl?: string }) {
-  if (videoUrl) {
-    return (
-      <div
-        className="w-full mb-8 rounded-xl overflow-hidden"
-        style={{ aspectRatio: '16/9', border: '1px solid rgba(201,168,76,0.2)' }}
-      >
-        <iframe
-          src={videoUrl}
-          className="w-full h-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
-    );
-  }
-
+// Renders only when a session actually has a lecture video — sessions
+// without one show no placeholder (the lesson text is the lecture).
+function LectureVideoBlock({ videoUrl }: { sessionId?: number; videoUrl?: string }) {
+  if (!videoUrl) return null;
   return (
     <div
-      className="w-full mb-8 rounded-xl flex flex-col items-center justify-center gap-3"
-      style={{
-        aspectRatio: '16/9',
-        background: '#0C1420',
-        border: '1px solid rgba(201,168,76,0.2)',
-      }}
+      className="w-full mb-8 rounded-xl overflow-hidden"
+      style={{ aspectRatio: '16/9', border: '1px solid rgba(201,168,76,0.2)' }}
     >
-      {/* Play button */}
-      <div
-        className="flex items-center justify-center w-14 h-14 rounded-full"
-        style={{ border: '1.5px solid rgba(201,168,76,0.6)' }}
-      >
-        {/* Triangle */}
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path d="M7 4.5L16 10L7 15.5V4.5Z" fill="rgba(201,168,76,0.8)" />
-        </svg>
-      </div>
-      {/* Labels */}
-      <div className="text-center">
-        <p
-          className="text-xs uppercase tracking-widest mb-1"
-          style={{ fontFamily: 'DM Mono, monospace', color: '#6B7A99' }}
-        >
-          Lecture — Session {toRoman(sessionId)}
-        </p>
-        <p
-          className="text-xs italic"
-          style={{ fontFamily: 'DM Mono, monospace', color: '#6B7A99' }}
-        >
-          Video coming soon
-        </p>
-      </div>
+      <iframe
+        src={videoUrl}
+        className="w-full h-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
     </div>
   );
 }
