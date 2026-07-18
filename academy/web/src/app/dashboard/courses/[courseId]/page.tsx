@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -23,6 +23,7 @@ import { PHIL_703_SESSIONS, type Phil703Session } from '@/data/phil703';
 import { PHIL703_READING } from '@/data/phil703_reading';
 import { PHIL_704_SESSIONS, type Phil704Session } from '@/data/phil704';
 import { PHIL704_READING } from '@/data/phil704_reading';
+import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
@@ -1267,6 +1268,14 @@ function SeminarPage() {
   const [rightWidth, setRightWidth] = useState(380);
   const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
   const [activeTab, setActiveTab] = useState<'lesson' | 'quiz'>('lesson');
+  // ── Evaluator state (two-role architecture: the Proctor teaches, the
+  // Evaluator judges; code gates completion) ──
+  const [objectiveStatus, setObjectiveStatus] = useState<Record<string, { status: string; note?: string }>>({});
+  const [stagnation, setStagnation] = useState<Record<string, number>>({});
+  const [suggestedRemediate, setSuggestedRemediate] = useState(false);
+  const [evaluating, setEvaluating] = useState(false);
+  const [lastEvalTurn, setLastEvalTurn] = useState(0);
+  const [objectivesOpen, setObjectivesOpen] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Deep link: /dashboard/courses/<id>?session=N (used by the dashboard
@@ -1321,6 +1330,41 @@ function SeminarPage() {
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
   const briefingCompleteKey = `briefing-complete-${courseId}-${activeSessionId}`;
+
+  // The rubric for this seminar: session objectives, or the capstone rubric
+  // on final (seminar) sessions.
+  const activePhilSession = phil701Session ?? phil702Session ?? phil703Session ?? phil704Session;
+  const isSeminarSession = !!activePhilSession?.isSeminar;
+  const { objectives: rubric, capstone } = useMemo(
+    () => getSeminarObjectives(courseId, activeSessionId, isSeminarSession),
+    [courseId, activeSessionId, isSeminarSession]
+  );
+  const demonstratedCount = rubric.filter(o => objectiveStatus[o.id]?.status === 'demonstrated').length;
+  const allObjectivesDemonstrated = rubric.length > 0 && demonstratedCount === rubric.length;
+
+  // Load persisted objective statuses when the rubric changes; reset the
+  // per-session evaluation bookkeeping.
+  useEffect(() => {
+    setSuggestedRemediate(false);
+    setLastEvalTurn(0);
+    setStagnation({});
+    if (rubric.length === 0) { setObjectiveStatus({}); return; }
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      const { data } = await supabase
+        .from('objective_status')
+        .select('objective_id, status, assessment_note')
+        .eq('user_id', user.id)
+        .in('objective_id', rubric.map(o => o.id));
+      if (cancelled) return;
+      const map: Record<string, { status: string; note?: string }> = {};
+      for (const r of data ?? []) map[r.objective_id as string] = { status: r.status as string, note: (r.assessment_note as string) ?? undefined };
+      setObjectiveStatus(map);
+    })();
+    return () => { cancelled = true; };
+  }, [rubric]);
 
   useEffect(() => {
     async function init() {
@@ -1398,6 +1442,82 @@ function SeminarPage() {
   // Reset to Lesson tab whenever the student navigates to a different session.
   useEffect(() => { setActiveTab('lesson'); }, [activeSessionId]);
 
+  // Run the Evaluator over the dialogue: separate call, structured JSON,
+  // validated server-side. Persists objective_status + the raw evaluation,
+  // then feeds suggested_focus back into the Proctor's next prompt.
+  const runEvaluation = async (msgs: SeminarMessage[]) => {
+    if (rubric.length === 0 || evaluating) return;
+    setEvaluating(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const priorStatus = rubric.map(o => ({
+        objective_id: o.id,
+        status: (objectiveStatus[o.id]?.status ?? 'not_demonstrated') as 'not_demonstrated' | 'partial' | 'demonstrated',
+        stagnation: stagnation[o.id] ?? 0,
+      }));
+      const res = await fetch('/api/academy/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId,
+          sessionId: activeSessionId,
+          capstone,
+          turnCount: msgs.length,
+          objectives: rubric.map(o => ({ id: o.id, description: o.description })),
+          transcript: msgs.slice(-40).map(m => ({ role: m.role, content: m.content })),
+          priorStatus,
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data.objectives)) return;
+
+      // Persist statuses + the raw evaluation (audit trail)
+      const rows = data.objectives.map((o: { objective_id: string; status: string; evidence: unknown; assessment_note: string; misconceptions: unknown }) => ({
+        user_id: user.id,
+        objective_id: o.objective_id,
+        status: o.status,
+        evidence: o.evidence,
+        assessment_note: o.assessment_note,
+        misconceptions: o.misconceptions,
+        updated_at: new Date().toISOString(),
+      }));
+      await supabase.from('objective_status').upsert(rows, { onConflict: 'user_id,objective_id' });
+      await supabase.from('evaluations').insert({
+        user_id: user.id,
+        course_id: courseId,
+        session_id: activeSessionId,
+        raw_response: data,
+        turn_count: msgs.length,
+      });
+
+      const map: Record<string, { status: string; note?: string }> = {};
+      const stag: Record<string, number> = {};
+      for (const o of data.objectives as { objective_id: string; status: string; assessment_note?: string }[]) {
+        map[o.objective_id] = { status: o.status, note: o.assessment_note };
+        stag[o.objective_id] = o.status === 'not_demonstrated' ? (stagnation[o.objective_id] ?? 0) + 1 : 0;
+      }
+      setObjectiveStatus(map);
+      setStagnation(stag);
+      setSuggestedRemediate(data.session_recommendation === 'remediate');
+      setLastEvalTurn(msgs.filter(m => m.role === 'user').length);
+    } catch {
+      // Evaluation is advisory; a failed run never blocks the dialogue.
+    } finally {
+      setEvaluating(false);
+    }
+  };
+
+  // Trigger cadence: every 5 student turns, on "am I done"-style requests,
+  // or manually from the objectives panel.
+  const maybeEvaluate = (msgs: SeminarMessage[], lastStudentText: string) => {
+    if (agentId !== 'socratic-proctor' || rubric.length === 0) return;
+    const studentTurns = msgs.filter(m => m.role === 'user').length;
+    const asked = /am i done|check my understanding|how am i doing|assess (me|my)|have i (demonstrated|passed)/i.test(lastStudentText);
+    if (asked || studentTurns - lastEvalTurn >= 5) runEvaluation(msgs);
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading || !session) return;
     // Mark briefing complete on first message sent in this session
@@ -1412,10 +1532,50 @@ function SeminarPage() {
     setIsLoading(true);
     await appendSeminarMessage(session.id, userMsg).catch(console.error);
     try {
-      const systemPrompt = SYSTEM_PROMPTS[agentId]
+      let systemPrompt = SYSTEM_PROMPTS[agentId]
         .replace('{course_id}', courseId)
         .replace('{assigned_text}', courseContent.assignedText)
         .replace('{tier}', enrollment?.tier ?? 'auditor');
+
+      // Session-aware Proctor: current session, its discussion prompt, and
+      // the open objectives (fed back from the Evaluator, invisibly).
+      if (agentId === 'socratic-proctor') {
+        const sessionMeta = sessions.find(s => s.id === activeSessionId);
+        const discussionPrompt =
+          sessionContent?.prompt ??
+          phil701Session?.preSeminarBriefing.problem ??
+          (phil702Session ?? phil703Session ?? phil704Session)?.briefing;
+        const ctx: string[] = [
+          `Current seminar session: Session ${activeSessionId}${sessionMeta ? ` — ${sessionMeta.title}` : ''}.`,
+        ];
+        if (discussionPrompt) ctx.push(`Session briefing / discussion prompt: ${discussionPrompt}`);
+        if (rubric.length > 0) {
+          const open = rubric.filter(o => objectiveStatus[o.id]?.status !== 'demonstrated');
+          if (open.length === 0) {
+            ctx.push(
+              'Every learning objective for this session has been demonstrated by the student. Conclude the seminar: deliver a closing synthesis naming what the student established in their own words, note one thing worth deepening, and direct them to the session quiz. This closing message may end without a question.'
+            );
+          } else {
+            ctx.push(
+              `Objectives still open for this session — steer the dialogue toward these without announcing you are doing so:\n${open.map(o => `- ${o.description}`).join('\n')}`
+            );
+            ctx.push(
+              'Demand application, not recitation: press the student to apply concepts to cases and generate their own examples. Do not supply answers; scaffolded answers do not count as mastery.'
+            );
+          }
+          if (suggestedRemediate) {
+            ctx.push(
+              'The student has repeatedly failed to demonstrate one or more of the open objectives. Change your approach: replace abstract questioning with one concrete everyday scenario, or suggest the student revisit the session material before continuing.'
+            );
+          }
+          if (capstone) {
+            ctx.push(
+              'This is the course capstone dialogue: pose novel scenarios not covered verbatim in the course material and require transfer of the doctrines to them.'
+            );
+          }
+        }
+        systemPrompt += `\n\n${ctx.join('\n\n')}`;
+      }
       const res = await fetch(`${API_BASE}/api/academy/seminar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1427,6 +1587,8 @@ function SeminarPage() {
       const assistantMsg: SeminarMessage = { role: 'assistant', content: responseText, timestamp: Date.now() };
       setMessages(prev => [...prev, assistantMsg]);
       await appendSeminarMessage(session.id, assistantMsg).catch(console.error);
+      // Evaluator cadence — fires in the background; never blocks the dialogue.
+      maybeEvaluate([...newMessages, assistantMsg], userMsg.content);
     } catch {
       setMessages(prev => [...prev, { role: 'assistant', content: 'The seminar room is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
     } finally {
@@ -1691,6 +1853,69 @@ function SeminarPage() {
             </p>
             <AgentSelector selectedId={agentId} tier={tier} onChange={handleAgentChange} />
           </div>
+
+          {/* Objectives panel — the Evaluator's scoreboard for this session */}
+          {agentId === 'socratic-proctor' && rubric.length > 0 && (
+            <div className="flex-shrink-0 border-b border-academy-border bg-navy/40 px-5 py-3">
+              <button
+                onClick={() => setObjectivesOpen(o => !o)}
+                className="w-full flex items-center justify-between"
+              >
+                <span className="text-academy-gold text-[10px] font-semibold uppercase tracking-widest">
+                  {capstone ? 'Capstone Objectives' : 'Session Objectives'} · {demonstratedCount}/{rubric.length}
+                  {evaluating && (
+                    <span className="text-academy-muted normal-case tracking-normal ml-2 italic">assessing…</span>
+                  )}
+                </span>
+                <span className="text-academy-muted text-xs">{objectivesOpen ? '▾' : '▸'}</span>
+              </button>
+              {objectivesOpen && (
+                <>
+                  <ul className="mt-2.5 space-y-1.5">
+                    {rubric.map(o => {
+                      const st = objectiveStatus[o.id]?.status ?? 'not_demonstrated';
+                      return (
+                        <li
+                          key={o.id}
+                          className="flex items-start gap-2 text-xs leading-snug"
+                          title={objectiveStatus[o.id]?.note}
+                        >
+                          <span className={`mt-px flex-shrink-0 ${
+                            st === 'demonstrated' ? 'text-green-400' : st === 'partial' ? 'text-academy-gold' : 'text-academy-muted/50'
+                          }`}>
+                            {st === 'demonstrated' ? '●' : st === 'partial' ? '◐' : '○'}
+                          </span>
+                          <span className={st === 'demonstrated' ? 'text-academy-muted/70' : 'text-academy-muted'}>
+                            {o.description}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  {allObjectivesDemonstrated ? (
+                    <p className="mt-2.5 text-green-400 text-xs font-semibold">
+                      ✓ All objectives demonstrated — the Proctor will conclude the seminar. Proceed to the quiz.
+                    </p>
+                  ) : (
+                    <div className="mt-2.5 flex items-center gap-3">
+                      <button
+                        onClick={() => runEvaluation(messages)}
+                        disabled={evaluating || messages.filter(m => m.role === 'user').length === 0}
+                        className="text-academy-gold text-[10px] font-semibold uppercase tracking-widest hover:opacity-80 disabled:opacity-40"
+                      >
+                        Assess my understanding
+                      </button>
+                      {suggestedRemediate && (
+                        <span className="text-academy-gold/80 text-[10px] italic">
+                          The Proctor is changing approach — consider revisiting the lesson.
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
