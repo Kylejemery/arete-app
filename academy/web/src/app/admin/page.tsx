@@ -96,7 +96,7 @@ function timeAgo(iso: string | null): string {
 type Metric = { label: string; value: React.ReactNode }
 
 function AgentCard({
-  icon, name, status, statusKind, metrics, footer, href,
+  icon, name, status, statusKind, metrics, footer, href, action,
 }: {
   icon: string
   name: string
@@ -105,6 +105,7 @@ function AgentCard({
   metrics: Metric[]
   footer: string
   href: string
+  action?: { label: string; onClick: () => void; disabled?: boolean }
 }) {
   return (
     <div className={styles.agentCard}>
@@ -124,7 +125,19 @@ function AgentCard({
       </div>
       <div className={styles.agentFooter}>
         <span className={styles.muted}>{footer}</span>
-        <Link href={href} className={styles.viewLink}>View →</Link>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {action && (
+            <button
+              className={styles.ghostBtn}
+              style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+              onClick={action.onClick}
+              disabled={action.disabled}
+            >
+              {action.label}
+            </button>
+          )}
+          <Link href={href} className={styles.viewLink}>View →</Link>
+        </span>
       </div>
     </div>
   )
@@ -280,6 +293,8 @@ export default function AdminOverviewPage() {
   const [data, setData] = useState<Overview | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [consolRunning, setConsolRunning] = useState(false)
+  const [consolMsg, setConsolMsg] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -296,6 +311,24 @@ export default function AdminOverviewPage() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Run the Consolidation Agent from the dashboard: fires the Railway run
+  // (202 immediately), then refreshes the overview so new pending-review
+  // counts and the fresh morning report show up.
+  const runConsolidation = useCallback(async () => {
+    setConsolRunning(true)
+    setConsolMsg('')
+    try {
+      const res = await fetch('/api/admin/consolidation/run', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to start')
+      setConsolMsg('Consolidating — Hebbian update, synthesis, decay, report. Refreshing shortly…')
+      setTimeout(() => { load(); setConsolMsg('') }, 45000)
+    } catch (e) {
+      setConsolMsg(e instanceof Error ? e.message : 'Failed to start')
+    }
+    setConsolRunning(false)
+  }, [load])
 
   return (
     <div className={styles.page}>
@@ -524,10 +557,11 @@ export default function AdminOverviewPage() {
               { label: 'In corpus', value: data.consolidation?.approved ?? 0 },
               { label: 'Graph edges', value: data.consolidation?.edges ?? 0 },
             ]}
-            footer={data.consolidation?.lastReportExcerpt
+            footer={consolMsg || (data.consolidation?.lastReportExcerpt
               ? `${data.consolidation.lastReportExcerpt.slice(0, 44)}… · nightly 07:30 UTC`
-              : 'No report yet · nightly 07:30 UTC'}
+              : 'No report yet · nightly 07:30 UTC')}
             href="/admin/consolidation"
+            action={{ label: consolRunning ? 'Starting…' : 'Run', onClick: runConsolidation, disabled: consolRunning }}
           />
 
           <AgentCard
