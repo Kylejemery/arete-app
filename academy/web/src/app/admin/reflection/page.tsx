@@ -167,17 +167,28 @@ export default function ReflectionPage() {
 
   async function generateNow() {
     setGenerating(true)
-    setGenMsg('Generating this week’s reflection — the agent reads the whole fleet, ~1 minute…')
+    setGenMsg('Starting this week’s reflection — the agent reads the whole fleet, ~1 minute. This tab refreshes automatically when it lands…')
     try {
       const res = await fetch('/api/admin/reflection/generate', { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Failed to generate')
-      setGenMsg('✓ Reflection generated. Re-running in the same week overwrites the same report.')
-      await load()
+      const json = await res.json().catch(() => ({}))
+      // 202 = run started (the backend fires it and returns immediately);
+      // 409 = a run is already in progress. Both mean a run is underway, so
+      // wait for it to finish and reload the report either way.
+      if (!res.ok && res.status !== 409) throw new Error(json.error || 'Failed to start')
+      if (res.status === 409) {
+        setGenMsg('A reflection run is already in progress — refreshing when it lands…')
+      }
+      // The run writes the report on completion (~40-60s). Reload once it should
+      // be done rather than awaiting the request, which the proxy would time out.
+      setTimeout(async () => {
+        await load()
+        setGenMsg('✓ Reflection updated. Re-running in the same week overwrites the same report.')
+        setGenerating(false)
+      }, 55000)
     } catch (e) {
-      setGenMsg(e instanceof Error ? e.message : 'Failed to generate')
+      setGenMsg(e instanceof Error ? e.message : 'Failed to start')
+      setGenerating(false)
     }
-    setGenerating(false)
   }
 
   const anomalies = current?.anomalies || []

@@ -3420,12 +3420,20 @@ app.post('/api/admin/synthesis/generate', async (req, res) => {
 // demand (admin only). The scheduled Railway cron is Sundays 07:00 UTC; this
 // lets Kyle produce this week's reflection without waiting. Idempotent: the
 // agent upserts on reflection_week, so re-running overwrites the same row.
+// Fire-and-return: the reflection reads the whole fleet and calls Claude, which
+// takes ~40-60s — longer than the Vercel proxy in front of this endpoint will
+// wait, so awaiting it here made the button look like it failed even when the
+// run completed. Instead we start the run, return 202 immediately, and let the
+// Self-Reflection tab reload once it lands. Idempotent: the agent upserts on
+// reflection_week, so re-running overwrites the same row. The latch prevents
+// overlapping runs.
 let reflectionRunning = false;
 app.post('/api/admin/reflection/generate', async (req, res) => {
   try {
     const userId = await getAuthenticatedUserId(req);
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
     if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    // Self-reflection needs Claude + Supabase only — it does no retrieval, so no OpenAI key.
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY) {
       return res.status(500).json({ error: 'Server not configured for self-reflection' });
     }
@@ -3434,16 +3442,22 @@ app.post('/api/admin/reflection/generate', async (req, res) => {
     }
 
     reflectionRunning = true;
-    try {
-      const result = await runWeeklySelfReflection();
-      return res.json({ ok: true, ...result });
-    } finally {
-      reflectionRunning = false;
-    }
+    runWeeklySelfReflection()
+      .then(result => {
+        console.log('[/api/admin/reflection/generate] finished:', JSON.stringify(result));
+      })
+      .catch(err => {
+        console.error('[/api/admin/reflection/generate] run failed:', err.message);
+      })
+      .finally(() => {
+        reflectionRunning = false;
+      });
+
+    return res.status(202).json({ ok: true, started: true });
   } catch (err) {
     reflectionRunning = false;
     console.error('[/api/admin/reflection/generate] error:', err.message);
-    return res.status(500).json({ error: err.message || 'Reflection failed' });
+    return res.status(500).json({ error: err.message || 'Failed to start reflection' });
   }
 });
 

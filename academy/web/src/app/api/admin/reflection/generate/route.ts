@@ -2,17 +2,18 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
+export const maxDuration = 30
 
 const BACKEND_URL =
   process.env.RAILWAY_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   'https://arete-app-production.up.railway.app'
 
-// POST /api/admin/reflection/generate — admin-only. Generates this week's
-// Self-Reflection report NOW on the Railway server (which awaits the run and
-// returns the result) instead of waiting for the Sunday 07:00 UTC cron.
-// Idempotent: the agent upserts on reflection_week.
+// POST /api/admin/reflection/generate — admin-only. Starts this week's
+// Self-Reflection run NOW on the Railway server instead of waiting for the
+// Sunday 07:00 UTC cron. The backend fires the run and returns 202 immediately
+// (the run itself takes ~40-60s); the Self-Reflection tab reloads once it
+// lands. Idempotent: the agent upserts on reflection_week.
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
