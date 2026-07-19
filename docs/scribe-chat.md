@@ -70,3 +70,15 @@ RLS is enabled with **no policies** — same deny-all pattern as the other
   hand before publishing.
 - **Scribe never writes to `rag_corpus`** — it reads the corpus; its output
   never enters it.
+
+## The Log (added 2026-07-19, migration `scribe_log_items`)
+
+Kyle's running commonplace book at `/admin/scribe/log`: journal entries,
+thoughts, generated essays, clippings (`kind` check constraint). Every item is
+embedded on save (`text-embedding-3-small`, 1536 dims — same space as the
+corpus) so related items surface via `match_scribe_log_items(query_embedding,
+match_count, exclude_id)`. Scribe chat gets a `search_journal` tool alongside
+`search_corpus`: the log is a participant in the conversation the same way the
+corpus is, and teasing out connections across entries over time is part of
+Scribe's job. Kyle's own words are always quotable (recorded in `sources_used`
+as mode `quote`, `text_type` `journal`). The log never feeds `rag_corpus`.
