@@ -23,6 +23,10 @@ import { PHIL_703_SESSIONS, type Phil703Session } from '@/data/phil703';
 import { PHIL703_READING } from '@/data/phil703_reading';
 import { PHIL_704_SESSIONS, type Phil704Session } from '@/data/phil704';
 import { PHIL704_READING } from '@/data/phil704_reading';
+import { PHIL_706_SESSIONS, type Phil706Session } from '@/data/phil706';
+import { PHIL706_READING } from '@/data/phil706_reading';
+import { PHIL_707_SESSIONS, type Phil707Session } from '@/data/phil707';
+import { PHIL707_READING } from '@/data/phil707_reading';
 import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
@@ -36,7 +40,7 @@ interface SessionItem {
   id: number;
   title: string;
   locked: boolean;
-  lockReason?: 'completion-gate' | null;
+  lockReason?: 'completion-gate' | 'fast-gate' | null;
   videoUrl?: string;
 }
 
@@ -92,6 +96,26 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
     { id: 9,  title: "On the Happy Life — The Hypocrite's Defense",          locked: true },
     { id: 10, title: 'On Mercy — Philosophy Advises Power',                  locked: true },
     { id: 11, title: 'Qualifying Conversation — The Examined Correspondence', locked: true },
+  ],
+  'phil-706': [
+    { id: 1, title: 'No One Does Wrong Willingly — The Socratic Foundation',      locked: false },
+    { id: 2, title: 'The Thief and the Mistaken Judgment — Epictetus on Error',   locked: true },
+    { id: 3, title: 'Anger Anatomized — Seneca and the Two Movements',            locked: true },
+    { id: 4, title: 'Against Useful Anger — The Demolition of the Defenses',      locked: true },
+    { id: 5, title: 'The Synthesis — Why Anger Is Always False',                  locked: true },
+    { id: 6, title: 'The Practice — Living Without Anger',                        locked: true },
+    { id: 7, title: 'Capstone Dialogue — The Doctrine Under Fire',                locked: true },
+  ],
+  'phil-707': [
+    { id: 1, title: 'The Engineered Impression — The Attention Economy on Stoic Terms', locked: false },
+    { id: 2, title: 'Prosoche Under Siege — Phones, Shorts, and the Fragmented Guard',  locked: true },
+    { id: 3, title: 'The Opinion of Others, Industrialized — Metrics, Comparison, Outrage', locked: true },
+    { id: 4, title: 'Appetite by Design — Desire with an R&D Department',               locked: true },
+    { id: 5, title: 'Externals and the Market Self — Wealth, Hustle, and Fortuna',      locked: true },
+    { id: 6, title: 'Fear at Scale — News, Health Anxiety, and the Political Other',    locked: true },
+    { id: 7, title: 'Connection and Eros in the Digital Age — Friendship, Parasocial Bonds, and the AI Companion', locked: true },
+    { id: 8, title: 'The Digital Askēsis — Assembling the Rule of Life',                locked: true },
+    { id: 9, title: 'Capstone Dialogue — The Assayer Examined',                         locked: true },
   ],
 };
 
@@ -208,6 +232,44 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
       },
     },
   },
+  'phil-706': {
+    code: 'PHIL 706',
+    shortTitle: "The Impossibility\nof Willing Evil",
+    fullTitle: 'The Impossibility of Willing Evil',
+    assignedText: 'Plato, Epictetus, Seneca (De Ira), Marcus Aurelius',
+    sessions: {
+      1: {
+        quote: '“No one who either knows or believes that there is another possible course of action, better than the one he is following, will ever continue on his present course.”',
+        quoteSource: '— Plato, Protagoras 358b',
+        intro: [
+          'This course assembles one argument across six sessions: all anger is unnecessary because no one does wrong willingly. Anger presupposes that the offender knowingly chose evil; Socratic intellectualism denies that this ever happens; therefore anger always rests on a false judgment — and what rests on a false judgment can be eliminated, not merely managed.',
+          'The argument begins four centuries before the Stoa, in three Platonic dialogues where Socrates defends the most counterintuitive claim in ancient ethics: virtue is knowledge, vice is ignorance, and nobody has ever done wrong while seeing it clearly as wrong.',
+          'Your task is not yet to believe the thesis. It is to understand exactly what it claims, why Socrates thought it followed from the structure of desire itself — and to carry, unresolved, the strongest objection: "I knew it was wrong and did it anyway."',
+        ],
+        readings: [],
+        prompt: "Socrates claims that no one does wrong willingly — that every wrongdoer pursues an apparent good and misses the real one. Ordinary experience seems to refute this daily: we say 'I knew it was wrong and did it anyway.' State the intellectualist thesis precisely, and then state the akrasia objection in its strongest form. Which do you currently believe, and what would change your mind?",
+      },
+    },
+  },
+  'phil-707': {
+    code: 'PHIL 707',
+    shortTitle: "The Prokopton in\nthe Digital Age",
+    fullTitle: 'The Prokopton in the Digital Age',
+    assignedText: 'Epictetus, Seneca (Letters), Musonius Rufus',
+    sessions: {
+      1: {
+        quote: '“Every habit and faculty is maintained and increased by the corresponding actions... if you would not be of an angry temper, do not feed the habit; throw nothing on it that will increase it.”',
+        quoteSource: '— Epictetus, Discourses 2.18',
+        intro: [
+          'Modern technologies and markets are industrial-scale phantasia machines — systems engineered to present false impressions of the good faster and more persistently than an untrained prohairesis can examine them.',
+          'Epictetus faced the orator, the flatterer, and the mob — artisanal producers of false impressions. You face an industry: impressions professionally designed, A/B-tested against millions of nervous systems, and delivered at a cadence calibrated to arrive faster than examination.',
+          'The Stoic response is not retreat but trained assent: the same doctrine, harder conditions. This course ends with a rule of life, a completed fast, and a defended framework — the first course in this Academy whose completion requires lived time, not just dialogue.',
+        ],
+        readings: [],
+        prompt: 'Take one interface element you touched today — a notification badge, an infinite scroll, an autoplay countdown. Describe it as an engineered impression: who designed it, what good does it present as yours for the taking, and what does its timing tell you about whose interests the design serves? Then say what a trained assent to it would look like — and whether abstinence alone would count as training.',
+      },
+    },
+  },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -244,6 +306,7 @@ function PreparedNotice({ sessionId, sessions }: { sessionId: number; sessions: 
 
 function CompletionGateLock({ sessionId, sessions }: { sessionId: number; sessions: SessionItem[] }) {
   const s = sessions.find(x => x.id === sessionId);
+  const fastGate = s?.lockReason === 'fast-gate';
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center px-8">
       <div className="w-14 h-14 rounded-full border border-academy-border flex items-center justify-center mb-6">
@@ -253,8 +316,15 @@ function CompletionGateLock({ sessionId, sessions }: { sessionId: number; sessio
       </div>
       <h2 className="font-serif text-xl text-academy-text mb-3">{s?.title ?? `Session ${toRoman(sessionId)}`}</h2>
       <p className="text-academy-muted text-sm max-w-xs leading-relaxed">
-        Pass the quiz for the previous session to unlock this one.
+        {fastGate
+          ? 'The capstone convenes only when the fast has run. Schedule, execute, and review your fasting protocol in the Practicum — trained assent is proven in the field, not in dialogue.'
+          : 'Pass the quiz for the previous session to unlock this one.'}
       </p>
+      {fastGate && (
+        <a href="/dashboard/practicum" className="text-academy-gold text-xs font-semibold mt-4">
+          Open the Practicum &rarr;
+        </a>
+      )}
     </div>
   );
 }
@@ -278,6 +348,14 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_704_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-706') {
+    const s = PHIL_706_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
+  if (courseId === 'phil-707') {
+    const s = PHIL_707_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   return false;
 }
 
@@ -293,6 +371,12 @@ function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
   }
   if (courseId === 'phil-704') {
     return PHIL_704_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-706') {
+    return PHIL_706_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-707') {
+    return PHIL_707_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
   }
   return [];
 }
@@ -1264,6 +1348,10 @@ function SeminarPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [paperExpanded, setPaperExpanded] = useState(false);
   const [briefingComplete, setBriefingComplete] = useState(false);
+  // PHIL 707 capstone gate (the fast must have run and been reviewed) and
+  // PHIL 706 practicum context for the Proctor.
+  const [fastCompleted, setFastCompleted] = useState(false);
+  const [practicumRecent, setPracticumRecent] = useState<string | null>(null);
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
   const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
@@ -1304,6 +1392,11 @@ function SeminarPage() {
       ? (sessionProgress[s.id - 1] ?? 'not_started')
       : 'passed';
     const locked = prevEffectiveStatus !== 'passed';
+    // PHIL 707 capstone additionally requires the completed, logged fast —
+    // the first session in the Academy gated on lived time.
+    if (courseId === 'phil-707' && s.id === 9 && !locked && !fastCompleted) {
+      return { ...s, locked: true, lockReason: 'fast-gate' as const };
+    }
     return { ...s, locked, lockReason: locked ? ('completion-gate' as const) : null };
   });
   const courseContent = COURSE_CONTENT[courseId] ?? COURSE_CONTENT['phil-701'];
@@ -1326,6 +1419,13 @@ function SeminarPage() {
   const phil704Session: Phil704Session | undefined = courseId === 'phil-704'
     ? PHIL_704_SESSIONS.find(s => s.id === activeSessionId)
     : undefined;
+  // PHIL 706 and 707 (Year 2) share the same shape and contract.
+  const phil706Session: Phil706Session | undefined = courseId === 'phil-706'
+    ? PHIL_706_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
+  const phil707Session: Phil707Session | undefined = courseId === 'phil-707'
+    ? PHIL_707_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
@@ -1333,7 +1433,7 @@ function SeminarPage() {
 
   // The rubric for this seminar: session objectives, or the capstone rubric
   // on final (seminar) sessions.
-  const activePhilSession = phil701Session ?? phil702Session ?? phil703Session ?? phil704Session;
+  const activePhilSession = phil701Session ?? phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session;
   const isSeminarSession = !!activePhilSession?.isSeminar;
   const { objectives: rubric, capstone } = useMemo(
     () => getSeminarObjectives(courseId, activeSessionId, isSeminarSession),
@@ -1365,6 +1465,46 @@ function SeminarPage() {
     })();
     return () => { cancelled = true; };
   }, [rubric]);
+
+  // Year 2 practicum data: the PHIL 707 fast-gate check, and recent PHIL 706
+  // practicum entries for the Proctor's context.
+  useEffect(() => {
+    if (courseId !== 'phil-706' && courseId !== 'phil-707') return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || cancelled) return;
+      if (courseId === 'phil-707') {
+        const { data } = await supabase
+          .from('practicum_logs')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('course_id', 'phil-707')
+          .contains('episode', { type: 'fast_review' })
+          .limit(1);
+        if (!cancelled) setFastCompleted((data?.length ?? 0) > 0);
+      } else {
+        const { data } = await supabase
+          .from('practicum_logs')
+          .select('episode, created_at')
+          .eq('user_id', user.id)
+          .eq('course_id', 'phil-706')
+          .order('created_at', { ascending: false })
+          .limit(8);
+        if (cancelled || !data || data.length === 0) return;
+        const lines = data.map(r => {
+          const e = r.episode as Record<string, unknown>;
+          const day = new Date(r.created_at as string).toISOString().slice(0, 10);
+          if (e.type === 'episode') {
+            return `- [${day}] episode (assent: ${e.assent}): flash: ${e.flash}; judgment: "${e.judgment}"; offender's good: ${e.offenders_good}; corrected response: ${e.corrected_response}`;
+          }
+          return `- [${day}] evening review: cured: ${e.habit_cured || '—'}; resisted: ${e.fault_resisted || '—'}; better: ${e.respect_better || '—'}`;
+        });
+        setPracticumRecent(lines.join('\n'));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [courseId]);
 
   useEffect(() => {
     async function init() {
@@ -1544,7 +1684,7 @@ function SeminarPage() {
         const discussionPrompt =
           sessionContent?.prompt ??
           phil701Session?.preSeminarBriefing.problem ??
-          (phil702Session ?? phil703Session ?? phil704Session)?.briefing;
+          (phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session)?.briefing;
         const ctx: string[] = [
           `Current seminar session: Session ${activeSessionId}${sessionMeta ? ` — ${sessionMeta.title}` : ''}.`,
         ];
@@ -1571,6 +1711,12 @@ function SeminarPage() {
           if (capstone) {
             ctx.push(
               'This is the course capstone dialogue: pose novel scenarios not covered verbatim in the course material and require transfer of the doctrines to them.'
+            );
+          }
+          // PHIL 706: ground the dialogue in the student's own practicum data.
+          if (courseId === 'phil-706' && practicumRecent) {
+            ctx.push(
+              `Recent entries from the student's anger practicum log (most recent first). Use them to ground the dialogue in the student's actual episodes rather than hypotheticals; in the capstone, examine the student on this data — their most frequent constituting judgment and the standing belief beneath it:\n${practicumRecent}`
             );
           }
         }
@@ -1801,6 +1947,44 @@ function SeminarPage() {
                           <Phil702SessionContent
                             session={phil704Session}
                             courseId="phil-704"
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil706Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-706-${activeSessionId}`}
+                            courseId="phil-706"
+                            session={activeSessionId}
+                            title={phil706Session.title}
+                            problem={phil706Session.briefing}
+                            whyItMatters=""
+                            watchFor={[]}
+                            yourTask=""
+                            requiredReading={PHIL706_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil706Session}
+                            courseId="phil-706"
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil707Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-707-${activeSessionId}`}
+                            courseId="phil-707"
+                            session={activeSessionId}
+                            title={phil707Session.title}
+                            problem={phil707Session.briefing}
+                            whyItMatters=""
+                            watchFor={[]}
+                            yourTask=""
+                            requiredReading={PHIL707_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil707Session}
+                            courseId="phil-707"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>

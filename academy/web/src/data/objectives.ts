@@ -31,6 +31,8 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil701-s3-obj1', description: 'Trace the chain impression → assent → impulse → action and locate ethical responsibility at assent.' },
       { id: 'phil701-s3-obj2', description: 'Explain why having an impression is not up to us but assenting to it is.' },
       { id: 'phil701-s3-obj3', description: "Analyze a disturbance of their own using 'men are disturbed not by things but by opinions about things.'" },
+      // Year 1 → PHIL 706 bridge: plant the flag, don't argue it yet.
+      { id: 'phil701-s3-obj4', description: 'States the Socratic principle that no one does wrong willingly and identifies it as a foundation to be developed in Year 2.' },
     ],
     4: [
       { id: 'phil701-s4-obj1', description: "State the discipline of desire's instruction: redirect desire toward what is eph' hēmin and aversion toward vice alone." },
@@ -113,6 +115,8 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil702-s9-obj1', description: 'Explain anger as a failure of the discipline of desire, with the Socratic diagnosis of wrongdoing.' },
       { id: 'phil702-s9-obj2', description: 'Describe Book XI.18 as a real-time diagnostic and what it corrects.' },
       { id: 'phil702-s9-obj3', description: 'Run the diagnostic on a recent anger of their own and name the frustrated desire.' },
+      // Year 1 → PHIL 706 bridge.
+      { id: 'phil702-s9-obj4', description: "Identifies Marcus's arguments against anger in XI.18 and notes which depend on the claim that wrongdoers err unwillingly." },
     ],
     10: [
       { id: 'phil702-s10-obj1', description: 'Explain the inner citadel: what alone can harm the ruling faculty, and why that is both uncomfortable and liberating.' },
@@ -135,6 +139,8 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil703-s3-obj1', description: 'Explain why logic is necessary: reason as the only faculty that audits itself.' },
       { id: 'phil703-s3-obj2', description: 'Explain pity-not-anger toward the wrongdoer and why it does not entail passivity.' },
       { id: 'phil703-s3-obj3', description: "Run the assayer's test on one strong impression of their own, in writing or dialogue." },
+      // Year 1 → PHIL 706 bridge: I.18 and I.28 are the intellectualism core.
+      { id: 'phil703-s3-obj4', description: 'States the intellectualist claim of Discourses I.18 and I.28 — the wrongdoer errs about the good rather than choosing evil — and identifies it as a foundation to be developed in Year 2.' },
     ],
     4: [
       { id: 'phil703-s4-obj1', description: 'Assign confidence and caution to their correct domains and explain the ordinary inversion.' },
@@ -224,6 +230,105 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil704-s10-obj3', description: 'Apply the mercy protocol at their own station of power and report the hardest case.' },
     ],
   },
+  // PHIL 706 — The Impossibility of Willing Evil (Year 2, 6 sessions +
+  // anger practicum weeks 2–6 + capstone dialogue). Course thesis: anger
+  // presupposes the offender knowingly chose evil; Socratic intellectualism
+  // denies this ever happens; therefore anger rests on a false judgment and
+  // can be eliminated, not merely managed. Provisioned ahead of the course
+  // page (inert until built). Full outline: data/reference/PHIL_706_Course_Outline.md.
+  'phil-706': {
+    1: [
+      { id: 'phil706-s1-obj1', description: 'States the intellectualist thesis in their own words: all wrongdoing stems from mistaken judgment about the good, not willing choice of evil.' },
+      { id: 'phil706-s1-obj2', description: 'Reconstructs the Gorgias argument that wrongdoers do "what seems best" but not "what they will."' },
+      { id: 'phil706-s1-obj3', description: 'Explains hamartia as "missing the mark" and contrasts it with willful transgression.' },
+      { id: 'phil706-s1-obj4', description: 'Articulates the strongest objection (apparent akrasia — "I knew it was wrong and did it anyway") without yet resolving it.' },
+    ],
+    2: [
+      { id: 'phil706-s2-obj1', description: 'Explains why Epictetus treats the wrongdoer like a person with impaired vision rather than an enemy.' },
+      { id: 'phil706-s2-obj2', description: 'Locates the offender\'s error in assent to a false impression about goods/evils, using the phantasia–sunkatathesis vocabulary.' },
+      { id: 'phil706-s2-obj3', description: 'Applies Discourses 1.18 to a scenario of theft or insult: identifies the mistaken judgment driving the offender.' },
+      { id: 'phil706-s2-obj4', description: 'Explains Epictetus\'s claim that the wrongdoer is the one actually harmed, and by what.' },
+    ],
+    3: [
+      { id: 'phil706-s3-obj1', description: 'Distinguishes the involuntary first movement from anger proper, and identifies assent as the point of responsibility.' },
+      { id: 'phil706-s3-obj2', description: 'States the composite judgment that constitutes anger ("wronged" + "retaliation fitting") in their own words.' },
+      { id: 'phil706-s3-obj3', description: 'Given a first-person vignette of a flash of irritation, correctly identifies whether anger has yet occurred and what would make it so.' },
+      { id: 'phil706-s3-obj4', description: 'Explains why the two-movements doctrine entails anger is voluntary and thus a legitimate target for elimination.' },
+    ],
+    4: [
+      { id: 'phil706-s4-obj1', description: 'Reconstructs and rebuts the "righteous anger at injustice" defense using Seneca\'s argument that justice requires an undistorted judge.' },
+      { id: 'phil706-s4-obj2', description: 'Rebuts the motivation defense: explains how the sage acts vigorously against wrongdoing without anger.' },
+      { id: 'phil706-s4-obj3', description: 'Distinguishes anger elimination from passivity or indifference to injustice, with an example of firm non-angry corrective action.' },
+      { id: 'phil706-s4-obj4', description: 'Articulates the difference between the modern "anger management" frame and the Stoic elimination thesis, and why the latter follows from Sessions 1–2.' },
+    ],
+    5: [
+      { id: 'phil706-s5-obj1', description: 'States the full syllogism connecting intellectualism to anger elimination and identifies which premise anger denies.' },
+      { id: 'phil706-s5-obj2', description: 'Applies the framework to a case of deliberate, premeditated malice: explains what the offender is still mistaken about despite "knowing what they were doing."' },
+      { id: 'phil706-s5-obj3', description: 'Uses the Medea case to explain how even self-aware wrongdoing involves a false judgment about the good.' },
+      { id: 'phil706-s5-obj4', description: 'Responds to the objection that this doctrine excuses wrongdoers: distinguishes explaining from excusing, and correction from retribution.' },
+    ],
+    6: [
+      { id: 'phil706-s6-obj1', description: 'Describes the delay tactic and explains its rationale via the two-movements doctrine.' },
+      { id: 'phil706-s6-obj2', description: 'Conducts a model evening review of an anger episode: first movement, the assented judgment, the offender\'s mistaken good, the corrected response.' },
+      { id: 'phil706-s6-obj3', description: 'Composes their own morning preparation in the style of Meditations 2.1, incorporating the intellectualist premise.' },
+      { id: 'phil706-s6-obj4', description: 'Analyzes at least one real episode from their practicum log using the full framework.' },
+    ],
+  },
+  // PHIL 707 — The Prokopton in the Digital Age (Year 2, 8 sessions).
+  // Provisioned ahead of the course page: the courses/[courseId] renderer only
+  // serves phil-701..704 today, so these are inert until 707 is built.
+  // Prerequisites: PHIL 705 (impressions/assent machinery); PHIL 706
+  // recommended for Sessions 3 and 6.
+  'phil-707': {
+    1: [
+      { id: 'phil707-s1-obj1', description: 'Explains the attention economy as an industrialized phantasia system, using the impression–assent vocabulary from PHIL 705.' },
+      { id: 'phil707-s1-obj2', description: 'Analyzes one interface element (infinite scroll, autoplay, notification badge) as an engineered impression: what good does it falsely present?' },
+      { id: 'phil707-s1-obj3', description: 'States why the Stoic response is trained assent rather than mere abstinence, and where abstinence (askēsis) still fits.' },
+    ],
+    2: [
+      { id: 'phil707-s2-obj1', description: 'Explains why prosoche is impossible under ambient interruption, citing Discourses 4.12.' },
+      { id: 'phil707-s2-obj2', description: 'Diagnoses short-form video by its impression cadence: why examination cannot keep pace with delivery.' },
+      { id: 'phil707-s2-obj3', description: 'Designs their own attention protocol (notification elimination, phone placement rules, single-tasking blocks) with Stoic rationale for each element.' },
+      { id: 'phil707-s2-obj4', description: 'Distinguishes tool-use from impression-consumption in their own phone habits with logged examples.' },
+    ],
+    3: [
+      { id: 'phil707-s3-obj1', description: 'Analyzes the like/metric as an externalization of self-worth and classifies it correctly as not up to us.' },
+      { id: 'phil707-s3-obj2', description: 'Applies the intellectualist framework to an online outrage pile-on: identifies the mistaken good pursued by participants.' },
+      { id: 'phil707-s3-obj3', description: 'Explains comparison culture via the distinction between curated impression and reality, with a personal example.' },
+      { id: 'phil707-s3-obj4', description: 'Formulates their own social media rule of life (posting intention, consumption limits, response-to-provocation policy).' },
+    ],
+    4: [
+      { id: 'phil707-s4-obj1', description: 'Explains habituation (Discourses 2.18) as the mechanism these industries exploit: each assent strengthens the next impression.' },
+      { id: 'phil707-s4-obj2', description: 'Analyzes pornography on Stoic terms: the false impression presented, the training effect on desire, the harm located in the user\'s own prohairesis.' },
+      { id: 'phil707-s4-obj3', description: 'Distinguishes the Stoic case for temperance from moralism: the argument runs through freedom and self-command, not shame.' },
+      { id: 'phil707-s4-obj4', description: 'Selects one personal appetite pattern and designs a graduated askēsis (delay, substitution, fasting period) with a relapse-analysis protocol.' },
+    ],
+    5: [
+      { id: 'phil707-s5-obj1', description: 'Applies the preferred-indifferent doctrine strictly to wealth and career: pursued appropriately, never constitutive of the good.' },
+      { id: 'phil707-s5-obj2', description: 'Diagnoses hustle culture as a confusion of preferred indifferents with the good, and identifies its characteristic fear.' },
+      { id: 'phil707-s5-obj3', description: 'Analyzes speculation/day-trading through Seneca on Fortuna: what the speculator has handed to fortune.' },
+      { id: 'phil707-s5-obj4', description: 'Conducts a possessions-and-purchases audit distinguishing use, signal, and consolation.' },
+    ],
+    6: [
+      { id: 'phil707-s6-obj1', description: 'Applies Letters 13 to doomscrolling: distinguishes information adequate for action from fear rehearsal.' },
+      { id: 'phil707-s6-obj2', description: 'Designs a news protocol: what to know, when, from where, and the assent discipline applied to headlines.' },
+      { id: 'phil707-s6-obj3', description: 'Applies the intellectualist framework to a political opponent: states the mistaken good their position pursues, without strawmanning and without anger.' },
+      { id: 'phil707-s6-obj4', description: 'Analyzes health anxiety via the dichotomy: the body as not fully up to us, care as appropriate action, prognosis-rumination as false assent.' },
+    ],
+    7: [
+      { id: 'phil707-s7-obj1', description: 'Applies Discourses 2.22 to dating-app dynamics: what person-shopping optimizes for versus what friendship requires.' },
+      { id: 'phil707-s7-obj2', description: 'Analyzes parasocial attachment as assent to an impression of reciprocity that does not exist.' },
+      // Taught with full candor on this platform — the counselors themselves
+      // affirm the boundary.
+      { id: 'phil707-s7-obj3', description: 'Evaluates AI companionship on Stoic terms: what it can appropriately provide (practice, counsel) and what it cannot (mutual prohairesis), and states the honest boundary.' },
+      { id: 'phil707-s7-obj4', description: 'Explains the Stoic account of loneliness: the difference between solitude (eremia) as deprivation and as self-sufficiency, citing Letters 9.' },
+    ],
+    8: [
+      { id: 'phil707-s8-obj1', description: 'Presents a complete personal rule of life covering attention, appetite, opinion, externals, fear, and connection, with a doctrinal justification for each provision.' },
+      { id: 'phil707-s8-obj2', description: 'Designs and schedules one fasting-style protocol (digital sabbath, dopamine austerity week, media fast) per Letters 18, with review criteria.' },
+      { id: 'phil707-s8-obj3', description: 'Explains why the goal is trained assent in the world rather than permanent withdrawal from it, citing Discourses 3.12 on misdirected askēsis.' },
+    ],
+  },
 };
 
 // Capstone rubrics — used for each course's final (seminar) session.
@@ -249,6 +354,31 @@ export const CAPSTONE_OBJECTIVES: Record<string, Objective[]> = {
     { id: 'phil704-capstone-1', description: 'Given a novel loss or adversity scenario, prescribes the Senecan response and grounds it in the right letters or essays.' },
     { id: 'phil704-capstone-2', description: 'States their own pattern-of-life bequest clause and defends it as a Stoic artifact.' },
     { id: 'phil704-capstone-3', description: 'Argues the hypocrisy question on fresh facts — a case not from the course — without recitation.' },
+  ],
+  // PHIL 705 is quiz-based (language renderer), so this is inert until its
+  // seminar sessions are wired to the Proctor — provisioned per the Year 2
+  // integration map: 705 is the hinge the 706/707 machinery runs on.
+  'phil-705': [
+    { id: 'phil705-capstone-1', description: 'Applies the impression–assent model to one modern engineered stimulus and one interpersonal provocation.' },
+  ],
+  // Capstone scenario bank (Proctor samples one): partner conceals financials
+  // and defrauds the student; a knowing lie damages their reputation; a
+  // reckless driver injures a family member; an online stranger is
+  // deliberately cruel about something the student built.
+  'phil-706': [
+    { id: 'phil706-cap-1', description: 'Given a novel scenario of deliberate malicious harm to the student personally, applies the full framework: identifies the offender\'s mistaken judgment, explains why anger\'s constituting belief is false, prescribes the non-angry corrective response.' },
+    { id: 'phil706-cap-2', description: 'Defends the elimination thesis against a live objection chosen by the Proctor (righteous anger, moral motivation, or the excuse worry) without reverting to "anger management" framing.' },
+    // Connects to practicum_logs data (weeks 2–6) — see the outline's
+    // practicum protocol and data model.
+    { id: 'phil706-cap-3', description: 'Connects the doctrine to their own practicum data: identifies their most common anger-constituting judgment and the standing belief it rests on.' },
+  ],
+  'phil-707': [
+    { id: 'phil707-cap-1', description: 'Given a novel engineered-temptation scenario (a technology or product not covered in the course), performs the full analysis: impression presented, judgment error invited, doctrine engaged, askēsis prescribed.' },
+    { id: 'phil707-cap-2', description: 'Defends their rule of life against the Proctor\'s pressure-testing (a scenario where the rule is costly or socially awkward) without abandoning it or turning rigid.' },
+    // Requires the s8-obj2 protocol to have actually run: gate the capstone
+    // until the scheduled fast completes and is logged — the first course
+    // where completion requires lived time, not just dialogue.
+    { id: 'phil707-cap-3', description: 'Reports on their completed fasting protocol from s8-obj2: what impressions arose, what was assented to, what the experiment demonstrated.' },
   ],
 };
 

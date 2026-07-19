@@ -20,6 +20,8 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-702': 'Living the Practice — Marcus Aurelius',
   'phil-703': 'The School of Epictetus',
   'phil-704': 'The Examined Correspondence — Seneca',
+  'phil-706': 'The Impossibility of Willing Evil',
+  'phil-707': 'The Prokopton in the Digital Age',
   'dissertation': 'The Doctoral Defense',
 };
 

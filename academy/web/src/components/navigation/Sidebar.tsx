@@ -10,6 +10,7 @@ const navItems = [
   { href: '/dashboard/lexicon',    label: 'Lexicon',      icon: '𝛼' },
   { href: '/dashboard/drill',      label: 'Vocab Drill',  icon: '🏺' },
   { href: '/dashboard/examine',    label: 'Daily Examination', icon: '☀️' },
+  { href: '/dashboard/practicum',  label: 'Practicum',    icon: '🔥' },
   { href: '/dashboard/courtyard',  label: 'The Courtyard', icon: '⚗️' },
   { href: '/dashboard/library',    label: 'Library',      icon: '📜' },
   { href: '/dashboard/papers',     label: 'Papers',       icon: '✒️' },

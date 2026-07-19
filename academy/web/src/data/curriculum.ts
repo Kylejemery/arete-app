@@ -14,9 +14,13 @@ import { LATN_101_SESSIONS } from './latn101';
 import { GREK_201_SESSIONS } from './grek201';
 import { LATN_201_SESSIONS } from './latn201';
 import { PHIL_705_SESSIONS } from './phil705';
+import { PHIL_706_SESSIONS } from './phil706';
+import { PHIL_707_SESSIONS } from './phil707';
 import { PHIL702_READING, type ReadingItem } from './phil702_reading';
 import { PHIL703_READING } from './phil703_reading';
 import { PHIL704_READING } from './phil704_reading';
+import { PHIL706_READING } from './phil706_reading';
+import { PHIL707_READING } from './phil707_reading';
 import { SEMINARS } from './seminars';
 
 export type { ReadingItem };
@@ -90,6 +94,30 @@ export const PHIL_CURRICULUM: CurriculumCourse[] = [
       hasQuiz: (s.quiz?.length ?? 0) > 0,
     })),
     readings: PHIL704_READING,
+  },
+  // Year 2 — after the Year 1 sequence. PHIL 705 (the hinge) stays in the
+  // parallel tracks; 706 and 707 are gated doctoral courses in program order.
+  {
+    id: 'phil-706',
+    code: 'PHIL 706',
+    title: 'The Impossibility of Willing Evil',
+    sessions: PHIL_706_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: PHIL706_READING,
+  },
+  {
+    id: 'phil-707',
+    code: 'PHIL 707',
+    title: 'The Prokopton in the Digital Age',
+    sessions: PHIL_707_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: PHIL707_READING,
   },
 ];
 

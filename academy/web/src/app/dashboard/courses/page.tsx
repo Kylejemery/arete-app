@@ -60,6 +60,31 @@ const COURSES: Course[] = [
     ],
   },
   {
+    id: 'phil-706',
+    code: 'PHIL 706',
+    title: 'The Impossibility of Willing Evil',
+    description: 'All anger is unnecessary because no one does wrong willingly. Not two doctrines — one argument. From Socratic intellectualism through Epictetus and De Ira to the full syllogism: anger rests on a factual error about the human mind, and can be eliminated, not managed. Runs with a five-week anger practicum, logged in-app.',
+    term: 'Year 2',
+    assignedTexts: [
+      { title: 'Protagoras, Gorgias, Meno (selections)', author: 'Plato', sourceSlug: 'plato' },
+      { title: 'Discourses 1.18, 1.28, 2.26', author: 'Epictetus', sourceSlug: 'epictetus' },
+      { title: 'De Ira', author: 'Seneca', sourceSlug: 'seneca' },
+      { title: 'Meditations 2.1, 11.18', author: 'Marcus Aurelius', sourceSlug: 'marcus-aurelius' },
+    ],
+  },
+  {
+    id: 'phil-707',
+    code: 'PHIL 707',
+    title: 'The Prokopton in the Digital Age',
+    description: 'Modern technologies and markets are industrial-scale phantasia machines — impressions engineered to arrive faster than examination. The Stoic response is not retreat but trained assent: the same doctrine, harder conditions. The applied capstone of the curriculum — you exit with a rule of life, a completed fast, and a defended framework.',
+    term: 'Year 2 — Applied Capstone',
+    assignedTexts: [
+      { title: 'Discourses 2.18, 2.22, 3.12, 4.12', author: 'Epictetus', sourceSlug: 'epictetus' },
+      { title: 'Letters 2, 9, 13, 18, 83, 87, 108', author: 'Seneca', sourceSlug: 'seneca' },
+      { title: 'Lectures 6–7, 12, 18', author: 'Musonius Rufus', sourceSlug: 'musonius' },
+    ],
+  },
+  {
     id: 'grek-101',
     code: 'GREK 101',
     title: 'Ancient Greek for Philosophers',

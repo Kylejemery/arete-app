@@ -46,6 +46,11 @@ export const PHIL703_READING: Record<number, ReadingItem[]> = {
       "note": "Primary text — required reading."
     },
     {
+      "source": "Epictetus",
+      "passage": "Discourses I.28 (that we should not be angry with men)",
+      "note": "With I.18, the intellectualism core — the foundation PHIL 706 develops in Year 2."
+    },
+    {
       "source": "Long, Epictetus Ch. 3",
       "passage": "as assigned",
       "note": "How Epictetus uses argument as a tool for life."

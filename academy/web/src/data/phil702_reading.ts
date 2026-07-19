@@ -129,6 +129,11 @@ export const PHIL702_READING: Record<number, ReadingItem[]> = {
   "9": [
     {
       "source": "Marcus Aurelius",
+      "passage": "Meditations XI.18 (the ten heads against anger)",
+      "note": "Primary text — required reading. Note which arguments depend on the claim that wrongdoers err unwillingly; PHIL 706 develops this in full."
+    },
+    {
+      "source": "Marcus Aurelius",
       "passage": "Meditations XII (complete — the final book)",
       "note": "Primary text — required reading."
     },

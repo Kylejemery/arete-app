@@ -15,6 +15,8 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-702': 'PHIL 702 — Living the Practice — Marcus Aurelius',
   'phil-703': 'PHIL 703 — The School of Epictetus',
   'phil-704': 'PHIL 704 — The Examined Correspondence — Seneca',
+  'phil-706': 'PHIL 706 — The Impossibility of Willing Evil',
+  'phil-707': 'PHIL 707 — The Prokopton in the Digital Age',
 };
 
 type ExamSignal = { label: string; href: string } | { done: true } | null;
@@ -296,6 +298,72 @@ export default function DashboardPage() {
                     The Examined Correspondence — Seneca
                   </p>
                   <p className="text-academy-muted text-xs">Unlocks upon completing PHIL 703</p>
+                </div>
+                <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            </Card>
+          )}
+
+          {/* PHIL 706 — Year 2 */}
+          {isAdmin ? (
+            <Link href="/dashboard/courses/phil-706">
+              <Card className="hover:border-academy-gold transition-colors cursor-pointer">
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                  PHIL 706
+                </p>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  The Impossibility of Willing Evil
+                </p>
+                <p className="text-academy-muted text-xs">Session I — No One Does Wrong Willingly: The Socratic Foundation</p>
+                <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="opacity-50">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                    PHIL 706
+                  </p>
+                  <p className="font-serif text-academy-text text-base mb-1">
+                    The Impossibility of Willing Evil
+                  </p>
+                  <p className="text-academy-muted text-xs">Year 2 — unlocks upon completing PHIL 704 and PHIL 705</p>
+                </div>
+                <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+            </Card>
+          )}
+
+          {/* PHIL 707 — Year 2, applied capstone */}
+          {isAdmin ? (
+            <Link href="/dashboard/courses/phil-707">
+              <Card className="hover:border-academy-gold transition-colors cursor-pointer">
+                <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                  PHIL 707
+                </p>
+                <p className="font-serif text-academy-text text-base mb-1">
+                  The Prokopton in the Digital Age
+                </p>
+                <p className="text-academy-muted text-xs">Session I — The Engineered Impression: The Attention Economy on Stoic Terms</p>
+                <p className="text-academy-gold text-xs font-semibold mt-3">Enter Seminar &rarr;</p>
+              </Card>
+            </Link>
+          ) : (
+            <Card className="opacity-50">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-academy-gold text-xs font-semibold uppercase tracking-widest mb-1">
+                    PHIL 707
+                  </p>
+                  <p className="font-serif text-academy-text text-base mb-1">
+                    The Prokopton in the Digital Age
+                  </p>
+                  <p className="text-academy-muted text-xs">Year 2 — unlocks upon completing PHIL 706</p>
                 </div>
                 <svg className="w-4 h-4 text-academy-muted flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
