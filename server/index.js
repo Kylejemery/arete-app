@@ -1819,8 +1819,51 @@ const COURSE_TO_SLUG = {
   'phil-704': ['seneca'],
 };
 
+// Year 2 courses assign authors beyond the three counselor corpora — Plato and
+// Gellius (PHIL 706), Musonius Rufus (PHIL 707) — so their seminar retrieval
+// runs over rag_corpus scoped by author instead of the counselor chunks.
+// Musonius appears in rag_corpus under two author labels; query both.
+const COURSE_TO_AUTHORS = {
+  'phil-706': ['Plato', 'Epictetus', 'Seneca', 'Marcus Aurelius', 'Gellius'],
+  'phil-707': ['Epictetus', 'Seneca', 'Musonius Rufus', 'Gaius Musonius Rufus', 'Marcus Aurelius'],
+};
+
 async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
   if (!process.env.OPENAI_API_KEY) return [];
+  const authors = COURSE_TO_AUTHORS[courseId];
+  if (authors) {
+    try {
+      const embedding = await embedQuery(userMessage);
+      const results = await Promise.all(
+        authors.map(author =>
+          supabase.rpc('match_rag_corpus', {
+            query_embedding: embedding,
+            match_count: 2,
+            filter_author: author,
+            filter_language: 'english',
+          })
+        )
+      );
+      const rows = results.flatMap(r => r.data ?? []);
+      rows.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+      const seen = new Set();
+      const top = [];
+      for (const r of rows) {
+        const key = (r.chunk_text ?? '').slice(0, 80);
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        top.push({
+          source_title: [r.author, r.work].filter(Boolean).join(', ') || 'Corpus',
+          content: r.chunk_text,
+        });
+        if (top.length >= Math.max(k, 4)) break;
+      }
+      return top;
+    } catch (err) {
+      console.error('Academy RAG retrieval error (author-scoped):', err.message);
+      return [];
+    }
+  }
   const slugs = COURSE_TO_SLUG[courseId] ?? ACADEMY_RAG_SLUGS;
   try {
     const embedding = await embedQuery(userMessage);
