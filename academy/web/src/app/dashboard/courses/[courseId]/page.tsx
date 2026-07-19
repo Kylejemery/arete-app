@@ -1602,6 +1602,7 @@ function SeminarPage() {
         body: JSON.stringify({
           courseId,
           sessionId: activeSessionId,
+          userId: user.id,
           capstone,
           turnCount: msgs.length,
           objectives: rubric.map(o => ({ id: o.id, description: o.description })),
@@ -1722,10 +1723,18 @@ function SeminarPage() {
         }
         systemPrompt += `\n\n${ctx.join('\n\n')}`;
       }
+      // userId + sessionNumber ride along so retrieval logging can be joined
+      // to Evaluator outcomes (learning system Phase A).
+      let userId: string | undefined;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        userId = user?.id;
+      } catch {}
       const res = await fetch(`${API_BASE}/api/academy/seminar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ courseId, agentId, sessionId: session.id, systemPrompt,
+          userId, sessionNumber: activeSessionId,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
       const data = await res.json();
@@ -2203,6 +2212,7 @@ function ProctorChatPanel({ session, width }: { session: Phil705Session; width: 
           agent_type: 'socratic-proctor',
           course_id: 'phil-705',
           user_id: userId,
+          session_id: session.id,
           course_context: session.primarySources || session.keyConcepts
             ? `Session ${session.id}: ${session.title}. Primary sources: ${session.primarySources}. Key concepts: ${session.keyConcepts}.`
             : undefined,

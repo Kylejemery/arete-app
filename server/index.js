@@ -14,6 +14,8 @@ const OpenAI = require('openai');
 const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
+const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
+const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
 // Observatory Living Sky — all new /api/observatory/* routes live in their own
@@ -1853,6 +1855,8 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
         if (!key || seen.has(key)) continue;
         seen.add(key);
         top.push({
+          id: r.id,
+          similarity: r.similarity,
           source_title: [r.author, r.work].filter(Boolean).join(', ') || 'Corpus',
           content: r.chunk_text,
         });
@@ -1876,7 +1880,8 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
         })
       )
     );
-    return results.flatMap(r => r.data ?? []).slice(0, k);
+    return results.flatMap(r => r.data ?? []).slice(0, k)
+      .map(r => ({ ...r, _corpus: 'source_chunks' }));
   } catch (err) {
     console.error('Academy RAG retrieval error:', err.message);
     return [];
@@ -1888,7 +1893,7 @@ app.post('/api/academy/seminar', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  const { courseId, agentId, sessionId, systemPrompt, messages } = req.body;
+  const { courseId, agentId, sessionId, sessionNumber, userId, systemPrompt, messages } = req.body;
 
   if (!systemPrompt || !messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'Missing required fields: systemPrompt and messages' });
@@ -1897,6 +1902,19 @@ app.post('/api/academy/seminar', async (req, res) => {
   // RAG: retrieve relevant passages from the course corpus
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
   const ragChunks = await retrieveAcademyChunks(lastUserMessage, courseId);
+
+  // Learning-system outcome logging (Phase A): one request_id per response,
+  // one retrieval_log row per chunk. Fire-and-forget — never blocks.
+  const requestId = randomUUID();
+  logRetrieval({
+    requestId,
+    agent: agentId || 'socratic-proctor',
+    studentId: userId,
+    sessionId: sessionNumber,
+    courseId,
+    queryText: lastUserMessage,
+    chunks: ragChunks,
+  });
 
   let ragContext = '';
   if (ragChunks.length > 0) {
@@ -1933,10 +1951,16 @@ app.post('/api/academy/seminar', async (req, res) => {
     }
 
     const data = await response.json();
+    const assistantText = data.content?.find(b => b.type === 'text')?.text ?? '';
+
+    // Post-hoc usage attribution (Phase A) — which chunks did the response
+    // actually draw on. Fire-and-forget.
+    if (assistantText && ragChunks.length > 0) {
+      attributeUsage({ requestId, chunks: ragChunks, responseText: assistantText });
+    }
 
     // Persist updated session if sessionId provided
     if (sessionId) {
-      const assistantText = data.content?.find(b => b.type === 'text')?.text ?? '';
       if (assistantText) {
         const { data: session } = await supabase
           .from('academy_sessions')
@@ -1960,6 +1984,7 @@ app.post('/api/academy/seminar', async (req, res) => {
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) data.content = textBlocks;
     }
+    data.request_id = requestId;
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API (academy/seminar):', error);
@@ -2035,6 +2060,8 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
     return (data ?? []).map(r => ({
+      id: r.id,
+      similarity: r.similarity,
       source_author: r.author ?? null,
       source_title: r.work ?? 'Corpus',
       content: r.chunk_text ?? '',
@@ -2474,7 +2501,7 @@ app.post('/api/academy/agent', async (req, res) => {
 
   if (await enforceMessageLimit(req, res)) return;
 
-  const { agent_type, messages, course_id, user_id, course_context } = req.body;
+  const { agent_type, messages, course_id, user_id, course_context, session_id } = req.body;
 
   if (!messages || !Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing required field: messages (non-empty array)' });
@@ -2515,6 +2542,7 @@ This course covers formal Stoic logic — propositional calculus, the five indem
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content ?? '';
 
   let ragContext = '';
+  let retrievedChunks = []; // kept for Phase A outcome logging below
 
   if (agent_type === 'socratic-proctor') {
     let chunks = [];
@@ -2524,6 +2552,7 @@ This course covers formal Stoic logic — propositional calculus, the five indem
       console.error('[/api/academy/agent] getRelevantChunks failed, falling back to retrieveCorpusChunks:', retrievalErr.message);
       chunks = await retrieveCorpusChunks(lastUserMessage, course_id);
     }
+    retrievedChunks = chunks;
     if (chunks.length > 0) {
       ragContext =
         `\n\n[CONTEXT]\nThe following passages from the course corpus are directly relevant to the student's message. Use them to ground your Socratic questioning in the actual texts — press claims, surface contradictions, and return the question to the student:\n\n` +
@@ -2532,6 +2561,7 @@ This course covers formal Stoic logic — propositional calculus, the five indem
     }
   } else {
     const ragChunks = await retrieveCorpusChunks(lastUserMessage, course_id);
+    retrievedChunks = ragChunks;
     if (ragChunks.length > 0) {
       ragContext =
         `\n\n[RELEVANT CORPUS PASSAGES]\nThe following passages from the course corpus are relevant to the current exchange. Ground your response in the actual texts:\n\n` +
@@ -2551,6 +2581,18 @@ This course covers formal Stoic logic — propositional calculus, the five indem
     : '';
 
   const systemPrompt = persona + courseContext + sessionContext + ragContext;
+
+  // Learning-system outcome logging (Phase A). Fire-and-forget.
+  const requestId = randomUUID();
+  logRetrieval({
+    requestId,
+    agent: agent_type ?? 'socratic-proctor',
+    studentId: user_id,
+    sessionId: session_id,
+    courseId: course_id,
+    queryText: lastUserMessage,
+    chunks: retrievedChunks,
+  });
 
   try {
     let responseText;
@@ -2629,7 +2671,12 @@ This course covers formal Stoic logic — propositional calculus, the five indem
       }
     }
 
-    return res.json({ content: responseText, model, agent_type: agent_type ?? 'socratic-proctor' });
+    // Post-hoc usage attribution (Phase A). Fire-and-forget.
+    if (responseText && retrievedChunks.length > 0) {
+      attributeUsage({ requestId, chunks: retrievedChunks, responseText });
+    }
+
+    return res.json({ content: responseText, model, agent_type: agent_type ?? 'socratic-proctor', request_id: requestId });
   } catch (error) {
     console.error('Failed to reach API (academy/agent):', error);
     return res.status(502).json({ error: 'Failed to reach model API' });
@@ -2773,12 +2820,25 @@ app.post('/api/examine/proctor', async (req, res) => {
   }
 
   // RAG retrieval — student responses inform the corpus context.
+  const examQuery = responses.map(r => r.response).join(' ');
   let chunks = [];
   try {
-    chunks = await getRelevantChunks(responses.map(r => r.response).join(' '), 5);
+    chunks = await getRelevantChunks(examQuery, 5);
   } catch (ragErr) {
     console.warn('[/api/examine/proctor] RAG failed:', ragErr.message);
   }
+
+  // Learning-system outcome logging (Phase A). Fire-and-forget.
+  const requestId = randomUUID();
+  logRetrieval({
+    requestId,
+    agent: 'examine-proctor',
+    studentId: user.id,
+    sessionId: sessionNum,
+    courseId: 'phil-701',
+    queryText: examQuery,
+    chunks,
+  });
 
   const systemPrompt = `You are the Socratic Proctor of Arete Academy.
 A student has completed their ${period} examination for PHIL 701 Session ${sessionNum}.
@@ -2826,7 +2886,10 @@ ${chunks.map(c => c.content).join('\n\n')}`;
 
     const data = await response.json();
     const question = data.content?.find(b => b.type === 'text')?.text ?? '';
-    return res.json({ question });
+    if (question && chunks.length > 0) {
+      attributeUsage({ requestId, chunks, responseText: question });
+    }
+    return res.json({ question, request_id: requestId });
   } catch (error) {
     console.error('[/api/examine/proctor] error:', error);
     return res.status(502).json({ error: 'Failed to reach Claude API' });

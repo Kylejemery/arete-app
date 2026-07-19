@@ -75,6 +75,7 @@ async function getRelevantChunks(query, k = 5, filters = {}) {
     }
 
     return results.slice(0, k).map(r => ({
+      id: r.id,
       content: r.chunk_text,
       source_author: r.author,
       source_title: r.work,

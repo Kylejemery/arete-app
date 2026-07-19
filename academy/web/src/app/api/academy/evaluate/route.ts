@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { createAdminClient } from '@/lib/supabase-admin'
 
 // POST /api/academy/evaluate — the Evaluator judges a Socratic dialogue.
 //
@@ -121,6 +122,7 @@ export async function POST(req: NextRequest) {
   let body: {
     courseId?: string
     sessionId?: number
+    userId?: string
     capstone?: boolean
     turnCount?: number
     objectives?: { id: string; description: string }[]
@@ -278,6 +280,47 @@ Assess each objective. A previously "demonstrated" objective stays demonstrated 
     result.suggested_focus = result.objectives
       .filter(o => o.status !== 'demonstrated')
       .map(o => o.objective_id)
+
+    // Learning-system outcome fan-out (Phase A): map the session-level verdict
+    // onto every Proctor request logged for this (student, course, session) in
+    // retrieval_log, so retrievals can be joined to what happened downstream.
+    // Later evaluations of the same session overwrite earlier ones — the most
+    // informed verdict wins. Advisory: a failure here never blocks the result.
+    if (body.userId && typeof body.sessionId === 'number' && body.courseId) {
+      try {
+        const admin = createAdminClient()
+        const { data: reqRows } = await admin
+          .from('retrieval_log')
+          .select('request_id, agent')
+          .eq('student_id', body.userId)
+          .eq('course_id', body.courseId)
+          .eq('session_id', body.sessionId)
+          .eq('agent', 'socratic-proctor')
+          .limit(1000)
+        const requestIds = [...new Set((reqRows ?? []).map(r => r.request_id as string))]
+        if (requestIds.length > 0) {
+          const score =
+            result.objectives.reduce((sum, o) => sum + STATUS_RANK[o.status], 0) /
+            (2 * result.objectives.length)
+          const outcome = allDemonstrated
+            ? 'objective_demonstrated'
+            : score >= 0.25 ? 'objective_partial' : 'objective_failed'
+          const rows = requestIds.map(request_id => ({
+            request_id,
+            agent: 'socratic-proctor',
+            student_id: body.userId,
+            session_id: body.sessionId,
+            course_id: body.courseId,
+            outcome,
+            outcome_source: 'evaluator',
+            score,
+          }))
+          await admin.from('response_outcomes').upsert(rows, { onConflict: 'request_id' })
+        }
+      } catch (e) {
+        console.warn('[academy/evaluate] outcome fan-out failed:', e)
+      }
+    }
 
     return NextResponse.json({
       ...result,
