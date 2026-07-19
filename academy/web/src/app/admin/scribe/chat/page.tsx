@@ -73,6 +73,10 @@ export default function ScribeChatPage() {
   const [snapshotting, setSnapshotting] = useState(false)
 
   const threadRef = useRef<HTMLDivElement>(null)
+  // Deep link from the Log: ?entry=<id>&run=1 opens an entry and, if Scribe
+  // hasn't answered yet, runs the opening turn. Read from location instead of
+  // useSearchParams to avoid the Suspense-boundary requirement.
+  const autoRunRef = useRef(false)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -106,6 +110,16 @@ export default function ScribeChatPage() {
 
   useEffect(() => { loadEntries() }, [loadEntries])
   useEffect(() => { if (selectedId) loadEntry(selectedId) }, [selectedId, loadEntry])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const entryParam = params.get('entry')
+    if (entryParam) {
+      autoRunRef.current = params.get('run') === '1'
+      setSelectedId(entryParam)
+      window.history.replaceState(null, '', '/admin/scribe/chat')
+    }
+  }, [])
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight })
@@ -260,6 +274,29 @@ export default function ScribeChatPage() {
   const canChat = selectedId && messages.length > 0
   const needsOpening = canChat && !streaming && messages[messages.length - 1].role === 'user'
 
+  // Auto-run the opening turn when arriving from the Log with &run=1.
+  useEffect(() => {
+    if (autoRunRef.current && needsOpening && selectedId) {
+      autoRunRef.current = false
+      runTurn(selectedId)
+    }
+  }, [needsOpening, selectedId, runTurn])
+
+  async function saveToLog() {
+    if (!draftShown) return
+    try {
+      const res = await fetch('/api/admin/scribe/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind: 'essay', title: entry?.title || null, content: draftShown }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed')
+      showToast('Draft saved to the Log as an essay')
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Save failed')
+    }
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
@@ -371,9 +408,14 @@ export default function ScribeChatPage() {
               {viewedSnapshot
                 ? `Snapshot · ${viewedSnapshot.stage} · ${new Date(viewedSnapshot.created_at).toLocaleString()}`
                 : 'Working draft'}
-              <button className={admin.ghostBtn} onClick={exportDraft} disabled={!draftShown}>
-                Export
-              </button>
+              <span>
+                <button className={admin.ghostBtn} onClick={saveToLog} disabled={!draftShown}>
+                  Save to log
+                </button>{' '}
+                <button className={admin.ghostBtn} onClick={exportDraft} disabled={!draftShown}>
+                  Export
+                </button>
+              </span>
             </div>
             <div className={styles.paneBody}>
               {draftShown

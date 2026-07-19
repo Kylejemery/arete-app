@@ -1,0 +1,132 @@
+/* The Log — Kyle's running commonplace book. Same visual language as the
+   admin chrome: navy page, white cards, #AFA9EC accent. */
+
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 1.5rem 1.5rem 4rem;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.header { margin-bottom: 1rem; }
+.header h1 { font-size: 22px; font-weight: 500; color: #f4ead5; margin-bottom: 4px; }
+.header p { font-size: 14px; color: #9aa7b8; }
+
+.kindChips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.kindChip {
+  font-size: 12px;
+  border: 0.5px solid #ddd;
+  border-radius: 999px;
+  padding: 3px 12px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+  font-family: inherit;
+}
+.kindChip:hover { border-color: #afa9ec; color: #1a1a1a; }
+.kindChipOn { background: #edebfa; border-color: #afa9ec; color: #1a1a1a; }
+
+.metaRow { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.metaRow input {
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a1a;
+  outline: none;
+}
+.metaRow input:focus { border-color: #afa9ec; }
+.titleInput { flex: 1; min-width: 200px; }
+
+.contentInput {
+  width: 100%;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #1a1a1a;
+  resize: vertical;
+  min-height: 110px;
+  outline: none;
+  margin-bottom: 8px;
+}
+.contentInput:focus { border-color: #afa9ec; }
+.contentInput::placeholder { color: #aaa; }
+
+.searchRow { display: flex; gap: 8px; margin-bottom: 4px; }
+.searchInput {
+  flex: 1;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1a1a1a;
+  outline: none;
+}
+.searchInput:focus { border-color: #afa9ec; }
+
+/* ── Items ── */
+.item {
+  border-bottom: 0.5px solid #eee;
+  padding: 12px 2px;
+}
+.item:last-child { border-bottom: none; }
+
+.itemHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.kindPill {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 7px;
+}
+.kJournal  { background: #e9f0fb; color: #2a5aa0; }
+.kThought  { background: #f3ecfa; color: #6c3fa8; }
+.kEssay    { background: #e7f4ea; color: #2c7a3f; }
+.kClipping { background: #fdf1e3; color: #a8690f; }
+
+.itemTitle { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+.itemDate { font-size: 12px; color: #aaa; }
+.simBadge { font-size: 11px; color: #9a93d8; }
+
+.itemBody {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #333;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 6px;
+}
+.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.itemActions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #7b74c9;
+  cursor: pointer;
+  font-family: inherit;
+}
+.linkBtn:hover { text-decoration: underline; }
+.linkBtn:disabled { color: #bbb; cursor: default; text-decoration: none; }
+.dangerBtn { color: #b05555; }
+
+.related {
+  margin-top: 10px;
+  border-left: 2px solid #edebfa;
+  padding-left: 12px;
+}
+.relatedItem { margin-bottom: 8px; font-size: 12.5px; }
+.relatedHead { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.relatedExcerpt { color: #555; margin-top: 2px; }
