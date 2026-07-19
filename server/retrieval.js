@@ -3,6 +3,7 @@
 // Embedding model: text-embedding-3-small (matches corpus-ingestion/embedder.js)
 // ---------------------------------------------------------------------------
 const { createClient } = require('@supabase/supabase-js');
+const { expandCandidates } = require('./lib/graph-boost');
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const MATCH_THRESHOLD = 0.4;
@@ -73,6 +74,9 @@ async function getRelevantChunks(query, k = 5, filters = {}) {
     if (filters.text_type) {
       results = results.filter(r => r.text_type === filters.text_type);
     }
+
+    // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
+    results = (await expandCandidates(results, k)).rows;
 
     return results.slice(0, k).map(r => ({
       id: r.id,

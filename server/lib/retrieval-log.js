@@ -36,8 +36,10 @@ function getSupabase() {
  * @param {string} p.queryText
  * @param {Array<{id?: string, similarity?: number, _corpus?: string}>} p.chunks
  *   In retrieved order. Chunks without an id are skipped (nothing to join on).
+ * @param {string} [p.mode] 'vector' (default) | 'graph_boost' — which retrieval
+ *   mode served this request, for A/B comparison.
  */
-function logRetrieval({ requestId, agent, studentId, sessionId, courseId, queryText, chunks }) {
+function logRetrieval({ requestId, agent, studentId, sessionId, courseId, queryText, chunks, mode }) {
   (async () => {
     try {
       const supabase = getSupabase();
@@ -55,6 +57,7 @@ function logRetrieval({ requestId, agent, studentId, sessionId, courseId, queryT
           corpus: c?._corpus ?? 'rag_corpus',
           rank: i + 1,
           similarity: typeof c?.similarity === 'number' ? c.similarity : null,
+          retrieval_mode: mode ?? 'vector',
         }))
         .filter(r => r.chunk_key);
       if (rows.length === 0) return;

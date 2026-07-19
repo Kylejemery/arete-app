@@ -15,6 +15,7 @@ const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
+const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -105,6 +106,7 @@ const { runTensionAgent } = require('./agents/tension-agent');
 // via GET /api/observatory/dreams below, under "The Corpus Imagines".
 // This require backs the on-demand admin trigger POST /api/admin/dreams/run.
 const { runDreamingAgent } = require('./agents/dreaming-agent');
+const { runConsolidationAgent } = require('./agents/consolidation-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1846,8 +1848,11 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
           })
         )
       );
-      const rows = results.flatMap(r => r.data ?? []);
+      let rows = results.flatMap(r => r.data ?? []);
       rows.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+      // Phase B: expand through the Hebbian graph before truncation (no-op
+      // unless GRAPH_BOOST=true).
+      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows;
       const seen = new Set();
       const top = [];
       for (const r of rows) {
@@ -1914,6 +1919,7 @@ app.post('/api/academy/seminar', async (req, res) => {
     courseId,
     queryText: lastUserMessage,
     chunks: ragChunks,
+    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
   });
 
   let ragContext = '';
@@ -2057,9 +2063,11 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
       return [];
     }
     observatory.recordRetrieval(data ?? [], 'academy'); // fire-and-forget log
+    // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
+    const { rows: expanded } = await expandCandidates(data ?? [], k);
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
-    return (data ?? []).map(r => ({
+    return expanded.map(r => ({
       id: r.id,
       similarity: r.similarity,
       source_author: r.author ?? null,
@@ -2592,6 +2600,7 @@ This course covers formal Stoic logic — propositional calculus, the five indem
     courseId: course_id,
     queryText: lastUserMessage,
     chunks: retrievedChunks,
+    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
   });
 
   try {
@@ -2838,6 +2847,7 @@ app.post('/api/examine/proctor', async (req, res) => {
     courseId: 'phil-701',
     queryText: examQuery,
     chunks,
+    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
   });
 
   const systemPrompt = `You are the Socratic Proctor of Arete Academy.
@@ -3597,6 +3607,11 @@ app.post('/api/admin/inquiry/run', makeAgentRunEndpoint('inquiry', { running: fa
 // POST /api/admin/dreams/run — let the corpus dream now instead of Sunday 23:30 UTC.
 app.post('/api/admin/dreams/run', makeAgentRunEndpoint('dreams', { running: false }, runDreamingAgent));
 
+// Consolidation Agent (learning system Phase B): nightly Hebbian update +
+// decay over concept_edges. Scheduled Railway cron is daily 07:30 UTC; this
+// runs it on demand (admin only).
+app.post('/api/admin/consolidation/run', makeAgentRunEndpoint('consolidation', { running: false }, runConsolidationAgent));
+
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
 // Stoic-focused, but every primary text is viewable, readable, and discussable.
@@ -3919,7 +3934,7 @@ app.get('/api/library/observatory/pulse', (req, res) => {
 app.get('/api/library/observatory', async (req, res) => {
   try {
     const [{ data: cpm }, { data: synth }, { data: journals }, { data: gapRows }] = await Promise.all([
-      supabase.from('concept_passage_map').select('concept, author'),
+      supabase.from('concept_passage_map').select('concept, author, chunk_id'),
       supabase.from('synthesis_documents').select('title, concept, content, status, ingested_at'),
       supabase.from('journal_analysis').select('dominant_theme, created_at').order('created_at', { ascending: false }).limit(20),
       supabase.from('corpus_gap_reports').select('demand_gaps, recommended_additions, report_week').order('report_week', { ascending: false }).limit(1),
@@ -4027,6 +4042,75 @@ app.get('/api/library/observatory', async (req, res) => {
     // Edges touching a freshly-ingested concept fire brighter in the sky.
     const freshEdges = topEdges.filter(([a, b]) => freshConceptIds.has(a) || freshConceptIds.has(b));
 
+    // Learned edges (Phase B): Hebbian chunk edges from concept_edges,
+    // aggregated up to the sky's concept stars — chunk → its author → that
+    // author's concepts, with the strongest contributing chunk edge setting
+    // the concept pair's weight. Weight drives line thickness client-side.
+    let learnedEdges = [];
+    try {
+      const { data: hebb } = await supabase
+        .from('concept_edges')
+        .select('chunk_a, chunk_b, weight')
+        .gte('weight', 0.3)
+        .order('weight', { ascending: false })
+        .limit(200);
+      if (hebb && hebb.length > 0) {
+        const chunkIds = [...new Set(hebb.flatMap(e => [e.chunk_a, e.chunk_b]))];
+        const authorById = new Map();
+        for (let i = 0; i < chunkIds.length; i += 200) {
+          const { data: chunkRows } = await supabase
+            .from('rag_corpus').select('id, author').in('id', chunkIds.slice(i, i + 200));
+          for (const c of chunkRows ?? []) if (c.author) authorById.set(c.id, c.author);
+        }
+        // Chunk → concept stars. Prefer the DIRECT passage mapping
+        // (concept_passage_map.chunk_id); fall back to the author's whole
+        // concept set only when the chunk was never mapped, dampened by the
+        // fan-out so one diffuse edge cannot flood the sky.
+        const chunkConcepts = new Map(); // chunk_id -> Set<concept id>
+        for (const r of cpm || []) {
+          if (!r.chunk_id || !r.concept) continue;
+          const hit = aliases.get(r.concept);
+          if (!hit) continue;
+          if (!chunkConcepts.has(r.chunk_id)) chunkConcepts.set(r.chunk_id, new Set());
+          chunkConcepts.get(r.chunk_id).add(hit.id);
+        }
+        const authorConcepts = new Map(); // lower author -> Set<concept id>
+        for (const [cid, g] of byConcept) {
+          for (const a of g.authors) {
+            const key = a.toLowerCase();
+            if (!authorConcepts.has(key)) authorConcepts.set(key, new Set());
+            authorConcepts.get(key).add(cid);
+          }
+        }
+        const conceptsFor = (chunkId) => {
+          const direct = chunkConcepts.get(chunkId);
+          if (direct && direct.size > 0) return { set: direct, direct: true };
+          const viaAuthor = authorConcepts.get((authorById.get(chunkId) || '').toLowerCase());
+          return { set: viaAuthor ?? new Set(), direct: false };
+        };
+        const pairWeight = new Map();
+        for (const e of hebb) {
+          const ca = conceptsFor(e.chunk_a);
+          const cb = conceptsFor(e.chunk_b);
+          if (ca.set.size === 0 || cb.set.size === 0) continue;
+          const dampen = ca.direct && cb.direct
+            ? 1
+            : 1 / Math.sqrt(Math.max(1, ca.set.size * cb.set.size));
+          for (const x of ca.set) for (const y of cb.set) {
+            if (x === y) continue;
+            const key = x < y ? `${x}|${y}` : `${y}|${x}`;
+            const w = e.weight * dampen;
+            if (w > (pairWeight.get(key) ?? 0)) pairWeight.set(key, w);
+          }
+        }
+        learnedEdges = [...pairWeight.entries()]
+          .sort((p, q) => q[1] - p[1]).slice(0, 12)
+          .map(([key, w]) => { const [a, b] = key.split('|'); return [a, b, Math.round(w * 100) / 100]; });
+      }
+    } catch (learnErr) {
+      console.warn('[/api/library/observatory] learned edges failed:', learnErr.message);
+    }
+
     // "Lately the corpus has been thinking about" — journal themes are user
     // phrasing, so only their CANONICAL names ever surface; unmapped themes
     // are queued for resolution and skipped.
@@ -4066,7 +4150,7 @@ app.get('/api/library/observatory', async (req, res) => {
     // background — it joins the sky (canonically named) on a later build.
     canonicalConcepts.resolveConceptsLazily([...unmappedLabels]);
 
-    return res.json({ concepts, edges: topEdges, freshEdges, recent: { mostAsked, tensions, newIngests, gaps } });
+    return res.json({ concepts, edges: topEdges, freshEdges, learnedEdges, recent: { mostAsked, tensions, newIngests, gaps } });
   } catch (err) {
     console.error('[/api/library/observatory] error:', err.message);
     return res.status(500).json({ error: 'The sky could not be charted' });

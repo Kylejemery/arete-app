@@ -84,6 +84,7 @@ type ObsData = {
   concepts: ObsConcept[];
   edges: [string, string][];
   freshEdges?: [string, string][]; // edges touching a freshly-ingested concept; fire brighter
+  learnedEdges?: [string, string, number][]; // Hebbian graph (Consolidation Agent): weight 0..1 drives line thickness
   recent: { mostAsked: string[]; tensions: { title: string; concept: string }[]; newIngests: { title: string; concept: string }[]; gaps: string[] };
 };
 
@@ -1073,8 +1074,9 @@ function sphere3D(concepts: ObsConcept[], eraDepth?: Map<string, number> | null)
 // A rotatable / zoomable 3D star-field. The layout is projected imperatively in
 // a requestAnimationFrame loop (mutating element transforms directly) so it
 // stays at 60fps without re-rendering React on every frame.
-function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1, tensionPairs, birthIds, eraDepth }: {
+function Sky3D({ concepts, edges, freshEdges, learnedEdges, activeId, onPick, breathScale = 1, tensionPairs, birthIds, eraDepth }: {
   concepts: ObsConcept[]; edges: [string, string][]; freshEdges?: [string, string][]; activeId: string | null; onPick: (id: string) => void;
+  learnedEdges?: [string, string, number][]; // Hebbian connections learned from teaching outcomes — weight → thickness
   breathScale?: number; // circadian multiplier — dreaming slows every breath
   tensionPairs?: [string, string][]; // approved unresolved tensions — taut amber edges between their poles
   birthIds?: Set<string>; // concepts whose author was first ingested <48h ago — nebula condenses on load
@@ -1109,6 +1111,13 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
       .filter(p => p[0] != null && p[1] != null) as [number, number][],
     [tensionPairs, idx]);
   const tensionRefs = useRef<(SVGLineElement | null)[]>([]);
+  // Learned (Hebbian) edges — connections the Consolidation Agent has
+  // strengthened from real teaching outcomes. Weight drives thickness.
+  const learnedIdx = useMemo(() =>
+    (learnedEdges ?? []).map(([a, b, w]) => [idx.get(a), idx.get(b), w] as const)
+      .filter(p => p[0] != null && p[1] != null) as [number, number, number][],
+    [learnedEdges, idx]);
+  const learnedRefs = useRef<(SVGLineElement | null)[]>([]);
   // Which edge indices touch a freshly-ingested concept (fire brighter).
   const freshSet = useMemo(() => {
     const fe = freshEdges ?? [];
@@ -1309,6 +1318,22 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
         }
       }
 
+      // Learned edges: the Hebbian graph made visible. Weight → thickness and
+      // brightness — a connection the corpus has EARNED through teaching
+      // outcomes reads heavier than the ambient co-occurrence lattice.
+      for (let g = 0; g < learnedIdx.length; g++) {
+        const ln = learnedRefs.current[g]; if (!ln) continue;
+        const [a, b, wgt] = learnedIdx[g]; const pa = proj[a], pb = proj[b];
+        ln.setAttribute('x1', pa.sx.toFixed(1)); ln.setAttribute('y1', pa.sy.toFixed(1));
+        ln.setAttribute('x2', pb.sx.toFixed(1)); ln.setAttribute('y2', pb.sy.toFixed(1));
+        const lit = aIdx >= 0 && (a === aIdx || b === aIdx);
+        const depth = ((pa.z + pb.z) / 2 + 1) / 2;
+        const w01 = Math.max(0, Math.min(1, wgt));
+        ln.setAttribute('stroke', lit ? 'rgb(244,234,213)' : 'rgb(227,199,122)');
+        ln.setAttribute('stroke-opacity', (lit ? 0.7 : (0.16 + depth * 0.18) * (0.5 + w01 * 0.5)).toFixed(2));
+        ln.setAttribute('stroke-width', (0.5 + w01 * 1.8).toFixed(2));
+      }
+
       // Tension edges: taut amber lines between the two poles of each
       // unresolved approved tension, with a slow strain oscillation (~9s).
       for (let t = 0; t < tensionIdx.length; t++) {
@@ -1466,6 +1491,7 @@ function Sky3D({ concepts, edges, freshEdges, activeId, onPick, breathScale = 1,
     <div ref={wrapRef} className="lib-sky3d" style={{ position: 'absolute', inset: 0, zIndex: 1, cursor: 'grab', touchAction: 'none' }}>
       <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
         {edgePairs.map((_, e) => <line key={e} ref={el => { lineRefs.current[e] = el; }} stroke="rgb(201,168,76)" strokeOpacity={0.2} strokeWidth={0.55} />)}
+        {learnedIdx.map((_, g) => <line key={`g${g}`} ref={el => { learnedRefs.current[g] = el; }} stroke="rgb(227,199,122)" strokeOpacity={0.25} strokeWidth={0.7} />)}
         {edgePairs.map((_, e) => <circle key={`p${e}`} ref={el => { pulseRefs.current[e] = el; }} r={1.1} fill="rgb(227,199,122)" style={{ opacity: 0 }} />)}
         {tensionIdx.map((_, t) => <line key={`t${t}`} ref={el => { tensionRefs.current[t] = el; }} stroke="rgb(217,144,74)" strokeOpacity={0.25} strokeWidth={0.9} />)}
       </svg>
@@ -1782,7 +1808,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
           {!loading && concepts.length === 0 && <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>The sky is empty for now.</div>}
 
           {!loading && concepts.length > 0 && (
-            <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} eraDepth={eraDepth} />
+            <Sky3D concepts={concepts} edges={data?.edges ?? []} freshEdges={data?.freshEdges ?? []} learnedEdges={data?.learnedEdges ?? []} activeId={activeId} onPick={id => { setActiveId(id); setDossierOpen(true); }} breathScale={sky.breathScale} tensionPairs={tensionPairs} birthIds={births.ids} eraDepth={eraDepth} />
           )}
 
           {/* comets: one per open inquiry from the last 7 days, once per session */}
