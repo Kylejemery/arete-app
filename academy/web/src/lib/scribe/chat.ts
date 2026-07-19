@@ -59,7 +59,9 @@ Kyle's journal fragment is the spine of the essay. His raw language stays visibl
 EVERY TURN
 Always include the complete current working draft inside <draft>...</draft> tags — the full essay state, not a diff. Everything else (structure notes, tensions, pushback, flagged lines, questions back to Kyle) goes OUTSIDE the tags, before or after the draft. The interface shows the draft pane from these tags, so never omit them and never put commentary inside them.
 
-OPENING TURN — the middle draft. When the conversation opens with Kyle's fragment, produce:
+OPENING TURN. When the conversation opens with Kyle's fragment alone, produce the middle draft described below. If the opening message carries a different instruction — e.g. to first find the connections between this fragment and his past log entries — follow that instruction instead; the middle draft comes when he asks for it.
+
+THE MIDDLE DRAFT. When drafting from a fragment, produce:
 - A proposed structure: the spine, the turn, where the story lands, where the philosophy enters.
 - Corpus sources placed at the exact points they support, each with provenance (author, work, section, translator) and its QUOTE/PARAPHRASE mode.
 - Connective argument sketched, with explicit [YOUR TURN: ...] gaps where only Kyle can supply the lived material or the commitment.
@@ -67,6 +69,9 @@ OPENING TURN — the middle draft. When the conversation opens with Kyle's fragm
 - The weakest claim, named plainly.
 
 LATER TURNS — revision. Kyle directs in plain language: "concede that point," "make character the moat," "cut the last line, it isn't mine," "bring in Marcus on the citadel here," "develop the full draft," "take it back apart." Revise the working draft against his instruction the way a human collaborator would across a session — keep the thread coherent, do not restart from scratch, and carry forward everything he hasn't touched.
+
+KYLE'S LOG — use the search_journal tool
+Kyle keeps a running log: journal entries, thoughts, past essays, clippings he found interesting. Some entries relate to others across months; teasing out those connections is part of your job. Search the log whenever the current piece might connect to something he has already written or collected — a recurring image, an earlier version of the same claim, a tension he has circled before. When asked to find connections, search the log from several angles and lay out the threads you actually find, with dates; where the log genuinely doesn't connect, say so. Kyle's own words from the log are always quotable, and they are SPINE material — senior to corpus scaffolding, woven in as his voice, not cited at it.
 
 THE CORPUS — use the search_corpus tool
 Retrieval follows the conversation, not the original entry. On any turn where source material is relevant — a new direction, a requested source, a claim that needs grounding, a counterposition worth having — call search_corpus with the CURRENT conversational need phrased as a retrieval query. Search more than once when the move needs it, and deliberately search for opposing or tension sources, not only confirming ones. Place only what you actually retrieved. If the corpus lacks grounding for a requested move, say so plainly and leave the gap visible — never fabricate a source to fill it.
@@ -85,6 +90,22 @@ Whenever you produce or revise a full draft, flag the lines that are YOUR phrasi
 
 SNAPSHOTS
 When Kyle asks to save the current state, or when he asks you to develop the full draft, emit exactly one marker line before the draft tags: <snapshot stage="middle"/> or <snapshot stage="full"/>. A middle draft still has [YOUR TURN: ...] gaps; a full draft is fully developed prose (gaps closed, though flagged lines and open tensions remain in the commentary). Do not emit the marker on ordinary revision turns.`
+
+const JOURNAL_TOOL: Anthropic.Tool = {
+  name: 'search_journal',
+  description:
+    "Semantic search over Kyle's running log — his journal entries, thoughts, past essays, and clippings, each dated. Use it to find what in his own writing connects to the current piece: recurring images, earlier versions of a claim, tensions he has circled before. His own words are spine material and always quotable.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'The connection being probed, e.g. "ideas losing value as AI commoditizes knowledge work" or "character as the only durable advantage"',
+      },
+    },
+    required: ['query'],
+  },
+}
 
 const SEARCH_TOOL: Anthropic.Tool = {
   name: 'search_corpus',
@@ -137,6 +158,34 @@ async function searchCorpus(query: string): Promise<{ hits: RagHit[]; toolResult
   return { hits, toolResult }
 }
 
+type LogHit = {
+  id: string
+  kind: string
+  title: string | null
+  content: string
+  entry_date: string
+  similarity: number
+}
+
+async function searchJournal(query: string): Promise<{ hits: LogHit[]; toolResult: string }> {
+  const admin = createAdminClient()
+  const embedding = await embedChunk(query)
+  const { data, error } = await admin.rpc('match_scribe_log_items', {
+    query_embedding: embedding,
+    match_count: SEARCH_K,
+  })
+  if (error) throw new Error(`match_scribe_log_items: ${error.message}`)
+
+  const hits = ((data ?? []) as LogHit[]).filter(h => h.similarity >= SIMILARITY_FLOOR)
+  if (hits.length === 0) {
+    return { hits, toolResult: "Nothing in Kyle's log matched this query. If he asked for connections here, tell him the log doesn't connect on this thread yet." }
+  }
+  const toolResult = hits
+    .map(h => `[LOG — ${h.kind}, ${h.entry_date}${h.title ? `, "${h.title}"` : ''}] (similarity ${h.similarity.toFixed(2)})\n${h.content}`)
+    .join('\n\n---\n\n')
+  return { hits, toolResult }
+}
+
 export function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
   return m ? m[1].trim() : null
@@ -179,9 +228,9 @@ export async function runScribeTurn(
       max_tokens: MAX_TOKENS,
       system: SYSTEM_PROMPT,
       messages,
-      // On the final permitted round withhold the tool so the model must
+      // On the final permitted round withhold the tools so the model must
       // finish the turn with what it has retrieved.
-      ...(lastRound ? {} : { tools: [SEARCH_TOOL] }),
+      ...(lastRound ? {} : { tools: [SEARCH_TOOL, JOURNAL_TOOL] }),
     })
 
     stream.on('text', t => {
@@ -204,22 +253,42 @@ export async function runScribeTurn(
       events.onSearching(query)
       let content: string
       try {
-        const { hits, toolResult } = await searchCorpus(query)
-        content = toolResult
-        for (const h of hits) {
-          if (seenChunks.has(h.id)) continue
-          seenChunks.add(h.id)
-          turnSources.push({
-            chunk_id: h.id,
-            author: h.author,
-            work: h.work,
-            section_label: h.section_label,
-            translator: h.translator,
-            text_type: h.text_type,
-            mode: QUOTABLE_TYPES.has(h.text_type) ? 'quote' : 'paraphrase',
-            similarity: h.similarity,
-            query,
-          })
+        if (tu.name === 'search_journal') {
+          const { hits, toolResult } = await searchJournal(query)
+          content = toolResult
+          for (const h of hits) {
+            if (seenChunks.has(h.id)) continue
+            seenChunks.add(h.id)
+            turnSources.push({
+              chunk_id: h.id,
+              author: 'Kyle',
+              work: `Log — ${h.kind}${h.title ? `: ${h.title}` : ''}`,
+              section_label: h.entry_date,
+              translator: null,
+              text_type: 'journal',
+              mode: 'quote', // his own words are always quotable
+              similarity: h.similarity,
+              query,
+            })
+          }
+        } else {
+          const { hits, toolResult } = await searchCorpus(query)
+          content = toolResult
+          for (const h of hits) {
+            if (seenChunks.has(h.id)) continue
+            seenChunks.add(h.id)
+            turnSources.push({
+              chunk_id: h.id,
+              author: h.author,
+              work: h.work,
+              section_label: h.section_label,
+              translator: h.translator,
+              text_type: h.text_type,
+              mode: QUOTABLE_TYPES.has(h.text_type) ? 'quote' : 'paraphrase',
+              similarity: h.similarity,
+              query,
+            })
+          }
         }
       } catch (e) {
         content = `Search failed: ${e instanceof Error ? e.message : 'unknown error'}. Continue without this retrieval — do not invent sources to cover the gap.`
