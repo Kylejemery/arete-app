@@ -67,6 +67,13 @@ type Overview = {
     total: number
     lastGeneratedAt: string | null
   } | null
+  consolidation: {
+    pending: number
+    approved: number
+    edges: number
+    lastReportDate: string | null
+    lastReportExcerpt: string | null
+  } | null
   longitudinal: { usersModeled: number; lastRunAt: string | null } | null
   world: {
     pending: number
@@ -500,6 +507,27 @@ export default function AdminOverviewPage() {
             ]}
             footer={`Last dreamed ${timeAgo(data.dreams?.lastGeneratedAt ?? null)} · next Sun 23:30 UTC`}
             href="/admin/dreams"
+          />
+
+          <AgentCard
+            icon="🕸️"
+            name="Consolidation"
+            status={!data.consolidation ? 'no data' : data.consolidation.pending > 0 ? 'review needed' : data.consolidation.edges > 0 ? 'learning' : 'graph empty'}
+            statusKind={!data.consolidation ? 'idle' : data.consolidation.pending > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.consolidation?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.consolidation?.pending}</span>
+                  : 0,
+              },
+              { label: 'In corpus', value: data.consolidation?.approved ?? 0 },
+              { label: 'Graph edges', value: data.consolidation?.edges ?? 0 },
+            ]}
+            footer={data.consolidation?.lastReportExcerpt
+              ? `${data.consolidation.lastReportExcerpt.slice(0, 44)}… · nightly 07:30 UTC`
+              : 'No report yet · nightly 07:30 UTC'}
+            href="/admin/consolidation"
           />
 
           <AgentCard

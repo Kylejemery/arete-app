@@ -196,6 +196,26 @@ export async function GET() {
     } catch { return null }
   })()
 
+  // --- Consolidation agent (learning system) ---
+  const consolidation = (async () => {
+    try {
+      const [{ count: pending }, { count: approved }, { count: edges }] = await Promise.all([
+        admin.from('corpus_syntheses').select('id', { count: 'exact', head: true }).eq('status', 'pending_review'),
+        admin.from('corpus_syntheses').select('id', { count: 'exact', head: true }).eq('status', 'approved'),
+        admin.from('concept_edges').select('chunk_a', { count: 'exact', head: true }),
+      ])
+      const { data: lastReport } = await admin.from('consolidation_reports')
+        .select('report_date, content').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      return {
+        pending: pending ?? 0,
+        approved: approved ?? 0,
+        edges: edges ?? 0,
+        lastReportDate: lastReport?.report_date ?? null,
+        lastReportExcerpt: lastReport?.content?.slice(0, 90) ?? null,
+      }
+    } catch { return null }
+  })()
+
   // --- Dreaming agent ---
   const dreams = (async () => {
     try {
@@ -247,10 +267,10 @@ export async function GET() {
 
   const [
     corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData,
-    tensionData, inquiryData, dreamsData, longitudinalData, worldData,
+    tensionData, inquiryData, dreamsData, longitudinalData, worldData, consolidationData,
   ] = await Promise.all([
     corpus, journal, gap, synthesis, scheduler, dispatch, reflection,
-    tension, inquiry, dreams, longitudinal, world,
+    tension, inquiry, dreams, longitudinal, world, consolidation,
   ])
 
   return NextResponse.json({
@@ -267,5 +287,6 @@ export async function GET() {
     dreams: dreamsData,
     longitudinal: longitudinalData,
     world: worldData,
+    consolidation: consolidationData,
   })
 }
