@@ -13,6 +13,14 @@
 // them EMAs toward the outcome score (apply_hebbian_edge RPC, atomic per
 // pair-event). Chunks that teach well together grow connected.
 //
+// Pass 0 — Heuristic outcomes (spec A3 fallback). Counselor conversations
+// have no Evaluator, so their requests would never earn outcomes. Nightly,
+// consecutive requests by the same student to the same counselor surface
+// within 45 minutes are read as engagement signals: an immediate rephrase of
+// nearly the same question is a negative outcome (the answer didn't land);
+// any other continuation is neutral. Insert-only — a real Evaluator verdict
+// always wins, and heuristic rows are never overwritten onto anything.
+//
 // Pass 2 — Synthesis. Connected clusters of strong edges (weight >= 0.5,
 // spanning at least two source works) are handed to Opus: "these passages
 // have proven repeatedly useful together in teaching — articulate the
@@ -103,6 +111,86 @@ async function getAgentConfig() {
   } catch {
     return { ...DEFAULTS };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Pass 0 — Heuristic outcomes for counselor conversations.
+// ---------------------------------------------------------------------------
+
+const HEURISTIC_WINDOW_HOURS = 48;   // re-scanned nightly; inserts are idempotent
+const HEURISTIC_SETTLE_MINUTES = 60; // let a conversation finish before judging
+const HEURISTIC_FOLLOWUP_MINUTES = 45; // a successor within this gap = same conversation
+const REPHRASE_JACCARD = 0.45;       // word overlap above this = "asked the same thing again"
+                                     // (a genuine rephrase swaps a verb or two; topical
+                                     // follow-ups land far lower — see agent audit stats)
+
+function jaccard(a, b) {
+  const words = s => new Set(String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3));
+  const wa = words(a), wb = words(b);
+  if (wa.size === 0 || wb.size === 0) return 0;
+  let inter = 0;
+  for (const w of wa) if (wb.has(w)) inter++;
+  return inter / (wa.size + wb.size - inter);
+}
+
+async function runHeuristicsPass() {
+  const stats = { requests_seen: 0, labeled: 0, negative: 0, neutral: 0 };
+  const windowStart = new Date(Date.now() - HEURISTIC_WINDOW_HOURS * 3600 * 1000).toISOString();
+  const settled = new Date(Date.now() - HEURISTIC_SETTLE_MINUTES * 60 * 1000).toISOString();
+
+  // One row per request (rank 1) for counselor-surface agents with a known
+  // student. The Evaluator owns academy agents; the Oracle is anonymous.
+  const { data: rows, error } = await supabase
+    .from('retrieval_log')
+    .select('request_id, student_id, agent, query_text, created_at')
+    .eq('rank', 1)
+    .not('student_id', 'is', null)
+    .or('agent.eq.cabinet,agent.like.counselor:*')
+    .gt('created_at', windowStart)
+    .order('created_at', { ascending: true })
+    .limit(5000);
+  if (error) throw new Error('retrieval_log read failed: ' + error.message);
+  if (!rows || rows.length === 0) return stats;
+  stats.requests_seen = rows.length;
+
+  // Group into conversations by (student, agent) and label each request that
+  // has a successor within the follow-up gap. The last message of a
+  // conversation gets no heuristic — silence is not evidence either way.
+  const byConvo = new Map();
+  for (const r of rows) {
+    const key = `${r.student_id}|${r.agent}`;
+    if (!byConvo.has(key)) byConvo.set(key, []);
+    byConvo.get(key).push(r);
+  }
+
+  const outcomes = [];
+  for (const convo of byConvo.values()) {
+    for (let i = 0; i < convo.length - 1; i++) {
+      const cur = convo[i], next = convo[i + 1];
+      if (cur.created_at > settled) continue; // conversation may still be live
+      const gapMin = (new Date(next.created_at) - new Date(cur.created_at)) / 60000;
+      if (gapMin > HEURISTIC_FOLLOWUP_MINUTES) continue;
+      const rephrased = jaccard(cur.query_text, next.query_text) > REPHRASE_JACCARD;
+      outcomes.push({
+        request_id: cur.request_id,
+        agent: cur.agent,
+        student_id: cur.student_id,
+        outcome: rephrased ? 'student_negative' : 'student_neutral',
+        outcome_source: 'heuristic',
+        score: rephrased ? 0.2 : 0.5,
+      });
+      if (rephrased) stats.negative++; else stats.neutral++;
+    }
+  }
+  if (outcomes.length === 0) return stats;
+
+  // Insert-only: never overwrite an Evaluator verdict or a prior heuristic.
+  const { error: iErr, count } = await supabase
+    .from('response_outcomes')
+    .upsert(outcomes, { onConflict: 'request_id', ignoreDuplicates: true, count: 'exact' });
+  if (iErr) throw new Error('response_outcomes upsert failed: ' + iErr.message);
+  stats.labeled = count ?? outcomes.length;
+  return stats;
 }
 
 // The Hebbian window starts where the last successful hebbian pass ended, so
@@ -414,6 +502,7 @@ async function runReportPass(config, night) {
     .from('corpus_syntheses').select('title').eq('status', 'pending_review');
 
   const rawStats = {
+    heuristics: night.heuristics,
     hebbian: night.hebbian,
     synthesis: night.synthesis,
     decay: night.decay,
@@ -479,6 +568,10 @@ async function runConsolidationAgent() {
     return { skipped: true };
   }
 
+  const heuristics = await runHeuristicsPass();
+  await audit('heuristics', heuristics);
+  console.log(`[consolidation-agent] heuristics: ${heuristics.labeled} counselor requests labeled (${heuristics.negative} negative, ${heuristics.neutral} neutral)`);
+
   const hebbian = await runHebbianPass(config);
   await audit('hebbian', hebbian);
   console.log(`[consolidation-agent] hebbian: ${hebbian.pair_events} pair-events from ${hebbian.outcomes} outcomes (since ${hebbian.since})`);
@@ -496,7 +589,7 @@ async function runConsolidationAgent() {
   await audit('deprecation', deprecation);
   console.log(`[consolidation-agent] selection pressure: ${deprecation.deprecated}/${deprecation.checked} approved syntheses deprecated`);
 
-  const report = await runReportPass(config, { hebbian, synthesis, decay, deprecation });
+  const report = await runReportPass(config, { heuristics, hebbian, synthesis, decay, deprecation });
   await audit('report', { written: report.written });
   console.log(`[consolidation-agent] report ${report.written ? 'written' : 'FAILED'}`);
 
@@ -510,6 +603,7 @@ async function runConsolidationAgent() {
 
 module.exports = {
   getAgentConfig,
+  runHeuristicsPass,
   runHebbianPass,
   runSynthesisPass,
   runDecayPass,

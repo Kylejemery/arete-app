@@ -802,6 +802,8 @@ app.post('/api/chat/counselor', async (req, res) => {
           filter_language: 'english',
         });
         if (!error) contextChunks = (data ?? []);
+        // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
+        contextChunks = (await expandCandidates(contextChunks, 7)).rows;
       } catch (err) {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
@@ -810,9 +812,28 @@ app.post('/api/chat/counselor', async (req, res) => {
     // Light up the Observatory: stamp the concepts this answer drew from.
     pulseFromChunks(contextChunks, question);
 
+    // Learning-system outcome logging (Phase A widening): the Cabinet is a
+    // real teaching surface too. Heuristic outcomes (continued engagement vs
+    // immediate rephrase) are attached by the Consolidation Agent nightly.
+    const requestId = randomUUID();
+    logRetrieval({
+      requestId,
+      agent: 'cabinet',
+      studentId: userId,
+      queryText: question,
+      chunks: contextChunks,
+      mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    });
+
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
     const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext);
+
+    // Post-hoc usage attribution across the whole Cabinet turn.
+    const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
+    if (cabinetText && contextChunks.length > 0) {
+      attributeUsage({ requestId, chunks: contextChunks, responseText: cabinetText });
+    }
 
     const sources = contextChunks
       .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
@@ -853,6 +874,7 @@ app.post('/api/chat/counselor', async (req, res) => {
     return res.json({
       responses: results.map(r => ({ ...r, sources })),
       mode: 'parallel',
+      request_id: requestId,
     });
   }
 
@@ -878,7 +900,8 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   // RAG: retrieve relevant source text chunks (silent on failure)
   const lastUserMessage = messages[messages.length - 1]?.content || '';
-  const ragChunks = await retrieveChunks(lastUserMessage, counselorSlug);
+  const ragChunks = (await retrieveChunks(lastUserMessage, counselorSlug))
+    .map(r => ({ ...r, _corpus: 'source_chunks' }));
 
   let ragContext = '';
   if (ragChunks.length > 0) {
@@ -891,6 +914,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   // counselor genuinely has the library (parallel Cabinet mode already does)
   // and can answer truthfully when asked whether a given work is available.
   let libraryContext = '';
+  let libraryChunks = [];
   if (process.env.OPENAI_API_KEY) {
     try {
       const embedding = await embedQuery(lastUserMessage);
@@ -901,9 +925,11 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
         filter_language: 'english',
       });
       if (!error && Array.isArray(data) && data.length > 0) {
-        pulseFromChunks(data, lastUserMessage);
+        // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
+        libraryChunks = (await expandCandidates(data, 5)).rows;
+        pulseFromChunks(libraryChunks, lastUserMessage);
         libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
-          data.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
+          libraryChunks.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
           `\n[END LIBRARY PASSAGES]`;
       }
     } catch (err) {
@@ -911,6 +937,20 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     }
   }
   const catalogBlock = await getLibraryCatalogBlock();
+
+  // Learning-system outcome logging (Phase A widening): one request per
+  // single-counselor turn, covering both the counselor's own source chunks
+  // and the corpus-wide library passages.
+  const requestId = randomUUID();
+  const loggedChunks = [...ragChunks, ...libraryChunks];
+  logRetrieval({
+    requestId,
+    agent: `counselor:${counselorSlug || activeCounselorId || 'unknown'}`,
+    studentId: userId,
+    queryText: lastUserMessage,
+    chunks: loggedChunks,
+    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+  });
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
@@ -968,7 +1008,10 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
           maxTokens: serverMaxTokens,
         });
         await writeSharedAssistant(text);
-        return res.json({ content: [{ type: 'text', text }] });
+        if (text && loggedChunks.length > 0) {
+          attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
+        }
+        return res.json({ content: [{ type: 'text', text }], request_id: requestId });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
         return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
@@ -1011,6 +1054,10 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     }
     const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     await writeSharedAssistant(assistantText);
+    if (assistantText && loggedChunks.length > 0) {
+      attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
+    }
+    data.request_id = requestId;
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API (chat/counselor):', error);
@@ -2932,7 +2979,9 @@ async function getStoicContext(query, topK = 5, authorFilter = null) {
 
   if (error) throw new Error(`RAG retrieval failed: ${error.message}`);
   observatory.recordRetrieval(chunks || [], 'oracle'); // fire-and-forget log
-  return chunks || [];
+  // Phase B: Hebbian expansion for every getStoicContext caller (no-op
+  // unless GRAPH_BOOST=true).
+  return (await expandCandidates(chunks || [], topK)).rows;
 }
 
 function buildStoicSystemPrompt(chunks) {
@@ -3184,6 +3233,19 @@ app.post('/oracle', async (req, res) => {
     // 4. RETRIEVE FROM CORPUS (embed + search via getStoicContext)
     const chunks = await getStoicContext(question.trim(), 7, author || null);
 
+    // Learning-system outcome logging (Phase A widening). The Oracle is
+    // anonymous (no student_id) so heuristic outcomes don't apply; rows
+    // become trainable if/when the UI adds feedback keyed by request_id.
+    const requestId = randomUUID();
+    logRetrieval({
+      requestId,
+      agent: 'oracle',
+      studentId: null,
+      queryText: question.trim(),
+      chunks,
+      mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    });
+
     // 5. BUILD CONTEXT BLOCK — section_label carries the fuller citation
     // (chapter/pages for shelf works; venue — year for paper summaries), so
     // the model can cite where and when, not just who and what.
@@ -3266,7 +3328,10 @@ ${contextBlock}
         textType: c.text_type || null,
       }));
 
-    return res.json({ answer, sources, remaining });
+    if (answer && chunks.length > 0) {
+      attributeUsage({ requestId, chunks, responseText: answer });
+    }
+    return res.json({ answer, sources, remaining, request_id: requestId });
 
   } catch (err) {
     console.error('/oracle error:', err);
