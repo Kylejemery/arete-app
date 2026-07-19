@@ -1525,12 +1525,12 @@ function SeminarPage() {
         progress[row.session_id as number] = row.status as string;
       }
       setSessionProgress(progress);
-      const sess = await getOrCreateSession(courseId, agentId);
+      const sess = await getOrCreateSession(courseId, agentId, activeSessionId);
       if (sess) { setSession(sess); setMessages(sess.messages); }
       setInitializing(false);
     }
     init();
-  }, [courseId, agentId, router]);
+  }, [courseId, agentId, activeSessionId, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1557,7 +1557,7 @@ function SeminarPage() {
     setMessages([]);
     setSession(null);
     setInitializing(true);
-    const sess = await getOrCreateSession(courseId, newAgentId);
+    const sess = await getOrCreateSession(courseId, newAgentId, activeSessionId);
     if (sess) { setSession(sess); setMessages(sess.messages); }
     setInitializing(false);
   };

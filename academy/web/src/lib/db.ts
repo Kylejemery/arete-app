@@ -66,27 +66,57 @@ export async function getProfile(): Promise<{ is_admin: boolean } | null> {
 // SEMINAR SESSIONS
 // ----------------------------------------------------------------
 
-export async function getOrCreateSession(courseId: string, agentId: AgentId): Promise<SeminarSession | null> {
+// One persistent thread per (course, agent, course-session). Threads resume
+// indefinitely — a discussion is never lost to a date rollover. Legacy rows
+// (created before threads were session-scoped, session_number null) are
+// adopted into the session being viewed on first lookup, so pre-migration
+// conversations resurface instead of being orphaned.
+export async function getOrCreateSession(
+  courseId: string,
+  agentId: AgentId,
+  sessionNumber: number
+): Promise<SeminarSession | null> {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const today = new Date().toISOString().split('T')[0];
   const { data: existing } = await supabase
     .from('academy_sessions')
     .select('*')
     .eq('user_id', userId)
     .eq('course_id', courseId)
     .eq('agent_id', agentId)
-    .gte('created_at', today)
-    .order('created_at', { ascending: false })
+    .eq('session_number', sessionNumber)
+    .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (existing) return existing as SeminarSession;
 
+  const { data: legacy } = await supabase
+    .from('academy_sessions')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('course_id', courseId)
+    .eq('agent_id', agentId)
+    .is('session_number', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (legacy) {
+    const { data: adopted, error: adoptErr } = await supabase
+      .from('academy_sessions')
+      .update({ session_number: sessionNumber })
+      .eq('id', legacy.id)
+      .select()
+      .single();
+    if (!adoptErr && adopted) return adopted as SeminarSession;
+    return legacy as SeminarSession;
+  }
+
   const { data, error } = await supabase
     .from('academy_sessions')
-    .insert({ user_id: userId, course_id: courseId, agent_id: agentId, messages: [] })
+    .insert({ user_id: userId, course_id: courseId, agent_id: agentId, session_number: sessionNumber, messages: [] })
     .select()
     .single();
   if (error) { console.error('getOrCreateSession error:', error); return null; }

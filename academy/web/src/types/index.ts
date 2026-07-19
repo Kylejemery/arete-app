@@ -76,6 +76,9 @@ export interface SeminarSession {
   user_id: string;
   course_id: string;
   agent_id: AgentId;
+  // Course session number the thread belongs to (null on legacy rows created
+  // before threads were session-scoped).
+  session_number?: number | null;
   messages: SeminarMessage[];
   created_at: string;
   updated_at: string;
