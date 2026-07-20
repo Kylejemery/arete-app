@@ -600,6 +600,76 @@
 }
 .bigTextarea:focus { border-color: #AFA9EC; }
 
+/* Dictation (Web Speech API) controls above the source textarea */
+.dictateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.micBtn,
+.micBtnActive {
+  padding: 0 0.85rem;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.micBtn {
+  background: transparent;
+  border: 0.5px solid #ddd;
+  color: #555;
+}
+.micBtn:hover:not(:disabled) { background: #f8f8f8; }
+.micBtn:disabled {
+  color: #bbb;
+  border-color: #eee;
+  cursor: not-allowed;
+}
+
+.micBtnActive {
+  background: #FDF0EF;
+  border: 0.5px solid #E24B4A;
+  color: #E24B4A;
+}
+
+.dictateStatus {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #888;
+}
+.dictateStatus em { color: #555; font-style: normal; }
+
+.micPulse {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #E24B4A;
+  animation: micPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .micPulse { animation: none; }
+}
+
+.dictateError {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #E24B4A;
+}
+
 /* Draft save/restore bar */
 .draftBar {
   display: flex;

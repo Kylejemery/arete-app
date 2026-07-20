@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { useDictation } from '@/lib/useDictation'
 import styles from '../admin.module.css'
 
 type Mode = 'summary' | 'verbatim'
@@ -33,6 +34,14 @@ type Draft = {
   difficulty: string
   mode: Mode
   savedAt: number
+}
+
+// Recognition locales. Greek and Latin have no dictation engine, so those fall
+// back to English — dictation there is for the translator, not the source.
+const DICTATION_LOCALE: Record<'en' | 'grc' | 'lat', string> = {
+  en: 'en-US',
+  grc: 'en-US',
+  lat: 'en-US',
 }
 
 function timeAgo(ts: number): string {
@@ -73,6 +82,25 @@ export default function CorpusIngestPage() {
   // Draft state (saved to the browser so work isn't lost on refresh/navigation)
   const [savedDraft, setSavedDraft] = useState<Draft | null>(null)
   const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null)
+
+  // Dictation — read a passage aloud instead of pasting it. Settled phrases are
+  // appended to the source text, which then flows through the normal
+  // summarize/ingest path unchanged.
+  const appendDictated = useCallback((phrase: string) => {
+    setInputText(prev => (prev && !/\s$/.test(prev) ? `${prev} ${phrase}` : `${prev}${phrase}`))
+  }, [])
+  const dictation = useDictation({
+    onFinalText: appendDictated,
+    lang: DICTATION_LOCALE[language],
+  })
+
+  // Verbatim ingestion stores text as authoritative and character-exact, and a
+  // misheard word would corrupt it silently. Dictation is summary-mode only.
+  const dictationAllowed = mode === 'summary'
+  const { listening: dictating, stop: stopDictation } = dictation
+  useEffect(() => {
+    if (!dictationAllowed && dictating) stopDictation()
+  }, [dictationAllowed, dictating, stopDictation])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -357,13 +385,43 @@ export default function CorpusIngestPage() {
           )}
 
           <div className={styles.field} style={{ marginTop: '1rem' }}>
-            <label className={styles.fieldLabel}>Paste text *</label>
+            <div className={styles.dictateRow}>
+              <label className={styles.fieldLabel}>
+                {dictation.supported ? 'Paste or dictate text *' : 'Paste text *'}
+              </label>
+              {dictation.supported && (
+                <button
+                  type="button"
+                  className={dictation.listening ? styles.micBtnActive : styles.micBtn}
+                  onClick={dictation.toggle}
+                  disabled={!dictationAllowed}
+                  title={
+                    dictationAllowed
+                      ? 'Read aloud — your words are added to the text below'
+                      : 'Dictation is disabled in verbatim mode (text must match the source exactly)'
+                  }
+                >
+                  {dictation.listening ? '● Stop dictating' : '🎤 Dictate'}
+                </button>
+              )}
+            </div>
             <textarea
               className={styles.bigTextarea}
               value={inputText}
               onChange={e => setInputText(e.target.value)}
-              placeholder="Paste the verbatim passage here…"
+              placeholder={
+                dictation.supported && dictationAllowed
+                  ? 'Paste the passage here — or click Dictate and read it aloud…'
+                  : 'Paste the verbatim passage here…'
+              }
             />
+            {dictation.listening && (
+              <p className={styles.dictateStatus}>
+                <span className={styles.micPulse} /> Listening…
+                {dictation.interimText && <em> {dictation.interimText}</em>}
+              </p>
+            )}
+            {dictation.error && <p className={styles.dictateError}>{dictation.error}</p>}
             <span className={styles.charCount}>{inputText.length.toLocaleString()} characters</span>
           </div>
 

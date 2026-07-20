@@ -33,11 +33,11 @@
   },
   {
     "author": "Seneca",
-    "work": "Shortness",
+    "work": "On the Shortness of Life",
     "tier": 1,
     "chunk_threshold": 50,
     "source_type": "public_domain",
-    "notes": "On the Shortness of Life (De Brevitate Vitae). Single most-cited Stoic text on time and attention. Work name aligned to corpus ('Shortness')."
+    "notes": "On the Shortness of Life (De Brevitate Vitae). Single most-cited Stoic text on time and attention. Held as part of Aubrey Stewart's Minor Dialogues volume, which was ingested whole under 'Clemency' and has since been split into its constituent dialogues by section label."
   },
   {
     "author": "Plato",
