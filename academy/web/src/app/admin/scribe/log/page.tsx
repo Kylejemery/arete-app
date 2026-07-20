@@ -35,6 +35,19 @@ const KIND_CLASS: Record<Kind, string> = {
   clipping: styles.kClipping,
 }
 
+// A route that dies before it can serialize (gateway timeout, crashed handler)
+// sends back an empty or HTML body. Parsing that as JSON throws "Unexpected end
+// of JSON input", which tells you nothing — so fall back to the status line.
+async function readJson(res: Response, fallback: string) {
+  const text = await res.text()
+  if (!text) throw new Error(`${fallback} — server returned ${res.status} with an empty response`)
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(`${fallback} — server returned ${res.status} (${text.slice(0, 120)})`)
+  }
+}
+
 const CONNECTIONS_INSTRUCTION =
   "Before drafting anything: search my log from several angles for entries that connect to this one. Lay out the threads you actually find, with dates — including where the log doesn't connect — and tell me which connection you'd develop into an essay and why."
 
@@ -79,7 +92,7 @@ export default function ScribeLogPage() {
       if (search?.trim()) params.set('q', search.trim())
       if (kindFilter) params.set('kind', kindFilter)
       const res = await fetch(`/api/admin/scribe/log?${params}`, { cache: 'no-store' })
-      const json = await res.json()
+      const json = await readJson(res, 'Failed to load the log')
       if (!res.ok) throw new Error(json.error || 'Failed to load the log')
       setItems(json.items || [])
       setSemantic(!!json.semantic)
@@ -106,7 +119,7 @@ export default function ScribeLogPage() {
           entry_date: entryDate || undefined,
         }),
       })
-      const json = await res.json()
+      const json = await readJson(res, 'Add failed')
       if (!res.ok) throw new Error(json.error || 'Add failed')
       setTitle('')
       setContent('')
@@ -124,7 +137,7 @@ export default function ScribeLogPage() {
     setBusy(id)
     try {
       const res = await fetch(`/api/admin/scribe/log/${id}/related`, { cache: 'no-store' })
-      const json = await res.json()
+      const json = await readJson(res, 'Failed to load related items')
       if (!res.ok) throw new Error(json.error || 'Failed to load related items')
       setRelated(json.related || [])
       setRelatedFor(id)
@@ -146,7 +159,7 @@ export default function ScribeLogPage() {
           ...(withConnections ? { instruction: CONNECTIONS_INSTRUCTION } : {}),
         }),
       })
-      const json = await res.json()
+      const json = await readJson(res, 'Failed to open in Scribe')
       if (!res.ok) throw new Error(json.error || 'Failed to open in Scribe')
       router.push(`/admin/scribe/chat?entry=${json.entry.id}&run=1`)
     } catch (e) {
@@ -164,7 +177,7 @@ export default function ScribeLogPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editText }),
       })
-      const json = await res.json()
+      const json = await readJson(res, 'Save failed')
       if (!res.ok) throw new Error(json.error || 'Save failed')
       setEditing(null)
       showToast('Saved and re-embedded')
@@ -180,7 +193,7 @@ export default function ScribeLogPage() {
     setBusy(id)
     try {
       const res = await fetch(`/api/admin/scribe/log/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error((await res.json()).error || 'Delete failed')
+      if (!res.ok) throw new Error((await readJson(res, 'Delete failed')).error || 'Delete failed')
       showToast('Deleted')
       await load(q || undefined, filterKind)
     } catch (e) {

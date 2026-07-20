@@ -28,17 +28,38 @@ export function wordCount(text: string): number {
   return text.split(/\s+/).filter(Boolean).length
 }
 
+// text-embedding-3-small caps input at 8192 tokens. Corpus chunks are far under
+// it, but callers that embed a whole document (e.g. a long log entry) can cross
+// it and get a hard 400 back. How many characters fit varies with the prose —
+// observed entries run anywhere from ~4 to ~5.9 chars per token — so rather than
+// guess a character budget, shrink and retry until it fits. That never truncates
+// more than the text actually requires.
+const OVERLONG = /maximum context length|reduce.*length|too many tokens/i
+
 export async function embedChunk(text: string): Promise<number[]> {
   const key = process.env.OPENAI_API_KEY
   if (!key) throw new Error('OPENAI_API_KEY not configured')
-  const res = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
-  })
-  if (!res.ok) throw new Error(`OpenAI embeddings ${res.status}: ${await res.text()}`)
-  const data = await res.json()
-  return data.data[0].embedding
+
+  let input = text
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+      body: JSON.stringify({ model: 'text-embedding-3-small', input }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return data.data[0].embedding
+    }
+    // Only length is recoverable by trimming — auth, quota and rate limits are
+    // surfaced as-is so the caller reports the real reason.
+    const body = await res.text()
+    if (res.status === 400 && OVERLONG.test(body) && attempt < 6 && input.length > 500) {
+      input = input.slice(0, Math.floor(input.length * 0.8))
+      continue
+    }
+    throw new Error(`OpenAI embeddings ${res.status}: ${body}`)
+  }
 }
 
 export type IngestMeta = {
