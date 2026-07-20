@@ -3639,18 +3639,32 @@ app.post('/api/admin/longitudinal/run', async (req, res) => {
   }
 });
 
-// The three "thinking chain" agents share one on-demand trigger shape: admin
-// gate, env pre-check (each agent process.exits on missing keys — must never
-// happen in-process), overlap latch, fire-and-forget 202 (multi-candidate
-// model calls can run for minutes; the tabs poll their pending lists).
-function makeAgentRunEndpoint(name, latch, runFn) {
+// The on-demand agent triggers share one shape: admin gate, env pre-check
+// (each agent process.exits on missing keys — must never happen in-process),
+// overlap latch, fire-and-forget 202 (multi-candidate model calls can run for
+// minutes; the tabs poll their pending lists).
+//
+// needsOpenAI defaults true because the thinking-chain agents (tension,
+// inquiry, dreams) all embed. Consolidation does not — it only moves numbers
+// and calls Anthropic — so requiring OPENAI_API_KEY there would refuse a run
+// the agent could have completed. Name the missing keys in the response: the
+// bare "not configured" string gave no way to tell which one was absent.
+function makeAgentRunEndpoint(name, latch, runFn, { needsOpenAI = true } = {}) {
   return async (req, res) => {
     try {
       const userId = await getAuthenticatedUserId(req);
       if (!userId) return res.status(401).json({ error: 'Unauthorized' });
       if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
-      if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY || !process.env.OPENAI_API_KEY) {
-        return res.status(500).json({ error: `Server not configured for the ${name} agent` });
+      const missing = [
+        ['SUPABASE_URL', process.env.SUPABASE_URL],
+        ['SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY],
+        ['CLAUDE_API_KEY', CLAUDE_API_KEY],
+        ...(needsOpenAI ? [['OPENAI_API_KEY', process.env.OPENAI_API_KEY]] : []),
+      ].filter(([, value]) => !value).map(([key]) => key);
+      if (missing.length) {
+        return res.status(500).json({
+          error: `Server not configured for the ${name} agent: missing ${missing.join(', ')}`,
+        });
       }
       if (latch.running) {
         return res.status(409).json({ error: `A ${name} run is already in progress` });
@@ -3689,7 +3703,7 @@ app.post('/api/admin/dreams/run', makeAgentRunEndpoint('dreams', { running: fals
 // Consolidation Agent (learning system Phase B): nightly Hebbian update +
 // decay over concept_edges. Scheduled Railway cron is daily 07:30 UTC; this
 // runs it on demand (admin only).
-app.post('/api/admin/consolidation/run', makeAgentRunEndpoint('consolidation', { running: false }, runConsolidationAgent));
+app.post('/api/admin/consolidation/run', makeAgentRunEndpoint('consolidation', { running: false }, runConsolidationAgent, { needsOpenAI: false }));
 
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
