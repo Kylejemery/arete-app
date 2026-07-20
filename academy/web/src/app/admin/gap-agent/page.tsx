@@ -104,9 +104,14 @@ export default function GapAgentPage() {
   const [pdfForm, setPdfForm] = useState({ author: '', work: '', section: '' })
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [pdfText, setPdfText] = useState('')
+  // Per-page text, retained so summary mode can cut the work into page-labelled
+  // sections. Verbatim mode only needs the joined pdfText.
+  const [pdfPages, setPdfPages] = useState<string[]>([])
+  const [pdfMode, setPdfMode] = useState<'verbatim' | 'summary'>('verbatim')
   const [pdfPublicDomain, setPdfPublicDomain] = useState(false)
   const [pdfBusy, setPdfBusy] = useState<'extracting' | 'ingesting' | null>(null)
   const [pdfMsg, setPdfMsg] = useState('')
+  const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -188,6 +193,74 @@ export default function GapAgentPage() {
   // ── PDF ingestion ─────────────────────────────────────────────────
   // Text extraction happens in the browser (pdfjs) so there is no upload
   // limit; only the extracted text travels to the existing ingest endpoint.
+  //
+  // Two modes. VERBATIM (public-domain works) posts the whole extracted text
+  // straight through, as before. SUMMARY (in-copyright works) cannot: /summarize
+  // is a passage-level tool capped at 2048 output tokens, so handing it a whole
+  // book yields a ~1,500-word blur — four chunks for 200 pages, useless for
+  // retrieval. Instead the work is cut into ~SECTION_WORDS sections, each
+  // summarized and ingested on its own with a page-range label, which also gives
+  // the corpus real citations ("pp. 81–94") instead of one book-wide label.
+
+  // Sized so a section is a substantial run of argument but still lands well
+  // inside the summarizer's passage-level framing and output cap.
+  const SECTION_WORDS = 3500
+
+  type Section = { text: string; startPage: number; endPage: number }
+
+  // Greedily pack whole pages into sections, never splitting a page, so every
+  // section maps onto a real page range.
+  function buildSections(pages: string[]): Section[] {
+    const sections: Section[] = []
+    let buf: string[] = []
+    let words = 0
+    let startPage = 1
+
+    pages.forEach((page, idx) => {
+      const pageWords = page.split(/\s+/).filter(Boolean).length
+      if (words > 0 && words + pageWords > SECTION_WORDS) {
+        sections.push({ text: buf.join('\n\n'), startPage, endPage: idx })
+        buf = []
+        words = 0
+        startPage = idx + 1
+      }
+      buf.push(page)
+      words += pageWords
+    })
+    if (buf.join('').trim()) {
+      sections.push({ text: buf.join('\n\n'), startPage, endPage: pages.length })
+    }
+    // Pages that extracted to nothing (plates, blanks) can leave an empty section.
+    return sections.filter(s => s.text.trim().length > 100)
+  }
+
+  // One summarize call. The route streams plain text and returns 200 even when
+  // the stream breaks mid-flight, appending a marker instead — so the marker is
+  // the only way to tell a truncated summary from a complete one.
+  async function summarizeSection(section: Section, label: string): Promise<string> {
+    const res = await fetch('/api/corpus-ingest/summarize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: section.text,
+        author: pdfForm.author,
+        work: pdfForm.work,
+        section: label,
+      }),
+    })
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      throw new Error(j.error || `Summarization failed (${res.status})`)
+    }
+    const summary = await res.text()
+    if (/\[summarization error:/.test(summary)) {
+      throw new Error(summary.slice(summary.indexOf('[summarization error:')).trim())
+    }
+    if (summary.trim().length < 100) {
+      throw new Error('Summarizer returned almost nothing')
+    }
+    return summary.trim()
+  }
 
   async function extractPdf(file: File) {
     setPdfBusy('extracting')
@@ -206,15 +279,21 @@ export default function GapAgentPage() {
         const content = await page.getTextContent()
         parts.push(content.items.map(it => ('str' in it ? it.str : '')).join(' '))
       }
-      const text = parts.join('\n\n').replace(/[ \t]+/g, ' ').trim()
+      const pages = parts.map(p => p.replace(/[ \t]+/g, ' ').trim())
+      const text = pages.join('\n\n').trim()
       if (text.length < 200) {
         throw new Error('Extraction produced almost no text — the PDF is likely scanned images. It needs OCR first.')
       }
       setPdfText(text)
+      setPdfPages(pages)
       const words = text.split(/\s+/).length
+      const sections = buildSections(pages).length
       setPdfMsg(
         `✓ Extracted ${doc.numPages} pages, ~${words.toLocaleString()} words.` +
-        (words > 20000 ? ' ⚠ Large work — if ingestion times out, split the PDF and ingest in sections.' : '')
+        ` Summary mode would run ${sections} section${sections === 1 ? '' : 's'}.` +
+        (words > 20000
+          ? ' ⚠ Large work — verbatim ingestion of this size may time out; summary mode paces itself section by section.'
+          : '')
       )
     } catch (e) {
       setPdfMsg(e instanceof Error ? e.message : 'Failed to extract PDF text')
@@ -231,32 +310,37 @@ export default function GapAgentPage() {
       setPdfMsg('Choose a PDF first — the text preview appears once it extracts')
       return
     }
-    if (!pdfPublicDomain) {
+    if (pdfMode === 'verbatim' && !pdfPublicDomain) {
       setPdfMsg('Confirm the text is public domain (or yours to ingest) first')
       return
     }
     setPdfBusy('ingesting')
-    setPdfMsg('Ingesting — chunking, embedding, and upserting into the corpus. This can take a few minutes for large works…')
     try {
-      const res = await fetch('/api/corpus-ingest/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: pdfText,
-          sourceText: pdfText,
-          mode: 'verbatim',
-          publicDomainConfirmed: true,
-          author: pdfForm.author,
-          work: pdfForm.work,
-          section: pdfForm.section,
-          language: 'en',
-        }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || 'Ingestion failed')
-      setPdfMsg(`✓ Ingested ${json.chunksCreated} chunks (${(json.wordCount ?? 0).toLocaleString()} words) — ${json.author} now has ${json.authorChunkCount} chunks in the corpus.`)
+      if (pdfMode === 'verbatim') {
+        setPdfMsg('Ingesting — chunking, embedding, and upserting into the corpus. This can take a few minutes for large works…')
+        const res = await fetch('/api/corpus-ingest/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: pdfText,
+            sourceText: pdfText,
+            mode: 'verbatim',
+            publicDomainConfirmed: true,
+            author: pdfForm.author,
+            work: pdfForm.work,
+            section: pdfForm.section,
+            language: 'en',
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || 'Ingestion failed')
+        setPdfMsg(`✓ Ingested ${json.chunksCreated} chunks (${(json.wordCount ?? 0).toLocaleString()} words) — ${json.author} now has ${json.authorChunkCount} chunks in the corpus.`)
+      } else {
+        await ingestPdfAsSummaries()
+      }
       setPdfFile(null)
       setPdfText('')
+      setPdfPages([])
       setPdfForm({ author: '', work: '', section: '' })
       setPdfPublicDomain(false)
       await Promise.all([load(), loadSigMap()])
@@ -264,6 +348,73 @@ export default function GapAgentPage() {
       setPdfMsg(e instanceof Error ? e.message : 'Ingestion failed')
     }
     setPdfBusy(null)
+    setPdfProgress(null)
+  }
+
+  // Summary mode: summarize → ingest, one section at a time. Sequential rather
+  // than parallel so a 26-section book doesn't fire 26 concurrent Claude calls.
+  //
+  // Each section commits on its own, and ingestText() offsets new chunks past
+  // the work's existing max chunk_index, so sections append cleanly and a run
+  // that dies partway leaves everything before the failure intact. On failure we
+  // stop rather than grind through the remaining sections — the usual causes
+  // (expired key, quota) would fail all of them anyway — and report the last
+  // page committed so the run can be resumed from a trimmed PDF.
+  async function ingestPdfAsSummaries() {
+    const sections = buildSections(pdfPages)
+    if (sections.length === 0) throw new Error('No sections to ingest')
+
+    let chunksTotal = 0
+    let lastPage = 0
+
+    for (let i = 0; i < sections.length; i++) {
+      const s = sections[i]
+      const pageLabel = s.startPage === s.endPage ? `p. ${s.startPage}` : `pp. ${s.startPage}–${s.endPage}`
+      setPdfProgress({ done: i, total: sections.length })
+      setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — summarizing…`)
+
+      try {
+        const summary = await summarizeSection(s, [pdfForm.section.trim(), pageLabel].filter(Boolean).join(', '))
+
+        setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — embedding…`)
+        const res = await fetch('/api/corpus-ingest/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: summary,          // the summary is what gets embedded
+            sourceText: s.text,     // original goes to corpus_sources (admin-only)
+            mode: 'summary',
+            // Keeps the work off the Reading Room shelf while leaving it
+            // retrievable and listed in the counselor source catalog.
+            textType: 'paper_summary',
+            author: pdfForm.author,
+            work: pdfForm.work,
+            section: pdfForm.section,
+            pages: pageLabel,
+            language: 'en',
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error || 'Ingestion failed')
+        chunksTotal += json.chunksCreated ?? 0
+        lastPage = s.endPage
+      } catch (e) {
+        const why = e instanceof Error ? e.message : 'failed'
+        throw new Error(
+          `Stopped at section ${i + 1}/${sections.length} (${pageLabel}): ${why}. ` +
+          (lastPage > 0
+            ? `Pages 1–${lastPage} are ingested (${chunksTotal} chunks) — resume by re-uploading the PDF from page ${lastPage + 1}.`
+            : 'Nothing was ingested.')
+        )
+      }
+    }
+
+    setPdfProgress({ done: sections.length, total: sections.length })
+    setPdfMsg(
+      `✓ Ingested ${sections.length} sections as summaries — ${chunksTotal} chunks. ` +
+      `Original text is in corpus_sources (admin-only); only the summaries are in rag_corpus. ` +
+      `Off the Reading Room shelf automatically — no further step needed.`
+    )
   }
 
   // Prefill the PDF form from a structural-gap row (e.g. summary-only works
@@ -453,9 +604,9 @@ export default function GapAgentPage() {
         <div className={styles.cardTitle}>Ingest a PDF</div>
         <p className={styles.muted} style={{ marginBottom: 12 }}>
           For works that only exist as PDFs (no plain-text URL). The text is extracted in your
-          browser, then chunked, embedded, and upserted into the corpus verbatim — same pipeline
-          as the paste box on the Corpus page. Scanned/image PDFs need OCR first. Author/Work must
-          match the significance-map names for a gap to clear.
+          browser, then chunked, embedded, and upserted into the corpus — same pipeline as the
+          paste box on the Corpus page, in either verbatim or summary mode. Scanned/image PDFs
+          need OCR first. Author/Work must match the significance-map names for a gap to clear.
         </p>
         <div className={styles.fieldRow}>
           <div className={styles.field}>
@@ -504,14 +655,67 @@ export default function GapAgentPage() {
             {pdfText.slice(0, 400)}…
           </div>
         )}
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#444', margin: '10px 0' }}>
-          <input
-            type="checkbox"
-            checked={pdfPublicDomain}
-            onChange={e => setPdfPublicDomain(e.target.checked)}
-          />
-          I confirm this text is public domain (or otherwise mine to ingest verbatim)
-        </label>
+        <div className={styles.field} style={{ margin: '10px 0' }}>
+          <label className={styles.fieldLabel}>Ingestion mode</label>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#444', marginTop: 6 }}>
+            <input
+              type="radio"
+              name="pdfMode"
+              checked={pdfMode === 'verbatim'}
+              onChange={() => setPdfMode('verbatim')}
+              disabled={pdfBusy !== null}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Verbatim</strong> — the text itself is chunked and embedded, and the work
+              appears on the Reading Room shelf. Public-domain works only.
+            </span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#444', marginTop: 6 }}>
+            <input
+              type="radio"
+              name="pdfMode"
+              checked={pdfMode === 'summary'}
+              onChange={() => setPdfMode('summary')}
+              disabled={pdfBusy !== null}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Summary</strong> — each section is rewritten by Claude and only the summary
+              is embedded; the original stays in the admin-only source table. Stays off the
+              Reading Room shelf, but stays retrievable and counselors can say they draw on it.
+              Use this for in-copyright books. Slower: one pass per section.
+            </span>
+          </label>
+        </div>
+        {pdfMode === 'verbatim' && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#444', margin: '10px 0' }}>
+            <input
+              type="checkbox"
+              checked={pdfPublicDomain}
+              onChange={e => setPdfPublicDomain(e.target.checked)}
+            />
+            I confirm this text is public domain (or otherwise mine to ingest verbatim)
+          </label>
+        )}
+        {pdfMode === 'summary' && pdfText && (
+          <p className={styles.muted} style={{ margin: '10px 0' }}>
+            {buildSections(pdfPages).length} sections will be summarized and ingested one at a
+            time. Keep this tab open until it finishes — the run is driven from the browser.
+          </p>
+        )}
+        {pdfProgress && (
+          <div style={{ margin: '10px 0', height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
+            <div
+              style={{
+                height: '100%',
+                width: `${Math.round((pdfProgress.done / pdfProgress.total) * 100)}%`,
+                background: '#7a6a52',
+                transition: 'width 200ms ease',
+              }}
+            />
+          </div>
+        )}
         <div className={styles.actions}>
           <button
             className={styles.scheduleBtn}
