@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
       text,
       sourceText,
       mode,
+      textType,
       publicDomainConfirmed,
       author,
       work,
@@ -50,6 +51,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Which flavour of summary this is. 'summary' shelves the work in the
+    // Reading Room like any other; 'paper_summary' keeps it off the shelf while
+    // staying retrievable and listed in the counselor source catalog — the
+    // posture for modern in-copyright works. Defaults to 'summary' so existing
+    // callers are unaffected. Rejected outright on verbatim rather than ignored,
+    // so a caller that sends both surfaces its own bug instead of silently
+    // publishing a copyrighted work to the shelf.
+    if (textType !== undefined) {
+      if (mode !== 'summary') {
+        return NextResponse.json(
+          { error: 'textType only applies to mode "summary".' },
+          { status: 400 }
+        )
+      }
+      if (textType !== 'summary' && textType !== 'paper_summary') {
+        return NextResponse.json(
+          { error: 'textType must be "summary" or "paper_summary".' },
+          { status: 400 }
+        )
+      }
+    }
+
     const meta: IngestMeta = {
       author: author.trim(),
       work: work.trim(),
@@ -58,7 +81,7 @@ export async function POST(req: NextRequest) {
       language: language || 'en',
       course_relevance: courseRelevance?.trim() || null,
       difficulty: difficulty?.trim() || null,
-      text_type: mode === 'summary' ? 'summary' : 'public_domain',
+      text_type: mode === 'summary' ? (textType || 'summary') : 'public_domain',
     }
 
     const { chunksCreated, wordCount, chunkIds } = await ingestText(text, meta)

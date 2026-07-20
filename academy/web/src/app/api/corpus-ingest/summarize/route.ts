@@ -3,6 +3,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
+// Book ingestion drives this a section at a time (~3,500 words in, ~400 out).
+// That streams well inside a minute, but the platform default is tighter than
+// the slowest sections need.
+export const maxDuration = 120
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

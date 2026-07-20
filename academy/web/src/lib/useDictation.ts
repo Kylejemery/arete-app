@@ -58,6 +58,10 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
   const [error, setError] = useState<string | null>(null)
 
   const recognizerRef = useRef<SpeechRecognizer | null>(null)
+  // The not-yet-settled tail, mirrored outside React state so `onend` can read
+  // it synchronously. Chrome discards pending audio when a session ends, so
+  // anything still here has to be flushed by us or it's lost.
+  const interimRef = useRef('')
   // Chrome ends a session on its own after a stretch of silence. This tracks
   // whether the *user* still wants to be dictating, so `onend` can restart.
   const wantListeningRef = useRef(false)
@@ -70,12 +74,24 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
     setSupported(getRecognizerCtor() !== null)
   }, [])
 
-  const stop = useCallback(() => {
-    wantListeningRef.current = false
-    recognizerRef.current?.stop()
-    setListening(false)
+  /**
+   * Hand over whatever is still unsettled and clear it. Safe to call twice —
+   * the second call sees an empty ref and does nothing.
+   */
+  const flushInterim = useCallback(() => {
+    const pending = interimRef.current.trim()
+    interimRef.current = ''
+    if (pending) onFinalRef.current(pending)
     setInterimText('')
   }, [])
+
+  const stop = useCallback(() => {
+    wantListeningRef.current = false
+    // Keep the tail the speaker had already said when they hit stop.
+    flushInterim()
+    recognizerRef.current?.stop()
+    setListening(false)
+  }, [flushInterim])
 
   const start = useCallback(() => {
     const Ctor = getRecognizerCtor()
@@ -96,6 +112,9 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
         else pending += r[0].transcript
       }
       if (settled.trim()) onFinalRef.current(settled.trim())
+      // Mirror into the ref too: once a phrase settles, `pending` comes back
+      // empty, which is what keeps the flush from duplicating it.
+      interimRef.current = pending
       setInterimText(pending)
     }
 
@@ -108,11 +127,15 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
           : `Dictation error: ${e.error}`
       )
       wantListeningRef.current = false
+      flushInterim()
       setListening(false)
-      setInterimText('')
     }
 
     rec.onend = () => {
+      // The session is over, so any unsettled tail will never be finalized by
+      // the engine. Keep it before restarting or the speaker loses whatever
+      // they were mid-sentence on when the rollover hit.
+      flushInterim()
       // Resume if the browser cut us off but the user never pressed stop.
       if (wantListeningRef.current) {
         try {
@@ -123,7 +146,6 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
         }
       }
       setListening(false)
-      setInterimText('')
     }
 
     recognizerRef.current = rec
@@ -135,7 +157,7 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
       wantListeningRef.current = false
       setError('Could not start dictation — is the microphone in use?')
     }
-  }, [lang])
+  }, [lang, flushInterim])
 
   const toggle = useCallback(() => {
     if (wantListeningRef.current) stop()
@@ -146,6 +168,9 @@ export function useDictation({ onFinalText, lang }: UseDictationOptions) {
   useEffect(() => {
     return () => {
       wantListeningRef.current = false
+      // Drop the tail rather than flushing it — the component is going away,
+      // so there's nothing left to append it to.
+      interimRef.current = ''
       recognizerRef.current?.abort()
     }
   }, [])
