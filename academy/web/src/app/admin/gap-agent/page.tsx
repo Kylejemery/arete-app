@@ -205,6 +205,17 @@ export default function GapAgentPage() {
   // Sized so a section is a substantial run of argument but still lands well
   // inside the summarizer's passage-level framing and output cap.
   const SECTION_WORDS = 3500
+  // A section below this many words is too thin to summarize as argument and is
+  // usually back-matter — an index, colophon, or a blank verso — not prose. Left
+  // to stand alone it gets handed to the summarizer, which refuses and narrates
+  // the refusal ("this is an index, no summary can be generated"), and that
+  // refusal is what ends up embedded as a chunk. Only the FINAL section can fall
+  // this short: greedy packing keeps every earlier one near SECTION_WORDS. So a
+  // thin tail is folded into the section before it — its pages stay covered, no
+  // junk chunk. A char floor missed this: a 90-word index clears 100 characters.
+  const MIN_SECTION_WORDS = 300
+
+  const countWords = (s: string) => s.split(/\s+/).filter(Boolean).length
 
   type Section = { text: string; startPage: number; endPage: number }
 
@@ -217,7 +228,7 @@ export default function GapAgentPage() {
     let startPage = 1
 
     pages.forEach((page, idx) => {
-      const pageWords = page.split(/\s+/).filter(Boolean).length
+      const pageWords = countWords(page)
       if (words > 0 && words + pageWords > SECTION_WORDS) {
         sections.push({ text: buf.join('\n\n'), startPage, endPage: idx })
         buf = []
@@ -230,8 +241,19 @@ export default function GapAgentPage() {
     if (buf.join('').trim()) {
       sections.push({ text: buf.join('\n\n'), startPage, endPage: pages.length })
     }
-    // Pages that extracted to nothing (plates, blanks) can leave an empty section.
-    return sections.filter(s => s.text.trim().length > 100)
+
+    // Drop sections that extracted to nothing (all-blank pages), then fold a
+    // too-thin trailing fragment into the section before it. Kept standing only
+    // when it is the sole section — there is then nothing to merge into, and it
+    // is the whole document rather than a scrap.
+    const kept = sections.filter(s => s.text.trim().length > 0)
+    if (kept.length > 1 && countWords(kept[kept.length - 1].text) < MIN_SECTION_WORDS) {
+      const tail = kept.pop()!
+      const prev = kept[kept.length - 1]
+      prev.text = `${prev.text}\n\n${tail.text}`
+      prev.endPage = tail.endPage
+    }
+    return kept
   }
 
   // One summarize call. The route streams plain text and returns 200 even when
@@ -366,6 +388,7 @@ export default function GapAgentPage() {
 
     let chunksTotal = 0
     let lastPage = 0
+    const skipped: string[] = []
 
     for (let i = 0; i < sections.length; i++) {
       const s = sections[i]
@@ -375,6 +398,18 @@ export default function GapAgentPage() {
 
       try {
         const summary = await summarizeSection(s, [pdfForm.section.trim(), pageLabel].filter(Boolean).join(', '))
+
+        // A "summary" no shorter than its source is not a summary — it is the
+        // model refusing on non-prose (a table or figure page it cannot
+        // condense) and narrating the refusal. The thin-tail merge catches the
+        // common back-matter case up front; this catches a refusal anywhere in
+        // the book. Skip rather than embed it, but count the pages as covered so
+        // the resume point and progress stay honest.
+        if (countWords(summary) >= countWords(s.text)) {
+          skipped.push(pageLabel)
+          lastPage = s.endPage
+          continue
+        }
 
         setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — embedding…`)
         const res = await fetch('/api/corpus-ingest/ingest', {
@@ -411,7 +446,8 @@ export default function GapAgentPage() {
 
     setPdfProgress({ done: sections.length, total: sections.length })
     setPdfMsg(
-      `✓ Ingested ${sections.length} sections as summaries — ${chunksTotal} chunks. ` +
+      `✓ Ingested ${sections.length - skipped.length} of ${sections.length} sections as summaries — ${chunksTotal} chunks. ` +
+      (skipped.length ? `Skipped as non-prose (no chunk): ${skipped.join(', ')}. ` : '') +
       `Original text is in corpus_sources (admin-only); only the summaries are in rag_corpus. ` +
       `Off the Reading Room shelf automatically — no further step needed.`
     )
