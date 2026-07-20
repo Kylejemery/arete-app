@@ -24,6 +24,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/dispatch', label: 'Dispatch' },
   { href: '/admin/reflection', label: 'Self-Reflection' },
   { href: '/admin/dreams', label: 'Dreams' },
+  { href: '/admin/consolidation', label: 'Consolidation' },
   { href: '/admin/scribe', label: 'Scribe' },
   { href: '/admin/scribe/chat', label: 'Scribe Chat' },
   { href: '/admin/scribe/log', label: 'Log' },
