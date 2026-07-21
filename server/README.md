@@ -99,11 +99,42 @@ The server will start on `http://localhost:3000`.
 Railway scopes variables to each service, and the autonomous agents run as
 **separate cron services** from this API. Set each one's variables independently:
 
-| Service | Start command | Required variables |
-|---------|---------------|--------------------|
-| API | `node index.js` | `CLAUDE_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| Journal Analysis agent | `node journal-analysis-agent.js` | `CLAUDE_API_KEY`, `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` |
-| Coverage Gap agent | `node coverage-gap-agent.js` | `OPENAI_API_KEY`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (no Claude key) |
+**Every** service needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. The AI
+keys are what differ — the table lists only those, so a blank cell means the
+service needs neither. Don't set a key a service doesn't use; it's one more
+secret in one more place for nothing.
 
-See `JOURNAL_AGENT.md` and `COVERAGE_GAP_AGENT.md` for each agent's schedule
-and details.
+All schedules are UTC. Cron services must set **Restart Policy = Never** —
+each script runs once and exits 0, and any other policy turns that exit into a
+restart loop. `Root Directory` is `server` for every service.
+
+| Service | Start command | Schedule | Extra keys |
+|---------|---------------|----------|-----------|
+| API | `node index.js` | — (always on) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Journal Analysis | `node journal-analysis-agent.js` | `0 9 * * *` (daily 09:00) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Dispatch Generation | `node dispatch-generation-agent.js` | `0 10 * * *` (daily 10:00) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Dispatch Delivery | `node dispatch-delivery-agent.js` | `0 * * * *` (hourly) | — |
+| World | `node world-agent.js` | `30 3 * * 1` (Mon 03:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Tension | `node agents/tension-agent.js` | `30 5 * * 1` (Mon 05:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Inquiry | `node agents/inquiry-agent.js` | `30 6 * * 1` (Mon 06:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Longitudinal User Model | `node longitudinal-user-model.js` | `30 9 * * 1` (Mon 09:30) | `CLAUDE_API_KEY` |
+| Coverage Gap | `node coverage-gap-agent.js` | `0 10 * * 1` (Mon 10:00) | `OPENAI_API_KEY` |
+| Synthesis | `node synthesis-agent.js` | `0 11 * * 1` (Mon 11:00) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Weekly Self-Reflection | `node weekly-self-reflection-agent.js` | `0 7 * * 0` (Sun 07:00) | `CLAUDE_API_KEY` |
+| Dreaming | `node agents/dreaming-agent.js` | `30 23 * * 0` (Sun 23:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
+| Consolidation | `node agents/consolidation-agent.js` | `30 7 * * *` (daily 07:30) | `CLAUDE_API_KEY` |
+
+Ordering matters on Mondays: World → Tension → Inquiry run before the daily
+Journal Analysis at 09:00; Longitudinal, Coverage Gap, and Synthesis run after
+it. Longitudinal specifically must stay after Journal Analysis — it reads that
+morning's `journal_analysis` rows, and an earlier slot silently builds every
+portrait from week-old data.
+
+> **Railway does not auto-detect these config files.** Railway reads
+> `railway.json` / `railway.toml`; the per-agent `railway.<name>.json` files
+> here are named for humans, so they are a record of intent, not live config.
+> Either type the settings into each service's dashboard, or point the
+> service's Config-as-code path at its file to make them authoritative.
+
+See `JOURNAL_AGENT.md`, `COVERAGE_GAP_AGENT.md`, `DISPATCH_AGENT.md`, and
+`SYNTHESIS_AGENT.md` for individual agent details.
