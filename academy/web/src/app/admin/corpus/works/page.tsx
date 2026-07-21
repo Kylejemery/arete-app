@@ -28,6 +28,20 @@ type Work = {
   defaultTradition: string
   override: Override | null
 }
+// rag_corpus.text_type is not a two-value field. Labelling anything that is not
+// exactly 'summary' as "verbatim" reported every in-copyright book summary
+// (text_type 'paper_summary') as verbatim text — the inverse of the truth, on
+// the one distinction that governs whether a work may be reproduced. Unknown
+// values show their raw value rather than being filed under a guess.
+const TEXT_TYPE_LABEL: Record<string, string> = {
+  public_domain: 'verbatim · public domain',
+  primary: 'verbatim · primary',
+  summary: 'summary',
+  paper_summary: 'summary · in-copyright source',
+  synthesis: 'synthesis',
+}
+const textTypeLabel = (t: string) => TEXT_TYPE_LABEL[t] ?? t
+
 type EditState = {
   id: string
   sourceText: string
@@ -247,7 +261,7 @@ export default function ManageWorksPage() {
               <span className={styles.muted}>
                 {(w.override?.tradition || w.defaultTradition) === 'stoic' ? 'Stoic' : (w.override?.tradition || w.defaultTradition) === 'wider' ? 'Wider' : 'Synthesis'} shelf
                 {w.override?.hidden ? ' · 🚫 hidden' : ''}
-                {' · '}{w.chunks} chunks · {w.textType === 'summary' ? 'summary' : 'verbatim'}
+                {' · '}{w.chunks} chunks · {textTypeLabel(w.textType)}
                 {w.passages.length > 0 ? ` · ${w.passages.length} passage${w.passages.length > 1 ? 's' : ''}` : ' · legacy'}
               </span>
             </div>
