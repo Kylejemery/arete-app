@@ -222,9 +222,16 @@ export default function GapAgentPage() {
 
   type Section = { text: string; startPage: number; endPage: number }
 
+  // Verbatim ingestion embeds one chunk per OpenAI call, sequentially, so a
+  // whole book in a single request is hundreds of round-trips and overruns the
+  // route's time limit — the platform then answers with an error PAGE, not JSON.
+  // Batched instead. Larger than SECTION_WORDS because no summarizer is
+  // involved: the only ceiling is how many chunks embed inside one request.
+  const VERBATIM_BATCH_WORDS = 12000
+
   // Greedily pack whole pages into sections, never splitting a page, so every
   // section maps onto a real page range.
-  function buildSections(pages: string[]): Section[] {
+  function buildSections(pages: string[], budget: number = SECTION_WORDS): Section[] {
     const sections: Section[] = []
     let buf: string[] = []
     let words = 0
@@ -232,7 +239,7 @@ export default function GapAgentPage() {
 
     pages.forEach((page, idx) => {
       const pageWords = countWords(page)
-      if (words > 0 && words + pageWords > SECTION_WORDS) {
+      if (words > 0 && words + pageWords > budget) {
         sections.push({ text: buf.join('\n\n'), startPage, endPage: idx })
         buf = []
         words = 0
@@ -257,6 +264,45 @@ export default function GapAgentPage() {
       prev.endPage = tail.endPage
     }
     return kept
+  }
+
+  // POST JSON and parse defensively. The route handlers always answer with
+  // JSON, but a platform-level failure — function timeout, crash, upstream
+  // proxy — answers with an HTML or plain-text page instead. Calling res.json()
+  // on that throws "Unexpected token 'A', \"An error o\"... is not valid JSON",
+  // which replaces the real failure with a parser complaint. Read the body once
+  // as text, then try to parse, so the actual status and message survive.
+  async function postJson(url: string, body: unknown): Promise<Record<string, unknown>> {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const raw = await res.text()
+    let json: Record<string, unknown> | null = null
+    try {
+      json = raw ? JSON.parse(raw) : null
+    } catch {
+      // Left null — handled below so the raw body can be reported.
+    }
+
+    if (!res.ok) {
+      if (typeof json?.error === 'string') throw new Error(json.error)
+      const snippet = raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160)
+      throw new Error(
+        `Server returned ${res.status}${snippet ? `: ${snippet}` : ''}` +
+        (res.status === 504 || res.status === 502
+          ? ' — that is a timeout. Try a smaller PDF, or split it.'
+          : '')
+      )
+    }
+    if (json === null) {
+      throw new Error(
+        'Server returned a non-JSON response on success — it most likely timed out mid-request. ' +
+        'Some chunks may already be stored; check the corpus before re-running.'
+      )
+    }
+    return json
   }
 
   // Hold section 1's summary for review before committing the whole book.
@@ -332,12 +378,11 @@ export default function GapAgentPage() {
       setPdfPages(pages)
       const words = text.split(/\s+/).length
       const sections = buildSections(pages).length
+      const batches = buildSections(pages, VERBATIM_BATCH_WORDS).length
       setPdfMsg(
-        `✓ Extracted ${doc.numPages} pages, ~${words.toLocaleString()} words.` +
-        ` Summary mode would run ${sections} section${sections === 1 ? '' : 's'}.` +
-        (words > 20000
-          ? ' ⚠ Large work — verbatim ingestion of this size may time out; summary mode paces itself section by section.'
-          : '')
+        `✓ Extracted ${doc.numPages} pages, ~${words.toLocaleString()} words. ` +
+        `Verbatim would run ${batches} batch${batches === 1 ? '' : 'es'}; ` +
+        `summary would run ${sections} section${sections === 1 ? '' : 's'}.`
       )
     } catch (e) {
       setPdfMsg(e instanceof Error ? e.message : 'Failed to extract PDF text')
@@ -361,24 +406,7 @@ export default function GapAgentPage() {
     setPdfBusy('ingesting')
     try {
       if (pdfMode === 'verbatim') {
-        setPdfMsg('Ingesting — chunking, embedding, and upserting into the corpus. This can take a few minutes for large works…')
-        const res = await fetch('/api/corpus-ingest/ingest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: pdfText,
-            sourceText: pdfText,
-            mode: 'verbatim',
-            publicDomainConfirmed: true,
-            author: pdfForm.author,
-            work: pdfForm.work,
-            section: pdfForm.section,
-            language: 'en',
-          }),
-        })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Ingestion failed')
-        setPdfMsg(`✓ Ingested ${json.chunksCreated} chunks (${(json.wordCount ?? 0).toLocaleString()} words) — ${json.author} now has ${json.authorChunkCount} chunks in the corpus.`)
+        await ingestPdfVerbatim()
       } else {
         await ingestPdfAsSummaries()
       }
@@ -393,6 +421,56 @@ export default function GapAgentPage() {
     }
     setPdfBusy(null)
     setPdfProgress(null)
+  }
+
+  // Verbatim mode: post the work in page-batches rather than as one request.
+  // ingestText() offsets each batch past the work's existing max chunk_index, so
+  // batches append in order — the same mechanism summary mode relies on. A batch
+  // that fails leaves every earlier batch stored, and the message reports the
+  // resume point.
+  async function ingestPdfVerbatim() {
+    const batches = buildSections(pdfPages, VERBATIM_BATCH_WORDS)
+    if (batches.length === 0) throw new Error('No text to ingest')
+
+    let chunksTotal = 0
+    let lastPage = 0
+
+    for (let i = 0; i < batches.length; i++) {
+      const b = batches[i]
+      const pageLabel = b.startPage === b.endPage ? `p. ${b.startPage}` : `pp. ${b.startPage}–${b.endPage}`
+      setPdfProgress({ done: i, total: batches.length })
+      setPdfMsg(`Batch ${i + 1} of ${batches.length} (${pageLabel}) — chunking, embedding, upserting…`)
+
+      try {
+        const json = await postJson('/api/corpus-ingest/ingest', {
+          text: b.text,
+          sourceText: b.text,
+          mode: 'verbatim',
+          publicDomainConfirmed: true,
+          author: pdfForm.author,
+          work: pdfForm.work,
+          section: pdfForm.section,
+          pages: pageLabel,
+          language: 'en',
+        })
+        chunksTotal += (json.chunksCreated as number) ?? 0
+        lastPage = b.endPage
+      } catch (e) {
+        const why = e instanceof Error ? e.message : 'failed'
+        throw new Error(
+          `Stopped at batch ${i + 1}/${batches.length} (${pageLabel}): ${why}. ` +
+          (lastPage > 0
+            ? `Pages 1–${lastPage} are ingested (${chunksTotal} chunks) — resume by re-uploading the PDF from page ${lastPage + 1}.`
+            : 'Nothing was ingested.')
+        )
+      }
+    }
+
+    setPdfProgress({ done: batches.length, total: batches.length })
+    setPdfMsg(
+      `✓ Ingested ${batches.length} batch${batches.length === 1 ? '' : 'es'} verbatim — ${chunksTotal} chunks. ` +
+      `The full text is in the corpus and the work appears on the Reading Room shelf.`
+    )
   }
 
   // Summary mode: summarize → ingest, one section at a time. Sequential rather
@@ -446,26 +524,20 @@ export default function GapAgentPage() {
         }
 
         setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — embedding…`)
-        const res = await fetch('/api/corpus-ingest/ingest', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: summary,          // the summary is what gets embedded
-            sourceText: s.text,     // original goes to corpus_sources (admin-only)
-            mode: 'summary',
-            // Keeps the work off the Reading Room shelf while leaving it
-            // retrievable and listed in the counselor source catalog.
-            textType: 'paper_summary',
-            author: pdfForm.author,
-            work: pdfForm.work,
-            section: pdfForm.section,
-            pages: pageLabel,
-            language: 'en',
-          }),
+        const json = await postJson('/api/corpus-ingest/ingest', {
+          text: summary,          // the summary is what gets embedded
+          sourceText: s.text,     // original goes to corpus_sources (admin-only)
+          mode: 'summary',
+          // Keeps the work off the Reading Room shelf while leaving it
+          // retrievable and listed in the counselor source catalog.
+          textType: 'paper_summary',
+          author: pdfForm.author,
+          work: pdfForm.work,
+          section: pdfForm.section,
+          pages: pageLabel,
+          language: 'en',
         })
-        const json = await res.json()
-        if (!res.ok) throw new Error(json.error || 'Ingestion failed')
-        chunksTotal += json.chunksCreated ?? 0
+        chunksTotal += (json.chunksCreated as number) ?? 0
         lastPage = s.endPage
       } catch (e) {
         const why = e instanceof Error ? e.message : 'failed'
