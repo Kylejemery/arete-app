@@ -281,7 +281,13 @@ export default function GapAgentPage() {
   // One summarize call. The route streams plain text and returns 200 even when
   // the stream breaks mid-flight, appending a marker instead — so the marker is
   // the only way to tell a truncated summary from a complete one.
-  async function summarizeSection(section: Section, label: string): Promise<string> {
+  //
+  // Returns null when the summarizer judges the section to be reference
+  // apparatus (index, bibliography, contents) rather than argued prose. That
+  // judgement has to come from the model: back matter can run nine pages and
+  // produce a full-length, structurally normal summary, so neither the thin-tail
+  // merge nor the length-ratio check sees anything wrong with it.
+  async function summarizeSection(section: Section, label: string): Promise<string | null> {
     const res = await fetch('/api/corpus-ingest/summarize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -300,6 +306,9 @@ export default function GapAgentPage() {
     if (/\[summarization error:/.test(summary)) {
       throw new Error(summary.slice(summary.indexOf('[summarization error:')).trim())
     }
+    // Checked before the length guard below: the marker is deliberately short
+    // and would otherwise trip "returned almost nothing" and fail the run.
+    if (/^NON-PROSE\b/i.test(summary.trim())) return null
     if (summary.trim().length < 100) {
       throw new Error('Summarizer returned almost nothing')
     }
@@ -411,6 +420,7 @@ export default function GapAgentPage() {
     let chunksTotal = 0
     let lastPage = 0
     let cancelled = false
+    let confirmed = false
     const skipped: string[] = []
 
     for (let i = 0; i < sections.length; i++) {
@@ -422,27 +432,35 @@ export default function GapAgentPage() {
       try {
         const summary = await summarizeSection(s, [pdfForm.section.trim(), pageLabel].filter(Boolean).join(', '))
 
-        // Section 1 doubles as a metadata check: nothing is committed until the
-        // summary has been read against the Author/Work about to be stamped on
-        // every chunk. break (not throw) so this is not reported as a failure.
-        if (i === 0) {
-          setPdfMsg(`Section 1 of ${sections.length} (${pageLabel}) — check the attribution below.`)
-          if (!(await askConfirmAttribution(pageLabel, summary))) {
-            cancelled = true
-            break
-          }
+        // Reference apparatus, per the summarizer's own judgement.
+        if (summary === null) {
+          skipped.push(pageLabel)
+          lastPage = s.endPage
+          continue
         }
 
-        // A "summary" no shorter than its source is not a summary — it is the
-        // model refusing on non-prose (a table or figure page it cannot
-        // condense) and narrating the refusal. The thin-tail merge catches the
-        // common back-matter case up front; this catches a refusal anywhere in
-        // the book. Skip rather than embed it, but count the pages as covered so
-        // the resume point and progress stay honest.
+        // A "summary" no shorter than its source is not a summary — the model
+        // could not condense the section (a table or figure page) and narrated
+        // that instead. Backstop for anything the NON-PROSE marker misses.
         if (countWords(summary) >= countWords(s.text)) {
           skipped.push(pageLabel)
           lastPage = s.endPage
           continue
+        }
+
+        // The first section that yields a usable summary doubles as a metadata
+        // check: nothing is committed until it has been read against the
+        // Author/Work about to be stamped on every chunk. Gated on the summary
+        // rather than on i === 0, so a book that opens with a contents page —
+        // skipped above — still gets reviewed instead of silently ingesting the
+        // whole work unchecked. break (not throw) so this is not a failure.
+        if (!confirmed) {
+          setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — check the attribution below.`)
+          if (!(await askConfirmAttribution(pageLabel, summary))) {
+            cancelled = true
+            break
+          }
+          confirmed = true
         }
 
         setPdfMsg(`Section ${i + 1} of ${sections.length} (${pageLabel}) — embedding…`)
@@ -484,6 +502,15 @@ export default function GapAgentPage() {
     if (cancelled) {
       throw new Error(
         'Cancelled after section 1 — nothing was ingested. Correct Author and Work (check they are not swapped), then ingest again.'
+      )
+    }
+
+    // Every section was apparatus — a "✓ ingested 0 sections" would read as
+    // success. Almost always the wrong file (an index or front-matter extract).
+    if (chunksTotal === 0) {
+      throw new Error(
+        `Nothing was ingested: all ${sections.length} sections were judged reference apparatus ` +
+        `(index, bibliography, contents) rather than argued prose. Check the PDF is the work itself.`
       )
     }
 
