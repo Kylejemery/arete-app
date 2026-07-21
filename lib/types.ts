@@ -147,3 +147,41 @@ export interface Counselor {
 }
 
 export type SubscriptionTier = 'free' | 'arete' | 'pro';
+
+// The living philosophical portrait, rebuilt weekly by the Longitudinal User
+// Model Agent (server/longitudinal-user-model.js). Every field is nullable —
+// a user under the agent's min_weeks_required threshold has no row at all, and
+// the theme buckets stay empty until enough weeks accumulate for persistence.
+export interface LongitudinalTheme {
+  theme: string;
+  weeks_seen: number;
+}
+
+export interface CounselorAffinity {
+  counselor: string;
+  count: number;
+}
+
+export interface EntryTypeShare {
+  type: string;
+  count: number;
+  pct: number;
+}
+
+export interface LongitudinalPortrait {
+  persistent_themes: LongitudinalTheme[] | null;
+  emerging_themes: LongitudinalTheme[] | null;
+  fading_themes: LongitudinalTheme[] | null;
+  growth_edges: string[] | null;
+  counselor_affinity: CounselorAffinity[] | null;
+  preferred_entry_types: EntryTypeShare[] | null;
+  dominant_philosophical_orientation: string | null;
+  emotional_tone_baseline: string | null;
+  self_disclosure_depth: string | null;
+  philosophical_portrait: string | null;
+  portrait_updated_at: string | null;
+  delta_summary: string | null;
+  weeks_analyzed: number | null;
+  first_analyzed_at: string | null;
+  last_analyzed_at: string | null;
+}

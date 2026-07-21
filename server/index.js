@@ -624,6 +624,74 @@ You are speaking to all of them together. Address the group when appropriate. Ho
 const LONGITUDINAL_CACHE_TTL_MS = 30 * 60 * 1000;
 const longitudinalCache = new Map(); // userId -> { block: string, expires: number }
 
+// How much raw material to carry alongside the abstractions. Themes and growth
+// edges tell a counselor what kind of person this is; they cannot produce a
+// specific callback, because you cannot quote a theme. These excerpts are what
+// make "you wrote three weeks ago that..." possible at all.
+const RECALL_ENTRY_LIMIT = 6;
+const RECALL_BELIEF_LIMIT = 3;
+const RECALL_WINDOW_DAYS = 180;
+const RECALL_EXCERPT_CHARS = 320;
+
+// Not every journal row is quotable material, and two kinds in particular must
+// never reach a counselor that has been told to quote the user back to himself.
+//
+// 1. source='evening_reflection' entries are answers to a check-in prompt stored
+//    without the question — "I certainly did. It felt good too.", "Tomorrow I'll
+//    start the perfect streak." Out of context they mean nothing, and a callback
+//    built on one is confident nonsense: worse than the generic reply it
+//    replaces. (They are also the bulk of entries: 26 of 41 at time of writing.)
+//
+// 2. Some entries are saved Cabinet transcripts the user pasted back in — the
+//    counselors' own words, not his. They are the longest rows in the table, so
+//    any length-based selection actively prefers them, and quoting one back
+//    would have a counselor attribute its own dialogue to the user.
+//
+// With those two out, the remaining length floor only needs to exclude bare
+// fragments, so it can stay low enough to keep self-contained aphorisms
+// ("Deadlines are as flexible as the least flexible person in the sequence").
+const EXCLUDED_RECALL_SOURCES = new Set(['evening_reflection']);
+const MIN_RECALL_CHARS = 60;
+
+// Cabinet transcripts are dense with asterisk stage directions ("*He steps
+// forward.*", "*Marcus, quietly:*"); ordinary writing almost never has two.
+function looksLikeCounselorTranscript(text) {
+  return (String(text).match(/\*[^*\n]+\*/g) || []).length >= 2;
+}
+
+// Over-fetch so the length filter still leaves enough to choose from.
+const RECALL_FETCH_MULTIPLIER = 4;
+
+// A refined belief is a deliberate artifact and can be short and still potent
+// ("Anger is a judgment I can withdraw"), so it gets a lower bar than a
+// free-form journal entry.
+const MIN_RECALL_CHARS_BELIEF = 40;
+
+function recallable(text, source, min = MIN_RECALL_CHARS) {
+  if (typeof text !== 'string' || text.trim().length < min) return false;
+  if (EXCLUDED_RECALL_SOURCES.has(source)) return false;
+  return !looksLikeCounselorTranscript(text);
+}
+
+function excerpt(text, max = RECALL_EXCERPT_CHARS) {
+  const t = (text || '').replace(/\s+/g, ' ').trim();
+  return t.length > max ? `${t.slice(0, max).trimEnd()}…` : t;
+}
+
+// "three weeks ago", "yesterday" — counselors should speak in human time, not
+// ISO dates. Anything past the recall window is described in months.
+function humanAge(iso) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return 'today';
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days} days ago`;
+  const weeks = Math.round(days / 7);
+  if (weeks === 1) return 'last week';
+  if (days < 60) return `${weeks} weeks ago`;
+  const months = Math.round(days / 30);
+  return months === 1 ? 'a month ago' : `${months} months ago`;
+}
+
 async function getLongitudinalContext(userId) {
   if (!userId) return '';
   const cached = longitudinalCache.get(userId);
@@ -631,11 +699,36 @@ async function getLongitudinalContext(userId) {
 
   let block = '';
   try {
-    const { data } = await supabase
-      .from('user_longitudinal_models')
-      .select('weeks_analyzed, persistent_themes, growth_edges, dominant_philosophical_orientation, emotional_tone_baseline')
-      .eq('user_id', userId)
-      .maybeSingle();
+    const since = new Date(Date.now() - RECALL_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+    const [modelRes, entriesRes, beliefsRes] = await Promise.all([
+      supabase
+        .from('user_longitudinal_models')
+        .select('weeks_analyzed, persistent_themes, growth_edges, dominant_philosophical_orientation, emotional_tone_baseline')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase
+        .from('journal_entries')
+        .select('content, refined_statement, topic, type, source, created_at')
+        .eq('user_id', userId)
+        .eq('type', 'reflection')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(RECALL_ENTRY_LIMIT * RECALL_FETCH_MULTIPLIER),
+      // Beliefs the user has worked through live in journal_entries under
+      // type='belief', not in the (currently unpopulated) beliefs table. Prefer
+      // the encoded form when the refinement pipeline has produced one and fall
+      // back to what they actually typed.
+      supabase
+        .from('journal_entries')
+        .select('content, encoded_belief, refined_statement, topic, source, created_at')
+        .eq('user_id', userId)
+        .eq('type', 'belief')
+        .order('created_at', { ascending: false })
+        .limit(RECALL_BELIEF_LIMIT),
+    ]);
+
+    const data = modelRes.data;
 
     // Only inject once there is a meaningful portrait (4+ weeks of signal).
     if (data && (data.weeks_analyzed ?? 0) >= 4) {
@@ -645,15 +738,49 @@ async function getLongitudinalContext(userId) {
       const persistent = themeNames(data.persistent_themes);
       const edges = Array.isArray(data.growth_edges) ? data.growth_edges.filter(Boolean) : [];
 
+      const entryLines = (entriesRes.data || [])
+        .map(e => ({ text: e.refined_statement || e.content, at: e.created_at, topic: e.topic, source: e.source }))
+        .filter(e => recallable(e.text, e.source))
+        .slice(0, RECALL_ENTRY_LIMIT)
+        .map(e => {
+          const topic = e.topic ? ` (on ${e.topic})` : '';
+          return `- ${humanAge(e.at)}${topic}: "${excerpt(e.text)}"`;
+        });
+
+      const beliefLines = (beliefsRes.data || [])
+        .map(b => ({ text: b.encoded_belief || b.refined_statement || b.content, at: b.created_at, topic: b.topic, source: b.source }))
+        .filter(b => recallable(b.text, b.source, MIN_RECALL_CHARS_BELIEF))
+        .map(b => {
+          const topic = b.topic ? ` (on ${b.topic})` : '';
+          return `- ${humanAge(b.at)}${topic}: "${excerpt(b.text, 200)}"`;
+        });
+
+      const recall = [
+        entryLines.length ? `What they have written recently:\n${entryLines.join('\n')}` : '',
+        beliefLines.length ? `Beliefs they have refined:\n${beliefLines.join('\n')}` : '',
+      ].filter(Boolean).join('\n\n');
+
       block = `\n\n[LONGITUDINAL CONTEXT — updated weekly]
 This user has been part of the platform for ${data.weeks_analyzed} weeks.
 
 Persistent themes they carry: ${persistent.length ? persistent.join(', ') : 'none identified yet'}
 Where they are growing: ${edges.length ? edges.join('; ') : 'not yet identified'}
 Their philosophical orientation: ${data.dominant_philosophical_orientation || 'unspecified'}
-Their emotional baseline: ${data.emotional_tone_baseline || 'unspecified'}
+Their emotional baseline: ${data.emotional_tone_baseline || 'unspecified'}${recall ? `\n\n${recall}` : ''}
 
-Do not reference this context explicitly or mention that you have it. Let it inform how you speak to them — the depth you assume, the questions you ask, the resistance you offer. You know this person. Respond accordingly.
+How to use this: you know this person. Let the themes and growth edges set the
+depth you assume, the questions you ask, the resistance you offer.
+
+When their own words above genuinely bear on what they have just raised, refer
+to them specifically and naturally — "when you wrote about X a few weeks back",
+"you settled on Y, and this looks like the same knot". A counsel who remembers
+is the entire point; a generic reply to someone you have known for
+${data.weeks_analyzed} weeks is a failure.
+
+Two limits. Do not narrate the mechanism — never say you have records, context,
+or a profile, and never list what you know back at them. And do not force it: if
+nothing above is actually relevant, say nothing about it. One earned callback is
+worth more than three strained ones, and most turns warrant none.
 [END LONGITUDINAL CONTEXT]`;
     }
   } catch (err) {
