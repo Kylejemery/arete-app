@@ -16,7 +16,8 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed } from '@/lib/db';
+import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed, getLongitudinalPortrait } from '@/lib/db';
+import type { LongitudinalPortrait } from '@/lib/types';
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -46,6 +47,7 @@ export default function ProgressScreen() {
   const [totalReadingSeconds, setTotalReadingSeconds] = useState(0);
   const [todayReadingSeconds, setTodayReadingSeconds] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
+  const [portrait, setPortrait] = useState<LongitudinalPortrait | null>(null);
 
   // Screen time
   const [screenTimeGoal, setScreenTimeGoal] = useState(2);
@@ -69,6 +71,10 @@ export default function ProgressScreen() {
       const freshStreak = await checkAndResetStreakIfMissed();
       setStreak(freshStreak);
       try { await AsyncStorage.setItem('arete:progress_streak', JSON.stringify({ streak: freshStreak })); } catch {}
+
+      // Null until the weekly agent has enough history to build one; the card
+      // below is simply absent in that case.
+      getLongitudinalPortrait().then(setPortrait).catch(() => {});
 
       const journalEntries = await getJournalEntries();
       setJournalCount(journalEntries.filter(e => e.type === 'reflection').length);
@@ -247,6 +253,30 @@ export default function ProgressScreen() {
 
         {activeTab === 'overview' && (
           <>
+            {/* Portrait — the longitudinal model, if the weekly agent has built
+                one. Deliberately the first thing on this screen: it is the only
+                item here that says something about who you are rather than how
+                often you showed up. */}
+            {portrait?.philosophical_portrait && (
+              <TouchableOpacity
+                style={styles.portraitCard}
+                onPress={() => router.push('/portrait' as any)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.portraitHeader}>
+                  <Text style={styles.portraitLabel}>Portrait</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#c9a84c" />
+                </View>
+                <Text style={styles.portraitTeaser} numberOfLines={3}>
+                  {portrait.philosophical_portrait.trim()}
+                </Text>
+                <Text style={styles.portraitMeta}>
+                  {portrait.weeks_analyzed ?? 0}{' '}
+                  {portrait.weeks_analyzed === 1 ? 'week' : 'weeks'} of your own writing
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {/* Streak */}
             <View style={styles.streakCard}>
               <Text style={styles.streakIcon}>🔥</Text>
@@ -569,6 +599,33 @@ const styles = StyleSheet.create({
   activeTabText: { color: '#1a1a2e' },
   scrollView: { flex: 1 },
   content: { padding: 25, paddingTop: 15 },
+  portraitCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 16,
+    padding: 22,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  portraitHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  portraitLabel: {
+    color: '#c9a84c',
+    fontSize: 12,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  portraitTeaser: {
+    fontFamily: Platform.select({ ios: 'Georgia', android: 'serif', default: 'serif' }),
+    color: '#d8d8e4',
+    fontSize: 15,
+    lineHeight: 25,
+  },
+  portraitMeta: { color: '#7a7a90', fontSize: 12, marginTop: 12 },
   streakCard: {
     backgroundColor: '#16213e', borderRadius: 16, padding: 28,
     alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: '#c9a84c',

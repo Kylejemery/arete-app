@@ -9,6 +9,7 @@ import type {
   Counselor,
   Goal,
   SubscriptionTier,
+  LongitudinalPortrait,
 } from './types'
 
 // ----------------------------------------------------------------
@@ -995,6 +996,65 @@ export async function getConversationMemory(counselorSlug: string): Promise<stri
   } catch (e) {
     console.error('getConversationMemory exception:', e);
     return null;
+  }
+}
+
+// ----------------------------------------------------------------
+// Longitudinal portrait
+// ----------------------------------------------------------------
+
+// The user's living philosophical portrait, or null if the weekly agent hasn't
+// built one yet (it skips users below min_weeks_required, currently 4 weeks of
+// journal analysis). Callers must treat null as "not enough history yet", not
+// as an error. Read-only: RLS grants SELECT on own row and nothing more.
+export async function getLongitudinalPortrait(): Promise<LongitudinalPortrait | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('user_longitudinal_models')
+      .select(
+        'persistent_themes, emerging_themes, fading_themes, growth_edges, ' +
+        'counselor_affinity, preferred_entry_types, ' +
+        'dominant_philosophical_orientation, emotional_tone_baseline, self_disclosure_depth, ' +
+        'philosophical_portrait, portrait_updated_at, delta_summary, ' +
+        'weeks_analyzed, first_analyzed_at, last_analyzed_at'
+      )
+      .eq('user_id', userId)
+      .maybeSingle()
+    if (error) {
+      console.error('getLongitudinalPortrait error:', error)
+      return null
+    }
+    return (data as unknown as LongitudinalPortrait) ?? null
+  } catch (e) {
+    console.error('getLongitudinalPortrait exception:', e)
+    return null
+  }
+}
+
+// Prior portrait states, newest first — the arc of how the portrait itself
+// changed. Empty until the agent has overwritten at least once (it snapshots
+// the old row before each weekly rebuild).
+export async function getPortraitHistory(): Promise<
+  { snapshot_date: string; delta_summary: string | null; model_snapshot: LongitudinalPortrait }[]
+> {
+  const userId = await getUserId()
+  if (!userId) return []
+  try {
+    const { data, error } = await supabase
+      .from('longitudinal_model_history')
+      .select('snapshot_date, delta_summary, model_snapshot')
+      .eq('user_id', userId)
+      .order('snapshot_date', { ascending: false })
+    if (error) {
+      console.error('getPortraitHistory error:', error)
+      return []
+    }
+    return (data as any) ?? []
+  } catch (e) {
+    console.error('getPortraitHistory exception:', e)
+    return []
   }
 }
 
