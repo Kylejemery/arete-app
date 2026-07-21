@@ -64,7 +64,9 @@ const { runJournalAnalysis } = require('./journal-analysis-agent');
 const { runInquiryAgent } = require('./agents/inquiry-agent');
 
 // Longitudinal User Model Agent
-// Railway cron: 30 4 * * 1 (Mondays 04:30 UTC — 30min after Journal Analysis)
+// Railway cron: 30 9 * * 1 (Mondays 09:30 UTC — 30min after Journal Analysis,
+// which runs daily at 09:00. The earlier 04:30 slot ran *before* that morning's
+// analysis landed, so every portrait was built a week stale.)
 // Builds a persistent philosophical portrait per user from accumulated
 // journal_analysis data (server/longitudinal-user-model.js). Runs as its own
 // Railway cron service (`node longitudinal-user-model.js`); Kyle adds the cron

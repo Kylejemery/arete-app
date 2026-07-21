@@ -2,8 +2,8 @@
 //
 // Longitudinal User Model Agent — Layer 5 (Memory) of the Arete AI Agent System.
 //
-// Runs weekly (Mondays 04:30 UTC, 30 min after the Journal Analysis Agent's
-// cycle) and, for each user with enough signal, rebuilds a living philosophical
+// Runs weekly (Mondays 09:30 UTC, 30 min after the Journal Analysis Agent's
+// daily 09:00 cycle) and, for each user with enough signal, rebuilds a living philosophical
 // portrait from ALL of their accumulated journal_analysis rows — not a summary
 // of one week, but a portrait of who they are becoming over time. Theme
 // persistence is computed programmatically; the prose portrait, delta, and
