@@ -27,6 +27,11 @@ const MUTED = '#8a8b8e';
 
 type Room = 'atrium' | 'reading' | 'symposium' | 'observatory';
 
+// Lowercase and strip combining marks, so a query typed without accents still
+// matches the name as catalogued (Laërtius, Montaigne, Zeno of Citium).
+const foldText = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 type LibText = {
   id: string;
   author: string;
@@ -569,7 +574,22 @@ function ReadingRoom(props: {
   related: Related[]; openWork: (a: string, w: string, t: string) => void; gotoPage: (n: number) => void;
   closeText: () => void; goSymposium: () => void; isAdmin: boolean; pendingReview: number;
 }) {
-  const { stoicTexts, widerTexts, synthTexts, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview } = props;
+  const { stoicTexts: allStoic, widerTexts: allWider, synthTexts: allSynth, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview } = props;
+
+  // Shelf search. Held here rather than in the parent so it survives opening and
+  // closing a work — the reader branch below returns early, but this component
+  // stays mounted, so a reader comes back to the same filtered shelf.
+  const [shelfQuery, setShelfQuery] = useState('');
+  const shelfQ = foldText(shelfQuery.trim());
+  const matches = (t: LibText) =>
+    [t.author, t.title, t.work, t.era, t.translator ?? ''].some(f => foldText(f).includes(shelfQ));
+
+  const stoicTexts = shelfQ ? allStoic.filter(matches) : allStoic;
+  const widerTexts = shelfQ ? allWider.filter(matches) : allWider;
+  const synthTexts = shelfQ ? allSynth.filter(matches) : allSynth;
+
+  const totalCount = allStoic.length + allWider.length + allSynth.length;
+  const shownCount = stoicTexts.length + widerTexts.length + synthTexts.length;
 
   if (active) {
     const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
@@ -644,9 +664,51 @@ function ReadingRoom(props: {
           <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', textTransform: 'uppercase', color: GOLD, marginBottom: 10 }}>The Reading Room</div>
           <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(32px,4vw,46px)', color: IVORY, margin: '0 0 10px' }}>Pull a text from the shelves</h1>
           <p style={{ fontFamily: SERIF, fontSize: 19, fontStyle: 'italic', color: MUTED, margin: 0, maxWidth: 600 }}>Every primary source is here in full — the Stoics first, and the wider tradition beside them.</p>
+
+          {totalCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative', flex: '1 1 320px', maxWidth: 460 }}>
+                <input
+                  value={shelfQuery}
+                  onChange={e => setShelfQuery(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Escape') setShelfQuery(''); }}
+                  placeholder="Search author, title, era, translator…"
+                  aria-label="Search the shelves"
+                  style={{
+                    width: '100%', padding: '10px 34px 10px 14px',
+                    background: 'rgba(244,234,213,0.05)',
+                    border: '1px solid rgba(201,168,76,0.3)', borderRadius: 8,
+                    color: IVORY, fontFamily: SERIF, fontSize: 16, outline: 'none',
+                  }}
+                />
+                {shelfQuery && (
+                  <button
+                    onClick={() => setShelfQuery('')}
+                    aria-label="Clear search"
+                    style={{
+                      position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+                      background: 'none', border: 'none', color: MUTED, cursor: 'pointer',
+                      fontFamily: MONO, fontSize: 15, lineHeight: 1, padding: 4,
+                    }}
+                  >×</button>
+                )}
+              </div>
+              <span style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: '0.12em', color: MUTED }}>
+                {shelfQ
+                  ? `${shownCount} of ${totalCount} works`
+                  : `${totalCount} works on the shelves`}
+              </span>
+            </div>
+          )}
         </div>
 
         {textsLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Opening the doors…</p>}
+
+        {!textsLoading && shelfQ && shownCount === 0 && (
+          <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>
+            Nothing on the shelves matches “{shelfQuery.trim()}”.
+          </p>
+        )}
 
         {stoicTexts.length > 0 && (
           <>
