@@ -635,30 +635,39 @@ const RECALL_BELIEF_LIMIT = 3;
 const RECALL_WINDOW_DAYS = 180;
 const RECALL_EXCERPT_CHARS = 320;
 
-// Not every journal row is quotable material, and two kinds in particular must
-// never reach a counselor that has been told to quote the user back to himself.
+// Not every journal row is quotable material as-is, but only one kind must never
+// reach a counselor that has been told to quote the user back to himself: saved
+// Cabinet transcripts the user pasted back in. Those are the counselors' own
+// words, not his, and they are the longest rows in the table — so any
+// length-based selection actively prefers them, and quoting one back would have
+// a counselor attribute its own dialogue to the user.
 //
-// 1. source='evening_reflection' entries are answers to a check-in prompt stored
-//    without the question — "I certainly did. It felt good too.", "Tomorrow I'll
-//    start the perfect streak." Out of context they mean nothing, and a callback
-//    built on one is confident nonsense: worse than the generic reply it
-//    replaces. (They are also the bulk of entries: 26 of 41 at time of writing.)
+// source='evening_reflection' entries need care but not exclusion. They are
+// answers to a nightly check-in prompt, and read as nonsense alone ("I certainly
+// did. It felt good too."). But the prompt that produced them is stored on the
+// same row in raw_input, so the pair reconstructs cleanly:
 //
-// 2. Some entries are saved Cabinet transcripts the user pasted back in — the
-//    counselors' own words, not his. They are the longest rows in the table, so
-//    any length-based selection actively prefers them, and quoting one back
-//    would have a counselor attribute its own dialogue to the user.
+//   "Did you act in line with your values today?" → "I certainly did."
 //
-// With those two out, the remaining length floor only needs to exclude bare
-// fragments, so it can stay low enough to keep self-contained aphorisms
-// ("Deadlines are as flexible as the least flexible person in the sequence").
-const EXCLUDED_RECALL_SOURCES = new Set(['evening_reflection']);
+// Recomposed that way they are the single richest source available — the bulk of
+// entries (26 of 41 at time of writing), every one carrying its question.
+// Dropping them wholesale threw away roughly two thirds of the corpus to avoid a
+// problem the data had already solved.
 const MIN_RECALL_CHARS = 60;
+
+// A check-in answer may be very short and still be meaningful once its question
+// is attached, so the pair is measured together rather than the answer alone.
+const MIN_RECALL_CHARS_PAIRED = 40;
 
 // Cabinet transcripts are dense with asterisk stage directions ("*He steps
 // forward.*", "*Marcus, quietly:*"); ordinary writing almost never has two.
 function looksLikeCounselorTranscript(text) {
   return (String(text).match(/\*[^*\n]+\*/g) || []).length >= 2;
+}
+
+// A prompted entry keeps its question; anything else stands on its own.
+function isPromptedEntry(source, prompt) {
+  return source === 'evening_reflection' && typeof prompt === 'string' && prompt.trim().length > 0;
 }
 
 // Over-fetch so the length filter still leaves enough to choose from.
@@ -669,9 +678,11 @@ const RECALL_FETCH_MULTIPLIER = 4;
 // free-form journal entry.
 const MIN_RECALL_CHARS_BELIEF = 40;
 
+// `text` is what would be quoted — for a prompted entry that is the question and
+// answer together, so a two-word reply still clears the bar when its question
+// carries the meaning.
 function recallable(text, source, min = MIN_RECALL_CHARS) {
   if (typeof text !== 'string' || text.trim().length < min) return false;
-  if (EXCLUDED_RECALL_SOURCES.has(source)) return false;
   return !looksLikeCounselorTranscript(text);
 }
 
@@ -711,7 +722,8 @@ async function getLongitudinalContext(userId) {
         .maybeSingle(),
       supabase
         .from('journal_entries')
-        .select('content, refined_statement, topic, type, source, created_at')
+        // raw_input carries the check-in question for prompted entries.
+        .select('content, refined_statement, raw_input, topic, type, source, created_at')
         .eq('user_id', userId)
         .eq('type', 'reflection')
         .gte('created_at', since)
@@ -741,11 +753,35 @@ async function getLongitudinalContext(userId) {
       const edges = Array.isArray(data.growth_edges) ? data.growth_edges.filter(Boolean) : [];
 
       const entryLines = (entriesRes.data || [])
-        .map(e => ({ text: e.refined_statement || e.content, at: e.created_at, topic: e.topic, source: e.source }))
-        .filter(e => recallable(e.text, e.source))
+        .map(e => {
+          const answer = e.refined_statement || e.content;
+          const prompted = isPromptedEntry(e.source, e.raw_input);
+          return {
+            at: e.created_at,
+            topic: e.topic,
+            source: e.source,
+            prompted,
+            question: prompted ? e.raw_input : null,
+            answer,
+            // What the counselor would actually quote — for a prompted entry the
+            // question is part of the meaning, so it is what gets length-checked.
+            text: prompted ? `${e.raw_input} ${answer}` : answer,
+          };
+        })
+        .filter(e => recallable(
+          e.text,
+          e.source,
+          e.prompted ? MIN_RECALL_CHARS_PAIRED : MIN_RECALL_CHARS,
+        ))
         .slice(0, RECALL_ENTRY_LIMIT)
         .map(e => {
           const topic = e.topic ? ` (on ${e.topic})` : '';
+          // Render the pair as question → answer so the counselor can see what
+          // the user was responding to and never mistakes the prompt for their
+          // own words.
+          if (e.prompted) {
+            return `- ${humanAge(e.at)}${topic}, asked "${excerpt(e.question, 160)}" — they answered: "${excerpt(e.answer)}"`;
+          }
           return `- ${humanAge(e.at)}${topic}: "${excerpt(e.text)}"`;
         });
 
@@ -758,7 +794,9 @@ async function getLongitudinalContext(userId) {
         });
 
       const recall = [
-        entryLines.length ? `What they have written recently:\n${entryLines.join('\n')}` : '',
+        entryLines.length
+          ? `What they have written recently (lines with "asked ..." are answers to a nightly check-in prompt — the question is the app's, the answer is theirs):\n${entryLines.join('\n')}`
+          : '',
         beliefLines.length ? `Beliefs they have refined:\n${beliefLines.join('\n')}` : '',
       ].filter(Boolean).join('\n\n');
 
@@ -779,10 +817,13 @@ to them specifically and naturally — "when you wrote about X a few weeks back"
 is the entire point; a generic reply to someone you have known for
 ${data.weeks_analyzed} weeks is a failure.
 
-Two limits. Do not narrate the mechanism — never say you have records, context,
-or a profile, and never list what you know back at them. And do not force it: if
+Three limits. Do not narrate the mechanism — never say you have records, context,
+or a profile, and never list what you know back at them. Do not force it: if
 nothing above is actually relevant, say nothing about it. One earned callback is
-worth more than three strained ones, and most turns warrant none.
+worth more than three strained ones, and most turns warrant none. And quote only
+what they wrote — on a check-in line the question was put to them, so never
+attribute it to them ("you said you wanted equanimity" when the app asked about
+equanimity is a fabrication); refer to what they answered.
 [END LONGITUDINAL CONTEXT]`;
     }
   } catch (err) {
