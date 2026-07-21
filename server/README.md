@@ -130,11 +130,21 @@ it. Longitudinal specifically must stay after Journal Analysis — it reads that
 morning's `journal_analysis` rows, and an earlier slot silently builds every
 portrait from week-old data.
 
-> **Railway does not auto-detect these config files.** Railway reads
-> `railway.json` / `railway.toml`; the per-agent `railway.<name>.json` files
-> here are named for humans, so they are a record of intent, not live config.
-> Either type the settings into each service's dashboard, or point the
-> service's Config-as-code path at its file to make them authoritative.
+> **These config files are live, via Config-as-code.** Railway does not read
+> `railway.<name>.json` by default — it looks for `railway.json`. Each service
+> here has its **Settings → Config-as-code** path pointed at its own file, which
+> makes the file authoritative: schedule, start command, and restart policy all
+> come from git, and the corresponding dashboard fields render read-only
+> ("The value is set in /server/railway.<name>.json").
+>
+> The consequence is that **you change a schedule by editing the file and
+> pushing, not in the dashboard.** A local commit changes nothing — Railway
+> deploys from GitHub `main`, so an unpushed or unmerged change leaves the old
+> schedule live while the repo says otherwise. If a service's cron doesn't
+> match the file, check whether the change actually reached `main` before
+> touching anything in Railway.
+>
+> A new service needs its Config-as-code path set once, at creation.
 
 See `JOURNAL_AGENT.md`, `COVERAGE_GAP_AGENT.md`, `DISPATCH_AGENT.md`, and
 `SYNTHESIS_AGENT.md` for individual agent details.
