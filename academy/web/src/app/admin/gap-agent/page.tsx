@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import styles from '../admin.module.css'
 
@@ -112,6 +112,9 @@ export default function GapAgentPage() {
   const [pdfBusy, setPdfBusy] = useState<'extracting' | 'ingesting' | null>(null)
   const [pdfMsg, setPdfMsg] = useState('')
   const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null)
+  // Section 1's summary, held for review before the rest of the book runs.
+  const [pdfConfirm, setPdfConfirm] = useState<{ label: string; summary: string } | null>(null)
+  const pdfConfirmResolve = useRef<((ok: boolean) => void) | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -256,6 +259,25 @@ export default function GapAgentPage() {
     return kept
   }
 
+  // Hold section 1's summary for review before committing the whole book.
+  // The summarize prompt is handed `Author:` / `Work:` verbatim and keeps
+  // authorial framing on every claim, so wrong metadata does not just mislabel
+  // the columns — it writes the wrong attribution INTO the chunk prose, where no
+  // later UPDATE can reach it. Section 1 is the cheapest place to catch that:
+  // the summary names the work it thinks it read, so a mismatch is visible in
+  // seconds rather than after twenty sections have committed. Mirrors the paper
+  // agent's detected_title/detected_authors, which exist for the same reason.
+  function askConfirmAttribution(label: string, summary: string): Promise<boolean> {
+    setPdfConfirm({ label, summary })
+    return new Promise<boolean>(resolve => { pdfConfirmResolve.current = resolve })
+  }
+
+  function resolvePdfConfirm(ok: boolean) {
+    pdfConfirmResolve.current?.(ok)
+    pdfConfirmResolve.current = null
+    setPdfConfirm(null)
+  }
+
   // One summarize call. The route streams plain text and returns 200 even when
   // the stream breaks mid-flight, appending a marker instead — so the marker is
   // the only way to tell a truncated summary from a complete one.
@@ -388,6 +410,7 @@ export default function GapAgentPage() {
 
     let chunksTotal = 0
     let lastPage = 0
+    let cancelled = false
     const skipped: string[] = []
 
     for (let i = 0; i < sections.length; i++) {
@@ -398,6 +421,17 @@ export default function GapAgentPage() {
 
       try {
         const summary = await summarizeSection(s, [pdfForm.section.trim(), pageLabel].filter(Boolean).join(', '))
+
+        // Section 1 doubles as a metadata check: nothing is committed until the
+        // summary has been read against the Author/Work about to be stamped on
+        // every chunk. break (not throw) so this is not reported as a failure.
+        if (i === 0) {
+          setPdfMsg(`Section 1 of ${sections.length} (${pageLabel}) — check the attribution below.`)
+          if (!(await askConfirmAttribution(pageLabel, summary))) {
+            cancelled = true
+            break
+          }
+        }
 
         // A "summary" no shorter than its source is not a summary — it is the
         // model refusing on non-prose (a table or figure page it cannot
@@ -442,6 +476,15 @@ export default function GapAgentPage() {
             : 'Nothing was ingested.')
         )
       }
+    }
+
+    // Throw rather than return so ingestPdf's catch skips its cleanup: the
+    // file, extracted text, and form fields all survive, so the metadata can be
+    // corrected and the run retried without re-uploading.
+    if (cancelled) {
+      throw new Error(
+        'Cancelled after section 1 — nothing was ingested. Correct Author and Work (check they are not swapped), then ingest again.'
+      )
     }
 
     setPdfProgress({ done: sections.length, total: sections.length })
@@ -739,6 +782,30 @@ export default function GapAgentPage() {
             {buildSections(pdfPages).length} sections will be summarized and ingested one at a
             time. Keep this tab open until it finishes — the run is driven from the browser.
           </p>
+        )}
+        {pdfConfirm && (
+          <div style={{ margin: '12px 0', border: '1px solid #d9c9a3', background: '#fdfaf3', borderRadius: 8, padding: '12px 14px' }}>
+            <p style={{ margin: 0, fontSize: 13.5, color: '#3d3527', fontWeight: 600 }}>
+              Check the attribution before the rest of the book runs
+            </p>
+            <p className={styles.muted} style={{ margin: '6px 0' }}>
+              Section 1 ({pdfConfirm.label}) summarized as follows. Every chunk will be stamped{' '}
+              <strong>{pdfForm.author}</strong> — <strong>{pdfForm.work}</strong>. If the summary
+              names a different author or work, cancel: the attribution is written into the summary
+              text itself and cannot be corrected afterward.
+            </p>
+            <div style={{ maxHeight: 200, overflow: 'auto', background: '#fff', border: '1px solid #eee', borderRadius: 6, padding: '8px 10px', fontSize: 12.5, color: '#444', whiteSpace: 'pre-wrap' }}>
+              {pdfConfirm.summary}
+            </div>
+            <div className={styles.actions} style={{ marginTop: 10 }}>
+              <button className={styles.scheduleBtn} onClick={() => resolvePdfConfirm(true)}>
+                ✓ Attribution is right — ingest all sections
+              </button>
+              <button className={styles.ghostBtn} onClick={() => resolvePdfConfirm(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
         )}
         {pdfProgress && (
           <div style={{ margin: '10px 0', height: 6, background: '#eee', borderRadius: 3, overflow: 'hidden' }}>
