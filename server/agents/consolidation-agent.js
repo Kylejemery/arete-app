@@ -18,8 +18,10 @@
 // consecutive requests by the same student to the same counselor surface
 // within 45 minutes are read as engagement signals: an immediate rephrase of
 // nearly the same question is a negative outcome (the answer didn't land);
-// any other continuation is neutral. Insert-only — a real Evaluator verdict
-// always wins, and heuristic rows are never overwritten onto anything.
+// any other continuation is neutral. The FINAL turn of a settled multi-turn
+// conversation is positive — the student worked through a real exchange and
+// stopped without re-asking. Insert-only — a real Evaluator verdict always
+// wins, and heuristic rows are never overwritten onto anything.
 //
 // Pass 2 — Synthesis. Connected clusters of strong edges (weight >= 0.5,
 // spanning at least two source works) are handed to Opus: "these passages
@@ -123,6 +125,12 @@ const HEURISTIC_FOLLOWUP_MINUTES = 45; // a successor within this gap = same con
 const REPHRASE_JACCARD = 0.45;       // word overlap above this = "asked the same thing again"
                                      // (a genuine rephrase swaps a verb or two; topical
                                      // follow-ups land far lower — see agent audit stats)
+const COMPLETION_SCORE = 0.7;        // a settled multi-turn conversation that ended without
+                                     // a re-ask. Scored above a mid-conversation
+                                     // continuation (0.5) because an EMA can never exceed
+                                     // the scores feeding it: without a signal above 0.5,
+                                     // no counselor-surface edge can ever reach the
+                                     // synthesis threshold, no matter how much traffic runs.
 
 function jaccard(a, b) {
   const words = s => new Set(String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3));
@@ -134,9 +142,13 @@ function jaccard(a, b) {
 }
 
 async function runHeuristicsPass() {
-  const stats = { requests_seen: 0, labeled: 0, negative: 0, neutral: 0 };
+  const stats = { requests_seen: 0, labeled: 0, negative: 0, neutral: 0, completed: 0 };
   const windowStart = new Date(Date.now() - HEURISTIC_WINDOW_HOURS * 3600 * 1000).toISOString();
-  const settled = new Date(Date.now() - HEURISTIC_SETTLE_MINUTES * 60 * 1000).toISOString();
+  // Compared as epoch millis, not as strings: Postgres renders timestamptz with
+  // a space separator in some transports and a 'T' in others, and ' ' < 'T'
+  // lexicographically — a string compare silently treats same-day live
+  // conversations as settled.
+  const settledMs = Date.now() - HEURISTIC_SETTLE_MINUTES * 60 * 1000;
 
   // One row per request (rank 1) for counselor-surface agents with a known
   // student. The Evaluator owns academy agents; the Oracle is anonymous.
@@ -153,9 +165,9 @@ async function runHeuristicsPass() {
   if (!rows || rows.length === 0) return stats;
   stats.requests_seen = rows.length;
 
-  // Group into conversations by (student, agent) and label each request that
-  // has a successor within the follow-up gap. The last message of a
-  // conversation gets no heuristic — silence is not evidence either way.
+  // Group into conversations by (student, agent), label each request by how its
+  // successor reads, then label the final turn by the fact that the exchange
+  // ended there.
   const byConvo = new Map();
   for (const r of rows) {
     const key = `${r.student_id}|${r.agent}`;
@@ -167,7 +179,7 @@ async function runHeuristicsPass() {
   for (const convo of byConvo.values()) {
     for (let i = 0; i < convo.length - 1; i++) {
       const cur = convo[i], next = convo[i + 1];
-      if (cur.created_at > settled) continue; // conversation may still be live
+      if (new Date(cur.created_at).getTime() > settledMs) continue; // conversation may still be live
       const gapMin = (new Date(next.created_at) - new Date(cur.created_at)) / 60000;
       if (gapMin > HEURISTIC_FOLLOWUP_MINUTES) continue;
       const rephrased = jaccard(cur.query_text, next.query_text) > REPHRASE_JACCARD;
@@ -181,6 +193,32 @@ async function runHeuristicsPass() {
       });
       if (rephrased) stats.negative++; else stats.neutral++;
     }
+
+    // The final turn of a settled conversation. The loop above judges a
+    // message by its successor, so the last message of every conversation went
+    // unlabeled — and the last turn is disproportionately where the corpus
+    // actually gets used, since the exchange has warmed up by then. A student
+    // who worked through a real multi-turn sequence and then stopped WITHOUT
+    // re-asking got what they came for.
+    if (convo.length < 2) continue;                    // a single unanswered turn proves nothing
+    const last = convo[convo.length - 1];
+    const prev = convo[convo.length - 2];
+    if (new Date(last.created_at).getTime() > settledMs) continue; // a successor may still be coming
+    const tailGapMin = (new Date(last.created_at) - new Date(prev.created_at)) / 60000;
+    if (tailGapMin > HEURISTIC_FOLLOWUP_MINUTES) continue; // an isolated turn, not the tail of an exchange
+    // A repeated seed prompt is a re-ask, not a resolution: the home screen's
+    // daily prompt card is identical for every student on a given day, so two
+    // taps of it in one sitting must never read as a satisfied conversation.
+    if (jaccard(prev.query_text, last.query_text) > REPHRASE_JACCARD) continue;
+    outcomes.push({
+      request_id: last.request_id,
+      agent: last.agent,
+      student_id: last.student_id,
+      outcome: 'student_positive',
+      outcome_source: 'heuristic',
+      score: COMPLETION_SCORE,
+    });
+    stats.completed++;
   }
   if (outcomes.length === 0) return stats;
 
@@ -570,7 +608,7 @@ async function runConsolidationAgent() {
 
   const heuristics = await runHeuristicsPass();
   await audit('heuristics', heuristics);
-  console.log(`[consolidation-agent] heuristics: ${heuristics.labeled} counselor requests labeled (${heuristics.negative} negative, ${heuristics.neutral} neutral)`);
+  console.log(`[consolidation-agent] heuristics: ${heuristics.labeled} counselor requests labeled (${heuristics.negative} negative, ${heuristics.neutral} neutral, ${heuristics.completed} completed)`);
 
   const hebbian = await runHebbianPass(config);
   await audit('hebbian', hebbian);
