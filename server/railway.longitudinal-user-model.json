@@ -3,7 +3,7 @@
   "build": { "builder": "NIXPACKS" },
   "deploy": {
     "startCommand": "node longitudinal-user-model.js",
-    "cronSchedule": "30 4 * * 1",
+    "cronSchedule": "30 9 * * 1",
     "restartPolicyType": "NEVER"
   }
 }

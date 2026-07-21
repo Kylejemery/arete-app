@@ -67,6 +67,12 @@
         "projectId": "84e0593d-d728-4e1a-b522-f8d51ce8a069"
       }
     },
-    "owner": "kjemery"
+    "owner": "kjemery",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/84e0593d-d728-4e1a-b522-f8d51ce8a069"
+    }
   }
 }
