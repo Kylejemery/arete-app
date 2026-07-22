@@ -5,6 +5,7 @@ import { getPapers, upsertPaper } from '@/lib/db';
 import { Card, CardLabel } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Topbar from '@/components/navigation/Topbar';
+import { AskInterlocutor } from '@/components/InterlocutorPanel';
 import type { Paper } from '@/types';
 
 const COURSE_LABELS: Record<string, string> = {
@@ -110,6 +111,11 @@ export default function PapersPage() {
               placeholder="State your thesis in the first sentence. Every paragraph thereafter must advance the argument or provide evidence. Hedging language will be noted by the Examiner..."
               className="w-full bg-academy-surface border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:outline-none focus:border-academy-gold transition-colors text-sm font-serif resize-none leading-relaxed"
             />
+          </div>
+
+          {/* Formative pass, before the Examiner's verdict closes the exchange. */}
+          <div className="border-t border-academy-border pt-5">
+            <AskInterlocutor text={content} pieceTitle={title} />
           </div>
 
           <div className="flex gap-3">

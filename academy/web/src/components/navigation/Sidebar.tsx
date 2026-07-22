@@ -14,6 +14,7 @@ const navItems = [
   { href: '/dashboard/courtyard',  label: 'The Courtyard', icon: '⚗️' },
   { href: '/dashboard/library',    label: 'Library',      icon: '📜' },
   { href: '/dashboard/papers',     label: 'Papers',       icon: '✒️' },
+  { href: '/dashboard/composer',   label: 'Composer',     icon: '🖋️' },
   { href: '/dashboard/dissertation', label: 'Dissertation', icon: '🎓' },
   { href: '/dashboard/profile',    label: 'Profile',      icon: '👤' },
 ];

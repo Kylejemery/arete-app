@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { AskInterlocutor } from '@/components/InterlocutorPanel';
 
 const MIN_APPROVED_CHAPTERS = 4;
 const MAX_CHAPTERS = 8;
@@ -349,6 +350,14 @@ export default function DissertationPage() {
                         <span className="text-academy-muted text-xs font-mono">
                           {ch.content.trim().length.toLocaleString()} chars
                         </span>
+                      </div>
+
+                      {/* Formative pass, before the Supervisor's review. */}
+                      <div className="mt-4 pt-4 border-t border-academy-border">
+                        <AskInterlocutor
+                          text={ch.content}
+                          pieceTitle={ch.title ? `Ch. ${n}: ${ch.title}` : `Chapter ${n}`}
+                        />
                       </div>
                       {ch.feedback && (
                         <div className="mt-4 border-l-2 border-academy-gold/40 pl-4">

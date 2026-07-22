@@ -24,7 +24,7 @@ const TIER_DETAILS: Record<Tier, { label: string; price: string; agents: string[
   fellow: {
     label: 'Fellow',
     price: '$79/mo',
-    agents: ['All six agents'],
+    agents: ['All five agents', 'The Interlocutor'],
     description: 'The complete formation experience. No restrictions.',
   },
 };
@@ -123,7 +123,7 @@ export default function ProfilePage() {
             <p className="text-academy-muted text-sm leading-relaxed mb-4">
               {tier === 'auditor'
                 ? 'Upgrade to Scholar to unlock the full curriculum, The Archivist, and The Examiner.'
-                : 'Upgrade to Fellow to unlock all six agents including The Dialectician, Rhetorician, and Chronologist.'}
+                : 'Upgrade to Fellow to unlock all five agents including The Dialectician and The Chronologist.'}
             </p>
             <Button
               onClick={() => alert('Stripe integration coming in Phase 2.')}

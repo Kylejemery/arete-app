@@ -34,7 +34,6 @@ export type AgentId =
   | 'archivist'
   | 'examiner'
   | 'dialectician'
-  | 'rhetorician'
   | 'chronologist';
 
 export interface Agent {
