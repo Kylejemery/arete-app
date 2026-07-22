@@ -19,6 +19,7 @@ export const MIN_CRITIQUE_CHARS = 40;
 export interface CritiqueResult {
   critique: string;
   dimensions_flagged: string[];
+  id: string | null;
   recorded: boolean;
 }
 
@@ -59,6 +60,132 @@ export function DimensionChips({ dimensions }: { dimensions: string[] }) {
         </span>
       ))}
     </>
+  );
+}
+
+export interface ChatTurn {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// Conversation with the Interlocutor about the draft on screen.
+//
+// Anchored to the piece, never free-floating: the agent's domain is craft on a
+// specific argument, and a chat box with no draft attached is how a writing
+// teacher quietly becomes a general assistant.
+//
+// Paste is blocked here for the same reason it is blocked in the editor. The
+// agent hands back diagnoses rather than sentences, so there is nothing it gave
+// you that belongs in this box.
+export function InterlocutorChat({
+  excerpt,
+  critique,
+  critiqueId,
+  pieceTitle,
+  placeholder = 'Ask about the draft…',
+}: {
+  excerpt: string;
+  critique?: string;
+  critiqueId?: string | null;
+  pieceTitle?: string;
+  placeholder?: string;
+}) {
+  const [turns, setTurns] = useState<ChatTurn[]>([]);
+  const [draft, setDraft] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const ready = draft.trim().length > 0 && excerpt.trim().length > 0 && !busy;
+
+  const blockInsertion = (e: React.ClipboardEvent | React.DragEvent) => {
+    e.preventDefault();
+    setNotice('Type it. Nothing the Interlocutor gives you belongs in this box.');
+    window.setTimeout(() => setNotice(null), 4000);
+  };
+
+  const send = async () => {
+    if (!ready) return;
+    const mine: ChatTurn = { role: 'user', content: draft.trim() };
+    const history = [...turns, mine];
+    setTurns(history);
+    setDraft('');
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/interlocutor/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          excerpt: excerpt.trim(),
+          critique: critique || undefined,
+          critiqueId: critiqueId || undefined,
+          pieceTitle: pieceTitle?.trim() || undefined,
+          messages: history,
+        }),
+      });
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        setError((data as { error?: string }).error ?? 'The Interlocutor is unavailable.');
+        return;
+      }
+      const { reply } = data as { reply: string; recorded: boolean };
+      setTurns([...history, { role: 'assistant', content: reply }]);
+    } catch {
+      setError('The Interlocutor could not be reached.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      {turns.length > 0 && (
+        <div className="space-y-5 mb-5">
+          {turns.map((t, i) =>
+            t.role === 'user' ? (
+              <p key={i} className="text-academy-muted text-sm leading-relaxed pl-4 border-l border-academy-border">
+                {t.content}
+              </p>
+            ) : (
+              <div key={i}>
+                <CritiqueBody critique={t.content} />
+              </div>
+            )
+          )}
+          {busy && <p className="text-academy-muted text-xs italic">Reading…</p>}
+        </div>
+      )}
+
+      <textarea
+        className="w-full bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text text-sm placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y min-h-[4.5rem] leading-relaxed"
+        placeholder={placeholder}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onPaste={blockInsertion}
+        onDrop={blockInsertion}
+        onKeyDown={e => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            send();
+          }
+        }}
+      />
+
+      <div className="flex flex-wrap items-center gap-3 mt-2">
+        <button
+          onClick={send}
+          disabled={!ready}
+          className="border border-academy-border text-academy-muted hover:text-academy-text hover:border-academy-gold font-semibold rounded-lg px-4 py-2 text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {busy ? 'Reading…' : 'Send'}
+        </button>
+        <span className="text-academy-muted text-xs">Enter sends, Shift+Enter for a new line.</span>
+      </div>
+
+      {notice && <p className="text-academy-gold text-xs mt-2 leading-relaxed">{notice}</p>}
+      {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+    </div>
   );
 }
 
@@ -133,10 +260,21 @@ export function AskInterlocutor({
           </div>
           <CritiqueBody critique={result.critique} />
           {!result.recorded && (
-            <p className="text-academy-muted text-xs">
+            <p className="text-academy-muted text-xs mb-4">
               Not written to your history, so it will not shape your profile.
             </p>
           )}
+
+          {/* Argue with it, or ask what a judgment meant. */}
+          <div className="mt-6 pt-5 border-t border-academy-border">
+            <InterlocutorChat
+              excerpt={submission}
+              critique={result.critique}
+              critiqueId={result.id}
+              pieceTitle={pieceTitle}
+              placeholder="Push back, or ask what a judgment meant…"
+            />
+          </div>
         </section>
       )}
     </div>

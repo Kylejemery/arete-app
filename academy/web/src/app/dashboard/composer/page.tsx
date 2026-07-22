@@ -14,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import {
   CritiqueBody,
   DimensionChips,
+  InterlocutorChat,
   MIN_CRITIQUE_CHARS as MIN_CHARS,
   type CritiqueResult,
 } from '@/components/InterlocutorPanel';
@@ -227,6 +228,31 @@ export default function ComposerPage() {
             <DimensionChips dimensions={result.dimensions_flagged} />
           </div>
           <CritiqueBody critique={result.critique} />
+        </section>
+      )}
+
+      {/* ── Conversation ────────────────────────────────────────────────────────
+          Available with or without a critique: a question about a paragraph you
+          are stuck on should not require submitting the whole draft first. It
+          stays anchored to the draft either way, and inherits the critique as
+          context once one exists. */}
+      {text.trim().length >= MIN_CHARS && (
+        <section className="mt-12 border-t border-academy-gold/20 pt-6">
+          <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">
+            {result ? 'Continue' : 'Ask'}
+          </p>
+          <InterlocutorChat
+            key={result?.id ?? 'no-critique'}
+            excerpt={hasSelection ? selected : text}
+            critique={result?.critique}
+            critiqueId={result?.id}
+            pieceTitle={title}
+            placeholder={
+              result
+                ? 'Push back, or ask what a judgment meant…'
+                : 'Ask about the draft. It will not write a sentence for you…'
+            }
+          />
         </section>
       )}
     </div>
