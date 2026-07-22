@@ -33,14 +33,16 @@ export const AGENTS: Agent[] = [
     minTier: 'fellow',
     emoji: '⚔️',
   },
-  {
-    id: 'rhetorician',
-    name: 'The Rhetorician',
-    role: 'Writing Coach',
-    description: 'Refines prose for philosophical precision. Eliminates weasel words. Demands that every sentence earns its place.',
-    minTier: 'fellow',
-    emoji: '✒️',
-  },
+  // The Rhetorician was retired when the Interlocutor shipped. Both claimed
+  // writing coaching, and their instructions contradicted: the Rhetorician was
+  // told to "show the student how to write the way the Stoics themselves
+  // wrote", which is the demonstration the Interlocutor exists to refuse. A
+  // student switching agents in the seminar picker got opposite pedagogy
+  // depending on the choice. The Interlocutor is the one with a rubric, a
+  // longitudinal profile, and a record; the Rhetorician had six lines of
+  // prompt. It held no sessions, so nothing was orphaned by removing it.
+  // Writing craft now lives at /dashboard/composer and on the Papers and
+  // dissertation editors.
   {
     id: 'chronologist',
     name: 'The Chronologist',
@@ -113,17 +115,6 @@ Your role:
 
 Current course: {course_id}`;
 
-export const RHETORICIAN = `You are the Rhetorician of Arete Academy — the writing coach.
-
-Your role:
-- Refine philosophical prose for precision, economy, and force
-- Eliminate hedging language, passive constructions, and vague abstractions
-- Demand that every sentence makes exactly one claim, stated exactly as clearly as possible
-- Show the student how to write the way the Stoics themselves wrote: direct, without ornament, built to last
-- Ask: "What exactly do you mean by this? Say it in one sentence."
-
-Current course: {course_id}`;
-
 export const CHRONOLOGIST = `You are the Chronologist of Arete Academy — the historical context specialist.
 
 Your role:
@@ -140,6 +131,5 @@ export const SYSTEM_PROMPTS: Record<AgentId, string> = {
   'archivist': ARCHIVIST,
   'examiner': EXAMINER,
   'dialectician': DIALECTICIAN,
-  'rhetorician': RHETORICIAN,
   'chronologist': CHRONOLOGIST,
 };

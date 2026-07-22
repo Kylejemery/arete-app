@@ -11,34 +11,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import {
+  CritiqueBody,
+  DimensionChips,
+  MIN_CRITIQUE_CHARS as MIN_CHARS,
+  type CritiqueResult,
+} from '@/components/InterlocutorPanel';
 
 type Mode = 'full' | 'structural';
 
-interface CritiqueResult {
-  critique: string;
-  dimensions_flagged: string[];
-  recorded: boolean;
-}
-
 const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
-const MIN_CHARS = 40;
-
-// Minimal markdown: paragraphs, and **bold** for the rubric dimension names the
-// agent emphasizes. Built as React nodes, never as raw HTML.
-function renderCritique(text: string) {
-  return text.split(/\n{2,}/).map((para, i) => (
-    <p key={i} className="font-serif text-academy-text text-[15px] leading-[1.75] mb-5 whitespace-pre-wrap">
-      {para.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
-        part.startsWith('**') && part.endsWith('**') ? (
-          <strong key={j} className="text-academy-gold font-semibold">{part.slice(2, -2)}</strong>
-        ) : (
-          <span key={j}>{part}</span>
-        )
-      )}
-    </p>
-  ));
-}
 
 export default function ComposerPage() {
   const router = useRouter();
@@ -241,16 +224,9 @@ export default function ComposerPage() {
             <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mr-2">
               The Interlocutor
             </p>
-            {result.dimensions_flagged.map(d => (
-              <span
-                key={d}
-                className="font-mono text-[10px] uppercase tracking-wider text-academy-muted border border-academy-border rounded px-2 py-0.5"
-              >
-                {d}
-              </span>
-            ))}
+            <DimensionChips dimensions={result.dimensions_flagged} />
           </div>
-          {renderCritique(result.critique)}
+          <CritiqueBody critique={result.critique} />
         </section>
       )}
     </div>
