@@ -4,20 +4,56 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-const navItems = [
-  { href: '/dashboard',            label: 'Dashboard',    icon: '🏛️' },
-  { href: '/dashboard/courses',    label: 'Courses',      icon: '📚' },
-  { href: '/dashboard/lexicon',    label: 'Lexicon',      icon: '𝛼' },
-  { href: '/dashboard/drill',      label: 'Vocab Drill',  icon: '🏺' },
-  { href: '/dashboard/examine',    label: 'Daily Examination', icon: '☀️' },
-  { href: '/dashboard/practicum',  label: 'Practicum',    icon: '🔥' },
-  { href: '/dashboard/courtyard',  label: 'The Courtyard', icon: '⚗️' },
-  { href: '/dashboard/library',    label: 'Library',      icon: '📜' },
-  { href: '/dashboard/papers',     label: 'Papers',       icon: '✒️' },
-  { href: '/dashboard/composer',   label: 'Composer',     icon: '🖋️' },
-  { href: '/dashboard/dissertation', label: 'Dissertation', icon: '🎓' },
-  { href: '/dashboard/profile',    label: 'Profile',      icon: '👤' },
+// Twelve destinations is past the point where a flat list can be scanned, and
+// whatever sits at the bottom falls below the fold on a laptop. Grouped, with
+// the writing surfaces together and the Composer at the head of them.
+const navSections: { heading: string | null; items: NavItem[] }[] = [
+  {
+    heading: null,
+    items: [{ href: '/dashboard', label: 'Dashboard', icon: '🏛️', mobile: true }],
+  },
+  {
+    heading: 'Study',
+    items: [
+      { href: '/dashboard/courses', label: 'Courses',     icon: '📚', mobile: true },
+      { href: '/dashboard/lexicon', label: 'Lexicon',     icon: '𝛼' },
+      { href: '/dashboard/drill',   label: 'Vocab Drill', icon: '🏺' },
+    ],
+  },
+  {
+    heading: 'Practice',
+    items: [
+      { href: '/dashboard/examine',   label: 'Daily Examination', icon: '☀️' },
+      { href: '/dashboard/practicum', label: 'Practicum',         icon: '🔥' },
+      { href: '/dashboard/courtyard', label: 'The Courtyard',     icon: '⚗️' },
+    ],
+  },
+  {
+    heading: 'Write',
+    items: [
+      { href: '/dashboard/composer',     label: 'Composer',     icon: '🖋️', mobile: true },
+      { href: '/dashboard/papers',       label: 'Papers',       icon: '✒️' },
+      { href: '/dashboard/dissertation', label: 'Dissertation', icon: '🎓' },
+    ],
+  },
+  {
+    heading: 'Reference',
+    items: [
+      { href: '/dashboard/library', label: 'Library', icon: '📜', mobile: true },
+      { href: '/dashboard/profile', label: 'Profile', icon: '👤', mobile: true },
+    ],
+  },
 ];
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+  // Twelve tabs in a bottom bar is five pixels each. Only these ride along.
+  mobile?: boolean;
+}
+
+const mobileItems = navSections.flatMap(s => s.items).filter(i => i.mobile);
 
 interface SidebarProps {
   navOpen: boolean;
@@ -60,20 +96,29 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 py-4 overflow-y-auto">
-          {navItems.map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors ${
-                isActive(item.href)
-                  ? 'text-academy-gold bg-academy-bg border-r-2 border-academy-gold'
-                  : 'text-academy-muted hover:text-academy-text hover:bg-academy-bg'
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              <span className="font-medium">{item.label}</span>
-            </Link>
+        <nav className="flex-1 py-3 overflow-y-auto">
+          {navSections.map((section, i) => (
+            <div key={section.heading ?? `section-${i}`} className={section.heading ? 'mt-4' : ''}>
+              {section.heading && (
+                <p className="px-6 pb-1.5 font-mono text-[10px] uppercase tracking-[0.2em] text-academy-muted/60">
+                  {section.heading}
+                </p>
+              )}
+              {section.items.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-6 py-2.5 text-sm transition-colors ${
+                    isActive(item.href)
+                      ? 'text-academy-gold bg-academy-bg border-r-2 border-academy-gold'
+                      : 'text-academy-muted hover:text-academy-text hover:bg-academy-bg'
+                  }`}
+                >
+                  <span className="text-base">{item.icon}</span>
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              ))}
+            </div>
           ))}
         </nav>
 
@@ -93,10 +138,10 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Mobile Bottom Nav — unchanged */}
+      {/* Mobile Bottom Nav — the five that survive a phone-width bar. */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-academy-surface border-t border-academy-border z-50">
         <div className="flex">
-          {navItems.map(item => (
+          {mobileItems.map(item => (
             <Link
               key={item.href}
               href={item.href}
