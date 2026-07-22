@@ -236,11 +236,11 @@ export default function ComposerPage() {
           are stuck on should not require submitting the whole draft first. It
           stays anchored to the draft either way, and inherits the critique as
           context once one exists. */}
-      {text.trim().length >= MIN_CHARS && (
-        <section className="mt-12 border-t border-academy-gold/20 pt-6">
-          <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">
-            {result ? 'Continue' : 'Ask'}
-          </p>
+      <section className="mt-12 border-t border-academy-gold/20 pt-6">
+        <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">
+          {result ? 'Continue' : 'Ask'}
+        </p>
+        {text.trim().length >= MIN_CHARS ? (
           <InterlocutorChat
             key={result?.id ?? 'no-critique'}
             excerpt={hasSelection ? selected : text}
@@ -253,8 +253,15 @@ export default function ComposerPage() {
                 : 'Ask about the draft. It will not write a sentence for you…'
             }
           />
-        </section>
-      )}
+        ) : (
+          // The heading stays even when the box cannot. Hiding the section
+          // outright left nothing on the page to explain the absence.
+          <p className="text-academy-muted text-sm leading-relaxed">
+            The conversation is anchored to the draft, so it opens once there is
+            a draft to anchor it to. Write a few sentences above.
+          </p>
+        )}
+      </section>
     </div>
   );
 }
