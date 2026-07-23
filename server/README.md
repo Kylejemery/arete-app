@@ -123,6 +123,7 @@ restart loop. `Root Directory` is `server` for every service.
 | Weekly Self-Reflection | `node weekly-self-reflection-agent.js` | `0 7 * * 0` (Sun 07:00) | `CLAUDE_API_KEY` |
 | Dreaming | `node agents/dreaming-agent.js` | `30 23 * * 0` (Sun 23:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
 | Consolidation | `node agents/consolidation-agent.js` | `30 7 * * *` (daily 07:30) | `CLAUDE_API_KEY` |
+| Interlocutor Profile | `node interlocutor-profile.js` | `0 8 * * *` (daily 08:00) | `CLAUDE_API_KEY` |
 
 Ordering matters on Mondays: World → Tension → Inquiry run before the daily
 Journal Analysis at 09:00; Longitudinal, Coverage Gap, and Synthesis run after

@@ -75,6 +75,15 @@ const { runInquiryAgent } = require('./agents/inquiry-agent');
 // also backs the on-demand admin trigger POST /api/admin/longitudinal/run.
 const { runLongitudinalUserModel } = require('./longitudinal-user-model');
 
+// Interlocutor Writing Profile Agent — derives one writing_profile row per
+// student from their critique_history, so the Interlocutor can name patterns
+// across pieces rather than judging each cold (server/interlocutor-profile.js).
+// Its own Railway cron service (`node interlocutor-profile.js`), swept daily but
+// content-gated: a user is re-derived only when they have new critiques since
+// their last derivation. Backs the on-demand admin trigger
+// POST /api/admin/interlocutor-profile/run.
+const { runInterlocutorProfile } = require('./interlocutor-profile');
+
 // World Agent
 // Railway cron: 30 3 * * 1 (Mondays 03:30 UTC)
 // The only outward-facing agent: weekly web search across philosophically
@@ -3806,6 +3815,41 @@ app.post('/api/admin/longitudinal/run', async (req, res) => {
     longitudinalRunning = false;
     console.error('[/api/admin/longitudinal/run] error:', err.message);
     return res.status(500).json({ error: err.message || 'Longitudinal run failed' });
+  }
+});
+
+// POST /api/admin/interlocutor-profile/run — derive Interlocutor writing
+// profiles on demand (admin only) instead of waiting for the daily cron.
+// Awaited so the caller gets the summary { eligible, skipped, updated,
+// unchanged, failures }; `unchanged` explains why an eligible user did not move
+// (no new critiques since last derivation). Optional { force: true } re-derives
+// every eligible user regardless — used after a prompt change. Idempotent: one
+// living row per user.
+let interlocutorProfileRunning = false;
+app.post('/api/admin/interlocutor-profile/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY || !CLAUDE_API_KEY) {
+      return res.status(500).json({ error: 'Server not configured for the writing profile agent' });
+    }
+    if (interlocutorProfileRunning) {
+      return res.status(409).json({ error: 'A writing profile run is already in progress' });
+    }
+
+    const force = req.body && req.body.force === true;
+    interlocutorProfileRunning = true;
+    try {
+      const result = await runInterlocutorProfile({ force });
+      return res.json({ ok: true, ...result });
+    } finally {
+      interlocutorProfileRunning = false;
+    }
+  } catch (err) {
+    interlocutorProfileRunning = false;
+    console.error('[/api/admin/interlocutor-profile/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Writing profile run failed' });
   }
 });
 
