@@ -19,6 +19,12 @@ const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
+// The corpus's knowledge of itself — appended to every user-facing chat's
+// system prompt so any counselor can answer questions ABOUT Arete (the corpus,
+// the tensions, "what do you dream," the background agents) accurately and in
+// voice. Descriptive, not live; see server/lib/self-knowledge.js.
+const { SELF_KNOWLEDGE } = require('./lib/self-knowledge');
+
 // Observatory Living Sky — all new /api/observatory/* routes live in their own
 // module to keep the merge surface of this shared file minimal. recordRetrieval
 // is the fire-and-forget retrieval-event logger the retrieval paths below call.
@@ -868,7 +874,7 @@ app.post('/api/chat', async (req, res) => {
 
   const dateTimeLine = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeLine + resourceInstruction;
+  const enrichedSystem = system + dateTimeLine + resourceInstruction + SELF_KNOWLEDGE;
 
   try {
     const truncatedMessages = truncateMessages(messages);
@@ -1133,7 +1139,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE;
 
   // Shared session: mirror this single-counselor turn into session_messages so
   // the partner's realtime listener receives it. Same pattern as the parallel
@@ -2668,7 +2674,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
 
   const contextBlock = (contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '');
+    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE;
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
@@ -3457,7 +3463,7 @@ Do not mention that you are an AI. Do not break character.`;
 
 [STOIC CORPUS — ground your response in these passages]
 ${contextBlock}
-[END CORPUS]`;
+[END CORPUS]${SELF_KNOWLEDGE}`;
 
     const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
 

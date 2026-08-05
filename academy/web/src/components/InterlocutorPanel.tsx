@@ -94,15 +94,8 @@ export function InterlocutorChat({
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const ready = draft.trim().length > 0 && excerpt.trim().length > 0 && !busy;
-
-  const blockInsertion = (e: React.ClipboardEvent | React.DragEvent) => {
-    e.preventDefault();
-    setNotice('Type it. Nothing the Interlocutor gives you belongs in this box.');
-    window.setTimeout(() => setNotice(null), 4000);
-  };
 
   const send = async () => {
     if (!ready) return;
@@ -162,8 +155,6 @@ export function InterlocutorChat({
         placeholder={placeholder}
         value={draft}
         onChange={e => setDraft(e.target.value)}
-        onPaste={blockInsertion}
-        onDrop={blockInsertion}
         onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -183,7 +174,6 @@ export function InterlocutorChat({
         <span className="text-academy-muted text-xs">Enter sends, Shift+Enter for a new line.</span>
       </div>
 
-      {notice && <p className="text-academy-gold text-xs mt-2 leading-relaxed">{notice}</p>}
       {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
     </div>
   );
