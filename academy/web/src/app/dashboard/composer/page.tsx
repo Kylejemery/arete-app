@@ -4,9 +4,9 @@
 // explicit invocation. No ambient flagging, no inline suggestions, no
 // autocomplete: the agent speaks when asked and not otherwise.
 //
-// Paste and drop are blocked in the editor. The agent never writes the
-// student's sentences, so the student never pastes them back in; revisions are
-// typed. That is the mechanism, not a formality.
+// Paste and drop are permitted: drafts written elsewhere can be brought in.
+// (The editor once blocked insertion so revisions had to be typed; that
+// mechanism was lifted deliberately.)
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -69,12 +69,6 @@ export default function ComposerPage() {
     if (!el) return;
     setSelection({ start: el.selectionStart, end: el.selectionEnd });
   }, []);
-
-  const blockInsertion = (e: React.ClipboardEvent | React.DragEvent) => {
-    e.preventDefault();
-    setNotice('Revisions are typed here, not pasted. Type the sentence and you will own it.');
-    window.setTimeout(() => setNotice(null), 4000);
-  };
 
   const selected = text.slice(selection.start, selection.end).trim();
   const hasSelection = selected.length >= MIN_CHARS;
@@ -147,8 +141,6 @@ export default function ComposerPage() {
         placeholder="Untitled"
         value={title}
         onChange={e => handleTitleChange(e.target.value)}
-        onPaste={blockInsertion}
-        onDrop={blockInsertion}
       />
 
       <textarea
@@ -157,8 +149,6 @@ export default function ComposerPage() {
         placeholder="Begin."
         value={text}
         onChange={e => handleTextChange(e.target.value)}
-        onPaste={blockInsertion}
-        onDrop={blockInsertion}
         onSelect={trackSelection}
         onKeyUp={trackSelection}
         onMouseUp={trackSelection}
