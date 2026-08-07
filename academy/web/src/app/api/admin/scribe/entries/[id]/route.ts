@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .order('created_at', { ascending: true }),
     admin
       .from('scribe_entry_drafts')
-      .select('id, stage, draft_text, sources_used, created_at')
+      .select('id, stage, draft_text, sources_used, review, created_at')
       .eq('entry_id', id)
       .order('created_at', { ascending: true }),
   ])
