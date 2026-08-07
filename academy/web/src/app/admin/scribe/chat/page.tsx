@@ -88,6 +88,7 @@ export default function ScribeChatPage() {
   const [input, setInput] = useState('')
   const [viewedDraftId, setViewedDraftId] = useState<string | null>(null) // null = working draft
   const [snapshotting, setSnapshotting] = useState(false)
+  const [rightTab, setRightTab] = useState<'draft' | 'review'>('draft') // draft-pane view
 
   const threadRef = useRef<HTMLDivElement>(null)
   // Deep link from the Log: ?entry=<id>&run=1 opens an entry and, if Scribe
@@ -120,6 +121,7 @@ export default function ScribeChatPage() {
       setMessages(json.messages || [])
       setDrafts(json.drafts || [])
       setViewedDraftId(null)
+      setRightTab('draft')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load entry')
     }
@@ -181,6 +183,7 @@ export default function ScribeChatPage() {
             setLiveSources(ev.v as Source[])
           } else if (ev.t === 'review') {
             setLiveReview(ev.v as Review)
+            setRightTab('review') // surface the cold read as soon as it lands
           } else if (ev.t === 'error') {
             throw new Error(ev.v as string)
           } else if (ev.t === 'done') {
@@ -257,9 +260,19 @@ export default function ScribeChatPage() {
   const streamingDraft = streaming ? partialDraft(streamText) : null
   const viewedSnapshot = viewedDraftId ? drafts.find(d => d.id === viewedDraftId) : null
   const draftShown = viewedSnapshot?.draft_text ?? streamingDraft ?? lastScribeDraft
-  // A viewed final snapshot shows its own stored read; otherwise the live one
-  // from the turn just finished.
-  const reviewShown = viewedSnapshot?.review ?? (viewedDraftId ? null : liveReview)
+  // A viewed final snapshot shows its own stored read. On the working view:
+  // the live read from the turn just finished, else the last saved final
+  // snapshot's read — which is persisted in the DB, so it survives reloads and
+  // further edits (no need to re-run finalize just to see it again).
+  const latestFinalWithReview = [...drafts].reverse().find(d => d.stage === 'final' && d.review)
+  const reviewShown = viewedSnapshot?.review ?? (viewedDraftId ? null : (liveReview ?? latestFinalWithReview?.review ?? null))
+  // True when the shown read is the saved fallback (may predate current edits).
+  const reviewIsSavedFallback = !viewedDraftId && !liveReview && !!latestFinalWithReview
+  const reviewCount = reviewShown
+    ? reviewShown.not_kyle.length + reviewShown.unearned.length + reviewShown.narrated_over.length + (reviewShown.tells?.length ?? 0)
+    : 0
+  // The review tab only shows when there's a read to show.
+  const effTab: 'draft' | 'review' = rightTab === 'review' && reviewShown ? 'review' : 'draft'
   // Deterministic voice meter — recomputed from whatever draft is shown.
   const voiceMetrics = draftShown ? computeVoiceMetrics(draftShown) : null
 
@@ -441,9 +454,25 @@ export default function ScribeChatPage() {
         <div className={styles.rightCol}>
           <div className={`${styles.pane} ${styles.draftPane}`}>
             <div className={styles.paneHead}>
-              {viewedSnapshot
-                ? `Snapshot · ${viewedSnapshot.stage} · ${new Date(viewedSnapshot.created_at).toLocaleString()}`
-                : 'Working draft'}
+              <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  className={admin.ghostBtn}
+                  onClick={() => setRightTab('draft')}
+                  style={{ fontWeight: effTab === 'draft' ? 700 : 400, opacity: effTab === 'draft' ? 1 : 0.55 }}
+                >
+                  {viewedSnapshot ? `Snapshot · ${viewedSnapshot.stage}` : 'Working draft'}
+                </button>
+                {reviewShown && (
+                  <button
+                    className={admin.ghostBtn}
+                    onClick={() => setRightTab('review')}
+                    style={{ fontWeight: effTab === 'review' ? 700 : 400, opacity: effTab === 'review' ? 1 : 0.55 }}
+                    title="The cold gpt-4o outside read of this draft"
+                  >
+                    Outside read{reviewCount ? ` (${reviewCount})` : ''}
+                  </button>
+                )}
+              </span>
               <span>
                 <button className={admin.ghostBtn} onClick={saveToLog} disabled={!draftShown}>
                   Save to log
@@ -454,11 +483,44 @@ export default function ScribeChatPage() {
               </span>
             </div>
             <div className={styles.paneBody}>
-              {draftShown
-                ? <div className={styles.draftText}>{draftShown}</div>
-                : <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>}
+              {effTab === 'review' && reviewShown ? (
+                <>
+                  <div style={{ fontSize: 11.5, color: '#888', marginBottom: 10 }}>
+                    {reviewShown.model ? `${reviewShown.model} · read the draft cold` : 'outside read'}
+                    {reviewIsSavedFallback && ' · saved from your last finalize — re-finalize to refresh after edits'}
+                  </div>
+                  {reviewShown.error ? (
+                    <p className={styles.draftEmpty}>Outside read unavailable: {reviewShown.error}</p>
+                  ) : !reviewHasFindings(reviewShown) ? (
+                    <p className={styles.draftEmpty}>Nothing flagged — the honest all-clear. What&apos;s left is yours in the retype.</p>
+                  ) : (
+                    ([
+                      ['Reads like AI, not you', reviewShown.not_kyle],
+                      ['Claims not yet earned', reviewShown.unearned],
+                      ['Philosophy narrating over your story', reviewShown.narrated_over],
+                      ['Mechanical AI tells', reviewShown.tells ?? []],
+                    ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
+                      <div key={label} style={{ marginBottom: 12 }}>
+                        <div style={{ fontWeight: 600, opacity: 0.8, marginBottom: 3 }}>{label}</div>
+                        <ul style={{ margin: 0, paddingLeft: 16 }}>
+                          {items.map((f, i) => (
+                            <li key={i} style={{ marginBottom: 5 }}>
+                              <span style={{ fontStyle: 'italic' }}>“{f.line}”</span>
+                              {f.why ? <span style={{ opacity: 0.75 }}> — {f.why}</span> : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))
+                  )}
+                </>
+              ) : draftShown ? (
+                <div className={styles.draftText}>{draftShown}</div>
+              ) : (
+                <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>
+              )}
             </div>
-            {voiceMetrics && (
+            {effTab === 'draft' && voiceMetrics && (
               <div style={{ flexShrink: 0, borderTop: '0.5px solid #eee', padding: '7px 14px', fontSize: 11.5, color: '#555', display: 'flex', flexWrap: 'wrap', gap: '3px 14px', alignItems: 'center' }}>
                 <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em', color: '#aaa', fontSize: 10 }}>Voice meter</span>
                 <span title="Std-dev of sentence length in words. Higher = more human rhythm variation; flat prose is an AI tell.">
@@ -470,37 +532,6 @@ export default function ScribeChatPage() {
                 <span title={voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'no cliché tells found'}>
                   AI tells <strong style={{ color: voiceMetrics.tellTotal === 0 ? '#2e7d32' : '#c0392b' }}>{voiceMetrics.tellTotal}</strong>
                 </span>
-              </div>
-            )}
-            {reviewShown && (
-              <div className={styles.reviewPanel}>
-                <div style={{ fontWeight: 600, marginBottom: 6 }}>
-                  Outside reader{reviewShown.model ? ` · ${reviewShown.model}` : ''} — read the draft cold
-                </div>
-                {reviewShown.error ? (
-                  <p className={styles.draftEmpty}>Outside read unavailable: {reviewShown.error}</p>
-                ) : !reviewHasFindings(reviewShown) ? (
-                  <p className={styles.draftEmpty}>Nothing flagged — the honest all-clear. What&apos;s left is yours in the retype.</p>
-                ) : (
-                  ([
-                    ['Reads like AI, not you', reviewShown.not_kyle],
-                    ['Claims not yet earned', reviewShown.unearned],
-                    ['Philosophy narrating over your story', reviewShown.narrated_over],
-                    ['Mechanical AI tells', reviewShown.tells ?? []],
-                  ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
-                    <div key={label} style={{ marginBottom: 8 }}>
-                      <div style={{ fontWeight: 600, opacity: 0.8, marginBottom: 2 }}>{label}</div>
-                      <ul style={{ margin: 0, paddingLeft: 16 }}>
-                        {items.map((f, i) => (
-                          <li key={i} style={{ marginBottom: 4 }}>
-                            <span style={{ fontStyle: 'italic' }}>“{f.line}”</span>
-                            {f.why ? <span style={{ opacity: 0.75 }}> — {f.why}</span> : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))
-                )}
               </div>
             )}
             <div className={styles.draftActions}>
