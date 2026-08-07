@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
@@ -480,7 +479,7 @@ export default function LibraryOfArete() {
           />
         )}
 
-        {room === 'observatory' && <Observatory go={go} onDebate={debateConcept} />}
+        {room === 'observatory' && <Observatory go={go} onDebate={debateConcept} openWork={openWork} />}
       </div>
     </div>
   );
@@ -1589,7 +1588,7 @@ function Sky3D({ concepts, edges, freshEdges, learnedEdges, activeId, onPick, br
   );
 }
 
-function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (concept: string) => void }) {
+function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDebate: (concept: string) => void; openWork: (a: string, w: string, t: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
   const [obsState, setObsState] = useState<ObsState | null>(null);
   const [greeting, setGreeting] = useState<{ line: string; plaque: string } | null>(null);
@@ -1809,7 +1808,7 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
   const eraDepth = useMemo(() => eraDepthMap(concepts, obsState?.chronology), [concepts, obsState]);
 
   // ---- touch a star: one passage, attributed ----
-  type Passage = { text: string; author: string | null; work: string | null; section: string | null };
+  type Passage = { text: string; author: string | null; work: string | null; title: string | null; section: string | null };
   const [passage, setPassage] = useState<{ loading: boolean; concept: string; p: Passage | null; note: string | null } | null>(null);
   const touchStar = useCallback(async (conceptName: string) => {
     setPassage({ loading: true, concept: conceptName, p: null, note: null });
@@ -2083,7 +2082,21 @@ function Observatory({ go, onDebate }: { go: (r: Room) => void; onDebate: (conce
                 <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD, marginBottom: 20 }}>
                   {[passage.p.author, passage.p.work, passage.p.section].filter(Boolean).join(' · ')}
                 </div>
-                <Link href="/" className="lib-discuss" style={{ display: 'block', textAlign: 'center', textDecoration: 'none', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 11, padding: 12, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Read the whole tradition at the Academy →</Link>
+                {/* Stay in the Library: open the work this passage came from
+                    in the reading room. Only when the chunk lost its
+                    attribution do we fall back to the shelves. */}
+                <button
+                  onClick={() => {
+                    const p = passage.p!;
+                    setPassage(null);
+                    if (p.author && p.work) openWork(p.author, p.work, p.title || p.work);
+                    else go('reading');
+                  }}
+                  className="lib-discuss"
+                  style={{ display: 'block', width: '100%', textAlign: 'center', cursor: 'pointer', background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.35)', borderRadius: 11, padding: 12, fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}
+                >
+                  {passage.p.work ? `Read ${passage.p.title || passage.p.work} in full →` : 'Read the sources in full →'}
+                </button>
               </>
             )}
             {!passage.loading && !passage.p && (
