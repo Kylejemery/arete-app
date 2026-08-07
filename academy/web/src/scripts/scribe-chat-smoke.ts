@@ -12,6 +12,7 @@
 
 import { createAdminClient } from '../lib/supabase-admin'
 import { runScribeTurn, extractSnapshotIntent, extractDraft, TurnSource } from '../lib/scribe/chat'
+import { reviewDraft } from '../lib/scribe/review'
 import { withAttribution } from '../lib/scribe/attribution'
 
 const FRAGMENT =
@@ -87,13 +88,20 @@ async function main() {
     })
     const intent = extractSnapshotIntent(result.text)
     if (intent) {
+      // Mirror the /turn route: a final snapshot fires the cold outside read.
+      const review = intent.stage === 'final' ? await reviewDraft(intent.draft_text) : null
       await admin.from('scribe_entry_drafts').insert({
         entry_id: entry.id,
         stage: intent.stage,
         draft_text: intent.draft_text,
         sources_used: result.sources.length ? result.sources : null,
+        review,
       })
       console.log(`  … snapshot intent honored: stage=${intent.stage}`)
+      if (review) {
+        const n = review.not_kyle.length + review.unearned.length + review.narrated_over.length
+        console.log(`  … outside read (${review.model}): ${review.error ? `error — ${review.error}` : `${n} findings`}`)
+      }
     }
     console.log(`  sources this turn: ${result.sources.map(s => `${s.author} (${s.mode})`).join(', ') || 'none'}`)
     allTurns.push(result)
@@ -132,6 +140,29 @@ async function main() {
   check('voice guard — Scribe flags its own lines', /mine|my phrasing/i.test(t4Commentary))
   check("Kyle's language survives the full draft", !!d4 && /character|art of living/i.test(d4!))
   console.log('\n  — full-draft commentary excerpt —\n' + excerpt(t4.text.split('<draft>')[0]))
+
+  // ── 7b. Final handoff — terminal stage + cold outside read ──
+  const t5 = await turn('final handoff', 'Finalize the draft and hand it off: produce the final draft and the retype punch-list. No new directions or sources.')
+  const d5 = extractDraft(t5.text)
+  const { data: finalSnap } = await admin
+    .from('scribe_entry_drafts')
+    .select('stage, review')
+    .eq('entry_id', entry.id)
+    .eq('stage', 'final')
+    .maybeSingle()
+  check("snapshot saved as stage='final'", !!finalSnap)
+  const t5Commentary = t5.text.replace(/<draft>[\s\S]*?<\/draft>/, '')
+  check('retype punch-list present at handoff', /mine|retype|punch|earn them|cut them/i.test(t5Commentary))
+  check("Kyle's language survives to the final draft", !!d5 && /character|art of living/i.test(d5!))
+  const review = (finalSnap?.review ?? null) as { model: string; not_kyle: unknown[]; unearned: unknown[]; narrated_over: unknown[]; error?: string } | null
+  check('outside read stored on final snapshot', !!review && typeof review.model === 'string')
+  check('outside reader is a different family than the drafter (not Opus)', !!review && !/opus|claude/i.test(review.model))
+  if (review?.error) {
+    console.log(`  (outside read degraded gracefully: ${review.error})`)
+  } else if (review) {
+    const n = review.not_kyle.length + review.unearned.length + review.narrated_over.length
+    console.log(`  outside read: ${review.model} returned ${n} findings`)
+  }
 
   // ── 5. Push-back somewhere in the conversation ──
   const allCommentary = allTurns.map(t => t.text.split('<draft>')[0]).join('\n')

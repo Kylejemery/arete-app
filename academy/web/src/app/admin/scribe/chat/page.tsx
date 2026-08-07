@@ -22,7 +22,19 @@ type Source = {
   query: string
 }
 type Message = { id: string; role: 'user' | 'scribe'; content: string; sources_used: Source[] | null; created_at: string }
-type Draft = { id: string; stage: 'middle' | 'full'; draft_text: string; sources_used: Source[] | null; created_at: string }
+type ReviewFinding = { line: string; why: string }
+type Review = {
+  model: string
+  not_kyle: ReviewFinding[]
+  unearned: ReviewFinding[]
+  narrated_over: ReviewFinding[]
+  error?: string
+}
+type Draft = { id: string; stage: 'middle' | 'full' | 'final'; draft_text: string; sources_used: Source[] | null; review: Review | null; created_at: string }
+
+function reviewHasFindings(r: Review | null | undefined): boolean {
+  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0)
+}
 
 function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
@@ -32,7 +44,7 @@ function extractDraft(text: string): string | null {
 // Chat-bubble text: commentary only — the draft lives in its own pane.
 function commentaryOf(text: string): string {
   const out = text
-    .replace(/<snapshot stage="(?:middle|full)"\s*\/>/g, '')
+    .replace(/<snapshot stage="(?:middle|full|final)"\s*\/>/g, '')
     .replace(/<draft>[\s\S]*?(<\/draft>|$)/, '')
     .trim()
   return out || '(revised the working draft — see the draft pane)'
@@ -66,6 +78,9 @@ export default function ScribeChatPage() {
   const [streaming, setStreaming] = useState(false)
   const [searchingQuery, setSearchingQuery] = useState('')
   const [liveSources, setLiveSources] = useState<Source[]>([])
+  // The outside reader's findings from the just-finished final turn. Held until
+  // the next turn starts; a viewed snapshot's own stored review takes priority.
+  const [liveReview, setLiveReview] = useState<Review | null>(null)
 
   // Composer + draft pane
   const [input, setInput] = useState('')
@@ -131,6 +146,7 @@ export default function ScribeChatPage() {
     setStreamText('')
     setSearchingQuery('')
     setLiveSources([])
+    setLiveReview(null)
     setError('')
     try {
       const res = await fetch(`/api/admin/scribe/entries/${entryId}/turn`, {
@@ -161,11 +177,17 @@ export default function ScribeChatPage() {
             setSearchingQuery(ev.v as string)
           } else if (ev.t === 'sources') {
             setLiveSources(ev.v as Source[])
+          } else if (ev.t === 'review') {
+            setLiveReview(ev.v as Review)
           } else if (ev.t === 'error') {
             throw new Error(ev.v as string)
           } else if (ev.t === 'done') {
             const v = ev.v as { snapshot: { stage: string } | null }
-            if (v.snapshot) showToast(`Saved a ${v.snapshot.stage} draft snapshot`)
+            if (v.snapshot) {
+              showToast(v.snapshot.stage === 'final'
+                ? 'Final draft saved — outside reader has weighed in'
+                : `Saved a ${v.snapshot.stage} draft snapshot`)
+            }
           }
         }
       }
@@ -233,6 +255,9 @@ export default function ScribeChatPage() {
   const streamingDraft = streaming ? partialDraft(streamText) : null
   const viewedSnapshot = viewedDraftId ? drafts.find(d => d.id === viewedDraftId) : null
   const draftShown = viewedSnapshot?.draft_text ?? streamingDraft ?? lastScribeDraft
+  // A viewed final snapshot shows its own stored read; otherwise the live one
+  // from the turn just finished.
+  const reviewShown = viewedSnapshot?.review ?? (viewedDraftId ? null : liveReview)
 
   // Source panel: live during a turn, else the latest scribe turn's sources.
   const latestSources = (() => {
@@ -262,6 +287,13 @@ export default function ScribeChatPage() {
       showToast(e instanceof Error ? e.message : 'Snapshot failed')
     }
     setSnapshotting(false)
+  }
+
+  // The final handoff: Scribe stops developing, produces the final draft plus
+  // the retype punch-list, and the server fires one cold outside read.
+  async function finalize() {
+    if (!selectedId || streaming || !lastScribeDraft) return
+    await runTurn(selectedId, 'Finalize the draft and hand it off: produce the final draft and the retype punch-list. No new directions or sources.')
   }
 
   async function exportDraft() {
@@ -422,12 +454,45 @@ export default function ScribeChatPage() {
                 ? <div className={styles.draftText}>{draftShown}</div>
                 : <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>}
             </div>
+            {reviewShown && (
+              <div style={{ borderTop: '1px solid var(--border, #2a2a2a)', padding: '12px 16px', fontSize: 13 }}>
+                <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                  Outside reader{reviewShown.model ? ` · ${reviewShown.model}` : ''} — read the draft cold
+                </div>
+                {reviewShown.error ? (
+                  <p className={styles.draftEmpty}>Outside read unavailable: {reviewShown.error}</p>
+                ) : !reviewHasFindings(reviewShown) ? (
+                  <p className={styles.draftEmpty}>Nothing flagged — the honest all-clear. What&apos;s left is yours in the retype.</p>
+                ) : (
+                  ([
+                    ['Reads like AI, not you', reviewShown.not_kyle],
+                    ['Claims not yet earned', reviewShown.unearned],
+                    ['Philosophy narrating over your story', reviewShown.narrated_over],
+                  ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
+                    <div key={label} style={{ marginBottom: 8 }}>
+                      <div style={{ fontWeight: 600, opacity: 0.8, marginBottom: 2 }}>{label}</div>
+                      <ul style={{ margin: 0, paddingLeft: 16 }}>
+                        {items.map((f, i) => (
+                          <li key={i} style={{ marginBottom: 4 }}>
+                            <span style={{ fontStyle: 'italic' }}>“{f.line}”</span>
+                            {f.why ? <span style={{ opacity: 0.75 }}> — {f.why}</span> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
             <div className={styles.draftActions}>
               <button className={styles.snapshotChip} onClick={() => snapshot('middle')} disabled={snapshotting || !lastScribeDraft || streaming}>
                 Save as middle
               </button>
               <button className={styles.snapshotChip} onClick={() => snapshot('full')} disabled={snapshotting || !lastScribeDraft || streaming}>
                 Save as full
+              </button>
+              <button className={styles.snapshotChip} onClick={finalize} disabled={!lastScribeDraft || streaming} title="Stop developing; produce the final draft, the retype punch-list, and a cold outside read">
+                Finalize + outside read
               </button>
               {drafts.length > 0 && (
                 <>

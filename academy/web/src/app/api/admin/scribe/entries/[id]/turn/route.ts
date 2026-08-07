@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { runScribeTurn, extractSnapshotIntent, TurnSource } from '@/lib/scribe/chat'
+import { reviewDraft } from '@/lib/scribe/review'
 
 export const dynamic = 'force-dynamic'
 // Same budget as the pipeline's Opus draft stage — a turn can be a full-draft
@@ -87,6 +88,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         let snapshot: { id: string; stage: string } | null = null
         const intent = extractSnapshotIntent(text)
         if (intent) {
+          // The final handoff triggers one cold outside read — a different model,
+          // blind to this conversation, scoring the finished draft. It runs
+          // before the insert so the findings persist on the snapshot row, and
+          // it never throws (a broken reviewer must not block finalization).
+          const review = intent.stage === 'final' ? await reviewDraft(intent.draft_text) : null
           const { data: draft, error: draftError } = await admin
             .from('scribe_entry_drafts')
             .insert({
@@ -94,11 +100,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               stage: intent.stage,
               draft_text: intent.draft_text,
               sources_used: sources.length ? sources : null,
+              review,
             })
             .select('id, stage')
             .single()
           if (draftError) throw new Error(`snapshotting draft: ${draftError.message}`)
           snapshot = draft
+          if (review) emit('review', review)
         }
 
         emit('done', { messageId: saved.id, snapshot })
