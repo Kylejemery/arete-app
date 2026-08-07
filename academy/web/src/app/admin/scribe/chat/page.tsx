@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import admin from '../../admin.module.css'
 import styles from './chat.module.css'
 import { withAttribution } from '@/lib/scribe/attribution'
+import { computeVoiceMetrics } from '@/lib/scribe/voice-metrics'
 
 type Entry = { id: string; title: string | null; raw_text: string; created_at: string; updated_at: string }
 type Source = {
@@ -28,12 +29,13 @@ type Review = {
   not_kyle: ReviewFinding[]
   unearned: ReviewFinding[]
   narrated_over: ReviewFinding[]
+  tells?: ReviewFinding[]
   error?: string
 }
 type Draft = { id: string; stage: 'middle' | 'full' | 'final'; draft_text: string; sources_used: Source[] | null; review: Review | null; created_at: string }
 
 function reviewHasFindings(r: Review | null | undefined): boolean {
-  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0)
+  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || (r.tells?.length ?? 0) > 0)
 }
 
 function extractDraft(text: string): string | null {
@@ -258,6 +260,8 @@ export default function ScribeChatPage() {
   // A viewed final snapshot shows its own stored read; otherwise the live one
   // from the turn just finished.
   const reviewShown = viewedSnapshot?.review ?? (viewedDraftId ? null : liveReview)
+  // Deterministic voice meter — recomputed from whatever draft is shown.
+  const voiceMetrics = draftShown ? computeVoiceMetrics(draftShown) : null
 
   // Source panel: live during a turn, else the latest scribe turn's sources.
   const latestSources = (() => {
@@ -454,6 +458,20 @@ export default function ScribeChatPage() {
                 ? <div className={styles.draftText}>{draftShown}</div>
                 : <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>}
             </div>
+            {voiceMetrics && (
+              <div style={{ flexShrink: 0, borderTop: '0.5px solid #eee', padding: '7px 14px', fontSize: 11.5, color: '#555', display: 'flex', flexWrap: 'wrap', gap: '3px 14px', alignItems: 'center' }}>
+                <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em', color: '#aaa', fontSize: 10 }}>Voice meter</span>
+                <span title="Std-dev of sentence length in words. Higher = more human rhythm variation; flat prose is an AI tell.">
+                  rhythm <strong style={{ color: voiceMetrics.burstinessLabel === 'good' ? '#2e7d32' : voiceMetrics.burstinessLabel === 'ok' ? '#b8860b' : '#c0392b' }}>{voiceMetrics.burstiness}</strong> ({voiceMetrics.burstinessLabel})
+                </span>
+                <span title="Average words per sentence.">avg {voiceMetrics.meanSentenceLen}w</span>
+                <span title="-ly adverbs per 100 words. Lower is usually tighter.">adverbs {voiceMetrics.adverbRate}</span>
+                <span title="to-be verbs (is/are/was…) per 100 words. High = flatter prose.">to-be {voiceMetrics.toBeRate}</span>
+                <span title={voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'no cliché tells found'}>
+                  AI tells <strong style={{ color: voiceMetrics.tellTotal === 0 ? '#2e7d32' : '#c0392b' }}>{voiceMetrics.tellTotal}</strong>
+                </span>
+              </div>
+            )}
             {reviewShown && (
               <div className={styles.reviewPanel}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>
@@ -468,6 +486,7 @@ export default function ScribeChatPage() {
                     ['Reads like AI, not you', reviewShown.not_kyle],
                     ['Claims not yet earned', reviewShown.unearned],
                     ['Philosophy narrating over your story', reviewShown.narrated_over],
+                    ['Mechanical AI tells', reviewShown.tells ?? []],
                   ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
                     <div key={label} style={{ marginBottom: 8 }}>
                       <div style={{ fontWeight: 600, opacity: 0.8, marginBottom: 2 }}>{label}</div>
