@@ -455,7 +455,7 @@ export default function ScribeChatPage() {
                 : <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>}
             </div>
             {reviewShown && (
-              <div style={{ borderTop: '1px solid var(--border, #2a2a2a)', padding: '12px 16px', fontSize: 13 }}>
+              <div className={styles.reviewPanel}>
                 <div style={{ fontWeight: 600, marginBottom: 6 }}>
                   Outside reader{reviewShown.model ? ` · ${reviewShown.model}` : ''} — read the draft cold
                 </div>
