@@ -61,13 +61,26 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       const emit = (t: string, v: unknown) =>
         controller.enqueue(encoder.encode(JSON.stringify({ t, v }) + '\n'))
       try {
+        // Kyle's voice = the active style profile (newest-updated), the same
+        // store the pipeline draft stage reads. Null if he hasn't added one.
+        const { data: style } = await admin
+          .from('scribe_style_profiles')
+          .select('exemplar_refs, guidance')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        const voice = style
+          ? { exemplars: style.exemplar_refs ?? [], guidance: style.guidance ?? null }
+          : null
+
         const { text, sources } = await runScribeTurn(
           thread as { role: 'user' | 'scribe'; content: string }[],
           {
             onText: v => emit('text', v),
             onSearching: v => emit('searching', v),
             onSources: (v: TurnSource[]) => emit('sources', v),
-          }
+          },
+          voice
         )
 
         const { data: saved, error: saveError } = await admin

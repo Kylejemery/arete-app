@@ -40,6 +40,14 @@ export interface SnapshotIntent {
   draft_text: string
 }
 
+// Kyle's voice, sourced from the active scribe_style_profiles row (the same
+// store the pipeline draft stage uses). Injected into the system prompt so
+// Scribe develops in his actual cadence and diction, not generic-essay prose.
+export interface VoiceProfile {
+  exemplars: { title: string; text: string }[]
+  guidance: string | null
+}
+
 type RagHit = {
   id: string
   chunk_text: string
@@ -89,6 +97,16 @@ But an editor with a spine can always find one more thing — and a draft that n
 
 VOICE GUARD — even at the finish
 Whenever you produce or revise a full draft, flag the lines that are YOUR phrasing rather than Kyle's (a short list in the commentary: "Lines that are mine — earn them in the retype or cut them"), and point to where a concrete lived moment — a specific scene — would turn a claim into evidence.
+
+PROSE PHYSICS — how the sentences must move
+Generic machine prose has two tells, and they are the same two things that make writing dull: every sentence runs the same length, and every word is the most predictable one. Write against both, on every draft:
+- Vary the rhythm hard. Follow a long, winding sentence with a three-word one. A fragment is allowed. If your paragraphs all have the same cadence, you have failed — read them aloud in your head and break the pattern.
+- Choose the specific concrete word over the general one every time: the gutter he never fixed, not "a reminder of loss." Name the thing. Prefer strong verbs to adverbs; cut "very," "really," "quite."
+- Kill the scaffolding: no "firstly / secondly / in conclusion," no "it's important to note," no "moreover / furthermore." Kill the hedge stack ("while X, it's also true that Y"). Say the thing.
+- Break the rule-of-three reflex. Machine prose reaches for "clarity, purpose, and meaning." Do not stack three parallel items unless the third genuinely earns its place; two is often stronger, and an unexpected single is stronger still.
+- No thesaurus diction: no "delve," "tapestry," "testament to," "navigate the complexities," "underscore," "landscape," "realm." Plain, exact words.
+- Land, don't summarize. The last line is a turn — it arrives somewhere the reader didn't see coming but now finds inevitable. Never restate what the essay already said.
+These rules never override THE SPINE or the VOICE GUIDANCE below; when they conflict, Kyle's actual voice wins.
 
 SNAPSHOTS
 When Kyle asks to save the current state, or when he asks you to develop the full draft, emit exactly one marker line before the draft tags: <snapshot stage="middle"/>, <snapshot stage="full"/>, or <snapshot stage="final"/>. A middle draft still has [YOUR TURN: ...] gaps; a full draft is fully developed prose (gaps closed, though flagged lines and open tensions remain in the commentary). Do not emit any marker on ordinary revision turns.
@@ -213,15 +231,33 @@ export interface TurnEvents {
 // Run one Scribe turn: full thread as history, agentic search loop, streamed
 // text. Returns the complete assistant text and every source retrieved on
 // this turn (for scribe_messages.sources_used — the audit trail).
+// Append Kyle's voice reference to the base system prompt. Same framing the
+// pipeline draft stage uses, so the two paths sound like the same author.
+function buildSystem(voice: VoiceProfile | null): string {
+  if (!voice) return SYSTEM_PROMPT
+  let s = SYSTEM_PROMPT
+  const exemplars = (voice.exemplars ?? [])
+    .filter(e => e?.text?.trim())
+    .map((e, i) => `--- exemplar ${i + 1}: ${e.title} ---\n${e.text}`)
+    .join('\n\n')
+  if (exemplars) {
+    s += `\n\nHOW KYLE WRITES — these are his own paragraphs. Match this cadence, sentence-length variation, diction, and how he opens and closes; this is the voice the finished essay must sound like. Learn the voice, do NOT reuse their content:\n\n${exemplars}`
+  }
+  if (voice.guidance?.trim()) s += `\n\nVOICE GUIDANCE: ${voice.guidance.trim()}`
+  return s
+}
+
 export async function runScribeTurn(
   history: { role: 'user' | 'scribe'; content: string }[],
-  events: TurnEvents
+  events: TurnEvents,
+  voice: VoiceProfile | null = null
 ): Promise<{ text: string; sources: TurnSource[] }> {
   const messages: Anthropic.MessageParam[] = history.map(m => ({
     role: m.role === 'scribe' ? 'assistant' : 'user',
     content: m.content,
   }))
 
+  const systemText = buildSystem(voice)
   const turnSources: TurnSource[] = []
   const seenChunks = new Set<string>()
   let fullText = ''
@@ -231,7 +267,7 @@ export async function runScribeTurn(
     const stream = getClient().messages.stream({
       model: CHAT_MODEL,
       max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
+      system: systemText,
       messages,
       // On the final permitted round withhold the tools so the model must
       // finish the turn with what it has retrieved.

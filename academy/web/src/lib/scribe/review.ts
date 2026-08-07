@@ -27,7 +27,8 @@ Read the draft once, as a stranger would. Then report ONLY what you are genuinel
 {
   "not_kyle": [ { "line": "<the exact phrase or sentence>", "why": "<why it reads like generic AI prose rather than a specific person who lived this>" } ],
   "unearned": [ { "line": "<the claim>", "why": "<why it is asserted as universal or settled when the essay hasn't earned it>" } ],
-  "narrated_over": [ { "line": "<the passage>", "why": "<where the philosophy talks over the author's own story instead of enriching it>" } ]
+  "narrated_over": [ { "line": "<the passage>", "why": "<where the philosophy talks over the author's own story instead of enriching it>" } ],
+  "tells": [ { "line": "<the exact phrase or sentence>", "why": "<the mechanical AI-writing tell: uniform sentence rhythm, rule-of-three / parallelism overuse, signposting (firstly/in conclusion), hedging, thesaurus diction (delve, tapestry, underscore), or cliché phrasing>" } ]
 }
 
 Rules:
@@ -45,12 +46,13 @@ export interface ReviewFindings {
   not_kyle: ReviewFinding[]
   unearned: ReviewFinding[]
   narrated_over: ReviewFinding[]
+  tells: ReviewFinding[]
   // Set only when the pass could not complete; arrays are empty in that case.
   error?: string
 }
 
 function empty(model: string, error: string): ReviewFindings {
-  return { model, not_kyle: [], unearned: [], narrated_over: [], error }
+  return { model, not_kyle: [], unearned: [], narrated_over: [], tells: [], error }
 }
 
 function asFindings(raw: unknown): ReviewFinding[] {
@@ -102,6 +104,7 @@ export async function reviewDraft(draft: string): Promise<ReviewFindings> {
       not_kyle: asFindings(parsed.not_kyle),
       unearned: asFindings(parsed.unearned),
       narrated_over: asFindings(parsed.narrated_over),
+      tells: asFindings(parsed.tells),
     }
   } catch (e) {
     return empty(model, e instanceof Error ? e.message : 'Reviewer call failed.')
@@ -110,5 +113,5 @@ export async function reviewDraft(draft: string): Promise<ReviewFindings> {
 
 // True when the pass produced at least one usable finding.
 export function hasFindings(r: ReviewFindings | null | undefined): boolean {
-  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0)
+  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || r.tells.length > 0)
 }
