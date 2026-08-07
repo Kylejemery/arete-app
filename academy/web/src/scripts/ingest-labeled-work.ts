@@ -30,6 +30,15 @@ function flag(name: string): boolean {
 
 interface Boundary { offset: number; label: string }
 
+// Range-aware join: labels may themselves be ranges ("2.54–2.59") — a chunk
+// spanning several takes the low end of the first and the high end of the last.
+function joinLabels(a: string, b: string): string {
+  const lo = a.split('–')[0]
+  const parts = b.split('–')
+  const hi = parts[parts.length - 1]
+  return lo === hi ? lo : `${lo}–${hi}`
+}
+
 function labelFor(boundaries: Boundary[], start: number, end: number): string {
   let first = boundaries[0]
   for (const b of boundaries) {
@@ -40,7 +49,23 @@ function labelFor(boundaries: Boundary[], start: number, end: number): string {
   const last = spanned.length ? spanned[spanned.length - 1] : first
   if (first.label === last.label) return first.label
   if (first.label === 'front matter') return spanned.length === 1 ? last.label : `front matter–${last.label}`
-  return `${first.label}–${last.label}`
+  return joinLabels(first.label, last.label)
+}
+
+// --sparse: the source anchors only some sections (e.g. ToposText ND anchors
+// 170 of ~370). Expand each anchor's label to the range it actually covers —
+// "2.54" followed by "2.60" becomes "2.54–2.59" — so citations of the
+// unanchored sections in between verify instead of false-mismatching.
+function expandSparse(boundaries: Boundary[]): void {
+  for (let i = 1; i < boundaries.length - 1; i++) {
+    const cur = boundaries[i].label
+    const next = boundaries[i + 1].label
+    const c = cur.match(/^(.*?)(\d+)$/)
+    const n = next.match(/^(.*?)(\d+)$/)
+    if (!c || !n || c[1] !== n[1]) continue // sentinel or book boundary
+    const gapEnd = parseInt(n[2], 10) - 1
+    if (gapEnd > parseInt(c[2], 10)) boundaries[i].label = `${cur}–${c[1]}${gapEnd}`
+  }
 }
 
 async function main() {
@@ -68,6 +93,7 @@ async function main() {
     if (m) boundaries.push({ offset, label: `${prefix}${m[1]}` })
     offset += line.split(/\s+/).filter(Boolean).length
   }
+  if (flag('sparse')) expandSparse(boundaries)
   const words = raw.split(/\s+/).filter(Boolean)
   console.log(`${author}, ${work}: ${words.length.toLocaleString()} words · ${boundaries.length - 1} passages (…${boundaries[boundaries.length - 1].label})`)
 
