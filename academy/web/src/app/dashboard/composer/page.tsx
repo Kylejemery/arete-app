@@ -1,28 +1,37 @@
 'use client';
 
-// The composer — the Interlocutor's only surface. A long-form editor and one
-// explicit invocation. No ambient flagging, no inline suggestions, no
-// autocomplete: the agent speaks when asked and not otherwise.
+// The composer — the Interlocutor Studio. A long-form editor and one explicit
+// invocation, as before, but the response is now marked up in place: the draft
+// is snapshotted as an immutable version and returned with annotations anchored
+// to the sentences that earned them, colored by severity, some carrying a
+// concrete rewrite the student accepts or rejects.
 //
-// Paste and drop are permitted: drafts written elsewhere can be brought in.
-// (The editor once blocked insertion so revisions had to be typed; that
-// mechanism was lifted deliberately.)
+// The loop the studio adds: write -> submit for markup -> accept/dismiss and
+// revise -> submit again as the next version, with the version rail showing the
+// argument getting less red over time. Revision happens back in the textarea
+// (academy has no rich-text editor), so accepting a rewrite repopulates the
+// editor rather than mutating the reviewed snapshot.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import {
-  CritiqueBody,
-  DimensionChips,
-  InterlocutorChat,
-  MIN_CRITIQUE_CHARS as MIN_CHARS,
-  type CritiqueResult,
-} from '@/components/InterlocutorPanel';
-
-type Mode = 'full' | 'structural';
+import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/InterlocutorPanel';
+import { MarkedUpDraft, type Annotation } from '@/components/MarkedUpDraft';
+import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
+import { applyAccepted, type AcceptedEdit } from '@/lib/annotations';
 
 const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
+const PIECE_KEY = 'interlocutor-piece-id';
+
+interface ReviewData {
+  draftId: string;
+  version: number;
+  content: string;
+  summary: string;
+  annotations: Annotation[];
+  generalNotes: Annotation[];
+}
 
 export default function ComposerPage() {
   const router = useRouter();
@@ -31,29 +40,72 @@ export default function ComposerPage() {
   const [loaded, setLoaded] = useState(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
-  const [mode, setMode] = useState<Mode>('full');
+  const [pieceId, setPieceId] = useState<string | null>(null);
+
+  const [view, setView] = useState<'editor' | 'review'>('editor');
+  const [review, setReview] = useState<ReviewData | null>(null);
+  // The draft produced by this session's latest submit is editable; a version
+  // opened from the rail is read-only.
+  const [liveDraftId, setLiveDraftId] = useState<string | null>(null);
+  const [history, setHistory] = useState<DraftSummary[]>([]);
 
   const [working, setWorking] = useState(false);
-  const [result, setResult] = useState<CritiqueResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // ── Auth + draft restore ───────────────────────────────────────────────────
+  // ── Load the draft's version rail for the rail + counts ──────────────────────
+  const loadHistory = useCallback(async (pid: string) => {
+    const { data: drafts } = await supabase
+      .from('piece_drafts')
+      .select('id, version, created_at, word_count')
+      .eq('piece_id', pid)
+      .order('version', { ascending: false });
+    const rows = (drafts as { id: string; version: number; created_at: string; word_count: number }[]) ?? [];
+    if (rows.length === 0) {
+      setHistory([]);
+      return;
+    }
+    const ids = rows.map(r => r.id);
+    const { data: anns } = await supabase
+      .from('draft_annotations')
+      .select('draft_id, severity')
+      .in('draft_id', ids);
+    const tally: Record<string, Record<string, number>> = {};
+    for (const a of (anns as { draft_id: string; severity: string }[]) ?? []) {
+      (tally[a.draft_id] ??= {})[a.severity] = ((tally[a.draft_id] ??= {})[a.severity] ?? 0) + 1;
+    }
+    setHistory(
+      rows.map(r => ({
+        id: r.id,
+        version: r.version,
+        created_at: r.created_at,
+        wordCount: r.word_count,
+        counts: tally[r.id] ?? {},
+      }))
+    );
+  }, []);
+
+  // ── Auth + restore ───────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       if (cancelled) return;
+      let pid: string | null = null;
       try {
         setText(localStorage.getItem(DRAFT_KEY) ?? '');
         setTitle(localStorage.getItem(TITLE_KEY) ?? '');
+        pid = localStorage.getItem(PIECE_KEY);
       } catch {}
+      if (pid) {
+        setPieceId(pid);
+        await loadHistory(pid);
+      }
       setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [router]);
+  }, [router, loadHistory]);
 
   const handleTextChange = (v: string) => {
     setText(v);
@@ -64,55 +116,143 @@ export default function ComposerPage() {
     try { localStorage.setItem(TITLE_KEY, v); } catch {}
   };
 
-  const trackSelection = useCallback(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    setSelection({ start: el.selectionStart, end: el.selectionEnd });
-  }, []);
-
-  const selected = text.slice(selection.start, selection.end).trim();
-  const hasSelection = selected.length >= MIN_CHARS;
-  const submission = hasSelection ? selected : text.trim();
+  const submission = text.trim();
   const canSubmit = submission.length >= MIN_CHARS && !working;
+  const words = useMemo(() => (submission ? submission.split(/\s+/).length : 0), [submission]);
 
-  const words = useMemo(
-    () => (text.trim() ? text.trim().split(/\s+/).length : 0),
-    [text]
-  );
-
+  // ── Submit for markup ─────────────────────────────────────────────────────────
   const invoke = async () => {
     if (!canSubmit) return;
     setWorking(true);
     setError(null);
-    setResult(null);
+    setNotice(null);
     try {
-      const res = await fetch('/api/interlocutor/critique', {
+      const res = await fetch('/api/interlocutor/annotate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          excerpt: submission,
-          scope: hasSelection ? 'selection' : 'document',
-          documentContext: hasSelection ? text : undefined,
-          pieceTitle: title.trim() || undefined,
-          mode,
+          pieceId: pieceId || undefined,
+          title: title.trim() || undefined,
+          draftContent: text,
         }),
       });
       const data: unknown = await res.json();
       if (!res.ok) {
-        const msg = (data as { error?: string }).error;
-        setError(msg ?? 'The Interlocutor is unavailable.');
+        setError((data as { error?: string }).error ?? 'The Interlocutor is unavailable.');
         return;
       }
-      const d = data as CritiqueResult;
-      setResult(d);
+      const d = data as {
+        pieceId: string;
+        draftId: string;
+        version: number;
+        summary: string;
+        annotations: Annotation[];
+        generalNotes: Annotation[];
+        recorded: boolean;
+      };
+      setPieceId(d.pieceId);
+      try { localStorage.setItem(PIECE_KEY, d.pieceId); } catch {}
+      setReview({
+        draftId: d.draftId,
+        version: d.version,
+        content: text,
+        summary: d.summary,
+        annotations: d.annotations ?? [],
+        generalNotes: d.generalNotes ?? [],
+      });
+      setLiveDraftId(d.draftId);
+      setView('review');
       if (!d.recorded) {
-        setNotice('This critique was not written to your history, so it will not shape your profile.');
+        setNotice('This pass was not written to your history, so it will not shape your profile.');
       }
+      await loadHistory(d.pieceId);
     } catch {
       setError('The Interlocutor could not be reached.');
     } finally {
       setWorking(false);
     }
+  };
+
+  // ── Accept / dismiss on the live draft ────────────────────────────────────────
+  const setAnnStatus = async (a: Annotation, status: 'accepted' | 'dismissed') => {
+    setReview(prev =>
+      prev
+        ? {
+            ...prev,
+            annotations: prev.annotations.map(x => (x.id === a.id ? { ...x, status } : x)),
+            generalNotes: prev.generalNotes.map(x => (x.id === a.id ? { ...x, status } : x)),
+          }
+        : prev
+    );
+    const { error: upErr } = await supabase
+      .from('draft_annotations')
+      .update({ status })
+      .eq('id', a.id);
+    if (upErr) {
+      setNotice('That change did not save. It will apply here but may not persist.');
+    }
+  };
+
+  const acceptedEdits: AcceptedEdit[] = useMemo(() => {
+    if (!review) return [];
+    return review.annotations
+      .filter(a => a.status === 'accepted' && a.start_offset !== null && a.end_offset !== null && a.suggestion)
+      .map(a => ({
+        start: a.start_offset as number,
+        end: a.end_offset as number,
+        suggestion: a.suggestion as string,
+      }));
+  }, [review]);
+
+  // Carry the reviewed version (with accepted rewrites spliced in) back into the
+  // editor. The next submit becomes the following version.
+  const reviseInEditor = () => {
+    if (!review) return;
+    const revised = applyAccepted(review.content, acceptedEdits);
+    handleTextChange(revised);
+    setView('editor');
+    setNotice(
+      acceptedEdits.length
+        ? `${acceptedEdits.length} accepted rewrite${acceptedEdits.length === 1 ? '' : 's'} applied. Keep revising, then submit again for the next draft.`
+        : 'Back in the editor. Keep revising, then submit again for the next draft.'
+    );
+  };
+
+  // ── Open a past version from the rail (read-only) ──────────────────────────────
+  const openDraft = async (draftId: string) => {
+    setError(null);
+    const { data: draft } = await supabase
+      .from('piece_drafts')
+      .select('id, version, content')
+      .eq('id', draftId)
+      .maybeSingle();
+    if (!draft) { setError('That draft could not be opened.'); return; }
+    const d = draft as { id: string; version: number; content: string };
+    const { data: anns } = await supabase
+      .from('draft_annotations')
+      .select('id, start_offset, end_offset, quote, dimension, severity, comment, suggestion, status')
+      .eq('draft_id', draftId);
+    const all = (anns as Annotation[]) ?? [];
+    setReview({
+      draftId: d.id,
+      version: d.version,
+      content: d.content,
+      summary: '',
+      annotations: all.filter(a => a.start_offset !== null),
+      generalNotes: all.filter(a => a.start_offset === null),
+    });
+    setView('review');
+  };
+
+  const newPiece = () => {
+    setPieceId(null);
+    setReview(null);
+    setLiveDraftId(null);
+    setHistory([]);
+    setView('editor');
+    handleTitleChange('');
+    handleTextChange('');
+    try { localStorage.removeItem(PIECE_KEY); } catch {}
   };
 
   if (!loaded) {
@@ -123,132 +263,148 @@ export default function ComposerPage() {
     );
   }
 
+  const reviewReadOnly = review ? review.draftId !== liveDraftId : true;
+
   return (
-    <div className="max-w-3xl">
-      <header className="mb-8">
-        <p className="font-mono text-academy-gold text-xs uppercase tracking-[0.3em] mb-2">
-          The Interlocutor
-        </p>
-        <p className="text-academy-muted text-sm leading-relaxed">
-          Write the argument. Select a passage and ask, or ask on the whole draft.
-          The Interlocutor will not write a sentence for you.
-        </p>
+    <div className="max-w-6xl">
+      <header className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <p className="font-mono text-academy-gold text-xs uppercase tracking-[0.3em] mb-2">
+            The Interlocutor
+          </p>
+          <p className="text-academy-muted text-sm leading-relaxed max-w-2xl">
+            Write the argument, then submit it for markup. The Interlocutor returns your
+            draft marked up in place: each judgment fastened to the sentence that earned it,
+            colored by how much it costs the argument. Where a fix is better shown than
+            described, it offers a rewrite you can accept or reject. Revise, and submit again.
+          </p>
+        </div>
+        {(pieceId || text.trim()) && (
+          <button
+            onClick={newPiece}
+            className="flex-shrink-0 font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
+          >
+            New piece
+          </button>
+        )}
       </header>
 
-      {/* ── The editor ──────────────────────────────────────────────────────── */}
-      <input
-        className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
-        placeholder="Untitled"
-        value={title}
-        onChange={e => handleTitleChange(e.target.value)}
-      />
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-start">
+        <div className="min-w-0">
+          {view === 'editor' ? (
+            <>
+              <input
+                className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
+                placeholder="Untitled"
+                value={title}
+                onChange={e => handleTitleChange(e.target.value)}
+              />
 
-      <textarea
-        ref={editorRef}
-        className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
-        placeholder="Begin."
-        value={text}
-        onChange={e => handleTextChange(e.target.value)}
-        onSelect={trackSelection}
-        onKeyUp={trackSelection}
-        onMouseUp={trackSelection}
-      />
+              <textarea
+                ref={editorRef}
+                className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
+                placeholder="Begin."
+                value={text}
+                onChange={e => handleTextChange(e.target.value)}
+              />
 
-      <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
-        <span>{words} word{words === 1 ? '' : 's'}</span>
-        <span>
-          {hasSelection
-            ? `${selected.split(/\s+/).length} words selected`
-            : selection.end > selection.start
-              ? 'selection too short to judge'
-              : 'no selection'}
-        </span>
-      </div>
+              <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
+                <span>{words} word{words === 1 ? '' : 's'}</span>
+                {review && (
+                  <button onClick={() => setView('review')} className="hover:text-academy-text">
+                    ← back to the markup
+                  </button>
+                )}
+              </div>
 
-      {notice && (
-        <p className="text-academy-gold text-xs mt-3 leading-relaxed">{notice}</p>
-      )}
+              <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
+                <button
+                  onClick={invoke}
+                  disabled={!canSubmit}
+                  className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
+                </button>
+                {submission.length > 0 && submission.length < MIN_CHARS && (
+                  <span className="text-academy-muted text-xs">Too little to judge.</span>
+                )}
+              </div>
+            </>
+          ) : (
+            review && (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-academy-gold text-xs uppercase tracking-widest">
+                      Draft v{review.version}
+                    </span>
+                    {reviewReadOnly && (
+                      <span className="font-mono text-[10px] uppercase tracking-wider text-academy-muted">
+                        read-only
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {!reviewReadOnly && (
+                      <button
+                        onClick={reviseInEditor}
+                        className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-4 py-2 text-xs hover:opacity-90"
+                      >
+                        {acceptedEdits.length
+                          ? `Apply ${acceptedEdits.length} & revise`
+                          : 'Revise in editor'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setView('editor')}
+                      className="border border-academy-border text-academy-muted hover:text-academy-text rounded-lg px-4 py-2 text-xs"
+                    >
+                      To editor
+                    </button>
+                  </div>
+                </div>
 
-      {/* ── Invocation ──────────────────────────────────────────────────────── */}
-      <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
-        <button
-          onClick={invoke}
-          disabled={!canSubmit}
-          className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {working
-            ? 'Reading…'
-            : hasSelection
-              ? 'Submit the selection'
-              : 'Submit the draft'}
-        </button>
+                <MarkedUpDraft
+                  content={review.content}
+                  annotations={review.annotations}
+                  generalNotes={review.generalNotes}
+                  summary={review.summary || undefined}
+                  readOnly={reviewReadOnly}
+                  onAccept={a => setAnnStatus(a, 'accepted')}
+                  onDismiss={a => setAnnStatus(a, 'dismissed')}
+                />
+              </>
+            )
+          )}
 
-        <div className="flex items-center gap-1 text-xs font-mono">
-          {(['full', 'structural'] as Mode[]).map(m => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              className={`px-3 py-1.5 rounded border transition-colors ${
-                mode === m
-                  ? 'border-academy-gold text-academy-gold'
-                  : 'border-academy-border text-academy-muted hover:text-academy-text'
-              }`}
-            >
-              {m === 'full' ? 'Full critique' : 'Structural pass'}
-            </button>
-          ))}
+          {notice && <p className="text-academy-gold text-xs mt-4 leading-relaxed">{notice}</p>}
+          {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
         </div>
 
-        {submission.length > 0 && submission.length < MIN_CHARS && (
-          <span className="text-academy-muted text-xs">
-            Too little to judge.
-          </span>
-        )}
+        {/* ── The version rail ─────────────────────────────────────────────── */}
+        <div className="lg:sticky lg:top-4">
+          <DraftHistory
+            versions={history}
+            activeDraftId={review?.draftId ?? null}
+            onSelect={openDraft}
+          />
+        </div>
       </div>
 
-      {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
-
-      {/* ── The critique ────────────────────────────────────────────────────── */}
-      {result && (
-        <section className="mt-12 border-l-2 border-academy-gold pl-6">
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mr-2">
-              The Interlocutor
-            </p>
-            <DimensionChips dimensions={result.dimensions_flagged} />
-          </div>
-          <CritiqueBody critique={result.critique} />
-        </section>
-      )}
-
-      {/* ── Conversation ────────────────────────────────────────────────────────
-          Available with or without a critique: a question about a paragraph you
-          are stuck on should not require submitting the whole draft first. It
-          stays anchored to the draft either way, and inherits the critique as
-          context once one exists. */}
-      <section className="mt-12 border-t border-academy-gold/20 pt-6">
-        <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">
-          {result ? 'Continue' : 'Ask'}
-        </p>
+      {/* ── Conversation, anchored to the draft ──────────────────────────────── */}
+      <section className="mt-12 border-t border-academy-gold/20 pt-6 max-w-3xl">
+        <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">Ask</p>
         {text.trim().length >= MIN_CHARS ? (
           <InterlocutorChat
-            key={result?.id ?? 'no-critique'}
-            excerpt={hasSelection ? selected : text}
-            critique={result?.critique}
-            critiqueId={result?.id}
+            key={review?.draftId ?? 'no-draft'}
+            excerpt={review?.content ?? text}
             pieceTitle={title}
-            placeholder={
-              result
-                ? 'Push back, or ask what a judgment meant…'
-                : 'Ask about the draft. It will not write a sentence for you…'
-            }
+            placeholder="Ask about the draft, or push back on a judgment…"
           />
         ) : (
-          // The heading stays even when the box cannot. Hiding the section
-          // outright left nothing on the page to explain the absence.
           <p className="text-academy-muted text-sm leading-relaxed">
-            The conversation is anchored to the draft, so it opens once there is
-            a draft to anchor it to. Write a few sentences above.
+            The conversation is anchored to the draft, so it opens once there is a draft to
+            anchor it to. Write a few sentences above.
           </p>
         )}
       </section>

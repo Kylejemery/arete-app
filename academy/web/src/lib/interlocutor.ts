@@ -177,6 +177,56 @@ Do not repeat the critique. They have read it. If they ask what you meant, answe
 
 Match their length. A one-line question gets a one-line answer. Do not open with a summary of what they just said.`
 
+// ── Annotation mode ─────────────────────────────────────────────────────────
+// The marked-up pass. Instead of one prose critique, the Interlocutor returns a
+// set of annotations, each fastened to a verbatim quote from the draft, so the
+// student sees each judgment on the sentence that earned it rather than a wall of
+// text they must map back onto their own work.
+//
+// This mode RELAXES the absolute constraint: an annotation may carry a concrete
+// rewrite in `suggestion`. The constraint's purpose (that the student earns the
+// prose) is preserved differently here: every suggestion ships with a `comment`
+// that names the flaw and why the rewrite answers it, and the student accepts or
+// rejects each one deliberately. The paired diagnosis is what keeps a rewrite
+// teaching rather than merely fixing.
+
+export const SEVERITY_LEVELS = ['critical', 'major', 'minor', 'note', 'strength'] as const
+export type Severity = (typeof SEVERITY_LEVELS)[number]
+
+// One marked-up span as the model returns it. Offsets are computed server-side
+// from `quote`; the model is never asked to count characters.
+export interface AnnotationOut {
+  quote: string
+  dimension: RubricDimension
+  severity: Severity
+  comment: string
+  suggestion: string | null
+}
+
+export const ANNOTATION_APPENDIX = `
+
+### This invocation: marked-up annotations
+
+You are marking up the draft, not writing a prose critique. Everything above still governs, with two changes to how you deliver it and one change to the absolute constraint.
+
+**Output.** Return a short summary and a set of annotations. The summary is one or two sentences naming the single most serious problem, with its rubric dimension: the lead you would open a critique with, and nothing more. No preamble, no recap of the draft. Each annotation fastens a judgment to a specific place in the text.
+
+For every annotation:
+- **quote**: copy the exact span of the student's text you are judging, verbatim, character for character, with its original punctuation. Do not paraphrase, normalize, or add or drop words. The quote is how the annotation is located in the draft, so a quote that is not a substring of the draft cannot be placed. Keep it as short as carries the point: usually a phrase or a sentence, rarely more than two.
+- **dimension**: the rubric dimension at stake (thesis, validity, soundness, charity, economy, fidelity).
+- **severity**: what it costs the argument.
+  - critical: the piece fails here (no thesis, an invalid core inference, a false load-bearing premise, a misattributed source).
+  - major: a real weakness a serious reader would hold against the argument.
+  - minor: a lapse worth fixing that does not threaten the argument.
+  - note: an observation or a question, not a fault.
+  - strength: something working well enough to name and keep. Use sparingly, only when true.
+- **comment**: the diagnosis. Name what the span does and fails to do, and ask the question that locates the fix. This is the teaching, and it is required on every annotation, including those that carry a suggestion.
+- **suggestion**: optional (see below); null when you are not offering a rewrite.
+
+**The relaxed constraint.** You may now offer a concrete rewrite in **suggestion** when a fix is better shown than only described. A suggestion is a proposed replacement for exactly the quoted span, in the student's own register, which the student will accept or reject. Two rules bind it: a suggestion never appears without a comment that explains the flaw and why the rewrite answers it (a rewrite the student cannot reason about is not teaching); and you suggest only where a rewrite genuinely helps, not on every annotation. Leave suggestion null for a pure diagnosis, for a strength, and wherever the student learns more by finding the words themselves. Never offer a suggestion that only restates the quote.
+
+Order annotations by severity, gravest first, not by reading order. Do not mark everything: a page dense with marks teaches nothing. Judge proportionally.`
+
 export interface WritingProfileRow {
   recurring_failures: {
     dimension?: string
