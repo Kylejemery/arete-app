@@ -227,6 +227,85 @@ For every annotation:
 
 Order annotations by severity, gravest first, not by reading order. Do not mark everything: a page dense with marks teaches nothing. Judge proportionally.`
 
+// ── The guided stage flow ────────────────────────────────────────────────────
+// A piece moves through five stages. The flow is non-blocking: the student sets
+// the stage and may jump freely; it never gates a submission. Its only effect is
+// to tune what the Interlocutor weights, and whether it offers rewrites at all.
+//
+// This is also where the never-write pedagogy is re-honored by stage even though
+// the annotation mode relaxes it globally: at thesis and outline the coach offers
+// no rewrites (the claim and its sequence must be the student's own); by polish,
+// where the argument is settled, it offers them freely.
+
+export const STAGES = [
+  { id: 'thesis', label: 'Thesis', blurb: 'Find the one claim a reasonable person could deny.' },
+  { id: 'outline', label: 'Outline', blurb: 'Sequence the argument so each step earns the next.' },
+  { id: 'draft', label: 'Draft', blurb: 'Write it through, start to finish, without polishing.' },
+  { id: 'revise', label: 'Revise', blurb: 'Test validity, soundness, and the opposing case.' },
+  { id: 'polish', label: 'Polish', blurb: 'Cut, tighten, and sharpen every sentence.' },
+] as const
+
+export type Stage = (typeof STAGES)[number]['id']
+
+export const DEFAULT_STAGE: Stage = 'draft'
+
+export function isStage(s: unknown): s is Stage {
+  return typeof s === 'string' && STAGES.some(st => st.id === s)
+}
+
+// Short, actionable prompts shown beside the editor. Guidance, never a gate.
+export const STAGE_CHECKLIST: Record<Stage, string[]> = {
+  thesis: [
+    'State the thesis in a single sentence.',
+    'Confirm a reasonable person could deny it.',
+    'Cut any throat-clearing before the claim.',
+  ],
+  outline: [
+    'List each claim in the order it must be made.',
+    'For every step, name what it earns.',
+    'Mark the premise carrying the most weight.',
+  ],
+  draft: [
+    'Write to the end without stopping to polish.',
+    'Keep every paragraph advancing the one thesis.',
+    'State the opposing view at full strength.',
+  ],
+  revise: [
+    'Make each inference explicit; name missing premises.',
+    'Press the premise you assumed was obvious.',
+    'Strengthen the strongest objection, then answer it.',
+  ],
+  polish: [
+    'Delete any paragraph that loses nothing when cut.',
+    'Remove hedging that protects you, not the claim.',
+    'Read for rhythm; land each sentence on its turn.',
+  ],
+}
+
+// The per-stage instruction appended to the system prompt after ANNOTATION_APPENDIX,
+// so its stage-specific rewrite policy overrides the general permission above.
+export function buildStageAppendix(stage: string): string {
+  const s: Stage = isStage(stage) ? stage : DEFAULT_STAGE
+  const blocks: Record<Stage, string> = {
+    thesis: `### This piece is at the THESIS stage
+
+The student is trying to find a single claim a reasonable person could deny. Judge Thesis above everything: whether one exists, whether it is deniable, whether it is announced or buried rather than made. Economy and sentence craft are premature; mark them only where they obscure the claim. Override the general suggestion guidance: offer NO rewrites at this stage, leaving every suggestion null. The claim must be forged in the student's own words; a thesis handed over is the one thing that must not be.`,
+    outline: `### This piece is at the OUTLINE stage
+
+The student is sequencing the argument. Judge Thesis and the arc: whether each step earns the next, whether the load-bearing premise is identified, whether the order builds or merely lists. Do not mark sentence craft. Override the general suggestion guidance: offer NO rewrites at this stage, leaving every suggestion null; an outline is reasoning to be repaired, not prose to be replaced.`,
+    draft: `### This piece is at the DRAFT stage
+
+The student is writing the argument through. Judge the full rubric, but weight Thesis, Validity, and Charity over Economy: it is early to cut what is not yet fully built. Offer rewrites sparingly, only where a structural fix is genuinely clearer shown than described.`,
+    revise: `### This piece is at the REVISE stage
+
+The argument exists and the student is strengthening it. Weight Validity, Soundness, and Charity. Press the missing premises and the strongest objection. Offer rewrites where they teach a move the student can reuse, still not on every mark.`,
+    polish: `### This piece is at the POLISH stage
+
+The argument is settled and the student is sharpening the prose. Weight Economy and register: hedging, throat-clearing, restatement, adjectives doing an argument's work. This is where a concrete rewrite helps most, so offer suggestions freely wherever a tighter line is better shown than described. Do not reopen the thesis unless it has genuinely broken.`,
+  }
+  return `\n\n${blocks[s]}`
+}
+
 export interface WritingProfileRow {
   recurring_failures: {
     dimension?: string

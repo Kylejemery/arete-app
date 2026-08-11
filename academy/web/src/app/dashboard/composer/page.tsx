@@ -18,7 +18,9 @@ import { supabase } from '@/lib/supabase';
 import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/InterlocutorPanel';
 import { MarkedUpDraft, type Annotation } from '@/components/MarkedUpDraft';
 import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
+import { StageStepper } from '@/components/StageStepper';
 import { applyAccepted, type AcceptedEdit } from '@/lib/annotations';
+import { DEFAULT_STAGE, isStage, type Stage } from '@/lib/interlocutor';
 
 const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
@@ -41,6 +43,7 @@ export default function ComposerPage() {
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [pieceId, setPieceId] = useState<string | null>(null);
+  const [stage, setStage] = useState<Stage>(DEFAULT_STAGE);
 
   const [view, setView] = useState<'editor' | 'review'>('editor');
   const [review, setReview] = useState<ReviewData | null>(null);
@@ -100,6 +103,13 @@ export default function ComposerPage() {
       } catch {}
       if (pid) {
         setPieceId(pid);
+        const { data: piece } = await supabase
+          .from('writing_pieces')
+          .select('stage')
+          .eq('id', pid)
+          .maybeSingle();
+        const st = (piece as { stage?: string } | null)?.stage;
+        if (isStage(st)) setStage(st);
         await loadHistory(pid);
       }
       setLoaded(true);
@@ -134,6 +144,7 @@ export default function ComposerPage() {
           pieceId: pieceId || undefined,
           title: title.trim() || undefined,
           draftContent: text,
+          stage,
         }),
       });
       const data: unknown = await res.json();
@@ -244,11 +255,25 @@ export default function ComposerPage() {
     setView('review');
   };
 
+  // Set the guided-flow stage. Non-blocking; persists to the piece when one
+  // exists, otherwise rides along on the next submit.
+  const changeStage = async (s: Stage) => {
+    setStage(s);
+    if (pieceId) {
+      const { error: upErr } = await supabase
+        .from('writing_pieces')
+        .update({ stage: s })
+        .eq('id', pieceId);
+      if (upErr) setNotice('The stage change did not save, but it applies here.');
+    }
+  };
+
   const newPiece = () => {
     setPieceId(null);
     setReview(null);
     setLiveDraftId(null);
     setHistory([]);
+    setStage(DEFAULT_STAGE);
     setView('editor');
     handleTitleChange('');
     handleTextChange('');
@@ -293,6 +318,7 @@ export default function ComposerPage() {
         <div className="min-w-0">
           {view === 'editor' ? (
             <>
+              <StageStepper stage={stage} onChange={changeStage} />
               <input
                 className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
                 placeholder="Untitled"
