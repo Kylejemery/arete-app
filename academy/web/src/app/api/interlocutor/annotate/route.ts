@@ -6,6 +6,9 @@ import {
   ANNOTATION_APPENDIX,
   RUBRIC_DIMENSIONS,
   SEVERITY_LEVELS,
+  DEFAULT_STAGE,
+  isStage,
+  buildStageAppendix,
   buildProfileBlock,
   type WritingProfileRow,
   type AnnotationOut,
@@ -115,6 +118,10 @@ export async function POST(req: NextRequest) {
   const title =
     typeof body.title === 'string' && body.title.trim() ? body.title.trim().slice(0, 200) : null
 
+  // The guided-flow stage, validated. Drives which rubric dimensions the coach
+  // weights and whether it offers rewrites at all.
+  const stage = isStage(body.stage) ? body.stage : DEFAULT_STAGE
+
   // ── Resolve the piece: reuse an owned one, or start a new one ────────────────
   let pieceId: string
   if (typeof body.pieceId === 'string' && body.pieceId) {
@@ -128,16 +135,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Piece not found' }, { status: 404 })
     }
     pieceId = (piece as { id: string }).id
-    // Keep the title and the updated_at current.
+    // Keep the title, stage, and updated_at current.
     await supabase
       .from('writing_pieces')
-      .update({ title, updated_at: new Date().toISOString() })
+      .update({ title, stage, updated_at: new Date().toISOString() })
       .eq('id', pieceId)
       .eq('user_id', user.id)
   } else {
     const { data: created, error } = await supabase
       .from('writing_pieces')
-      .insert({ user_id: user.id, title, stage: body.stage || 'draft' })
+      .insert({ user_id: user.id, title, stage })
       .select('id')
       .single()
     if (error || !created) {
@@ -160,7 +167,10 @@ export async function POST(req: NextRequest) {
     console.warn('[interlocutor/annotate] profile read failed:', e)
   }
 
-  const system = [INTERLOCUTOR_SYSTEM + ANNOTATION_APPENDIX, buildProfileBlock(profile)].join('\n\n')
+  const system = [
+    INTERLOCUTOR_SYSTEM + ANNOTATION_APPENDIX + buildStageAppendix(stage),
+    buildProfileBlock(profile),
+  ].join('\n\n')
 
   const userContent = [
     title ? `PIECE: ${title}` : null,
