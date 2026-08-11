@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/InterlocutorPanel';
-import { MarkedUpDraft, type Annotation } from '@/components/MarkedUpDraft';
+import { MarkedUpDraft, CommentList, type Annotation } from '@/components/MarkedUpDraft';
 import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
 import { StageStepper } from '@/components/StageStepper';
 import { applyAccepted, type AcceptedEdit } from '@/lib/annotations';
@@ -291,7 +291,7 @@ export default function ComposerPage() {
   const reviewReadOnly = review ? review.draftId !== liveDraftId : true;
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-[1600px]">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <p className="font-mono text-academy-gold text-xs uppercase tracking-[0.3em] mb-2">
@@ -319,40 +319,63 @@ export default function ComposerPage() {
           {view === 'editor' ? (
             <>
               <StageStepper stage={stage} onChange={changeStage} />
-              <input
-                className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
-                placeholder="Untitled"
-                value={title}
-                onChange={e => handleTitleChange(e.target.value)}
-              />
+              <div
+                className={
+                  review ? 'grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10 items-start' : ''
+                }
+              >
+                <div className="min-w-0">
+                  <input
+                    className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
+                    placeholder="Untitled"
+                    value={title}
+                    onChange={e => handleTitleChange(e.target.value)}
+                  />
 
-              <textarea
-                ref={editorRef}
-                className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
-                placeholder="Begin."
-                value={text}
-                onChange={e => handleTextChange(e.target.value)}
-              />
+                  <textarea
+                    ref={editorRef}
+                    className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
+                    placeholder="Begin."
+                    value={text}
+                    onChange={e => handleTextChange(e.target.value)}
+                  />
 
-              <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
-                <span>{words} word{words === 1 ? '' : 's'}</span>
+                  <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
+                    <span>{words} word{words === 1 ? '' : 's'}</span>
+                    {review && (
+                      <button onClick={() => setView('review')} className="hover:text-academy-text">
+                        ← back to the markup
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
+                    <button
+                      onClick={invoke}
+                      disabled={!canSubmit}
+                      className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
+                    </button>
+                    {submission.length > 0 && submission.length < MIN_CHARS && (
+                      <span className="text-academy-muted text-xs">Too little to judge.</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* While revising, keep the markup's comments in view beside the editor. */}
                 {review && (
-                  <button onClick={() => setView('review')} className="hover:text-academy-text">
-                    ← back to the markup
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
-                <button
-                  onClick={invoke}
-                  disabled={!canSubmit}
-                  className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
-                </button>
-                {submission.length > 0 && submission.length < MIN_CHARS && (
-                  <span className="text-academy-muted text-xs">Too little to judge.</span>
+                  <aside className="lg:sticky lg:top-4">
+                    <p className="font-mono text-academy-gold text-[10px] uppercase tracking-widest mb-3">
+                      Comments · draft v{review.version}
+                    </p>
+                    <CommentList
+                      annotations={review.annotations}
+                      generalNotes={review.generalNotes}
+                      summary={review.summary || undefined}
+                      readOnly
+                    />
+                  </aside>
                 )}
               </div>
             </>
