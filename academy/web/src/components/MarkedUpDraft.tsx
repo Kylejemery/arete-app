@@ -12,6 +12,7 @@
 import { useState } from 'react';
 import { buildSegments, type SpanInput } from '@/lib/annotations';
 import { DimensionChips } from '@/components/InterlocutorPanel';
+import { ResizableSplit } from '@/components/ResizableSplit';
 
 export interface Annotation {
   id: string;
@@ -264,9 +265,25 @@ export function MarkedUpDraft({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10 items-start">
+    <ResizableSplit
+      storageKey="il-review-split"
+      initialLeft={760}
+      aside={
+        <div className="lg:sticky lg:top-4 lg:pl-2">
+          <CommentList
+            annotations={annotations}
+            generalNotes={generalNotes}
+            readOnly={readOnly}
+            onAccept={onAccept}
+            onDismiss={onDismiss}
+            activeId={activeId}
+            onCardFocus={focusSpan}
+          />
+        </div>
+      }
+    >
       {/* ── The marked-up text ─────────────────────────────────────────────── */}
-      <article className="font-serif text-academy-text text-[16px] leading-[1.9] whitespace-pre-wrap">
+      <article className="font-serif text-academy-text text-[16px] leading-[1.9] whitespace-pre-wrap lg:pr-2">
         {summary && (
           <div className="mb-6 pb-5 border-b border-academy-gold/25">
             <SummaryLead summary={summary} />
@@ -293,19 +310,6 @@ export function MarkedUpDraft({
           );
         })}
       </article>
-
-      {/* ── The margin ─────────────────────────────────────────────────────── */}
-      <aside className="lg:sticky lg:top-4">
-        <CommentList
-          annotations={annotations}
-          generalNotes={generalNotes}
-          readOnly={readOnly}
-          onAccept={onAccept}
-          onDismiss={onDismiss}
-          activeId={activeId}
-          onCardFocus={focusSpan}
-        />
-      </aside>
-    </div>
+    </ResizableSplit>
   );
 }
