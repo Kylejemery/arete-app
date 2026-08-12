@@ -13,6 +13,7 @@ import styles from './admin.module.css'
 // output, then the Sunday meta/dream agents and operational tools.
 const TABS: { href: string; label: string }[] = [
   { href: '/admin', label: 'Overview' },
+  { href: '/admin/usage', label: 'Usage' },
   { href: '/admin/corpus-agent', label: 'Corpus Agent' },
   { href: '/admin/journal-agent', label: 'Journal Agent' },
   { href: '/admin/world', label: 'World' },

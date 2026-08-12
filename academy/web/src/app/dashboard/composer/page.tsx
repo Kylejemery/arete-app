@@ -19,12 +19,14 @@ import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/
 import { MarkedUpDraft, CommentList, type Annotation } from '@/components/MarkedUpDraft';
 import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
 import { StageStepper } from '@/components/StageStepper';
+import { ResizableSplit } from '@/components/ResizableSplit';
 import { applyAccepted, type AcceptedEdit } from '@/lib/annotations';
 import { DEFAULT_STAGE, isStage, type Stage } from '@/lib/interlocutor';
 
 const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
 const PIECE_KEY = 'interlocutor-piece-id';
+const RAIL_KEY = 'interlocutor-show-rail';
 
 interface ReviewData {
   draftId: string;
@@ -44,6 +46,7 @@ export default function ComposerPage() {
   const [text, setText] = useState('');
   const [pieceId, setPieceId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>(DEFAULT_STAGE);
+  const [showRail, setShowRail] = useState(true);
 
   const [view, setView] = useState<'editor' | 'review'>('editor');
   const [review, setReview] = useState<ReviewData | null>(null);
@@ -100,6 +103,7 @@ export default function ComposerPage() {
         setText(localStorage.getItem(DRAFT_KEY) ?? '');
         setTitle(localStorage.getItem(TITLE_KEY) ?? '');
         pid = localStorage.getItem(PIECE_KEY);
+        if (localStorage.getItem(RAIL_KEY) === '0') setShowRail(false);
       } catch {}
       if (pid) {
         setPieceId(pid);
@@ -291,7 +295,7 @@ export default function ComposerPage() {
   const reviewReadOnly = review ? review.draftId !== liveDraftId : true;
 
   return (
-    <div className="max-w-[1600px]">
+    <div className="w-full">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <p className="font-mono text-academy-gold text-xs uppercase tracking-[0.3em] mb-2">
@@ -304,80 +308,102 @@ export default function ComposerPage() {
             described, it offers a rewrite you can accept or reject. Revise, and submit again.
           </p>
         </div>
-        {(pieceId || text.trim()) && (
+        <div className="flex-shrink-0 flex items-center gap-2">
           <button
-            onClick={newPiece}
-            className="flex-shrink-0 font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
+            onClick={() =>
+              setShowRail(v => {
+                const nv = !v;
+                try { localStorage.setItem(RAIL_KEY, nv ? '1' : '0'); } catch {}
+                return nv;
+              })
+            }
+            className="font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
           >
-            New piece
+            {showRail ? 'Hide drafts' : 'Show drafts'}
           </button>
-        )}
+          {(pieceId || text.trim()) && (
+            <button
+              onClick={newPiece}
+              className="font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
+            >
+              New piece
+            </button>
+          )}
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-start">
+      <div className={showRail ? 'grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-start' : ''}>
         <div className="min-w-0">
           {view === 'editor' ? (
             <>
               <StageStepper stage={stage} onChange={changeStage} />
-              <div
-                className={
-                  review ? 'grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-10 items-start' : ''
-                }
-              >
-                <div className="min-w-0">
-                  <input
-                    className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
-                    placeholder="Untitled"
-                    value={title}
-                    onChange={e => handleTitleChange(e.target.value)}
-                  />
-
-                  <textarea
-                    ref={editorRef}
-                    className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
-                    placeholder="Begin."
-                    value={text}
-                    onChange={e => handleTextChange(e.target.value)}
-                  />
-
-                  <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
-                    <span>{words} word{words === 1 ? '' : 's'}</span>
-                    {review && (
-                      <button onClick={() => setView('review')} className="hover:text-academy-text">
-                        ← back to the markup
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
-                    <button
-                      onClick={invoke}
-                      disabled={!canSubmit}
-                      className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                      {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
-                    </button>
-                    {submission.length > 0 && submission.length < MIN_CHARS && (
-                      <span className="text-academy-muted text-xs">Too little to judge.</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* While revising, keep the markup's comments in view beside the editor. */}
-                {review && (
-                  <aside className="lg:sticky lg:top-4">
-                    <p className="font-mono text-academy-gold text-[10px] uppercase tracking-widest mb-3">
-                      Comments · draft v{review.version}
-                    </p>
-                    <CommentList
-                      annotations={review.annotations}
-                      generalNotes={review.generalNotes}
-                      summary={review.summary || undefined}
-                      readOnly
+              {(() => {
+                const editorPane = (
+                  <div className="min-w-0 lg:pr-2">
+                    <input
+                      className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
+                      placeholder="Untitled"
+                      value={title}
+                      onChange={e => handleTitleChange(e.target.value)}
                     />
-                  </aside>
-                )}
-              </div>
+
+                    <textarea
+                      ref={editorRef}
+                      className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
+                      placeholder="Begin."
+                      value={text}
+                      onChange={e => handleTextChange(e.target.value)}
+                    />
+
+                    <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
+                      <span>{words} word{words === 1 ? '' : 's'}</span>
+                      {review && (
+                        <button onClick={() => setView('review')} className="hover:text-academy-text">
+                          ← back to the markup
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
+                      <button
+                        onClick={invoke}
+                        disabled={!canSubmit}
+                        className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
+                      </button>
+                      {submission.length > 0 && submission.length < MIN_CHARS && (
+                        <span className="text-academy-muted text-xs">Too little to judge.</span>
+                      )}
+                    </div>
+                  </div>
+                );
+
+                // No markup yet: the editor takes the whole width. Once there is a
+                // review, split it with the comments and let the divider be dragged.
+                if (!review) return editorPane;
+                return (
+                  <ResizableSplit
+                    storageKey="il-editor-split"
+                    initialLeft={760}
+                    aside={
+                      <div className="lg:sticky lg:top-4 lg:pl-2">
+                        <p className="font-mono text-academy-gold text-[10px] uppercase tracking-widest mb-3">
+                          Comments · draft v{review.version}
+                        </p>
+                        <CommentList
+                          annotations={review.annotations}
+                          generalNotes={review.generalNotes}
+                          summary={review.summary || undefined}
+                          readOnly
+                        />
+                      </div>
+                    }
+                  >
+                    {editorPane}
+                  </ResizableSplit>
+                );
+              })()}
             </>
           ) : (
             review && (
@@ -430,14 +456,16 @@ export default function ComposerPage() {
           {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
         </div>
 
-        {/* ── The version rail ─────────────────────────────────────────────── */}
-        <div className="lg:sticky lg:top-4">
-          <DraftHistory
-            versions={history}
-            activeDraftId={review?.draftId ?? null}
-            onSelect={openDraft}
-          />
-        </div>
+        {/* ── The version rail (collapsible to give the editor full width) ──── */}
+        {showRail && (
+          <div className="lg:sticky lg:top-4">
+            <DraftHistory
+              versions={history}
+              activeDraftId={review?.draftId ?? null}
+              onSelect={openDraft}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── Conversation, anchored to the draft ──────────────────────────────── */}
