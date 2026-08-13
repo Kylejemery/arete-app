@@ -881,14 +881,16 @@
 
 .guideWhen {
   flex-shrink: 0;
-  width: 90px;
+  width: 116px;
   font-size: 11px;
   color: #534AB7;
   font-weight: 500;
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
-.guideBody { flex: 1; }
+.guideBody { flex: 1; min-width: 0; }
 
 .guideName {
   font-size: 13px;
