@@ -152,9 +152,162 @@
 
 /* ==================== situations game ==================== */
 .pg-sit {
-  max-width: var(--measure);
+  max-width: 68rem;
   margin: 0 auto;
   padding: 0 var(--gap) clamp(5rem, 12vh, 9rem);
+}
+.pg-sit-h1 {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-weight: 400;
+  font-size: clamp(2.2rem, 6vw, 3.4rem);
+  line-height: 1.02;
+  margin: 0;
+  color: var(--paper);
+}
+.pg-sit-note {
+  font-family: var(--util);
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+  line-height: 1.6;
+  border-top: 1px solid var(--tape-rule);
+  padding-top: 1.6rem;
+  margin-top: clamp(2rem, 5vh, 3.5rem);
+}
+
+/* master–detail: a rail of situations, the selected one in the main pane */
+.pg-sit-layout {
+  display: grid;
+  grid-template-columns: minmax(14rem, 17rem) 1fr;
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+  align-items: start;
+}
+.pg-sit-nav {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+.pg-sit-navitem {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  text-align: left;
+  background: #100e0a;
+  border: 1px solid var(--tape-rule);
+  border-left: 2px solid transparent;
+  padding: 0.7rem 0.85rem;
+  cursor: pointer;
+  color: var(--bone-dim);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.pg-sit-navitem:hover {
+  color: var(--bone);
+  border-color: var(--bone-dim);
+}
+.pg-sit-navitem[aria-current='true'] {
+  color: var(--paper);
+  background: var(--slate);
+  border-left-color: var(--pom);
+}
+.pg-sit-navnum {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--pom-lit);
+  flex: none;
+}
+.pg-sit-navtext {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.pg-sit-navtag {
+  font-family: var(--util);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+.pg-sit-navitem[aria-current='true'] .pg-sit-navtag {
+  color: var(--pom-lit);
+}
+.pg-sit-navtitle {
+  font-family: var(--util);
+  font-size: 0.9rem;
+  line-height: 1.28;
+}
+.pg-sit-main {
+  min-width: 0;
+}
+.pg-sit-progress {
+  float: right;
+  font-family: var(--mono);
+  letter-spacing: normal;
+  color: var(--bone-dim);
+}
+
+/* prev / next */
+.pg-sit-pager {
+  display: flex;
+  gap: 0.7rem;
+  margin-top: 1.4rem;
+}
+.pg-sit-pagerbtn {
+  flex: 1 1 0;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid var(--tape-rule);
+  color: var(--bone);
+  font-family: var(--util);
+  font-size: 0.8rem;
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.pg-sit-pagerbtn-next {
+  text-align: right;
+}
+.pg-sit-pagerbtn:hover:not(:disabled) {
+  color: var(--paper);
+  border-color: var(--pom);
+}
+.pg-sit-pagerbtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 860px) {
+  .pg-sit-layout {
+    grid-template-columns: 1fr;
+  }
+  .pg-sit-nav {
+    position: static;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x proximity;
+  }
+  .pg-sit-navitem {
+    flex: 0 0 auto;
+    width: 13rem;
+    border-left: 1px solid var(--tape-rule);
+    border-top: 2px solid transparent;
+    scroll-snap-align: start;
+  }
+  .pg-sit-navitem[aria-current='true'] {
+    border-left-color: var(--tape-rule);
+    border-top-color: var(--pom);
+  }
 }
 .pg-back {
   display: inline-block;
@@ -182,7 +335,7 @@
 }
 
 .pg-situation {
-  margin: 0 0 clamp(2.5rem, 6vh, 4rem);
+  margin: 0;
   border: 1px solid var(--tape-rule);
   background: #100e0a;
 }
