@@ -1,0 +1,491 @@
+/* The Playground, Arete Academy
+ *
+ * Two scopes live here:
+ *   .pg  — the playground hub and situations surfaces
+ *   .cd  — the corpus discussion board, reused on every playground page
+ *
+ * Both share the Perspectives palette so an essay pulled into the playground
+ * reads continuously. The fonts come from app/playground/layout.tsx.
+ */
+
+.pg,
+.cd {
+  --paper: #e4e5dc;
+  --paper-rule: #c9ccbe;
+  --ink: #23282a;
+  --ink-soft: #5b635e;
+  --tape: #16140f;
+  --tape-rule: #332f26;
+  --bone: #c9c4b6;
+  --bone-dim: #7c7565;
+  --slate: #1d2124;
+  --pom: #8a2b2b;
+  --pom-lit: #b8473f;
+  --measure: 40rem;
+  --gap: clamp(1.5rem, 4vw, 4rem);
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --util: var(--font-plex-sans), 'IBM Plex Sans', system-ui, sans-serif;
+}
+.pg *,
+.cd * {
+  box-sizing: border-box;
+}
+
+/* ============================ hub ============================ */
+.pg {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tape);
+  color: var(--bone);
+  font-family: var(--book);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.pg :focus-visible {
+  outline: 2px solid var(--pom-lit);
+  outline-offset: 3px;
+}
+
+.pg-hero {
+  padding: clamp(4rem, 12vh, 8rem) var(--gap) clamp(2.5rem, 6vh, 4rem);
+  max-width: 60rem;
+  margin: 0 auto;
+  position: relative;
+}
+.pg-eyebrow {
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1.6rem;
+}
+.pg-hero h1 {
+  font-family: var(--display);
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 144;
+  font-weight: 400;
+  font-size: clamp(2.6rem, 8vw, 5.4rem);
+  line-height: 0.98;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--paper);
+  max-width: 16ch;
+  text-wrap: balance;
+}
+.pg-lede {
+  font-family: var(--book);
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  max-width: 40ch;
+  margin: 1.6rem 0 0;
+  color: var(--bone);
+  line-height: 1.42;
+}
+
+/* experiment cards */
+.pg-grid {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0 var(--gap) clamp(5rem, 12vh, 9rem);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: clamp(1.2rem, 3vw, 2rem);
+}
+.pg-card {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  background: var(--slate);
+  border-top: 2px solid var(--pom);
+  padding: clamp(1.6rem, 3.5vw, 2.4rem);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 18px 44px -30px rgba(0, 0, 0, 0.8);
+}
+.pg-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 26px 60px -30px rgba(0, 0, 0, 0.9);
+}
+.pg-card.pg-card-soon {
+  opacity: 0.5;
+  pointer-events: none;
+  border-top-color: var(--tape-rule);
+}
+.pg-card-kicker {
+  font-family: var(--util);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 0.9rem;
+}
+.pg-card h2 {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3.4vw, 2rem);
+  line-height: 1.05;
+  margin: 0 0 0.7rem;
+  color: var(--paper);
+}
+.pg-card p {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--bone-dim);
+  line-height: 1.55;
+}
+.pg-card-go {
+  margin-top: auto;
+  padding-top: 1.4rem;
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+}
+
+/* ==================== situations game ==================== */
+.pg-sit {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--gap) clamp(5rem, 12vh, 9rem);
+}
+.pg-back {
+  display: inline-block;
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  text-decoration: none;
+  margin: 0 0 2.5rem;
+}
+.pg-back:hover {
+  color: var(--pom-lit);
+}
+.pg-sit-intro {
+  margin: 0 0 clamp(2.5rem, 6vh, 4rem);
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--tape-rule);
+}
+.pg-sit-intro p {
+  margin: 0.9rem 0 0;
+  color: var(--bone-dim);
+  font-size: 1rem;
+}
+
+.pg-situation {
+  margin: 0 0 clamp(2.5rem, 6vh, 4rem);
+  border: 1px solid var(--tape-rule);
+  background: #100e0a;
+}
+.pg-situation-head {
+  padding: clamp(1.4rem, 3.5vw, 2.2rem);
+}
+.pg-sit-tag {
+  font-family: var(--util);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin: 0 0 0.9rem;
+}
+.pg-situation h2 {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3.2vw, 1.85rem);
+  line-height: 1.12;
+  margin: 0 0 0.8rem;
+  color: var(--paper);
+}
+.pg-sit-scene {
+  margin: 0;
+  color: var(--bone);
+  font-size: 1.05rem;
+}
+.pg-sit-response {
+  background: var(--slate);
+  border-top: 2px solid var(--pom);
+  padding: clamp(1.4rem, 3.5vw, 2.2rem);
+}
+.pg-sit-response-ref {
+  font-family: var(--util);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.pg-sit-response-ref .pg-diamond {
+  width: 6px;
+  height: 6px;
+  background: var(--pom-lit);
+  transform: rotate(45deg);
+  flex: none;
+}
+.pg-sit-verdict {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: 1.22rem;
+  line-height: 1.42;
+  margin: 0 0 1.1rem;
+  color: #ede9de;
+  text-wrap: pretty;
+}
+.pg-sit-reason {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.62;
+  color: #a8a396;
+}
+
+/* ==================== discussion board (.cd) ==================== */
+.cd {
+  font-family: var(--book);
+  color: var(--bone);
+  background: var(--tape);
+  border-top: 1px solid var(--tape-rule);
+  padding: clamp(1.6rem, 4vw, 2.6rem);
+}
+.pg-situation .cd {
+  border-top: 1px solid var(--tape-rule);
+  background: #100e0a;
+}
+.cd-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 0.5rem;
+}
+.cd-mark {
+  width: 7px;
+  height: 7px;
+  background: var(--pom-lit);
+  transform: rotate(45deg);
+  flex: none;
+}
+.cd-head h2 {
+  font-family: var(--util);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone);
+  margin: 0;
+}
+.cd-intro {
+  margin: 0 0 1.6rem;
+  color: var(--bone-dim);
+  font-size: 0.96rem;
+  max-width: 46rem;
+}
+
+.cd-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  margin-bottom: 2rem;
+}
+.cd-empty {
+  color: var(--bone-dim);
+  font-style: italic;
+  margin: 0;
+  padding: 1.2rem 0;
+}
+.cd-thread {
+  border-left: 2px solid var(--tape-rule);
+  padding-left: clamp(0.9rem, 2.5vw, 1.4rem);
+}
+.cd-msg {
+  margin: 0 0 0.9rem;
+}
+.cd-msg:last-child {
+  margin-bottom: 0;
+}
+.cd-byline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.4rem;
+}
+.cd-who {
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--bone);
+}
+.cd-corpus .cd-who {
+  color: var(--pom-lit);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.cd-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--pom-lit);
+  transform: rotate(45deg);
+  flex: none;
+}
+.cd-stance {
+  font-family: var(--util);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--tape-rule);
+  color: var(--bone-dim);
+}
+.cd-stance-agree {
+  color: #8fb48a;
+  border-color: #3a4a36;
+}
+.cd-stance-disagree {
+  color: var(--pom-lit);
+  border-color: #4a2a28;
+}
+.cd-body {
+  margin: 0;
+  color: var(--bone);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+.cd-corpus-body {
+  color: #cfcabc;
+}
+.cd-corpus-body p {
+  margin: 0 0 0.75em;
+}
+.cd-corpus-body p:last-child {
+  margin-bottom: 0;
+}
+.cd-silent {
+  margin: 0.4rem 0 0;
+  font-style: italic;
+  color: var(--bone-dim);
+  font-size: 0.9rem;
+}
+
+/* composer */
+.cd-form {
+  border-top: 1px solid var(--tape-rule);
+  padding-top: 1.6rem;
+}
+.cd-stances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+.cd-chip {
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 0.45rem 0.9rem;
+  background: transparent;
+  color: var(--bone-dim);
+  border: 1px solid var(--tape-rule);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cd-chip:hover {
+  color: var(--bone);
+  border-color: var(--bone-dim);
+}
+.cd-chip-on {
+  color: var(--paper);
+  background: var(--pom);
+  border-color: var(--pom);
+}
+.cd-text {
+  width: 100%;
+  background: #100e0a;
+  border: 1px solid var(--tape-rule);
+  color: var(--paper);
+  font-family: var(--book);
+  font-size: 1rem;
+  line-height: 1.55;
+  padding: 0.9rem 1rem;
+  resize: vertical;
+  min-height: 5.5rem;
+}
+.cd-text::placeholder {
+  color: var(--bone-dim);
+}
+.cd-text:focus {
+  outline: none;
+  border-color: var(--pom);
+}
+.cd-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.8rem;
+  align-items: center;
+}
+.cd-name {
+  flex: 1 1 12rem;
+  background: #100e0a;
+  border: 1px solid var(--tape-rule);
+  color: var(--paper);
+  font-family: var(--util);
+  font-size: 0.9rem;
+  padding: 0.7rem 0.9rem;
+}
+.cd-name::placeholder {
+  color: var(--bone-dim);
+}
+.cd-name:focus {
+  outline: none;
+  border-color: var(--pom);
+}
+.cd-submit {
+  font-family: var(--util);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tape);
+  background: var(--paper);
+  border: none;
+  padding: 0.85rem 1.4rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.cd-submit:hover:not(:disabled) {
+  background: var(--pom-lit);
+  color: var(--paper);
+}
+.cd-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.cd-error {
+  margin: 0.9rem 0 0;
+  color: var(--pom-lit);
+  font-size: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pg-card,
+  .cd-chip,
+  .cd-submit {
+    transition: none;
+  }
+}

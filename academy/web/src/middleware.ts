@@ -12,8 +12,11 @@ import type { NextRequest } from 'next/server'
 // Railway backend rate-limits the one interactive route (passage).
 //
 // Perspectives (/perspectives/*) is a public essay surface, like the Library.
+// The Playground (/playground/*) is public for the same reason — an open
+// workshop of essays and the situations game — and its discussion API
+// (/api/playground/*) writes only via the service role, server-side.
 const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
-const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/perspectives/']
+const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/perspectives/', '/playground', '/api/playground/']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
