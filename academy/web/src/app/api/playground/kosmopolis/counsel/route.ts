@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       counselor: counselor.name,
       advice,
       reflection: reply.answer,
+      sources: reply.sources ?? null,
       user_id: visitor?.userId ?? null,
       author_name: visitor?.name ?? null,
     });
@@ -130,5 +131,5 @@ export async function POST(request: NextRequest) {
     console.error("[api/playground/kosmopolis/counsel persist]", err);
   }
 
-  return NextResponse.json({ reply: reply.answer, counselor: counselor.name, virtue, remaining: reply.remaining });
+  return NextResponse.json({ reply: reply.answer, counselor: counselor.name, virtue, sources: reply.sources ?? null, remaining: reply.remaining });
 }
