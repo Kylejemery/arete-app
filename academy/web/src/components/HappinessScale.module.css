@@ -901,3 +901,26 @@
     animation: none;
   }
 }
+
+/* ── Playground back link (only rendered when a backHref is passed) ────────── */
+
+.topBar {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 32px 0;
+}
+
+.backLink {
+  display: inline-block;
+  font-family: Georgia, serif;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #8a9ab0;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.backLink:hover {
+  color: #c9a84c;
+}

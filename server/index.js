@@ -355,6 +355,80 @@ ${lines.join('\n')}
 }
 
 // ---------------------------------------------------------------------------
+// Observatory pulse — live state of what the corpus is working through
+// ---------------------------------------------------------------------------
+// The self-knowledge block is descriptive ("what the Observatory shows"); this
+// adds the current figures ("4 tensions on display right now, including …") so
+// a counselor can answer "what is the corpus working through at the moment?"
+// with the same live catalogue the Observatory renders. Same source of truth
+// as the /api/observatory/* endpoints (approved AND observatory_visible only).
+// The underlying agents update at most weekly, so a 30-minute in-memory cache
+// makes this effectively free per message; on any error we degrade to the
+// static description rather than fail the chat.
+
+let observatoryPulseCache = { block: '', at: 0 };
+const OBSERVATORY_PULSE_TTL_MS = 30 * 60 * 1000;
+
+// First sentence / clause of a longer field — a count block names things, it
+// does not argue them.
+const firstClause = (s) => ((s || '').split(/(?<=[.!?])\s+/)[0] || '').trim();
+
+async function getObservatoryPulseBlock() {
+  if (Date.now() - observatoryPulseCache.at < OBSERVATORY_PULSE_TTL_MS) {
+    return observatoryPulseCache.block;
+  }
+  try {
+    const [tensionsR, inquiriesR, dreamsR, worldR] = await Promise.all([
+      supabase.from('philosophical_tensions').select('title')
+        .eq('status', 'approved').eq('observatory_visible', true),
+      supabase.from('open_inquiries').select('question')
+        .eq('status', 'approved').eq('observatory_visible', true),
+      supabase.from('corpus_dreams').select('id')
+        .in('status', ['approved', 'starred']).eq('observatory_visible', true),
+      supabase.from('world_observations').select('dominant_signal')
+        .in('status', ['approved', 'auto_approved']).eq('observatory_visible', true)
+        .order('observation_week', { ascending: false }).limit(1),
+    ]);
+
+    const tensions = tensionsR.data || [];
+    const inquiries = inquiriesR.data || [];
+    const dreamCount = (dreamsR.data || []).length;
+    const worldSignal = firstClause(worldR.data?.[0]?.dominant_signal);
+
+    const lines = [];
+    if (tensions.length) {
+      const names = tensions.slice(0, 3).map(t => `"${t.title}"`).join(', ');
+      lines.push(`- Open tensions on display in the Observatory: ${tensions.length}${names ? ` — including ${names}` : ''}.`);
+    }
+    if (inquiries.length) {
+      const q = firstClause(inquiries[0].question);
+      lines.push(`- Open inquiries the corpus is pursuing: ${inquiries.length}${q ? ` — such as "${q}"` : ''}.`);
+    }
+    if (dreamCount) {
+      lines.push(`- Dreams the corpus is currently keeping (labelled conjecture, never source text): ${dreamCount}.`);
+    }
+    if (worldSignal) {
+      lines.push(`- What the World Agent is currently responding to from outside: ${worldSignal}.`);
+    }
+
+    // Nothing approved-and-visible yet: emit no block, so the chat leans on the
+    // static description rather than announcing an empty sky.
+    const block = lines.length === 0 ? '' : `
+
+[OBSERVATORY — LIVE RIGHT NOW]
+This is the current, live state of what the corpus is working through, as shown in the Observatory. These figures shift as the background agents run (mostly weekly); cite them only when a person asks what the corpus is working through at the moment, and point them to the Observatory for the full, live view.
+${lines.join('\n')}
+[END OBSERVATORY LIVE]`;
+
+    observatoryPulseCache = { block, at: Date.now() };
+    return block;
+  } catch (err) {
+    console.error('[Observatory pulse] load failed:', err.message);
+    return observatoryPulseCache.block || '';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Library Observatory — live retrieval pulse
 // ---------------------------------------------------------------------------
 // Ephemeral, in-memory signal of which concepts the corpus has just answered
@@ -874,7 +948,7 @@ app.post('/api/chat', async (req, res) => {
 
   const dateTimeLine = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeLine + resourceInstruction + SELF_KNOWLEDGE;
+  const enrichedSystem = system + dateTimeLine + resourceInstruction + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
 
   try {
     const truncatedMessages = truncateMessages(messages);
@@ -941,9 +1015,15 @@ app.post('/api/chat/counselor', async (req, res) => {
     } catch { /* no restriction if lookup fails */ }
   }
 
-  const TIER_MAX_TOKENS = { free: 400, arete: 600, arete_pro: 1000 };
+  // Ceilings, not targets: a reply ends when the model is done (end_turn), so
+  // these only prevent a mid-sentence cutoff — they don't lengthen or add cost
+  // to normal replies. A Cabinet reply renders multiple voices (e.g. Marcus,
+  // Epictetus, Future Self) in one generation (~1.5–2k tokens), so the old
+  // 400/600/1000 caps guillotined it mid-word. Length is governed by the
+  // system prompt's "3–5 paragraphs" guidance, not by these ceilings.
+  const TIER_MAX_TOKENS = { free: 1500, arete: 2500, arete_pro: 4000 };
   const tier = req.headers['x-subscription-tier'];
-  const serverMaxTokens = TIER_MAX_TOKENS[tier] || max_tokens || 1500;
+  const serverMaxTokens = TIER_MAX_TOKENS[tier] || max_tokens || 2500;
 
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
@@ -1139,7 +1219,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
 
   // Shared session: mirror this single-counselor turn into session_messages so
   // the partner's realtime listener receives it. Same pattern as the parallel
@@ -2674,7 +2754,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
 
   const contextBlock = (contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE;
+    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
@@ -3463,7 +3543,7 @@ Do not mention that you are an AI. Do not break character.`;
 
 [STOIC CORPUS — ground your response in these passages]
 ${contextBlock}
-[END CORPUS]${SELF_KNOWLEDGE}`;
+[END CORPUS]${SELF_KNOWLEDGE}${await getObservatoryPulseBlock()}`;
 
     const safeHistory = Array.isArray(history) ? history.slice(-6) : [];
 

@@ -41,6 +41,16 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Play →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/happiness-scale">
+          <p className="pg-card-kicker">The Scale of Happiness</p>
+          <h2>Κλίμακα Εὐδαιμονίας</h2>
+          <p>
+            Locate yourself from Ataraxia to Epithumia, read the zones, and see
+            where the philosophers land — then pressure-test your own.
+          </p>
+          <span className="pg-card-go">Find your zone →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>

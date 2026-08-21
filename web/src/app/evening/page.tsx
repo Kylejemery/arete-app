@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   getUserSettings,
@@ -10,10 +10,10 @@ import {
   getRoutineTemplates,
   addRoutineTemplate,
   deleteRoutineTemplate,
+  createJournalEntry,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
-import { REFLECTION_PROMPTS, STOIC_PROMPTS, getDailyItem } from '@/lib/quotes';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
 
@@ -30,15 +30,19 @@ const DEFAULT_TASKS: Task[] = [
 
 const DONE_STORAGE_KEY = 'arete_evening_done_ids';
 
-// Counselor prompts built from existing reflection/stoic data
-interface EveningPrompt {
-  counselor: 'reflection' | 'stoic';
-  counselorName: string;
-  initials: string;
-  question: string;
-  response: string;
-  save: (val: string) => void;
-}
+// The single daily Stoic journal prompt — one per weekday, matching the iOS
+// evening tab verbatim so both platforms show the same question on a given day.
+// Answering it persists to the check-in AND creates a journal entry, exactly as
+// on iOS, so the reflection lands in the Journal tab.
+const STOIC_JOURNAL_PROMPTS = [
+  "What could you have done better today? What would Epictetus say?",
+  "Did you act in line with your values today? Would Marcus Aurelius approve?",
+  "What obstacles did you face and how did you respond? Were you the master of your reactions?",
+  "What emotions controlled you today? How can you cultivate greater equanimity?",
+  "What would Marcus Aurelius say about your day — did you act for the common good?",
+  "Where did you waste time or energy today? How will you reclaim it tomorrow?",
+  "What are you grateful for that you usually take for granted? As Epictetus taught, count your blessings.",
+];
 
 export default function EveningPage() {
   const router = useRouter();
@@ -46,15 +50,18 @@ export default function EveningPage() {
   const [usingDefaults, setUsingDefaults] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddInput, setShowAddInput] = useState(false);
-  const [reflectionAnswer, setReflectionAnswer] = useState('');
   const [stoicAnswer, setStoicAnswer] = useState('');
+  const [stoicSaved, setStoicSaved] = useState(false);
   const [checkInResponse, setCheckInResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [checkInDone, setCheckInDone] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // Guards the once-per-day journal write, so re-editing a saved answer updates
+  // the check-in without spawning a second Journal entry (mirrors iOS).
+  const stoicJournalCreated = useRef(false);
 
-  const reflectionPrompt = getDailyItem(REFLECTION_PROMPTS);
-  const stoicPrompt      = getDailyItem(STOIC_PROMPTS);
+  // Same weekday indexing as iOS: getDay() is 0 (Sun) – 6 (Sat).
+  const stoicPrompt = STOIC_JOURNAL_PROMPTS[new Date().getDay()];
 
   useEffect(() => {
     async function load() {
@@ -89,11 +96,12 @@ export default function EveningPage() {
         setUsingDefaults(true);
       }
 
-      if (typeof window !== 'undefined') {
-        const storedReflection = localStorage.getItem('arete_reflection_answer');
-        if (storedReflection) setReflectionAnswer(storedReflection);
-        const storedStoic = localStorage.getItem('arete_stoic_answer');
-        if (storedStoic) setStoicAnswer(storedStoic);
+      // The saved Stoic answer lives on the check-in row (same as iOS); if it
+      // is present the reflection has already been journaled today.
+      if (checkin?.stoic_answer) {
+        setStoicAnswer(checkin.stoic_answer as string);
+        setStoicSaved(true);
+        stoicJournalCreated.current = true;
       }
 
       if (checkin?.evening_done) setCheckInDone(true);
@@ -112,19 +120,21 @@ export default function EveningPage() {
     }
   };
 
-  const saveReflection = (value: string) => {
-    setReflectionAnswer(value);
-    if (typeof window !== 'undefined') localStorage.setItem('arete_reflection_answer', value);
-  };
-
-  const saveStoic = (value: string) => {
-    setStoicAnswer(value);
-    if (typeof window !== 'undefined') localStorage.setItem('arete_stoic_answer', value);
-  };
-
-  const saveResponse = (counselor: 'reflection' | 'stoic', value: string) => {
-    if (counselor === 'reflection') saveReflection(value);
-    else saveStoic(value);
+  // Persist the Stoic answer to today's check-in and, the first time it is
+  // saved, drop it into the Journal — identical to the iOS evening tab.
+  const saveStoic = async (text: string) => {
+    if (!text.trim()) return;
+    await upsertTodayCheckin({ stoic_answer: text });
+    if (!stoicJournalCreated.current) {
+      stoicJournalCreated.current = true;
+      await createJournalEntry({
+        type: 'reflection',
+        content: text.trim(),
+        source: 'evening_reflection',
+        raw_input: stoicPrompt,
+      });
+    }
+    setStoicSaved(true);
   };
 
   const toggleTask = async (id: string) => {
@@ -179,25 +189,6 @@ export default function EveningPage() {
   const doneCount  = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
   const pct = totalCount > 0 ? doneCount / totalCount : 0;
-
-  const eveningPrompts: EveningPrompt[] = [
-    {
-      counselor: 'reflection',
-      counselorName: 'Marcus Aurelius',
-      initials: 'MA',
-      question: reflectionPrompt,
-      response: reflectionAnswer,
-      save: saveReflection,
-    },
-    {
-      counselor: 'stoic',
-      counselorName: 'Seneca',
-      initials: 'SN',
-      question: stoicPrompt,
-      response: stoicAnswer,
-      save: saveStoic,
-    },
-  ];
 
   if (!loaded) return null;
 
@@ -367,65 +358,72 @@ export default function EveningPage() {
 
       <ChapterRule label="Reflection" className="mx-4" />
 
-      {/* ── Evening Reflection Prompts ────────────────────────────── */}
-      <div className="px-4 flex flex-col gap-3 pb-2">
-        {eveningPrompts.map(prompt => (
-          <div
-            key={prompt.counselor}
-            className="rounded-2xl border p-4"
-            style={{
-              background: 'rgba(20,27,52,0.5)',
-              borderColor: 'rgba(255,255,255,0.07)',
-            }}
-          >
-            {/* Counselor header */}
-            <div className="flex gap-2.5 items-center mb-3">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{
-                  background: 'rgba(201,168,76,0.12)',
-                  border: '1px solid rgba(201,168,76,0.3)',
-                  fontFamily: 'var(--font-mono, monospace)',
-                  fontSize: 8,
-                  fontWeight: 600,
-                  color: '#c9a84c',
-                }}
-              >
-                {prompt.initials}
-              </div>
-              <div
-                className="text-[9.5px] tracking-[1.5px] uppercase"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-              >
-                {prompt.counselorName} asks
-              </div>
-            </div>
-
-            {/* Question */}
+      {/* ── Stoic Journal ─────────────────────────────────────────── */}
+      {/* One daily prompt; saving writes the check-in and a Journal entry,
+          matching the iOS evening tab. */}
+      <div className="px-4 pb-2">
+        <div
+          className="rounded-2xl border p-4"
+          style={{ background: 'rgba(20,27,52,0.5)', borderColor: 'rgba(255,255,255,0.07)' }}
+        >
+          {/* Header */}
+          <div className="flex gap-2.5 items-center mb-3">
             <div
-              className="italic text-[18px] leading-snug tracking-tight mb-3"
-              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+              className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{
+                background: 'rgba(201,168,76,0.12)',
+                border: '1px solid rgba(201,168,76,0.3)',
+                color: '#c9a84c',
+              }}
             >
-              &ldquo;{prompt.question}&rdquo;
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></svg>
             </div>
+            <div
+              className="text-[9.5px] tracking-[1.5px] uppercase"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+            >
+              Stoic Journal
+            </div>
+          </div>
 
-            {/* Response area */}
-            {checkInDone && prompt.response ? (
-              <div
-                className="px-3 py-2.5 rounded-lg"
-                style={{
-                  background: 'rgba(201,168,76,0.06)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              >
-                <p
-                  className="italic text-[14px] leading-relaxed"
-                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          {/* Question */}
+          <div
+            className="italic text-[18px] leading-snug tracking-tight mb-3"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            &ldquo;{stoicPrompt}&rdquo;
+          </div>
+
+          {/* Saved state, or write + save */}
+          {stoicSaved ? (
+            <div
+              className="px-3 py-2.5 rounded-lg"
+              style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <span
+                  className="text-[9px] tracking-[1.4px] uppercase"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
                 >
-                  &ldquo;{prompt.response}&rdquo;
-                </p>
+                  ✓ Saved to Journal
+                </span>
+                <button
+                  onClick={() => setStoicSaved(false)}
+                  className="ml-auto text-[11px] opacity-60 hover:opacity-100 transition-opacity"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                >
+                  Edit
+                </button>
               </div>
-            ) : (
+              <p
+                className="italic text-[14px] leading-relaxed whitespace-pre-wrap"
+                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+              >
+                &ldquo;{stoicAnswer}&rdquo;
+              </p>
+            </div>
+          ) : (
+            <>
               <textarea
                 className="w-full rounded-lg px-3 py-2.5 text-[13px] outline-none resize-none min-h-[64px]"
                 style={{
@@ -435,12 +433,20 @@ export default function EveningPage() {
                   color: '#e6eef8',
                 }}
                 placeholder="Begin to write…"
-                value={prompt.response}
-                onChange={e => saveResponse(prompt.counselor, e.target.value)}
+                value={stoicAnswer}
+                onChange={e => setStoicAnswer(e.target.value)}
               />
-            )}
-          </div>
-        ))}
+              <button
+                onClick={() => saveStoic(stoicAnswer)}
+                disabled={!stoicAnswer.trim()}
+                className="mt-2 px-4 py-2 rounded-lg text-[11px] tracking-[1.2px] uppercase font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
+                style={{ background: '#c9a84c', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+              >
+                Save
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       <ChapterRule className="mx-4 mt-2" />
