@@ -105,7 +105,12 @@ type World = {
   settlements: Settlement[];
   camera: Camera;
   playout: Playout | null;
+  maxims: Maxim[];
+  maximId: number;
 };
+
+// A saying an awakened soul reasoned its way to — the world's own growing corpus.
+type Maxim = { id: number; text: string; author: string; year: number };
 
 // A decision playing out: the camera holds on the soul while a caption and a
 // burst of light (or shadow) settle over them. Transient — never persisted.
@@ -155,6 +160,8 @@ function createWorld(): World {
     settlements: [],
     camera: { cx: 0, cy: 0, zoom: FIT_ZOOM },
     playout: null,
+    maxims: [],
+    maximId: 1,
   };
 }
 
@@ -300,6 +307,8 @@ type SavedWorld = {
   chron: Chron[];
   seed: number;
   camera: Camera;
+  maxims: Maxim[];
+  maximId: number;
 };
 
 function serialize(w: World): SavedWorld {
@@ -322,6 +331,8 @@ function serialize(w: World): SavedWorld {
     chron: w.chron.slice(0, 80),
     seed: w.seed,
     camera: w.camera,
+    maxims: w.maxims.slice(0, 40),
+    maximId: w.maximId,
   };
 }
 
@@ -392,9 +403,14 @@ function hydrate(w: World, data: unknown): boolean {
       };
     });
   w.chron = (d.chron as Chron[]).filter((c) => c && typeof c.text === "string").slice(0, 80);
+  w.maxims = Array.isArray(d.maxims)
+    ? (d.maxims as Maxim[]).filter((m) => m && typeof m.text === "string").slice(0, 40)
+    : [];
+  w.maximId = Math.max(1, Math.round(numOr(d.maximId, 1)));
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
+  for (const m of w.maxims) if (m.id >= w.maximId) w.maximId = m.id + 1;
   return true;
 }
 
@@ -649,6 +665,7 @@ function tick(world: World) {
 
   if (e.act) {
     for (const s of world.souls) act(world, s);
+    teach(world);
     if (e.breed && world.souls.length < MAX_SOULS && Math.random() < 0.05 + meanEud(world) * 0.08) beget(world);
 
     const target = world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5;
@@ -663,6 +680,44 @@ function tick(world: World) {
 
 /** Daily life: souls walk to a spot in their town, pause to rest or work, then
  *  choose somewhere new. Frame-based so movement stays smooth at any speed. */
+// An awakened soul is a teacher: it draws those nearby toward the virtue it is
+// strongest in, and lifts their flourishing a little. This is how wisdom, once
+// kindled, spreads on its own — the corpus made local.
+function teach(world: World) {
+  const teachers = world.souls.filter((s) => s.awake);
+  if (!teachers.length) return;
+  const r2 = 9000; // a teacher's reach, in world units squared
+  for (const t of teachers) {
+    const key = dominantVirtue(t.v).key;
+    const a = arete(t.v);
+    for (const o of world.souls) {
+      if (o === t || o.awake) continue;
+      const dx = o.x - t.x;
+      const dy = o.y - t.y;
+      if (dx * dx + dy * dy < r2) {
+        o.v[key] = clamp(o.v[key] + 0.0018 * a, 0.02, 0.99);
+        o.eud = clamp(o.eud + 0.0009 * a, 0.02, 1);
+      }
+    }
+  }
+  if (Math.random() < 0.01) {
+    const t = pick(teachers);
+    log(world, `${t.name}, awakened, drew others toward ${dominantVirtue(t.v).name.toLowerCase()}.`);
+  }
+}
+
+// Pull the carried principle out of an Oracle reflection — the last sentence,
+// which is where the Oracle leaves the one line to carry away.
+function extractMaxim(text: string): string {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (!clean) return "";
+  const parts = clean.split(/(?<=[.!?])\s+/);
+  let last = (parts[parts.length - 1] || clean).replace(/^["“'*]+|["”'*]+$/g, "").trim();
+  if (last.length < 12 && parts.length > 1) last = parts.slice(-2).join(" ").trim();
+  if (last.length > 160) last = last.slice(0, 158).trimEnd() + "…";
+  return last;
+}
+
 function life(world: World) {
   const sp = 0.95;
   for (const s of world.souls) {
@@ -750,6 +805,7 @@ export default function KosmopolisWorld() {
     canRebirth: false,
   });
   const [chron, setChron] = useState<Chron[]>([]);
+  const [maxims, setMaxims] = useState<Maxim[]>([]);
   const [selected, setSelected] = useState<Soul | null>(null);
   const [dials, setDials] = useState<Dials>({ ...DEFAULT_DIALS });
 
@@ -810,6 +866,7 @@ export default function KosmopolisWorld() {
       canRebirth: EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length > 0,
     });
     setChron(w.chron.slice(0, 48));
+    setMaxims(w.maxims.slice(0, 12));
     setSelected(snapshotSelected());
   }, [snapshotSelected]);
 
@@ -1251,6 +1308,29 @@ export default function KosmopolisWorld() {
       }
     }
 
+    // 4b. teaching threads — brighter gold, from each awakened teacher to those
+    // it is drawing along.
+    if (acting && zoom >= 1.1) {
+      ctx.lineWidth = inv;
+      for (const t of w.souls) {
+        if (!t.awake) continue;
+        for (const o of w.souls) {
+          if (o === t || o.awake) continue;
+          const dx = o.x - t.x;
+          const dy = o.y - t.y;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < 9000) {
+            const strength = (1 - d2 / 9000) * (0.4 + arete(t.v) * 0.6);
+            ctx.strokeStyle = `rgba(227,199,122,${(strength * 0.45).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.moveTo(t.x, t.y - 6);
+            ctx.lineTo(o.x, o.y);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
     // 5. souls
     for (const s of w.souls) {
       s.pulse += 0.03;
@@ -1293,12 +1373,23 @@ export default function KosmopolisWorld() {
         ctx.fill();
       }
 
-      // awakened: a steady ring of reason
+      // awakened: a warm aura of influence + a steady ring of reason
       if (s.awake) {
-        ctx.strokeStyle = "rgba(240,232,214,0.8)";
+        const cy2 = s.y - (figures ? 6 : 0);
+        if (figures) {
+          const halo = 18 + Math.sin(t * 1.5 + s.pulse) * 2;
+          const ga = ctx.createRadialGradient(s.x, cy2, 0, s.x, cy2, halo);
+          ga.addColorStop(0, "rgba(227,199,122,0.16)");
+          ga.addColorStop(1, "rgba(227,199,122,0)");
+          ctx.fillStyle = ga;
+          ctx.beginPath();
+          ctx.arc(s.x, cy2, halo, 0, 6.283);
+          ctx.fill();
+        }
+        ctx.strokeStyle = "rgba(240,232,214,0.85)";
         ctx.lineWidth = 1.2 * inv;
         ctx.beginPath();
-        ctx.arc(s.x, s.y - (figures ? 6 : 0), (figures ? 15 : 6 * inv), 0, 6.283);
+        ctx.arc(s.x, cy2, figures ? 15 : 6 * inv, 0, 6.283);
         ctx.stroke();
       }
       // needs help: a pulsing amber marker so the struggling can be found
@@ -1651,6 +1742,13 @@ export default function KosmopolisWorld() {
       s.lastDeed = { virtue: key, virtuous: true };
       s.reflection = data.reflection;
       log(w, `${s.name} awakened to reason, and chose — drawing on ${virtueDef(key).name.toLowerCase()}.`);
+      // The line it reasoned its way to enters the world's own corpus.
+      const maxim = extractMaxim(data.reflection || "");
+      if (maxim) {
+        w.maxims.unshift({ id: w.maximId++, text: maxim, author: s.name, year: w.year });
+        if (w.maxims.length > 40) w.maxims.pop();
+        log(w, `${s.name} left a saying: “${maxim}”`);
+      }
       if (typeof data.remaining === "number") setRemaining(data.remaining);
       dirtyRef.current = true;
       flush(true);
@@ -2018,6 +2116,27 @@ export default function KosmopolisWorld() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* the world's own corpus */}
+          <div className="kp-card">
+            <h3>Maxims — what this world has learned</h3>
+            {maxims.length === 0 ? (
+              <p className="kp-empty">
+                When you awaken a soul, the saying it reasons its way to is kept here — this world writing its own corpus.
+              </p>
+            ) : (
+              <ul className="kp-maxims">
+                {maxims.map((m) => (
+                  <li key={m.id}>
+                    <p className="kp-maxim-text">“{m.text}”</p>
+                    <p className="kp-maxim-by">
+                      — {m.author}, yr {m.year.toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
 
           {/* the ledger */}
