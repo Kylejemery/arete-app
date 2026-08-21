@@ -642,3 +642,229 @@
     transition: none;
   }
 }
+
+/* ============================ Kosmopolis ============================
+ *
+ * The simulated world. It renders inside .pg, so it inherits the tape/bone/
+ * pomegranate palette variables defined at the top of this file. The virtue
+ * pigments are set as literals to match the canvas.
+ */
+.kp {
+  --v-wisdom: #d6b26a;
+  --v-justice: #7a9cc4;
+  --v-courage: #b8473f;
+  --v-temperance: #7aa88e;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 var(--gap) clamp(3rem, 8vh, 6rem);
+  font-family: var(--util);
+}
+.kp * { box-sizing: border-box; }
+
+.kp-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 22rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 60rem) {
+  .kp-stage { grid-template-columns: 1fr; }
+}
+
+/* ---- the cosmos ---- */
+.kp-cosmos {
+  position: relative;
+  border: 1px solid var(--tape-rule);
+  background: #100e0a;
+  overflow: hidden;
+  box-shadow: 0 30px 70px -44px rgba(0, 0, 0, 0.9);
+}
+.kp-cosmos canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  cursor: crosshair;
+}
+.kp-ov {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  padding: 0.9rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.kp-ov-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; }
+.kp-epoch-kicker {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin: 0 0 0.2rem;
+}
+.kp-epoch-name {
+  font-family: var(--display);
+  font-style: italic;
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  line-height: 1;
+  color: var(--paper);
+  margin: 0;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.85);
+}
+.kp-clock { text-align: right; font-family: var(--mono); }
+.kp-yr {
+  font-size: 1.5rem;
+  color: var(--v-wisdom);
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.9);
+  font-variant-numeric: tabular-nums;
+}
+.kp-yr-lbl { display: block; font-size: 0.55rem; letter-spacing: 0.24em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-ov-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap; }
+.kp-harmony-read { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-harmony-read b { color: var(--paper); font-weight: 400; }
+.kp-fortune { color: var(--pom-lit); }
+.kp-legend { display: flex; gap: 0.7rem; flex-wrap: wrap; }
+.kp-legend span { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); display: inline-flex; align-items: center; gap: 0.3rem; }
+.kp-legend i { width: 0.5rem; height: 0.5rem; border-radius: 50%; }
+
+.kp-veil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at center, rgba(16, 14, 10, 0.55), rgba(16, 14, 10, 0.92));
+}
+.kp-veil-inner { max-width: 28ch; }
+.kp-veil-inner h2 { font-family: var(--display); font-style: italic; font-weight: 400; font-size: 1.8rem; color: var(--paper); margin: 0 0 0.6rem; }
+.kp-veil-inner p { color: var(--bone); font-size: 0.92rem; margin: 0 0 1.2rem; }
+
+/* ---- rail + cards ---- */
+.kp-rail { display: flex; flex-direction: column; gap: 1rem; }
+.kp-card {
+  border: 1px solid var(--tape-rule);
+  border-top: 2px solid var(--pom);
+  background: var(--slate);
+  padding: 1rem 1.05rem;
+}
+.kp-card h3 {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 0.85rem;
+  font-weight: 400;
+}
+
+/* ---- metrics ---- */
+.kp-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--tape-rule); border: 1px solid var(--tape-rule); }
+.kp-metric { background: var(--slate); padding: 0.6rem 0.7rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.kp-k { font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-v { font-family: var(--display); font-size: 1.6rem; line-height: 1; color: var(--paper); font-variant-numeric: tabular-nums; }
+.kp-v small { font-size: 0.8rem; color: var(--bone-dim); font-family: var(--mono); }
+.kp-bar { height: 4px; background: var(--tape-rule); margin-top: 0.7rem; overflow: hidden; }
+.kp-bar > i { display: block; height: 100%; transition: width 0.5s ease, background 0.6s ease; }
+
+/* ---- buttons ---- */
+.kp-btn {
+  font-family: var(--util);
+  font-size: 0.82rem;
+  color: var(--bone);
+  background: transparent;
+  border: 1px solid var(--tape-rule);
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  flex: 1;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.kp-btn:hover { border-color: var(--pom-lit); color: var(--paper); }
+.kp-btn:active { transform: translateY(1px); }
+.kp-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.kp-btn-primary { background: var(--pom); border-color: var(--pom); color: var(--paper); font-weight: 600; }
+.kp-btn-primary:hover { background: var(--pom-lit); border-color: var(--pom-lit); }
+.kp-btn-fire { border-style: dashed; }
+.kp-on { border-color: var(--pom-lit); color: var(--pom-lit); background: rgba(184, 71, 63, 0.09); }
+.kp-wide { flex: 1 1 100%; width: 100%; }
+.kp-controls { display: flex; flex-direction: column; gap: 0.55rem; }
+.kp-btn-row, .kp-speeds { display: flex; gap: 0.45rem; }
+.kp-hint { font-size: 0.72rem; color: var(--bone-dim); line-height: 1.45; margin: 0.2rem 0 0; }
+
+/* ---- inspector ---- */
+.kp-empty { color: var(--bone-dim); font-size: 0.82rem; font-style: italic; font-family: var(--book); margin: 0; }
+.kp-soul-name { font-family: var(--display); font-size: 1.4rem; color: var(--paper); margin: 0; line-height: 1.05; display: flex; align-items: center; gap: 0.5rem; }
+.kp-awake-tag { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--paper); background: rgba(240, 232, 214, 0.14); border: 1px solid rgba(240, 232, 214, 0.3); padding: 0.1rem 0.4rem; }
+.kp-soul-sub { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 0.25rem 0 0.9rem; }
+.kp-virtues { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.9rem; }
+.kp-virtue { display: grid; grid-template-columns: 5.2rem 1fr 1.9rem; align-items: center; gap: 0.5rem; }
+.kp-vn { font-size: 0.74rem; color: var(--bone); }
+.kp-vbar { height: 5px; background: var(--tape-rule); overflow: hidden; }
+.kp-vbar > i { display: block; height: 100%; transition: width 0.4s ease; }
+.kp-vv { font-family: var(--mono); font-size: 0.66rem; color: var(--bone-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.kp-flourish { display: flex; align-items: baseline; justify-content: space-between; border-top: 1px solid var(--tape-rule); padding-top: 0.7rem; }
+.kp-flourish-v { font-family: var(--display); font-size: 1.35rem; color: var(--paper); font-variant-numeric: tabular-nums; }
+.kp-flourish-v small { font-size: 0.7rem; color: var(--bone-dim); font-family: var(--mono); }
+.kp-soul-note { font-size: 0.76rem; color: var(--bone-dim); font-style: italic; font-family: var(--book); margin: 0.7rem 0 0; line-height: 1.45; }
+.kp-reflection { font-family: var(--book); font-size: 0.86rem; line-height: 1.5; color: var(--bone); border-left: 2px solid var(--pom); margin: 0.8rem 0 0; padding: 0.1rem 0 0.1rem 0.8rem; max-height: 12rem; overflow-y: auto; }
+.kp-soul-actions { display: flex; gap: 0.45rem; margin-top: 0.9rem; }
+.kp-notice { font-size: 0.76rem; color: var(--pom-lit); margin: 0.7rem 0 0; line-height: 1.4; }
+.kp-remaining { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 0.4rem 0 0; }
+
+/* ---- doctrine dials ---- */
+.kp-dials { display: flex; flex-direction: column; gap: 0.9rem; }
+.kp-dial { display: flex; flex-direction: column; gap: 0.3rem; }
+.kp-dial-top { display: flex; justify-content: space-between; align-items: baseline; }
+.kp-dial-label { font-size: 0.76rem; color: var(--bone); }
+.kp-dial-val { font-family: var(--mono); font-size: 0.68rem; color: var(--v-wisdom); font-variant-numeric: tabular-nums; }
+.kp-dial-note { font-size: 0.66rem; color: var(--bone-dim); line-height: 1.35; }
+.kp-dial input[type="range"] { width: 100%; accent-color: var(--pom); cursor: pointer; }
+
+/* ---- laws ---- */
+.kp-laws { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; }
+.kp-laws li { display: flex; gap: 0.6rem; font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); }
+.kp-glyph { flex: none; width: 1.1rem; text-align: center; color: var(--pom-lit); font-family: var(--display); font-style: italic; font-size: 1rem; }
+.kp-laws b { color: var(--bone); font-weight: 400; }
+
+/* ---- ledger ---- */
+.kp-ledger { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.kp-ledger li { display: flex; gap: 0.55rem; align-items: baseline; font-size: 0.78rem; color: var(--bone-dim); line-height: 1.35; }
+.kp-ledger-mark { flex: none; width: 0.45rem; height: 0.45rem; border-radius: 50%; position: relative; top: 0.15rem; }
+.kp-ledger-body b { color: var(--bone); font-weight: 400; }
+.kp-ledger-epoch { color: var(--bone-dim); }
+
+.kp-reset { background: none; border: none; color: var(--bone-dim); font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; padding: 0.4rem; text-align: center; }
+.kp-reset:hover { color: var(--pom-lit); }
+
+/* ---- chronicle ---- */
+.kp-chronicle-card { margin-top: 1.25rem; }
+.kp-chronicle { max-height: 13rem; overflow-y: auto; }
+.kp-entry { display: grid; grid-template-columns: 4.5rem 1fr; gap: 0.9rem; padding: 0.5rem 0.1rem; border-top: 1px solid var(--tape-rule); }
+.kp-entry:first-child { border-top: none; }
+.kp-when { font-family: var(--mono); font-size: 0.6rem; color: var(--bone-dim); letter-spacing: 0.05em; padding-top: 0.15rem; font-variant-numeric: tabular-nums; }
+.kp-what { font-family: var(--book); font-size: 0.95rem; line-height: 1.4; color: var(--bone); }
+.kp-entry-ill .kp-what { color: #b7a894; }
+
+/* ---- counsel modal ---- */
+.kp-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
+.kp-modal-scrim { position: absolute; inset: 0; background: rgba(16, 14, 10, 0.82); }
+.kp-modal-body { position: relative; width: min(34rem, 100%); background: var(--slate); border: 1px solid var(--tape-rule); border-top: 3px solid var(--pom); padding: 1.6rem; max-height: 90vh; overflow-y: auto; }
+.kp-modal-x { position: absolute; top: 0.6rem; right: 0.8rem; background: none; border: none; color: var(--bone-dim); font-size: 1.5rem; line-height: 1; cursor: pointer; }
+.kp-modal-x:hover { color: var(--paper); }
+.kp-modal-kicker { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--pom-lit); margin: 0 0 0.5rem; }
+.kp-modal-h { font-family: var(--display); font-size: 1.7rem; color: var(--paper); margin: 0 0 0.5rem; font-weight: 400; }
+.kp-modal-lede { font-family: var(--book); font-size: 0.9rem; color: var(--bone); margin: 0 0 1.1rem; line-height: 1.45; }
+.kp-voice-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.9rem; }
+.kp-voice { font-family: var(--util); font-size: 0.76rem; color: var(--bone); background: transparent; border: 1px solid var(--tape-rule); padding: 0.4rem 0.7rem; cursor: pointer; }
+.kp-voice:hover { border-color: var(--pom-lit); }
+.kp-voice-on { background: var(--pom); border-color: var(--pom); color: var(--paper); }
+.kp-advice { width: 100%; font-family: var(--book); font-size: 0.92rem; color: var(--paper); background: var(--tape); border: 1px solid var(--tape-rule); padding: 0.7rem 0.8rem; resize: vertical; line-height: 1.5; }
+.kp-advice:focus { outline: 2px solid var(--pom-lit); outline-offset: 1px; }
+.kp-modal-actions { display: flex; gap: 0.5rem; margin-top: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .kp-bar > i, .kp-vbar > i { transition: none; }
+}
