@@ -51,6 +51,16 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Find your zone →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/kosmopolis">
+          <p className="pg-card-kicker">Kosmopolis</p>
+          <h2>A world built for virtue</h2>
+          <p>
+            A living simulation where the physics reward virtue. Seed souls, watch
+            them evolve, and spend the Oracle to awaken one to reason.
+          </p>
+          <span className="pg-card-go">Enter →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
