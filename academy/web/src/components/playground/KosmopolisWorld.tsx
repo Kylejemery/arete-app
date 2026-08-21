@@ -36,8 +36,10 @@ import { pickDilemma, type Dilemma, type DilemmaOption } from "@/content/playgro
  * chrome. See content/playground/kosmopolis.ts for the pure model.
  */
 
-const W = 1200;
-const H = 760;
+// Canvas backing resolution. Larger than the default display box so the world
+// stays crisp when the window is expanded or taken fullscreen.
+const W = 1680;
+const H = 1050;
 const MAX_SOULS = 150;
 const REBIRTH_HARMONY = 0.82;
 const REBIRTH_YEARS = 120;
@@ -277,7 +279,6 @@ function placeName(prng: () => number): string {
 
 /* ---- persistence: a world is plain data, so it serializes as-is ---- */
 
-const SAVE_KEY = "kosmopolis:world:v2";
 const SAVE_VERSION = 2;
 
 type SavedWorld = {
@@ -397,26 +398,77 @@ function hydrate(w: World, data: unknown): boolean {
   return true;
 }
 
-function readLocal(): unknown | null {
+/* Multiple worlds live in localStorage under an index plus one blob each. This
+ * is the whole store for anonymous visitors, and an offline cache for signed-in
+ * ones (whose worlds also live in kosmopolis_saves). */
+const INDEX_KEY = "kosmopolis:index:v2";
+const ACTIVE_KEY = "kosmopolis:active:v2";
+const stateKey = (id: string) => `kosmopolis:save:${id}`;
+
+export type SaveMeta = { id: string; name: string; updated: number };
+
+function readIndex(): SaveMeta[] {
   try {
-    const raw = window.localStorage.getItem(SAVE_KEY);
+    const raw = window.localStorage.getItem(INDEX_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter((m) => m && typeof m.id === "string" && typeof m.name === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function writeIndex(list: SaveMeta[]) {
+  try {
+    window.localStorage.setItem(INDEX_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+function readState(id: string): unknown | null {
+  try {
+    const raw = window.localStorage.getItem(stateKey(id));
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
-function writeLocal(w: World) {
+function writeState(id: string, w: World) {
   try {
-    window.localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(w)));
+    window.localStorage.setItem(stateKey(id), JSON.stringify(serialize(w)));
   } catch {
-    /* private mode / quota — the world still runs, just not saved locally */
+    /* private mode / quota — the world still runs, just not cached locally */
   }
 }
-function clearLocal() {
+function removeState(id: string) {
   try {
-    window.localStorage.removeItem(SAVE_KEY);
+    window.localStorage.removeItem(stateKey(id));
   } catch {
     /* ignore */
+  }
+}
+function upsertIndex(list: SaveMeta[], meta: SaveMeta): SaveMeta[] {
+  const next = list.filter((m) => m.id !== meta.id);
+  next.unshift(meta);
+  return next;
+}
+function getActiveId(): string | null {
+  try {
+    return window.localStorage.getItem(ACTIVE_KEY);
+  } catch {
+    return null;
+  }
+}
+function setActiveId(id: string) {
+  try {
+    window.localStorage.setItem(ACTIVE_KEY, id);
+  } catch {
+    /* ignore */
+  }
+}
+function newId(): string {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    return "w-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 }
 
@@ -666,6 +718,7 @@ const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cosmosRef = useRef<HTMLElement | null>(null);
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
   const terrainRef = useRef<HTMLCanvasElement | null>(null);
   const terrainSeedRef = useRef<number>(-1);
@@ -717,10 +770,14 @@ export default function KosmopolisWorld() {
 
   const [authed, setAuthed] = useState(false);
   const [sync, setSync] = useState<SyncState>("off");
+  const [saves, setSaves] = useState<SaveMeta[]>([]);
+  const [activeId, setActiveIdState] = useState<string | null>(null);
   const authedRef = useRef(false);
+  const activeIdRef = useRef<string | null>(null);
   const dirtyRef = useRef(false);
   const loadedRef = useRef(false);
   const savingRef = useRef(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Keep the simulation reading the latest dials, and remember the change.
   useEffect(() => {
@@ -770,28 +827,35 @@ export default function KosmopolisWorld() {
     loadLedger();
   }, [loadLedger]);
 
-  /* ---- persistence: localStorage for everyone, cloud sync when signed in ---- */
+  /* ---- persistence: multiple worlds, localStorage for all + cloud when signed in ---- */
+
+  // Save the active world: always to localStorage, and to the cloud row when signed in.
   const flush = useCallback(async (force = false) => {
     if (!loadedRef.current) return;
     if (!dirtyRef.current && !force) return;
     dirtyRef.current = false;
     const w = worldRef.current;
-    writeLocal(w);
+    const id = activeIdRef.current;
+    if (!id) return;
+    writeState(id, w);
+    // keep the local index's "updated" fresh so the list stays ordered
+    const nm = readIndex().find((m) => m.id === id)?.name ?? "A world";
+    writeIndex(upsertIndex(readIndex().filter((m) => m.id !== id), { id, name: nm, updated: Date.now() }));
     if (!authedRef.current) {
       setSync("local");
       return;
     }
     if (savingRef.current) {
-      dirtyRef.current = true; // a save is in flight; catch this on the next pass
+      dirtyRef.current = true;
       return;
     }
     savingRef.current = true;
     setSync("saving");
     try {
-      const res = await fetch("/api/playground/kosmopolis/world", {
+      const res = await fetch("/api/playground/kosmopolis/saves", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state: serialize(w) }),
+        body: JSON.stringify({ id, state: serialize(w) }),
       });
       setSync(res.ok ? "synced" : "error");
     } catch {
@@ -801,36 +865,201 @@ export default function KosmopolisWorld() {
     }
   }, []);
 
-  // On mount: cloud world first (if signed in), else this browser's saved world.
+  const activeName = useCallback(
+    (id: string | null) => saves.find((m) => m.id === id)?.name ?? "A world",
+    [saves]
+  );
+
+  // Adopt a state blob into the running world under a given id.
+  const adopt = useCallback(
+    (id: string, state: unknown) => {
+      worldRef.current = createWorld();
+      hydrate(worldRef.current, state); // false leaves a fresh Void, which is fine
+      activeIdRef.current = id;
+      setActiveIdState(id);
+      setActiveId(id);
+      if (worldRef.current.ignited) ensureGeography();
+      setDials({ ...worldRef.current.dials });
+      setSelected(null);
+      loadedRef.current = true;
+      dirtyRef.current = false;
+      refresh();
+    },
+    [ensureGeography, refresh]
+  );
+
+  const switchTo = useCallback(
+    async (id: string) => {
+      if (id === activeIdRef.current) return;
+      await flush(true);
+      setSync(authedRef.current ? "saving" : "local");
+      let data: unknown = null;
+      if (authedRef.current) {
+        try {
+          const r = await fetch(`/api/playground/kosmopolis/saves?id=${encodeURIComponent(id)}`);
+          const j = await r.json();
+          data = j.save?.state ?? null;
+        } catch {
+          /* fall back to local cache */
+        }
+      }
+      if (!data) data = readState(id);
+      adopt(id, data);
+      setSync(authedRef.current ? "synced" : "local");
+    },
+    [flush, adopt]
+  );
+
+  const newWorld = useCallback(async () => {
+    await flush(true);
+    const w = createWorld();
+    worldRef.current = w;
+    const name = `World ${saves.length + 1}`;
+    let id: string | undefined;
+    if (authedRef.current) {
+      try {
+        const r = await fetch("/api/playground/kosmopolis/saves", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, state: serialize(w) }),
+        });
+        const j = await r.json();
+        id = j.id;
+      } catch {
+        /* fall back to a local id */
+      }
+    }
+    if (!id) id = newId();
+    writeState(id, w);
+    const meta: SaveMeta = { id, name, updated: Date.now() };
+    setSaves((prev) => upsertIndex(prev, meta));
+    writeIndex(upsertIndex(readIndex(), meta));
+    activeIdRef.current = id;
+    setActiveIdState(id);
+    setActiveId(id);
+    loadedRef.current = true;
+    dirtyRef.current = false;
+    setDials({ ...w.dials });
+    setSelected(null);
+    setSync(authedRef.current ? "synced" : "local");
+    refresh();
+  }, [flush, saves.length, refresh]);
+
+  const renameActive = useCallback(() => {
+    const id = activeIdRef.current;
+    if (!id) return;
+    const current = saves.find((m) => m.id === id)?.name ?? "";
+    const name = window.prompt("Name this world", current)?.trim().slice(0, 80);
+    if (!name) return;
+    setSaves((prev) => prev.map((m) => (m.id === id ? { ...m, name } : m)));
+    writeIndex(readIndex().map((m) => (m.id === id ? { ...m, name } : m)));
+    if (authedRef.current) {
+      fetch("/api/playground/kosmopolis/saves", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, name }),
+      }).catch(() => {});
+    }
+  }, [saves]);
+
+  const deleteWorld = useCallback(
+    async (id: string) => {
+      if (saves.length <= 1) {
+        setNotice("This is your only world — begin it again from the Void instead.");
+        return;
+      }
+      if (!window.confirm(`Forget "${activeName(id)}"? This cannot be undone.`)) return;
+      removeState(id);
+      const remaining = saves.filter((m) => m.id !== id);
+      setSaves(remaining);
+      writeIndex(readIndex().filter((m) => m.id !== id));
+      if (authedRef.current) {
+        fetch(`/api/playground/kosmopolis/saves?id=${encodeURIComponent(id)}`, { method: "DELETE" }).catch(() => {});
+      }
+      if (id === activeIdRef.current && remaining.length) switchTo(remaining[0].id);
+    },
+    [saves, activeName, switchTo]
+  );
+
+  // On mount: list the worlds (cloud when signed in, else local), then load the
+  // last active one — creating a first world if there are none.
   useEffect(() => {
     let alive = true;
     (async () => {
       let isAuthed = false;
-      let loaded = false;
+      let cloud: { id: string; name: string; updated_at?: string }[] = [];
       try {
-        const res = await fetch("/api/playground/kosmopolis/world");
+        const res = await fetch("/api/playground/kosmopolis/saves");
         const data = await res.json();
         isAuthed = !!data.authenticated;
-        if (isAuthed && data.world && hydrate(worldRef.current, data.world)) loaded = true;
+        if (Array.isArray(data.saves)) cloud = data.saves;
       } catch {
-        /* fall through to local */
+        /* offline / anon → local */
       }
       if (!alive) return;
-      if (!loaded && hydrate(worldRef.current, readLocal())) loaded = true;
       authedRef.current = isAuthed;
       setAuthed(isAuthed);
-      loadedRef.current = true;
-      setSync(loaded ? (isAuthed ? "synced" : "local") : "off");
-      // A restored, already-ignited world needs its planet in hand before the
-      // first frame; a fresh world builds it at ignition.
-      if (worldRef.current.ignited) ensureGeography();
-      setDials({ ...worldRef.current.dials });
-      refresh();
+
+      let list: SaveMeta[] = isAuthed
+        ? cloud.map((s) => ({ id: s.id, name: s.name, updated: (s.updated_at && Date.parse(s.updated_at)) || Date.now() }))
+        : readIndex();
+      if (isAuthed) writeIndex(list);
+
+      let active = getActiveId();
+      if (!active || !list.some((m) => m.id === active)) active = list[0]?.id ?? null;
+
+      if (active) {
+        let data: unknown = null;
+        if (isAuthed) {
+          try {
+            const r = await fetch(`/api/playground/kosmopolis/saves?id=${encodeURIComponent(active)}`);
+            const j = await r.json();
+            data = j.save?.state ?? null;
+          } catch {
+            /* local cache */
+          }
+        }
+        if (!data) data = readState(active);
+        setSaves(list);
+        adopt(active, data);
+        setSync(isAuthed ? "synced" : "local");
+      } else {
+        // no worlds yet — create the first
+        const w = createWorld();
+        worldRef.current = w;
+        let id: string | undefined;
+        if (isAuthed) {
+          try {
+            const r = await fetch("/api/playground/kosmopolis/saves", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: "World 1", state: serialize(w) }),
+            });
+            id = (await r.json()).id;
+          } catch {
+            /* local id */
+          }
+        }
+        if (!id) id = newId();
+        writeState(id, w);
+        const meta: SaveMeta = { id, name: "World 1", updated: Date.now() };
+        list = [meta];
+        setSaves(list);
+        writeIndex(list);
+        activeIdRef.current = id;
+        setActiveIdState(id);
+        setActiveId(id);
+        loadedRef.current = true;
+        setDials({ ...w.dials });
+        setSync(isAuthed ? "synced" : "off");
+        refresh();
+      }
     })();
     return () => {
       alive = false;
     };
-  }, [refresh, ensureGeography]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Autosave loop: coalesce changes and persist at most every few seconds, plus
   // a final save when the tab is hidden.
@@ -938,31 +1167,34 @@ export default function KosmopolisWorld() {
     // 2. world transform: everything below is in world units
     ctx.setTransform(cam.zoom, 0, 0, cam.zoom, W / 2 - cam.cx * cam.zoom, H / 2 - cam.cy * cam.zoom);
 
-    // atmosphere halo + ocean disc under the land
-    ctx.beginPath();
-    ctx.arc(0, 0, R + 26, 0, 6.283);
-    ctx.fillStyle = "rgba(90,120,150,0.10)";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, 6.283);
-    ctx.fillStyle = "#14202e";
-    ctx.fill();
+    // Before ignition there is nothing but the void — no planet at all.
+    if (w.ignited) {
+      // atmosphere halo + ocean disc under the land
+      ctx.beginPath();
+      ctx.arc(0, 0, R + 26, 0, 6.283);
+      ctx.fillStyle = "rgba(90,120,150,0.10)";
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0, 0, R, 0, 6.283);
+      ctx.fillStyle = "#14202e";
+      ctx.fill();
 
-    // terrain (a static raster, blit once per frame)
-    if (terrainRef.current) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.drawImage(terrainRef.current, -R, -R, 2 * R, 2 * R);
+      // terrain (a static raster, blit once per frame) — only when it matches this world
+      if (terrainRef.current && terrainSeedRef.current === w.seed) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(terrainRef.current, -R, -R, 2 * R, 2 * R);
+      }
+      // harmony tints the whole planet warm or cold
+      const h = w.harmony;
+      ctx.beginPath();
+      ctx.arc(0, 0, R, 0, 6.283);
+      ctx.fillStyle = w.fortune
+        ? `rgba(${w.fortune.tint[0]},${w.fortune.tint[1]},${w.fortune.tint[2]},0.16)`
+        : h > 0.5
+        ? `rgba(214,178,106,${((h - 0.5) * 0.28).toFixed(3)})`
+        : `rgba(90,80,110,${((0.5 - h) * 0.3).toFixed(3)})`;
+      ctx.fill();
     }
-    // harmony tints the whole planet warm or cold
-    const h = w.harmony;
-    ctx.beginPath();
-    ctx.arc(0, 0, R, 0, 6.283);
-    ctx.fillStyle = w.fortune
-      ? `rgba(${w.fortune.tint[0]},${w.fortune.tint[1]},${w.fortune.tint[2]},0.16)`
-      : h > 0.5
-      ? `rgba(214,178,106,${((h - 0.5) * 0.28).toFixed(3)})`
-      : `rgba(90,80,110,${((0.5 - h) * 0.3).toFixed(3)})`;
-    ctx.fill();
 
     const zoom = cam.zoom;
     const acting = EPOCHS[w.epoch].act === true;
@@ -1247,23 +1479,18 @@ export default function KosmopolisWorld() {
     refresh();
   }, [refresh, flush]);
 
+  // Wipe the CURRENT world back to the Void, keeping its slot (id + name).
   const beginAgain = useCallback(() => {
+    if (!window.confirm("Begin this world again from the Void? Its progress will be lost.")) return;
     worldRef.current = createWorld();
     worldRef.current.dials = { ...dials };
-    dirtyRef.current = false;
-    clearLocal();
-    if (authedRef.current) {
-      setSync("saving");
-      fetch("/api/playground/kosmopolis/world", { method: "DELETE" })
-        .then(() => setSync("off"))
-        .catch(() => setSync("error"));
-    } else {
-      setSync("off");
-    }
+    dirtyRef.current = true;
     setSelected(null);
     setNotice(null);
+    setDials({ ...worldRef.current.dials });
     refresh();
-  }, [dials, refresh]);
+    flush(true); // overwrite the saved slot with the fresh Void
+  }, [dials, refresh, flush]);
 
   // Camera: drag to pan, wheel to zoom toward the cursor, click to select a soul.
   useEffect(() => {
@@ -1379,6 +1606,15 @@ export default function KosmopolisWorld() {
     w.camera.cx = s.x;
     w.camera.cy = s.y;
     w.camera.zoom = clamp(Math.max(w.camera.zoom, 2.6), ZOOM_MIN, ZOOM_MAX);
+  }, []);
+  const toggleFullscreen = useCallback(() => {
+    const el = cosmosRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      el.requestFullscreen?.().catch(() => {});
+    }
   }, []);
 
   /* ---- the Oracle: awaken ---- */
@@ -1549,27 +1785,35 @@ export default function KosmopolisWorld() {
       : "Saved to this browser as you go";
 
   return (
-    <div className="kp">
+    <div className={`kp${expanded ? " kp-expanded" : ""}`}>
       <div className="kp-stage">
         {/* the cosmos */}
-        <section className="kp-cosmos" aria-label="The simulated world">
+        <section className="kp-cosmos" aria-label="The simulated world" ref={cosmosRef}>
           <canvas ref={canvasRef} width={W} height={H} />
-          {ui.ignited && (
-            <div className="kp-cam" role="group" aria-label="Camera">
-              <button className="kp-cam-btn" onClick={() => zoomBy(1.4)} aria-label="Zoom in" title="Zoom in">
-                +
-              </button>
-              <button className="kp-cam-btn" onClick={() => zoomBy(1 / 1.4)} aria-label="Zoom out" title="Zoom out">
-                −
-              </button>
-              <button className="kp-cam-btn" onClick={viewWorld} aria-label="View the whole world" title="View the whole world">
-                ◯
-              </button>
-              <button className="kp-cam-btn" onClick={followSelected} aria-label="Follow the selected soul" title="Follow the selected soul" disabled={!selected}>
-                ✦
-              </button>
-            </div>
-          )}
+          <div className="kp-cam" role="group" aria-label="View">
+            <button className="kp-cam-btn" onClick={() => setExpanded((x) => !x)} aria-label={expanded ? "Shrink the map" : "Enlarge the map"} title={expanded ? "Shrink the map" : "Enlarge the map"}>
+              {expanded ? "⤡" : "⤢"}
+            </button>
+            <button className="kp-cam-btn" onClick={toggleFullscreen} aria-label="Fullscreen" title="Fullscreen">
+              ⛶
+            </button>
+            {ui.ignited && (
+              <>
+                <button className="kp-cam-btn" onClick={() => zoomBy(1.4)} aria-label="Zoom in" title="Zoom in">
+                  +
+                </button>
+                <button className="kp-cam-btn" onClick={() => zoomBy(1 / 1.4)} aria-label="Zoom out" title="Zoom out">
+                  −
+                </button>
+                <button className="kp-cam-btn" onClick={viewWorld} aria-label="View the whole world" title="View the whole world">
+                  ◯
+                </button>
+                <button className="kp-cam-btn" onClick={followSelected} aria-label="Follow the selected soul" title="Follow the selected soul" disabled={!selected}>
+                  ✦
+                </button>
+              </>
+            )}
+          </div>
           {ui.ignited && <p className="kp-zoomhint">Scroll to zoom · drag to pan · click a soul</p>}
           <div className="kp-ov">
             <div className="kp-ov-top">
@@ -1613,6 +1857,33 @@ export default function KosmopolisWorld() {
 
         {/* instruments */}
         <aside className="kp-rail">
+          <div className="kp-card">
+            <h3>Your worlds</h3>
+            <ul className="kp-worlds">
+              {saves.map((s) => (
+                <li key={s.id} className={s.id === activeId ? "kp-world kp-world-on" : "kp-world"}>
+                  <button className="kp-world-pick" onClick={() => switchTo(s.id)} title={s.id === activeId ? "Current world" : "Open this world"}>
+                    <span className="kp-world-dot" />
+                    {s.name}
+                  </button>
+                  {saves.length > 1 && (
+                    <button className="kp-world-x" onClick={() => deleteWorld(s.id)} aria-label={`Forget ${s.name}`} title="Forget this world">
+                      ×
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <div className="kp-world-actions">
+              <button className="kp-btn" onClick={newWorld}>
+                + New world
+              </button>
+              <button className="kp-btn" onClick={renameActive} disabled={!activeId}>
+                Rename
+              </button>
+            </div>
+          </div>
+
           <div className="kp-card">
             <h3>The world</h3>
             <div className="kp-metrics">

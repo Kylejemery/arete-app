@@ -917,3 +917,34 @@
 .kp-option-label { flex: 1; }
 .kp-option-virtue { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; flex: none; }
 .kp-modal-foot { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 1rem 0 0; text-align: center; }
+
+/* ---- Kosmopolis: enlarge (expand + fullscreen) ---- */
+.kp-expanded .kp-stage { grid-template-columns: 1fr; }
+.kp-expanded .kp-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+.kp-cosmos:fullscreen { width: 100vw; height: 100vh; background: #08060a; border: none; }
+.kp-cosmos:fullscreen canvas { width: 100%; height: 100%; object-fit: contain; }
+.kp-cosmos:-webkit-full-screen { width: 100vw; height: 100vh; background: #08060a; }
+.kp-cosmos:-webkit-full-screen canvas { width: 100%; height: 100%; object-fit: contain; }
+
+/* ---- Kosmopolis: the worlds panel ---- */
+.kp-worlds { list-style: none; margin: 0 0 0.7rem; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; max-height: 12rem; overflow-y: auto; }
+.kp-world { display: flex; align-items: stretch; gap: 0.3rem; }
+.kp-world-pick {
+  flex: 1; display: flex; align-items: center; gap: 0.5rem; text-align: left;
+  font-family: var(--util); font-size: 0.84rem; color: var(--bone);
+  background: var(--tape); border: 1px solid var(--tape-rule); padding: 0.5rem 0.65rem; cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.kp-world-pick:hover { border-color: var(--pom-lit); color: var(--paper); }
+.kp-world-dot { flex: none; width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--bone-dim); }
+.kp-world-on .kp-world-pick { border-color: var(--pom); color: var(--paper); background: rgba(184, 71, 63, 0.08); }
+.kp-world-on .kp-world-dot { background: var(--pom-lit); box-shadow: 0 0 6px var(--pom-lit); }
+.kp-world-x { flex: none; width: 2rem; background: transparent; border: 1px solid var(--tape-rule); color: var(--bone-dim); font-size: 1rem; line-height: 1; cursor: pointer; }
+.kp-world-x:hover { border-color: var(--pom-lit); color: var(--pom-lit); }
+.kp-world-actions { display: flex; gap: 0.45rem; }
