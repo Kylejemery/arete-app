@@ -948,3 +948,9 @@
 .kp-world-x { flex: none; width: 2rem; background: transparent; border: 1px solid var(--tape-rule); color: var(--bone-dim); font-size: 1rem; line-height: 1; cursor: pointer; }
 .kp-world-x:hover { border-color: var(--pom-lit); color: var(--pom-lit); }
 .kp-world-actions { display: flex; gap: 0.45rem; }
+
+/* ---- Kosmopolis: the world's maxims ---- */
+.kp-maxims { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.7rem; max-height: 15rem; overflow-y: auto; }
+.kp-maxims li { border-left: 2px solid var(--pom); padding: 0.1rem 0 0.1rem 0.7rem; }
+.kp-maxim-text { font-family: var(--book); font-style: italic; font-size: 0.92rem; line-height: 1.4; color: var(--bone); margin: 0; }
+.kp-maxim-by { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); margin: 0.3rem 0 0; }
