@@ -41,15 +41,28 @@ const MAX_SOULS = 150;
 const REBIRTH_HARMONY = 0.82;
 const REBIRTH_YEARS = 120;
 
+// The world is a planet-face: procedural land inside a disc of this radius, in
+// world units. The camera flies from the whole disc down to individual people.
+const PLANET_R = 1400;
+const TERRAIN_PX = 900; // offscreen terrain raster resolution
+const ZOOM_MIN = 0.2;
+const ZOOM_MAX = 9;
+const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
+
 type Virtues = Record<VirtueKey, number>;
+
+type Settlement = { x: number; y: number; r: number; name: string };
 
 type Soul = {
   id: number;
   name: string;
   x: number;
   y: number;
-  vx: number;
-  vy: number;
+  tx: number; // where they are walking to (daily wander)
+  ty: number;
+  hold: number; // frames left paused at an activity
+  act: 0 | 1 | 2; // 0 walking, 1 resting, 2 working
+  home: number; // settlement index
   v: Virtues;
   eud: number;
   born: number;
@@ -62,6 +75,10 @@ type Soul = {
 type Chron = { id: number; year: number; text: string; ill: boolean };
 
 type Fortune = { name: string; good: boolean; tint: [number, number, number]; life: number };
+
+type Camera = { cx: number; cy: number; zoom: number };
+
+const FIT_ZOOM = (Math.min(1200, 760) * 0.92) / (2 * PLANET_R);
 
 type World = {
   running: boolean;
@@ -81,6 +98,9 @@ type World = {
   dials: Dials;
   chron: Chron[];
   chronId: number;
+  seed: number;
+  settlements: Settlement[];
+  camera: Camera;
 };
 
 type Life = {
@@ -123,13 +143,135 @@ function createWorld(): World {
     dials: { ...DEFAULT_DIALS },
     chron: [],
     chronId: 1,
+    seed: (Math.random() * 1e9) | 0,
+    settlements: [],
+    camera: { cx: 0, cy: 0, zoom: FIT_ZOOM },
   };
+}
+
+/* ------------------------------------------------------ geography (terrain) */
+
+// A tiny deterministic value-noise field, so a world's continents are stable
+// across reloads — we persist only the seed and regenerate the map from it.
+function hash2(ix: number, iy: number, seed: number): number {
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(seed, 362437);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const fade = (t: number) => t * t * (3 - 2 * t);
+function valueNoise(x: number, y: number, seed: number): number {
+  const ix = Math.floor(x);
+  const iy = Math.floor(y);
+  const fx = fade(x - ix);
+  const fy = fade(y - iy);
+  const a = hash2(ix, iy, seed);
+  const b = hash2(ix + 1, iy, seed);
+  const c = hash2(ix, iy + 1, seed);
+  const d = hash2(ix + 1, iy + 1, seed);
+  return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+}
+/** Elevation 0..1 at a world point. High in the middle, falling to ocean at the
+ *  rim, so the planet reads as land surrounded by sea. */
+function heightAt(wx: number, wy: number, seed: number): number {
+  const nx = (wx / PLANET_R) * 3.1;
+  const ny = (wy / PLANET_R) * 3.1;
+  let h = 0;
+  let amp = 0.55;
+  let freq = 1;
+  for (let o = 0; o < 5; o++) {
+    h += valueNoise(nx * freq + 11.3, ny * freq + 7.7, seed + o * 101) * amp;
+    amp *= 0.5;
+    freq *= 2.05;
+  }
+  const dist = Math.hypot(wx, wy) / PLANET_R; // 0 center → 1 rim
+  return clamp(h - dist * dist * 0.9, 0, 1);
+}
+
+type Geography = { canvas: HTMLCanvasElement; settlements: Settlement[] };
+
+// Biome palette, warm archival tones to match the playground.
+function biomeColor(h: number): [number, number, number] {
+  if (h < 0.34) return [18, 30, 46]; // deep ocean
+  if (h < 0.46) return [26, 44, 62]; // ocean
+  if (h < 0.5) return [40, 66, 82]; // shallows
+  if (h < 0.535) return [120, 108, 78]; // sand
+  if (h < 0.63) return [78, 96, 62]; // grass
+  if (h < 0.74) return [58, 78, 52]; // forest
+  if (h < 0.85) return [92, 84, 70]; // rock
+  return [176, 170, 150]; // snow
+}
+
+function buildGeography(seed: number): Geography {
+  const px = TERRAIN_PX;
+  const canvas = document.createElement("canvas");
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext("2d");
+  const img = ctx!.createImageData(px, px);
+  const data = img.data;
+  const R = PLANET_R;
+  for (let j = 0; j < px; j++) {
+    for (let i = 0; i < px; i++) {
+      const wx = (i / px) * 2 * R - R;
+      const wy = (j / px) * 2 * R - R;
+      const idx = (j * px + i) * 4;
+      if (Math.hypot(wx, wy) > R) {
+        data[idx + 3] = 0; // outside the disc → space shows through
+        continue;
+      }
+      const h = heightAt(wx, wy, seed);
+      const [r, g, b] = biomeColor(h);
+      // gentle relief shading from the local slope
+      const s = 1 + (heightAt(wx + 12, wy, seed) - heightAt(wx - 12, wy, seed)) * 1.4;
+      data[idx] = clamp(r * s, 0, 255);
+      data[idx + 1] = clamp(g * s, 0, 255);
+      data[idx + 2] = clamp(b * s, 0, 255);
+      data[idx + 3] = 255;
+    }
+  }
+  ctx!.putImageData(img, 0, 0);
+
+  // Seat settlements on habitable land (grass/forest), spread apart.
+  const settlements: Settlement[] = [];
+  let attempts = 0;
+  const target = 7;
+  const prng = mulberry(seed ^ 0x9e3779b9);
+  while (settlements.length < target && attempts < 4000) {
+    attempts++;
+    const ang = prng() * Math.PI * 2;
+    const rad = Math.sqrt(prng()) * R * 0.86;
+    const x = Math.cos(ang) * rad;
+    const y = Math.sin(ang) * rad;
+    const h = heightAt(x, y, seed);
+    if (h < 0.54 || h > 0.75) continue; // not water, not mountain
+    if (settlements.some((s) => Math.hypot(s.x - x, s.y - y) < R * 0.34)) continue;
+    settlements.push({ x, y, r: 120 + prng() * 60, name: placeName(prng) });
+  }
+  return { canvas, settlements };
+}
+
+function mulberry(a: number) {
+  return function () {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const PLACE_A = ["Thes", "Kor", "Aul", "Myr", "Del", "Per", "Hal", "Ther", "Kal", "Xan", "Erin", "Dor", "Pyth", "Lyk"];
+const PLACE_B = ["ia", "os", "on", "aia", "enai", "andros", "opolis", "ythos", "ara", "essa", "yrne"];
+function placeName(prng: () => number): string {
+  const a = PLACE_A[(prng() * PLACE_A.length) | 0];
+  const b = PLACE_B[(prng() * PLACE_B.length) | 0];
+  return a + b;
 }
 
 /* ---- persistence: a world is plain data, so it serializes as-is ---- */
 
-const SAVE_KEY = "kosmopolis:world:v1";
-const SAVE_VERSION = 1;
+const SAVE_KEY = "kosmopolis:world:v2";
+const SAVE_VERSION = 2;
 
 type SavedWorld = {
   version: number;
@@ -148,6 +290,8 @@ type SavedWorld = {
   dials: Dials;
   souls: Soul[];
   chron: Chron[];
+  seed: number;
+  camera: Camera;
 };
 
 function serialize(w: World): SavedWorld {
@@ -168,6 +312,8 @@ function serialize(w: World): SavedWorld {
     dials: w.dials,
     souls: w.souls,
     chron: w.chron.slice(0, 80),
+    seed: w.seed,
+    camera: w.camera,
   };
 }
 
@@ -203,6 +349,16 @@ function hydrate(w: World, data: unknown): boolean {
   w.highRun = Math.max(0, Math.round(numOr(d.highRun, 0)));
   w.dials = { ...DEFAULT_DIALS, ...(d.dials && typeof d.dials === "object" ? d.dials : {}) };
   w.flash = 0;
+  w.seed = Math.round(numOr(d.seed, (Math.random() * 1e9) | 0));
+  w.settlements = []; // regenerated from the seed by ensureGeography on load
+  w.camera =
+    d.camera && typeof d.camera === "object"
+      ? {
+          cx: numOr((d.camera as Camera).cx, 0),
+          cy: numOr((d.camera as Camera).cy, 0),
+          zoom: clamp(numOr((d.camera as Camera).zoom, FIT_ZOOM), ZOOM_MIN, ZOOM_MAX),
+        }
+      : { cx: 0, cy: 0, zoom: FIT_ZOOM };
 
   w.souls = (d.souls as unknown[])
     .filter(validSoul)
@@ -210,12 +366,17 @@ function hydrate(w: World, data: unknown): boolean {
     .map((s) => {
       const v = {} as Virtues;
       for (const k of VIRTUE_KEYS) v[k] = clamp(s.v[k], 0.02, 0.99);
+      const x = numOr(s.x, 0);
+      const y = numOr(s.y, 0);
       return {
         ...s,
-        x: clamp(numOr(s.x, W / 2), 20, W - 20),
-        y: clamp(numOr(s.y, H / 2), 30, H - 20),
-        vx: numOr(s.vx, 0),
-        vy: numOr(s.vy, 0),
+        x,
+        y,
+        tx: numOr(s.tx, x),
+        ty: numOr(s.ty, y),
+        hold: Math.max(0, Math.round(numOr(s.hold, 0))),
+        act: (s.act === 1 || s.act === 2 ? s.act : 0) as 0 | 1 | 2,
+        home: Math.max(0, Math.round(numOr(s.home, 0))),
         v,
         eud: clamp(numOr(s.eud, 0.5), 0.02, 1),
         pulse: numOr(s.pulse, 0),
@@ -252,20 +413,26 @@ function clearLocal() {
   }
 }
 
-function makeSoul(world: World, x: number, y: number, base?: Virtues): Soul {
+function makeSoul(world: World, home: number, base?: Virtues): Soul {
   const v = {} as Virtues;
   for (const key of VIRTUE_KEYS) {
     v[key] = base
       ? clamp(base[key] + rand(-0.18, 0.18), 0.05, 0.98)
       : clamp(rand(0.28, 0.66) + rand(-0.14, 0.14), 0.05, 0.95);
   }
+  const seat = world.settlements[home];
+  const px = seat ? seat.x + rand(-seat.r, seat.r) : rand(-PLANET_R * 0.5, PLANET_R * 0.5);
+  const py = seat ? seat.y + rand(-seat.r, seat.r) : rand(-PLANET_R * 0.5, PLANET_R * 0.5);
   return {
     id: world.nextId++,
     name: makeName(),
-    x,
-    y,
-    vx: rand(-0.15, 0.15),
-    vy: rand(-0.15, 0.15),
+    x: px,
+    y: py,
+    tx: px,
+    ty: py,
+    hold: (Math.random() * 60) | 0,
+    act: 0,
+    home,
     v,
     eud: 0.5,
     born: world.year,
@@ -276,9 +443,11 @@ function makeSoul(world: World, x: number, y: number, base?: Virtues): Soul {
   };
 }
 
-function seedSouls(world: World, n: number, base?: Virtues) {
+function seedSouls(world: World, n: number, base?: Virtues, home?: number) {
+  const count = world.settlements.length;
   for (let i = 0; i < n && world.souls.length < MAX_SOULS; i++) {
-    world.souls.push(makeSoul(world, rand(W * 0.2, W * 0.8), rand(H * 0.25, H * 0.8), base));
+    const seat = home != null ? home : count ? (Math.random() * count) | 0 : 0;
+    world.souls.push(makeSoul(world, seat, base));
   }
 }
 
@@ -378,7 +547,7 @@ function beget(world: World) {
   if (a === b) return;
   const base = {} as Virtues;
   for (const key of VIRTUE_KEYS) base[key] = (a.v[key] + b.v[key]) / 2;
-  const child = makeSoul(world, (a.x + b.x) / 2 + rand(-30, 30), (a.y + b.y) / 2 + rand(-30, 30), base);
+  const child = makeSoul(world, a.home, base); // born into a parent's town
   world.souls.push(child);
   world.generations++;
   if (Math.random() < 0.4) log(world, `${child.name} was born into the world, carrying something of those before them.`);
@@ -433,6 +602,40 @@ function tick(world: World) {
   }
 }
 
+/** Daily life: souls walk to a spot in their town, pause to rest or work, then
+ *  choose somewhere new. Frame-based so movement stays smooth at any speed. */
+function life(world: World) {
+  const sp = 0.95;
+  for (const s of world.souls) {
+    if (s.hold > 0) {
+      s.hold--;
+      continue;
+    }
+    const dx = s.tx - s.x;
+    const dy = s.ty - s.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 4) {
+      if (Math.random() < 0.55) {
+        s.hold = 30 + ((Math.random() * 150) | 0);
+        s.act = Math.random() < 0.5 ? 1 : 2; // rest or work
+      } else {
+        const seat = world.settlements[s.home];
+        if (seat) {
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(Math.random()) * seat.r;
+          s.tx = seat.x + Math.cos(a) * r;
+          s.ty = seat.y + Math.sin(a) * r;
+        }
+        s.act = 0;
+      }
+    } else {
+      s.x += (dx / d) * sp;
+      s.y += (dy / d) * sp;
+      s.act = 0;
+    }
+  }
+}
+
 /* --------------------------------------------------------------- component */
 
 type UiState = {
@@ -457,6 +660,19 @@ export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
+  const terrainRef = useRef<HTMLCanvasElement | null>(null);
+  const terrainSeedRef = useRef<number>(-1);
+
+  // Build (or rebuild) the planet's terrain + settlements from the world's seed.
+  // Cached by seed so it runs once per world, not per frame.
+  const ensureGeography = useCallback(() => {
+    const w = worldRef.current;
+    if (terrainSeedRef.current === w.seed && terrainRef.current) return;
+    const geo = buildGeography(w.seed);
+    terrainRef.current = geo.canvas;
+    terrainSeedRef.current = w.seed;
+    w.settlements = geo.settlements;
+  }, []);
 
   const [ui, setUi] = useState<UiState>({
     ignited: false,
@@ -594,13 +810,16 @@ export default function KosmopolisWorld() {
       setAuthed(isAuthed);
       loadedRef.current = true;
       setSync(loaded ? (isAuthed ? "synced" : "local") : "off");
+      // A restored, already-ignited world needs its planet in hand before the
+      // first frame; a fresh world builds it at ignition.
+      if (worldRef.current.ignited) ensureGeography();
       setDials({ ...worldRef.current.dials });
       refresh();
     })();
     return () => {
       alive = false;
     };
-  }, [refresh]);
+  }, [refresh, ensureGeography]);
 
   // Autosave loop: coalesce changes and persist at most every few seconds, plus
   // a final save when the tab is hidden.
@@ -654,9 +873,10 @@ export default function KosmopolisWorld() {
           guard++;
         }
         if (guard > 0) dirtyRef.current = true;
+        if (!reduce) life(w);
       }
 
-      draw(ctx, w, t, reduce);
+      draw(ctx, w, t);
 
       sinceRefresh += dt;
       if (sinceRefresh >= 0.28) {
@@ -669,40 +889,87 @@ export default function KosmopolisWorld() {
     return () => cancelAnimationFrame(raf);
   }, [refresh]);
 
-  /* ---- drawing ---- */
-  function draw(ctx: CanvasRenderingContext2D, w: World, t: number, reduce: boolean) {
-    const h = w.harmony;
-    // Ground: warm amber when concordant, cold slate-violet when not — over the tape-dark base.
-    const base: [number, number, number] = w.fortune
-      ? w.fortune.tint
-      : h > 0.5
-      ? [26 + (h - 0.5) * 40, 24 + (h - 0.5) * 30, 16]
-      : [26, 22, 30 + (0.5 - h) * 30];
-    const g = ctx.createRadialGradient(W * 0.5, H * 0.42, 40, W * 0.5, H * 0.5, H * 0.98);
-    g.addColorStop(0, rgb([base[0] + 6, base[1] + 6, base[2] + 8]));
-    g.addColorStop(1, "#100e0a");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+  /* ---- drawing: a planet you fly into ---- */
+  function draw(ctx: CanvasRenderingContext2D, w: World, t: number) {
+    const cam = w.camera;
+    const R = PLANET_R;
 
-    // starfield
-    const starGlow = EPOCHS[w.epoch].stars;
-    if (starGlow > 0) {
-      for (const st of starsRef.current) {
-        const a = (0.22 + 0.32 * Math.sin(t * 0.7 + st.tw)) * starGlow;
-        ctx.globalAlpha = clamp(a, 0, 0.65);
-        ctx.fillStyle = "#d8d2c0";
+    // 1. space + starfield, in screen space (identity transform)
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#08060a";
+    ctx.fillRect(0, 0, W, H);
+    for (const st of starsRef.current) {
+      const a = 0.18 + 0.3 * Math.sin(t * 0.7 + st.tw);
+      ctx.globalAlpha = clamp(a, 0, 0.6);
+      ctx.fillStyle = "#d8d2c0";
+      ctx.beginPath();
+      ctx.arc(st.x, st.y, st.r, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 2. world transform: everything below is in world units
+    ctx.setTransform(cam.zoom, 0, 0, cam.zoom, W / 2 - cam.cx * cam.zoom, H / 2 - cam.cy * cam.zoom);
+
+    // atmosphere halo + ocean disc under the land
+    ctx.beginPath();
+    ctx.arc(0, 0, R + 26, 0, 6.283);
+    ctx.fillStyle = "rgba(90,120,150,0.10)";
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, 6.283);
+    ctx.fillStyle = "#14202e";
+    ctx.fill();
+
+    // terrain (a static raster, blit once per frame)
+    if (terrainRef.current) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(terrainRef.current, -R, -R, 2 * R, 2 * R);
+    }
+    // harmony tints the whole planet warm or cold
+    const h = w.harmony;
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, 6.283);
+    ctx.fillStyle = w.fortune
+      ? `rgba(${w.fortune.tint[0]},${w.fortune.tint[1]},${w.fortune.tint[2]},0.16)`
+      : h > 0.5
+      ? `rgba(214,178,106,${((h - 0.5) * 0.28).toFixed(3)})`
+      : `rgba(90,80,110,${((0.5 - h) * 0.3).toFixed(3)})`;
+    ctx.fill();
+
+    const zoom = cam.zoom;
+    const acting = EPOCHS[w.epoch].act === true;
+    const figures = zoom >= FIGURE_ZOOM;
+    const inv = 1 / zoom; // screen-constant sizes divide by zoom
+
+    // 3. settlements
+    for (const st of w.settlements) {
+      if (figures) {
+        // a little cluster of buildings
+        ctx.fillStyle = "rgba(38,30,22,0.9)";
+        for (let k = 0; k < 5; k++) {
+          const a = (k / 5) * 6.283;
+          const bx = st.x + Math.cos(a) * st.r * 0.4;
+          const by = st.y + Math.sin(a) * st.r * 0.4;
+          ctx.fillRect(bx - 5, by - 5, 10, 9);
+        }
+      } else {
         ctx.beginPath();
-        ctx.arc(st.x, st.y, st.r, 0, 6.283);
+        ctx.arc(st.x, st.y, 5 * inv, 0, 6.283);
+        ctx.fillStyle = "#e3c77a";
         ctx.fill();
+        if (zoom > 0.34) {
+          ctx.font = `${18 * inv}px var(--font-newsreader, Georgia, serif)`;
+          ctx.fillStyle = "rgba(228,229,220,0.8)";
+          ctx.textAlign = "center";
+          ctx.fillText(st.name, st.x, st.y - 12 * inv);
+        }
       }
-      ctx.globalAlpha = 1;
     }
 
-    const acting = EPOCHS[w.epoch].act === true;
-
-    // sympatheia threads — faint links between near, flourishing souls
-    if (acting) {
-      ctx.lineWidth = 1;
+    // 4. sympatheia threads (only close in, within a town)
+    if (acting && zoom >= 1.1) {
+      ctx.lineWidth = inv;
       const souls = w.souls;
       for (let i = 0; i < souls.length; i++) {
         const s1 = souls[i];
@@ -711,9 +978,9 @@ export default function KosmopolisWorld() {
           const dx = s2.x - s1.x;
           const dy = s2.y - s1.y;
           const d2 = dx * dx + dy * dy;
-          if (d2 < 15000) {
-            const strength = (1 - d2 / 15000) * Math.min(s1.eud, s2.eud);
-            if (strength > 0.12) {
+          if (d2 < 6000) {
+            const strength = (1 - d2 / 6000) * Math.min(s1.eud, s2.eud);
+            if (strength > 0.14) {
               ctx.strokeStyle = `rgba(212,178,106,${(strength * 0.4).toFixed(3)})`;
               ctx.beginPath();
               ctx.moveTo(s1.x, s1.y);
@@ -725,52 +992,84 @@ export default function KosmopolisWorld() {
       }
     }
 
-    // souls
+    // 5. souls
     for (const s of w.souls) {
-      if (!reduce && w.running) {
-        s.x += s.vx;
-        s.y += s.vy;
-        if (s.x < 26 || s.x > W - 26) s.vx *= -1;
-        if (s.y < 34 || s.y > H - 26) s.vy *= -1;
-        s.vx = clamp(s.vx + rand(-0.01, 0.01), -0.28, 0.28);
-        s.vy = clamp(s.vy + rand(-0.01, 0.01), -0.28, 0.28);
-      }
       s.pulse += 0.03;
       const col = dominantVirtue(s.v).color;
-      const bright = 0.35 + s.eud * 0.65;
-      const rad = 2.2 + s.eud * 5 + Math.sin(s.pulse) * 0.5;
+      const bright = 0.4 + s.eud * 0.6;
+      const struggling = acting && s.eud < 0.33;
 
-      const gg = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, rad * 4.6);
-      gg.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${(bright * 0.5).toFixed(3)})`);
-      gg.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
-      ctx.fillStyle = gg;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, rad * 4.6, 0, 6.283);
-      ctx.fill();
-
-      ctx.fillStyle = `rgba(${Math.min(255, col[0] + 55)},${Math.min(255, col[1] + 52)},${Math.min(255, col[2] + 52)},${bright.toFixed(3)})`;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, rad, 0, 6.283);
-      ctx.fill();
-
-      // an awakened soul wears a steady ring of reason
-      if (s.awake) {
-        ctx.strokeStyle = "rgba(240,232,214,0.75)";
-        ctx.lineWidth = 1;
+      if (!figures) {
+        // a point of light
+        const rad = (1.8 + s.eud * 2.2) * inv;
+        ctx.fillStyle = `rgba(${Math.min(255, col[0] + 50)},${Math.min(255, col[1] + 48)},${Math.min(255, col[2] + 48)},${bright.toFixed(3)})`;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, rad + 4, 0, 6.283);
+        ctx.arc(s.x, s.y, rad, 0, 6.283);
+        ctx.fill();
+      } else {
+        // a little person: head + body, coloured by dominant virtue
+        const bob = s.act === 2 ? Math.sin(s.pulse * 2) * 1.2 : 0;
+        const bx = s.x;
+        const by = s.y + bob;
+        const cr = `rgb(${Math.min(255, col[0] + 40)},${Math.min(255, col[1] + 38)},${Math.min(255, col[2] + 38)})`;
+        // soft aura by flourishing
+        const gg = ctx.createRadialGradient(bx, by - 6, 0, bx, by - 6, 22);
+        gg.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${(bright * 0.32).toFixed(3)})`);
+        gg.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.arc(bx, by - 6, 22, 0, 6.283);
+        ctx.fill();
+        // body
+        ctx.fillStyle = cr;
+        ctx.beginPath();
+        ctx.moveTo(bx, by - 9);
+        ctx.lineTo(bx + 5, by + 6);
+        ctx.lineTo(bx - 5, by + 6);
+        ctx.closePath();
+        ctx.fill();
+        // head
+        ctx.beginPath();
+        ctx.arc(bx, by - 12, 3.6, 0, 6.283);
+        ctx.fill();
+      }
+
+      // awakened: a steady ring of reason
+      if (s.awake) {
+        ctx.strokeStyle = "rgba(240,232,214,0.8)";
+        ctx.lineWidth = 1.2 * inv;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - (figures ? 6 : 0), (figures ? 15 : 6 * inv), 0, 6.283);
         ctx.stroke();
       }
+      // needs help: a pulsing amber marker so the struggling can be found
+      if (struggling) {
+        const p = 0.5 + 0.5 * Math.sin(t * 3 + s.pulse);
+        ctx.strokeStyle = `rgba(211,112,106,${(0.5 + p * 0.5).toFixed(3)})`;
+        ctx.lineWidth = 1.4 * inv;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - (figures ? 6 : 0), (10 + p * 4) * (figures ? 1 : inv), 0, 6.283);
+        ctx.stroke();
+      }
+      // selection
       if (w.selected === s.id) {
         ctx.strokeStyle = "#f0e8d6";
-        ctx.lineWidth = 1.3;
+        ctx.lineWidth = 1.6 * inv;
+        const rr = (figures ? 17 : 9 * inv) + Math.sin(t * 2) * 1.5 * inv;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, rad + 8 + Math.sin(t * 2) * 1.5, 0, 6.283);
+        ctx.arc(s.x, s.y - (figures ? 6 : 0), rr, 0, 6.283);
         ctx.stroke();
+        if (figures && zoom >= 1.4) {
+          ctx.font = `${12 * inv}px var(--font-newsreader, Georgia, serif)`;
+          ctx.fillStyle = "#f4ead5";
+          ctx.textAlign = "center";
+          ctx.fillText(s.name, s.x, s.y - 22);
+        }
       }
     }
 
-    // the conflagration
+    // 6. the conflagration, back in screen space
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (w.flash > 0) {
       const a = w.flash / 60;
       ctx.fillStyle = `rgba(184,71,63,${(a * 0.6).toFixed(3)})`;
@@ -785,13 +1084,14 @@ export default function KosmopolisWorld() {
     if (!w.ignited) {
       w.ignited = true;
       w.year = 1;
+      ensureGeography(); // the planet condenses out of the fire
       advanceEpoch(w);
       log(w, "The creative fire was struck. Out of the formless field a world began to condense.");
     }
     w.running = true;
     dirtyRef.current = true;
     refresh();
-  }, [refresh]);
+  }, [refresh, ensureGeography]);
 
   const togglePlay = useCallback(() => {
     const w = worldRef.current;
@@ -835,7 +1135,8 @@ export default function KosmopolisWorld() {
       setNotice("The world is as full as it can hold.");
       return;
     }
-    const s = makeSoul(w, rand(W * 0.25, W * 0.75), rand(H * 0.3, H * 0.75));
+    const home = w.settlements.length ? (Math.random() * w.settlements.length) | 0 : 0;
+    const s = makeSoul(w, home);
     w.souls.push(s);
     w.selected = s.id;
     log(w, `A soul — ${s.name} — was breathed into being by a hand outside the world.`);
@@ -870,33 +1171,121 @@ export default function KosmopolisWorld() {
     refresh();
   }, [dials, refresh]);
 
-  const onCanvasClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+  // Camera: drag to pan, wheel to zoom toward the cursor, click to select a soul.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const toCanvas = (clientX: number, clientY: number) => {
       const r = canvas.getBoundingClientRect();
-      const x = (e.clientX - r.left) * (W / r.width);
-      const y = (e.clientY - r.top) * (H / r.height);
+      return { x: (clientX - r.left) * (W / r.width), y: (clientY - r.top) * (H / r.height) };
+    };
+    const toWorld = (sx: number, sy: number) => {
+      const cam = worldRef.current.camera;
+      return { x: cam.cx + (sx - W / 2) / cam.zoom, y: cam.cy + (sy - H / 2) / cam.zoom };
+    };
+    const clampCam = () => {
+      const cam = worldRef.current.camera;
+      cam.zoom = clamp(cam.zoom, ZOOM_MIN, ZOOM_MAX);
+      const m = PLANET_R * 1.05;
+      cam.cx = clamp(cam.cx, -m, m);
+      cam.cy = clamp(cam.cy, -m, m);
+    };
+
+    let dragging = false;
+    let moved = 0;
+    let lastX = 0;
+    let lastY = 0;
+
+    const onDown = (e: PointerEvent) => {
+      dragging = true;
+      moved = 0;
+      const c = toCanvas(e.clientX, e.clientY);
+      lastX = c.x;
+      lastY = c.y;
+      try {
+        canvas.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const c = toCanvas(e.clientX, e.clientY);
+      const dx = c.x - lastX;
+      const dy = c.y - lastY;
+      lastX = c.x;
+      lastY = c.y;
+      moved += Math.abs(dx) + Math.abs(dy);
+      const cam = worldRef.current.camera;
+      cam.cx -= dx / cam.zoom;
+      cam.cy -= dy / cam.zoom;
+      clampCam();
+      dirtyRef.current = true;
+    };
+    const onUp = (e: PointerEvent) => {
+      if (!dragging) return;
+      dragging = false;
+      if (moved > 6) return; // a pan, not a click
+      const c = toCanvas(e.clientX, e.clientY);
+      const wp = toWorld(c.x, c.y);
       const w = worldRef.current;
       let best: Soul | null = null;
       let bd = Infinity;
       for (const s of w.souls) {
-        const dx = s.x - x;
-        const dy = s.y - y;
+        const dx = s.x - wp.x;
+        const dy = s.y - wp.y;
         const d = dx * dx + dy * dy;
         if (d < bd) {
           bd = d;
           best = s;
         }
       }
-      if (best && bd < 2600) {
+      const thr = Math.max(16, 22 / w.camera.zoom);
+      if (best && bd < thr * thr) {
         w.selected = best.id;
         setNotice(null);
         refresh();
       }
-    },
-    [refresh]
-  );
+    };
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const c = toCanvas(e.clientX, e.clientY);
+      const before = toWorld(c.x, c.y);
+      const cam = worldRef.current.camera;
+      cam.zoom = clamp(cam.zoom * Math.exp(-e.deltaY * 0.0015), ZOOM_MIN, ZOOM_MAX);
+      cam.cx = before.x - (c.x - W / 2) / cam.zoom;
+      cam.cy = before.y - (c.y - H / 2) / cam.zoom;
+      clampCam();
+    };
+
+    canvas.addEventListener("pointerdown", onDown);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    canvas.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      canvas.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("wheel", onWheel);
+    };
+  }, [refresh]);
+
+  const zoomBy = useCallback((factor: number) => {
+    const cam = worldRef.current.camera;
+    cam.zoom = clamp(cam.zoom * factor, ZOOM_MIN, ZOOM_MAX);
+  }, []);
+  const viewWorld = useCallback(() => {
+    worldRef.current.camera = { cx: 0, cy: 0, zoom: FIT_ZOOM };
+  }, []);
+  const followSelected = useCallback(() => {
+    const w = worldRef.current;
+    const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
+    if (!s) return;
+    w.camera.cx = s.x;
+    w.camera.cy = s.y;
+    w.camera.zoom = clamp(Math.max(w.camera.zoom, 2.6), ZOOM_MIN, ZOOM_MAX);
+  }, []);
 
   /* ---- the Oracle: awaken ---- */
   const awaken = useCallback(async () => {
@@ -1012,7 +1401,24 @@ export default function KosmopolisWorld() {
       <div className="kp-stage">
         {/* the cosmos */}
         <section className="kp-cosmos" aria-label="The simulated world">
-          <canvas ref={canvasRef} width={W} height={H} onClick={onCanvasClick} />
+          <canvas ref={canvasRef} width={W} height={H} />
+          {ui.ignited && (
+            <div className="kp-cam" role="group" aria-label="Camera">
+              <button className="kp-cam-btn" onClick={() => zoomBy(1.4)} aria-label="Zoom in" title="Zoom in">
+                +
+              </button>
+              <button className="kp-cam-btn" onClick={() => zoomBy(1 / 1.4)} aria-label="Zoom out" title="Zoom out">
+                −
+              </button>
+              <button className="kp-cam-btn" onClick={viewWorld} aria-label="View the whole world" title="View the whole world">
+                ◯
+              </button>
+              <button className="kp-cam-btn" onClick={followSelected} aria-label="Follow the selected soul" title="Follow the selected soul" disabled={!selected}>
+                ✦
+              </button>
+            </div>
+          )}
+          {ui.ignited && <p className="kp-zoomhint">Scroll to zoom · drag to pan · click a soul</p>}
           <div className="kp-ov">
             <div className="kp-ov-top">
               <div>
