@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { callOracle, type HistoryTurn } from "@/lib/oracle";
+import { resolveVisitor } from "@/lib/playground-visitor";
 import { arete, virtueFromText, VIRTUE_KEYS, type VirtueKey } from "@/content/playground/kosmopolis";
 
 /**
@@ -99,8 +100,10 @@ export async function POST(request: NextRequest) {
 
   const virtue = virtueFromText(reply.answer);
 
-  // Remember the awakening in the shared annals. A failure here must not lose
-  // the reflection the visitor is owed, so we persist best-effort.
+  // Remember the awakening in the shared annals, attributed to the signed-in
+  // visitor if there is one. A failure here must not lose the reflection the
+  // visitor is owed, so we persist best-effort.
+  const visitor = await resolveVisitor();
   try {
     const supabase = createAdminClient();
     await supabase.from("kosmopolis_lives").insert({
@@ -111,6 +114,8 @@ export async function POST(request: NextRequest) {
       arete: a,
       virtue,
       reflection: reply.answer,
+      user_id: visitor?.userId ?? null,
+      author_name: visitor?.name ?? null,
     });
   } catch (err) {
     console.error("[api/playground/kosmopolis/mind persist]", err);

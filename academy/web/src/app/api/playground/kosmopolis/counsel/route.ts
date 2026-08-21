@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { callOracle, type HistoryTurn } from "@/lib/oracle";
+import { resolveVisitor } from "@/lib/playground-visitor";
 import {
   arete,
   virtueFromText,
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
 
   const virtue = virtueFromText(reply.answer);
 
+  const visitor = await resolveVisitor();
   try {
     const supabase = createAdminClient();
     await supabase.from("kosmopolis_lives").insert({
@@ -121,6 +123,8 @@ export async function POST(request: NextRequest) {
       counselor: counselor.name,
       advice,
       reflection: reply.answer,
+      user_id: visitor?.userId ?? null,
+      author_name: visitor?.name ?? null,
     });
   } catch (err) {
     console.error("[api/playground/kosmopolis/counsel persist]", err);

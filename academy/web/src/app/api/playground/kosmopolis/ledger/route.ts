@@ -20,7 +20,7 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("kosmopolis_lives")
-      .select("id, kind, soul_name, epoch, world_year, arete, virtue, counselor, reflection, created_at")
+      .select("id, kind, soul_name, epoch, world_year, arete, virtue, counselor, author_name, reflection, created_at")
       .order("created_at", { ascending: false })
       .limit(24);
     if (error) throw error;

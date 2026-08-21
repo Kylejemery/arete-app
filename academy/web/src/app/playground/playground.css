@@ -868,3 +868,15 @@
 @media (prefers-reduced-motion: reduce) {
   .kp-bar > i, .kp-vbar > i { transition: none; }
 }
+
+/* ---- Kosmopolis: sync indicator ---- */
+.kp-sync { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.7rem; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-sync-dot { flex: none; width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--bone-dim); }
+.kp-sync-dot.kp-sync-synced { background: var(--v-temperance, #7aa88e); }
+.kp-sync-dot.kp-sync-local { background: var(--v-wisdom, #d6b26a); }
+.kp-sync-dot.kp-sync-saving { background: var(--v-wisdom, #d6b26a); animation: kp-pulse 1s ease-in-out infinite; }
+.kp-sync-dot.kp-sync-error { background: var(--pom-lit); }
+.kp-sync-link { margin-left: auto; color: var(--pom-lit); text-decoration: none; border-bottom: 1px solid transparent; }
+.kp-sync-link:hover { border-bottom-color: var(--pom-lit); }
+@keyframes kp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .kp-sync-dot.kp-sync-saving { animation: none; } }

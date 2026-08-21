@@ -91,9 +91,12 @@ type Life = {
   world_year: number | null;
   virtue: VirtueKey | null;
   counselor: string | null;
+  author_name: string | null;
   reflection: string;
   created_at: string;
 };
+
+type SyncState = "off" | "local" | "saving" | "synced" | "error";
 
 /* ------------------------------------------------------------ pure physics */
 
@@ -121,6 +124,132 @@ function createWorld(): World {
     chron: [],
     chronId: 1,
   };
+}
+
+/* ---- persistence: a world is plain data, so it serializes as-is ---- */
+
+const SAVE_KEY = "kosmopolis:world:v1";
+const SAVE_VERSION = 1;
+
+type SavedWorld = {
+  version: number;
+  ignited: boolean;
+  speed: number;
+  year: number;
+  epoch: number;
+  harmony: number;
+  generations: number;
+  cycle: number;
+  nextId: number;
+  chronId: number;
+  selected: number | null;
+  fortune: Fortune | null;
+  highRun: number;
+  dials: Dials;
+  souls: Soul[];
+  chron: Chron[];
+};
+
+function serialize(w: World): SavedWorld {
+  return {
+    version: SAVE_VERSION,
+    ignited: w.ignited,
+    speed: w.speed,
+    year: w.year,
+    epoch: w.epoch,
+    harmony: w.harmony,
+    generations: w.generations,
+    cycle: w.cycle,
+    nextId: w.nextId,
+    chronId: w.chronId,
+    selected: w.selected,
+    fortune: w.fortune,
+    highRun: w.highRun,
+    dials: w.dials,
+    souls: w.souls,
+    chron: w.chron.slice(0, 80),
+  };
+}
+
+const numOr = (v: unknown, f: number) => (typeof v === "number" && isFinite(v) ? v : f);
+
+function validSoul(s: unknown): s is Soul {
+  if (!s || typeof s !== "object") return false;
+  const o = s as Record<string, unknown>;
+  if (typeof o.id !== "number" || !o.v || typeof o.v !== "object") return false;
+  const v = o.v as Record<string, unknown>;
+  return VIRTUE_KEYS.every((k) => typeof v[k] === "number");
+}
+
+/** Load saved data into an existing world. Returns false (leaving it untouched)
+ *  if the payload is missing, malformed, or from an older save version. */
+function hydrate(w: World, data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const d = data as Partial<SavedWorld>;
+  if (d.version !== SAVE_VERSION || !Array.isArray(d.souls) || !Array.isArray(d.chron)) return false;
+
+  w.ignited = !!d.ignited;
+  w.running = false; // never auto-run a restored world
+  w.speed = numOr(d.speed, 3);
+  w.year = Math.max(0, Math.round(numOr(d.year, 0)));
+  w.epoch = Math.min(EPOCHS.length - 1, Math.max(0, Math.round(numOr(d.epoch, 0))));
+  w.harmony = clamp(numOr(d.harmony, 0.5), 0, 1);
+  w.generations = Math.max(0, Math.round(numOr(d.generations, 0)));
+  w.cycle = Math.max(1, Math.round(numOr(d.cycle, 1)));
+  w.nextId = Math.max(1, Math.round(numOr(d.nextId, 1)));
+  w.chronId = Math.max(1, Math.round(numOr(d.chronId, 1)));
+  w.selected = typeof d.selected === "number" ? d.selected : null;
+  w.fortune = d.fortune && typeof d.fortune === "object" ? (d.fortune as Fortune) : null;
+  w.highRun = Math.max(0, Math.round(numOr(d.highRun, 0)));
+  w.dials = { ...DEFAULT_DIALS, ...(d.dials && typeof d.dials === "object" ? d.dials : {}) };
+  w.flash = 0;
+
+  w.souls = (d.souls as unknown[])
+    .filter(validSoul)
+    .slice(0, MAX_SOULS)
+    .map((s) => {
+      const v = {} as Virtues;
+      for (const k of VIRTUE_KEYS) v[k] = clamp(s.v[k], 0.02, 0.99);
+      return {
+        ...s,
+        x: clamp(numOr(s.x, W / 2), 20, W - 20),
+        y: clamp(numOr(s.y, H / 2), 30, H - 20),
+        vx: numOr(s.vx, 0),
+        vy: numOr(s.vy, 0),
+        v,
+        eud: clamp(numOr(s.eud, 0.5), 0.02, 1),
+        pulse: numOr(s.pulse, 0),
+        awake: !!s.awake,
+      };
+    });
+  w.chron = (d.chron as Chron[]).filter((c) => c && typeof c.text === "string").slice(0, 80);
+  // Keep id counters ahead of anything restored.
+  for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
+  for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
+  return true;
+}
+
+function readLocal(): unknown | null {
+  try {
+    const raw = window.localStorage.getItem(SAVE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function writeLocal(w: World) {
+  try {
+    window.localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(w)));
+  } catch {
+    /* private mode / quota — the world still runs, just not saved locally */
+  }
+}
+function clearLocal() {
+  try {
+    window.localStorage.removeItem(SAVE_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 function makeSoul(world: World, x: number, y: number, base?: Virtues): Soul {
@@ -359,9 +488,17 @@ export default function KosmopolisWorld() {
 
   const [lives, setLives] = useState<Life[]>([]);
 
-  // Keep the simulation reading the latest dials.
+  const [authed, setAuthed] = useState(false);
+  const [sync, setSync] = useState<SyncState>("off");
+  const authedRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const loadedRef = useRef(false);
+  const savingRef = useRef(false);
+
+  // Keep the simulation reading the latest dials, and remember the change.
   useEffect(() => {
     worldRef.current.dials = { ...dials };
+    if (loadedRef.current) dirtyRef.current = true;
   }, [dials]);
 
   const snapshotSelected = useCallback(() => {
@@ -406,6 +543,81 @@ export default function KosmopolisWorld() {
     loadLedger();
   }, [loadLedger]);
 
+  /* ---- persistence: localStorage for everyone, cloud sync when signed in ---- */
+  const flush = useCallback(async (force = false) => {
+    if (!loadedRef.current) return;
+    if (!dirtyRef.current && !force) return;
+    dirtyRef.current = false;
+    const w = worldRef.current;
+    writeLocal(w);
+    if (!authedRef.current) {
+      setSync("local");
+      return;
+    }
+    if (savingRef.current) {
+      dirtyRef.current = true; // a save is in flight; catch this on the next pass
+      return;
+    }
+    savingRef.current = true;
+    setSync("saving");
+    try {
+      const res = await fetch("/api/playground/kosmopolis/world", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: serialize(w) }),
+      });
+      setSync(res.ok ? "synced" : "error");
+    } catch {
+      setSync("error");
+    } finally {
+      savingRef.current = false;
+    }
+  }, []);
+
+  // On mount: cloud world first (if signed in), else this browser's saved world.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      let isAuthed = false;
+      let loaded = false;
+      try {
+        const res = await fetch("/api/playground/kosmopolis/world");
+        const data = await res.json();
+        isAuthed = !!data.authenticated;
+        if (isAuthed && data.world && hydrate(worldRef.current, data.world)) loaded = true;
+      } catch {
+        /* fall through to local */
+      }
+      if (!alive) return;
+      if (!loaded && hydrate(worldRef.current, readLocal())) loaded = true;
+      authedRef.current = isAuthed;
+      setAuthed(isAuthed);
+      loadedRef.current = true;
+      setSync(loaded ? (isAuthed ? "synced" : "local") : "off");
+      setDials({ ...worldRef.current.dials });
+      refresh();
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [refresh]);
+
+  // Autosave loop: coalesce changes and persist at most every few seconds, plus
+  // a final save when the tab is hidden.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      flush(false);
+    }, 4000);
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush(true);
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [flush]);
+
   /* ---- render + tick loop ---- */
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -441,6 +653,7 @@ export default function KosmopolisWorld() {
           acc -= 1;
           guard++;
         }
+        if (guard > 0) dirtyRef.current = true;
       }
 
       draw(ctx, w, t, reduce);
@@ -576,6 +789,7 @@ export default function KosmopolisWorld() {
       log(w, "The creative fire was struck. Out of the formless field a world began to condense.");
     }
     w.running = true;
+    dirtyRef.current = true;
     refresh();
   }, [refresh]);
 
@@ -586,8 +800,10 @@ export default function KosmopolisWorld() {
       return;
     }
     w.running = !w.running;
+    dirtyRef.current = true;
+    if (!w.running) flush(true); // save on pause
     refresh();
-  }, [ignite, refresh]);
+  }, [ignite, refresh, flush]);
 
   const step = useCallback(() => {
     const w = worldRef.current;
@@ -599,12 +815,14 @@ export default function KosmopolisWorld() {
     }
     w.running = false;
     tick(w);
+    dirtyRef.current = true;
     refresh();
   }, [ignite, refresh]);
 
   const setSpeed = useCallback(
     (sp: number) => {
       worldRef.current.speed = sp;
+      dirtyRef.current = true;
       refresh();
     },
     [refresh]
@@ -621,6 +839,7 @@ export default function KosmopolisWorld() {
     w.souls.push(s);
     w.selected = s.id;
     log(w, `A soul — ${s.name} — was breathed into being by a hand outside the world.`);
+    dirtyRef.current = true;
     refresh();
   }, [ignite, refresh]);
 
@@ -628,12 +847,24 @@ export default function KosmopolisWorld() {
     const w = worldRef.current;
     if (!(EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length)) return;
     ekpyrosis(w);
+    dirtyRef.current = true;
+    flush(true);
     refresh();
-  }, [refresh]);
+  }, [refresh, flush]);
 
   const beginAgain = useCallback(() => {
     worldRef.current = createWorld();
     worldRef.current.dials = { ...dials };
+    dirtyRef.current = false;
+    clearLocal();
+    if (authedRef.current) {
+      setSync("saving");
+      fetch("/api/playground/kosmopolis/world", { method: "DELETE" })
+        .then(() => setSync("off"))
+        .catch(() => setSync("error"));
+    } else {
+      setSync("off");
+    }
     setSelected(null);
     setNotice(null);
     refresh();
@@ -702,6 +933,8 @@ export default function KosmopolisWorld() {
       s.reflection = data.reflection;
       log(w, `${s.name} awakened to reason, and chose — drawing on ${virtueDef(key).name.toLowerCase()}.`);
       if (typeof data.remaining === "number") setRemaining(data.remaining);
+      dirtyRef.current = true;
+      flush(true);
       refresh();
       loadLedger();
     } catch {
@@ -709,7 +942,7 @@ export default function KosmopolisWorld() {
     } finally {
       setAwakening(false);
     }
-  }, [awakening, refresh, loadLedger]);
+  }, [awakening, refresh, loadLedger, flush]);
 
   /* ---- the Oracle: counsel ---- */
   const submitCounsel = useCallback(async () => {
@@ -745,6 +978,8 @@ export default function KosmopolisWorld() {
       if (typeof data.remaining === "number") setRemaining(data.remaining);
       setAdvice("");
       setCounselOpen(false);
+      dirtyRef.current = true;
+      flush(true);
       refresh();
       loadLedger();
     } catch {
@@ -752,12 +987,25 @@ export default function KosmopolisWorld() {
     } finally {
       setCounseling(false);
     }
-  }, [advice, counselorId, counseling, refresh, loadLedger]);
+  }, [advice, counselorId, counseling, refresh, loadLedger, flush]);
 
   /* ---------------------------------------------------------------- view */
 
   const harmonyPct = Math.round(ui.harmony * 100);
   const playLabel = ui.running ? "❚❚ Pause" : ui.ignited ? "▶ Resume" : "Ignite";
+
+  const syncLabel =
+    sync === "saving"
+      ? "Saving…"
+      : sync === "synced"
+      ? "Synced to your account"
+      : sync === "local"
+      ? "Saved to this browser"
+      : sync === "error"
+      ? "Sync failed — saved to this browser"
+      : authed
+      ? "Will sync as your world changes"
+      : "Saved to this browser as you go";
 
   return (
     <div className="kp">
@@ -834,6 +1082,15 @@ export default function KosmopolisWorld() {
                   background: ui.harmony > 0.5 ? "linear-gradient(90deg,#7aa88e,#d6b26a)" : "linear-gradient(90deg,#5b635e,#b8473f)",
                 }}
               />
+            </div>
+            <div className="kp-sync">
+              <span className={`kp-sync-dot kp-sync-${sync}`} />
+              <span>{syncLabel}</span>
+              {!authed && (
+                <a className="kp-sync-link" href="/login?redirectTo=/playground/kosmopolis">
+                  Sign in to sync
+                </a>
+              )}
             </div>
           </div>
 
@@ -946,6 +1203,7 @@ export default function KosmopolisWorld() {
                     <span className="kp-ledger-body">
                       <b>{l.soul_name}</b>
                       {l.kind === "counsel" && l.counselor ? ` — counselled by ${l.counselor}` : " — awakened"}
+                      {l.author_name ? <span className="kp-ledger-epoch"> · by {l.author_name}</span> : null}
                       {l.epoch ? <span className="kp-ledger-epoch"> · {l.epoch}</span> : null}
                     </span>
                   </li>
