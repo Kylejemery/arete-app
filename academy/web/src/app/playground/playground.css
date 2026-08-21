@@ -868,3 +868,52 @@
 @media (prefers-reduced-motion: reduce) {
   .kp-bar > i, .kp-vbar > i { transition: none; }
 }
+
+/* ---- Kosmopolis: sync indicator ---- */
+.kp-sync { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.7rem; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-sync-dot { flex: none; width: 0.4rem; height: 0.4rem; border-radius: 50%; background: var(--bone-dim); }
+.kp-sync-dot.kp-sync-synced { background: var(--v-temperance, #7aa88e); }
+.kp-sync-dot.kp-sync-local { background: var(--v-wisdom, #d6b26a); }
+.kp-sync-dot.kp-sync-saving { background: var(--v-wisdom, #d6b26a); animation: kp-pulse 1s ease-in-out infinite; }
+.kp-sync-dot.kp-sync-error { background: var(--pom-lit); }
+.kp-sync-link { margin-left: auto; color: var(--pom-lit); text-decoration: none; border-bottom: 1px solid transparent; }
+.kp-sync-link:hover { border-bottom-color: var(--pom-lit); }
+@keyframes kp-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@media (prefers-reduced-motion: reduce) { .kp-sync-dot.kp-sync-saving { animation: none; } }
+
+/* ---- Kosmopolis: camera controls over the map ---- */
+.kp-cosmos { position: relative; }
+.kp-cam { position: absolute; top: 0.8rem; right: 0.8rem; display: flex; flex-direction: column; gap: 0.35rem; z-index: 3; }
+.kp-cam-btn {
+  width: 2rem; height: 2rem; padding: 0; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--util); font-size: 1rem; line-height: 1;
+  color: var(--bone); background: rgba(16, 14, 10, 0.72); backdrop-filter: blur(3px);
+  border: 1px solid var(--tape-rule); cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.kp-cam-btn:hover { border-color: var(--pom-lit); color: var(--paper); }
+.kp-cam-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.kp-zoomhint {
+  position: absolute; left: 50%; bottom: 0.7rem; transform: translateX(-50%);
+  margin: 0; z-index: 3; pointer-events: none;
+  font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--bone-dim); background: rgba(16, 14, 10, 0.5); padding: 0.2rem 0.6rem; border-radius: 2px;
+}
+
+/* ---- Kosmopolis: decisions ---- */
+.kp-trouble-tag { font-family: var(--mono); font-size: 0.5rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--pom-lit); background: rgba(184, 71, 63, 0.14); border: 1px solid rgba(184, 71, 63, 0.4); padding: 0.1rem 0.4rem; }
+.kp-decide { margin: 0.9rem 0 0.5rem; text-align: center; }
+.kp-modal-scene { font-family: var(--book); font-size: 1.02rem; line-height: 1.5; color: var(--paper); margin: 0 0 1.2rem; }
+.kp-options { display: flex; flex-direction: column; gap: 0.5rem; }
+.kp-option {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.8rem;
+  text-align: left; font-family: var(--util); font-size: 0.92rem; color: var(--bone);
+  background: var(--tape); border: 1px solid var(--tape-rule); padding: 0.75rem 0.9rem; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.kp-option:hover { border-color: var(--pom-lit); background: rgba(184, 71, 63, 0.06); color: var(--paper); }
+.kp-option:active { transform: translateY(1px); }
+.kp-option-label { flex: 1; }
+.kp-option-virtue { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; flex: none; }
+.kp-modal-foot { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); margin: 1rem 0 0; text-align: center; }
