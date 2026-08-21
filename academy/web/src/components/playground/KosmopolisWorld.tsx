@@ -19,6 +19,7 @@ import {
   type VirtueKey,
   type Dials,
 } from "@/content/playground/kosmopolis";
+import { pickDilemma, type Dilemma, type DilemmaOption } from "@/content/playground/kosmopolis-dilemmas";
 
 /**
  * Kosmopolis — the world itself.
@@ -101,11 +102,16 @@ type World = {
   seed: number;
   settlements: Settlement[];
   camera: Camera;
+  playout: Playout | null;
 };
+
+// A decision playing out: the camera holds on the soul while a caption and a
+// burst of light (or shadow) settle over them. Transient — never persisted.
+type Playout = { soulId: number; text: string; good: boolean; life: number };
 
 type Life = {
   id: string;
-  kind: "awakening" | "counsel";
+  kind: "awakening" | "counsel" | "choice";
   soul_name: string;
   epoch: string | null;
   world_year: number | null;
@@ -146,6 +152,7 @@ function createWorld(): World {
     seed: (Math.random() * 1e9) | 0,
     settlements: [],
     camera: { cx: 0, cy: 0, zoom: FIT_ZOOM },
+    playout: null,
   };
 }
 
@@ -702,6 +709,10 @@ export default function KosmopolisWorld() {
   const [advice, setAdvice] = useState("");
   const [counseling, setCounseling] = useState(false);
 
+  const [dilemmaOpen, setDilemmaOpen] = useState(false);
+  const [dilemma, setDilemma] = useState<Dilemma | null>(null);
+  const lastDilemmaRef = useRef<string | undefined>(undefined);
+
   const [lives, setLives] = useState<Life[]>([]);
 
   const [authed, setAuthed] = useState(false);
@@ -876,6 +887,19 @@ export default function KosmopolisWorld() {
         if (!reduce) life(w);
       }
 
+      // While a decision plays out, hold the camera on the soul.
+      if (w.playout) {
+        const s = w.souls.find((x) => x.id === w.playout!.soulId);
+        if (s) {
+          w.camera.cx += (s.x - w.camera.cx) * 0.09;
+          w.camera.cy += (s.y - w.camera.cy) * 0.09;
+          const targetZoom = Math.max(w.camera.zoom, 2.8);
+          w.camera.zoom += (targetZoom - w.camera.zoom) * 0.06;
+        }
+        w.playout.life -= 1;
+        if (w.playout.life <= 0) w.playout = null;
+      }
+
       draw(ctx, w, t);
 
       sinceRefresh += dt;
@@ -887,6 +911,9 @@ export default function KosmopolisWorld() {
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
+    // draw/life read live refs; the loop is set up once and intentionally not
+    // torn down when they change identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
   /* ---- drawing: a planet you fly into ---- */
@@ -1068,7 +1095,29 @@ export default function KosmopolisWorld() {
       }
     }
 
-    // 6. the conflagration, back in screen space
+    // 6. a decision playing out — a burst around the soul (world space)
+    if (w.playout) {
+      const s = w.souls.find((x) => x.id === w.playout!.soulId);
+      if (s) {
+        const p = 1 - w.playout.life / 240; // 0 → 1 over the play-out
+        const col = w.playout.good ? "212,178,106" : "184,71,63";
+        const ringR = 8 + p * 48;
+        ctx.strokeStyle = `rgba(${col},${(0.7 * (1 - p)).toFixed(3)})`;
+        ctx.lineWidth = 2 * inv;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - 6, ringR, 0, 6.283);
+        ctx.stroke();
+        const gg2 = ctx.createRadialGradient(s.x, s.y - 6, 0, s.x, s.y - 6, 34);
+        gg2.addColorStop(0, `rgba(${col},${(0.28 * (1 - p)).toFixed(3)})`);
+        gg2.addColorStop(1, `rgba(${col},0)`);
+        ctx.fillStyle = gg2;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y - 6, 34, 0, 6.283);
+        ctx.fill();
+      }
+    }
+
+    // 7. overlays, back in screen space
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     if (w.flash > 0) {
       const a = w.flash / 60;
@@ -1076,6 +1125,51 @@ export default function KosmopolisWorld() {
       ctx.fillRect(0, 0, W, H);
       w.flash--;
     }
+    // the play-out caption, wrapped in a plate above the soul
+    if (w.playout) {
+      const s = w.souls.find((x) => x.id === w.playout!.soulId);
+      if (s) {
+        const sx = W / 2 + (s.x - cam.cx) * cam.zoom;
+        const sy = H / 2 + (s.y - cam.cy) * cam.zoom;
+        drawCaption(ctx, w.playout.text, sx, clamp(sy - 60, 40, H - 120), w.playout.good);
+      }
+    }
+  }
+
+  // A soft plate of wrapped text centred on (x, y) in screen space.
+  function drawCaption(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, good: boolean) {
+    ctx.font = "16px var(--font-newsreader, Georgia, serif)";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const maxW = 340;
+    const words = text.split(" ");
+    const lines: string[] = [];
+    let line = "";
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    const lh = 21;
+    const padX = 16;
+    const padY = 12;
+    const boxW = maxW + padX * 2;
+    const boxH = lines.length * lh + padY * 2;
+    const bx = clamp(x - boxW / 2, 8, W - boxW - 8);
+    ctx.fillStyle = "rgba(16,14,10,0.86)";
+    ctx.fillRect(bx, y, boxW, boxH);
+    ctx.fillStyle = good ? "#d6b26a" : "#cf7b74";
+    ctx.fillRect(bx, y, 3, boxH);
+    ctx.fillStyle = "#efe7d4";
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], bx + boxW / 2 + 1.5, y + padY + i * lh);
+    }
+    ctx.textBaseline = "alphabetic";
   }
 
   /* ---- controls ---- */
@@ -1378,6 +1472,64 @@ export default function KosmopolisWorld() {
     }
   }, [advice, counselorId, counseling, refresh, loadLedger, flush]);
 
+  /* ---- decisions: a soul faces a dilemma, you help it choose ---- */
+  const openDilemma = useCallback(() => {
+    const w = worldRef.current;
+    const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
+    if (!s) return;
+    const d = pickDilemma(s.v, lastDilemmaRef.current);
+    lastDilemmaRef.current = d.id;
+    setDilemma(d);
+    setDilemmaOpen(true);
+    setNotice(null);
+  }, []);
+
+  const chooseOption = useCallback(
+    (opt: DilemmaOption) => {
+      const w = worldRef.current;
+      const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
+      if (!s) return;
+      const mag = opt.good ? 1 : -1;
+      s.v[opt.virtue] = clamp(s.v[opt.virtue] + mag * 0.1, 0.02, 0.99);
+      s.eud = clamp(s.eud + mag * 0.16, 0.02, 1);
+      s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
+      const text = opt.outcome(s.name);
+      s.reflection = text;
+      // the choice ripples to those nearby, for good or ill
+      for (const o of w.souls) {
+        if (o === s) continue;
+        const dx = o.x - s.x;
+        const dy = o.y - s.y;
+        if (dx * dx + dy * dy < 6000) o.eud = clamp(o.eud + mag * 0.03, 0.02, 1);
+      }
+      w.playout = { soulId: s.id, text, good: opt.good, life: 240 };
+      log(
+        w,
+        `${s.name} faced a choice and ${opt.good ? "chose well" : "chose poorly"} — ${virtueDef(opt.virtue).name.toLowerCase()} ${opt.good ? "strengthened" : "faltered"} in them.`,
+        !opt.good
+      );
+      setDilemmaOpen(false);
+      dirtyRef.current = true;
+      flush(true);
+      refresh();
+      // remember notable choices in the shared annals (no Oracle spent)
+      fetch("/api/playground/kosmopolis/choice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          soul: { name: s.name, virtues: s.v },
+          virtue: opt.virtue,
+          outcome: text,
+          epoch: EPOCHS[w.epoch].name,
+          year: w.year,
+        }),
+      })
+        .then(() => loadLedger())
+        .catch(() => {});
+    },
+    [flush, refresh, loadLedger]
+  );
+
   /* ---------------------------------------------------------------- view */
 
   const harmonyPct = Math.round(ui.harmony * 100);
@@ -1548,6 +1700,7 @@ export default function KosmopolisWorld() {
                 onAwaken={awaken}
                 awakening={awakening}
                 onCounsel={() => setCounselOpen(true)}
+                onDecide={openDilemma}
                 acting={EPOCHS[worldRef.current.epoch].act === true}
               />
             )}
@@ -1608,7 +1761,11 @@ export default function KosmopolisWorld() {
                     <span className="kp-ledger-mark" style={{ background: l.virtue ? rgb(virtueDef(l.virtue).color) : "#7c7565" }} />
                     <span className="kp-ledger-body">
                       <b>{l.soul_name}</b>
-                      {l.kind === "counsel" && l.counselor ? ` — counselled by ${l.counselor}` : " — awakened"}
+                      {l.kind === "counsel" && l.counselor
+                        ? ` — counselled by ${l.counselor}`
+                        : l.kind === "choice"
+                        ? " — helped through a choice"
+                        : " — awakened"}
                       {l.author_name ? <span className="kp-ledger-epoch"> · by {l.author_name}</span> : null}
                       {l.epoch ? <span className="kp-ledger-epoch"> · {l.epoch}</span> : null}
                     </span>
@@ -1681,6 +1838,32 @@ export default function KosmopolisWorld() {
           </div>
         </div>
       )}
+
+      {/* decision modal */}
+      {dilemmaOpen && dilemma && selected && (
+        <div className="kp-modal" role="dialog" aria-modal="true" aria-label={`A choice for ${selected.name}`}>
+          <div className="kp-modal-scrim" onClick={() => setDilemmaOpen(false)} />
+          <div className="kp-modal-body">
+            <button className="kp-modal-x" onClick={() => setDilemmaOpen(false)} aria-label="Close">
+              ×
+            </button>
+            <p className="kp-modal-kicker">A choice · {dilemma.tag}</p>
+            <h2 className="kp-modal-h">{selected.name} must decide</h2>
+            <p className="kp-modal-scene">{dilemma.scene(selected.name)}</p>
+            <div className="kp-options">
+              {dilemma.options.map((opt, i) => (
+                <button key={i} className="kp-option" onClick={() => chooseOption(opt)}>
+                  <span className="kp-option-label">{opt.label}</span>
+                  <span className="kp-option-virtue" style={{ color: rgb(virtueDef(opt.virtue).color) }}>
+                    {virtueDef(opt.virtue).name}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="kp-modal-foot">Choose the course you would have them take, and watch it play out.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1692,6 +1875,7 @@ function SoulCard({
   onAwaken,
   awakening,
   onCounsel,
+  onDecide,
   acting,
 }: {
   soul: Soul;
@@ -1699,15 +1883,18 @@ function SoulCard({
   onAwaken: () => void;
   awakening: boolean;
   onCounsel: () => void;
+  onDecide: () => void;
   acting: boolean;
 }) {
   const dom = dominantVirtue(soul.v);
   const age = year - soul.born;
+  const troubled = acting && soul.eud < 0.34;
   return (
     <div>
       <p className="kp-soul-name">
         {soul.name}
         {soul.awake && <span className="kp-awake-tag">awake</span>}
+        {troubled && <span className="kp-trouble-tag">troubled</span>}
       </p>
       <p className="kp-soul-sub">
         Born year {soul.born.toLocaleString()} · {age.toLocaleString()} yrs · leans {dom.name.toLowerCase()}
@@ -1737,19 +1924,20 @@ function SoulCard({
         <blockquote className="kp-reflection">{soul.reflection}</blockquote>
       ) : (
         <p className="kp-soul-note">
-          {acting ? "Acts on simple leanings, not yet on thought." : "Dormant — the age of deeds has not begun."}
+          {troubled ? `${soul.name} is struggling, and faces a hard choice.` : "Acts on simple leanings, not yet on thought."}
         </p>
       )}
-      {acting && (
-        <div className="kp-soul-actions">
-          <button className="kp-btn kp-btn-primary" onClick={onAwaken} disabled={awakening || soul.awake}>
-            {soul.awake ? "Reason kindled" : awakening ? "The Oracle reasons…" : "✦ Awaken this soul"}
-          </button>
-          <button className="kp-btn" onClick={onCounsel}>
-            Counsel
-          </button>
-        </div>
-      )}
+      <button className={`kp-btn kp-wide kp-decide ${troubled ? "kp-btn-primary" : ""}`} onClick={onDecide}>
+        ⚖ Help {soul.name} decide
+      </button>
+      <div className="kp-soul-actions">
+        <button className="kp-btn" onClick={onAwaken} disabled={awakening || soul.awake}>
+          {soul.awake ? "Reason kindled" : awakening ? "The Oracle reasons…" : "✦ Awaken"}
+        </button>
+        <button className="kp-btn" onClick={onCounsel}>
+          Counsel
+        </button>
+      </div>
     </div>
   );
 }
