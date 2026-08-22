@@ -53,6 +53,7 @@ const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 9;
 const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
 const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and names
+const ACT_START = (EPOCHS.find((e) => e.act)?.at ?? 260); // the year deeds — and aging — begin
 
 type Virtues = Record<VirtueKey, number>;
 
@@ -83,6 +84,7 @@ type Soul = {
   v: Virtues;
   eud: number;
   born: number;
+  lifespan: number; // world-years this soul will live
   awake: boolean;
   pulse: number;
   lastDeed: { virtue: VirtueKey; virtuous: boolean } | null;
@@ -124,7 +126,21 @@ type World = {
   maxims: Maxim[];
   maximId: number;
   builtInst: InstType[][]; // institutions per settlement, index-aligned to settlements
+  laws: VirtueKey[]; // world-wide laws the Polis has enacted for itself
+  lastAssembly: number; // year the assembly last convened
 };
+
+// The laws a self-governing Polis can enact, one per virtue — chosen by the
+// population's own strongest character, not by the hand outside the world.
+const LAWS_OF_POLIS: { virtue: VirtueKey; name: string; note: string }[] = [
+  { virtue: "wisdom", name: "Law of Inquiry", note: "Teaching and learning quicken across every town." },
+  { virtue: "justice", name: "Law of Restitution", note: "Vice is restrained everywhere, court or no." },
+  { virtue: "courage", name: "Law of the Vanguard", note: "The people meet fortune together; its blows land softer." },
+  { virtue: "temperance", name: "Law of Measure", note: "Virtue, once practised, takes hold faster in all." },
+];
+function lawDef(v: VirtueKey) {
+  return LAWS_OF_POLIS.find((l) => l.virtue === v) ?? LAWS_OF_POLIS[0];
+}
 
 // A corpus passage the Oracle grounded a reflection in.
 type Source = { author?: string | null; work?: string | null; sectionLabel?: string | null };
@@ -192,6 +208,8 @@ function createWorld(): World {
     maxims: [],
     maximId: 1,
     builtInst: [],
+    laws: [],
+    lastAssembly: 0,
   };
 }
 
@@ -340,6 +358,8 @@ type SavedWorld = {
   maxims: Maxim[];
   maximId: number;
   builtInst: InstType[][];
+  laws: VirtueKey[];
+  lastAssembly: number;
 };
 
 function serialize(w: World): SavedWorld {
@@ -365,6 +385,8 @@ function serialize(w: World): SavedWorld {
     maxims: w.maxims.slice(0, 40),
     maximId: w.maximId,
     builtInst: w.builtInst,
+    laws: w.laws,
+    lastAssembly: w.lastAssembly,
   };
 }
 
@@ -430,6 +452,7 @@ function hydrate(w: World, data: unknown): boolean {
         home: Math.max(0, Math.round(numOr(s.home, 0))),
         v,
         eud: clamp(numOr(s.eud, 0.5), 0.02, 1),
+        lifespan: Math.max(20, Math.round(numOr(s.lifespan, 70 + Math.random() * 50))),
         pulse: numOr(s.pulse, 0),
         awake: !!s.awake,
       };
@@ -442,6 +465,8 @@ function hydrate(w: World, data: unknown): boolean {
   w.builtInst = Array.isArray(d.builtInst)
     ? (d.builtInst as unknown[]).map((row) => (Array.isArray(row) ? (row.filter((x) => x === "school" || x === "court" || x === "granary") as InstType[]) : []))
     : [];
+  w.laws = Array.isArray(d.laws) ? (d.laws as unknown[]).filter((x) => (VIRTUE_KEYS as string[]).includes(x as string)) as VirtueKey[] : [];
+  w.lastAssembly = Math.max(0, Math.round(numOr(d.lastAssembly, 0)));
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
@@ -546,6 +571,7 @@ function makeSoul(world: World, home: number, base?: Virtues): Soul {
     v,
     eud: 0.5,
     born: world.year,
+    lifespan: 70 + ((Math.random() * 55) | 0), // ~70–125 world-years
     awake: false,
     pulse: Math.random() * Math.PI * 2,
     lastDeed: null,
@@ -665,8 +691,11 @@ function maybeBuild(world: World) {
 
 function act(world: World, s: Soul) {
   const d = world.dials;
-  // A court in the soul's town restrains the harm a vicious act does.
-  const viceScale = hasInst(world, s.home, "court") ? 0.5 : 1;
+  // A court in the soul's town — and a polis-wide Law of Restitution — restrain
+  // the harm a vicious act does.
+  const viceScale = (hasInst(world, s.home, "court") ? 0.5 : 1) * (world.laws.includes("justice") ? 0.7 : 1);
+  // A Law of Measure makes virtue take hold faster once practised.
+  const habit = d.habituation * (world.laws.includes("temperance") ? 1.3 : 1);
   const key = weightedVirtue(s);
   const strength = clamp(s.v[key] + rand(-0.4, 0.4), 0, 1);
   const virtuous = strength > 0.5;
@@ -683,7 +712,7 @@ function act(world: World, s: Soul) {
     else s.faulty = faultyFor(key);
   }
   // Character is habit — the practised virtue strengthens, the indulged vice erodes.
-  s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * d.habituation * magnitude * scale, 0.02, 0.99);
+  s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * habit * magnitude * scale, 0.02, 0.99);
 
   // The good is contagious — a strong deed radiates to nearby souls.
   if (magnitude > 0.55 && d.contagion > 0) {
@@ -707,17 +736,19 @@ function act(world: World, s: Soul) {
 function applyFortune(world: World, f: { good: boolean }) {
   // The sage is unshaken: impact scales with (1 − virtue × shield).
   const shield = world.dials.sageShield;
+  const vanguard = world.laws.includes("courage"); // the people bear fortune together
   for (const s of world.souls) {
     const exposure = 1 - arete(s.v) * shield;
     let hit = (f.good ? 0.09 : -0.13) * (0.12 + exposure * 0.88);
-    // A granary softens fortune's blows for the town it stands in.
+    // A granary — and a polis-wide Law of the Vanguard — soften fortune's blows.
     if (!f.good && hasInst(world, s.home, "granary")) hit *= 0.5;
+    if (!f.good && vanguard) hit *= 0.7;
     s.eud = clamp(s.eud + hit, 0.02, 1);
   }
 }
 
 function beget(world: World) {
-  const flourishing = world.souls.filter((s) => s.eud > 0.55);
+  const flourishing = world.souls.filter((s) => s.eud > 0.5);
   if (flourishing.length < 2) return;
   const a = pick(flourishing);
   const b = pick(flourishing);
@@ -748,6 +779,72 @@ function ekpyrosis(world: World) {
   log(world, `The world passed into fire and began again — the ${ordSuffix(world.cycle)} cycle — carrying forward the virtue of its best souls.`);
 }
 
+// The last things: souls age and die. Death grieves the near, but a soul's own
+// virtue is its composure before the end, and the grief it causes is softened by
+// the virtue of those it leaves. A death met well can leave a saying behind.
+function reap(world: World) {
+  const shield = world.dials.sageShield;
+  const survivors: Soul[] = [];
+  for (const s of world.souls) {
+    // Age is counted from when deeds began, so the founding cohort reads in a
+    // human span rather than from the world's first year.
+    const lived = world.year - Math.max(s.born, ACT_START); // years lived as an acting soul
+    // mortality climbs steeply once a soul passes its span
+    const over = lived - s.lifespan;
+    const chance = over < 0 ? 0 : over > 25 ? 1 : 0.02 + (over / 25) * 0.2;
+    if (Math.random() >= chance) {
+      survivors.push(s);
+      continue;
+    }
+    // this soul dies
+    const wellLived = s.awake || arete(s.v) > 0.68;
+    if (s.id === world.selected) world.selected = null;
+    // grief ripples to the near, softened by their own virtue
+    for (const o of world.souls) {
+      if (o === s) continue;
+      const dx = o.x - s.x;
+      const dy = o.y - s.y;
+      if (dx * dx + dy * dy < 12000) {
+        o.eud = clamp(o.eud - 0.06 * (1 - arete(o.v) * shield), 0.02, 1);
+      }
+    }
+    if (wellLived) {
+      log(world, `${s.name} died in their ${ordSuffix(lived)} year, and met the end without complaint.`);
+      // a good death instructs: it lifts the whole, gently
+      world.harmony = clamp(world.harmony + 0.01, 0, 1);
+      if (s.reflection) {
+        const m = extractMaxim(s.reflection);
+        if (m) {
+          world.maxims.unshift({ id: world.maximId++, text: m, author: s.name, year: world.year });
+          if (world.maxims.length > 40) world.maxims.pop();
+        }
+      }
+    } else if (arete(s.v) < 0.4) {
+      log(world, `${s.name} died in their ${ordSuffix(lived)} year, clutching to the last at what was never theirs to keep.`, true);
+    } else {
+      log(world, `${s.name} died in their ${ordSuffix(lived)} year.`);
+    }
+  }
+  world.souls = survivors;
+}
+
+// Self-government: in the Polis an assembly convenes and enacts a law that
+// embodies the population's own strongest virtue — the people governing
+// themselves by their collective character.
+function assembly(world: World) {
+  if (world.souls.length < 6) return;
+  if (world.year - world.lastAssembly < 70) return;
+  world.lastAssembly = world.year;
+  const sum: Virtues = { wisdom: 0, justice: 0, courage: 0, temperance: 0 };
+  for (const s of world.souls) for (const k of VIRTUE_KEYS) sum[k] += s.v[k];
+  let strongest: VirtueKey = "wisdom";
+  for (const k of VIRTUE_KEYS) if (sum[k] > sum[strongest]) strongest = k;
+  if (world.laws.includes(strongest)) return; // already enacted
+  world.laws.push(strongest);
+  const def = lawDef(strongest);
+  log(world, `The assembly of the Polis enacted the ${def.name} — ${def.note}`);
+}
+
 function tick(world: World) {
   world.year++;
   advanceEpoch(world);
@@ -769,7 +866,10 @@ function tick(world: World) {
     for (const s of world.souls) act(world, s);
     teach(world);
     maybeBuild(world);
-    if (e.breed && world.souls.length < MAX_SOULS && Math.random() < 0.05 + meanEud(world) * 0.08) beget(world);
+    reap(world); // the last things
+    if (e.breed) assembly(world); // the polis governs itself
+    // Souls beget through the acting age, so births can balance the deaths.
+    if (world.souls.length < MAX_SOULS && Math.random() < 0.05 + meanEud(world) * 0.08) beget(world);
 
     const target = world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5;
     world.harmony += (target - world.harmony) * 0.06;
@@ -787,16 +887,18 @@ function tick(world: World) {
 // strongest in, and lifts their flourishing a little. This is how wisdom, once
 // kindled, spreads on its own — the corpus made local.
 function teach(world: World) {
+  // A Law of Inquiry quickens all teaching and learning across the polis.
+  const inquiry = world.laws.includes("wisdom") ? 1.5 : 1;
   // A school lifts the wisdom of its townsfolk on its own, teacher or no.
   for (const s of world.souls) {
-    if (!s.awake && hasInst(world, s.home, "school")) s.v.wisdom = clamp(s.v.wisdom + 0.0006, 0.02, 0.99);
+    if (!s.awake && hasInst(world, s.home, "school")) s.v.wisdom = clamp(s.v.wisdom + 0.0006 * inquiry, 0.02, 0.99);
   }
   const teachers = world.souls.filter((s) => s.awake);
   if (!teachers.length) return;
   for (const t of teachers) {
     const school = hasInst(world, t.home, "school"); // a school extends a teacher's reach
     const reach2 = school ? 14000 : 9000;
-    const boost = school ? 1.6 : 1;
+    const boost = (school ? 1.6 : 1) * inquiry;
     const key = dominantVirtue(t.v).key;
     const a = arete(t.v);
     for (const o of world.souls) {
@@ -917,6 +1019,7 @@ export default function KosmopolisWorld() {
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
   const [insts, setInsts] = useState<Record<InstType, number>>({ school: 0, court: 0, granary: 0 });
+  const [laws, setLaws] = useState<VirtueKey[]>([]);
   const [selected, setSelected] = useState<Soul | null>(null);
   const [dials, setDials] = useState<Dials>({ ...DEFAULT_DIALS });
 
@@ -981,6 +1084,7 @@ export default function KosmopolisWorld() {
     const counts: Record<InstType, number> = { school: 0, court: 0, granary: 0 };
     for (const row of w.builtInst) for (const type of row) counts[type]++;
     setInsts(counts);
+    setLaws([...w.laws]);
     setSelected(snapshotSelected());
   }, [snapshotSelected]);
 
@@ -2290,6 +2394,7 @@ export default function KosmopolisWorld() {
             ) : (
               <SoulCard
                 soul={selected}
+                age={Math.max(0, ui.year - Math.max(selected.born, ACT_START))}
                 townName={worldRef.current.settlements[selected.home]?.name ?? null}
                 townInst={worldRef.current.builtInst[selected.home] ?? []}
                 onAwaken={awaken}
@@ -2362,6 +2467,32 @@ export default function KosmopolisWorld() {
               ))}
             </ul>
             <p className="kp-hint">A town raises these on its own as its people grow strong in the virtue each serves.</p>
+          </div>
+
+          {/* self-government */}
+          <div className="kp-card">
+            <h3>The Assembly — laws the people enact</h3>
+            {laws.length === 0 ? (
+              <p className="kp-empty">
+                In the Polis, the people convene and enact laws that embody their own strongest virtue. None yet — the assembly has not spoken.
+              </p>
+            ) : (
+              <ul className="kp-laws">
+                {laws.map((v) => {
+                  const l = lawDef(v);
+                  return (
+                    <li key={v}>
+                      <span className="kp-glyph" style={{ color: rgb(virtueDef(v).color) }}>
+                        §
+                      </span>
+                      <span>
+                        <b>{l.name}.</b> {l.note}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
 
           {/* the world's own corpus */}
@@ -2519,6 +2650,7 @@ function SourceCite({ sources }: { sources?: Source[] | null }) {
 
 function SoulCard({
   soul,
+  age,
   townName,
   townInst,
   onAwaken,
@@ -2528,6 +2660,7 @@ function SoulCard({
   acting,
 }: {
   soul: Soul;
+  age: number;
   townName?: string | null;
   townInst?: InstType[];
   onAwaken: () => void;
@@ -2539,6 +2672,7 @@ function SoulCard({
   const dom = dominantVirtue(soul.v);
   const troubled = acting && soul.eud < 0.34;
   const inst = townInst ?? [];
+  const elderly = age > soul.lifespan * 0.85;
   return (
     <div>
       <p className="kp-soul-name">
@@ -2547,7 +2681,8 @@ function SoulCard({
         {troubled && <span className="kp-trouble-tag">troubled</span>}
       </p>
       <p className="kp-soul-sub">
-        {townName ? `Of ${townName} · ` : ""}Born year {soul.born.toLocaleString()} · leans {dom.name.toLowerCase()}
+        {townName ? `Of ${townName} · ` : ""}
+        {age.toLocaleString()} yrs{elderly ? " · in their last years" : ""} · leans {dom.name.toLowerCase()}
       </p>
       {inst.length > 0 && (
         <p className="kp-soul-town">
