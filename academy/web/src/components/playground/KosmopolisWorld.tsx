@@ -19,7 +19,7 @@ import {
   type VirtueKey,
   type Dials,
 } from "@/content/playground/kosmopolis";
-import { pickDilemma, type Dilemma, type DilemmaOption } from "@/content/playground/kosmopolis-dilemmas";
+import { pickDilemma, type Dilemma, type DilemmaOption, type Verdict } from "@/content/playground/kosmopolis-dilemmas";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 
 /**
@@ -91,6 +91,7 @@ type Soul = {
   reflection: string | null;
   sources?: Source[] | null; // the corpus passages the last reflection rested on
   faulty?: FaultyReasoning | null; // the false judgment behind a recent vice
+  lastVerdict?: Verdict | null; // the corpus passage that grounded the last dilemma
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -1635,7 +1636,13 @@ export default function KosmopolisWorld() {
         const mood = s.eud > 0.6 ? 1 : s.eud < 0.34 ? -1 : 0; // content / neutral / troubled
         const seated = s.act === 1;
         const bob = s.act === 2 ? Math.sin(s.pulse * 2) * 0.7 : 0; // working sway
-        const hunch = mood < 0 ? 3 : 0; // the troubled stoop
+        // Stable per-soul traits so a face is recognisably its own, frame to frame.
+        const seed = (s.id * 2654435761) >>> 0;
+        const lived = w.year - Math.max(s.born, ACT_START);
+        const elderly = lived > s.lifespan * 0.85;
+        const bald = (seed & 7) === 0 || (elderly && (seed & 3) === 0);
+        const bearded = s.awake || (elderly && (seed & 1) === 0); // sages and many elders
+        const hunch = (mood < 0 ? 3 : 0) + (elderly ? 2 : 0); // the troubled — and the aged — stoop
         const bx = s.x;
         const feetY = s.y + 7 - (seated ? 3 : 0);
         const shoulderY = s.y - 5 + hunch + bob + (seated ? 3 : 0);
@@ -1673,12 +1680,53 @@ export default function KosmopolisWorld() {
         ctx.beginPath();
         ctx.arc(bx, headY, 4.1, 0, 6.283);
         ctx.fill();
-        // face
+        // beard — a soft wedge under the jaw for sages and elders
+        if (bearded) {
+          ctx.fillStyle = elderly ? "rgba(206,204,196,0.92)" : "rgba(60,48,38,0.9)";
+          ctx.beginPath();
+          ctx.moveTo(bx - 3, headY + 0.6);
+          ctx.quadraticCurveTo(bx, headY + 6.4, bx + 3, headY + 0.6);
+          ctx.quadraticCurveTo(bx, headY + 3.2, bx - 3, headY + 0.6);
+          ctx.fill();
+        }
+        // hair — a cap over the crown, styled and coloured by the soul's own seed
+        if (!bald) {
+          const hairs = elderly
+            ? [206, 204, 196] // grey
+            : [
+                [58, 42, 30],
+                [30, 24, 20],
+                [96, 60, 34],
+                [150, 120, 70],
+              ][seed % 4];
+          ctx.fillStyle = `rgb(${hairs[0]},${hairs[1]},${hairs[2]})`;
+          ctx.beginPath();
+          // longer or cropped by seed
+          const drop = (seed >> 3) % 2 ? 1.6 : 0.2;
+          ctx.arc(bx, headY - 0.3, 4.3, Math.PI, 2 * Math.PI);
+          ctx.lineTo(bx + 4.3, headY - 0.3 + drop);
+          ctx.quadraticCurveTo(bx, headY - 3.2, bx - 4.3, headY - 0.3 + drop);
+          ctx.closePath();
+          ctx.fill();
+        }
+        // face — eyes
         ctx.fillStyle = "rgba(38,30,24,0.9)";
         ctx.beginPath();
         ctx.arc(bx - 1.5, headY - 0.6, 0.7, 0, 6.283);
         ctx.arc(bx + 1.5, headY - 0.6, 0.7, 0, 6.283);
         ctx.fill();
+        // eyebrows — angled by mood: knit when troubled, lifted when content
+        ctx.strokeStyle = "rgba(38,30,24,0.85)";
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        const browY = headY - 2;
+        const tilt = mood < 0 ? 0.9 : mood > 0 ? -0.5 : 0; // inner ends drop when worried
+        ctx.moveTo(bx - 2.3, browY + tilt);
+        ctx.lineTo(bx - 0.7, browY - tilt);
+        ctx.moveTo(bx + 0.7, browY - tilt);
+        ctx.lineTo(bx + 2.3, browY + tilt);
+        ctx.stroke();
+        // mouth
         ctx.strokeStyle = "rgba(38,30,24,0.9)";
         ctx.lineWidth = 0.6;
         ctx.beginPath();
@@ -2063,6 +2111,7 @@ export default function KosmopolisWorld() {
       // soul flourishes, and it now wears the ring of reason.
       s.awake = true;
       s.faulty = null; // reason mended
+      s.lastVerdict = null; // its own reflection replaces the borrowed word
       s.v[key] = clamp(s.v[key] + 0.12, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.14, 0.02, 1);
       s.lastDeed = { virtue: key, virtuous: true };
@@ -2119,6 +2168,7 @@ export default function KosmopolisWorld() {
       s.v[key] = clamp(s.v[key] + 0.08, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.08, 0.02, 1);
       s.reflection = data.reply;
+      s.lastVerdict = null; // the counsel supersedes the dilemma's word
       s.sources = asSources(data.sources);
       log(w, `${data.counselor} counselled ${s.name}, who took it up — ${virtueDef(key).name.toLowerCase()} strengthened in them.`);
       if (typeof data.remaining === "number") setRemaining(data.remaining);
@@ -2158,6 +2208,7 @@ export default function KosmopolisWorld() {
       s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
       const text = opt.outcome(s.name);
       s.reflection = text;
+      s.lastVerdict = dilemma?.verdict ?? null; // the tradition's word on this choice
       // the choice ripples to those nearby, for good or ill
       for (const o of w.souls) {
         if (o === s) continue;
@@ -2190,7 +2241,7 @@ export default function KosmopolisWorld() {
         .then(() => loadLedger())
         .catch(() => {});
     },
-    [flush, refresh, loadLedger]
+    [flush, refresh, loadLedger, dilemma]
   );
 
   /* ---------------------------------------------------------------- view */
@@ -2714,6 +2765,15 @@ function SoulCard({
         <>
           <blockquote className="kp-reflection">{soul.reflection}</blockquote>
           <SourceCite sources={soul.sources} />
+          {soul.lastVerdict && (
+            <div className="kp-verdict">
+              <p className="kp-verdict-k">The tradition’s word</p>
+              <blockquote className="kp-verdict-text">“{soul.lastVerdict.text}”</blockquote>
+              <p className="kp-verdict-src">
+                — {soul.lastVerdict.author}, <cite>{soul.lastVerdict.work}</cite>
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <p className="kp-soul-note">

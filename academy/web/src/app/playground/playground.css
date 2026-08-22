@@ -980,3 +980,10 @@
 .kp-faulty-premise { font-family: var(--book); font-style: italic; font-size: 0.9rem; line-height: 1.45; color: var(--paper); margin: 0 0 0.45rem; }
 .kp-faulty-error { font-family: var(--util); font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); margin: 0; }
 .kp-faulty-error b { color: var(--bone); font-weight: 600; }
+
+/* the tradition's word on a resolved dilemma */
+.kp-verdict { border-left: 2px solid #c9a24a; background: rgba(201, 162, 74, 0.07); padding: 0.6rem 0.75rem; margin: 0.7rem 0 0; }
+.kp-verdict-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase; color: #d9b768; margin: 0 0 0.35rem; }
+.kp-verdict-text { font-family: var(--book); font-style: italic; font-size: 0.9rem; line-height: 1.45; color: var(--paper); margin: 0 0 0.4rem; padding: 0; border: 0; }
+.kp-verdict-src { font-family: var(--util); font-size: 0.72rem; color: var(--bone-dim); margin: 0; }
+.kp-verdict-src cite { font-style: normal; }
