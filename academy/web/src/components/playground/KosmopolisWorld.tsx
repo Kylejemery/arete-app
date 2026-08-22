@@ -56,6 +56,18 @@ type Virtues = Record<VirtueKey, number>;
 
 type Settlement = { x: number; y: number; r: number; name: string };
 
+// Institutions a town builds as its people grow virtuous — externals that make
+// a virtue easier for everyone (preferred indifferents, in Stoic terms).
+type InstType = "school" | "court" | "granary";
+const INSTITUTIONS: { type: InstType; virtue: VirtueKey; name: string; glyph: string; note: string }[] = [
+  { type: "school", virtue: "wisdom", name: "School", glyph: "🏛", note: "Teaching reaches further; the young grow wise faster." },
+  { type: "court", virtue: "justice", name: "Court", glyph: "⚖", note: "Vice is restrained; a wrong done here costs less to the wronged." },
+  { type: "granary", virtue: "temperance", name: "Granary", glyph: "🌾", note: "The sage's shield in stone; fortune's blows land softer." },
+];
+function instDef(type: InstType) {
+  return INSTITUTIONS.find((i) => i.type === type) ?? INSTITUTIONS[0];
+}
+
 type Soul = {
   id: number;
   name: string;
@@ -108,6 +120,7 @@ type World = {
   playout: Playout | null;
   maxims: Maxim[];
   maximId: number;
+  builtInst: InstType[][]; // institutions per settlement, index-aligned to settlements
 };
 
 // A corpus passage the Oracle grounded a reflection in.
@@ -175,6 +188,7 @@ function createWorld(): World {
     playout: null,
     maxims: [],
     maximId: 1,
+    builtInst: [],
   };
 }
 
@@ -322,6 +336,7 @@ type SavedWorld = {
   camera: Camera;
   maxims: Maxim[];
   maximId: number;
+  builtInst: InstType[][];
 };
 
 function serialize(w: World): SavedWorld {
@@ -346,6 +361,7 @@ function serialize(w: World): SavedWorld {
     camera: w.camera,
     maxims: w.maxims.slice(0, 40),
     maximId: w.maximId,
+    builtInst: w.builtInst,
   };
 }
 
@@ -420,6 +436,9 @@ function hydrate(w: World, data: unknown): boolean {
     ? (d.maxims as Maxim[]).filter((m) => m && typeof m.text === "string").slice(0, 40)
     : [];
   w.maximId = Math.max(1, Math.round(numOr(d.maximId, 1)));
+  w.builtInst = Array.isArray(d.builtInst)
+    ? (d.builtInst as unknown[]).map((row) => (Array.isArray(row) ? (row.filter((x) => x === "school" || x === "court" || x === "granary") as InstType[]) : []))
+    : [];
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
@@ -587,17 +606,74 @@ function weightedVirtue(s: Soul): VirtueKey {
   return "wisdom";
 }
 
+function instAt(world: World, home: number): InstType[] {
+  return world.builtInst[home] ?? [];
+}
+function hasInst(world: World, home: number, type: InstType): boolean {
+  return instAt(world, home).includes(type);
+}
+function padInst(world: World) {
+  while (world.builtInst.length < world.settlements.length) world.builtInst.push([]);
+}
+
+// Emergent building: a town whose residents have grown strong in a virtue raises
+// the institution that embodies it — externals that make the virtue easier for
+// everyone thereafter.
+function maybeBuild(world: World) {
+  const n = world.settlements.length;
+  if (!n) return;
+  padInst(world);
+  if (Math.random() > 0.03) return; // building is rare and momentous
+
+  const sum: Virtues[] = [];
+  const max: Virtues[] = [];
+  const cnt = new Array(n).fill(0);
+  for (let i = 0; i < n; i++) {
+    sum.push({ wisdom: 0, justice: 0, courage: 0, temperance: 0 });
+    max.push({ wisdom: 0, justice: 0, courage: 0, temperance: 0 });
+  }
+  for (const s of world.souls) {
+    const h = s.home;
+    if (h < 0 || h >= n) continue;
+    cnt[h]++;
+    for (const k of VIRTUE_KEYS) {
+      sum[h][k] += s.v[k];
+      if (s.v[k] > max[h][k]) max[h][k] = s.v[k];
+    }
+  }
+  const candidates: { home: number; type: InstType }[] = [];
+  for (let i = 0; i < n; i++) {
+    if (cnt[i] < 3) continue;
+    for (const inst of INSTITUTIONS) {
+      if (hasInst(world, i, inst.type)) continue;
+      // a town builds when its people are broadly strong in the virtue, or when
+      // one exemplar among them stands out enough to inspire it.
+      if (sum[i][inst.virtue] / cnt[i] >= 0.58 || max[i][inst.virtue] >= 0.82) {
+        candidates.push({ home: i, type: inst.type });
+      }
+    }
+  }
+  if (!candidates.length) return;
+  const c = candidates[(Math.random() * candidates.length) | 0];
+  world.builtInst[c.home].push(c.type);
+  const def = instDef(c.type);
+  log(world, `The people of ${world.settlements[c.home].name} raised a ${def.name.toLowerCase()} — ${def.note}`);
+}
+
 function act(world: World, s: Soul) {
   const d = world.dials;
+  // A court in the soul's town restrains the harm a vicious act does.
+  const viceScale = hasInst(world, s.home, "court") ? 0.5 : 1;
   const key = weightedVirtue(s);
   const strength = clamp(s.v[key] + rand(-0.4, 0.4), 0, 1);
   const virtuous = strength > 0.5;
   const magnitude = Math.abs(strength - 0.5) * 2;
 
-  s.eud = clamp(s.eud + (virtuous ? 1 : -1) * magnitude * 0.05, 0.02, 1);
+  const scale = virtuous ? 1 : viceScale;
+  s.eud = clamp(s.eud + (virtuous ? 1 : -1) * magnitude * 0.05 * scale, 0.02, 1);
   s.lastDeed = { virtue: key, virtuous };
   // Character is habit — the practised virtue strengthens, the indulged vice erodes.
-  s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * d.habituation * magnitude, 0.02, 0.99);
+  s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * d.habituation * magnitude * scale, 0.02, 0.99);
 
   // The good is contagious — a strong deed radiates to nearby souls.
   if (magnitude > 0.55 && d.contagion > 0) {
@@ -607,7 +683,7 @@ function act(world: World, s: Soul) {
       const dx = o.x - s.x;
       const dy = o.y - s.y;
       if (dx * dx + dy * dy < r2) {
-        o.eud = clamp(o.eud + (virtuous ? 1 : -1) * magnitude * 0.012, 0.02, 1);
+        o.eud = clamp(o.eud + (virtuous ? 1 : -1) * magnitude * 0.012 * scale, 0.02, 1);
       }
     }
   }
@@ -623,7 +699,10 @@ function applyFortune(world: World, f: { good: boolean }) {
   const shield = world.dials.sageShield;
   for (const s of world.souls) {
     const exposure = 1 - arete(s.v) * shield;
-    s.eud = clamp(s.eud + (f.good ? 0.09 : -0.13) * (0.12 + exposure * 0.88), 0.02, 1);
+    let hit = (f.good ? 0.09 : -0.13) * (0.12 + exposure * 0.88);
+    // A granary softens fortune's blows for the town it stands in.
+    if (!f.good && hasInst(world, s.home, "granary")) hit *= 0.5;
+    s.eud = clamp(s.eud + hit, 0.02, 1);
   }
 }
 
@@ -679,6 +758,7 @@ function tick(world: World) {
   if (e.act) {
     for (const s of world.souls) act(world, s);
     teach(world);
+    maybeBuild(world);
     if (e.breed && world.souls.length < MAX_SOULS && Math.random() < 0.05 + meanEud(world) * 0.08) beget(world);
 
     const target = world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5;
@@ -697,19 +777,25 @@ function tick(world: World) {
 // strongest in, and lifts their flourishing a little. This is how wisdom, once
 // kindled, spreads on its own — the corpus made local.
 function teach(world: World) {
+  // A school lifts the wisdom of its townsfolk on its own, teacher or no.
+  for (const s of world.souls) {
+    if (!s.awake && hasInst(world, s.home, "school")) s.v.wisdom = clamp(s.v.wisdom + 0.0006, 0.02, 0.99);
+  }
   const teachers = world.souls.filter((s) => s.awake);
   if (!teachers.length) return;
-  const r2 = 9000; // a teacher's reach, in world units squared
   for (const t of teachers) {
+    const school = hasInst(world, t.home, "school"); // a school extends a teacher's reach
+    const reach2 = school ? 14000 : 9000;
+    const boost = school ? 1.6 : 1;
     const key = dominantVirtue(t.v).key;
     const a = arete(t.v);
     for (const o of world.souls) {
       if (o === t || o.awake) continue;
       const dx = o.x - t.x;
       const dy = o.y - t.y;
-      if (dx * dx + dy * dy < r2) {
-        o.v[key] = clamp(o.v[key] + 0.0018 * a, 0.02, 0.99);
-        o.eud = clamp(o.eud + 0.0009 * a, 0.02, 1);
+      if (dx * dx + dy * dy < reach2) {
+        o.v[key] = clamp(o.v[key] + 0.0018 * a * boost, 0.02, 0.99);
+        o.eud = clamp(o.eud + 0.0009 * a * boost, 0.02, 1);
       }
     }
   }
@@ -800,6 +886,7 @@ export default function KosmopolisWorld() {
     terrainRef.current = geo.canvas;
     terrainSeedRef.current = w.seed;
     w.settlements = geo.settlements;
+    padInst(w); // keep the institutions array aligned to the settlements
   }, []);
 
   const [ui, setUi] = useState<UiState>({
@@ -819,6 +906,7 @@ export default function KosmopolisWorld() {
   });
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
+  const [insts, setInsts] = useState<Record<InstType, number>>({ school: 0, court: 0, granary: 0 });
   const [selected, setSelected] = useState<Soul | null>(null);
   const [dials, setDials] = useState<Dials>({ ...DEFAULT_DIALS });
 
@@ -880,6 +968,9 @@ export default function KosmopolisWorld() {
     });
     setChron(w.chron.slice(0, 48));
     setMaxims(w.maxims.slice(0, 12));
+    const counts: Record<InstType, number> = { school: 0, court: 0, granary: 0 };
+    for (const row of w.builtInst) for (const type of row) counts[type]++;
+    setInsts(counts);
     setSelected(snapshotSelected());
   }, [snapshotSelected]);
 
@@ -1271,10 +1362,12 @@ export default function KosmopolisWorld() {
     const figures = zoom >= FIGURE_ZOOM;
     const inv = 1 / zoom; // screen-constant sizes divide by zoom
 
-    // 3. settlements
-    for (const st of w.settlements) {
+    // 3. settlements (and the institutions their people have built)
+    for (let si = 0; si < w.settlements.length; si++) {
+      const st = w.settlements[si];
+      const inst = w.builtInst[si] ?? [];
       if (figures) {
-        // a little cluster of buildings
+        // a little cluster of dwellings
         ctx.fillStyle = "rgba(38,30,22,0.9)";
         for (let k = 0; k < 5; k++) {
           const a = (k / 5) * 6.283;
@@ -1282,11 +1375,47 @@ export default function KosmopolisWorld() {
           const by = st.y + Math.sin(a) * st.r * 0.4;
           ctx.fillRect(bx - 5, by - 5, 10, 9);
         }
+        // institutions, set in a row above the town centre
+        inst.forEach((type, k) => {
+          const col = virtueDef(instDef(type).virtue).color;
+          const bx = st.x + (k - (inst.length - 1) / 2) * 26;
+          const by = st.y - st.r * 0.55;
+          ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+          if (type === "granary") {
+            ctx.beginPath();
+            ctx.arc(bx, by, 8, 0, 6.283);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(bx - 8, by - 3);
+            ctx.lineTo(bx, by - 13);
+            ctx.lineTo(bx + 8, by - 3);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            // a temple: columned base + pediment (court a touch grander)
+            const wdt = type === "court" ? 13 : 10;
+            ctx.fillRect(bx - wdt, by - 2, wdt * 2, 10);
+            ctx.beginPath();
+            ctx.moveTo(bx - wdt - 2, by - 2);
+            ctx.lineTo(bx, by - 13);
+            ctx.lineTo(bx + wdt + 2, by - 2);
+            ctx.closePath();
+            ctx.fill();
+          }
+        });
       } else {
         ctx.beginPath();
         ctx.arc(st.x, st.y, 5 * inv, 0, 6.283);
         ctx.fillStyle = "#e3c77a";
         ctx.fill();
+        // institution pips beside the marker at overview
+        inst.forEach((type, k) => {
+          const col = virtueDef(instDef(type).virtue).color;
+          ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+          ctx.beginPath();
+          ctx.arc(st.x + (k + 1) * 7 * inv, st.y, 2.5 * inv, 0, 6.283);
+          ctx.fill();
+        });
         if (zoom > 0.34) {
           ctx.font = `${18 * inv}px var(--font-newsreader, Georgia, serif)`;
           ctx.fillStyle = "rgba(228,229,220,0.8)";
@@ -2081,7 +2210,8 @@ export default function KosmopolisWorld() {
             ) : (
               <SoulCard
                 soul={selected}
-                year={ui.year}
+                townName={worldRef.current.settlements[selected.home]?.name ?? null}
+                townInst={worldRef.current.builtInst[selected.home] ?? []}
                 onAwaken={awaken}
                 awakening={awakening}
                 onCounsel={() => setCounselOpen(true)}
@@ -2132,6 +2262,26 @@ export default function KosmopolisWorld() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* what the people have built */}
+          <div className="kp-card">
+            <h3>Institutions — what the people build</h3>
+            <ul className="kp-insts">
+              {INSTITUTIONS.map((inst) => (
+                <li key={inst.type} className={insts[inst.type] ? "kp-inst kp-inst-on" : "kp-inst"}>
+                  <span className="kp-inst-dot" style={{ background: rgb(virtueDef(inst.virtue).color) }} />
+                  <span className="kp-inst-body">
+                    <b>
+                      {inst.name}
+                      {insts[inst.type] > 0 ? ` ×${insts[inst.type]}` : ""}
+                    </b>
+                    <span className="kp-inst-note">{inst.note}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="kp-hint">A town raises these on its own as its people grow strong in the virtue each serves.</p>
           </div>
 
           {/* the world's own corpus */}
@@ -2289,7 +2439,8 @@ function SourceCite({ sources }: { sources?: Source[] | null }) {
 
 function SoulCard({
   soul,
-  year,
+  townName,
+  townInst,
   onAwaken,
   awakening,
   onCounsel,
@@ -2297,7 +2448,8 @@ function SoulCard({
   acting,
 }: {
   soul: Soul;
-  year: number;
+  townName?: string | null;
+  townInst?: InstType[];
   onAwaken: () => void;
   awakening: boolean;
   onCounsel: () => void;
@@ -2305,8 +2457,8 @@ function SoulCard({
   acting: boolean;
 }) {
   const dom = dominantVirtue(soul.v);
-  const age = year - soul.born;
   const troubled = acting && soul.eud < 0.34;
+  const inst = townInst ?? [];
   return (
     <div>
       <p className="kp-soul-name">
@@ -2315,8 +2467,13 @@ function SoulCard({
         {troubled && <span className="kp-trouble-tag">troubled</span>}
       </p>
       <p className="kp-soul-sub">
-        Born year {soul.born.toLocaleString()} · {age.toLocaleString()} yrs · leans {dom.name.toLowerCase()}
+        {townName ? `Of ${townName} · ` : ""}Born year {soul.born.toLocaleString()} · leans {dom.name.toLowerCase()}
       </p>
+      {inst.length > 0 && (
+        <p className="kp-soul-town">
+          Their town has {inst.map((t) => instDef(t).name.toLowerCase()).join(", ")}.
+        </p>
+      )}
       <div className="kp-virtues">
         {VIRTUES.map((v) => {
           const pct = Math.round(soul.v[v.key] * 100);
