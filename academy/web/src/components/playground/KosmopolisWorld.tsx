@@ -20,6 +20,7 @@ import {
   type Dials,
 } from "@/content/playground/kosmopolis";
 import { pickDilemma, type Dilemma, type DilemmaOption } from "@/content/playground/kosmopolis-dilemmas";
+import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 
 /**
  * Kosmopolis — the world itself.
@@ -86,6 +87,7 @@ type Soul = {
   lastDeed: { virtue: VirtueKey; virtuous: boolean } | null;
   reflection: string | null;
   sources?: Source[] | null; // the corpus passages the last reflection rested on
+  faulty?: FaultyReasoning | null; // the false judgment behind a recent vice
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -672,6 +674,13 @@ function act(world: World, s: Soul) {
   const scale = virtuous ? 1 : viceScale;
   s.eud = clamp(s.eud + (virtuous ? 1 : -1) * magnitude * 0.05 * scale, 0.02, 1);
   s.lastDeed = { virtue: key, virtuous };
+  // Vice is a false judgment: a clear misstep leaves its faulty reasoning on the
+  // soul; a clear virtuous act, or awakening, mends it. (Awakened souls reason
+  // rightly and are left alone.)
+  if (!s.awake && magnitude > 0.5) {
+    if (virtuous) s.faulty = null;
+    else s.faulty = faultyFor(key);
+  }
   // Character is habit — the practised virtue strengthens, the indulged vice erodes.
   s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * d.habituation * magnitude * scale, 0.02, 0.99);
 
@@ -1879,6 +1888,7 @@ export default function KosmopolisWorld() {
       // Awakening gives reason: the exercised virtue strengthens durably, the
       // soul flourishes, and it now wears the ring of reason.
       s.awake = true;
+      s.faulty = null; // reason mended
       s.v[key] = clamp(s.v[key] + 0.12, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.14, 0.02, 1);
       s.lastDeed = { virtue: key, virtuous: true };
@@ -2504,6 +2514,15 @@ function SoulCard({
         <p className="kp-soul-note">
           {troubled ? `${soul.name} is struggling, and faces a hard choice.` : "Acts on simple leanings, not yet on thought."}
         </p>
+      )}
+      {!soul.awake && soul.faulty && (
+        <div className="kp-faulty">
+          <p className="kp-faulty-k">Their misjudgement</p>
+          <p className="kp-faulty-premise">“{soul.faulty.premise}”</p>
+          <p className="kp-faulty-error">
+            <b>The false step —</b> {soul.faulty.error}
+          </p>
+        </div>
       )}
       <button className={`kp-btn kp-wide kp-decide ${troubled ? "kp-btn-primary" : ""}`} onClick={onDecide}>
         ⚖ Help {soul.name} decide

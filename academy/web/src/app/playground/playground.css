@@ -973,3 +973,10 @@
 .kp-inst-on .kp-inst-body b { color: var(--paper); }
 .kp-inst-note { font-size: 0.72rem; color: var(--bone-dim); line-height: 1.4; }
 .kp-soul-town { font-family: var(--book); font-size: 0.78rem; font-style: italic; color: var(--bone-dim); margin: 0.3rem 0 0.6rem; }
+
+/* ---- Kosmopolis: a soul's faulty reasoning ---- */
+.kp-faulty { border-left: 2px solid var(--pom); background: rgba(184, 71, 63, 0.06); padding: 0.6rem 0.75rem; margin: 0.7rem 0 0; }
+.kp-faulty-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--pom-lit); margin: 0 0 0.35rem; }
+.kp-faulty-premise { font-family: var(--book); font-style: italic; font-size: 0.9rem; line-height: 1.45; color: var(--paper); margin: 0 0 0.45rem; }
+.kp-faulty-error { font-family: var(--util); font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); margin: 0; }
+.kp-faulty-error b { color: var(--bone); font-weight: 600; }
