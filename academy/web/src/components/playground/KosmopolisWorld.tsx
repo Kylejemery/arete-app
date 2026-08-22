@@ -52,6 +52,7 @@ const TERRAIN_PX = 1600; // offscreen terrain raster resolution (higher = sharpe
 const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 9;
 const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
+const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and names
 
 type Virtues = Record<VirtueKey, number>;
 
@@ -1369,7 +1370,10 @@ export default function KosmopolisWorld() {
     const zoom = cam.zoom;
     const acting = EPOCHS[w.epoch].act === true;
     const figures = zoom >= FIGURE_ZOOM;
+    const portrait = zoom >= PORTRAIT_ZOOM;
     const inv = 1 / zoom; // screen-constant sizes divide by zoom
+    const halfW = W / 2 / zoom + 40; // for culling name labels to the viewport
+    const halfH = H / 2 / zoom + 40;
 
     // 3. settlements (and the institutions their people have built)
     for (let si = 0; si < w.settlements.length; si++) {
@@ -1496,7 +1500,7 @@ export default function KosmopolisWorld() {
         ctx.beginPath();
         ctx.arc(s.x, s.y, rad, 0, 6.283);
         ctx.fill();
-      } else {
+      } else if (!portrait) {
         // a little person: head + body, coloured by dominant virtue
         const bob = s.act === 2 ? Math.sin(s.pulse * 2) * 1.2 : 0;
         const bx = s.x;
@@ -1522,6 +1526,72 @@ export default function KosmopolisWorld() {
         ctx.beginPath();
         ctx.arc(bx, by - 12, 3.6, 0, 6.283);
         ctx.fill();
+      } else {
+        // up close: a real little person, whose face and posture read their state
+        const mood = s.eud > 0.6 ? 1 : s.eud < 0.34 ? -1 : 0; // content / neutral / troubled
+        const seated = s.act === 1;
+        const bob = s.act === 2 ? Math.sin(s.pulse * 2) * 0.7 : 0; // working sway
+        const hunch = mood < 0 ? 3 : 0; // the troubled stoop
+        const bx = s.x;
+        const feetY = s.y + 7 - (seated ? 3 : 0);
+        const shoulderY = s.y - 5 + hunch + bob + (seated ? 3 : 0);
+        const headY = shoulderY - 6;
+        const robe = `rgb(${Math.min(255, col[0] + 30)},${Math.min(255, col[1] + 28)},${Math.min(255, col[2] + 28)})`;
+        const skinL = 150 + s.eud * 70;
+        // aura by flourishing
+        const gg = ctx.createRadialGradient(bx, headY, 0, bx, headY, 26);
+        gg.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},${(bright * 0.28).toFixed(3)})`);
+        gg.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.arc(bx, headY, 26, 0, 6.283);
+        ctx.fill();
+        // robe (shoulders → hem)
+        ctx.fillStyle = robe;
+        ctx.beginPath();
+        ctx.moveTo(bx - 3.2, shoulderY);
+        ctx.lineTo(bx + 3.2, shoulderY);
+        ctx.lineTo(bx + 6, feetY);
+        ctx.lineTo(bx - 6, feetY);
+        ctx.closePath();
+        ctx.fill();
+        // an arm at work
+        if (s.act === 2) {
+          ctx.strokeStyle = robe;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(bx + 2.5, shoulderY + 1);
+          ctx.lineTo(bx + 7, shoulderY + 4 + bob);
+          ctx.stroke();
+        }
+        // head
+        ctx.fillStyle = `rgb(${skinL | 0},${(skinL - 18) | 0},${(skinL - 40) | 0})`;
+        ctx.beginPath();
+        ctx.arc(bx, headY, 4.1, 0, 6.283);
+        ctx.fill();
+        // face
+        ctx.fillStyle = "rgba(38,30,24,0.9)";
+        ctx.beginPath();
+        ctx.arc(bx - 1.5, headY - 0.6, 0.7, 0, 6.283);
+        ctx.arc(bx + 1.5, headY - 0.6, 0.7, 0, 6.283);
+        ctx.fill();
+        ctx.strokeStyle = "rgba(38,30,24,0.9)";
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        if (mood > 0) ctx.arc(bx, headY + 0.8, 1.7, 0.2 * Math.PI, 0.8 * Math.PI); // smile
+        else if (mood < 0) ctx.arc(bx, headY + 3, 1.7, 1.2 * Math.PI, 1.8 * Math.PI); // frown
+        else {
+          ctx.moveTo(bx - 1.4, headY + 1.8);
+          ctx.lineTo(bx + 1.4, headY + 1.8);
+        }
+        ctx.stroke();
+        // name, for those in view
+        if (Math.abs(s.x - cam.cx) < halfW && Math.abs(s.y - cam.cy) < halfH) {
+          ctx.font = `${9 * inv}px var(--font-newsreader, Georgia, serif)`;
+          ctx.fillStyle = "rgba(228,229,220,0.7)";
+          ctx.textAlign = "center";
+          ctx.fillText(s.name, bx, headY - 7);
+        }
       }
 
       // awakened: a warm aura of influence + a steady ring of reason
@@ -1560,7 +1630,7 @@ export default function KosmopolisWorld() {
         ctx.beginPath();
         ctx.arc(s.x, s.y - (figures ? 6 : 0), rr, 0, 6.283);
         ctx.stroke();
-        if (figures && zoom >= 1.4) {
+        if (figures && !portrait && zoom >= 1.4) {
           ctx.font = `${12 * inv}px var(--font-newsreader, Georgia, serif)`;
           ctx.fillStyle = "#f4ead5";
           ctx.textAlign = "center";
