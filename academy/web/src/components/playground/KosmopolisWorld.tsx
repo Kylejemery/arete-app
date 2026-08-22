@@ -47,7 +47,7 @@ const REBIRTH_YEARS = 120;
 // The world is a planet-face: procedural land inside a disc of this radius, in
 // world units. The camera flies from the whole disc down to individual people.
 const PLANET_R = 1400;
-const TERRAIN_PX = 900; // offscreen terrain raster resolution
+const TERRAIN_PX = 1600; // offscreen terrain raster resolution (higher = sharper map)
 const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 9;
 const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
@@ -2057,7 +2057,7 @@ export default function KosmopolisWorld() {
               </>
             )}
           </div>
-          {ui.ignited && <p className="kp-zoomhint">Scroll to zoom · drag to pan · click a soul</p>}
+          {ui.ignited && <p className="kp-zoomhint">Scroll to zoom · drag to pan</p>}
           <div className="kp-ov">
             <div className="kp-ov-top">
               <div>
