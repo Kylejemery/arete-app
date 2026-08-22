@@ -52,6 +52,7 @@ const TERRAIN_PX = 1600; // offscreen terrain raster resolution (higher = sharpe
 const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 9;
 const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
+const BUILDING_ZOOM = 2.2; // at/above this, institutions rise as little 3-D structures
 const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and names
 const ACT_START = (EPOCHS.find((e) => e.act)?.at ?? 260); // the year deeds — and aging — begin
 
@@ -982,6 +983,146 @@ type UiState = {
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
+// A little 3-D institution, drawn in world space so it grows as you zoom in:
+// a columned temple for a school or court, a domed silo for a granary. Faces are
+// shaded — lit top, plain front, dark side — to read as solid marble, faintly
+// tinted by the virtue the building serves. (gx, gy) is the front-centre ground
+// point; the building rises from there and recedes up-and-right.
+function drawBuilding(
+  ctx: CanvasRenderingContext2D,
+  kind: InstType,
+  gx: number,
+  gy: number,
+  col: [number, number, number]
+) {
+  const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+  const base = [mix(col[0], 224, 0.62), mix(col[1], 212, 0.62), mix(col[2], 182, 0.62)];
+  const face = (m: number) =>
+    `rgb(${Math.min(255, base[0] * m) | 0},${Math.min(255, base[1] * m) | 0},${Math.min(255, base[2] * m) | 0})`;
+  const LIT = face(1.08);
+  const FRONT = face(0.92);
+  const SIDE = face(0.64);
+  const ROOF = face(1.0);
+  const DARK = face(0.34); // the cella, in shadow behind the columns
+  const dx = 7; // one unit of depth, up and to the right
+  const dy = -5;
+
+  // ground shadow
+  ctx.fillStyle = "rgba(0,0,0,0.22)";
+  ctx.beginPath();
+
+  if (kind === "granary") {
+    const w = 8.5;
+    const bodyH = 19;
+    ctx.ellipse(gx + dx * 0.5, gy + dy * 0.5, w * 1.25, w * 0.5, 0, 0, 6.283);
+    ctx.fill();
+    // body
+    ctx.fillStyle = FRONT;
+    ctx.fillRect(gx - w, gy - bodyH, w * 2, bodyH);
+    // right shading
+    ctx.fillStyle = SIDE;
+    ctx.fillRect(gx + w * 0.35, gy - bodyH, w * 0.65, bodyH);
+    // a couple of banding lines
+    ctx.strokeStyle = "rgba(60,48,32,0.35)";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(gx - w, gy - bodyH * 0.62);
+    ctx.lineTo(gx + w, gy - bodyH * 0.62);
+    ctx.stroke();
+    // domed roof
+    ctx.fillStyle = ROOF;
+    ctx.beginPath();
+    ctx.moveTo(gx - w, gy - bodyH);
+    ctx.quadraticCurveTo(gx, gy - bodyH - 13, gx + w, gy - bodyH);
+    ctx.closePath();
+    ctx.fill();
+    return;
+  }
+
+  // a columned temple — the court a touch broader than the school
+  const cols = kind === "court" ? 6 : 5;
+  const halfW = kind === "court" ? 15 : 12;
+  const platH = 4;
+  const colH = 17;
+  const topY = gy - platH - colH; // top of the columns
+  ctx.ellipse(gx + dx * 0.5, gy + dy * 0.5, halfW * 1.3, halfW * 0.42, 0, 0, 6.283);
+  ctx.fill();
+
+  // plinth: front, lit top, dark right side
+  ctx.fillStyle = FRONT;
+  ctx.fillRect(gx - halfW, gy - platH, halfW * 2, platH);
+  ctx.fillStyle = LIT;
+  ctx.beginPath();
+  ctx.moveTo(gx - halfW, gy - platH);
+  ctx.lineTo(gx - halfW + dx, gy - platH + dy);
+  ctx.lineTo(gx + halfW + dx, gy - platH + dy);
+  ctx.lineTo(gx + halfW, gy - platH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = SIDE;
+  ctx.beginPath();
+  ctx.moveTo(gx + halfW, gy - platH);
+  ctx.lineTo(gx + halfW + dx, gy - platH + dy);
+  ctx.lineTo(gx + halfW + dx, gy + dy);
+  ctx.lineTo(gx + halfW, gy);
+  ctx.closePath();
+  ctx.fill();
+
+  // the cella wall in shadow, behind the colonnade
+  ctx.fillStyle = DARK;
+  ctx.fillRect(gx - halfW + 2, topY, halfW * 2 - 4, colH);
+
+  // columns
+  const span = halfW * 1.72;
+  const cw = 2.1;
+  for (let i = 0; i < cols; i++) {
+    const cx = gx - span / 2 + (span / (cols - 1)) * i;
+    ctx.fillStyle = FRONT;
+    ctx.fillRect(cx - cw / 2, topY, cw, colH);
+    ctx.fillStyle = SIDE;
+    ctx.fillRect(cx + cw / 2 - 0.6, topY, 0.6, colH);
+  }
+
+  // entablature band
+  const entH = 3;
+  ctx.fillStyle = FRONT;
+  ctx.fillRect(gx - halfW, topY - entH, halfW * 2, entH);
+  ctx.fillStyle = LIT;
+  ctx.beginPath();
+  ctx.moveTo(gx - halfW, topY - entH);
+  ctx.lineTo(gx - halfW + dx, topY - entH + dy);
+  ctx.lineTo(gx + halfW + dx, topY - entH + dy);
+  ctx.lineTo(gx + halfW, topY - entH);
+  ctx.closePath();
+  ctx.fill();
+
+  // pediment (front gable) and the roof receding behind it
+  const apexY = topY - entH - 9;
+  ctx.fillStyle = ROOF;
+  ctx.beginPath();
+  ctx.moveTo(gx - halfW, topY - entH);
+  ctx.lineTo(gx, apexY);
+  ctx.lineTo(gx + dx, apexY + dy);
+  ctx.lineTo(gx - halfW + dx, topY - entH + dy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = SIDE;
+  ctx.beginPath();
+  ctx.moveTo(gx, apexY);
+  ctx.lineTo(gx + halfW, topY - entH);
+  ctx.lineTo(gx + halfW + dx, topY - entH + dy);
+  ctx.lineTo(gx + dx, apexY + dy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = FRONT;
+  ctx.beginPath();
+  ctx.moveTo(gx - halfW, topY - entH);
+  ctx.lineTo(gx, apexY);
+  ctx.lineTo(gx + halfW, topY - entH);
+  ctx.closePath();
+  ctx.fill();
+}
+
 export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1023,6 +1164,8 @@ export default function KosmopolisWorld() {
   const [laws, setLaws] = useState<VirtueKey[]>([]);
   const [selected, setSelected] = useState<Soul | null>(null);
   const [dials, setDials] = useState<Dials>({ ...DEFAULT_DIALS });
+  // a building the cursor is resting on, with where to float its tooltip
+  const [hoverInst, setHoverInst] = useState<{ x: number; y: number; name: string; note: string } | null>(null);
 
   const [awakening, setAwakening] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -1494,10 +1637,16 @@ export default function KosmopolisWorld() {
           ctx.fillRect(bx - 5, by - 5, 10, 9);
         }
         // institutions, set in a row above the town centre
+        const spacing = zoom >= BUILDING_ZOOM ? 42 : 26; // 3-D structures need room
         inst.forEach((type, k) => {
           const col = virtueDef(instDef(type).virtue).color;
-          const bx = st.x + (k - (inst.length - 1) / 2) * 26;
+          const bx = st.x + (k - (inst.length - 1) / 2) * spacing;
           const by = st.y - st.r * 0.55;
+          if (zoom >= BUILDING_ZOOM) {
+            // close in: a real little 3-D building on the ground
+            drawBuilding(ctx, type, bx, by + 10, col);
+            return;
+          }
           ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
           if (type === "granary") {
             ctx.beginPath();
@@ -1666,6 +1815,20 @@ export default function KosmopolisWorld() {
         ctx.lineTo(bx - 6, feetY);
         ctx.closePath();
         ctx.fill();
+        // sashes — a townsperson wears the colours of the institutions their town
+        // has raised, one diagonal band per school, court, or granary.
+        const townInst = w.builtInst[s.home] ?? [];
+        const nSash = Math.min(townInst.length, 3);
+        townInst.slice(0, 3).forEach((it, idx) => {
+          const ic = virtueDef(instDef(it).virtue).color;
+          ctx.strokeStyle = `rgb(${ic[0]},${ic[1]},${ic[2]})`;
+          ctx.lineWidth = 1.2;
+          const off = (idx - (nSash - 1) / 2) * 1.7;
+          ctx.beginPath();
+          ctx.moveTo(bx - 3 + off, shoulderY + 0.5);
+          ctx.lineTo(bx + 4.5 + off, feetY - 1);
+          ctx.stroke();
+        });
         // an arm at work
         if (s.act === 2) {
           ctx.strokeStyle = robe;
@@ -2044,13 +2207,66 @@ export default function KosmopolisWorld() {
       clampCam();
     };
 
+    // Hover a building to learn what it is. Only once towns are close enough for
+    // their institutions to be legible on the map.
+    let hovered = false;
+    const onHover = (e: PointerEvent) => {
+      const w = worldRef.current;
+      if (dragging || w.camera.zoom < FIGURE_ZOOM) {
+        if (hovered) {
+          hovered = false;
+          setHoverInst(null);
+        }
+        return;
+      }
+      const c = toCanvas(e.clientX, e.clientY);
+      const wp = toWorld(c.x, c.y);
+      const spacing = w.camera.zoom >= BUILDING_ZOOM ? 42 : 26;
+      let hit: InstType | null = null;
+      for (let si = 0; si < w.settlements.length && !hit; si++) {
+        const st = w.settlements[si];
+        const inst = w.builtInst[si] ?? [];
+        for (let k = 0; k < inst.length; k++) {
+          const bx = st.x + (k - (inst.length - 1) / 2) * spacing;
+          const by = st.y - st.r * 0.55 - 5;
+          const ddx = wp.x - bx;
+          const ddy = wp.y - by;
+          if (ddx * ddx + ddy * ddy < 22 * 22) {
+            hit = inst[k];
+            break;
+          }
+        }
+      }
+      const rect = canvas.getBoundingClientRect();
+      if (hit) {
+        const def = instDef(hit);
+        hovered = true;
+        setHoverInst({ x: e.clientX - rect.left, y: e.clientY - rect.top, name: def.name, note: def.note });
+        canvas.style.cursor = "help";
+      } else if (hovered) {
+        hovered = false;
+        setHoverInst(null);
+        canvas.style.cursor = "";
+      }
+    };
+    const onLeave = () => {
+      if (hovered) {
+        hovered = false;
+        setHoverInst(null);
+      }
+    };
+
     canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", onHover);
+    canvas.addEventListener("pointerleave", onLeave);
     window.addEventListener("pointerup", onUp);
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       canvas.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointermove", onHover);
+      canvas.removeEventListener("pointerleave", onLeave);
       window.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("wheel", onWheel);
     };
@@ -2268,6 +2484,12 @@ export default function KosmopolisWorld() {
         {/* the cosmos */}
         <section className="kp-cosmos" aria-label="The simulated world" ref={cosmosRef}>
           <canvas ref={canvasRef} width={W} height={H} />
+          {hoverInst && (
+            <div className="kp-tip" style={{ left: hoverInst.x, top: hoverInst.y }} role="tooltip">
+              <b>{hoverInst.name}</b>
+              <span>{hoverInst.note}</span>
+            </div>
+          )}
           <div className="kp-cam" role="group" aria-label="View">
             <button className="kp-cam-btn" onClick={() => setExpanded((x) => !x)} aria-label={expanded ? "Shrink the map" : "Enlarge the map"} title={expanded ? "Shrink the map" : "Enlarge the map"}>
               {expanded ? "⤡" : "⤢"}
