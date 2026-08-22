@@ -25,6 +25,9 @@ export type DilemmaOption = {
   outcome: (name: string) => string;
 };
 
+/** A genuine line from the corpus that speaks to the dilemma, with its source. */
+export type Verdict = { text: string; author: string; work: string };
+
 export type Dilemma = {
   id: string;
   /** The virtue chiefly at stake — used to match the dilemma to a soul's flaw. */
@@ -33,6 +36,8 @@ export type Dilemma = {
   /** The scene, in the soul's own frame. */
   scene: (name: string) => string;
   options: DilemmaOption[];
+  /** The tradition's word on the choice — a real passage, shown when it resolves. */
+  verdict: Verdict;
 };
 
 export const DILEMMAS: Dilemma[] = [
@@ -46,6 +51,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Keep it — fortune's gift", virtue: "justice", good: false, outcome: (n) => `${n} kept the coin. It bought comfort, and a small unease that never quite left.` },
       { label: "Take a little for the trouble", virtue: "temperance", good: false, outcome: (n) => `${n} skimmed a few coins and returned the rest — a bargain that satisfied no one, least of all ${n}.` },
     ],
+    verdict: { text: "He who does wrong does wrong against himself. He who acts unjustly acts unjustly to himself, because he makes himself bad.", author: "Marcus Aurelius", work: "Meditations 9.4" },
   },
   {
     id: "rising-water",
@@ -56,6 +62,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Wade in and pull them out", virtue: "courage", good: true, outcome: (n) => `${n} went into the black water and dragged the family clear. ${n} shook for an hour after, and slept without shame.` },
       { label: "Wait for someone braver", virtue: "courage", good: false, outcome: (n) => `${n} waited. Help came late. ${n} has not walked past that house since without looking away.` },
     ],
+    verdict: { text: "That which is not good for the swarm is not good for the bee.", author: "Marcus Aurelius", work: "Meditations 6.54" },
   },
   {
     id: "public-insult",
@@ -67,6 +74,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Strike back in kind", virtue: "temperance", good: false, outcome: (n) => `${n} repaid the mockery twofold and won the moment. By evening ${n} had a new enemy and a worse temper.` },
       { label: "Walk off seething", virtue: "courage", good: false, outcome: (n) => `${n} left without a word, and carried the insult home to chew on for a week.` },
     ],
+    verdict: { text: "The best revenge is not to be like your enemy.", author: "Marcus Aurelius", work: "Meditations 6.6" },
   },
   {
     id: "confident-rumor",
@@ -78,6 +86,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Repeat it, and belong", virtue: "wisdom", good: false, outcome: (n) => `${n} passed the story on and was welcomed. The stranger left town wronged, and ${n} half-knew it.` },
       { label: "Say nothing either way", virtue: "courage", good: false, outcome: (n) => `${n} stayed silent. The lie ran on unopposed, and silence, ${n} learned, has a cost too.` },
     ],
+    verdict: { text: "If it is not right, do not do it; if it is not true, do not say it.", author: "Marcus Aurelius", work: "Meditations 12.17" },
   },
   {
     id: "hard-word",
@@ -88,6 +97,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Speak the hard truth kindly", virtue: "courage", good: true, outcome: (n) => `${n} said the difficult thing, gently and once. The friendship bent, held, and was the better for it.` },
       { label: "Tell them what they want", virtue: "justice", good: false, outcome: (n) => `${n} agreed to keep the peace. The ruin came as foretold, and ${n}'s silence was part of it.` },
     ],
+    verdict: { text: "When you have decided that a man is your friend... speak as boldly with him as with yourself.", author: "Seneca", work: "Letters 3.2" },
   },
   {
     id: "second-helping",
@@ -98,6 +108,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Stop at enough", virtue: "temperance", good: true, outcome: (n) => `${n} set the plate aside satisfied, and found the wanting itself grew quieter with the practice.` },
       { label: "Take more while it's there", virtue: "temperance", good: false, outcome: (n) => `${n} ate past fullness. The pleasure was brief; the heaviness, and the habit, were not.` },
     ],
+    verdict: { text: "Is anything brought round to you at a banquet? Put out your hand and take a moderate share. Does it pass by you? Do not stop it.", author: "Epictetus", work: "Enchiridion 15" },
   },
   {
     id: "poor-debtor",
@@ -108,6 +119,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Forgive what they cannot give", virtue: "justice", good: true, outcome: (n) => `${n} forgave the debt. The neighbour kept their trade, and repaid ${n} in loyalty for years.` },
       { label: "Take what the law allows", virtue: "justice", good: false, outcome: (n) => `${n} seized the tools. The debt was cleared, the neighbour broken, and the street a little colder to ${n}.` },
     ],
+    verdict: { text: "Kindness is invincible, so long as it is without flattery or hypocrisy.", author: "Marcus Aurelius", work: "Meditations 11.18" },
   },
   {
     id: "hasty-verdict",
@@ -118,6 +130,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Withhold judgement, look again", virtue: "wisdom", good: true, outcome: (n) => `${n} asked for a second day before deciding. The newcomer proved able, and ${n}'s fairness was remembered.` },
       { label: "Judge from the one slip", virtue: "wisdom", good: false, outcome: (n) => `${n} judged on the single stumble. A good hand was lost, and ${n} never learned what might have been.` },
     ],
+    verdict: { text: "When you see someone bathe hastily, do not say he bathes badly, but hastily. For you do not yet know his reasons.", author: "Epictetus", work: "Enchiridion 45" },
   },
   {
     id: "shared-harvest",
@@ -128,6 +141,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Divide it evenly", virtue: "justice", good: true, outcome: (n) => `${n} weighed each share alike, taking no more. The trust ${n} was given came back multiplied.` },
       { label: "Weight your own share", virtue: "justice", good: false, outcome: (n) => `${n} took a little extra where none would see. The hunger eased; the standing, once spent, did not return.` },
     ],
+    verdict: { text: "Never value anything as profitable that compels you to break your promise, to lose your self-respect.", author: "Marcus Aurelius", work: "Meditations 3.7" },
   },
   {
     id: "failing-plan",
@@ -138,6 +152,7 @@ export const DILEMMAS: Dilemma[] = [
       { label: "Change course, own the error", virtue: "wisdom", good: true, outcome: (n) => `${n} named the mistake plainly and changed tack. It cost a little pride and saved a great deal else.` },
       { label: "Press on to save face", virtue: "temperance", good: false, outcome: (n) => `${n} pressed on rather than admit it. The failure deepened, and pride paid for it in the end.` },
     ],
+    verdict: { text: "If anyone can prove and show to me that I think or act wrongly, I will gladly change; for I seek the truth, by which no one was ever truly harmed.", author: "Marcus Aurelius", work: "Meditations 6.21" },
   },
 ];
 

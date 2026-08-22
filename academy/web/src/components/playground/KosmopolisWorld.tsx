@@ -19,7 +19,7 @@ import {
   type VirtueKey,
   type Dials,
 } from "@/content/playground/kosmopolis";
-import { pickDilemma, type Dilemma, type DilemmaOption } from "@/content/playground/kosmopolis-dilemmas";
+import { pickDilemma, type Dilemma, type DilemmaOption, type Verdict } from "@/content/playground/kosmopolis-dilemmas";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 
 /**
@@ -91,6 +91,7 @@ type Soul = {
   reflection: string | null;
   sources?: Source[] | null; // the corpus passages the last reflection rested on
   faulty?: FaultyReasoning | null; // the false judgment behind a recent vice
+  lastVerdict?: Verdict | null; // the corpus passage that grounded the last dilemma
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -2063,6 +2064,7 @@ export default function KosmopolisWorld() {
       // soul flourishes, and it now wears the ring of reason.
       s.awake = true;
       s.faulty = null; // reason mended
+      s.lastVerdict = null; // its own reflection replaces the borrowed word
       s.v[key] = clamp(s.v[key] + 0.12, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.14, 0.02, 1);
       s.lastDeed = { virtue: key, virtuous: true };
@@ -2119,6 +2121,7 @@ export default function KosmopolisWorld() {
       s.v[key] = clamp(s.v[key] + 0.08, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.08, 0.02, 1);
       s.reflection = data.reply;
+      s.lastVerdict = null; // the counsel supersedes the dilemma's word
       s.sources = asSources(data.sources);
       log(w, `${data.counselor} counselled ${s.name}, who took it up — ${virtueDef(key).name.toLowerCase()} strengthened in them.`);
       if (typeof data.remaining === "number") setRemaining(data.remaining);
@@ -2158,6 +2161,7 @@ export default function KosmopolisWorld() {
       s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
       const text = opt.outcome(s.name);
       s.reflection = text;
+      s.lastVerdict = dilemma?.verdict ?? null; // the tradition's word on this choice
       // the choice ripples to those nearby, for good or ill
       for (const o of w.souls) {
         if (o === s) continue;
@@ -2190,7 +2194,7 @@ export default function KosmopolisWorld() {
         .then(() => loadLedger())
         .catch(() => {});
     },
-    [flush, refresh, loadLedger]
+    [flush, refresh, loadLedger, dilemma]
   );
 
   /* ---------------------------------------------------------------- view */
@@ -2714,6 +2718,15 @@ function SoulCard({
         <>
           <blockquote className="kp-reflection">{soul.reflection}</blockquote>
           <SourceCite sources={soul.sources} />
+          {soul.lastVerdict && (
+            <div className="kp-verdict">
+              <p className="kp-verdict-k">The tradition’s word</p>
+              <blockquote className="kp-verdict-text">“{soul.lastVerdict.text}”</blockquote>
+              <p className="kp-verdict-src">
+                — {soul.lastVerdict.author}, <cite>{soul.lastVerdict.work}</cite>
+              </p>
+            </div>
+          )}
         </>
       ) : (
         <p className="kp-soul-note">
