@@ -987,3 +987,8 @@
 .kp-verdict-text { font-family: var(--book); font-style: italic; font-size: 0.9rem; line-height: 1.45; color: var(--paper); margin: 0 0 0.4rem; padding: 0; border: 0; }
 .kp-verdict-src { font-family: var(--util); font-size: 0.72rem; color: var(--bone-dim); margin: 0; }
 .kp-verdict-src cite { font-style: normal; }
+
+/* building identity on hover */
+.kp-tip { position: absolute; z-index: 6; transform: translate(14px, -50%); max-width: 15rem; pointer-events: none; background: rgba(16, 18, 20, 0.94); border: 1px solid var(--tape-rule); border-radius: 4px; padding: 0.4rem 0.55rem; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
+.kp-tip b { display: block; font-family: var(--display); font-size: 0.82rem; color: var(--paper); margin: 0 0 0.15rem; }
+.kp-tip span { display: block; font-family: var(--util); font-size: 0.7rem; line-height: 1.4; color: var(--bone-dim); }
