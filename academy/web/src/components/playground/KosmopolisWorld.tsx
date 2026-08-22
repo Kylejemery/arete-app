@@ -73,6 +73,7 @@ type Soul = {
   pulse: number;
   lastDeed: { virtue: VirtueKey; virtuous: boolean } | null;
   reflection: string | null;
+  sources?: Source[] | null; // the corpus passages the last reflection rested on
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -109,8 +110,19 @@ type World = {
   maximId: number;
 };
 
+// A corpus passage the Oracle grounded a reflection in.
+type Source = { author?: string | null; work?: string | null; sectionLabel?: string | null };
+
+function formatSource(s: Source): string {
+  const head = [s.author, s.work].filter(Boolean).join(" — ");
+  return head + (s.sectionLabel ? ` ${s.sectionLabel}` : "");
+}
+function asSources(v: unknown): Source[] {
+  return Array.isArray(v) ? (v as Source[]).filter((s) => s && (s.author || s.work)) : [];
+}
+
 // A saying an awakened soul reasoned its way to — the world's own growing corpus.
-type Maxim = { id: number; text: string; author: string; year: number };
+type Maxim = { id: number; text: string; author: string; year: number; sources?: Source[] };
 
 // A decision playing out: the camera holds on the soul while a caption and a
 // burst of light (or shadow) settle over them. Transient — never persisted.
@@ -126,6 +138,7 @@ type Life = {
   counselor: string | null;
   author_name: string | null;
   reflection: string;
+  sources?: Source[] | null;
   created_at: string;
 };
 
@@ -1741,11 +1754,13 @@ export default function KosmopolisWorld() {
       s.eud = clamp(s.eud + 0.14, 0.02, 1);
       s.lastDeed = { virtue: key, virtuous: true };
       s.reflection = data.reflection;
+      const srcs = asSources(data.sources);
+      s.sources = srcs;
       log(w, `${s.name} awakened to reason, and chose — drawing on ${virtueDef(key).name.toLowerCase()}.`);
       // The line it reasoned its way to enters the world's own corpus.
       const maxim = extractMaxim(data.reflection || "");
       if (maxim) {
-        w.maxims.unshift({ id: w.maximId++, text: maxim, author: s.name, year: w.year });
+        w.maxims.unshift({ id: w.maximId++, text: maxim, author: s.name, year: w.year, sources: srcs });
         if (w.maxims.length > 40) w.maxims.pop();
         log(w, `${s.name} left a saying: “${maxim}”`);
       }
@@ -1791,6 +1806,7 @@ export default function KosmopolisWorld() {
       s.v[key] = clamp(s.v[key] + 0.08, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.08, 0.02, 1);
       s.reflection = data.reply;
+      s.sources = asSources(data.sources);
       log(w, `${data.counselor} counselled ${s.name}, who took it up — ${virtueDef(key).name.toLowerCase()} strengthened in them.`);
       if (typeof data.remaining === "number") setRemaining(data.remaining);
       setAdvice("");
@@ -2133,6 +2149,7 @@ export default function KosmopolisWorld() {
                     <p className="kp-maxim-by">
                       — {m.author}, yr {m.year.toLocaleString()}
                     </p>
+                    <SourceCite sources={m.sources} />
                   </li>
                 ))}
               </ul>
@@ -2259,6 +2276,17 @@ export default function KosmopolisWorld() {
 }
 
 /* ---- the selected soul ---- */
+// "Grounded in ..." — the corpus passages the Oracle drew on.
+function SourceCite({ sources }: { sources?: Source[] | null }) {
+  const list = asSources(sources).slice(0, 4);
+  if (!list.length) return null;
+  return (
+    <p className="kp-cite">
+      <span className="kp-cite-k">Grounded in</span> {list.map(formatSource).filter(Boolean).join(" · ")}
+    </p>
+  );
+}
+
 function SoulCard({
   soul,
   year,
@@ -2311,7 +2339,10 @@ function SoulCard({
         </span>
       </div>
       {soul.reflection ? (
-        <blockquote className="kp-reflection">{soul.reflection}</blockquote>
+        <>
+          <blockquote className="kp-reflection">{soul.reflection}</blockquote>
+          <SourceCite sources={soul.sources} />
+        </>
       ) : (
         <p className="kp-soul-note">
           {troubled ? `${soul.name} is struggling, and faces a hard choice.` : "Acts on simple leanings, not yet on thought."}

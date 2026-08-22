@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
       arete: a,
       virtue,
       reflection: reply.answer,
+      sources: reply.sources ?? null,
       user_id: visitor?.userId ?? null,
       author_name: visitor?.name ?? null,
     });
@@ -121,5 +122,5 @@ export async function POST(request: NextRequest) {
     console.error("[api/playground/kosmopolis/mind persist]", err);
   }
 
-  return NextResponse.json({ reflection: reply.answer, virtue, remaining: reply.remaining });
+  return NextResponse.json({ reflection: reply.answer, virtue, sources: reply.sources ?? null, remaining: reply.remaining });
 }
