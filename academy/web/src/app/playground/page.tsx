@@ -51,6 +51,17 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Find your zone →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/view-from-above">
+          <p className="pg-card-kicker">The View from Above</p>
+          <h2>All of time, in one frame</h2>
+          <p>
+            Compress the universe into a year, the Earth into a day, our species
+            into an hour — then set the hand to your own age and see how brief,
+            and how astonishing, your place in it is.
+          </p>
+          <span className="pg-card-go">Rise above →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
