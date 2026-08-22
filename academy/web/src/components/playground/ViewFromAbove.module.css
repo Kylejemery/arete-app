@@ -1,0 +1,493 @@
+/* The View from Above — a Playground experiment.
+ *
+ * Shares the Playground palette (tape / bone / pomegranate) and the four type
+ * families exposed by app/playground/layout.tsx, so it sits continuously beside
+ * the situations game and the scale of happiness. Scoped as a CSS module.
+ */
+
+.page {
+  --paper: #e4e5dc;
+  --tape: #16140f;
+  --tape-rule: #332f26;
+  --bone: #c9c4b6;
+  --bone-dim: #7c7565;
+  --slate: #1d2124;
+  --pom: #8a2b2b;
+  --pom-lit: #b8473f;
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --util: var(--font-plex-sans), 'IBM Plex Sans', system-ui, sans-serif;
+  --gap: clamp(1.5rem, 4vw, 4rem);
+
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tape);
+  color: var(--bone);
+  font-family: var(--book);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--pom-lit);
+  outline-offset: 3px;
+}
+
+/* ── top bar / back ── */
+.topBar {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(1.4rem, 4vw, 2.2rem) var(--gap) 0;
+}
+.backLink {
+  display: inline-block;
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  text-decoration: none;
+}
+.backLink:hover {
+  color: var(--pom-lit);
+}
+
+/* ── hero ── */
+.hero {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 3.5rem) var(--gap) clamp(1.5rem, 4vh, 2.5rem);
+}
+.eyebrow {
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1.4rem;
+}
+.title {
+  font-family: var(--display);
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 144;
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vw, 4.6rem);
+  line-height: 0.99;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--paper);
+  max-width: 18ch;
+  text-wrap: balance;
+}
+.lede {
+  font-family: var(--book);
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.4vw, 1.42rem);
+  max-width: 46ch;
+  margin: 1.4rem 0 0;
+  color: var(--bone);
+  line-height: 1.42;
+}
+
+/* ── master–detail layout ── */
+.layout {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vh, 2.5rem) var(--gap) clamp(5rem, 12vh, 9rem);
+  display: grid;
+  grid-template-columns: minmax(15rem, 19rem) 1fr;
+  gap: clamp(1.2rem, 3vw, 2.4rem);
+  align-items: start;
+}
+.rail {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+.railItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: left;
+  background: #100e0a;
+  border: 1px solid var(--tape-rule);
+  border-left: 2px solid transparent;
+  padding: 0.8rem 0.95rem;
+  cursor: pointer;
+  color: var(--bone-dim);
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.railItem:hover {
+  color: var(--bone);
+  border-color: var(--bone-dim);
+}
+.railItemActive {
+  color: var(--paper);
+  background: var(--slate);
+  border-left-color: var(--pom);
+}
+.railKicker {
+  font-family: var(--util);
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+.railItemActive .railKicker {
+  color: var(--pom-lit);
+}
+.railName {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-weight: 400;
+  font-size: 1.05rem;
+  line-height: 1.12;
+  color: inherit;
+}
+
+.main {
+  min-width: 0;
+}
+
+/* ── scale header ── */
+.scaleHead {
+  border-bottom: 1px solid var(--tape-rule);
+  padding-bottom: 1.6rem;
+  margin-bottom: 1.8rem;
+}
+.scaleName {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  line-height: 1.04;
+  margin: 0;
+  color: var(--paper);
+  text-wrap: balance;
+}
+.mapping {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.7rem;
+  margin: 1rem 0 0;
+  font-family: var(--util);
+  font-size: 0.9rem;
+  color: var(--bone);
+}
+.mappingSpan {
+  color: var(--paper);
+  font-weight: 600;
+}
+.mappingArrow {
+  color: var(--pom-lit);
+}
+.ratio {
+  margin: 0.7rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--bone-dim);
+  letter-spacing: 0.01em;
+}
+.blurb {
+  margin: 1.2rem 0 0;
+  color: var(--bone);
+  font-size: 1.02rem;
+  max-width: 52ch;
+}
+
+/* ── the compressed bar ── */
+.barWrap {
+  margin: 0 0 2rem;
+}
+.bar {
+  position: relative;
+  height: 3.4rem;
+  background: linear-gradient(90deg, #0d0b08, #241f16 70%, #3a2622);
+  border: 1px solid var(--tape-rule);
+}
+.tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--bone-dim);
+  transform: translateX(-0.5px);
+}
+.tickDot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: var(--bone-dim);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.tickEmphasis {
+  background: var(--pom-lit);
+  width: 2px;
+}
+.tickEmphasis .tickDot {
+  width: 8px;
+  height: 8px;
+  background: var(--pom-lit);
+  box-shadow: 0 0 10px rgba(184, 71, 63, 0.8);
+}
+.barEnds {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--bone-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.barCaption {
+  margin: 0.9rem 0 0;
+  font-family: var(--util);
+  font-size: 0.82rem;
+  font-style: normal;
+  color: var(--bone-dim);
+}
+
+/* ── event list ── */
+.events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--tape-rule);
+}
+.event {
+  display: grid;
+  grid-template-columns: 9.5rem 1fr;
+  gap: 0.4rem 1.2rem;
+  padding: 0.95rem 0;
+  border-bottom: 1px solid var(--tape-rule);
+  align-items: baseline;
+}
+.eventStamp {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--pom-lit);
+  line-height: 1.35;
+}
+.eventEmphasis .eventStamp {
+  color: var(--paper);
+}
+.eventBody {
+  min-width: 0;
+}
+.eventLabel {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 24;
+  font-weight: 400;
+  font-size: 1.12rem;
+  color: var(--bone);
+  line-height: 1.2;
+}
+.eventEmphasis .eventLabel {
+  color: var(--paper);
+}
+.eventDetail {
+  display: block;
+  margin-top: 0.15rem;
+  font-family: var(--book);
+  font-size: 0.94rem;
+  color: var(--bone-dim);
+}
+
+/* ── life stat callout ── */
+.lifeStat {
+  margin: 1.8rem 0 0;
+  padding: 1.2rem 1.4rem;
+  background: var(--slate);
+  border-left: 2px solid var(--pom);
+}
+.lifeStatLabel {
+  font-family: var(--util);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 0.5rem;
+}
+.lifeStatValue {
+  margin: 0;
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.15rem, 3vw, 1.5rem);
+  line-height: 1.32;
+  color: #ede9de;
+  text-wrap: pretty;
+}
+.lifeStatValue strong {
+  font-weight: 600;
+  color: var(--paper);
+}
+
+/* ── reflection ── */
+.reflection {
+  margin: 2.2rem 0 0;
+  padding: 1.6rem 0 0;
+  border-top: 1px solid var(--tape-rule);
+}
+.reflectionRef {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--util);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1rem;
+}
+.diamond {
+  width: 6px;
+  height: 6px;
+  background: var(--pom-lit);
+  transform: rotate(45deg);
+  flex: none;
+}
+.reflectionText {
+  margin: 0;
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  line-height: 1.42;
+  color: #ede9de;
+  text-wrap: pretty;
+}
+.reflectionBy {
+  display: block;
+  margin-top: 0.9rem;
+  font-family: var(--util);
+  font-size: 0.8rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+
+/* ── the personal scale: age control ── */
+.ageBox {
+  margin: 0 0 2rem;
+  padding: 1.4rem 1.5rem;
+  background: #100e0a;
+  border: 1px solid var(--tape-rule);
+}
+.ageTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.ageLabel {
+  font-family: var(--util);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+.ageReadout {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.3rem, 4vw, 1.9rem);
+  color: var(--paper);
+}
+.ageReadout strong {
+  color: var(--pom-lit);
+  font-weight: 400;
+}
+.ageSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  margin: 1.3rem 0 0.5rem;
+  background: var(--tape-rule);
+  cursor: pointer;
+}
+.ageSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pom-lit);
+  border: 2px solid var(--tape);
+  box-shadow: 0 0 8px rgba(184, 71, 63, 0.7);
+}
+.ageSlider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pom-lit);
+  border: 2px solid var(--tape);
+}
+.ageScaleRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--bone-dim);
+}
+
+/* ── responsive ── */
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+  .rail {
+    position: static;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    scroll-snap-type: x proximity;
+  }
+  .railItem {
+    flex: 0 0 auto;
+    width: 13.5rem;
+    border-left: 1px solid var(--tape-rule);
+    border-top: 2px solid transparent;
+    scroll-snap-align: start;
+  }
+  .railItemActive {
+    border-left-color: var(--tape-rule);
+    border-top-color: var(--pom);
+  }
+  .event {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+  .eventStamp {
+    font-size: 0.78rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railItem {
+    transition: none;
+  }
+}
