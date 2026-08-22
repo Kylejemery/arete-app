@@ -54,6 +54,7 @@ const ZOOM_MAX = 9;
 const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not dots
 const BUILDING_ZOOM = 2.2; // at/above this, institutions rise as little 3-D structures
 const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and names
+const STREET_ZOOM = 5.0; // at/above this, a town resolves into a paved street you look down
 const ACT_START = (EPOCHS.find((e) => e.act)?.at ?? 260); // the year deeds — and aging — begin
 
 type Virtues = Record<VirtueKey, number>;
@@ -1140,6 +1141,184 @@ function drawBuilding(
   ctx.fill();
 }
 
+// A plain dwelling — the houses that line a street between its institutions.
+// Oblique, like the temples: plaster front, lit top, shadowed side, tiled roof.
+function drawDwelling(ctx: CanvasRenderingContext2D, gx: number, gy: number, hw: number, seed: number) {
+  const dx = 5;
+  const dy = -4;
+  const wallH = 11 + (seed % 3) * 1.5;
+  const plaster = 196 - (seed % 4) * 8;
+  const wall = `rgb(${plaster},${plaster - 18},${plaster - 44})`;
+  const wallSide = `rgb(${(plaster * 0.7) | 0},${((plaster - 18) * 0.7) | 0},${((plaster - 44) * 0.7) | 0})`;
+  const roofF = "rgb(150,84,58)";
+  const roofT = "rgb(176,104,74)";
+  // shadow
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.beginPath();
+  ctx.ellipse(gx + dx * 0.5, gy + dy * 0.5, hw * 1.2, hw * 0.4, 0, 0, 6.283);
+  ctx.fill();
+  // walls
+  ctx.fillStyle = wall;
+  ctx.fillRect(gx - hw, gy - wallH, hw * 2, wallH);
+  ctx.fillStyle = wallSide;
+  ctx.beginPath();
+  ctx.moveTo(gx + hw, gy - wallH);
+  ctx.lineTo(gx + hw + dx, gy - wallH + dy);
+  ctx.lineTo(gx + hw + dx, gy + dy);
+  ctx.lineTo(gx + hw, gy);
+  ctx.closePath();
+  ctx.fill();
+  // roof: a low gable, front face + top slope back
+  const ridge = gy - wallH - 5;
+  ctx.fillStyle = roofT;
+  ctx.beginPath();
+  ctx.moveTo(gx - hw, gy - wallH);
+  ctx.lineTo(gx, ridge);
+  ctx.lineTo(gx + dx, ridge + dy);
+  ctx.lineTo(gx - hw + dx, gy - wallH + dy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = roofF;
+  ctx.beginPath();
+  ctx.moveTo(gx - hw, gy - wallH);
+  ctx.lineTo(gx, ridge);
+  ctx.lineTo(gx + hw, gy - wallH);
+  ctx.closePath();
+  ctx.fill();
+  // door + a window
+  ctx.fillStyle = "rgba(46,32,22,0.9)";
+  ctx.fillRect(gx - 1.6, gy - wallH * 0.7, 3.2, wallH * 0.7);
+  if (seed % 2) {
+    ctx.fillStyle = "rgba(70,80,86,0.8)";
+    ctx.fillRect(gx - hw + 1.6, gy - wallH + 2.4, 2.4, 2.4);
+  }
+}
+
+// A public well at the heart of the street.
+function drawWell(ctx: CanvasRenderingContext2D, gx: number, gy: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy + 1, 7, 3, 0, 0, 6.283);
+  ctx.fill();
+  ctx.fillStyle = "rgb(150,146,132)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy, 6, 3, 0, 0, 6.283);
+  ctx.fill();
+  ctx.fillStyle = "rgb(24,20,16)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy - 0.6, 4, 2, 0, 0, 6.283);
+  ctx.fill();
+  // two posts and a little peaked roof
+  ctx.strokeStyle = "rgb(96,70,48)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(gx - 5, gy - 1);
+  ctx.lineTo(gx - 5, gy - 12);
+  ctx.moveTo(gx + 5, gy - 1);
+  ctx.lineTo(gx + 5, gy - 12);
+  ctx.stroke();
+  ctx.fillStyle = "rgb(150,84,58)";
+  ctx.beginPath();
+  ctx.moveTo(gx - 7, gy - 11);
+  ctx.lineTo(gx, gy - 16);
+  ctx.lineTo(gx + 7, gy - 11);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// A cypress — the dark green punctuation of a Mediterranean street.
+function drawCypress(ctx: CanvasRenderingContext2D, gx: number, gy: number, h: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy, 4, 1.6, 0, 0, 6.283);
+  ctx.fill();
+  ctx.strokeStyle = "rgb(78,58,40)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(gx, gy);
+  ctx.lineTo(gx, gy - h * 0.25);
+  ctx.stroke();
+  const g = ctx.createLinearGradient(gx, gy - h, gx, gy);
+  g.addColorStop(0, "rgb(58,86,60)");
+  g.addColorStop(1, "rgb(34,52,38)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(gx, gy - h);
+  ctx.quadraticCurveTo(gx + 4.5, gy - h * 0.4, gx, gy - h * 0.2);
+  ctx.quadraticCurveTo(gx - 4.5, gy - h * 0.4, gx, gy - h);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// The street itself: a paved plaza a town resolves into at closest zoom, with a
+// road down its middle, dwellings flanking the institutions along the frontage,
+// a well at its heart, and cypresses at its edges. Drawn in world space beneath
+// the buildings and the people, who walk it.
+function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number, instCount: number) {
+  const halfW = Math.max(st.r * 1.2, 150);
+  const frontageY = st.y - st.r * 0.55 + 10; // where the institutions stand
+  const backY = frontageY - 16;
+  const depth = Math.max(st.r * 1.05, 150);
+  const frontY = frontageY + depth;
+
+  const w2 = halfW * 2;
+  const h2 = frontY - backY;
+  // a soft earth apron under the town, so the paving meets the countryside gently
+  ctx.fillStyle = "rgba(96,80,54,0.5)";
+  ctx.beginPath();
+  ctx.roundRect(st.x - halfW - 16, backY - 12, w2 + 32, h2 + 26, 40);
+  ctx.fill();
+  // paved ground, its corners rounded into the apron
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(st.x - halfW, backY, w2, h2, 26);
+  ctx.clip();
+  ctx.fillStyle = "rgb(178,163,132)";
+  ctx.fillRect(st.x - halfW, backY, w2, h2);
+  // a warm inner wash for depth
+  const wash = ctx.createLinearGradient(0, backY, 0, frontY);
+  wash.addColorStop(0, "rgba(120,100,70,0.28)");
+  wash.addColorStop(0.5, "rgba(120,100,70,0)");
+  wash.addColorStop(1, "rgba(60,48,32,0.22)");
+  ctx.fillStyle = wash;
+  ctx.fillRect(st.x - halfW, backY, w2, h2);
+  // paving joints
+  ctx.strokeStyle = "rgba(74,60,40,0.22)";
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  for (let gy = backY + 18; gy < frontY; gy += 18) {
+    ctx.moveTo(st.x - halfW, gy);
+    ctx.lineTo(st.x + halfW, gy);
+  }
+  for (let gx = st.x - halfW + 20; gx < st.x + halfW; gx += 20) {
+    ctx.moveTo(gx, backY);
+    ctx.lineTo(gx, frontY);
+  }
+  ctx.stroke();
+  // the road down the middle, a lighter dressed-stone strip
+  ctx.fillStyle = "rgba(206,192,162,0.65)";
+  ctx.fillRect(st.x - 15, backY, 30, h2);
+  ctx.restore();
+
+  // cypresses at the back corners
+  drawCypress(ctx, st.x - halfW + 14, backY + 8, 34);
+  drawCypress(ctx, st.x + halfW - 14, backY + 8, 30);
+
+  // dwellings flanking the institution row along the frontage
+  const instSpan = ((instCount - 1) * 42) / 2 + 24;
+  const flank = [instSpan + 20, instSpan + 44, instSpan + 68];
+  flank.forEach((off, i) => {
+    if (st.x - off > st.x - halfW + 12) drawDwelling(ctx, st.x - off, frontageY + 2, 8, seed + i);
+    if (st.x + off < st.x + halfW - 12) drawDwelling(ctx, st.x + off, frontageY + 2, 8, seed + i + 7);
+  });
+  // a second, nearer row of dwellings along the flanks
+  drawDwelling(ctx, st.x - halfW * 0.6, frontageY + depth * 0.42, 9, seed + 3);
+  drawDwelling(ctx, st.x + halfW * 0.6, frontageY + depth * 0.42, 9, seed + 5);
+
+  // the well at the heart of the street
+  drawWell(ctx, st.x, frontY - depth * 0.34);
+}
+
 export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1683,13 +1862,19 @@ export default function KosmopolisWorld() {
       const st = w.settlements[si];
       const inst = w.builtInst[si] ?? [];
       if (figures) {
-        // a little cluster of dwellings
-        ctx.fillStyle = "rgba(38,30,22,0.9)";
-        for (let k = 0; k < 5; k++) {
-          const a = (k / 5) * 6.283;
-          const bx = st.x + Math.cos(a) * st.r * 0.4;
-          const by = st.y + Math.sin(a) * st.r * 0.4;
-          ctx.fillRect(bx - 5, by - 5, 10, 9);
+        const onScreen = Math.abs(st.x - cam.cx) < halfW + st.r && Math.abs(st.y - cam.cy) < halfH + st.r;
+        if (zoom >= STREET_ZOOM && onScreen) {
+          // closest in: the town resolves into a paved street the people walk
+          drawStreet(ctx, st, (st.x * 131 + st.y * 17) | 0, inst.length);
+        } else {
+          // a little cluster of dwellings
+          ctx.fillStyle = "rgba(38,30,22,0.9)";
+          for (let k = 0; k < 5; k++) {
+            const a = (k / 5) * 6.283;
+            const bx = st.x + Math.cos(a) * st.r * 0.4;
+            const by = st.y + Math.sin(a) * st.r * 0.4;
+            ctx.fillRect(bx - 5, by - 5, 10, 9);
+          }
         }
         // institutions, set in a row above the town centre
         const spacing = zoom >= BUILDING_ZOOM ? 42 : 26; // 3-D structures need room
