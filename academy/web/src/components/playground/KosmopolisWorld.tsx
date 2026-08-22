@@ -130,7 +130,12 @@ type World = {
   builtInst: InstType[][]; // institutions per settlement, index-aligned to settlements
   laws: VirtueKey[]; // world-wide laws the Polis has enacted for itself
   lastAssembly: number; // year the assembly last convened
+  pendingEpitaphs: Epitaph[]; // legacies of the dead, awaiting the shared ledger
 };
+
+// The words a well-lived soul leaves behind at death, to be carried to the
+// shared annals for every visitor who comes after.
+type Epitaph = { name: string; virtues: Virtues; maxim: string; virtue: VirtueKey; epoch: string; year: number };
 
 // The laws a self-governing Polis can enact, one per virtue — chosen by the
 // population's own strongest character, not by the hand outside the world.
@@ -164,7 +169,7 @@ type Playout = { soulId: number; text: string; good: boolean; life: number };
 
 type Life = {
   id: string;
-  kind: "awakening" | "counsel" | "choice";
+  kind: "awakening" | "counsel" | "choice" | "legacy";
   soul_name: string;
   epoch: string | null;
   world_year: number | null;
@@ -212,6 +217,7 @@ function createWorld(): World {
     builtInst: [],
     laws: [],
     lastAssembly: 0,
+    pendingEpitaphs: [],
   };
 }
 
@@ -819,6 +825,17 @@ function reap(world: World) {
         if (m) {
           world.maxims.unshift({ id: world.maximId++, text: m, author: s.name, year: world.year });
           if (world.maxims.length > 40) world.maxims.pop();
+          // a soul that reasoned its way to words leaves them to the shared annals
+          if (s.awake) {
+            world.pendingEpitaphs.push({
+              name: s.name,
+              virtues: { ...s.v },
+              maxim: m,
+              virtue: dominantVirtue(s.v).key,
+              epoch: EPOCHS[world.epoch].name,
+              year: world.year,
+            });
+          }
         }
       }
     } else if (arete(s.v) < 0.4) {
@@ -1179,6 +1196,9 @@ export default function KosmopolisWorld() {
   const [dilemmaOpen, setDilemmaOpen] = useState(false);
   const [dilemma, setDilemma] = useState<Dilemma | null>(null);
   const lastDilemmaRef = useRef<string | undefined>(undefined);
+  // a live passage the Oracle drew for the open dilemma, in place of the authored one
+  const [scripture, setScripture] = useState<{ passage: string; sources: Source[] | null } | null>(null);
+  const [seeking, setSeeking] = useState(false);
 
   const [lives, setLives] = useState<Life[]>([]);
 
@@ -1245,6 +1265,38 @@ export default function KosmopolisWorld() {
   useEffect(() => {
     loadLedger();
   }, [loadLedger]);
+
+  // Carry the legacies of the newly dead to the shared annals, then refresh the
+  // ledger so their words appear. Drains a queue the simulation fills at death.
+  const flushEpitaphs = useCallback(async () => {
+    const w = worldRef.current;
+    if (!w.pendingEpitaphs.length) return;
+    const batch = w.pendingEpitaphs.splice(0, w.pendingEpitaphs.length);
+    let sent = false;
+    for (const e of batch) {
+      try {
+        await fetch("/api/playground/kosmopolis/legacy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            soul: { name: e.name, virtues: e.virtues },
+            maxim: e.maxim,
+            virtue: e.virtue,
+            epoch: e.epoch,
+            year: e.year,
+          }),
+        });
+        sent = true;
+      } catch {
+        /* a lost epitaph is a small grief; the world runs on */
+      }
+    }
+    if (sent) loadLedger();
+  }, [loadLedger]);
+  const flushEpitaphsRef = useRef(flushEpitaphs);
+  useEffect(() => {
+    flushEpitaphsRef.current = flushEpitaphs;
+  }, [flushEpitaphs]);
 
   /* ---- persistence: multiple worlds, localStorage for all + cloud when signed in ---- */
 
@@ -1531,7 +1583,10 @@ export default function KosmopolisWorld() {
           acc -= 1;
           guard++;
         }
-        if (guard > 0) dirtyRef.current = true;
+        if (guard > 0) {
+          dirtyRef.current = true;
+          flushEpitaphsRef.current(); // carry any new legacies to the annals
+        }
         if (!reduce) life(w);
       }
 
@@ -2409,9 +2464,38 @@ export default function KosmopolisWorld() {
     const d = pickDilemma(s.v, lastDilemmaRef.current);
     lastDilemmaRef.current = d.id;
     setDilemma(d);
+    setScripture(null);
     setDilemmaOpen(true);
     setNotice(null);
   }, []);
+
+  // Spend the Oracle to draw a live passage for the open dilemma, in place of
+  // the authored verdict. The virtue at stake frames the search.
+  const seekScripture = useCallback(async () => {
+    const s = worldRef.current.selected != null ? worldRef.current.souls.find((x) => x.id === worldRef.current.selected) : null;
+    if (!dilemma || !s || seeking) return;
+    setSeeking(true);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/playground/kosmopolis/scripture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scene: dilemma.scene(s.name), virtue: dilemma.stake, soulName: s.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setNotice(data.error || "The corpus was silent.");
+        if (typeof data.remaining === "number") setRemaining(data.remaining);
+        return;
+      }
+      setScripture({ passage: data.passage, sources: asSources(data.sources) });
+      if (typeof data.remaining === "number") setRemaining(data.remaining);
+    } catch {
+      setNotice("The corpus could not be reached.");
+    } finally {
+      setSeeking(false);
+    }
+  }, [dilemma, seeking]);
 
   const chooseOption = useCallback(
     (opt: DilemmaOption) => {
@@ -2424,7 +2508,20 @@ export default function KosmopolisWorld() {
       s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
       const text = opt.outcome(s.name);
       s.reflection = text;
-      s.lastVerdict = dilemma?.verdict ?? null; // the tradition's word on this choice
+      // The tradition's word on this choice: a live passage if the visitor drew
+      // one from the Oracle, otherwise the authored verdict.
+      if (scripture) {
+        const src = scripture.sources?.[0];
+        s.lastVerdict = {
+          text: scripture.passage,
+          author: src?.author ?? "the corpus",
+          work: src?.work ?? src?.sectionLabel ?? "",
+        };
+        s.sources = scripture.sources ?? null;
+      } else {
+        s.lastVerdict = dilemma?.verdict ?? null;
+        s.sources = null;
+      }
       // the choice ripples to those nearby, for good or ill
       for (const o of w.souls) {
         if (o === s) continue;
@@ -2456,8 +2553,9 @@ export default function KosmopolisWorld() {
       })
         .then(() => loadLedger())
         .catch(() => {});
+      setScripture(null);
     },
-    [flush, refresh, loadLedger, dilemma]
+    [flush, refresh, loadLedger, dilemma, scripture]
   );
 
   /* ---------------------------------------------------------------- view */
@@ -2806,9 +2904,12 @@ export default function KosmopolisWorld() {
                         ? ` — counselled by ${l.counselor}`
                         : l.kind === "choice"
                         ? " — helped through a choice"
+                        : l.kind === "legacy"
+                        ? " — died, and left words"
                         : " — awakened"}
                       {l.author_name ? <span className="kp-ledger-epoch"> · by {l.author_name}</span> : null}
                       {l.epoch ? <span className="kp-ledger-epoch"> · {l.epoch}</span> : null}
+                      {l.kind === "legacy" && l.reflection ? <em className="kp-ledger-words">“{l.reflection}”</em> : null}
                     </span>
                   </li>
                 ))}
@@ -2901,7 +3002,21 @@ export default function KosmopolisWorld() {
                 </button>
               ))}
             </div>
-            <p className="kp-modal-foot">Choose the course you would have them take, and watch it play out.</p>
+            {scripture ? (
+              <div className="kp-scripture">
+                <p className="kp-scripture-k">The corpus, sought live</p>
+                <blockquote className="kp-scripture-text">{scripture.passage}</blockquote>
+                <SourceCite sources={scripture.sources} />
+              </div>
+            ) : (
+              <button className="kp-btn kp-wide kp-seek" onClick={seekScripture} disabled={seeking}>
+                {seeking ? "The Oracle searches the corpus…" : "❖ Seek the corpus (spends the Oracle)"}
+              </button>
+            )}
+            <p className="kp-modal-foot">
+              Choose the course you would have them take, and watch it play out.
+              {scripture ? " The passage above will be the word remembered." : ""}
+            </p>
           </div>
         </div>
       )}
