@@ -986,6 +986,19 @@
 .kp-faulty-error { font-family: var(--util); font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); margin: 0; }
 .kp-faulty-error b { color: var(--bone); font-weight: 600; }
 
+/* circle of concern (oikeiosis) */
+.kp-circle { font-family: var(--util); font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); margin: 0.5rem 0 0; }
+.kp-circle-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.16em; text-transform: uppercase; color: #d9b768; margin-right: 0.35rem; }
+.kp-circle-note { color: var(--bone-dim); font-style: italic; }
+
+/* dichotomy of control */
+.kp-dichotomy { border-left: 2px solid #6e96d2; background: rgba(110, 150, 210, 0.07); padding: 0.6rem 0.75rem; margin: 0.8rem 0 0; }
+.kp-dich-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase; color: #8fb0e6; margin: 0 0 0.4rem; }
+.kp-dich-row { font-family: var(--util); font-size: 0.76rem; line-height: 1.45; color: var(--bone-dim); margin: 0 0 0.3rem; }
+.kp-dich-row b { color: var(--bone); font-weight: 600; }
+.kp-dich-verdict { font-family: var(--book); font-size: 0.84rem; line-height: 1.45; color: var(--paper); margin: 0.4rem 0 0; }
+.kp-dich-exp { display: block; font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); margin-top: 0.2rem; }
+
 /* the tradition's word on a resolved dilemma */
 .kp-verdict { border-left: 2px solid #c9a24a; background: rgba(201, 162, 74, 0.07); padding: 0.6rem 0.75rem; margin: 0.7rem 0 0; }
 .kp-verdict-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase; color: #d9b768; margin: 0 0 0.35rem; }
