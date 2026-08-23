@@ -21,6 +21,7 @@ import {
 } from "@/content/playground/kosmopolis";
 import { pickDilemma, type Dilemma, type DilemmaOption, type Verdict } from "@/content/playground/kosmopolis-dilemmas";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
+import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
 
 /**
  * Kosmopolis — the world itself.
@@ -689,6 +690,40 @@ function weakestVirtue(v: Virtues): VirtueKey {
   let w: VirtueKey = "wisdom";
   for (const k of VIRTUE_KEYS) if (v[k] < v[w]) w = k;
   return w;
+}
+
+// The prokoptôn scale — a soul is not virtuous-or-not but somewhere on the road
+// of moral progress, from bondage to the passions up to the sage (rare, and only
+// with reason kindled).
+function progressStage(s: Soul): string {
+  const a = arete(s.v);
+  if (a >= 0.88) return s.awake ? "Sage" : "All but a sage";
+  if (a >= 0.75) return "Near the sage";
+  if (a >= 0.6) return "Well-girded";
+  if (a >= 0.45) return "Making progress";
+  if (a >= 0.3) return "Stirred to question";
+  return "In bondage to passion";
+}
+
+// The eupatheiai and the passions — a soul's present bearing. A composed soul
+// (virtuous, flourishing, little at fortune's mercy) feels one of the three good
+// feelings of the sage; a troubled one, a passion. Distress (lupē) alone has no
+// good counterpart: the sage never grants that a present thing is evil.
+type Bearing = { name: string; greek: string; kind: "eupatheia" | "pathos" | "neutral"; note: string };
+function bearingOf(s: Soul, badFortune: boolean, exposure: number): Bearing {
+  const a = arete(s.v);
+  const composed = (a >= 0.62 || s.awake) && s.eud >= 0.48 && exposure <= 0.5;
+  if (composed) {
+    if (badFortune) return { name: "Caution", greek: "eulabeia", kind: "eupatheia", note: "a reasoned wariness — the good counterpart of fear." };
+    if (circleOf(s).stage >= 3) return { name: "Goodwill", greek: "boulēsis", kind: "eupatheia", note: "a rational wishing for the good of others." };
+    return { name: "Joy", greek: "chara", kind: "eupatheia", note: "the settled gladness of a soul in accord with nature." };
+  }
+  if (s.eud < 0.4 || a < 0.4) {
+    if (badFortune) return { name: "Fear", greek: "phobos", kind: "pathos", note: "shrinking from what is not truly an evil." };
+    if (weakestVirtue(s.v) === "temperance") return { name: "Craving", greek: "epithymia", kind: "pathos", note: "reaching for what cannot satisfy." };
+    return { name: "Distress", greek: "lupē", kind: "pathos", note: "pain at a loss wrongly judged an evil — the passion with no good counterpart." };
+  }
+  return { name: "Unsettled", greek: "", kind: "neutral", note: "between passion and reason, not yet composed." };
 }
 
 function instAt(world: World, home: number): InstType[] {
@@ -3532,6 +3567,7 @@ export default function KosmopolisWorld() {
                 onRehearse={rehearse}
                 acting={EPOCHS[worldRef.current.epoch].act === true}
                 shield={worldRef.current.dials.sageShield}
+                badFortune={!!worldRef.current.fortune && !worldRef.current.fortune.good}
               />
             )}
             {notice && <p className="kp-notice">{notice}</p>}
@@ -3645,6 +3681,27 @@ export default function KosmopolisWorld() {
                 ))}
               </ul>
             )}
+          </div>
+
+          {/* the handbook */}
+          <div className="kp-card">
+            <h3>The Enchiridion — the handbook</h3>
+            <p className="kp-hint">
+              The doctrines this world runs on.{selected ? " Opened to the page its chosen soul most needs." : ""}
+            </p>
+            <ul className="kp-ench">
+              {ENCHIRIDION.map((c) => {
+                const lit = !!selected && chapterFor(weakestVirtue(selected.v)).n === c.n;
+                return (
+                  <li key={c.n} className={lit ? "kp-ench-lit" : ""}>
+                    <p className="kp-ench-t">
+                      <span className="kp-ench-n">{c.n}</span> {c.title}
+                    </p>
+                    <p className="kp-ench-b">{c.body}</p>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
 
           {/* the ledger */}
@@ -3807,6 +3864,7 @@ function SoulCard({
   onRehearse,
   acting,
   shield,
+  badFortune,
 }: {
   soul: Soul;
   age: number;
@@ -3819,6 +3877,7 @@ function SoulCard({
   onRehearse: () => void;
   acting: boolean;
   shield: number;
+  badFortune: boolean;
 }) {
   const dom = dominantVirtue(soul.v);
   const troubled = acting && soul.eud < 0.34;
@@ -3827,7 +3886,10 @@ function SoulCard({
   const circle = circleOf(soul);
   const indiff = INDIFFERENTS[weakestVirtue(soul.v)];
   // how far fortune can still move them: 1 − virtue×shield − resolve
-  const exposure = Math.round(Math.max(0.05, 1 - arete(soul.v) * shield - soul.resolve) * 100);
+  const exp01 = Math.max(0.05, 1 - arete(soul.v) * shield - soul.resolve);
+  const exposure = Math.round(exp01 * 100);
+  const bearing = bearingOf(soul, badFortune, exp01);
+  const stage = progressStage(soul);
   // the three disciplines of Epictetus, and which this soul has practised
   const disciplines: [string, boolean, string][] = [
     ["Assent", soul.awake, "to judge rightly — kindled by awakening"],
@@ -3844,6 +3906,15 @@ function SoulCard({
       <p className="kp-soul-sub">
         {townName ? `Of ${townName} · ` : ""}
         {age.toLocaleString()} yrs{elderly ? " · in their last years" : ""} · leans {dom.name.toLowerCase()}
+      </p>
+      <p className="kp-stage">
+        <span className="kp-stage-badge">{stage}</span>
+        {acting && (
+          <span className={`kp-bearing kp-bearing-${bearing.kind}`} title={bearing.note}>
+            {bearing.name}
+            {bearing.greek ? <em> ({bearing.greek})</em> : null}
+          </span>
+        )}
       </p>
       {inst.length > 0 && (
         <p className="kp-soul-town">

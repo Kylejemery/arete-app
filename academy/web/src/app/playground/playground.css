@@ -1006,6 +1006,22 @@
 .kp-disc-pip { flex: 1; text-align: center; font-family: var(--util); font-size: 0.68rem; padding: 0.28rem 0.2rem; border: 1px solid var(--tape-rule); border-radius: 3px; color: var(--bone-dim); background: rgba(255,255,255,0.02); cursor: default; }
 .kp-disc-on { color: #23282a; background: #c9a24a; border-color: #c9a24a; font-weight: 600; }
 
+/* prokoptôn stage + eupatheiai bearing */
+.kp-stage { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.4rem 0 0; }
+.kp-stage-badge { font-family: var(--mono); font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--paper); background: rgba(201, 162, 74, 0.18); border: 1px solid #c9a24a; border-radius: 999px; padding: 0.15rem 0.55rem; }
+.kp-bearing { font-family: var(--util); font-size: 0.74rem; color: var(--bone-dim); cursor: default; }
+.kp-bearing em { font-style: italic; opacity: 0.8; }
+.kp-bearing-eupatheia { color: #8fbf8a; }
+.kp-bearing-pathos { color: var(--pom-lit); }
+
+/* the Enchiridion handbook */
+.kp-ench { list-style: none; margin: 0.6rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.kp-ench li { border-left: 2px solid var(--tape-rule); padding: 0.15rem 0 0.15rem 0.7rem; }
+.kp-ench-lit { border-left-color: #c9a24a !important; background: rgba(201, 162, 74, 0.06); }
+.kp-ench-t { font-family: var(--book); font-size: 0.86rem; color: var(--paper); margin: 0 0 0.2rem; }
+.kp-ench-n { font-family: var(--mono); font-size: 0.6rem; color: var(--bone-dim); margin-right: 0.35rem; }
+.kp-ench-b { font-family: var(--util); font-size: 0.74rem; line-height: 1.45; color: var(--bone-dim); margin: 0; }
+
 /* the tradition's word on a resolved dilemma */
 .kp-verdict { border-left: 2px solid #c9a24a; background: rgba(201, 162, 74, 0.07); padding: 0.6rem 0.75rem; margin: 0.7rem 0 0; }
 .kp-verdict-k { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.18em; text-transform: uppercase; color: #d9b768; margin: 0 0 0.35rem; }
