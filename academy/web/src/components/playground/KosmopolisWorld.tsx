@@ -137,6 +137,7 @@ type World = {
   laws: VirtueKey[]; // world-wide laws the Polis has enacted for itself
   lastAssembly: number; // year the assembly last convened
   pendingEpitaphs: Epitaph[]; // legacies of the dead, awaiting the shared ledger
+  tod: number; // time of day in [0,1): 0 midnight, 0.5 noon — a wall-clock cycle
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -224,8 +225,15 @@ function createWorld(): World {
     laws: [],
     lastAssembly: 0,
     pendingEpitaphs: [],
+    tod: 0.58,
   };
 }
+
+// The length of a day and a season, in wall-clock seconds — driven by the render
+// clock, not the sim, so the light and the seasons drift smoothly whatever speed
+// the world is set to run at.
+const DAY_SECS = 56;
+const SEASON_SECS = DAY_SECS * 2;
 
 /* ------------------------------------------------------ geography (terrain) */
 
@@ -1061,8 +1069,21 @@ function extractMaxim(text: string): string {
   return last;
 }
 
+// Where a town's market gathers — the square by the monument, matching the layout
+// drawStreet lays down. Souls make for it during the day.
+function marketSquare(st: Settlement): { x: number; y: number } {
+  const halfW = Math.max(st.r * 1.2, 150);
+  const frontageY = st.y - st.r * 0.55 + 10;
+  const depth = Math.max(st.r * 1.05, 150);
+  const crossY = frontageY + depth * 0.46;
+  return { x: st.x + halfW * 0.14, y: crossY + 8 };
+}
+
 function life(world: World) {
   const sp = 0.95;
+  // how strongly the market pulls right now — busy at midday, all but empty at night
+  const day = clamp(sunElevation(world.tod), 0, 1);
+  const marketPull = 0.12 + day * 0.5;
   for (const s of world.souls) {
     if (s.hold > 0) {
       s.hold--;
@@ -1078,10 +1099,19 @@ function life(world: World) {
       } else {
         const seat = world.settlements[s.home];
         if (seat) {
-          const a = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * seat.r;
-          s.tx = seat.x + Math.cos(a) * r;
-          s.ty = seat.y + Math.sin(a) * r;
+          if (Math.random() < marketPull) {
+            // off to market: cluster around the stalls with a little scatter
+            const m = marketSquare(seat);
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * 26;
+            s.tx = m.x + Math.cos(a) * r;
+            s.ty = m.y + Math.sin(a) * r * 0.7;
+          } else {
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * seat.r;
+            s.tx = seat.x + Math.cos(a) * r;
+            s.ty = seat.y + Math.sin(a) * r;
+          }
         }
         s.act = 0;
       }
@@ -1384,28 +1414,116 @@ function srnd(n: number): number {
   return x - Math.floor(x);
 }
 
+// -------------------------------------------------------- seasons & daylight
+
+type RGB = [number, number, number];
+// A season dresses the town: the grass beneath, the canopies of its trees, and a
+// gentle wash of ambient colour over the whole green. Winter also lays snow.
+type Season = {
+  name: string;
+  grass: [string, string]; // green gradient, top → bottom
+  canopy: [RGB, RGB, RGB, RGB]; // tree tones: shadow, mid, lit, highlight
+  wash: string; // ambient tint laid over the street
+  blossom: boolean; // flecks of blossom in the canopy (spring)
+  snow: boolean; // a dusting of snow on ground and boughs (winter)
+};
+const SEASONS: Season[] = [
+  {
+    name: "spring",
+    grass: ["rgb(120,142,74)", "rgb(100,124,64)"],
+    canopy: [
+      [40, 66, 40],
+      [64, 104, 54],
+      [104, 148, 70],
+      [150, 186, 96],
+    ],
+    wash: "rgba(150,210,120,0.06)",
+    blossom: true,
+    snow: false,
+  },
+  {
+    name: "summer",
+    grass: ["rgb(108,126,70)", "rgb(92,112,60)"],
+    canopy: [
+      [30, 52, 34],
+      [46, 78, 46],
+      [70, 108, 58],
+      [112, 150, 80],
+    ],
+    wash: "rgba(255,226,150,0.05)",
+    blossom: false,
+    snow: false,
+  },
+  {
+    name: "autumn",
+    grass: ["rgb(140,128,72)", "rgb(120,108,60)"],
+    canopy: [
+      [92, 52, 24],
+      [150, 92, 34],
+      [196, 132, 46],
+      [224, 176, 78],
+    ],
+    wash: "rgba(214,140,58,0.09)",
+    blossom: false,
+    snow: false,
+  },
+  {
+    name: "winter",
+    grass: ["rgb(150,158,150)", "rgb(126,134,128)"],
+    canopy: [
+      [70, 76, 74],
+      [96, 104, 100],
+      [128, 138, 132],
+      [186, 196, 190],
+    ],
+    wash: "rgba(150,178,214,0.10)",
+    blossom: false,
+    snow: true,
+  },
+];
+function seasonAt(t: number): Season {
+  return SEASONS[Math.floor(t / SEASON_SECS) % 4];
+}
+// Sun elevation for a time of day in [0,1): −1 at midnight, +1 at noon.
+function sunElevation(tod: number): number {
+  return -Math.cos(tod * 6.283185);
+}
+// The colour the daylight multiplies the scene by: near-white at noon, gold at
+// the horizons, deep blue at the dead of night.
+function daylightTint(e: number): RGB {
+  const mix = (a: number, b: number, k: number) => a + (b - a) * k;
+  if (e >= 0) {
+    return [mix(255, 255, e), mix(216, 250, e), mix(172, 240, e)];
+  }
+  const k = -e;
+  return [mix(255, 58, k), mix(200, 74, k), mix(150, 116, k)];
+}
+
 // A broadleaf tree seen from above: a full, layered canopy of overlapping leaf
 // clumps, dark at the base and lit toward the upper-left, with a soft cast
 // shadow. Radius r. Colours jitter per tree so a grove never looks stamped.
-function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number) {
+function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number, season: Season = SEASONS[1]) {
   const tint = (srnd(seed + 7) - 0.5) * 16;
+  const [cShad, cMid, cLit, cHi] = season.canopy;
+  const tc = (c: RGB) => `rgb(${(c[0] + tint) | 0},${(c[1] + tint) | 0},${(c[2] + tint) | 0})`;
   ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
   ctx.ellipse(gx + r * 0.3, gy + r * 0.34, r * 1.05, r * 0.52, 0, 0, 6.283);
   ctx.fill();
   // a soft feathered halo so the canopy edge reads as leaves, not a hard disc
+  const hc = `${(cShad[0] + tint) | 0},${(cShad[1] + 4 + tint) | 0},${(cShad[2] + 2 + tint) | 0}`;
   const halo = ctx.createRadialGradient(gx, gy, r * 0.5, gx, gy, r * 1.18);
-  halo.addColorStop(0, `rgba(${(34 + tint) | 0},${(56 + tint) | 0},${(36 + tint) | 0},0.9)`);
-  halo.addColorStop(1, `rgba(${(34 + tint) | 0},${(56 + tint) | 0},${(36 + tint) | 0},0)`);
+  halo.addColorStop(0, `rgba(${hc},0.9)`);
+  halo.addColorStop(1, `rgba(${hc},0)`);
   ctx.fillStyle = halo;
   ctx.beginPath();
   ctx.arc(gx, gy, r * 1.18, 0, 6.283);
   ctx.fill();
   // dense clumps, three tones from dark to lit
   const layers: [string, number, number, number, number][] = [
-    [`rgb(${(30 + tint) | 0},${(52 + tint) | 0},${(34 + tint) | 0})`, 10, 0.46, 0.4, 0],
-    [`rgb(${(46 + tint) | 0},${(78 + tint) | 0},${(46 + tint) | 0})`, 9, 0.36, 0.34, 0.06],
-    [`rgb(${(70 + tint) | 0},${(108 + tint) | 0},${(58 + tint) | 0})`, 7, 0.24, 0.26, 0.13],
+    [tc(cShad), 10, 0.46, 0.4, 0],
+    [tc(cMid), 9, 0.36, 0.34, 0.06],
+    [tc(cLit), 7, 0.24, 0.26, 0.13],
   ];
   for (const [col, blobs, spread, size, shift] of layers) {
     ctx.fillStyle = col;
@@ -1419,26 +1537,49 @@ function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: numb
     }
   }
   // brightest highlights, upper-left
-  ctx.fillStyle = `rgb(${(112 + tint) | 0},${(150 + tint) | 0},${(80 + tint) | 0})`;
+  ctx.fillStyle = tc(cHi);
   for (let i = 0; i < 5; i++) {
     ctx.beginPath();
     ctx.arc(gx - r * 0.3 + srnd(seed + i + 60) * r * 0.44, gy - r * 0.36 + srnd(seed + i + 70) * r * 0.4, r * (0.1 + srnd(seed + i + 80) * 0.08), 0, 6.283);
     ctx.fill();
   }
   // dappling — flecks of light and shade for a leafy, brushed texture
+  const dappleLit = `rgba(${(cHi[0] + tint) | 0},${(cHi[1] + tint) | 0},${(cHi[2] + tint) | 0},0.5)`;
   for (let i = 0; i < 14; i++) {
     const a = srnd(seed + i + 90) * 6.283;
     const dd = r * srnd(seed + i + 95) * 0.85;
-    ctx.fillStyle = srnd(seed + i + 99) > 0.5 ? "rgba(150,180,110,0.5)" : "rgba(24,40,26,0.4)";
+    ctx.fillStyle = srnd(seed + i + 99) > 0.5 ? dappleLit : "rgba(24,40,26,0.4)";
     ctx.beginPath();
     ctx.arc(gx + Math.cos(a) * dd, gy + Math.sin(a) * dd, r * 0.05, 0, 6.283);
     ctx.fill();
+  }
+  // spring blossom: soft pale-pink flecks scattered through the boughs
+  if (season.blossom) {
+    for (let i = 0; i < 10; i++) {
+      const a = srnd(seed + i + 120) * 6.283;
+      const dd = r * srnd(seed + i + 125) * 0.9;
+      ctx.fillStyle = srnd(seed + i + 129) > 0.5 ? "rgba(244,206,222,0.85)" : "rgba(250,236,244,0.8)";
+      ctx.beginPath();
+      ctx.arc(gx + Math.cos(a) * dd, gy + Math.sin(a) * dd, r * 0.055, 0, 6.283);
+      ctx.fill();
+    }
+  }
+  // winter snow: a bright cap laid over the upper-left of the canopy
+  if (season.snow) {
+    ctx.fillStyle = "rgba(238,244,250,0.7)";
+    for (let i = 0; i < 8; i++) {
+      const a = srnd(seed + i + 140) * 6.283;
+      const dd = r * srnd(seed + i + 145) * 0.7;
+      ctx.beginPath();
+      ctx.arc(gx - r * 0.22 + Math.cos(a) * dd, gy - r * 0.28 + Math.sin(a) * dd * 0.8, r * (0.09 + srnd(seed + i + 149) * 0.06), 0, 6.283);
+      ctx.fill();
+    }
   }
 }
 
 // A grove: a clutch of trees of varied size around a point, so greenery reads as
 // planted stands rather than lone dots.
-function drawGrove(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number) {
+function drawGrove(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number, season: Season = SEASONS[1]) {
   const n = 2 + ((srnd(seed) * 2) | 0);
   const spots: [number, number, number][] = [[gx, gy, r]];
   for (let i = 0; i < n; i++) {
@@ -1447,7 +1588,7 @@ function drawGrove(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: num
     spots.push([gx + Math.cos(a) * dd, gy + Math.sin(a) * dd, r * (0.6 + srnd(seed + i + 8) * 0.4)]);
   }
   spots.sort((a, b) => a[1] - b[1]); // back-to-front
-  spots.forEach(([x, y, rr], i) => drawTree(ctx, x, y, rr, seed + i * 17 + 3));
+  spots.forEach(([x, y, rr], i) => drawTree(ctx, x, y, rr, seed + i * 17 + 3, season));
 }
 
 // A few blades of grass — ground texture scattered over the town green.
@@ -1743,7 +1884,7 @@ function drawMonument(ctx: CanvasRenderingContext2D, gx: number, gy: number) {
 // cobbled cross-road, dwellings and institutions along it, garden plots and
 // picket fences between them, trees for shade, and a well at its heart. Drawn in
 // world space beneath the buildings and the people, who walk it.
-function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number, instCount: number) {
+function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number, instCount: number, season: Season = SEASONS[1], tod = 0.58) {
   const halfW = Math.max(st.r * 1.2, 150);
   const frontageY = st.y - st.r * 0.55 + 10; // where the institutions stand
   const backY = frontageY - 16;
@@ -1765,10 +1906,11 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   ctx.roundRect(L, backY, w2, h2, 30);
   ctx.clip();
 
-  // tended grass — lusher and warmer than the surrounding country
+  // tended grass — lusher and warmer than the surrounding country, dressed for
+  // the season
   const grass = ctx.createLinearGradient(0, backY, 0, frontY);
-  grass.addColorStop(0, "rgb(108,126,70)");
-  grass.addColorStop(1, "rgb(92,112,60)");
+  grass.addColorStop(0, season.grass[0]);
+  grass.addColorStop(1, season.grass[1]);
   ctx.fillStyle = grass;
   ctx.fillRect(L, backY, w2, h2);
   // mottling, so the green is never flat
@@ -1834,6 +1976,22 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   drawFence(ctx, L + halfW * 0.34 - 19, frontageY + depth * 0.72 + 13, L + halfW * 0.34 + 19, frontageY + depth * 0.72 + 13);
   drawGarden(ctx, R - halfW * 0.3, frontageY + depth * 0.34, 28, 20, seed + 17);
 
+  // a gentle wash of the season's ambient colour over the whole green
+  ctx.fillStyle = season.wash;
+  ctx.fillRect(L, backY, w2, h2);
+  // winter lays a dusting of snow across the ground, kept off the swept lanes
+  if (season.snow) {
+    ctx.fillStyle = "rgba(236,242,248,0.5)";
+    for (let i = 0; i < 90; i++) {
+      const x = L + 6 + srnd(seed + i + 400) * (w2 - 12);
+      const y = backY + 6 + srnd(seed + i + 500) * (h2 - 12);
+      if (Math.abs(x - st.x) < 20) continue;
+      ctx.beginPath();
+      ctx.ellipse(x, y, 2.2 + srnd(seed + i + 600) * 3, 1.6 + srnd(seed + i + 700) * 2, 0, 0, 6.283);
+      ctx.fill();
+    }
+  }
+
   // a warm vignette and a fine grain to lift the flat colour
   const vig = ctx.createRadialGradient(st.x, st.y, st.r * 0.3, st.x, st.y, st.r * 1.5);
   vig.addColorStop(0, "rgba(255,232,190,0.10)");
@@ -1884,7 +2042,7 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
     [R - halfW * 0.12, crossY + 20, 12],
     [L + halfW * 0.1, crossY + 8, 12],
   ];
-  groves.forEach(([tx, ty, tr], i) => drawGrove(ctx, tx, ty, tr, seed + i * 19 + 100));
+  groves.forEach(([tx, ty, tr], i) => drawGrove(ctx, tx, ty, tr, seed + i * 19 + 100, season));
 
   // the civic heart: a monument where the lanes meet, a market around it, a well
   drawMonument(ctx, st.x + halfW * 0.14, crossY);
@@ -1896,6 +2054,32 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   // cypress spires at the back corners
   drawCypress(ctx, L + 12, backY + 6, 30);
   drawCypress(ctx, R - 12, backY + 6, 28);
+
+  // after dark, the market square is lit by lanterns — warm pools of light at the
+  // stalls, the monument, and the well, so the town stays alive into the night
+  const elev = sunElevation(tod);
+  if (elev < 0.12) {
+    const lit = clamp((0.12 - elev) / 0.5, 0, 1); // 0 at dusk → 1 deep night
+    const lantern = (x: number, y: number, r: number) => {
+      const g = ctx.createRadialGradient(x, y - 4, 0, x, y - 4, r);
+      g.addColorStop(0, `rgba(255,214,138,${(0.55 * lit).toFixed(3)})`);
+      g.addColorStop(0.5, `rgba(255,196,110,${(0.22 * lit).toFixed(3)})`);
+      g.addColorStop(1, "rgba(255,196,110,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y - 4, r, 0, 6.283);
+      ctx.fill();
+      // the flame itself
+      ctx.fillStyle = `rgba(255,232,180,${(0.9 * lit).toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(x, y - 4, 1.6, 0, 6.283);
+      ctx.fill();
+    };
+    lantern(st.x + halfW * 0.14, crossY - 2, 34);
+    lantern(st.x + halfW * 0.14 - 22, crossY + 17, 20);
+    lantern(st.x + halfW * 0.14 + 24, crossY + 15, 20);
+    lantern(L + halfW * 0.3, crossY - 2, 18);
+  }
 }
 
 export default function KosmopolisWorld() {
@@ -2332,6 +2516,7 @@ export default function KosmopolisWorld() {
       last = now;
       t += dt;
       const w = worldRef.current;
+      w.tod = (t / DAY_SECS) % 1; // advance the wall-clock day
 
       if (w.running) {
         acc += dt * w.speed;
@@ -2382,12 +2567,18 @@ export default function KosmopolisWorld() {
     const cam = w.camera;
     const R = PLANET_R;
 
+    // day/night: the sun's elevation for the current time of day drives the
+    // ambient light. Night deepens the sky and brings out the stars.
+    const elev = sunElevation(w.tod);
+    const season = seasonAt(t);
+    const starVis = clamp(-elev + 0.15, 0, 1); // faint by day, full at night
+
     // 1. space + starfield, in screen space (identity transform)
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#08060a";
     ctx.fillRect(0, 0, W, H);
     for (const st of starsRef.current) {
-      const a = 0.18 + 0.3 * Math.sin(t * 0.7 + st.tw);
+      const a = (0.18 + 0.3 * Math.sin(t * 0.7 + st.tw)) * starVis;
       ctx.globalAlpha = clamp(a, 0, 0.6);
       ctx.fillStyle = "#d8d2c0";
       ctx.beginPath();
@@ -2444,7 +2635,7 @@ export default function KosmopolisWorld() {
         const onScreen = Math.abs(st.x - cam.cx) < halfW + st.r && Math.abs(st.y - cam.cy) < halfH + st.r;
         if (zoom >= STREET_ZOOM && onScreen) {
           // closest in: the town resolves into a paved street the people walk
-          drawStreet(ctx, st, (st.x * 131 + st.y * 17) | 0, inst.length);
+          drawStreet(ctx, st, (st.x * 131 + st.y * 17) | 0, inst.length, season, w.tod);
         } else {
           // a little cluster of dwellings
           ctx.fillStyle = "rgba(38,30,22,0.9)";
@@ -2809,6 +3000,25 @@ export default function KosmopolisWorld() {
 
     // 7. overlays, back in screen space
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+    // day/night: multiply the whole scene by the daylight colour — near-white at
+    // noon, gold at the horizons, deep blue at night — so the world dims and
+    // warms through the day. (Only once a world exists; the void stays void.)
+    if (w.ignited) {
+      const [lr, lg, lb] = daylightTint(elev);
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = `rgb(${lr | 0},${lg | 0},${lb | 0})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+      // at deep night, a soft blue vignette draws the eye inward
+      if (elev < -0.2) {
+        const nv = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, Math.max(W, H) * 0.7);
+        nv.addColorStop(0, "rgba(10,14,30,0)");
+        nv.addColorStop(1, `rgba(6,10,26,${(clamp(-elev - 0.2, 0, 0.8) * 0.5).toFixed(3)})`);
+        ctx.fillStyle = nv;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
     if (w.flash > 0) {
       const a = w.flash / 60;
       ctx.fillStyle = `rgba(184,71,63,${(a * 0.6).toFixed(3)})`;
