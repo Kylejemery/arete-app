@@ -982,6 +982,7 @@ function assembly(world: World) {
   world.laws.push(strongest);
   const def = lawDef(strongest);
   log(world, `The assembly of the Polis enacted the ${def.name} — ${def.note}`);
+  world.festival = 780; // the polis keeps festival to mark a new law
 }
 
 function tick(world: World) {
@@ -1002,12 +1003,6 @@ function tick(world: World) {
   }
 
   if (e.act) {
-    // On a settled, flourishing day the polis may keep a festival: the whole
-    // town leaves off its work and gathers at the monument to rejoice together.
-    if (world.festival <= 0 && !world.fortune && world.souls.length > 2 && world.harmony > 0.55 && Math.random() < 0.006) {
-      world.festival = 780; // ~13 seconds of gathering
-      log(world, "The polis kept a festival, and the whole town gathered at the monument to rejoice together.");
-    }
     for (const s of world.souls) act(world, s);
     teach(world);
     maybeBuild(world);
@@ -1839,6 +1834,24 @@ function drawStall(ctx: CanvasRenderingContext2D, gx: number, gy: number, seed: 
   }
 }
 
+// A market stall struck for the night: the awning is down, the goods are gone,
+// and only the bare trestle table stands.
+function drawStallPacked(ctx: CanvasRenderingContext2D, gx: number, gy: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.14)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy + 1, 9, 3, 0, 0, 6.283);
+  ctx.fill();
+  // bare table
+  ctx.fillStyle = "rgb(104,80,54)";
+  ctx.fillRect(gx - 8, gy - 3, 16, 3);
+  ctx.fillStyle = "rgb(84,62,42)";
+  ctx.fillRect(gx - 7, gy, 1.4, 4);
+  ctx.fillRect(gx + 5.6, gy, 1.4, 4);
+  // a folded cloth left on the boards
+  ctx.fillStyle = "rgba(150,138,116,0.85)";
+  ctx.fillRect(gx - 3, gy - 4.4, 7, 2);
+}
+
 // A handcart with a few sacks, left by a lane.
 function drawCart(ctx: CanvasRenderingContext2D, gx: number, gy: number, seed: number) {
   ctx.fillStyle = "rgba(0,0,0,0.16)";
@@ -2076,11 +2089,19 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   ];
   groves.forEach(([tx, ty, tr], i) => drawGrove(ctx, tx, ty, tr, seed + i * 19 + 100, season));
 
-  // the civic heart: a monument where the lanes meet, a market around it, a well
+  // the civic heart: a monument where the lanes meet, a market around it, a well.
+  // The market keeps hours: its stalls stand through the day (and any festival)
+  // and are struck at nightfall, leaving bare trestles behind.
   drawMonument(ctx, st.x + halfW * 0.14, crossY);
-  drawStall(ctx, st.x + halfW * 0.14 - 22, crossY + 17, seed + 2);
-  drawStall(ctx, st.x + halfW * 0.14 + 24, crossY + 15, seed + 6);
-  drawCart(ctx, R - halfW * 0.34, crossY - 6, seed + 8);
+  const marketOpen = festival || sunElevation(tod) > -0.05;
+  if (marketOpen) {
+    drawStall(ctx, st.x + halfW * 0.14 - 22, crossY + 17, seed + 2);
+    drawStall(ctx, st.x + halfW * 0.14 + 24, crossY + 15, seed + 6);
+    drawCart(ctx, R - halfW * 0.34, crossY - 6, seed + 8);
+  } else {
+    drawStallPacked(ctx, st.x + halfW * 0.14 - 22, crossY + 17);
+    drawStallPacked(ctx, st.x + halfW * 0.14 + 24, crossY + 15);
+  }
   drawWell(ctx, L + halfW * 0.3, crossY - 2);
 
   // cypress spires at the back corners
@@ -2878,6 +2899,26 @@ export default function KosmopolisWorld() {
       const bright = 0.4 + s.eud * 0.6;
       const struggling = acting && s.eud < 0.33;
 
+      // a lantern carried through the dark: those still abroad after nightfall —
+      // walking home — bear a small warm light beside them
+      if (figures && elev < -0.18 && w.festival <= 0 && s.act === 0) {
+        const lx = s.x + 6;
+        const ly = s.y - 2;
+        const flick = 0.85 + Math.sin(t * 6 + s.pulse) * 0.15;
+        const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, 16);
+        lg.addColorStop(0, `rgba(255,206,120,${(0.5 * flick).toFixed(3)})`);
+        lg.addColorStop(0.5, `rgba(255,190,104,${(0.2 * flick).toFixed(3)})`);
+        lg.addColorStop(1, "rgba(255,190,104,0)");
+        ctx.fillStyle = lg;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 16, 0, 6.283);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,232,178,${flick.toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(lx, ly, 1.3, 0, 6.283);
+        ctx.fill();
+      }
+
       if (!figures) {
         // a point of light
         const rad = (1.8 + s.eud * 2.2) * inv;
@@ -3514,6 +3555,7 @@ export default function KosmopolisWorld() {
       const srcs = asSources(data.sources);
       s.sources = srcs;
       log(w, `${s.name} awakened to reason, and chose — drawing on ${virtueDef(key).name.toLowerCase()}.`);
+      w.festival = 900; // the town keeps festival to honour a soul come to reason
       // The line it reasoned its way to enters the world's own corpus.
       const maxim = extractMaxim(data.reflection || "");
       if (maxim) {
