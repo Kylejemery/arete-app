@@ -95,6 +95,9 @@ type Soul = {
   faulty?: FaultyReasoning | null; // the false judgment behind a recent vice
   lastVerdict?: Verdict | null; // the corpus passage that grounded the last dilemma
   widest: number; // the widest circle of concern this soul has ever reached
+  resolve: number; // 0..0.5 — resilience won by rehearsing loss (blunts fortune)
+  metDesire: boolean; // has practised the discipline of desire (rehearsed loss / met fortune composed)
+  metAction: boolean; // has practised the discipline of action (chose a virtuous course)
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -466,6 +469,9 @@ function hydrate(w: World, data: unknown): boolean {
         pulse: numOr(s.pulse, 0),
         awake: !!s.awake,
         widest: Math.max(0, Math.min(4, Math.round(numOr(s.widest, 0)))),
+        resolve: clamp(numOr(s.resolve, 0), 0, 0.5),
+        metDesire: !!s.metDesire,
+        metAction: !!s.metAction,
       };
     });
   w.chron = (d.chron as Chron[]).filter((c) => c && typeof c.text === "string").slice(0, 80);
@@ -588,6 +594,9 @@ function makeSoul(world: World, home: number, base?: Virtues): Soul {
     lastDeed: null,
     reflection: null,
     widest: 0,
+    resolve: 0,
+    metDesire: false,
+    metAction: false,
   };
 }
 
@@ -789,19 +798,35 @@ function act(world: World, s: Soul) {
     const verb = pick((virtuous ? GOOD_DEEDS : ILL_DEEDS)[key]);
     log(world, `${s.name} ${verb} — the field grew ${virtuous ? "brighter" : "dimmer"}.`, !virtuous);
   }
+  // A rehearsal not repeated slowly fades — resolve must be kept up.
+  if (s.resolve > 0) s.resolve = Math.max(0, s.resolve - 0.0009);
 }
 
-function applyFortune(world: World, f: { good: boolean }) {
-  // The sage is unshaken: impact scales with (1 − virtue × shield).
+function applyFortune(world: World, f: { good: boolean; name?: string }) {
+  // The sage is unshaken: impact scales with (1 − virtue × shield − resolve).
+  // Resolve is resilience won by rehearsing loss (premeditatio malorum).
   const shield = world.dials.sageShield;
   const vanguard = world.laws.includes("courage"); // the people bear fortune together
   for (const s of world.souls) {
-    const exposure = 1 - arete(s.v) * shield;
+    const a = arete(s.v);
+    const exposure = clamp(1 - a * shield - s.resolve, 0.05, 1);
     let hit = (f.good ? 0.09 : -0.13) * (0.12 + exposure * 0.88);
     // A granary — and a polis-wide Law of the Vanguard — soften fortune's blows.
     if (!f.good && hasInst(world, s.home, "granary")) hit *= 0.5;
     if (!f.good && vanguard) hit *= 0.7;
     s.eud = clamp(s.eud + hit, 0.02, 1);
+    // Adversity is the test: a hard fortune met with virtue tempers the soul —
+    // fire tries gold. The more composed (the less fortune moved it), the more it
+    // grows, and it has practised the discipline of desire.
+    if (!f.good && a > 0.55) {
+      const composure = 1 - exposure;
+      const key = dominantVirtue(s.v).key;
+      s.v[key] = clamp(s.v[key] + 0.012 * composure, 0.02, 0.99);
+      s.metDesire = true;
+      if (composure > 0.5 && Math.random() < 0.06) {
+        log(world, `${s.name} was tried by ${f.name ?? "fortune"} and came through the stronger for it.`);
+      }
+    }
   }
 }
 
@@ -3185,6 +3210,21 @@ export default function KosmopolisWorld() {
     setNotice(null);
   }, []);
 
+  // Premeditatio malorum — the visitor guides the soul to rehearse the loss of
+  // what it clings to. Costs no Oracle; it builds resolve (diminishing returns),
+  // which blunts fortune, and is itself the discipline of desire.
+  const rehearse = useCallback(() => {
+    const w = worldRef.current;
+    const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
+    if (!s) return;
+    s.resolve = clamp(s.resolve + (0.5 - s.resolve) * 0.3, 0, 0.5);
+    s.metDesire = true;
+    log(w, `${s.name} rehearsed the loss of what is not theirs to keep, and stood the readier for fortune.`);
+    dirtyRef.current = true;
+    flush(true);
+    refresh();
+  }, [flush, refresh]);
+
   // Spend the Oracle to draw a live passage for the open dilemma, in place of
   // the authored verdict. The virtue at stake frames the search.
   const seekScripture = useCallback(async () => {
@@ -3222,6 +3262,7 @@ export default function KosmopolisWorld() {
       s.v[opt.virtue] = clamp(s.v[opt.virtue] + mag * 0.1, 0.02, 0.99);
       s.eud = clamp(s.eud + mag * 0.16, 0.02, 1);
       s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
+      if (opt.good) s.metAction = true; // the discipline of action: a virtuous course chosen
       const text = opt.outcome(s.name);
       s.reflection = text;
       // The tradition's word on this choice: a live passage if the visitor drew
@@ -3488,6 +3529,7 @@ export default function KosmopolisWorld() {
                 awakening={awakening}
                 onCounsel={() => setCounselOpen(true)}
                 onDecide={openDilemma}
+                onRehearse={rehearse}
                 acting={EPOCHS[worldRef.current.epoch].act === true}
                 shield={worldRef.current.dials.sageShield}
               />
@@ -3762,6 +3804,7 @@ function SoulCard({
   awakening,
   onCounsel,
   onDecide,
+  onRehearse,
   acting,
   shield,
 }: {
@@ -3773,6 +3816,7 @@ function SoulCard({
   awakening: boolean;
   onCounsel: () => void;
   onDecide: () => void;
+  onRehearse: () => void;
   acting: boolean;
   shield: number;
 }) {
@@ -3782,7 +3826,14 @@ function SoulCard({
   const elderly = age > soul.lifespan * 0.85;
   const circle = circleOf(soul);
   const indiff = INDIFFERENTS[weakestVirtue(soul.v)];
-  const exposure = Math.round((1 - arete(soul.v) * shield) * 100); // how far fortune can still move them
+  // how far fortune can still move them: 1 − virtue×shield − resolve
+  const exposure = Math.round(Math.max(0.05, 1 - arete(soul.v) * shield - soul.resolve) * 100);
+  // the three disciplines of Epictetus, and which this soul has practised
+  const disciplines: [string, boolean, string][] = [
+    ["Assent", soul.awake, "to judge rightly — kindled by awakening"],
+    ["Desire", soul.metDesire, "to want only what is up to it — by rehearsing loss, or meeting fortune composed"],
+    ["Action", soul.metAction, "to act well toward others — by choosing a virtuous course"],
+  ];
   return (
     <div>
       <p className="kp-soul-name">
@@ -3836,8 +3887,20 @@ function SoulCard({
           {exposure > 45
             ? `${soul.name} has staked their peace on ${indiff.short} — fortune can still unseat them.`
             : `${soul.name} asks little of fortune; it may take much and move them little.`}
-          <span className="kp-dich-exp"> {exposure}% at fortune’s mercy</span>
+          <span className="kp-dich-exp">
+            {exposure}% at fortune’s mercy{soul.resolve > 0.02 ? " · tempered by rehearsal" : ""}
+          </span>
         </p>
+      </div>
+      <div className="kp-disc">
+        <span className="kp-disc-k">Disciplines practised</span>
+        <span className="kp-disc-row">
+          {disciplines.map(([name, on, why]) => (
+            <span key={name} className={`kp-disc-pip ${on ? "kp-disc-on" : ""}`} title={why}>
+              {name}
+            </span>
+          ))}
+        </span>
       </div>
       {soul.reflection ? (
         <>
@@ -3869,6 +3932,9 @@ function SoulCard({
       )}
       <button className={`kp-btn kp-wide kp-decide ${troubled ? "kp-btn-primary" : ""}`} onClick={onDecide}>
         ⚖ Help {soul.name} decide
+      </button>
+      <button className="kp-btn kp-wide" onClick={onRehearse} title="Premeditatio malorum — rehearse the loss of what is not yours to keep, and stand the readier for fortune.">
+        ◇ Rehearse loss
       </button>
       <div className="kp-soul-actions">
         <button className="kp-btn" onClick={onAwaken} disabled={awakening || soul.awake}>
