@@ -1281,6 +1281,14 @@ function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: numb
   ctx.beginPath();
   ctx.ellipse(gx + r * 0.3, gy + r * 0.34, r * 1.05, r * 0.52, 0, 0, 6.283);
   ctx.fill();
+  // a soft feathered halo so the canopy edge reads as leaves, not a hard disc
+  const halo = ctx.createRadialGradient(gx, gy, r * 0.5, gx, gy, r * 1.18);
+  halo.addColorStop(0, `rgba(${(34 + tint) | 0},${(56 + tint) | 0},${(36 + tint) | 0},0.9)`);
+  halo.addColorStop(1, `rgba(${(34 + tint) | 0},${(56 + tint) | 0},${(36 + tint) | 0},0)`);
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(gx, gy, r * 1.18, 0, 6.283);
+  ctx.fill();
   // dense clumps, three tones from dark to lit
   const layers: [string, number, number, number, number][] = [
     [`rgb(${(30 + tint) | 0},${(52 + tint) | 0},${(34 + tint) | 0})`, 10, 0.46, 0.4, 0],
@@ -1303,6 +1311,15 @@ function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: numb
   for (let i = 0; i < 5; i++) {
     ctx.beginPath();
     ctx.arc(gx - r * 0.3 + srnd(seed + i + 60) * r * 0.44, gy - r * 0.36 + srnd(seed + i + 70) * r * 0.4, r * (0.1 + srnd(seed + i + 80) * 0.08), 0, 6.283);
+    ctx.fill();
+  }
+  // dappling — flecks of light and shade for a leafy, brushed texture
+  for (let i = 0; i < 14; i++) {
+    const a = srnd(seed + i + 90) * 6.283;
+    const dd = r * srnd(seed + i + 95) * 0.85;
+    ctx.fillStyle = srnd(seed + i + 99) > 0.5 ? "rgba(150,180,110,0.5)" : "rgba(24,40,26,0.4)";
+    ctx.beginPath();
+    ctx.arc(gx + Math.cos(a) * dd, gy + Math.sin(a) * dd, r * 0.05, 0, 6.283);
     ctx.fill();
   }
 }
@@ -1493,6 +1510,123 @@ function drawFence(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: nu
   ctx.stroke();
 }
 
+// A market stall: a laden table under a striped awning on two posts.
+function drawStall(ctx: CanvasRenderingContext2D, gx: number, gy: number, seed: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy + 1, 11, 3.4, 0, 0, 6.283);
+  ctx.fill();
+  // table
+  ctx.fillStyle = "rgb(126,96,64)";
+  ctx.fillRect(gx - 9, gy - 4, 18, 4);
+  ctx.fillStyle = "rgb(96,72,48)";
+  ctx.fillRect(gx - 8, gy, 1.6, 4);
+  ctx.fillRect(gx + 6.4, gy, 1.6, 4);
+  // goods
+  const goods = ["#c65b3c", "#e0b24a", "#8a9b52", "#b7794a"];
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = goods[i % goods.length];
+    ctx.beginPath();
+    ctx.arc(gx - 7 + i * 2.3, gy - 5 + (srnd(seed + i) - 0.5) * 1.2, 1.1, 0, 6.283);
+    ctx.fill();
+  }
+  // posts + striped awning
+  ctx.strokeStyle = "rgb(120,96,70)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(gx - 9, gy - 4);
+  ctx.lineTo(gx - 9, gy - 15);
+  ctx.moveTo(gx + 9, gy - 4);
+  ctx.lineTo(gx + 9, gy - 15);
+  ctx.stroke();
+  const stripes = 6;
+  for (let i = 0; i < stripes; i++) {
+    ctx.fillStyle = i % 2 ? "rgb(196,84,66)" : "rgb(226,214,190)";
+    const x0 = gx - 11 + (i / stripes) * 22;
+    const x1 = gx - 11 + ((i + 1) / stripes) * 22;
+    ctx.beginPath();
+    ctx.moveTo(x0, gy - 15);
+    ctx.lineTo(x1, gy - 15);
+    ctx.lineTo(x1 - 1.5, gy - 11);
+    ctx.lineTo(x0 - 1.5, gy - 11);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// A handcart with a few sacks, left by a lane.
+function drawCart(ctx: CanvasRenderingContext2D, gx: number, gy: number, seed: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(gx, gy + 1, 10, 3, 0, 0, 6.283);
+  ctx.fill();
+  // bed
+  ctx.fillStyle = "rgb(120,90,58)";
+  ctx.fillRect(gx - 8, gy - 6, 15, 5);
+  // sacks
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = srnd(seed + i) > 0.5 ? "rgb(196,182,142)" : "rgb(170,150,110)";
+    ctx.beginPath();
+    ctx.ellipse(gx - 5 + i * 4.5, gy - 7, 2.4, 3, 0, 0, 6.283);
+    ctx.fill();
+  }
+  // handle
+  ctx.strokeStyle = "rgb(96,72,48)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(gx + 7, gy - 4);
+  ctx.lineTo(gx + 12, gy - 6);
+  ctx.stroke();
+  // wheels
+  ctx.fillStyle = "rgb(60,44,30)";
+  for (const wx of [gx - 5, gx + 4]) {
+    ctx.beginPath();
+    ctx.arc(wx, gy - 1, 2.6, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = "rgb(120,96,70)";
+    ctx.beginPath();
+    ctx.arc(wx, gy - 1, 0.9, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = "rgb(60,44,30)";
+  }
+}
+
+// A civic monument on a stepped stone base — the heart of the square.
+function drawMonument(ctx: CanvasRenderingContext2D, gx: number, gy: number) {
+  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  ctx.beginPath();
+  ctx.ellipse(gx + 2, gy + 2, 13, 4.4, 0, 0, 6.283);
+  ctx.fill();
+  // stepped base, two courses
+  ctx.fillStyle = "rgb(150,146,132)";
+  ctx.beginPath();
+  ctx.roundRect(gx - 11, gy - 4, 22, 6, 1.5);
+  ctx.fill();
+  ctx.fillStyle = "rgb(172,168,152)";
+  ctx.beginPath();
+  ctx.roundRect(gx - 8, gy - 8, 16, 5, 1.5);
+  ctx.fill();
+  // plinth + slender obelisk
+  ctx.fillStyle = "rgb(186,182,166)";
+  ctx.fillRect(gx - 4, gy - 14, 8, 7);
+  const g = ctx.createLinearGradient(gx - 3, 0, gx + 3, 0);
+  g.addColorStop(0, "rgb(206,202,186)");
+  g.addColorStop(1, "rgb(150,146,130)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(gx - 3, gy - 14);
+  ctx.lineTo(gx + 3, gy - 14);
+  ctx.lineTo(gx + 1.6, gy - 30);
+  ctx.lineTo(gx - 1.6, gy - 30);
+  ctx.closePath();
+  ctx.fill();
+  // a small finial
+  ctx.fillStyle = "rgb(210,190,140)";
+  ctx.beginPath();
+  ctx.arc(gx, gy - 31, 1.6, 0, 6.283);
+  ctx.fill();
+}
+
 // The street itself: a paved plaza a town resolves into at closest zoom, with a
 // cobbled cross-road, dwellings and institutions along it, garden plots and
 // picket fences between them, trees for shade, and a well at its heart. Drawn in
@@ -1603,30 +1737,51 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   ctx.restore();
 
   // the built things and the greenery, above the ground finish
-  // dwellings flanking the institution row along the frontage
+  // a house at a spot, set at a slight angle so the town never reads as a grid
+  const house = (x: number, y: number, hw: number, s: number, rot: number) => {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    drawDwelling(ctx, 0, 0, hw, s);
+    ctx.restore();
+  };
+  // dwellings flanking the institution row along the frontage, lightly jittered
   const instSpan = ((instCount - 1) * 42) / 2 + 24;
-  const flank = [instSpan + 22, instSpan + 48, instSpan + 74];
-  flank.forEach((off, i) => {
-    if (st.x - off > L + 12) drawDwelling(ctx, st.x - off, frontageY + 2, 8, seed + i);
-    if (st.x + off < R - 12) drawDwelling(ctx, st.x + off, frontageY + 2, 8, seed + i + 7);
+  [instSpan + 22, instSpan + 48, instSpan + 74].forEach((off, i) => {
+    const j = (srnd(seed + i) - 0.5) * 0.22;
+    if (st.x - off > L + 12) house(st.x - off, frontageY + 2 + srnd(seed + i) * 4, 8, seed + i, j);
+    if (st.x + off < R - 12) house(st.x + off, frontageY + 2 + srnd(seed + i + 7) * 4, 8, seed + i + 7, -j);
   });
-  drawDwelling(ctx, L + halfW * 0.5, frontageY + depth * 0.42, 9, seed + 3);
-  drawDwelling(ctx, R - halfW * 0.52, frontageY + depth * 0.5, 9, seed + 5);
-  drawDwelling(ctx, L + halfW * 0.24, frontageY + depth * 0.5, 8, seed + 9);
+  // scattered dwellings through the town, irregular in place, size, and angle
+  const lots: [number, number, number, number][] = [
+    [L + halfW * 0.5, frontageY + depth * 0.44, 9, 0.2],
+    [R - halfW * 0.5, frontageY + depth * 0.56, 9, -0.22],
+    [L + halfW * 0.2, frontageY + depth * 0.54, 8, 0.12],
+    [R - halfW * 0.22, frontageY + depth * 0.66, 8, -0.16],
+    [L + halfW * 0.68, frontageY + depth * 0.66, 8, 0.26],
+    [R - halfW * 0.66, frontageY + depth * 0.72, 9, -0.24],
+  ];
+  lots.forEach(([x, y, hw, rot], i) => house(x, y, hw, seed + i * 5 + 3, rot + (srnd(seed + i) - 0.5) * 0.12));
 
-  // the well where the lanes meet
-  drawWell(ctx, st.x + halfW * 0.14, crossY);
-
-  // groves of trees for shade, and cypress spires at the back corners
+  // groves of trees, framing the town and shading the lanes
   const groves: [number, number, number][] = [
     [L + halfW * 0.5, backY + 34, 14],
     [R - halfW * 0.5, backY + 30, 13],
     [L + halfW * 0.6, frontageY + depth * 0.82, 15],
     [R - halfW * 0.58, frontageY + depth * 0.86, 14],
-    [R - halfW * 0.16, crossY + 18, 12],
-    [L + halfW * 0.12, crossY + 6, 12],
+    [R - halfW * 0.12, crossY + 20, 12],
+    [L + halfW * 0.1, crossY + 8, 12],
   ];
   groves.forEach(([tx, ty, tr], i) => drawGrove(ctx, tx, ty, tr, seed + i * 19 + 100));
+
+  // the civic heart: a monument where the lanes meet, a market around it, a well
+  drawMonument(ctx, st.x + halfW * 0.14, crossY);
+  drawStall(ctx, st.x + halfW * 0.14 - 22, crossY + 17, seed + 2);
+  drawStall(ctx, st.x + halfW * 0.14 + 24, crossY + 15, seed + 6);
+  drawCart(ctx, R - halfW * 0.34, crossY - 6, seed + 8);
+  drawWell(ctx, L + halfW * 0.3, crossY - 2);
+
+  // cypress spires at the back corners
   drawCypress(ctx, L + 12, backY + 6, 30);
   drawCypress(ctx, R - 12, backY + 6, 28);
 }
