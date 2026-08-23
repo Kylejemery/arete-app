@@ -138,6 +138,7 @@ type World = {
   lastAssembly: number; // year the assembly last convened
   pendingEpitaphs: Epitaph[]; // legacies of the dead, awaiting the shared ledger
   tod: number; // time of day in [0,1): 0 midnight, 0.5 noon — a wall-clock cycle
+  festival: number; // frames left in a festival, when the whole town gathers
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -226,6 +227,7 @@ function createWorld(): World {
     lastAssembly: 0,
     pendingEpitaphs: [],
     tod: 0.58,
+    festival: 0,
   };
 }
 
@@ -1000,6 +1002,12 @@ function tick(world: World) {
   }
 
   if (e.act) {
+    // On a settled, flourishing day the polis may keep a festival: the whole
+    // town leaves off its work and gathers at the monument to rejoice together.
+    if (world.festival <= 0 && !world.fortune && world.souls.length > 2 && world.harmony > 0.55 && Math.random() < 0.006) {
+      world.festival = 780; // ~13 seconds of gathering
+      log(world, "The polis kept a festival, and the whole town gathered at the monument to rejoice together.");
+    }
     for (const s of world.souls) act(world, s);
     teach(world);
     maybeBuild(world);
@@ -1081,8 +1089,13 @@ function marketSquare(st: Settlement): { x: number; y: number } {
 
 function life(world: World) {
   const sp = 0.95;
-  // how strongly the market pulls right now — busy at midday, all but empty at night
-  const day = clamp(sunElevation(world.tod), 0, 1);
+  if (world.festival > 0) world.festival--;
+  const festival = world.festival > 0;
+  // the light of day: the market is busy at noon, deserted at night, and the
+  // townsfolk go home to sleep once it is properly dark
+  const elev = sunElevation(world.tod);
+  const day = clamp(elev, 0, 1);
+  const night = elev < -0.18;
   const marketPull = 0.12 + day * 0.5;
   for (const s of world.souls) {
     if (s.hold > 0) {
@@ -1093,13 +1106,32 @@ function life(world: World) {
     const dy = s.ty - s.y;
     const d = Math.hypot(dx, dy);
     if (d < 4) {
-      if (Math.random() < 0.55) {
+      // at night, once home, sleep — a long, still rest until the town stirs
+      if (night && !festival) {
+        s.hold = 90 + ((Math.random() * 160) | 0);
+        s.act = 1; // resting / asleep
+        continue;
+      }
+      if (!festival && Math.random() < 0.55) {
         s.hold = 30 + ((Math.random() * 150) | 0);
         s.act = Math.random() < 0.5 ? 1 : 2; // rest or work
       } else {
         const seat = world.settlements[s.home];
         if (seat) {
-          if (Math.random() < marketPull) {
+          if (festival) {
+            // all to the square: the town gathers close about the monument
+            const m = marketSquare(seat);
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * 34;
+            s.tx = m.x + Math.cos(a) * r;
+            s.ty = m.y + Math.sin(a) * r * 0.7;
+          } else if (night) {
+            // homeward to sleep — the dwellings cluster near the town centre
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * seat.r * 0.4;
+            s.tx = seat.x + Math.cos(a) * r;
+            s.ty = seat.y + Math.sin(a) * r;
+          } else if (Math.random() < marketPull) {
             // off to market: cluster around the stalls with a little scatter
             const m = marketSquare(seat);
             const a = Math.random() * Math.PI * 2;
@@ -1884,7 +1916,7 @@ function drawMonument(ctx: CanvasRenderingContext2D, gx: number, gy: number) {
 // cobbled cross-road, dwellings and institutions along it, garden plots and
 // picket fences between them, trees for shade, and a well at its heart. Drawn in
 // world space beneath the buildings and the people, who walk it.
-function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number, instCount: number, season: Season = SEASONS[1], tod = 0.58) {
+function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number, instCount: number, season: Season = SEASONS[1], tod = 0.58, festival = false) {
   const halfW = Math.max(st.r * 1.2, 150);
   const frontageY = st.y - st.r * 0.55 + 10; // where the institutions stand
   const backY = frontageY - 16;
@@ -2055,11 +2087,54 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   drawCypress(ctx, L + 12, backY + 6, 30);
   drawCypress(ctx, R - 12, backY + 6, 28);
 
+  // a festival lights the square in broad colour: garlands of lanterns strung
+  // over the monument and confetti drifting above the gathered town
+  const mx = st.x + halfW * 0.14;
+  if (festival) {
+    // a warm wash over the whole square
+    const fg = ctx.createRadialGradient(mx, crossY, 0, mx, crossY, 90);
+    fg.addColorStop(0, "rgba(255,214,150,0.22)");
+    fg.addColorStop(1, "rgba(255,214,150,0)");
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.arc(mx, crossY, 90, 0, 6.283);
+    ctx.fill();
+    // strings of coloured lanterns radiating from the monument
+    const festCols = ["#e0b24a", "#c65b3c", "#6e96d2", "#78be96", "#c98bd0"];
+    for (let s = 0; s < 5; s++) {
+      const ang = (s / 5) * 6.283 + 0.3;
+      const ex = mx + Math.cos(ang) * 70;
+      const ey = crossY - 30 + Math.sin(ang) * 30;
+      ctx.strokeStyle = "rgba(60,44,30,0.5)";
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(mx, crossY - 34);
+      ctx.quadraticCurveTo((mx + ex) / 2, ey - 14, ex, ey);
+      ctx.stroke();
+      for (let b = 1; b <= 4; b++) {
+        const tq = b / 5;
+        const px = (1 - tq) * (1 - tq) * mx + 2 * (1 - tq) * tq * ((mx + ex) / 2) + tq * tq * ex;
+        const py = (1 - tq) * (1 - tq) * (crossY - 34) + 2 * (1 - tq) * tq * (ey - 14) + tq * tq * ey;
+        ctx.fillStyle = festCols[(s + b) % festCols.length];
+        ctx.beginPath();
+        ctx.arc(px, py, 1.7, 0, 6.283);
+        ctx.fill();
+      }
+    }
+    // confetti scattered above the square
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = festCols[i % festCols.length];
+      const x = mx + (srnd(seed + i + 800) - 0.5) * 120;
+      const y = crossY - 10 + (srnd(seed + i + 900) - 0.5) * 70;
+      ctx.fillRect(x, y, 1.6, 1.6);
+    }
+  }
+
   // after dark, the market square is lit by lanterns — warm pools of light at the
   // stalls, the monument, and the well, so the town stays alive into the night
   const elev = sunElevation(tod);
-  if (elev < 0.12) {
-    const lit = clamp((0.12 - elev) / 0.5, 0, 1); // 0 at dusk → 1 deep night
+  if (elev < 0.12 || festival) {
+    const lit = festival ? Math.max(0.7, clamp((0.12 - elev) / 0.5, 0, 1)) : clamp((0.12 - elev) / 0.5, 0, 1);
     const lantern = (x: number, y: number, r: number) => {
       const g = ctx.createRadialGradient(x, y - 4, 0, x, y - 4, r);
       g.addColorStop(0, `rgba(255,214,138,${(0.55 * lit).toFixed(3)})`);
@@ -2082,8 +2157,53 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   }
 }
 
+// Weather, drawn in screen space over the whole view: snow falls all winter,
+// and a spell of bad fortune brings a storm — rain, a darkened sky, and the
+// occasional far-off flash of lightning.
+function drawWeather(ctx: CanvasRenderingContext2D, t: number, season: Season, storm: boolean, elev: number) {
+  if (storm) {
+    // the sky lowers and greys over
+    ctx.fillStyle = "rgba(28,32,44,0.30)";
+    ctx.fillRect(0, 0, W, H);
+    // driving rain
+    ctx.strokeStyle = "rgba(190,205,225,0.28)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i < 220; i++) {
+      const speed = 820 + srnd(i * 1.7) * 340;
+      const x = (srnd(i * 7.7) * (W + 120) + t * speed * 0.34) % (W + 120) - 60;
+      const y = (srnd(i * 5.5) * (H + 40) + t * speed) % (H + 40) - 20;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 7, y + 18);
+    }
+    ctx.stroke();
+    // lightning: a brief double-flash every few seconds
+    const cyc = t % 6.5;
+    const fl = cyc < 0.1 ? (0.1 - cyc) / 0.1 : cyc > 0.18 && cyc < 0.3 ? ((0.3 - cyc) / 0.12) * 0.55 : 0;
+    if (fl > 0) {
+      ctx.fillStyle = `rgba(222,228,248,${(fl * 0.45).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+  }
+  if (season.snow) {
+    // gentle falling snow, brighter against the night
+    const a = 0.5 + clamp(-elev, 0, 1) * 0.35;
+    ctx.fillStyle = `rgba(238,244,250,${a.toFixed(3)})`;
+    for (let i = 0; i < 150; i++) {
+      const speed = 24 + srnd(i * 2.3) * 30;
+      const y = (srnd(i * 3.1) * (H + 20) + t * speed) % (H + 20) - 10;
+      const x = (srnd(i * 4.9) * W + Math.sin(t * 0.6 + i) * 16 + W) % W;
+      const r = 1 + srnd(i * 6.1) * 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 6.283);
+      ctx.fill();
+    }
+  }
+}
+
 export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
+  const reduceRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cosmosRef = useRef<HTMLElement | null>(null);
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
@@ -2498,6 +2618,7 @@ export default function KosmopolisWorld() {
     if (!ctx) return;
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    reduceRef.current = reduce;
 
     if (!starsRef.current.length) {
       const stars = [];
@@ -2635,7 +2756,7 @@ export default function KosmopolisWorld() {
         const onScreen = Math.abs(st.x - cam.cx) < halfW + st.r && Math.abs(st.y - cam.cy) < halfH + st.r;
         if (zoom >= STREET_ZOOM && onScreen) {
           // closest in: the town resolves into a paved street the people walk
-          drawStreet(ctx, st, (st.x * 131 + st.y * 17) | 0, inst.length, season, w.tod);
+          drawStreet(ctx, st, (st.x * 131 + st.y * 17) | 0, inst.length, season, w.tod, w.festival > 0);
         } else {
           // a little cluster of dwellings
           ctx.fillStyle = "rgba(38,30,22,0.9)";
@@ -2882,12 +3003,24 @@ export default function KosmopolisWorld() {
           ctx.closePath();
           ctx.fill();
         }
-        // face — eyes
-        ctx.fillStyle = "rgba(38,30,24,0.9)";
-        ctx.beginPath();
-        ctx.arc(bx - 1.5, headY - 0.6, 0.7, 0, 6.283);
-        ctx.arc(bx + 1.5, headY - 0.6, 0.7, 0, 6.283);
-        ctx.fill();
+        // face — eyes (closed to soft lashes when asleep after dark)
+        const asleep = elev < -0.18 && s.act === 1 && w.festival <= 0;
+        if (asleep) {
+          ctx.strokeStyle = "rgba(38,30,24,0.85)";
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(bx - 2.3, headY - 0.5);
+          ctx.lineTo(bx - 0.7, headY - 0.5);
+          ctx.moveTo(bx + 0.7, headY - 0.5);
+          ctx.lineTo(bx + 2.3, headY - 0.5);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = "rgba(38,30,24,0.9)";
+          ctx.beginPath();
+          ctx.arc(bx - 1.5, headY - 0.6, 0.7, 0, 6.283);
+          ctx.arc(bx + 1.5, headY - 0.6, 0.7, 0, 6.283);
+          ctx.fill();
+        }
         // eyebrows — angled by mood: knit when troubled, lifted when content
         ctx.strokeStyle = "rgba(38,30,24,0.85)";
         ctx.lineWidth = 0.5;
@@ -3017,6 +3150,11 @@ export default function KosmopolisWorld() {
         nv.addColorStop(1, `rgba(6,10,26,${(clamp(-elev - 0.2, 0, 0.8) * 0.5).toFixed(3)})`);
         ctx.fillStyle = nv;
         ctx.fillRect(0, 0, W, H);
+      }
+      // weather — snow in winter, a storm when fortune turns ill — once we are
+      // near enough the ground for it to read as falling around the town
+      if (!reduceRef.current && zoom >= FIGURE_ZOOM) {
+        drawWeather(ctx, t, season, !!w.fortune && !w.fortune.good, elev);
       }
     }
     if (w.flash > 0) {
