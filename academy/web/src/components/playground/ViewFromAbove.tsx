@@ -649,31 +649,63 @@ function HeartbeatBody({
 
 // ── peppercorn solar system ──────────────────────────────────────────────────
 
-const PX_PER_M = 3.2
 const SUN_X = 100
+const PP_MIN = 4
+const PP_MAX = 28
+const PP_DEFAULT = 9
 
 function PeppercornBody({ inst }: { inst: Kind<'peppercorn'> }) {
+  const [pxPerM, setPxPerM] = useState(PP_DEFAULT)
   const maxM = Math.max(...inst.bodies.map((b) => b.modelMeters))
-  const trackWidth = SUN_X + maxM * PX_PER_M + 150
+  const trackWidth = SUN_X + maxM * pxPerM + 160
+  const bump = (d: number) => setPxPerM((z) => Math.min(PP_MAX, Math.max(PP_MIN, z + d)))
 
   return (
     <>
+      <div className={styles.ppControls}>
+        <span className={styles.ppZoomLabel}>Zoom</span>
+        <button className={styles.ppZoomBtn} onClick={() => bump(-2)} aria-label="Zoom out">
+          −
+        </button>
+        <input
+          className={styles.slider}
+          type="range"
+          min={PP_MIN}
+          max={PP_MAX}
+          value={pxPerM}
+          onChange={(e) => setPxPerM(Number(e.target.value))}
+          aria-label="Zoom the solar system"
+        />
+        <button className={styles.ppZoomBtn} onClick={() => bump(2)} aria-label="Zoom in">
+          +
+        </button>
+      </div>
+
       <div className={styles.ppScroll}>
         <div className={styles.ppTrack} style={{ width: `${trackWidth}px` }}>
+          <span className={styles.ppAxis} />
           <div className={styles.ppSun} title={inst.sunNote} />
-          {inst.bodies.map((b) => (
-            <div key={b.name} className={styles.ppBody} style={{ left: `${SUN_X + b.modelMeters * PX_PER_M}px` }}>
+          {inst.bodies.map((b, i) => (
+            <div
+              key={b.name}
+              className={`${styles.ppBody} ${i % 2 === 0 ? styles.ppUp : styles.ppDown}`}
+              style={{ left: `${SUN_X + b.modelMeters * pxPerM}px` }}
+            >
               <span className={`${styles.ppDot} ${b.emphasis ? styles.ppDotEm : ''}`} />
-              <span className={styles.ppLabel}>{b.name}</span>
-              <span className={styles.ppMeta}>
-                {b.modelMeters} m · {b.size}
-              </span>
-              <span className={styles.ppMeta}>{b.realAU}</span>
+              <div className={styles.ppText}>
+                <span className={styles.ppName}>{b.name}</span>
+                <span className={styles.ppMeta}>
+                  {b.modelMeters} m · {b.size}
+                </span>
+                <span className={styles.ppMeta}>{b.realAU}</span>
+              </div>
             </div>
           ))}
         </div>
       </div>
-      <p className={styles.ppHint}>← the Sun · scroll right through the emptiness to Neptune →</p>
+      <p className={styles.ppHint}>
+        ← the Sun · zoom to spread the inner planets, then scroll right through the emptiness to Neptune →
+      </p>
 
       <div className={styles.lifeStat}>
         <p className={styles.lifeStatLabel}>To scale</p>
