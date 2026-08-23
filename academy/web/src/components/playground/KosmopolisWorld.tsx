@@ -2298,34 +2298,54 @@ function eyeHouse(ctx: CanvasRenderingContext2D, cx: number, baseY: number, w: n
   ctx.lineTo(cx + half + 2, wallTop + 2);
   ctx.closePath();
   ctx.fill();
-  // windows, two by two, warm-lit after dark
-  const winW = w * 0.17;
-  const winH = h * 0.2;
-  const gap = w * 0.12;
-  for (let r = 0; r < 2; r++)
-    for (let c = 0; c < 2; c++) {
-      const wx = cx - half + w * 0.2 + c * (winW + gap);
-      const wy = wallTop + h * 0.18 + r * (winH + h * 0.14);
-      const on = night && srnd(seed + r * 3 + c * 7) > 0.35;
-      if (on) {
-        const gg = ctx.createRadialGradient(wx + winW / 2, wy + winH / 2, 0, wx + winW / 2, wy + winH / 2, winW * 1.8);
-        gg.addColorStop(0, "rgba(255,206,120,0.55)");
-        gg.addColorStop(1, "rgba(255,206,120,0)");
-        ctx.fillStyle = gg;
-        ctx.fillRect(wx - winW, wy - winH, winW * 3, winH * 3);
-      }
-      ctx.fillStyle = on ? "rgb(255,214,138)" : rgbOf(pal.glass);
-      ctx.fillRect(wx, wy, winW, winH);
-      ctx.strokeStyle = "rgba(30,24,18,0.7)";
-      ctx.lineWidth = Math.max(0.6, w * 0.006);
-      ctx.strokeRect(wx, wy, winW, winH);
-      ctx.beginPath();
-      ctx.moveTo(wx + winW / 2, wy);
-      ctx.lineTo(wx + winW / 2, wy + winH);
-      ctx.moveTo(wx, wy + winH / 2);
-      ctx.lineTo(wx + winW, wy + winH / 2);
-      ctx.stroke();
+  // a lit or dim window pane at (wx,wy)
+  const pane = (wx: number, wy: number, pw: number, ph: number, on: boolean) => {
+    if (on) {
+      const gg = ctx.createRadialGradient(wx + pw / 2, wy + ph / 2, 0, wx + pw / 2, wy + ph / 2, pw * 1.8);
+      gg.addColorStop(0, "rgba(255,206,120,0.55)");
+      gg.addColorStop(1, "rgba(255,206,120,0)");
+      ctx.fillStyle = gg;
+      ctx.fillRect(wx - pw, wy - ph, pw * 3, ph * 3);
     }
+    ctx.fillStyle = on ? "rgb(255,214,138)" : rgbOf(pal.glass);
+    ctx.fillRect(wx, wy, pw, ph);
+    ctx.strokeStyle = "rgba(30,24,18,0.7)";
+    ctx.lineWidth = Math.max(0.6, w * 0.006);
+    ctx.strokeRect(wx, wy, pw, ph);
+    ctx.beginPath();
+    ctx.moveTo(wx + pw / 2, wy);
+    ctx.lineTo(wx + pw / 2, wy + ph);
+    ctx.moveTo(wx, wy + ph / 2);
+    ctx.lineTo(wx + pw, wy + ph / 2);
+    ctx.stroke();
+  };
+  // windows — the grid varies house to house (2×2, 3×2, or 2×3), warm-lit after dark
+  const cols = srnd(seed + 1) > 0.62 ? 3 : 2;
+  const rows = srnd(seed + 2) > 0.72 ? 3 : 2;
+  const winW = (w * 0.62) / (cols + (cols - 1) * 0.7);
+  const winH = winW * 1.15;
+  const gap = winW * 0.7;
+  const gridW = cols * winW + (cols - 1) * gap;
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++) {
+      const wx = cx - gridW / 2 + c * (winW + gap);
+      const wy = wallTop + h * 0.16 + r * (winH + h * 0.1);
+      if (wy + winH > baseY - h * 0.26) continue; // don't collide with the doorway
+      pane(wx, wy, winW, winH, night && srnd(seed + r * 3 + c * 7) > 0.35);
+    }
+  // a dormer window set into the front roof, on many houses
+  if (srnd(seed + 5) > 0.5) {
+    const dwW = w * 0.16;
+    const dmY = wallTop - roofH * 0.42;
+    ctx.fillStyle = rgbOf(pal.roofD);
+    ctx.beginPath();
+    ctx.moveTo(cx - dwW * 0.8, dmY + dwW * 0.7);
+    ctx.lineTo(cx, dmY - dwW * 0.5);
+    ctx.lineTo(cx + dwW * 0.8, dmY + dwW * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    pane(cx - dwW / 2, dmY + dwW * 0.16, dwW, dwW * 0.7, night && srnd(seed + 8) > 0.4);
+  }
   // door + a small porch roof
   const dW = w * 0.16;
   const dH = h * 0.26;
@@ -2339,6 +2359,88 @@ function eyeHouse(ctx: CanvasRenderingContext2D, cx: number, baseY: number, w: n
   // chimney
   ctx.fillStyle = rgbOf(pal.roofD);
   ctx.fillRect(cx + side * half * 0.4, wallTop - roofH * 0.9, w * 0.08, roofH * 0.7);
+}
+
+// A civic building at eye level — grander than a house: a granary is a fat
+// silo with a conical cap; a school or court is a columned hall with a pediment,
+// its lintel washed in the colour of the virtue it serves.
+function eyeInstitution(ctx: CanvasRenderingContext2D, cx: number, baseY: number, w: number, h: number, side: number, type: InstType, night: boolean, col: readonly number[]) {
+  const accent = `rgb(${col[0]},${col[1]},${col[2]})`;
+  if (type === "granary") {
+    const r = w * 0.42;
+    const top = baseY - h;
+    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    ctx.beginPath();
+    ctx.ellipse(cx, baseY, r * 1.1, r * 0.24, 0, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = "rgb(196,178,140)";
+    ctx.fillRect(cx - r, top, r * 2, h);
+    const sg = ctx.createLinearGradient(cx - r, 0, cx + r, 0);
+    sg.addColorStop(0, "rgba(0,0,0,0.18)");
+    sg.addColorStop(0.5, "rgba(255,255,255,0.06)");
+    sg.addColorStop(1, "rgba(0,0,0,0.2)");
+    ctx.fillStyle = sg;
+    ctx.fillRect(cx - r, top, r * 2, h);
+    // conical cap
+    ctx.fillStyle = "rgb(150,120,80)";
+    ctx.beginPath();
+    ctx.moveTo(cx - r - 3, top + 2);
+    ctx.lineTo(cx, top - h * 0.5);
+    ctx.lineTo(cx + r + 3, top + 2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = accent;
+    ctx.fillRect(cx - r, top + h * 0.12, r * 2, h * 0.05);
+    return;
+  }
+  const half = w / 2;
+  const top = baseY - h;
+  const roofH = h * 0.34;
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  ctx.beginPath();
+  ctx.ellipse(cx, baseY, half * 1.15, h * 0.05, 0, 0, 6.283);
+  ctx.fill();
+  // stepped base
+  ctx.fillStyle = "rgb(206,198,182)";
+  ctx.fillRect(cx - half - w * 0.06, baseY - h * 0.06, w + w * 0.12, h * 0.06);
+  // cella wall
+  ctx.fillStyle = "rgb(222,214,198)";
+  ctx.fillRect(cx - half, top, w, h - h * 0.06);
+  // columns
+  const nCol = 5;
+  ctx.fillStyle = "rgb(236,230,216)";
+  for (let i = 0; i < nCol; i++) {
+    const x = cx - half + w * 0.08 + i * ((w * 0.84) / (nCol - 1));
+    ctx.fillRect(x - w * 0.03, top + h * 0.16, w * 0.06, h - h * 0.22);
+    ctx.fillStyle = "rgba(0,0,0,0.12)";
+    ctx.fillRect(x + w * 0.01, top + h * 0.16, w * 0.02, h - h * 0.22);
+    ctx.fillStyle = "rgb(236,230,216)";
+  }
+  // lintel washed in the virtue's colour
+  ctx.fillStyle = accent;
+  ctx.globalAlpha = 0.5;
+  ctx.fillRect(cx - half, top + h * 0.1, w, h * 0.06);
+  ctx.globalAlpha = 1;
+  // pediment
+  ctx.fillStyle = "rgb(210,200,184)";
+  ctx.beginPath();
+  ctx.moveTo(cx - half - w * 0.05, top + h * 0.1);
+  ctx.lineTo(cx, top - roofH);
+  ctx.lineTo(cx + half + w * 0.05, top + h * 0.1);
+  ctx.closePath();
+  ctx.fill();
+  // a lit doorway at night
+  if (night) {
+    const dwW = w * 0.14;
+    const gg = ctx.createRadialGradient(cx, baseY - h * 0.2, 0, cx, baseY - h * 0.2, dwW * 2.4);
+    gg.addColorStop(0, "rgba(255,206,120,0.5)");
+    gg.addColorStop(1, "rgba(255,206,120,0)");
+    ctx.fillStyle = gg;
+    ctx.fillRect(cx - dwW * 2, baseY - h * 0.55, dwW * 4, h * 0.55);
+  }
+  ctx.fillStyle = "rgb(60,48,38)";
+  ctx.fillRect(cx - w * 0.07, baseY - h * 0.34, w * 0.14, h * 0.28);
+  void side;
 }
 
 function eyeTree(ctx: CanvasRenderingContext2D, x: number, groundY: number, scale: number, seed: number, canopy: [RGB, RGB, RGB, RGB]) {
@@ -2468,7 +2570,15 @@ function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev:
     ctx.lineTo(lerp(vx, W * 0.5, d1 * d1), y1);
     ctx.stroke();
   }
-  // rows of houses, back to front, trees between
+  // the town's own institutions take pride of place near the front of the street
+  const inst = w.builtInst[stIndex] ?? [];
+  const instSlot = (i: number, side: number): InstType | null => {
+    if (i === 2 && side === -1) return inst[0] ?? null;
+    if (i === 2 && side === 1) return inst[1] ?? null;
+    if (i === 3 && side === 1) return inst[2] ?? null;
+    return null;
+  };
+  // rows of houses (and civic buildings), back to front, trees between
   const N = 5;
   for (let i = N - 1; i >= 0; i--) {
     const d = i / N;
@@ -2478,10 +2588,17 @@ function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev:
       const edgeHalf = lerp(rhV + 8, rhB + 96, near);
       const bx = lerp(vx, W * 0.5, near) + side * edgeHalf;
       const by = lerp(vy, H, near);
-      const hw = 120 * sc;
-      const hh = 150 * sc;
-      eyeHouse(ctx, bx + side * hw * 0.5, by, hw, hh, side, seed + i * 13 + (side + 1) * 100, night, eyeHousePal(seed + i * 13 + side));
-      if (i < N - 1) eyeTree(ctx, lerp(vx, W * 0.5, near) + side * (edgeHalf + hw * 0.9), by, sc, seed + i * 7 + side * 50, season.canopy);
+      const it = instSlot(i, side);
+      if (it) {
+        const iw = 150 * sc;
+        const ih = 168 * sc;
+        eyeInstitution(ctx, bx + side * iw * 0.5, by, iw, ih, side, it, night, virtueDef(instDef(it).virtue).color);
+      } else {
+        const hw = 120 * sc * (0.82 + srnd(seed + i * 13 + side + 3) * 0.4);
+        const hh = 150 * sc * (0.88 + srnd(seed + i * 13 + side + 6) * 0.28);
+        eyeHouse(ctx, bx + side * hw * 0.5, by, hw, hh, side, seed + i * 13 + (side + 1) * 100, night, eyeHousePal(seed + i * 13 + side));
+      }
+      if (i < N - 1) eyeTree(ctx, lerp(vx, W * 0.5, near) + side * (edgeHalf + 120 * sc * 0.9), by, sc, seed + i * 7 + side * 50, season.canopy);
     }
   }
   // power poles down the right, strung with wire
@@ -2542,6 +2659,67 @@ function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev:
     ctx.arc(hx, hyL, lh * 0.05, 0, 6.283);
     ctx.fill();
   }
+  // roadside detail along the near verges: low fences, a bench, a parked cart
+  const vergeX = (near: number, side: number) => lerp(vx, W * 0.5, near) + side * lerp(rhV + 8, rhB + 34, near);
+  for (const side of [-1, 1]) {
+    ctx.strokeStyle = season.snow ? "rgba(150,150,150,0.8)" : "rgba(120,96,64,0.85)";
+    let pp: [number, number] | null = null;
+    for (let k = 0; k <= 6; k++) {
+      const near = 0.4 + (k / 6) * 0.55;
+      const x = vergeX(near, side);
+      const y = lerp(vy, H, near);
+      const ph = 14 * lerp(0.16, 1.05, near);
+      ctx.lineWidth = clamp(near * 3, 0.5, 2.4);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x, y - ph);
+      ctx.stroke();
+      if (pp) {
+        ctx.beginPath();
+        ctx.moveTo(pp[0], pp[1] - ph * 0.4);
+        ctx.lineTo(x, y - ph * 0.4);
+        ctx.stroke();
+      }
+      pp = [x, y];
+    }
+  }
+  // a bench on the left, a cart on the right, in the near foreground
+  {
+    const bn = 0.84;
+    const bx = vergeX(bn, -1) + 10;
+    const by = lerp(vy, H, bn);
+    const bs = lerp(0.16, 1.05, bn);
+    ctx.fillStyle = "rgb(110,84,56)";
+    ctx.fillRect(bx - 22 * bs, by - 12 * bs, 44 * bs, 5 * bs);
+    ctx.fillRect(bx - 22 * bs, by - 24 * bs, 44 * bs, 4 * bs);
+    ctx.fillRect(bx - 20 * bs, by - 12 * bs, 3 * bs, 12 * bs);
+    ctx.fillRect(bx + 17 * bs, by - 12 * bs, 3 * bs, 12 * bs);
+  }
+  {
+    const cn = 0.9;
+    const cx = vergeX(cn, 1) - 16;
+    const cy = lerp(vy, H, cn);
+    const cs = lerp(0.16, 1.05, cn);
+    ctx.fillStyle = "rgba(0,0,0,0.16)";
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 30 * cs, 7 * cs, 0, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = "rgb(120,92,60)";
+    ctx.fillRect(cx - 26 * cs, cy - 20 * cs, 52 * cs, 12 * cs);
+    ctx.fillStyle = "rgb(150,130,96)";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(cx - 14 * cs + i * 14 * cs, cy - 24 * cs, 6 * cs, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.strokeStyle = "rgb(70,52,38)";
+    ctx.lineWidth = 2 * cs;
+    ctx.beginPath();
+    ctx.arc(cx - 16 * cs, cy - 4 * cs, 8 * cs, 0, 6.283);
+    ctx.arc(cx + 16 * cs, cy - 4 * cs, 8 * cs, 0, 6.283);
+    ctx.stroke();
+  }
+
   // the townsfolk, walking the street, sized by distance
   const town = w.souls.filter((s) => s.home === stIndex).slice(0, 10);
   town.forEach((s, idx) => {
