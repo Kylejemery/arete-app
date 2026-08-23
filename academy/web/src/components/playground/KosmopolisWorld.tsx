@@ -94,6 +94,7 @@ type Soul = {
   sources?: Source[] | null; // the corpus passages the last reflection rested on
   faulty?: FaultyReasoning | null; // the false judgment behind a recent vice
   lastVerdict?: Verdict | null; // the corpus passage that grounded the last dilemma
+  widest: number; // the widest circle of concern this soul has ever reached
 };
 
 type Chron = { id: number; year: number; text: string; ill: boolean };
@@ -464,6 +465,7 @@ function hydrate(w: World, data: unknown): boolean {
         lifespan: Math.max(20, Math.round(numOr(s.lifespan, 70 + Math.random() * 50))),
         pulse: numOr(s.pulse, 0),
         awake: !!s.awake,
+        widest: Math.max(0, Math.min(4, Math.round(numOr(s.widest, 0)))),
       };
     });
   w.chron = (d.chron as Chron[]).filter((c) => c && typeof c.text === "string").slice(0, 80);
@@ -585,6 +587,7 @@ function makeSoul(world: World, home: number, base?: Virtues): Soul {
     pulse: Math.random() * Math.PI * 2,
     lastDeed: null,
     reflection: null,
+    widest: 0,
   };
 }
 
@@ -642,6 +645,41 @@ function weightedVirtue(s: Soul): VirtueKey {
     if (r <= 0) return key;
   }
   return "wisdom";
+}
+
+// Oikeiosis — the widening circle of concern. The Stoic task is to draw the
+// outer circles inward: self → household → town → the stranger → all rational
+// beings (a citizen of the cosmos — a kosmopolitês). A soul's circle widens with
+// its virtue, and reason (awakening) widens it further; the wider the circle, the
+// farther its good radiates. `factor` scales how far a deed reaches.
+type Circle = { stage: number; name: string; note: string; factor: number };
+const CIRCLES: { name: string; note: string; factor: number }[] = [
+  { name: "only itself", note: "Its care stops at its own comfort.", factor: 0.45 },
+  { name: "its household", note: "Its care reaches those closest to it.", factor: 0.72 },
+  { name: "its town", note: "It counts the whole town its own.", factor: 1.05 },
+  { name: "the stranger", note: "It has begun to count a stranger as kin.", factor: 1.5 },
+  { name: "all rational beings", note: "It counts every soul a citizen of one cosmos.", factor: 2.0 },
+];
+function circleOf(s: Soul): Circle {
+  const a = arete(s.v);
+  let stage = a < 0.34 ? 0 : a < 0.5 ? 1 : a < 0.66 ? 2 : a < 0.8 ? 3 : 4;
+  if (s.awake) stage = Math.min(4, stage + 1); // reason draws the circles inward
+  return { stage, ...CIRCLES[stage] };
+}
+
+// The dichotomy of control: what a soul most clings to that is not up to it,
+// keyed to the virtue it is weakest in. Each is an indifferent mistaken for a
+// good — the thing on which it wrongly stakes its peace.
+const INDIFFERENTS: Record<VirtueKey, { long: string; short: string }> = {
+  justice: { long: "coin, credit, and what is others' to give", short: "gain" },
+  courage: { long: "safety, and the ease of the body", short: "safety" },
+  temperance: { long: "pleasure, and the having of more", short: "pleasure" },
+  wisdom: { long: "the crowd's regard, and being thought right", short: "others' regard" },
+};
+function weakestVirtue(v: Virtues): VirtueKey {
+  let w: VirtueKey = "wisdom";
+  for (const k of VIRTUE_KEYS) if (v[k] < v[w]) w = k;
+  return w;
 }
 
 function instAt(world: World, home: number): InstType[] {
@@ -723,9 +761,13 @@ function act(world: World, s: Soul) {
   // Character is habit — the practised virtue strengthens, the indulged vice erodes.
   s.v[key] = clamp(s.v[key] + (virtuous ? 1 : -1) * habit * magnitude * scale, 0.02, 0.99);
 
-  // The good is contagious — a strong deed radiates to nearby souls.
+  // The good is contagious — and how far it reaches is the soul's circle of
+  // concern (oikeiosis). A narrow, selfish soul barely touches its neighbours; a
+  // wide one radiates to the far side of the town and beyond.
+  const circle = circleOf(s);
   if (magnitude > 0.55 && d.contagion > 0) {
-    const r2 = d.contagion * d.contagion;
+    const r = d.contagion * circle.factor;
+    const r2 = r * r;
     for (const o of world.souls) {
       if (o === s) continue;
       const dx = o.x - s.x;
@@ -734,6 +776,13 @@ function act(world: World, s: Soul) {
         o.eud = clamp(o.eud + (virtuous ? 1 : -1) * magnitude * 0.012 * scale, 0.02, 1);
       }
     }
+  }
+  // The first time a soul draws its circle out to the stranger — or to the whole
+  // cosmos — the world remembers it.
+  if (circle.stage > s.widest) {
+    if (circle.stage >= 4 && s.widest < 4) log(world, `${s.name} came to count every soul a citizen of one cosmos.`);
+    else if (circle.stage >= 3 && s.widest < 3) log(world, `${s.name} first counted a stranger as kin — the circle of care widening outward.`);
+    s.widest = circle.stage;
   }
 
   if (magnitude > 0.82 && Math.random() < 0.13) {
@@ -917,7 +966,10 @@ function teach(world: World) {
   if (!teachers.length) return;
   for (const t of teachers) {
     const school = hasInst(world, t.home, "school"); // a school extends a teacher's reach
-    const reach2 = school ? 14000 : 9000;
+    // A teacher's reach is its circle of concern — the wider the care, the farther
+    // its teaching carries.
+    const reachF = circleOf(t).factor;
+    const reach2 = (school ? 14000 : 9000) * reachF;
     const boost = (school ? 1.6 : 1) * inquiry;
     const key = dominantVirtue(t.v).key;
     const a = arete(t.v);
@@ -2646,6 +2698,18 @@ export default function KosmopolisWorld() {
       }
       // selection
       if (w.selected === s.id) {
+        // the circle of concern (oikeiosis): a faint ring at how far this soul's
+        // good actually reaches — it widens as the soul grows in virtue
+        if (acting && w.dials.contagion > 0) {
+          const cr = w.dials.contagion * circleOf(s).factor;
+          ctx.strokeStyle = "rgba(227,199,122,0.4)";
+          ctx.lineWidth = 1.2 * inv;
+          ctx.setLineDash([6 * inv, 5 * inv]);
+          ctx.beginPath();
+          ctx.arc(s.x, s.y - (figures ? 6 : 0), cr, 0, 6.283);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
         ctx.strokeStyle = "#f0e8d6";
         ctx.lineWidth = 1.6 * inv;
         const rr = (figures ? 17 : 9 * inv) + Math.sin(t * 2) * 1.5 * inv;
@@ -3425,6 +3489,7 @@ export default function KosmopolisWorld() {
                 onCounsel={() => setCounselOpen(true)}
                 onDecide={openDilemma}
                 acting={EPOCHS[worldRef.current.epoch].act === true}
+                shield={worldRef.current.dials.sageShield}
               />
             )}
             {notice && <p className="kp-notice">{notice}</p>}
@@ -3698,6 +3763,7 @@ function SoulCard({
   onCounsel,
   onDecide,
   acting,
+  shield,
 }: {
   soul: Soul;
   age: number;
@@ -3708,11 +3774,15 @@ function SoulCard({
   onCounsel: () => void;
   onDecide: () => void;
   acting: boolean;
+  shield: number;
 }) {
   const dom = dominantVirtue(soul.v);
   const troubled = acting && soul.eud < 0.34;
   const inst = townInst ?? [];
   const elderly = age > soul.lifespan * 0.85;
+  const circle = circleOf(soul);
+  const indiff = INDIFFERENTS[weakestVirtue(soul.v)];
+  const exposure = Math.round((1 - arete(soul.v) * shield) * 100); // how far fortune can still move them
   return (
     <div>
       <p className="kp-soul-name">
@@ -3729,6 +3799,10 @@ function SoulCard({
           Their town has {inst.map((t) => instDef(t).name.toLowerCase()).join(", ")}.
         </p>
       )}
+      <p className="kp-circle">
+        <span className="kp-circle-k">Circle of concern</span> reaches {circle.name}
+        <span className="kp-circle-note"> — {circle.note}</span>
+      </p>
       <div className="kp-virtues">
         {VIRTUES.map((v) => {
           const pct = Math.round(soul.v[v.key] * 100);
@@ -3749,6 +3823,21 @@ function SoulCard({
           {Math.round(soul.eud * 100)}
           <small>%</small>
         </span>
+      </div>
+      <div className="kp-dichotomy">
+        <p className="kp-dich-k">The dichotomy of control</p>
+        <p className="kp-dich-row">
+          <b>Up to {soul.name}:</b> their judgments and their acts — {dom.name.toLowerCase()} is theirs to exercise.
+        </p>
+        <p className="kp-dich-row">
+          <b>Not up to {soul.name}:</b> {indiff.long}, and all fortune besides.
+        </p>
+        <p className="kp-dich-verdict">
+          {exposure > 45
+            ? `${soul.name} has staked their peace on ${indiff.short} — fortune can still unseat them.`
+            : `${soul.name} asks little of fortune; it may take much and move them little.`}
+          <span className="kp-dich-exp"> {exposure}% at fortune’s mercy</span>
+        </p>
       </div>
       {soul.reflection ? (
         <>
