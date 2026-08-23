@@ -627,16 +627,60 @@
 }
 
 /* ══════════════ peppercorn: the scrollable void ══════════════ */
+.ppControls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 1rem;
+}
+.ppZoomLabel {
+  font-family: var(--util);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  flex: none;
+}
+.ppControls .slider {
+  margin: 0;
+  flex: 1 1 auto;
+}
+.ppZoomBtn {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  font-family: var(--util);
+  font-size: 1.1rem;
+  line-height: 1;
+  background: transparent;
+  border: 1px solid var(--tape-rule);
+  color: var(--bone);
+  cursor: pointer;
+}
+.ppZoomBtn:hover {
+  color: var(--paper);
+  border-color: var(--pom);
+}
 .ppScroll {
   overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--tape-rule);
-  background: radial-gradient(circle at 8% 50%, #241d16, #0d0b08 55%);
+  background: radial-gradient(circle at 6% 50%, #241d16, #0d0b08 55%);
   margin: 0 0 1rem;
   scrollbar-color: var(--pom) #100e0a;
 }
 .ppTrack {
   position: relative;
-  height: 12rem;
+  height: 13rem;
+}
+.ppAxis {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(124, 117, 101, 0.3);
 }
 .ppSun {
   position: absolute;
@@ -652,34 +696,43 @@
 .ppBody {
   position: absolute;
   top: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
 }
 .ppDot {
-  width: 6px;
-  height: 6px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: var(--bone);
-  margin-bottom: 0.5rem;
+  transform: translate(-50%, -50%);
 }
 .ppDotEm {
   background: var(--pom-lit);
   box-shadow: 0 0 8px rgba(184, 71, 63, 0.9);
 }
-.ppLabel {
+.ppText {
+  position: absolute;
+  left: 0;
+  width: 7rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  text-align: center;
+}
+.ppUp .ppText { bottom: 0.9rem; }
+.ppDown .ppText { top: 0.9rem; }
+.ppName {
   font-family: var(--util);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: var(--paper);
 }
 .ppMeta {
   font-family: var(--mono);
-  font-size: 0.64rem;
+  font-size: 0.63rem;
   color: var(--bone-dim);
-  margin-top: 0.1rem;
 }
 .ppHint {
   margin: 0;
