@@ -1141,57 +1141,73 @@ function drawBuilding(
   ctx.fill();
 }
 
-// A plain dwelling — the houses that line a street between its institutions.
-// Oblique, like the temples: plaster front, lit top, shadowed side, tiled roof.
+// A cottage seen from above: a tiled gable roof, its ridge running front-to-back
+// so two slopes fall to the eaves — one lit, one shaded — with tile courses, a
+// chimney, and a sliver of plaster wall under the front eave. Roofs are mostly
+// terracotta, some slate-blue, jittered per house so no two match.
 function drawDwelling(ctx: CanvasRenderingContext2D, gx: number, gy: number, hw: number, seed: number) {
-  const dx = 5;
-  const dy = -4;
-  const wallH = 11 + (seed % 3) * 1.5;
-  const plaster = 196 - (seed % 4) * 8;
-  const wall = `rgb(${plaster},${plaster - 18},${plaster - 44})`;
-  const wallSide = `rgb(${(plaster * 0.7) | 0},${((plaster - 18) * 0.7) | 0},${((plaster - 44) * 0.7) | 0})`;
-  const roofF = "rgb(150,84,58)";
-  const roofT = "rgb(176,104,74)";
-  // shadow
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
+  const w = hw + (seed % 3);
+  const d = hw * (0.85 + srnd(seed + 2) * 0.4); // half-depth, varied
+  const lift = 5 + (seed % 3) * 1.6;
+  const slate = seed % 5 === 0;
+  const jr = (srnd(seed) - 0.5) * 16;
+  const base = slate ? [96, 112, 132] : [176, 96, 60];
+  const lit = `rgb(${(base[0] + 26 + jr) | 0},${(base[1] + 20 + jr) | 0},${(base[2] + 14 + jr) | 0})`;
+  const shade = `rgb(${(base[0] * 0.72) | 0},${(base[1] * 0.72) | 0},${(base[2] * 0.72) | 0})`;
+  const eave = `rgb(${(base[0] * 0.46) | 0},${(base[1] * 0.46) | 0},${(base[2] * 0.46) | 0})`;
+  // soft ground shadow
+  ctx.fillStyle = "rgba(0,0,0,0.16)";
   ctx.beginPath();
-  ctx.ellipse(gx + dx * 0.5, gy + dy * 0.5, hw * 1.2, hw * 0.4, 0, 0, 6.283);
+  ctx.ellipse(gx + 3, gy - d + 4, w * 1.15, d * 1.02, 0, 0, 6.283);
   ctx.fill();
-  // walls
-  ctx.fillStyle = wall;
-  ctx.fillRect(gx - hw, gy - wallH, hw * 2, wallH);
-  ctx.fillStyle = wallSide;
+  // plaster wall footprint (mostly hidden beneath the roof; shows at the eaves)
+  const pl = 208 - (seed % 4) * 10;
+  ctx.fillStyle = `rgb(${pl},${pl - 16},${pl - 40})`;
   ctx.beginPath();
-  ctx.moveTo(gx + hw, gy - wallH);
-  ctx.lineTo(gx + hw + dx, gy - wallH + dy);
-  ctx.lineTo(gx + hw + dx, gy + dy);
-  ctx.lineTo(gx + hw, gy);
+  ctx.roundRect(gx - w, gy - 2 * d, w * 2, 2 * d, 2);
+  ctx.fill();
+  // the roof, lifted off the ground
+  const T = gy - 2 * d - lift;
+  const B = gy - lift;
+  ctx.fillStyle = lit;
+  ctx.beginPath();
+  ctx.moveTo(gx - w, T);
+  ctx.lineTo(gx, T);
+  ctx.lineTo(gx, B);
+  ctx.lineTo(gx - w, B);
   ctx.closePath();
   ctx.fill();
-  // roof: a low gable, front face + top slope back
-  const ridge = gy - wallH - 5;
-  ctx.fillStyle = roofT;
+  ctx.fillStyle = shade;
   ctx.beginPath();
-  ctx.moveTo(gx - hw, gy - wallH);
-  ctx.lineTo(gx, ridge);
-  ctx.lineTo(gx + dx, ridge + dy);
-  ctx.lineTo(gx - hw + dx, gy - wallH + dy);
+  ctx.moveTo(gx, T);
+  ctx.lineTo(gx + w, T);
+  ctx.lineTo(gx + w, B);
+  ctx.lineTo(gx, B);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = roofF;
+  // tile courses across the slopes
+  ctx.strokeStyle = "rgba(38,22,14,0.16)";
+  ctx.lineWidth = 0.5;
   ctx.beginPath();
-  ctx.moveTo(gx - hw, gy - wallH);
-  ctx.lineTo(gx, ridge);
-  ctx.lineTo(gx + hw, gy - wallH);
-  ctx.closePath();
-  ctx.fill();
-  // door + a window
-  ctx.fillStyle = "rgba(46,32,22,0.9)";
-  ctx.fillRect(gx - 1.6, gy - wallH * 0.7, 3.2, wallH * 0.7);
-  if (seed % 2) {
-    ctx.fillStyle = "rgba(70,80,86,0.8)";
-    ctx.fillRect(gx - hw + 1.6, gy - wallH + 2.4, 2.4, 2.4);
+  for (let yy = T + 3; yy < B; yy += 3.1) {
+    ctx.moveTo(gx - w, yy);
+    ctx.lineTo(gx + w, yy);
   }
+  ctx.stroke();
+  // ridge highlight
+  ctx.strokeStyle = "rgba(255,242,224,0.28)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(gx, T + 1);
+  ctx.lineTo(gx, B - 1);
+  ctx.stroke();
+  // eaves rim
+  ctx.strokeStyle = eave;
+  ctx.lineWidth = 1.3;
+  ctx.strokeRect(gx - w, T, w * 2, B - T);
+  // a chimney with a wisp of shadow
+  ctx.fillStyle = "rgb(126,100,76)";
+  ctx.fillRect(gx - w * 0.45, T - 3.5, 2.8, 4.5);
 }
 
 // A public well at the heart of the street.
@@ -1256,41 +1272,178 @@ function srnd(n: number): number {
   return x - Math.floor(x);
 }
 
-// A broadleaf tree seen from above: a layered leafy canopy with a lit crown, the
-// dominant green of the village. Radius r.
+// A broadleaf tree seen from above: a full, layered canopy of overlapping leaf
+// clumps, dark at the base and lit toward the upper-left, with a soft cast
+// shadow. Radius r. Colours jitter per tree so a grove never looks stamped.
 function drawTree(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number) {
-  ctx.fillStyle = "rgba(0,0,0,0.16)";
+  const tint = (srnd(seed + 7) - 0.5) * 16;
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
   ctx.beginPath();
-  ctx.ellipse(gx + r * 0.18, gy + r * 0.28, r * 0.95, r * 0.5, 0, 0, 6.283);
+  ctx.ellipse(gx + r * 0.3, gy + r * 0.34, r * 1.05, r * 0.52, 0, 0, 6.283);
   ctx.fill();
-  const blobs = 6;
-  // dark base canopy
-  ctx.fillStyle = "rgb(38,60,40)";
-  for (let i = 0; i < blobs; i++) {
-    const a = (i / blobs) * 6.283 + srnd(seed + i) * 0.6;
-    const rr = r * (0.5 + srnd(seed + i + 9) * 0.3);
+  // dense clumps, three tones from dark to lit
+  const layers: [string, number, number, number, number][] = [
+    [`rgb(${(30 + tint) | 0},${(52 + tint) | 0},${(34 + tint) | 0})`, 10, 0.46, 0.4, 0],
+    [`rgb(${(46 + tint) | 0},${(78 + tint) | 0},${(46 + tint) | 0})`, 9, 0.36, 0.34, 0.06],
+    [`rgb(${(70 + tint) | 0},${(108 + tint) | 0},${(58 + tint) | 0})`, 7, 0.24, 0.26, 0.13],
+  ];
+  for (const [col, blobs, spread, size, shift] of layers) {
+    ctx.fillStyle = col;
+    for (let i = 0; i < blobs; i++) {
+      const a = (i / blobs) * 6.283 + srnd(seed + i + spread * 10) * 0.9;
+      const rad = r * (spread + srnd(seed + i + 30) * 0.14);
+      const rr = r * (size + srnd(seed + i + 50) * 0.12);
+      ctx.beginPath();
+      ctx.arc(gx - r * shift * 1.6 + Math.cos(a) * rad, gy - r * shift * 1.8 + Math.sin(a) * rad, rr, 0, 6.283);
+      ctx.fill();
+    }
+  }
+  // brightest highlights, upper-left
+  ctx.fillStyle = `rgb(${(112 + tint) | 0},${(150 + tint) | 0},${(80 + tint) | 0})`;
+  for (let i = 0; i < 5; i++) {
     ctx.beginPath();
-    ctx.arc(gx + Math.cos(a) * r * 0.42, gy + Math.sin(a) * r * 0.42, rr, 0, 6.283);
+    ctx.arc(gx - r * 0.3 + srnd(seed + i + 60) * r * 0.44, gy - r * 0.36 + srnd(seed + i + 70) * r * 0.4, r * (0.1 + srnd(seed + i + 80) * 0.08), 0, 6.283);
     ctx.fill();
   }
+}
+
+// A grove: a clutch of trees of varied size around a point, so greenery reads as
+// planted stands rather than lone dots.
+function drawGrove(ctx: CanvasRenderingContext2D, gx: number, gy: number, r: number, seed: number) {
+  const n = 2 + ((srnd(seed) * 2) | 0);
+  const spots: [number, number, number][] = [[gx, gy, r]];
+  for (let i = 0; i < n; i++) {
+    const a = srnd(seed + i) * 6.283;
+    const dd = r * (0.6 + srnd(seed + i + 4) * 0.7);
+    spots.push([gx + Math.cos(a) * dd, gy + Math.sin(a) * dd, r * (0.6 + srnd(seed + i + 8) * 0.4)]);
+  }
+  spots.sort((a, b) => a[1] - b[1]); // back-to-front
+  spots.forEach(([x, y, rr], i) => drawTree(ctx, x, y, rr, seed + i * 17 + 3));
+}
+
+// A few blades of grass — ground texture scattered over the town green.
+function drawGrassTuft(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  ctx.strokeStyle = srnd(seed) > 0.5 ? "rgba(96,124,66,0.6)" : "rgba(70,96,52,0.55)";
+  ctx.lineWidth = 0.7;
   ctx.beginPath();
-  ctx.arc(gx, gy, r * 0.7, 0, 6.283);
-  ctx.fill();
-  // mid tone, nudged toward the light
-  ctx.fillStyle = "rgb(58,94,56)";
-  for (let i = 0; i < blobs; i++) {
-    const a = (i / blobs) * 6.283 + srnd(seed + i + 3) * 0.7;
+  for (let i = -1; i <= 1; i++) {
+    ctx.moveTo(x + i * 1.4, y);
+    ctx.quadraticCurveTo(x + i * 1.6 + srnd(seed + i) * 1.4 - 0.7, y - 2, x + i * 1.8, y - 3.4);
+  }
+  ctx.stroke();
+}
+
+// A small wild cluster of flowers on the green.
+function drawFlowerPatch(ctx: CanvasRenderingContext2D, x: number, y: number, seed: number) {
+  const cols = ["#e6c15a", "#d97b6c", "#e8e2d0", "#c98bd0"];
+  const n = 3 + ((srnd(seed) * 4) | 0);
+  for (let i = 0; i < n; i++) {
+    ctx.fillStyle = cols[(srnd(seed + i) * cols.length) | 0];
     ctx.beginPath();
-    ctx.arc(gx - r * 0.12 + Math.cos(a) * r * 0.34, gy - r * 0.14 + Math.sin(a) * r * 0.34, r * 0.34, 0, 6.283);
+    ctx.arc(x + (srnd(seed + i) - 0.5) * 8, y + (srnd(seed + i + 2) - 0.5) * 6, 0.9, 0, 6.283);
     ctx.fill();
   }
-  // lit crown, top-left
-  ctx.fillStyle = "rgb(96,140,78)";
-  for (let i = 0; i < 4; i++) {
-    ctx.beginPath();
-    ctx.arc(gx - r * 0.28 + srnd(seed + i + 20) * r * 0.4, gy - r * 0.32 + srnd(seed + i + 30) * r * 0.35, r * 0.2, 0, 6.283);
-    ctx.fill();
+}
+
+// Sample a smooth curve (Catmull-Rom) through control points into a dense
+// polyline — the spine of a winding path.
+function smoothCurve(pts: [number, number][], steps: number): [number, number][] {
+  if (pts.length < 3) return pts.slice();
+  const out: [number, number][] = [];
+  const p = [pts[0], ...pts, pts[pts.length - 1]];
+  for (let i = 1; i < p.length - 2; i++) {
+    const [p0, p1, p2, p3] = [p[i - 1], p[i], p[i + 1], p[i + 2]];
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      const t2 = t * t;
+      const t3 = t2 * t;
+      out.push([
+        0.5 * (2 * p1[0] + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t2 + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t3),
+        0.5 * (2 * p1[1] + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t2 + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t3),
+      ]);
+    }
   }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
+// A winding dirt-and-cobble path laid along a smooth spine: an earth bed with a
+// soft edge, strewn with set stones.
+function drawPathRibbon(ctx: CanvasRenderingContext2D, spine: [number, number][], width: number, seed: number) {
+  if (spine.length < 2) return;
+  const left: [number, number][] = [];
+  const right: [number, number][] = [];
+  for (let i = 0; i < spine.length; i++) {
+    const a = spine[Math.max(0, i - 1)];
+    const b = spine[Math.min(spine.length - 1, i + 1)];
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const L = Math.hypot(dx, dy) || 1;
+    const nx = -dy / L;
+    const ny = dx / L;
+    left.push([spine[i][0] + nx * width / 2, spine[i][1] + ny * width / 2]);
+    right.push([spine[i][0] - nx * width / 2, spine[i][1] - ny * width / 2]);
+  }
+  const region = new Path2D();
+  region.moveTo(left[0][0], left[0][1]);
+  for (const p of left) region.lineTo(p[0], p[1]);
+  for (let i = right.length - 1; i >= 0; i--) region.lineTo(right[i][0], right[i][1]);
+  region.closePath();
+  // earth bed
+  ctx.fillStyle = "rgb(150,128,96)";
+  ctx.fill(region);
+  ctx.save();
+  ctx.clip(region);
+  // cobbles strewn along the bed
+  let bx0 = Infinity;
+  let by0 = Infinity;
+  let bx1 = -Infinity;
+  let by1 = -Infinity;
+  for (const p of spine) {
+    bx0 = Math.min(bx0, p[0]);
+    by0 = Math.min(by0, p[1]);
+    bx1 = Math.max(bx1, p[0]);
+    by1 = Math.max(by1, p[1]);
+  }
+  bx0 -= width;
+  by0 -= width;
+  bx1 += width;
+  by1 += width;
+  let row = 0;
+  for (let y = by0; y < by1; y += 5.5, row++) {
+    for (let x = bx0 + (row % 2 ? 2.5 : 0); x < bx1; x += 6) {
+      const g = 150 + ((srnd(seed + x * 3 + y) * 40) | 0) - 20;
+      ctx.fillStyle = `rgba(${g + 6},${g},${g - 16},0.9)`;
+      ctx.beginPath();
+      ctx.ellipse(x + srnd(seed + x + y) * 1.2, y, 2.3, 1.9, 0, 0, 6.283);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+  // a soft darker edge so the path sinks into the grass
+  ctx.strokeStyle = "rgba(70,58,40,0.3)";
+  ctx.lineWidth = 1.4;
+  ctx.stroke(region);
+}
+
+// A once-built speckle tile, overlaid low to lend the flat colours a grain.
+let grainTile: HTMLCanvasElement | null = null;
+function grainPattern(ctx: CanvasRenderingContext2D): CanvasPattern | null {
+  if (!grainTile && typeof document !== "undefined") {
+    const c = document.createElement("canvas");
+    c.width = 90;
+    c.height = 90;
+    const g = c.getContext("2d");
+    if (g) {
+      for (let i = 0; i < 1400; i++) {
+        const v = (Math.random() * 255) | 0;
+        g.fillStyle = `rgba(${v},${v},${v},${Math.random() * 0.05})`;
+        g.fillRect(Math.random() * 90, Math.random() * 90, 1, 1);
+      }
+    }
+    grainTile = c;
+  }
+  return grainTile ? ctx.createPattern(grainTile, "repeat") : null;
 }
 
 // A tilled garden bed with furrows and a scatter of flowers — the colour between
@@ -1340,29 +1493,6 @@ function drawFence(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: nu
   ctx.stroke();
 }
 
-// A cobblestone path: a band of set stones with mortar gaps.
-function drawCobbles(ctx: CanvasRenderingContext2D, cx: number, topY: number, botY: number, width: number, seed: number) {
-  ctx.fillStyle = "rgb(150,146,132)";
-  ctx.beginPath();
-  ctx.roundRect(cx - width / 2, topY, width, botY - topY, 6);
-  ctx.fill();
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(cx - width / 2, topY, width, botY - topY, 6);
-  ctx.clip();
-  let row = 0;
-  for (let y = topY + 3; y < botY; y += 6, row++) {
-    for (let x = cx - width / 2 + (row % 2 ? 2 : 5); x < cx + width / 2; x += 7) {
-      const g = 150 + ((srnd(seed + x * 3 + y) * 44) | 0) - 22;
-      ctx.fillStyle = `rgb(${g + 8},${g + 2},${g - 12})`;
-      ctx.beginPath();
-      ctx.ellipse(x + srnd(seed + x + y) * 1.4, y, 2.6, 2.1, 0, 0, 6.283);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
-}
-
 // The street itself: a paved plaza a town resolves into at closest zoom, with a
 // cobbled cross-road, dwellings and institutions along it, garden plots and
 // picket fences between them, trees for shade, and a well at its heart. Drawn in
@@ -1373,86 +1503,132 @@ function drawStreet(ctx: CanvasRenderingContext2D, st: Settlement, seed: number,
   const backY = frontageY - 16;
   const depth = Math.max(st.r * 1.05, 150);
   const frontY = frontageY + depth;
-
   const w2 = halfW * 2;
   const h2 = frontY - backY;
-  // a soft earth apron under the town, so the paving meets the countryside gently
-  ctx.fillStyle = "rgba(96,80,54,0.5)";
+  const L = st.x - halfW;
+  const R = st.x + halfW;
+
+  // a soft earth apron so the town meets the countryside gently
+  ctx.fillStyle = "rgba(88,74,50,0.55)";
   ctx.beginPath();
-  ctx.roundRect(st.x - halfW - 16, backY - 12, w2 + 32, h2 + 26, 40);
+  ctx.roundRect(L - 16, backY - 12, w2 + 32, h2 + 26, 44);
   ctx.fill();
-  // paved ground, its corners rounded into the apron
+
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(st.x - halfW, backY, w2, h2, 26);
+  ctx.roundRect(L, backY, w2, h2, 30);
   ctx.clip();
-  ctx.fillStyle = "rgb(178,163,132)";
-  ctx.fillRect(st.x - halfW, backY, w2, h2);
-  // a warm inner wash for depth
-  const wash = ctx.createLinearGradient(0, backY, 0, frontY);
-  wash.addColorStop(0, "rgba(120,100,70,0.28)");
-  wash.addColorStop(0.5, "rgba(120,100,70,0)");
-  wash.addColorStop(1, "rgba(60,48,32,0.22)");
-  ctx.fillStyle = wash;
-  ctx.fillRect(st.x - halfW, backY, w2, h2);
-  // paving joints
-  ctx.strokeStyle = "rgba(74,60,40,0.22)";
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  for (let gy = backY + 18; gy < frontY; gy += 18) {
-    ctx.moveTo(st.x - halfW, gy);
-    ctx.lineTo(st.x + halfW, gy);
+
+  // tended grass — lusher and warmer than the surrounding country
+  const grass = ctx.createLinearGradient(0, backY, 0, frontY);
+  grass.addColorStop(0, "rgb(108,126,70)");
+  grass.addColorStop(1, "rgb(92,112,60)");
+  ctx.fillStyle = grass;
+  ctx.fillRect(L, backY, w2, h2);
+  // mottling, so the green is never flat
+  for (let i = 0; i < 26; i++) {
+    const dark = srnd(seed + i) > 0.5;
+    ctx.fillStyle = dark ? "rgba(70,92,48,0.35)" : "rgba(126,146,84,0.3)";
+    ctx.beginPath();
+    ctx.ellipse(L + srnd(seed + i + 1) * w2, backY + srnd(seed + i + 2) * h2, 14 + srnd(seed + i + 3) * 26, 9 + srnd(seed + i + 4) * 16, 0, 0, 6.283);
+    ctx.fill();
   }
-  for (let gx = st.x - halfW + 20; gx < st.x + halfW; gx += 20) {
-    ctx.moveTo(gx, backY);
-    ctx.lineTo(gx, frontY);
+
+  // ground cover strewn on the green (kept clear of the central path corridor)
+  for (let i = 0; i < 60; i++) {
+    const x = L + 8 + srnd(seed + i + 100) * (w2 - 16);
+    const y = backY + 8 + srnd(seed + i + 200) * (h2 - 16);
+    if (Math.abs(x - st.x) < 22) continue; // leave the road clear
+    const k = srnd(seed + i + 300);
+    if (k < 0.6) drawGrassTuft(ctx, x, y, seed + i);
+    else if (k < 0.82) drawFlowerPatch(ctx, x, y, seed + i);
+    else {
+      ctx.fillStyle = "rgba(120,110,92,0.6)";
+      ctx.beginPath();
+      ctx.ellipse(x, y, 1.4, 1.1, 0, 0, 6.283);
+      ctx.fill();
+    }
   }
-  ctx.stroke();
+
+  // the winding way: a main path from the frontage down to the front, with a
+  // branch to either side meeting at the well
+  const crossY = frontageY + depth * 0.46;
+  const main = smoothCurve(
+    [
+      [st.x, backY + 6],
+      [st.x - halfW * 0.16, frontageY + depth * 0.26],
+      [st.x + halfW * 0.14, crossY],
+      [st.x - halfW * 0.06, frontY - 6],
+    ],
+    12
+  );
+  const branchL = smoothCurve(
+    [
+      [st.x + halfW * 0.14, crossY],
+      [st.x - halfW * 0.28, crossY + 8],
+      [L + halfW * 0.28, crossY - 2],
+    ],
+    10
+  );
+  const branchR = smoothCurve(
+    [
+      [st.x + halfW * 0.14, crossY],
+      [st.x + halfW * 0.5, crossY - 6],
+      [R - halfW * 0.24, crossY + 6],
+    ],
+    10
+  );
+  drawPathRibbon(ctx, branchL, 22, seed + 41);
+  drawPathRibbon(ctx, branchR, 22, seed + 61);
+  drawPathRibbon(ctx, main, 30, seed);
+
+  // gardens behind low fences, off the lanes
+  drawGarden(ctx, L + halfW * 0.34, frontageY + depth * 0.72, 34, 22, seed + 11);
+  drawFence(ctx, L + halfW * 0.34 - 19, frontageY + depth * 0.72 - 13, L + halfW * 0.34 + 19, frontageY + depth * 0.72 - 13);
+  drawFence(ctx, L + halfW * 0.34 - 19, frontageY + depth * 0.72 + 13, L + halfW * 0.34 + 19, frontageY + depth * 0.72 + 13);
+  drawGarden(ctx, R - halfW * 0.3, frontageY + depth * 0.34, 28, 20, seed + 17);
+
+  // a warm vignette and a fine grain to lift the flat colour
+  const vig = ctx.createRadialGradient(st.x, st.y, st.r * 0.3, st.x, st.y, st.r * 1.5);
+  vig.addColorStop(0, "rgba(255,232,190,0.10)");
+  vig.addColorStop(0.6, "rgba(255,232,190,0)");
+  vig.addColorStop(1, "rgba(40,32,20,0.34)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(L, backY, w2, h2);
+  const grain = grainPattern(ctx);
+  if (grain) {
+    ctx.fillStyle = grain;
+    ctx.fillRect(L, backY, w2, h2);
+  }
   ctx.restore();
 
-  // a cobbled cross-road: the main street down the middle, a lane across at the well
-  const crossY = frontY - depth * 0.34;
-  drawCobbles(ctx, st.x, backY + 4, frontY - 4, 34, seed);
-  // the crossing lane, drawn as a wide short band
-  ctx.save();
-  ctx.translate(st.x, crossY);
-  ctx.rotate(Math.PI / 2);
-  drawCobbles(ctx, 0, -halfW * 0.8, halfW * 0.8, 26, seed + 41);
-  ctx.restore();
-
-  // gardens tucked along the near flanks, each behind a low fence
-  drawGarden(ctx, st.x - halfW * 0.66, frontageY + depth * 0.66, 34, 22, seed + 11);
-  drawFence(ctx, st.x - halfW * 0.66 - 19, frontageY + depth * 0.66 - 13, st.x - halfW * 0.66 + 19, frontageY + depth * 0.66 - 13);
-  drawFence(ctx, st.x - halfW * 0.66 - 19, frontageY + depth * 0.66 + 13, st.x - halfW * 0.66 + 19, frontageY + depth * 0.66 + 13);
-  drawGarden(ctx, st.x + halfW * 0.68, frontageY + depth * 0.5, 28, 20, seed + 17);
-
+  // the built things and the greenery, above the ground finish
   // dwellings flanking the institution row along the frontage
   const instSpan = ((instCount - 1) * 42) / 2 + 24;
   const flank = [instSpan + 22, instSpan + 48, instSpan + 74];
   flank.forEach((off, i) => {
-    if (st.x - off > st.x - halfW + 12) drawDwelling(ctx, st.x - off, frontageY + 2, 8, seed + i);
-    if (st.x + off < st.x + halfW - 12) drawDwelling(ctx, st.x + off, frontageY + 2, 8, seed + i + 7);
+    if (st.x - off > L + 12) drawDwelling(ctx, st.x - off, frontageY + 2, 8, seed + i);
+    if (st.x + off < R - 12) drawDwelling(ctx, st.x + off, frontageY + 2, 8, seed + i + 7);
   });
-  // a second, nearer row of dwellings along the flanks
-  drawDwelling(ctx, st.x - halfW * 0.62, frontageY + depth * 0.4, 9, seed + 3);
-  drawDwelling(ctx, st.x + halfW * 0.6, frontageY + depth * 0.36, 9, seed + 5);
+  drawDwelling(ctx, L + halfW * 0.5, frontageY + depth * 0.42, 9, seed + 3);
+  drawDwelling(ctx, R - halfW * 0.52, frontageY + depth * 0.5, 9, seed + 5);
+  drawDwelling(ctx, L + halfW * 0.24, frontageY + depth * 0.5, 8, seed + 9);
 
-  // the well at the heart of the crossing
-  drawWell(ctx, st.x, crossY);
+  // the well where the lanes meet
+  drawWell(ctx, st.x + halfW * 0.14, crossY);
 
-  // trees for shade — the village green, scattered but clear of the roads
-  const treeSpots: [number, number, number][] = [
-    [st.x - halfW * 0.85, backY + 30, 15],
-    [st.x + halfW * 0.85, backY + 26, 13],
-    [st.x - halfW * 0.4, frontageY + depth * 0.78, 16],
-    [st.x + halfW * 0.42, frontageY + depth * 0.82, 14],
-    [st.x + halfW * 0.9, crossY + 12, 12],
-    [st.x - halfW * 0.9, crossY - 4, 12],
+  // groves of trees for shade, and cypress spires at the back corners
+  const groves: [number, number, number][] = [
+    [L + halfW * 0.5, backY + 34, 14],
+    [R - halfW * 0.5, backY + 30, 13],
+    [L + halfW * 0.6, frontageY + depth * 0.82, 15],
+    [R - halfW * 0.58, frontageY + depth * 0.86, 14],
+    [R - halfW * 0.16, crossY + 18, 12],
+    [L + halfW * 0.12, crossY + 6, 12],
   ];
-  treeSpots.forEach(([tx, ty, tr], i) => drawTree(ctx, tx, ty, tr, seed + i * 13 + 100));
-  // a pair of cypress spires still stand at the back corners
-  drawCypress(ctx, st.x - halfW + 12, backY + 6, 30);
-  drawCypress(ctx, st.x + halfW - 12, backY + 6, 28);
+  groves.forEach(([tx, ty, tr], i) => drawGrove(ctx, tx, ty, tr, seed + i * 19 + 100));
+  drawCypress(ctx, L + 12, backY + 6, 30);
+  drawCypress(ctx, R - 12, backY + 6, 28);
 }
 
 export default function KosmopolisWorld() {
