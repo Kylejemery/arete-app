@@ -56,6 +56,7 @@ const FIGURE_ZOOM = 0.9; // at/above this, souls render as little people, not do
 const BUILDING_ZOOM = 2.2; // at/above this, institutions rise as little 3-D structures
 const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and names
 const STREET_ZOOM = 5.0; // at/above this, a town resolves into a paved street you look down
+const EYE_ZOOM = 7.0; // at/above this, the town stands up into an eye-level street scene
 const ACT_START = (EPOCHS.find((e) => e.act)?.at ?? 260); // the year deeds — and aging — begin
 
 type Virtues = Record<VirtueKey, number>;
@@ -2222,6 +2223,345 @@ function drawWeather(ctx: CanvasRenderingContext2D, t: number, season: Season, s
   }
 }
 
+// --------------------------------------------------- the eye-level street view
+// At the deepest zoom the town stops being a map seen from above and stands up
+// into a street you look down at eye level: a road receding to a vanishing
+// point, gabled houses in rows to either side, trees, poles and a lamp, windows
+// lit at night, and the townsfolk walking, sized by how far off they are.
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+// The settlement nearest a point — used to pick which town the eye-level view
+// looks down when the camera has zoomed all the way in.
+function nearestSettlement(w: World, cx: number, cy: number): number {
+  let best = -1;
+  let bd = Infinity;
+  for (let i = 0; i < w.settlements.length; i++) {
+    const s = w.settlements[i];
+    const d = (s.x - cx) * (s.x - cx) + (s.y - cy) * (s.y - cy);
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+type HousePal = { wall: RGB; wallD: RGB; roof: RGB; roofD: RGB; glass: RGB; door: RGB };
+function eyeHousePal(seed: number): HousePal {
+  return srnd(seed * 3.1) > 0.5
+    ? { wall: [178, 86, 66], wallD: [132, 60, 46], roof: [74, 64, 72], roofD: [54, 46, 54], glass: [70, 84, 96], door: [70, 52, 40] }
+    : { wall: [150, 146, 134], wallD: [112, 108, 98], roof: [86, 70, 64], roofD: [62, 50, 46], glass: [70, 84, 96], door: [64, 48, 38] };
+}
+const rgbOf = (c: RGB) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+function eyeHouse(ctx: CanvasRenderingContext2D, cx: number, baseY: number, w: number, h: number, side: number, seed: number, night: boolean, pal: HousePal) {
+  const roofH = h * 0.42;
+  const half = w / 2;
+  const wallTop = baseY - h;
+  const depth = w * 0.5;
+  const dir = -side;
+  const sx = cx + dir * half;
+  const sxD = cx + dir * (half + depth);
+  // the depth (side) wall, receding toward the vanishing point
+  ctx.fillStyle = rgbOf(pal.wallD);
+  ctx.beginPath();
+  ctx.moveTo(sx, wallTop);
+  ctx.lineTo(sxD, wallTop + h * 0.16);
+  ctx.lineTo(sxD, baseY - h * 0.02);
+  ctx.lineTo(sx, baseY);
+  ctx.closePath();
+  ctx.fill();
+  // front wall + a soft cross-shade
+  ctx.fillStyle = rgbOf(pal.wall);
+  ctx.fillRect(cx - half, wallTop, w, h);
+  const fg = ctx.createLinearGradient(cx - half, 0, cx + half, 0);
+  fg.addColorStop(0, "rgba(0,0,0,0.12)");
+  fg.addColorStop(0.5, "rgba(255,255,255,0.05)");
+  fg.addColorStop(1, "rgba(0,0,0,0.14)");
+  ctx.fillStyle = fg;
+  ctx.fillRect(cx - half, wallTop, w, h);
+  // side roof plane
+  ctx.fillStyle = rgbOf(pal.roofD);
+  ctx.beginPath();
+  ctx.moveTo(cx + dir * half, wallTop + 2);
+  ctx.lineTo(cx, wallTop - roofH);
+  ctx.lineTo(cx + dir * (half + depth * 0.7), wallTop - roofH * 0.5 + h * 0.08);
+  ctx.lineTo(cx + dir * (half + depth), wallTop + h * 0.16);
+  ctx.closePath();
+  ctx.fill();
+  // front gable
+  ctx.fillStyle = rgbOf(pal.roof);
+  ctx.beginPath();
+  ctx.moveTo(cx - half - 2, wallTop + 2);
+  ctx.lineTo(cx, wallTop - roofH);
+  ctx.lineTo(cx + half + 2, wallTop + 2);
+  ctx.closePath();
+  ctx.fill();
+  // windows, two by two, warm-lit after dark
+  const winW = w * 0.17;
+  const winH = h * 0.2;
+  const gap = w * 0.12;
+  for (let r = 0; r < 2; r++)
+    for (let c = 0; c < 2; c++) {
+      const wx = cx - half + w * 0.2 + c * (winW + gap);
+      const wy = wallTop + h * 0.18 + r * (winH + h * 0.14);
+      const on = night && srnd(seed + r * 3 + c * 7) > 0.35;
+      if (on) {
+        const gg = ctx.createRadialGradient(wx + winW / 2, wy + winH / 2, 0, wx + winW / 2, wy + winH / 2, winW * 1.8);
+        gg.addColorStop(0, "rgba(255,206,120,0.55)");
+        gg.addColorStop(1, "rgba(255,206,120,0)");
+        ctx.fillStyle = gg;
+        ctx.fillRect(wx - winW, wy - winH, winW * 3, winH * 3);
+      }
+      ctx.fillStyle = on ? "rgb(255,214,138)" : rgbOf(pal.glass);
+      ctx.fillRect(wx, wy, winW, winH);
+      ctx.strokeStyle = "rgba(30,24,18,0.7)";
+      ctx.lineWidth = Math.max(0.6, w * 0.006);
+      ctx.strokeRect(wx, wy, winW, winH);
+      ctx.beginPath();
+      ctx.moveTo(wx + winW / 2, wy);
+      ctx.lineTo(wx + winW / 2, wy + winH);
+      ctx.moveTo(wx, wy + winH / 2);
+      ctx.lineTo(wx + winW, wy + winH / 2);
+      ctx.stroke();
+    }
+  // door + a small porch roof
+  const dW = w * 0.16;
+  const dH = h * 0.26;
+  ctx.fillStyle = rgbOf(pal.door);
+  ctx.fillRect(cx - dW / 2, baseY - dH, dW, dH);
+  ctx.strokeStyle = "rgba(20,16,12,0.6)";
+  ctx.lineWidth = Math.max(0.6, w * 0.006);
+  ctx.strokeRect(cx - dW / 2, baseY - dH, dW, dH);
+  ctx.fillStyle = rgbOf(pal.roofD);
+  ctx.fillRect(cx - dW * 0.9, baseY - dH - h * 0.05, dW * 1.8, h * 0.05);
+  // chimney
+  ctx.fillStyle = rgbOf(pal.roofD);
+  ctx.fillRect(cx + side * half * 0.4, wallTop - roofH * 0.9, w * 0.08, roofH * 0.7);
+}
+
+function eyeTree(ctx: CanvasRenderingContext2D, x: number, groundY: number, scale: number, seed: number, canopy: [RGB, RGB, RGB, RGB]) {
+  const h = 90 * scale;
+  const r = 42 * scale;
+  ctx.strokeStyle = "rgb(70,52,38)";
+  ctx.lineWidth = Math.max(1.5, 7 * scale);
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(x, groundY);
+  ctx.lineTo(x, groundY - h * 0.6);
+  ctx.stroke();
+  const cy = groundY - h * 0.72;
+  const blobs: [RGB, number, number, number][] = [
+    [canopy[0], 1.0, 0, r * 0.2],
+    [canopy[1], 0.82, -r * 0.2, -r * 0.15],
+    [canopy[2], 0.6, -r * 0.35, -r * 0.3],
+    [canopy[3], 0.32, -r * 0.4, -r * 0.45],
+  ];
+  for (const [col, rr, ox, oy] of blobs) {
+    ctx.fillStyle = rgbOf(col);
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * 6.283 + srnd(seed + i) * 0.8;
+      const d = r * rr * (0.5 + srnd(seed + i + 9) * 0.4);
+      ctx.beginPath();
+      ctx.arc(x + ox + Math.cos(a) * d, cy + oy + Math.sin(a) * d * 0.8, r * rr * 0.5, 0, 6.283);
+      ctx.fill();
+    }
+  }
+}
+
+function eyeFigure(ctx: CanvasRenderingContext2D, x: number, groundY: number, scale: number, col: readonly number[], night: boolean, walking: boolean, t: number, seed: number) {
+  const h = 54 * scale;
+  ctx.fillStyle = "rgba(0,0,0,0.18)";
+  ctx.beginPath();
+  ctx.ellipse(x, groundY, h * 0.22, h * 0.06, 0, 0, 6.283);
+  ctx.fill();
+  if (night && walking) {
+    const lx = x + h * 0.16;
+    const ly = groundY - h * 0.4;
+    const flick = 0.85 + Math.sin(t * 6 + seed) * 0.15;
+    const g = ctx.createRadialGradient(lx, ly, 0, lx, ly, h * 0.55);
+    g.addColorStop(0, `rgba(255,206,120,${(0.55 * flick).toFixed(3)})`);
+    g.addColorStop(1, "rgba(255,206,120,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(lx, ly, h * 0.55, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = `rgba(255,232,178,${flick.toFixed(3)})`;
+    ctx.beginPath();
+    ctx.arc(lx, ly, h * 0.05, 0, 6.283);
+    ctx.fill();
+  }
+  ctx.fillStyle = `rgb(${Math.min(255, col[0] + 30)},${Math.min(255, col[1] + 28)},${Math.min(255, col[2] + 28)})`;
+  ctx.beginPath();
+  ctx.moveTo(x, groundY - h);
+  ctx.lineTo(x + h * 0.16, groundY);
+  ctx.lineTo(x - h * 0.16, groundY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgb(206,176,150)";
+  ctx.beginPath();
+  ctx.arc(x, groundY - h, h * 0.14, 0, 6.283);
+  ctx.fill();
+}
+
+function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev: number, season: Season, stIndex: number) {
+  const night = elev < -0.05;
+  const hy = H * 0.44;
+  const vx = W * 0.54;
+  const vy = hy;
+  const seed = stIndex * 733 + 17;
+  // sky
+  const sky = ctx.createLinearGradient(0, 0, 0, hy);
+  sky.addColorStop(0, "rgb(150,178,206)");
+  sky.addColorStop(0.7, "rgb(206,214,214)");
+  sky.addColorStop(1, "rgb(236,226,206)");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, hy + 2);
+  // a warm haze on the horizon
+  const haze = ctx.createLinearGradient(0, hy - 100, 0, hy + 14);
+  haze.addColorStop(0, "rgba(244,232,206,0)");
+  haze.addColorStop(1, "rgba(244,230,200,0.55)");
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, hy - 100, W, 116);
+  // distant treeline
+  ctx.fillStyle = "rgb(150,160,150)";
+  ctx.beginPath();
+  ctx.moveTo(0, hy);
+  for (let x = 0; x <= W; x += 24) ctx.lineTo(x, hy - 8 - srnd(x * 0.13 + seed) * 30);
+  ctx.lineTo(W, hy);
+  ctx.closePath();
+  ctx.fill();
+  // grass verge, then the road
+  ctx.fillStyle = season.snow ? "rgb(196,204,206)" : rgbOf(season.canopy[1]);
+  ctx.fillRect(0, hy, W, H - hy);
+  const rhB = W * 0.3;
+  const rhV = W * 0.02;
+  ctx.fillStyle = "rgb(120,112,104)";
+  ctx.beginPath();
+  ctx.moveTo(vx - rhV, vy);
+  ctx.lineTo(vx + rhV, vy);
+  ctx.lineTo(W * 0.5 + rhB, H);
+  ctx.lineTo(W * 0.5 - rhB, H);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = season.snow ? "rgb(216,220,224)" : "rgb(150,144,134)";
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(vx + s * rhV, vy);
+    ctx.lineTo(vx + s * (rhV + 6), vy);
+    ctx.lineTo(W * 0.5 + s * (rhB + 70), H);
+    ctx.lineTo(W * 0.5 + s * rhB, H);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // centre dashes
+  ctx.strokeStyle = "rgba(228,220,190,0.5)";
+  for (let i = 0; i < 8; i++) {
+    const d0 = i / 8;
+    const d1 = d0 + 0.05;
+    const y0 = vy + (H - vy) * d0 * d0;
+    const y1 = vy + (H - vy) * d1 * d1;
+    ctx.lineWidth = clamp(d0 * 10, 0.5, 7);
+    ctx.beginPath();
+    ctx.moveTo(lerp(vx, W * 0.5, d0 * d0), y0);
+    ctx.lineTo(lerp(vx, W * 0.5, d1 * d1), y1);
+    ctx.stroke();
+  }
+  // rows of houses, back to front, trees between
+  const N = 5;
+  for (let i = N - 1; i >= 0; i--) {
+    const d = i / N;
+    const near = 1 - d * d;
+    const sc = lerp(0.16, 0.92, near);
+    for (const side of [-1, 1]) {
+      const edgeHalf = lerp(rhV + 8, rhB + 96, near);
+      const bx = lerp(vx, W * 0.5, near) + side * edgeHalf;
+      const by = lerp(vy, H, near);
+      const hw = 120 * sc;
+      const hh = 150 * sc;
+      eyeHouse(ctx, bx + side * hw * 0.5, by, hw, hh, side, seed + i * 13 + (side + 1) * 100, night, eyeHousePal(seed + i * 13 + side));
+      if (i < N - 1) eyeTree(ctx, lerp(vx, W * 0.5, near) + side * (edgeHalf + hw * 0.9), by, sc, seed + i * 7 + side * 50, season.canopy);
+    }
+  }
+  // power poles down the right, strung with wire
+  ctx.strokeStyle = "rgb(70,60,54)";
+  let prev: [number, number] | null = null;
+  for (let i = 0; i < 5; i++) {
+    const d = i / 5;
+    const near = 1 - d * d;
+    const px = lerp(vx, W * 0.5, near) + (rhV + 8 + (rhB + 64 - rhV - 8) * near) * 1.02;
+    const py = lerp(vy, H, near);
+    const ph = 140 * lerp(0.16, 1.05, near);
+    ctx.lineWidth = clamp(near * 5, 0.6, 4);
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px, py - ph);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(px - ph * 0.12, py - ph * 0.9);
+    ctx.lineTo(px + ph * 0.12, py - ph * 0.9);
+    ctx.stroke();
+    if (prev) {
+      ctx.strokeStyle = "rgba(40,34,30,0.6)";
+      ctx.lineWidth = clamp(near * 2, 0.4, 1.4);
+      ctx.beginPath();
+      ctx.moveTo(prev[0], prev[1]);
+      ctx.quadraticCurveTo((prev[0] + px) / 2, (prev[1] + py - ph * 0.86) / 2 + 10, px, py - ph * 0.88);
+      ctx.stroke();
+      ctx.strokeStyle = "rgb(70,60,54)";
+    }
+    prev = [px, py - ph * 0.88];
+  }
+  // a streetlight on the left, lit after dark
+  {
+    const near = 0.62;
+    const lx = lerp(vx, W * 0.5, near) - (rhV + 8 + (rhB + 60 - rhV - 8) * near);
+    const ly = lerp(vy, H, near);
+    const lh = 150 * lerp(0.16, 1.05, near);
+    ctx.strokeStyle = "rgb(60,60,66)";
+    ctx.lineWidth = clamp(near * 5, 1, 5);
+    ctx.beginPath();
+    ctx.moveTo(lx, ly);
+    ctx.lineTo(lx, ly - lh);
+    ctx.quadraticCurveTo(lx + lh * 0.02, ly - lh * 1.05, lx + lh * 0.16, ly - lh * 1.02);
+    ctx.stroke();
+    const hx = lx + lh * 0.16;
+    const hyL = ly - lh * 1.0;
+    if (night) {
+      const g = ctx.createRadialGradient(hx, hyL, 0, hx, hyL, lh * 0.5);
+      g.addColorStop(0, "rgba(255,214,150,0.7)");
+      g.addColorStop(1, "rgba(255,214,150,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(hx, hyL, lh * 0.5, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.fillStyle = night ? "rgb(255,232,180)" : "rgb(120,120,128)";
+    ctx.beginPath();
+    ctx.arc(hx, hyL, lh * 0.05, 0, 6.283);
+    ctx.fill();
+  }
+  // the townsfolk, walking the street, sized by distance
+  const town = w.souls.filter((s) => s.home === stIndex).slice(0, 10);
+  town.forEach((s, idx) => {
+    const near = clamp(0.2 + (idx % 4) * 0.22 + srnd(s.id) * 0.1, 0.15, 0.98);
+    const side = s.id % 2 ? 1 : -1;
+    const edgeHalf = lerp(rhV + 8, rhB + 30, near);
+    const fx = lerp(vx, W * 0.5, near) + side * edgeHalf * 0.86;
+    const fy = lerp(vy, H, near);
+    eyeFigure(ctx, fx, fy, lerp(0.15, 1.0, near), dominantVirtue(s.v).color, night, s.act === 0, t, s.id * 11);
+  });
+  // a quiet caption naming the town and how to rise back out
+  ctx.fillStyle = "rgba(240,232,214,0.9)";
+  ctx.font = "20px var(--font-newsreader, Georgia, serif)";
+  ctx.textAlign = "left";
+  ctx.fillText(w.settlements[stIndex]?.name ?? "", 20, 34);
+  ctx.font = "13px var(--font-newsreader, Georgia, serif)";
+  ctx.fillStyle = "rgba(240,232,214,0.55)";
+  ctx.fillText("street level — scroll out to rise above the town", 20, 54);
+}
+
 export default function KosmopolisWorld() {
   const worldRef = useRef<World>(createWorld());
   const reduceRef = useRef(false);
@@ -2729,6 +3069,15 @@ export default function KosmopolisWorld() {
     }
     ctx.globalAlpha = 1;
 
+    const zoom = cam.zoom;
+
+    // At the deepest zoom the town stops being a map and stands up into an
+    // eye-level street; the map render is skipped, the overlays below still run.
+    const eyeSt = w.ignited && zoom >= EYE_ZOOM ? nearestSettlement(w, cam.cx, cam.cy) : -1;
+    if (eyeSt >= 0) {
+      drawEyeStreet(ctx, w, t, elev, season, eyeSt);
+    } else {
+
     // 2. world transform: everything below is in world units
     ctx.setTransform(cam.zoom, 0, 0, cam.zoom, W / 2 - cam.cx * cam.zoom, H / 2 - cam.cy * cam.zoom);
 
@@ -2761,7 +3110,6 @@ export default function KosmopolisWorld() {
       ctx.fill();
     }
 
-    const zoom = cam.zoom;
     const acting = EPOCHS[w.epoch].act === true;
     const figures = zoom >= FIGURE_ZOOM;
     const portrait = zoom >= PORTRAIT_ZOOM;
@@ -3171,6 +3519,8 @@ export default function KosmopolisWorld() {
         ctx.fill();
       }
     }
+
+    } // end of the map render (skipped in eye-level street mode)
 
     // 7. overlays, back in screen space
     ctx.setTransform(1, 0, 0, 1, 0, 0);
