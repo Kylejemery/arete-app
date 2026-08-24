@@ -10,7 +10,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(searchParams.get('error'));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,6 +61,11 @@ function LoginForm() {
                 className="w-full bg-academy-surface border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:outline-none focus:border-academy-gold transition-colors"
                 required
               />
+              <div className="text-right mt-1.5">
+                <Link href="/forgot-password" className="text-academy-muted text-xs hover:text-academy-gold transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             {error && (

@@ -15,7 +15,10 @@ import type { NextRequest } from 'next/server'
 // The Playground (/playground/*) is public for the same reason — an open
 // workshop of essays and the situations game — and its discussion API
 // (/api/playground/*) writes only via the service role, server-side.
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
+// Password-reset surfaces are public: /forgot-password requests the email,
+// /auth/confirm exchanges the email token for a recovery session, and
+// /reset-password lets the user set a new password (guarded by that session).
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
 const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/perspectives/', '/playground', '/api/playground/']
 
 export async function middleware(request: NextRequest) {
@@ -50,6 +53,16 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(loginUrl)
+  }
+
+  // The admin console (and its agent fleet) is single-tenant: only the owner
+  // may load it. Every /api/admin/* route already enforces this server-side
+  // (returning 401 JSON), so we gate only the /admin page shell here — a
+  // signed-in non-owner is bounced to the home page instead of seeing it.
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (user.email !== process.env.ADMIN_EMAIL) {
+      return NextResponse.redirect(new URL('/', request.url))
+    }
   }
 
   return response
