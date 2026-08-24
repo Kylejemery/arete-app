@@ -16,9 +16,12 @@ export default function ForgotPasswordPage() {
     if (!email.trim()) { setError('Please enter your email address.'); return; }
     setLoading(true);
     try {
-      // The email template links to /auth/confirm with a token hash, which
-      // establishes a recovery session and forwards to /reset-password.
-      const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim());
+      // The recovery email (default {{ .ConfirmationURL }} template) routes
+      // through Supabase's verify endpoint, which redirects to /auth/callback
+      // with a one-time ?code=. That route exchanges it for a session and
+      // forwards to /reset-password.
+      const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`;
+      const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
       if (authError) { setError(authError.message); return; }
       // Always report success even if the address has no account, so the form
       // can't be used to probe which emails are registered.

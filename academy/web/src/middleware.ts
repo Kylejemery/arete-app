@@ -16,9 +16,10 @@ import type { NextRequest } from 'next/server'
 // workshop of essays and the situations game — and its discussion API
 // (/api/playground/*) writes only via the service role, server-side.
 // Password-reset surfaces are public: /forgot-password requests the email,
-// /auth/confirm exchanges the email token for a recovery session, and
-// /reset-password lets the user set a new password (guarded by that session).
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
+// /auth/callback exchanges the emailed ?code= for a recovery session (PKCE),
+// /auth/confirm covers the token_hash variant, and /reset-password lets the
+// user set a new password (guarded by that session).
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
 const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/perspectives/', '/playground', '/api/playground/']
 
 export async function middleware(request: NextRequest) {
