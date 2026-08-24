@@ -125,6 +125,20 @@ const { runTensionAgent } = require('./agents/tension-agent');
 const { runDreamingAgent } = require('./agents/dreaming-agent');
 const { runConsolidationAgent } = require('./agents/consolidation-agent');
 
+// Convergence Agent — the fork of Inquiry that runs the other direction. Where
+// Inquiry finds the question the corpus cannot answer, Convergence finds the
+// answer the corpus already contains but has never assembled: passages far
+// apart in embedding space, held together, yielding the one conclusion (the
+// sumperasma) that follows from all and is stated in none. Supplies validity
+// and novelty; never significance (the human review gate does that).
+// Railway cron: intended 30 6 * * 1 (Mondays 06:30 UTC — beside Inquiry), but
+// the cron is deferred pending the Self-Reflection Sunday/Monday decision.
+// STRICT GATE: nothing surfaces without human review. Output is never ingested
+// into rag_corpus. Approved/starred convergences may seed Synthesis and surface
+// via the Observatory under "The Corpus Concludes".
+// This require backs the on-demand admin trigger POST /api/admin/convergence/run.
+const { runConvergenceAgent } = require('./agents/convergence-agent');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
@@ -4004,6 +4018,11 @@ app.post('/api/admin/dreams/run', makeAgentRunEndpoint('dreams', { running: fals
 // decay over concept_edges. Scheduled Railway cron is daily 07:30 UTC; this
 // runs it on demand (admin only).
 app.post('/api/admin/consolidation/run', makeAgentRunEndpoint('consolidation', { running: false }, runConsolidationAgent, { needsOpenAI: false }));
+
+// POST /api/admin/convergence/run — assemble convergences now instead of the
+// (deferred) Monday 06:30 UTC cron. Embeds for selection + novelty, so OpenAI
+// is required.
+app.post('/api/admin/convergence/run', makeAgentRunEndpoint('convergence', { running: false }, runConvergenceAgent));
 
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
