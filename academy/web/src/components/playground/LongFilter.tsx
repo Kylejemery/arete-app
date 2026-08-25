@@ -3,19 +3,25 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
+  ANCHOR_IMPROVEMENT,
+  ANCHOR_RISK,
+  ARISING_PER_YEAR,
   CIVILIZATIONS,
   HALVING_YEARS,
-  LAMBDA_RISKS,
-  LAMBDA_TAUS,
   LEDGER,
+  LONG_LIFETIME,
+  MATRIX_RATES,
+  MATRIX_RISKS,
+  PHOENIX_RATE,
   SCATTER_SEED,
+  THRESHOLD_RATIO,
 } from '@/content/playground/long-filter'
 import styles from './LongFilter.module.css'
 
 // ── the arithmetic ───────────────────────────────────────────────────────────
 
 /** A span of years, phrased for humans. */
-function fmt(n: number): string {
+function fmtYears(n: number): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace(/\.0$/, '')} billion`
   if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '')} million`
   return Math.round(n).toLocaleString('en-US')
@@ -38,6 +44,44 @@ function survival(p: number, years: number, decay: boolean): number {
   if (!decay) return Math.pow(1 - p, years)
   const integral = ((p * HALVING_YEARS) / Math.LN2) * (1 - Math.pow(2, -years / HALVING_YEARS))
   return Math.exp(-integral)
+}
+
+// ── the ratio ────────────────────────────────────────────────────────────────
+
+/** Both gauge sliders read the same scale: 0.01% to 3.16% a year. */
+const rateFromSlider = (v: number) => Math.pow(10, -4 + (v / 100) * 2.5)
+
+/**
+ * Transitioned civilizations expected alive right now.
+ *
+ * f_v = s₀^(p/g) — the exponentials cancel when τ_v = ln(1/s₀)/g is substituted
+ * into the survival term, so the whole hypothesis reduces to the one ratio.
+ */
+const survivorCount = (p: number, g: number) =>
+  ARISING_PER_YEAR * Math.pow(PHOENIX_RATE, p / g) * LONG_LIFETIME
+
+/** Where a p/g ratio falls on the gauge, which runs 0.02 to 5 in log space. */
+const GAUGE_LO = Math.log10(0.02)
+const GAUGE_SPAN = Math.log10(5) - GAUGE_LO
+const gaugePos = (ratio: number) =>
+  Math.min(100, Math.max(0, ((Math.log10(ratio) - GAUGE_LO) / GAUGE_SPAN) * 100))
+
+function fmtCount(n: number): string {
+  if (n >= 1000) return Math.round(n).toLocaleString('en-US')
+  if (n >= 10) return n.toFixed(0)
+  if (n >= 1) return n.toFixed(1)
+  if (n >= 0.01) return n.toFixed(2)
+  return '0'
+}
+
+function gaugeVerdict(n: number): string {
+  if (n >= 1000)
+    return 'Comfortably past the threshold. The galaxy holds thousands of transitioned civilizations, which means the filter cannot be what makes the sky quiet. Something else is.'
+  if (n >= 1)
+    return 'Above the line, but not by much. A handful of them exist, scattered across a hundred thousand light years and under no obligation to announce it.'
+  if (n >= 0.001)
+    return 'Below the threshold. Expected survivors round to none. Whatever else is out there, nothing has finished growing up.'
+  return 'Far below. On these numbers the transition is so much slower than the dice that the galaxy has never produced one, and there is no paradox left to explain.'
 }
 
 // ── the plate ────────────────────────────────────────────────────────────────
@@ -64,24 +108,32 @@ const MARKS: Mark[] = (() => {
   return out
 })()
 
-// ── the Λ table ──────────────────────────────────────────────────────────────
+// ── the matrix ───────────────────────────────────────────────────────────────
 
 /**
- * f_v = e^(−p·τ) for each cell, with a background ramped from oxide (nobody
- * makes it) to indigo (most do). The 0.32 exponent stops the ramp collapsing to
- * a single colour, since f_v spans many orders of magnitude across the grid.
+ * Expected survivors for each (p, g) pair, with indigo above the threshold and
+ * flat oxide below it — the line is categorical, so the ramp only grades the
+ * side of it that has anybody on it.
  */
-const LAMBDA_ROWS = LAMBDA_RISKS.map((p) => ({
+const MATRIX_ROWS = MATRIX_RISKS.map((p) => ({
   p,
-  label: `1 in ${Math.round(1 / p).toLocaleString('en-US')}`,
-  cells: LAMBDA_TAUS.map((tau) => {
-    const f = Math.exp(-p * tau)
-    const pct = f * 100
-    const mix = Math.pow(f, 0.32)
+  label: `${(p * 100).toFixed(p < 0.01 ? 2 : 0)}%`,
+  cells: MATRIX_RATES.map((g) => {
+    const n = survivorCount(p, g)
     return {
-      tau,
-      label: pct >= 1 ? `${pct.toFixed(0)}%` : pct >= 0.001 ? `${pct.toFixed(3)}%` : `${pct.toExponential(0)}%`,
-      background: `rgb(${Math.round(122 + (36 - 122) * mix)}, ${Math.round(46 + (52 - 46) * mix)}, ${Math.round(35 + (86 - 35) * mix)})`,
+      g,
+      label:
+        n >= 1000
+          ? Math.round(n).toLocaleString('en-US')
+          : n >= 1
+            ? n.toFixed(1)
+            : n >= 1e-4
+              ? n.toFixed(4)
+              : n.toExponential(0),
+      background:
+        n >= 1
+          ? `rgb(${Math.round(36 + 30 * Math.min(1, Math.log10(n) / 5))}, 52, 86)`
+          : '#7A2E23',
     }
   }),
 }))
@@ -98,8 +150,11 @@ export default function LongFilter({
   const [riskStep, setRiskStep] = useState(35)
   const [yearsStep, setYearsStep] = useState(60)
   const [decay, setDecay] = useState(false)
+  const [gaugeRiskStep, setGaugeRiskStep] = useState(80)
+  const [gaugeGrowthStep, setGaugeGrowthStep] = useState(71)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  // the plate
   const p = riskFromSlider(riskStep)
   const years = yearsFromSlider(yearsStep)
   const share = survival(p, years, decay)
@@ -119,15 +174,23 @@ export default function LongFilter({
   if (decay) {
     const floor = Math.exp((-p * HALVING_YEARS) / Math.LN2) * 100
     verdict =
-      'With the risk halving every thousand years, the curve stops falling. The floor is ' +
+      'With the risk halving every thousand years the curve stops falling. The floor is ' +
       (floor >= 1 ? `${floor.toFixed(0)}%` : `${floor.toFixed(3)}%`) +
       ', and it holds for the rest of time. Survival never required zero. It required a derivative.'
   } else if (alive === 0) {
     verdict =
       'Nothing is left. At a fixed annual risk there is no value of p small enough to survive deep time, only values that take longer to lose.'
   } else {
-    verdict = `At this risk, the coin flip arrives at year ${fmt(Math.log(0.5) / Math.log(1 - p))}. Keep dragging.`
+    verdict = `At this risk the coin flip arrives at year ${fmtYears(Math.log(0.5) / Math.log(1 - p))}. Keep dragging.`
   }
+
+  // the gauge
+  const gaugeRisk = rateFromSlider(gaugeRiskStep)
+  const gaugeGrowth = rateFromSlider(gaugeGrowthStep)
+  const ratio = gaugeRisk / gaugeGrowth
+  const transitionedShare = Math.pow(PHOENIX_RATE, ratio)
+  const count = survivorCount(gaugeRisk, gaugeGrowth)
+  const survives = ratio <= THRESHOLD_RATIO
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -159,9 +222,10 @@ export default function LongFilter({
           <p className={styles.eyebrow}>Arete / playground / working note</p>
           <h1>The Long Filter</h1>
           <p className={styles.lede}>
-            A civilization that can end itself, eventually will. Not from malice on any particular
-            Tuesday, but because a small annual probability, given a long enough run, becomes a
-            certainty. This is what that fact does to the question of why the sky is quiet.
+            A civilization that can end itself eventually will, because a small annual probability
+            across a long enough run becomes a certainty. Follow that through and the Fermi question
+            turns on a single ratio: how fast a species can kill itself, against how fast it can
+            improve.
           </p>
         </div>
         <div className={styles.plateFrame}>
@@ -175,7 +239,7 @@ export default function LongFilter({
         </div>
         <div className={styles.plateCap}>
           <span>Plate I &nbsp;/&nbsp; 1,000 civilizations</span>
-          <span>exposure {fmt(years)} yr</span>
+          <span>exposure {fmtYears(years)} yr</span>
         </div>
       </header>
 
@@ -187,13 +251,13 @@ export default function LongFilter({
             <h2>Odds do not forget</h2>
             <p>
               If a catastrophe carries a fixed annual probability <span className={styles.mono}>p</span>,
-              and each year is an independent throw, then survival across{' '}
+              and each year is an independent throw, survival across{' '}
               <span className={styles.mono}>n</span> years is{' '}
               <span className={styles.mono}>
                 (1 − p)<sup>n</sup>
               </span>
-              . It is the same equation that governs radioactive decay, pointed at a species instead
-              of an isotope. Move the two dials and watch the plate.
+              . The same equation governs radioactive decay, pointed at a species instead of an
+              isotope. Move the dials and watch the plate.
             </p>
           </div>
 
@@ -204,7 +268,7 @@ export default function LongFilter({
                   <label className={styles.ctrlLabel} htmlFor="lf-risk">
                     Annual risk of self-destruction
                   </label>
-                  <span className={styles.ctrlVal}>1 in {fmt(1 / p)}</span>
+                  <span className={styles.ctrlVal}>1 in {fmtYears(1 / p)}</span>
                 </div>
                 <input
                   type="range"
@@ -222,7 +286,7 @@ export default function LongFilter({
                   <label className={styles.ctrlLabel} htmlFor="lf-years">
                     Years elapsed
                   </label>
-                  <span className={styles.ctrlVal}>{fmt(years)} yr</span>
+                  <span className={styles.ctrlVal}>{fmtYears(years)} yr</span>
                 </div>
                 <input
                   type="range"
@@ -243,8 +307,9 @@ export default function LongFilter({
                   onChange={(e) => setDecay(e.target.checked)}
                 />
                 <span>
-                  Halve the risk every thousand years. This is the only escape the math allows: not
-                  perfection, but a hazard rate that falls faster than the years accumulate.
+                  Halve the risk every thousand years. This is the only escape the arithmetic
+                  allows: not perfection, but a hazard rate that falls faster than the years
+                  accumulate.
                 </span>
               </label>
             </div>
@@ -272,38 +337,180 @@ export default function LongFilter({
         </div>
       </section>
 
-      {/* ── II. the claim ── */}
+      {/* ── II. the measured input ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
-        <div className={styles.col}>
-          <p className={styles.eyebrow}>II. The claim</p>
-          <h2>Virtue is the price of admission</h2>
+        <div className={`${styles.secHead} ${styles.col}`}>
+          <p className={styles.eyebrow}>II. The measured input</p>
+          <h2>The phoenix rate</h2>
           <p>
-            Every route to a low hazard rate that does not run through character turns out to have a
-            person hidden inside it. Scatter a civilization across a hundred systems and you have
-            bought time, not safety, so long as the branches can still reach each other. Bind it with
-            constraints that cannot be lifted from inside and somebody has to be the one who does not
-            lift them. Build minds that cannot defect and you have made something durable that can no
-            longer be praised, and that will meet the first genuinely novel threat with a blind spot
-            where its judgment should be.
+            Seneca writes in the forty-second letter that the good man appears perhaps once in five
+            hundred years, like the phoenix. He meant it as a remark about rarity. Read as a rate, it
+            is the one empirical number this whole argument has.
+          </p>
+        </div>
+        <div className={styles.col}>
+          <ol className={styles.deriv}>
+            <li>
+              <b>one sage / 500 years</b>
+              Seneca&rsquo;s frame is an empire of roughly fifty million people with a life
+              expectancy near twenty five, so about a billion lives are lived across those five
+              centuries.
+            </li>
+            <li>
+              <b>s₀ ≈ 10⁻⁹</b>
+              One in a billion. Note what that number measures: the incidence of sagehood in a
+              population that was not cultivating it deliberately or at scale. A floor, not a
+              ceiling.
+            </li>
+            <li>
+              <b>
+                τ<sub>v</sub> = ln(1/s₀) / g
+              </b>
+              If the sage fraction grows at an annual rate <span className={styles.mono}>g</span>,
+              the time to saturation is the log of the distance divided by the rate.
+            </li>
+            <li>
+              <b>
+                f<sub>v</sub> = s₀<sup>(p/g)</sup>
+              </b>
+              Substitute that into the survival term and the exponentials cancel. Everything
+              collapses into one ratio.
+            </li>
+          </ol>
+          <p className={styles.afterDeriv}>
+            Two things fall out immediately. The first is that{' '}
+            <strong>the target barely matters.</strong> At an improvement rate of 0.6 percent a year,
+            reaching half sages takes 3,338 years and reaching all of them takes 3,454. A three
+            percent difference for double the target, because the growth is exponential and the
+            distance is logarithmic. Whether the threshold is a sage civilization or merely a
+            sage-governed one changes almost nothing.
           </p>
           <p>
-            So the claim is necessity, not sufficiency. A civilization of sages is not guaranteed a
-            billion years. It is simply the only kind that can have them. Asteroids, gamma ray bursts
-            and bad luck remain, and virtue never touches those.
+            The second is that <strong>the ratio is the whole argument.</strong> Not the risk on its
+            own, and not the rate of improvement on its own. Only p over g.
           </p>
         </div>
       </section>
 
-      {/* ── III. the equation ── */}
+      {/* ── III. the ratio ── */}
+      <div className={styles.gaugeBlock}>
+        <div className={styles.wrap}>
+          <div className={`${styles.secHead} ${styles.col}`}>
+            <p className={styles.eyebrow}>III. The ratio</p>
+            <h2>How many are out there</h2>
+            <p>
+              Set the annual risk against the annual rate of moral improvement. The scale below reads
+              their ratio, and the number beside it is how many transitioned civilizations should be
+              alive in the galaxy right now.
+            </p>
+          </div>
+
+          <div className={styles.colWide}>
+            <div className={styles.ctrl}>
+              <div className={styles.ctrlTop}>
+                <label className={styles.ctrlLabel} htmlFor="lf-gauge-risk">
+                  {'p  · annual risk of self-destruction'}
+                </label>
+                <span className={styles.ctrlVal}>
+                  {(gaugeRisk * 100).toFixed(gaugeRisk < 0.001 ? 3 : 2)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                id="lf-gauge-risk"
+                min={0}
+                max={100}
+                step={0.5}
+                value={gaugeRiskStep}
+                onChange={(e) => setGaugeRiskStep(Number(e.target.value))}
+              />
+            </div>
+
+            <div className={`${styles.ctrl} ${styles.ctrlTight}`}>
+              <div className={styles.ctrlTop}>
+                <label className={styles.ctrlLabel} htmlFor="lf-gauge-growth">
+                  {'g  · annual rate of moral improvement'}
+                </label>
+                <span className={styles.ctrlVal}>
+                  {(gaugeGrowth * 100).toFixed(gaugeGrowth < 0.001 ? 3 : 2)}%
+                </span>
+              </div>
+              <input
+                type="range"
+                id="lf-gauge-growth"
+                min={0}
+                max={100}
+                step={0.5}
+                value={gaugeGrowthStep}
+                onChange={(e) => setGaugeGrowthStep(Number(e.target.value))}
+              />
+            </div>
+
+            <div className={styles.gauge}>
+              <div
+                className={`${styles.gaugeTick} ${styles.thresh}`}
+                style={{ left: `${gaugePos(THRESHOLD_RATIO)}%` }}
+              >
+                <span>
+                  p/g = {THRESHOLD_RATIO.toFixed(2)}
+                  <br />
+                  one civilization
+                </span>
+              </div>
+              <div
+                className={styles.gaugeTick}
+                style={{ left: `${gaugePos(ANCHOR_RISK / ANCHOR_IMPROVEMENT)}%` }}
+              >
+                <span>where we sit</span>
+              </div>
+              <div className={styles.gaugeTrack}>
+                <div
+                  className={styles.gaugeHandle}
+                  style={{ left: `${gaugePos(ratio)}%`, background: survives ? '#8FB0E8' : '#E0A183' }}
+                />
+              </div>
+              <div className={styles.gaugeScale}>
+                <span>0.02 &nbsp;populated</span>
+                <span>empty&nbsp; 5.0</span>
+              </div>
+            </div>
+
+            <div className={styles.gaugeGrid}>
+              <div>
+                <span
+                  className={styles.verdictNum}
+                  style={{ color: count >= 1 ? '#8FB0E8' : '#E0A183' }}
+                >
+                  {fmtCount(count)}
+                </span>
+                <span className={styles.verdictLabel}>sage civilizations in the galaxy</span>
+              </div>
+              <div>
+                <p className={styles.gaugeVerdict} aria-live="polite">
+                  {gaugeVerdict(count)}
+                </p>
+                <p className={`${styles.footnote} ${styles.gaugeNote}`}>
+                  Assuming one technological civilization arises per century and each transitioned
+                  one lasts 10<sup>8</sup> years.{' '}
+                  <span className={styles.mono}>
+                    p/g = {ratio.toFixed(2)} · f_v = {transitionedShare.toExponential(1)}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── IV. the equation ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>III. The equation</p>
+          <p className={styles.eyebrow}>IV. The equation</p>
           <h2>Drake, split in two</h2>
           <p>
-            Drake&rsquo;s formula averages the lifetime of a civilization into a single term,{' '}
-            <span className={styles.mono}>L</span>. That average hides the whole problem, because
-            there are two populations and they differ by seven orders of magnitude. Separate them,
-            and separate existing from being detectable.
+            Drake averages the lifetime of a civilization into a single term. That average hides the
+            problem, because there are two populations and they differ by seven orders of magnitude.
+            Separate them, and separate existing from being detectable.
           </p>
         </div>
 
@@ -314,7 +521,7 @@ export default function LongFilter({
               &nbsp;+&nbsp; f<sub>v</sub>·f<sub>c,ℓ</sub>·L<sub>ℓ</sub> ]
             </div>
             <div className={`${styles.line} ${styles.sub}`}>
-              f<sub>v</sub> = e<sup>−Λ</sup> &nbsp;&nbsp;&nbsp; Λ = p · τ<sub>v</sub>
+              f<sub>v</sub> = s₀<sup>(p/g)</sup> &nbsp;&nbsp;&nbsp;&nbsp; s₀ ≈ 10⁻⁹
             </div>
           </div>
 
@@ -326,13 +533,10 @@ export default function LongFilter({
             </dd>
             <dt>p</dt>
             <dd>Annual probability of self-destruction, once the capability exists.</dd>
-            <dt>
-              τ<sub>v</sub>
-            </dt>
-            <dd>
-              Years needed to reach the moral transition, counted from the day the capability
-              arrives.
-            </dd>
+            <dt>g</dt>
+            <dd>Annual growth rate of the sage fraction of the population.</dd>
+            <dt>s₀</dt>
+            <dd>The phoenix rate. Baseline incidence of sagehood before deliberate cultivation.</dd>
             <dt>
               f<sub>v</sub>
             </dt>
@@ -342,65 +546,66 @@ export default function LongFilter({
             </dt>
             <dd>
               Mean lifetime of each population. The short one is roughly 1/p, a few centuries. The
-              long one is bounded only by hazards that virtue cannot reach.
+              long one is bounded only by hazards virtue cannot reach.
             </dd>
             <dt>
-              f<sub>c,s</sub>, f<sub>c,ℓ</sub>
+              f<sub>c,ℓ</sub>
             </dt>
             <dd>
-              Detectability of each population. Not the same number, and that turns out to be the
-              whole argument.
+              Detectability of the transitioned population. Set this near zero and the crowded branch
+              goes silent.
             </dd>
           </dl>
 
           <p className={styles.afterTerms}>
-            The hypothesis compresses into one dimensionless quantity.{' '}
+            The threshold is exact. For the galaxy to hold even one transitioned civilization besides
+            ourselves,{' '}
             <strong>
-              Λ is how dangerous you are per year multiplied by how long you take to grow up.
+              moral improvement has to run at least 1.5 times faster than annual catastrophic risk.
             </strong>{' '}
-            Everything else is bookkeeping.
+            That is a falsifiable claim, which is more than Drake&rsquo;s formula ever offered.
           </p>
         </div>
       </section>
 
-      {/* ── IV. the one number ── */}
+      {/* ── V. the two anchors ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>IV. The one number</p>
-          <h2>Where we sit</h2>
+          <p className={styles.eyebrow}>V. The two anchors</p>
+          <h2>Where the evidence puts us</h2>
           <p>
-            Each cell is{' '}
-            <span className={styles.mono}>
-              f<sub>v</sub>
-            </span>
-            , the share of civilizations that make the transition. Read down for how reckless a
-            species is, across for how slowly it learns.
+            European homicide fell from about forty per hundred thousand in the 1300s to roughly one
+            today, an improvement rate near 0.6 percent a year. Global literacy odds improved at
+            about 1.9 percent a year after 1820. Published estimates of annual nuclear risk cluster
+            between one tenth of a percent and one percent. Both of our numbers are inside this
+            table, and they land on opposite sides of the line.
           </p>
         </div>
-        <div className={styles.col}>
-          <div className={styles.lamScroll}>
-            <table className={styles.lam}>
-              <caption className={`${styles.footnote} ${styles.lamCaption}`}>
-                Columns: years to the moral transition. Rows: annual risk of self-destruction.
+        <div className={styles.colWide}>
+          <div className={styles.mtxScroll}>
+            <table className={styles.mtx}>
+              <caption className={`${styles.footnote} ${styles.mtxCaption}`}>
+                Cells give the expected number of transitioned civilizations alive now. Blue survives
+                the threshold, oxide does not.
               </caption>
               <thead>
                 <tr>
                   <th className={styles.rowhead} scope="col">
-                    annual risk \ τ
+                    {'p  \\  g'}
                   </th>
-                  {LAMBDA_TAUS.map((tau) => (
-                    <th key={tau} scope="col">
-                      {tau.toLocaleString('en-US')} yr
+                  {MATRIX_RATES.map((g) => (
+                    <th key={g} scope="col">
+                      {(g * 100).toFixed(g < 0.01 ? 1 : 0)}%
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {LAMBDA_ROWS.map((row) => (
+                {MATRIX_ROWS.map((row) => (
                   <tr key={row.p}>
                     <td className={styles.rowhead}>{row.label}</td>
                     {row.cells.map((cell) => (
-                      <td key={cell.tau} style={{ background: cell.background }}>
+                      <td key={cell.g} style={{ background: cell.background }}>
                         {cell.label}
                       </td>
                     ))}
@@ -409,64 +614,59 @@ export default function LongFilter({
               </tbody>
             </table>
           </div>
-          <p className={styles.footnote}>
-            We are roughly eighty years past acquiring the capability, at an annual risk most
-            published estimates put somewhere between one in a thousand and one in a hundred. If the
-            transition takes a thousand years, our prior sits near one in twenty thousand.
-          </p>
         </div>
       </section>
 
-      {/* ── V. the result ── */}
-      <section className={`${styles.section} ${styles.wrap}`}>
-        <div className={styles.col}>
-          <p className={styles.eyebrow}>V. The result nobody expects</p>
-          <h2>The filter makes the sky more crowded</h2>
-          <p>
-            Run both terms. Take one civilization arising per century and the brutal case where only
-            one in twenty thousand transitions. The doomed population, living a few centuries each,
-            has perhaps one member alive right now. The transitioned population, living on the order
-            of a hundred million years each, has several hundred.
-          </p>
-          <p>
-            Even a filter that kills 99.995 percent leaves the survivors outnumbering the dead by
-            hundreds to one, because their lifetime is seven orders of magnitude longer.{' '}
-            <strong>The filter cannot explain the silence.</strong> It predicts a galaxy thick with
-            ancient civilizations. Which means the entire weight of the answer rests on one term:{' '}
-            <span className={styles.mono}>
-              f<sub>c,ℓ</sub>
-            </span>
-            , whether the survivors can be detected at all.
-          </p>
-          <p>
-            The reason they are quiet is not that they are few, and it is not contempt. Contempt is a
-            passion, and the passions are the thing they no longer have. Chrysippus held that
-            everyone short of wisdom is drowning, and the one a foot beneath the surface is drowning
-            exactly as much as the one a fathom down. You do not sneer at a drowning man. The circles
-            of concern that Hierocles drew expand outward until the stranger has been pulled to the
-            centre, and nothing in that doctrine stops at the edge of a species.
-          </p>
-          <p>
-            What is left is restraint. Virtue that was not chosen is only architecture, and contact
-            would foreclose the choosing. A civilization that has watched this happen many times, and
-            knows how most of the watching ends, would be destroying the one thing that would have
-            made us worth meeting.
-          </p>
-          <p className={styles.footnote}>
-            This is the strongest form of the zoo hypothesis available, and for a specific reason.
-            The usual objection is uniformity: it needs every survivor to independently choose
-            silence, and one defector ruins it. If the survivors are sages reasoning from shared
-            premises, the convergence is not a sociological accident. It is what correct reasoning
-            does. Though the value premise is shared and the empirical prediction is not, so a few of
-            them may have got it wrong.
-          </p>
-        </div>
-      </section>
-
-      {/* ── VI. the survivors ── */}
+      {/* ── VI. the fork ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>VI. The survivors</p>
+          <p className={styles.eyebrow}>VI. The fork</p>
+          <h2>Two answers, and the ratio picks</h2>
+          <p>
+            This is the part I had wrong the first time. There is no single resolution to the paradox
+            here. The ratio selects between two of them, and they require completely different
+            explanations of the silence.
+          </p>
+        </div>
+        <div className={styles.colWide}>
+          <div className={styles.fork}>
+            <div className={styles.forkLeft}>
+              <span className={styles.k}>p/g below 0.67</span>
+              <h3>The galaxy is crowded and quiet</h3>
+              <p>
+                Survivors outnumber the doomed by orders of magnitude, because their lifetime is
+                seven orders longer. Even a filter killing 99.99 percent leaves hundreds alive. So
+                the silence cannot be explained by the filter at all. It rests entirely on
+                detectability, and the reason for it has to be restraint: virtue that was not chosen
+                is only architecture, and contact would foreclose the choosing.
+              </p>
+            </div>
+            <div className={styles.forkRight}>
+              <span className={styles.k}>p/g above 0.67</span>
+              <h3>The galaxy is empty</h3>
+              <p>
+                The transition is so much slower than the dice that almost nothing clears it. There
+                is no paradox left to solve, and nothing to explain. The sky is quiet because there
+                is nobody in it, and we are early rather than overlooked. On this branch the argument
+                stops being cosmology and becomes a warning.
+              </p>
+            </div>
+          </div>
+          <p className={styles.footnote}>
+            The restraint argument on the left has one thing going for it that no other zoo
+            hypothesis does. The usual objection is uniformity: it needs every survivor to
+            independently choose silence, and one defector ruins it. If the survivors are sages
+            reasoning from shared premises, the convergence is not a sociological accident, it is
+            what correct reasoning does. Though the value premise is shared and the empirical
+            prediction is not, so some of them may have got it wrong.
+          </p>
+        </div>
+      </section>
+
+      {/* ── VII. the survivors ── */}
+      <section className={`${styles.section} ${styles.wrap}`}>
+        <div className={`${styles.secHead} ${styles.col}`}>
+          <p className={styles.eyebrow}>VII. The survivors</p>
           <h2>What is left when nobody wants</h2>
           <p>
             Most of the description is subtraction. Institutions exist to manage vice, and the ones
@@ -474,7 +674,7 @@ export default function LongFilter({
             a harder job.
           </p>
         </div>
-        <div className={`${styles.col} ${styles.ledgerCol}`}>
+        <div className={styles.colWide}>
           <div className={styles.ledger}>
             <div className={styles.ledgerHead}>Dissolved</div>
             <div className={`${styles.ledgerHead} ${styles.right}`}>What stands in its place</div>
@@ -495,31 +695,39 @@ export default function LongFilter({
         </div>
       </section>
 
-      {/* ── VII. the close ── */}
+      {/* ── VIII. the close ── */}
       <section className={`${styles.section} ${styles.close}`}>
         <div className={`${styles.wrap} ${styles.col}`}>
-          <p className={styles.eyebrow}>VII.</p>
+          <p className={styles.eyebrow}>VIII.</p>
           <h2>The invitation that cannot be sent</h2>
           <p>
             Fermi asked it over lunch. The galaxy is old and large and ought to be crowded. Where is
             everybody?
           </p>
           <p>
-            If the filter is moral, then most of the silence is the silence of the dead, and that
-            part is not mysterious. The harder part is the ones who made it, who have been out there
-            a very long time, and who are not calling.
-          </p>
-          <p>
+            On one branch the answer is that they are there, in numbers, and holding back. Virtue
+            arrived at any way but freely is only architecture, so a civilization that has watched
+            this many times would be destroying the one thing that would have made us worth meeting.{' '}
             <em>
               It is not that we are not invited. It is that the invitation cannot be sent without
               voiding what it invites us to.
             </em>
           </p>
+          <p>
+            On the other branch there is no invitation, no watchers, and nothing withheld. Only a
+            very large room, and a species eighty years into holding a match, improving at a rate
+            that will not beat the odds it has already set running.
+          </p>
+          <p>
+            Which branch we are on is not written anywhere. It is a ratio, and both of its terms are
+            ours.
+          </p>
           <p className={`${styles.footnote} ${styles.closeNote}`}>
             One hypothesis among several, and the boring ones remain live. Life may be rare,
-            intelligence rarer, and the distances may simply be doing what distances do. The moral
-            filter is not established by the silence. It is only compatible with it, which is a
-            weaker claim and the strongest one on offer.
+            intelligence rarer, and the distances may simply be doing what distances do. Seneca was
+            making a point about rarity, not conducting a census, so s₀ is an order of magnitude at
+            best. Exponential growth in the sage fraction is an assumption and could as easily be
+            logistic, which would put a ceiling below one and change everything.
           </p>
         </div>
       </section>

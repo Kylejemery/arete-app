@@ -76,9 +76,9 @@ export default function PlaygroundHub() {
           <p className="pg-card-kicker">The Long Filter</p>
           <h2>Why the sky is quiet</h2>
           <p>
-            A civilization that can end itself eventually will. Drag the risk and
-            the years, split the Drake equation in two, and find the filter that
-            predicts a crowded galaxy — and still explains the silence.
+            A civilization that can end itself eventually will. Set annual risk
+            against the rate we improve, and the Fermi question reduces to one
+            ratio — a galaxy quietly crowded, or empty.
           </p>
           <span className="pg-card-go">Run the odds →</span>
         </Link>

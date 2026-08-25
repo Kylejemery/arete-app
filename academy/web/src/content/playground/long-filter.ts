@@ -2,9 +2,10 @@
  * The Long Filter — the fixed quantities behind the working note.
  *
  * The prose lives in the component; what sits here is the material the page
- * computes over: the plate of civilizations, the two axes of the Λ table, and
- * the ledger of what a post-transition civilization dissolves and what stands
- * in its place.
+ * computes over: the plate of civilizations, the constants that turn a p/g
+ * ratio into a population of survivors, the two axes of the matrix, and the
+ * ledger of what a post-transition civilization dissolves and what stands in
+ * its place.
  */
 
 /** Marks on the plate — one civilization each. */
@@ -16,11 +17,37 @@ export const HALVING_YEARS = 1000
 /** Fixed seed for the plate scatter, so the field is stable across redraws. */
 export const SCATTER_SEED = 20260825
 
-/** Λ table rows: annual probability of self-destruction. */
-export const LAMBDA_RISKS = [0.01, 0.003, 0.001, 0.0003]
+/**
+ * The phoenix rate: the baseline incidence of sagehood before anyone was
+ * cultivating it deliberately. One in a billion, read off Seneca's remark in
+ * the forty-second letter that the good man appears about once in five hundred
+ * years — an empire of ~50 million living ~25 years each is ~10⁹ lives.
+ */
+export const PHOENIX_RATE = 1e-9
 
-/** Λ table columns: years to the moral transition (τ_v). */
-export const LAMBDA_TAUS = [200, 500, 1000, 2000, 5000]
+/** Technological civilizations arising per year in the galaxy (Ṅ). */
+export const ARISING_PER_YEAR = 0.01
+
+/** Mean lifetime of a transitioned civilization, in years (L_ℓ). */
+export const LONG_LIFETIME = 1e8
+
+/**
+ * The p/g ratio at which exactly one transitioned civilization is expected.
+ *
+ * n = Ṅ · s₀^(p/g) · L_ℓ = 10⁶ · 10^(−9·p/g), so n = 1 at p/g = 2/3 — moral
+ * improvement running 1.5× faster than annual catastrophic risk.
+ */
+export const THRESHOLD_RATIO = 2 / 3
+
+/** Where the evidence puts us: 1% annual risk against 0.6% annual improvement. */
+export const ANCHOR_RISK = 0.01
+export const ANCHOR_IMPROVEMENT = 0.006
+
+/** Matrix rows: annual probability of self-destruction. */
+export const MATRIX_RISKS = [0.01, 0.003, 0.001, 0.0003]
+
+/** Matrix columns: annual growth rate of the sage fraction. */
+export const MATRIX_RATES = [0.001, 0.003, 0.006, 0.01, 0.02]
 
 /** One line of the survivors' ledger — what goes, and what takes its place. */
 export type LedgerRow = {
@@ -66,7 +93,7 @@ export const LEDGER: LedgerRow[] = [
     },
     stays: {
       title: 'The state as an instrument of judgment',
-      body: 'Sages agree about virtue and disagree about facts. Two of them reading the same models will differ on the best pathway, and neither is failing at anything. Politics survives, and gets to be about the question rather than the players.',
+      body: 'Sages agree about virtue and hold the facts without judgment, taking them as they come until better evidence arrives. What stays open is the pathway: two of them reading the same models will weigh the same evidence differently, and neither is failing at anything. Politics survives, and gets to be about the question rather than the players.',
     },
   },
   {
@@ -83,7 +110,7 @@ export const LEDGER: LedgerRow[] = [
     },
     stays: {
       title: 'Allocation',
-      body: 'Bushels stay finite. What ends is rivalry, not scarcity. Markets were a way to coordinate between people who do not trust each other, and the coordination problem outlives the mistrust.',
+      body: 'Bushels stay finite. What ends is rivalry, not scarcity. Markets coordinated between people who did not trust each other, and the coordination problem outlives the mistrust.',
     },
   },
   {

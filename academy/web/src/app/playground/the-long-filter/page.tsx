@@ -4,7 +4,7 @@ import LongFilter from '@/components/playground/LongFilter'
 export const metadata: Metadata = {
   title: 'The Long Filter — Playground | Arete Academy',
   description:
-    'A civilization that can end itself eventually will. Drag the two dials, split the Drake equation in two, and see why a moral filter predicts a crowded galaxy that stays silent.',
+    'A civilization that can end itself eventually will. Read Seneca’s phoenix as a rate, set it against annual catastrophic risk, and the Fermi question reduces to one ratio — a galaxy quietly crowded, or empty.',
 }
 
 export default function PlaygroundLongFilterPage() {
