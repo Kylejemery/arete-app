@@ -76,9 +76,9 @@ export default function PlaygroundHub() {
           <p className="pg-card-kicker">The Long Filter</p>
           <h2>Why the sky is quiet</h2>
           <p>
-            A civilization that can end itself eventually will. Set annual risk
-            against the rate we improve, and the Fermi question reduces to one
-            ratio — a galaxy quietly crowded, or empty.
+            A civilization that can end itself eventually will. Weigh malice
+            against how fast we improve, and error against how fast we learn to
+            handle what we build — a galaxy quietly crowded, or empty.
           </p>
           <span className="pg-card-go">Run the odds →</span>
         </Link>

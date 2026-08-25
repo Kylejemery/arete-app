@@ -2,10 +2,9 @@
  * The Long Filter — the fixed quantities behind the working note.
  *
  * The prose lives in the component; what sits here is the material the page
- * computes over: the plate of civilizations, the constants that turn a p/g
- * ratio into a population of survivors, the two axes of the matrix, and the
- * ledger of what a post-transition civilization dissolves and what stands in
- * its place.
+ * computes over: the plate of civilizations, the constants of the three-hazard
+ * model, and the ledger of what a post-transition civilization dissolves and
+ * what stands in its place.
  */
 
 /** Marks on the plate — one civilization each. */
@@ -25,29 +24,32 @@ export const SCATTER_SEED = 20260825
  */
 export const PHOENIX_RATE = 1e-9
 
+/** K = ln(1/s₀) ≈ 20.72. The log distance a species has to cross. */
+export const LOG_DISTANCE = Math.log(1 / PHOENIX_RATE)
+
 /** Technological civilizations arising per year in the galaxy (Ṅ). */
 export const ARISING_PER_YEAR = 0.01
 
-/** Mean lifetime of a transitioned civilization, in years (L_ℓ). */
-export const LONG_LIFETIME = 1e8
+/** Baseline annual error hazard at the start of the transition (p_e0). */
+export const ERROR_HAZARD_BASE = 1e-5
+
+/** Irreducible external hazard (p_x). Its reciprocal is L_ℓ. */
+export const EXTERNAL_HAZARD = 1e-8
 
 /**
- * The p/g ratio at which exactly one transitioned civilization is expected.
+ * The moral threshold, R* = log(Ṅ/p_x) / log(1/(e·s₀)) ≈ 0.700.
  *
- * n = Ṅ · s₀^(p/g) · L_ℓ = 10⁶ · 10^(−9·p/g), so n = 1 at p/g = 2/3 — moral
- * improvement running 1.5× faster than annual catastrophic risk.
+ * Malice decomposes to f_v = (e·s₀)^R, so the count crosses one at a ratio of
+ * logarithms — which is why it barely moves when the badly known parameters do.
  */
-export const THRESHOLD_RATIO = 2 / 3
+export const MORAL_THRESHOLD =
+  Math.log(ARISING_PER_YEAR / EXTERNAL_HAZARD) / Math.log(1 / (Math.E * PHOENIX_RATE))
 
-/** Where the evidence puts us: 1% annual risk against 0.6% annual improvement. */
-export const ANCHOR_RISK = 0.01
-export const ANCHOR_IMPROVEMENT = 0.006
-
-/** Matrix rows: annual probability of self-destruction. */
-export const MATRIX_RISKS = [0.01, 0.003, 0.001, 0.0003]
-
-/** Matrix columns: annual growth rate of the sage fraction. */
-export const MATRIX_RATES = [0.001, 0.003, 0.006, 0.01, 0.02]
+/** Phase-diagram axes: the moral ratio R, log-scaled, and the capability gap d. */
+export const RATIO_MIN = 0.02
+export const RATIO_MAX = 2.5
+export const GAP_MIN = -0.002
+export const GAP_MAX = 0.004
 
 /** One line of the survivors' ledger — what goes, and what takes its place. */
 export type LedgerRow = {

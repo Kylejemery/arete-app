@@ -2,7 +2,7 @@
  *
  * Unlike the tape-dark experiments, this one is printed on a plate: a pale
  * mineral ground with oxide and indigo for the two populations, inverted to ink
- * for the gauge and the close. Fraunces and IBM Plex Mono come from
+ * for the phase diagram and the close. Fraunces and IBM Plex Mono come from
  * app/playground/layout.tsx; Spectral is loaded by the route's own layout,
  * since the body text here is set in it rather than in Newsreader.
  */
@@ -68,6 +68,10 @@
   max-width: 54rem;
   margin: 0 auto;
 }
+.colWider {
+  max-width: 60rem;
+  margin: 0 auto;
+}
 
 /* ── type ── */
 .page h1,
@@ -87,6 +91,10 @@
 .page h2 {
   font-size: clamp(1.7rem, 3.6vw, 2.5rem);
   letter-spacing: -0.018em;
+}
+.page h3 {
+  font-size: 1.05rem;
+  letter-spacing: -0.005em;
 }
 .page p {
   margin: 0 0 1.15rem;
@@ -165,7 +173,7 @@
   margin-bottom: 1.6rem;
 }
 .hero .lede {
-  max-width: 34rem;
+  max-width: 35rem;
   margin: 0 auto;
 }
 .plateFrame {
@@ -199,10 +207,7 @@
 
 /* ── controls ── */
 .ctrl {
-  margin-bottom: 1.9rem;
-}
-.ctrlTight {
-  margin-bottom: 0.6rem;
+  margin-bottom: 1.7rem;
 }
 .ctrlTop {
   display: flex;
@@ -329,144 +334,201 @@
   color: var(--ink-soft);
 }
 
-/* ── the gauge: signature element ── */
-.gaugeBlock {
+/* ── three hazards ── */
+.hz {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  border: 1px solid var(--rule);
+  background: rgba(255, 255, 255, 0.24);
+}
+.hz > div {
+  padding: 1.6rem 1.3rem;
+}
+.hz > div + div {
+  border-left: 1px solid var(--rule);
+}
+.hz .sym {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  color: var(--oxide);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.hz h3 {
+  margin-bottom: 0.55rem;
+}
+.hz p {
+  font-size: 0.94rem;
+  line-height: 1.5;
+  margin: 0 0 0.8rem;
+}
+.hz .gov {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--rule);
+}
+.page .hzNote {
+  margin-top: 1.4rem;
+}
+
+/* ── the phase diagram: signature element ── */
+.phaseBlock {
   position: relative;
   z-index: 1;
   background: var(--ink);
   color: #cfd3c9;
   padding: 4rem 0 4.5rem;
-  margin: 0;
-  border-top: 0;
 }
-.gaugeBlock .eyebrow {
+.phaseBlock .eyebrow {
   color: #b0704f;
 }
-.gaugeBlock h2 {
+.phaseBlock h2 {
   color: #f0f2ea;
 }
-.gaugeBlock p {
+.phaseBlock p {
   color: #b7bdb2;
 }
-.gaugeBlock .ctrlLabel {
+.phaseBlock .ctrlLabel {
   color: #9aa298;
 }
-.gaugeBlock .ctrlVal {
+.phaseBlock .ctrlVal {
   color: #d08a63;
 }
-.gaugeBlock input[type='range']::-webkit-slider-runnable-track {
+.phaseBlock input[type='range']::-webkit-slider-runnable-track {
   background: rgba(255, 255, 255, 0.22);
 }
-.gaugeBlock input[type='range']::-moz-range-track {
+.phaseBlock input[type='range']::-moz-range-track {
   background: rgba(255, 255, 255, 0.22);
 }
-.gaugeBlock input[type='range']::-webkit-slider-thumb {
+.phaseBlock input[type='range']::-webkit-slider-thumb {
   background: #f0f2ea;
   border-color: var(--ink);
 }
-.gaugeBlock input[type='range']::-moz-range-thumb {
+.phaseBlock input[type='range']::-moz-range-thumb {
   background: #f0f2ea;
   border-color: var(--ink);
 }
-.gauge {
-  position: relative;
-  margin: 3.2rem 0 0;
-  padding-top: 3.4rem;
+.phaseWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 3rem;
+  align-items: start;
+  margin-top: 2.8rem;
 }
-.gaugeTrack {
-  position: relative;
-  height: 3px;
-  background: linear-gradient(90deg, #3e5c93 0%, #3e5c93 60%, #8e4030 68%, #8e4030 100%);
+.chart {
+  display: grid;
+  grid-template-columns: 3.6rem 1fr;
+  grid-template-rows: 1fr 2.4rem;
 }
-/* A tick spans from its label down to the track: top: -2.9rem is where the
- * label starts, 6.3rem later is the track itself (2.9rem back up plus the
- * 3.4rem of padding above it). The leader is a flex item taking whatever
- * height the label leaves, so a one-line and a two-line tick both land on the
- * track instead of stopping short at different heights. */
-.gaugeTick {
-  position: absolute;
-  top: -2.9rem;
-  height: 6.3rem;
-  width: 8rem;
-  transform: translateX(-50%);
-  text-align: center;
+.yax {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-right: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: #6e766d;
+  letter-spacing: 0.06em;
 }
-.gaugeTick::after {
-  content: '';
-  flex: 1;
-  width: 1px;
-  margin: 0.35rem auto 0;
-  background: rgba(255, 255, 255, 0.28);
+.canvasHolder {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
-.gaugeTick span {
+.canvasHolder canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.marker {
+  position: absolute;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  border: 2px solid #f0f2ea;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px rgba(22, 26, 23, 0.55);
+  pointer-events: none;
+  transition:
+    left 0.1s,
+    top 0.1s;
+}
+.xax {
+  grid-column: 2;
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: #6e766d;
+  letter-spacing: 0.06em;
+}
+.phaseBlock .axname {
   font-family: var(--mono);
   font-size: 0.6rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #8a9186;
-  line-height: 1.5;
-  display: block;
-}
-.gaugeTick.thresh span {
-  color: #d08a63;
-}
-.gaugeHandle {
-  position: absolute;
-  top: 50%;
-  width: 1.15rem;
-  height: 1.15rem;
-  border-radius: 50%;
-  background: #f0f2ea;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 6px rgba(240, 242, 234, 0.14);
-  transition:
-    left 0.12s ease-out,
-    background 0.12s;
-}
-.gaugeScale {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1.1rem;
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #6e766d;
-}
-.gaugeGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2.5rem;
-  margin-top: 3.4rem;
-  align-items: start;
+  margin-top: 0.4rem;
+  text-align: center;
 }
 .verdictNum {
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(3rem, 9vw, 5rem);
+  font-size: clamp(2.6rem, 8vw, 4.2rem);
   line-height: 0.9;
   letter-spacing: -0.035em;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.4rem;
   font-variant-numeric: tabular-nums;
 }
 .verdictLabel {
   font-family: var(--mono);
-  font-size: 0.66rem;
+  font-size: 0.64rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #8a9186;
 }
-.gaugeBlock .gaugeVerdict {
-  margin: 0;
-  font-size: 1.02rem;
+.gates {
+  margin-top: 1.8rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.gate {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+}
+.gate span:first-child {
+  color: #8a9186;
+}
+.gate .pass {
+  color: #8fb0e8;
+}
+.gate .fail {
+  color: #e0a183;
+}
+.gate .neutral {
+  color: #b7bdb2;
+}
+.phaseBlock .phaseVerdict {
+  font-size: 0.98rem;
   line-height: 1.5;
   color: #c5cabf;
+  margin: 1.5rem 0 0;
 }
-.gaugeBlock .gaugeNote {
-  margin: 1.1rem 0 0;
+.phaseBlock .phaseNote {
+  margin-top: 2rem;
   color: #7a8179;
 }
 
@@ -530,14 +592,14 @@
   overflow-x: auto;
 }
 .line {
-  font-size: clamp(0.9rem, 2.3vw, 1.22rem);
+  font-size: clamp(0.86rem, 2.2vw, 1.15rem);
   white-space: nowrap;
 }
 .line + .line {
-  margin-top: 1.1rem;
+  margin-top: 1rem;
 }
 .sub {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--ink-faint);
   letter-spacing: 0.06em;
 }
@@ -562,46 +624,6 @@
   margin-top: 2.4rem;
 }
 
-/* ── matrix ── */
-.mtxScroll {
-  overflow-x: auto;
-}
-.mtx {
-  border-collapse: collapse;
-  width: 100%;
-  min-width: 32rem;
-  font-family: var(--mono);
-  font-size: 0.82rem;
-}
-.mtx th {
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.63rem;
-  color: var(--ink-faint);
-  padding: 0.6rem 0.5rem;
-  text-align: center;
-  border-bottom: 1px solid var(--rule);
-}
-.mtx th.rowhead,
-.mtx td.rowhead {
-  text-align: left;
-  white-space: nowrap;
-  padding-right: 1.1rem;
-  color: var(--ink);
-}
-.mtx td {
-  padding: 0.7rem 0.5rem;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  color: #fff;
-}
-.mtxCaption {
-  caption-side: bottom;
-  text-align: left;
-  padding-top: 0.9rem;
-}
-
 /* ── the fork ── */
 .fork {
   display: grid;
@@ -617,7 +639,6 @@
   border-left: 1px solid var(--rule);
 }
 .fork h3 {
-  font-size: 1.02rem;
   margin-bottom: 0.5rem;
 }
 .fork .k {
@@ -733,16 +754,15 @@
   font-size: 0.66rem;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 900px) {
   .engineGrid,
-  .gaugeGrid,
+  .phaseWrap,
   .ledger,
-  .fork {
+  .fork,
+  .hz {
     grid-template-columns: 1fr;
   }
-  .gaugeGrid {
-    gap: 1.8rem;
-  }
+  .hz > div + div,
   .fork > div + div {
     border-left: 0;
     border-top: 1px solid var(--rule);
@@ -758,6 +778,9 @@
   }
   .hero {
     padding: 3rem 0 3rem;
+  }
+  .phaseWrap {
+    gap: 2.2rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {
