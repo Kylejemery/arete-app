@@ -23,6 +23,9 @@ const GOLD_L = '#e3c77a';
 const IVORY = '#f4ead5';
 const TEXT = '#e8e4d6';
 const MUTED = '#8a8b8e';
+// The corpus-concludes hue — a cool cyan, distinct from the green the corpus
+// uses for freshly-ingested synthesis: a conclusion is arrived-at, not found.
+const CONV_COLOR = '#5ab0c9';
 
 type Room = 'atrium' | 'reading' | 'symposium' | 'observatory';
 
@@ -108,6 +111,9 @@ const DREAM_TYPE_LABEL: Record<string, string> = {
   aphorism: 'Aphorism', thought_experiment: 'Thought experiment', proposition: 'Proposition', meditation: 'Meditation',
 };
 type WorldResponse = { id: string; dominantSignal: string; tension: string | null; authors: string[]; week: string };
+// The Convergence Agent's conclusions — "The Corpus Concludes". A conclusion the
+// corpus assembled from far-apart passages, never stated in any one of them.
+type OpenConvergence = { id: string; title: string; conclusion: string; entailment: string | null; novelty: string | null; authors: string[]; traditions: string[]; spread: number | null; pursuit: string | null; breakpoint: string | null; starred: boolean };
 
 type Master = {
   id: string;
@@ -1595,6 +1601,13 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
   const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
   const [tensions, setTensions] = useState<OpenTension[]>([]);
   const [dreams, setDreams] = useState<OpenDream[]>([]);
+  const [convergences, setConvergences] = useState<OpenConvergence[]>([]);
+  // The redesigned pane scans as a filterable feed; the long reading lives in a
+  // modal. `feedFilter` narrows the unified feed to one kind; `activeConv` opens
+  // the convergence detail overlay (conclusion, entailment, novelty, pursuit,
+  // breakpoint) so a verbose convergence never has to live inline.
+  const [feedFilter, setFeedFilter] = useState<'all' | 'inquiry' | 'tension' | 'conclude' | 'imagines' | 'world'>('all');
+  const [activeConv, setActiveConv] = useState<OpenConvergence | null>(null);
   const [dreamInfoOpen, setDreamInfoOpen] = useState(false);
   // The dream ledger: every approved+visible dream, full text, fetched once
   // on first open. `dreamView` drives the overlay — a single dream (tapped
@@ -1620,6 +1633,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [dreamView]);
+  useEffect(() => {
+    if (!activeConv) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setActiveConv(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [activeConv]);
   const [world, setWorld] = useState<WorldResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1719,6 +1738,17 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
         if (!cancelled && res.ok && Array.isArray(json.dreams)) setDreams(json.dreams);
       } catch {
         /* the corpus keeps its dreams to itself */
+      }
+    })();
+    // The Convergence Agent's approved + starred conclusions — "The Corpus
+    // Concludes"; a failed fetch just leaves the section empty.
+    (async () => {
+      try {
+        const res = await fetch('/api/observatory/convergences');
+        const json = await res.json();
+        if (!cancelled && res.ok && Array.isArray(json.convergences)) setConvergences(json.convergences);
+      } catch {
+        /* no convergences surfaced */
       }
     })();
     // The World Agent's response to the outside world, when Kyle has approved it
@@ -1912,123 +1942,111 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
       <aside className={`lib-obs-dossier${dossierOpen ? ' open' : ''}`} style={{ width: 354, flexShrink: 0, borderLeft: '1px solid rgba(201,168,76,0.16)', background: 'linear-gradient(180deg,rgba(12,20,40,0.72),rgba(8,14,30,0.78))', overflowY: 'auto' }}>
         <button onClick={() => setDossierOpen(false)} className="lib-mobile-only" aria-label="Close" style={{ cursor: 'pointer', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 0 4px', fontFamily: MONO, fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED }}>↓ Close</button>
         {!active ? (
-          <div className="lib-fade" style={{ padding: '26px 24px' }}>
-            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, marginBottom: 4 }}>Lately, the corpus has been thinking about</div>
-            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED, margin: '0 0 20px' }}>Updated as agents ingest, synthesize, and read the room.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
-              {data?.recent.mostAsked.map((t, i) => <RecentCard key={`m${i}`} tag="Most-asked this week" dot={GOLD} text={cap(t)} />)}
-              {data?.recent.tensions.map((t, i) => <RecentCard key={`t${i}`} tag="Open tension · awaiting review" dot="#d97a6a" text={t.title} />)}
-              {data?.recent.newIngests.map((t, i) => <RecentCard key={`n${i}`} tag="New synthesis ingested" dot="#7a9a6a" text={t.title} />)}
-              {data?.recent.gaps.map((t, i) => <RecentCard key={`g${i}`} tag="Coverage the corpus wants" dot="#6a8ad9" text={t} />)}
-            </div>
+          <div className="lib-fade" style={{ padding: '20px 18px 24px' }}>
+            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, marginBottom: 4 }}>What the corpus is working through</div>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, color: MUTED, margin: '0 0 14px' }}>Filter by kind, then open one to read it in full.</p>
 
-            {inquiries.length > 0 && (
-              <div style={{ marginTop: 26 }}>
-                {inquiries.map(inq => (
-                  <div key={inq.id} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, boxShadow: '0 0 8px 1px rgba(201,168,76,0.7)' }} />
-                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>Open inquiry</span>
-                    </div>
-                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: IVORY, margin: '0 0 7px' }}>{inq.question}</p>
-                    <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED }}>
-                      Pursued across {inq.authorCount} author{inq.authorCount === 1 ? '' : 's'}
-                      {inq.confidence ? <> · <span style={{ color: GOLD }}>{inq.confidence}</span></> : null}
-                    </div>
+            {(() => {
+              type Feed = { kind: 'inquiry' | 'tension' | 'conclude' | 'imagines' | 'world'; key: string; dot: string; tag: string; line: string; meta: string; onClick?: () => void; cta?: string; pills?: { text: string; hot?: boolean }[] };
+              const items: Feed[] = [];
+              // Convergences lead — new, and the highest-value thing in the pane.
+              for (const c of convergences) items.push({
+                kind: 'conclude', key: 'c' + c.id, dot: CONV_COLOR,
+                tag: c.starred ? 'The corpus concludes · starred' : 'The corpus concludes',
+                line: c.title, meta: `${c.authors.length} voices · spread ${typeof c.spread === 'number' ? c.spread.toFixed(2) : '—'}`,
+                onClick: () => setActiveConv(c), cta: 'Read the reasoning →',
+                pills: [...(c.entailment ? [{ text: c.entailment, hot: true }] : []), ...(c.novelty ? [{ text: c.novelty.replace('_', ' ') }] : [])],
+              });
+              for (const q of inquiries) items.push({
+                kind: 'inquiry', key: 'i' + q.id, dot: GOLD, tag: 'Open inquiry', line: q.question,
+                meta: `Pursued across ${q.authorCount} author${q.authorCount === 1 ? '' : 's'}${q.confidence ? ` · ${q.confidence}` : ''}`,
+              });
+              for (const t of tensions) items.push({
+                kind: 'tension', key: 't' + t.id, dot: '#d97a6a', tag: 'Open tension',
+                line: t.title, meta: [t.firstSentence, (t.authors || []).join(' · ')].filter(Boolean).join(' — '),
+              });
+              for (const d of dreams) items.push({
+                kind: 'imagines', key: 'd' + d.id, dot: '#9a7ad9', tag: 'The corpus imagines',
+                line: d.content || d.title || d.firstLine || 'A thought',
+                meta: d.seedAuthors.length ? `Dreamed from: ${d.seedAuthors.join(' · ')}` : '',
+                onClick: () => openDreams({ mode: 'one', id: d.id }), cta: 'Read this thought →',
+              });
+              if (world) items.push({
+                kind: 'world', key: 'w', dot: '#d99a6a', tag: 'The corpus is responding to',
+                line: world.dominantSignal, meta: (world.authors || []).slice(0, 3).join(' · '),
+              });
+
+              if (items.length === 0) {
+                return <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: MUTED, margin: 0 }}>The sky is quiet. Nothing surfaced for review yet.</p>;
+              }
+
+              const KIND_LABEL: Record<string, string> = { inquiry: 'Inquiries', tension: 'Tensions', conclude: 'Concludes', imagines: 'Imagines', world: 'World' };
+              const KIND_DOT: Record<string, string> = { inquiry: GOLD, tension: '#d97a6a', conclude: CONV_COLOR, imagines: '#9a7ad9', world: '#d99a6a' };
+              const order = ['conclude', 'inquiry', 'tension', 'imagines', 'world'];
+              const present = order.filter(k => items.some(i => i.kind === k));
+              const shown = items.filter(i => feedFilter === 'all' || i.kind === feedFilter);
+              const auroraShown = auroraOn && (feedFilter === 'all' || feedFilter === 'imagines') && dreams.length > 0;
+
+              return (
+                <>
+                  {/* filter chips — only kinds that have something to show */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                    {(['all', ...present]).map(k => {
+                      const on = feedFilter === k;
+                      const dot = k === 'all' ? GOLD : KIND_DOT[k];
+                      return (
+                        <button key={k} onClick={() => setFeedFilter(k as typeof feedFilter)} aria-pressed={on}
+                          style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: on ? IVORY : MUTED, background: on ? 'rgba(201,168,76,0.09)' : 'rgba(255,255,255,0.02)', border: `1px solid ${on ? 'rgba(201,168,76,0.45)' : 'rgba(201,168,76,0.1)'}`, borderRadius: 999, padding: '5px 10px', transition: 'all .16s ease' }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dot, boxShadow: on ? `0 0 7px 1px ${dot}` : 'none' }} />
+                          {k === 'all' ? 'All' : KIND_LABEL[k]}
+                        </button>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
-            )}
 
-            {tensions.length > 0 && (
-              <div style={{ marginTop: 26 }}>
-                {tensions.map(t => (
-                  <div key={t.id} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97a6a', boxShadow: '0 0 8px 1px rgba(217,122,106,0.7)' }} />
-                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>Open tension</span>
-                    </div>
-                    <p style={{ fontFamily: SERIF, fontSize: 16.5, lineHeight: 1.4, color: IVORY, margin: '0 0 6px' }}>{t.title}</p>
-                    {t.firstSentence && (
-                      <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, lineHeight: 1.5, color: MUTED, margin: '0 0 7px' }}>{t.firstSentence}</p>
-                    )}
-                    {t.authors.length > 0 && (
-                      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED }}>
-                        {t.authors.join(' · ')}
-                      </div>
-                    )}
+                  {/* unified compact feed — the pane scans, the modal reads */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, position: 'relative' }}>
+                    {auroraShown && <div className="lib-aurora" style={{ position: 'absolute', inset: -10, borderRadius: 14, pointerEvents: 'none' }} />}
+                    {shown.map(it => {
+                      const Tag = (it.onClick ? 'button' : 'div') as 'button';
+                      return (
+                        <Tag key={it.key} onClick={it.onClick} style={{ textAlign: 'left', width: '100%', font: 'inherit', color: 'inherit', cursor: it.onClick ? 'pointer' : 'default', background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(201,168,76,0.1)', borderLeft: `3px solid ${it.dot}`, borderRadius: 10, padding: '11px 13px' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: MONO, fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: it.dot }} />{it.tag}
+                          </span>
+                          <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.32, color: IVORY, margin: '6px 0 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{it.line}</p>
+                          {it.pills && it.pills.length > 0 && (
+                            <span style={{ display: 'flex', gap: 5, marginTop: 7, flexWrap: 'wrap' }}>
+                              {it.pills.map((p, pi) => (
+                                <span key={pi} style={{ fontFamily: MONO, fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '2px 7px', borderRadius: 999, border: `1px solid ${p.hot ? 'rgba(90,176,201,0.4)' : 'rgba(201,168,76,0.12)'}`, color: p.hot ? CONV_COLOR : MUTED }}>{p.text}</span>
+                              ))}
+                            </span>
+                          )}
+                          {it.meta && <span style={{ display: 'block', fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.08em', textTransform: 'uppercase', color: MUTED, marginTop: 6 }}>{it.meta}</span>}
+                          {it.cta && <span style={{ display: 'block', fontFamily: MONO, fontSize: 8, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, marginTop: 7 }}>{it.cta}</span>}
+                        </Tag>
+                      );
+                    })}
+                    {shown.length === 0 && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED, margin: '4px 0' }}>Nothing of this kind right now.</p>}
                   </div>
-                ))}
-              </div>
-            )}
 
-            {dreams.length > 0 && (
-              <div style={{ marginTop: 26, position: 'relative' }}>
-                {/* aurora: a single brief wash, only when a dream was starred this week */}
-                {auroraOn && <div className="lib-aurora" style={{ position: 'absolute', inset: -10, borderRadius: 14, pointerEvents: 'none' }} />}
-                {dreams.map((d, di) => (
-                  <div key={d.id} style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 9 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#9a7ad9', boxShadow: '0 0 8px 1px rgba(154,122,217,0.7)' }} />
-                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>The corpus imagines</span>
-                      {di === 0 && (
-                        <button
-                          onClick={() => setDreamInfoOpen(o => !o)}
-                          aria-label="What is this?"
-                          title="Corpus conjecture — generated by the system from its sources, reviewed by a human, and clearly not the words of any historical thinker."
-                          style={{ cursor: 'help', background: 'none', border: '1px solid rgba(201,168,76,0.35)', borderRadius: '50%', width: 15, height: 15, lineHeight: 1, padding: 0, fontFamily: MONO, fontSize: 9, color: MUTED }}
-                        >i</button>
-                      )}
-                    </div>
-                    {di === 0 && dreamInfoOpen && (
-                      <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.5, color: MUTED, margin: '0 0 9px', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, padding: '8px 10px' }}>
-                        Corpus conjecture — generated by the system from its sources, reviewed by a human, and clearly not the words of any historical thinker.
-                      </p>
-                    )}
-                    <button onClick={() => openDreams({ mode: 'one', id: d.id })} className="lib-related" style={{ display: 'block', width: '100%', textAlign: 'left', background: 'rgba(154,122,217,0.05)', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 11, padding: '12px 14px', cursor: 'pointer' }}>
-                      {d.content ? (
-                        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.55, color: IVORY, margin: '0 0 8px', whiteSpace: 'pre-wrap' }}>{d.content}</p>
-                      ) : (
-                        <>
-                          {d.title && <p style={{ fontFamily: SERIF, fontSize: 16.5, lineHeight: 1.4, color: IVORY, margin: '0 0 6px' }}>{d.title}</p>}
-                          {d.firstLine && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, lineHeight: 1.5, color: MUTED, margin: '0 0 8px' }}>{d.firstLine}</p>}
-                        </>
-                      )}
-                      <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Read this thought →</span>
-                    </button>
-                    {d.seedAuthors.length > 0 && (
-                      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginTop: 7 }}>
-                        Dreamed from: {d.seedAuthors.join(' · ')}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <button onClick={() => openDreams({ mode: 'all' })} className="lib-discuss" style={{ width: '100%', background: 'rgba(154,122,217,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 11, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Open the dream ledger →</button>
-              </div>
-            )}
+                  {/* the dream ledger stays one tap away when dreams are in view */}
+                  {dreams.length > 0 && (feedFilter === 'all' || feedFilter === 'imagines') && (
+                    <button onClick={() => openDreams({ mode: 'all' })} className="lib-discuss" style={{ width: '100%', marginTop: 12, background: 'rgba(154,122,217,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 11, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Open the dream ledger →</button>
+                  )}
 
-            {world && (
-              <div style={{ marginTop: 26, borderTop: '1px solid rgba(201,168,76,0.16)', paddingTop: 22 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97a6a', boxShadow: '0 0 8px 1px rgba(217,122,106,0.7)' }} />
-                  <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>The corpus is responding to</span>
-                </div>
-                <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.5, color: IVORY, margin: '0 0 10px' }}>{world.dominantSignal}</p>
-                {world.tension && (
-                  <p style={{ fontFamily: SERIF, fontSize: 14.5, lineHeight: 1.55, color: MUTED, margin: '0 0 12px' }}>{world.tension}</p>
-                )}
-                {world.authors.length > 0 && (
-                  <>
-                    <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED, marginBottom: 8 }}>This week&rsquo;s relevant voices</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {world.authors.map(a => (
-                        <span key={a} style={{ fontFamily: SERIF, fontSize: 13.5, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '4px 11px' }}>{a}</span>
-                      ))}
+                  {/* pulse: lightweight signals folded in, shown only under All */}
+                  {feedFilter === 'all' && data?.recent && (data.recent.mostAsked.length + data.recent.newIngests.length + data.recent.gaps.length) > 0 && (
+                    <div style={{ marginTop: 18, borderTop: '1px solid rgba(201,168,76,0.1)', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                      <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: MUTED }}>Also stirring</div>
+                      {data.recent.mostAsked.slice(0, 2).map((t, i) => <RecentCard key={`pm${i}`} tag="Most-asked this week" dot={GOLD} text={cap(t)} />)}
+                      {data.recent.newIngests.slice(0, 2).map((t, i) => <RecentCard key={`pn${i}`} tag="New synthesis ingested" dot="#7a9a6a" text={t.title} />)}
+                      {data.recent.gaps.slice(0, 2).map((t, i) => <RecentCard key={`pg${i}`} tag="Coverage the corpus wants" dot="#6a8ad9" text={t} />)}
                     </div>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              );
+            })()}
           </div>
         ) : (
           <div className="lib-fade" style={{ padding: '26px 24px' }}>
@@ -2152,6 +2170,64 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
             ))}
             {ledger && dreamView.mode === 'one' && ledger.length > 1 && (
               <button onClick={() => setDreamView({ mode: 'all' })} className="lib-discuss" style={{ width: '100%', background: 'rgba(154,122,217,0.08)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Open the whole ledger →</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* convergence detail: the reasoning the pane only teased — conclusion,
+          entailment, novelty, the pursuit, and the breakpoint. The framing line
+          is load-bearing: this is a conclusion the corpus ASSEMBLED from
+          far-apart passages, reviewed by a human, never a passage it holds. */}
+      {activeConv && (
+        <div onClick={() => setActiveConv(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(4,8,18,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} className="lib-fade" style={{ maxWidth: 620, width: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'linear-gradient(170deg,rgba(18,27,54,0.98),rgba(10,16,34,0.98))', border: '1px solid rgba(90,176,201,0.4)', borderRadius: 16, padding: '26px 28px', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: CONV_COLOR, boxShadow: `0 0 8px 1px ${CONV_COLOR}` }} />
+                <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: CONV_COLOR }}>
+                  {activeConv.starred ? 'The corpus concludes · starred' : 'The corpus concludes'}
+                </span>
+              </div>
+              <button onClick={() => setActiveConv(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+            </div>
+
+            {activeConv.title && <h3 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 25, lineHeight: 1.12, color: IVORY, margin: '0 0 8px' }}>{activeConv.title}</h3>}
+            <p style={{ fontFamily: SERIF, fontSize: 18, lineHeight: 1.55, color: IVORY, margin: '0 0 16px' }}>{activeConv.conclusion}</p>
+
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.5, color: MUTED, margin: '0 0 16px', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, padding: '9px 11px' }}>
+              A conclusion the corpus assembled from passages that sit far apart in it, reviewed by a human before appearing here. It is not a source text, and not the claim of any single thinker.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+              {activeConv.entailment && <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(90,176,201,0.4)', color: CONV_COLOR }}>entailment · {activeConv.entailment}</span>}
+              {activeConv.novelty && <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(201,168,76,0.2)', color: MUTED }}>novelty · {activeConv.novelty.replace('_', ' ')}</span>}
+              <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(201,168,76,0.2)', color: MUTED }}>{activeConv.authors.length} voices{activeConv.traditions.length ? ` · ${activeConv.traditions.length} traditions` : ''}{typeof activeConv.spread === 'number' ? ` · spread ${activeConv.spread.toFixed(2)}` : ''}</span>
+            </div>
+
+            {activeConv.breakpoint && (
+              <>
+                <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, margin: '0 0 6px' }}>The breakpoint · remove this and it collapses</div>
+                <div style={{ background: 'rgba(90,176,201,0.06)', border: '1px solid rgba(90,176,201,0.22)', borderRadius: 10, padding: '12px 14px', marginBottom: 18, fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, lineHeight: 1.5, color: TEXT }}>{activeConv.breakpoint}</div>
+              </>
+            )}
+
+            {activeConv.pursuit && (
+              <>
+                <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, margin: '0 0 6px' }}>The pursuit</div>
+                <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.62, color: TEXT, margin: '0 0 18px', whiteSpace: 'pre-wrap' }}>{activeConv.pursuit}</p>
+              </>
+            )}
+
+            {activeConv.authors.length > 0 && (
+              <>
+                <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, margin: '0 0 8px' }}>Assembled from</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {activeConv.authors.map(a => (
+                    <span key={a} style={{ fontFamily: SERIF, fontSize: 13.5, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '3px 11px' }}>{a}</span>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
