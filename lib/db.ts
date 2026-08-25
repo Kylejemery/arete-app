@@ -762,15 +762,30 @@ export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevel
 
 export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
   free: 10,
-  arete: 50,
+  premium: 50,
   pro: null,
 };
 
 export const MAX_TOKENS_BY_TIER: Record<SubscriptionTier, number> = {
   free: 400,
-  arete: 600,
+  premium: 600,
   pro: 1000,
 };
+
+/**
+ * Collapse a raw profiles.tier value into the canonical vocabulary.
+ * 'arete' and 'scholar' are legacy spellings of premium that still exist in
+ * older rows; anything unrecognized is treated as free so an unknown value
+ * can never accidentally unlock a paid tier.
+ */
+export function normalizeTier(raw: unknown, isPremium?: boolean | null): SubscriptionTier {
+  const value = typeof raw === 'string' ? raw.toLowerCase() : '';
+  if (value === 'pro') return 'pro';
+  if (value === 'premium' || value === 'arete' || value === 'scholar') return 'premium';
+  // is_premium is the second half of the same OR logic web's getIsPremium()
+  // uses — a row flagged premium without a tier still unlocks.
+  return isPremium ? 'premium' : 'free';
+}
 
 export async function getSubscriptionTier(): Promise<SubscriptionTier> {
   const userId = await getUserId();
@@ -778,11 +793,11 @@ export async function getSubscriptionTier(): Promise<SubscriptionTier> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('subscription_tier')
+      .select('tier, is_premium')
       .eq('id', userId)
       .single();
     if (error) return 'free';
-    return (data?.subscription_tier as SubscriptionTier) ?? 'free';
+    return normalizeTier(data?.tier, data?.is_premium);
   } catch {
     return 'free';
   }
@@ -801,13 +816,13 @@ export async function checkAndIncrementMessageCount(): Promise<MessageLimitStatu
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('subscription_tier, daily_message_count, message_count_date')
+    .select('tier, is_premium, daily_message_count, message_count_date')
     .eq('id', userId)
     .single();
 
   if (error || !data) return { allowed: false, tier: 'free', used: 0, limit: 10 };
 
-  const tier = (data.subscription_tier as SubscriptionTier) ?? 'free';
+  const tier = normalizeTier(data.tier, data.is_premium);
   const limit = MESSAGE_LIMITS[tier];
 
   // Pro tier: unlimited — no counting needed
@@ -846,11 +861,13 @@ export async function getIsPremium(): Promise<boolean> {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('is_premium')
+      .select('tier, is_premium')
       .eq('id', userId)
       .single();
     if (error) return false;
-    return data?.is_premium ?? false;
+    // Same OR logic as web's getIsPremium() — reading is_premium alone
+    // missed rows carrying a paid tier without the flag set.
+    return normalizeTier(data?.tier, data?.is_premium) !== 'free';
   } catch {
     return false;
   }

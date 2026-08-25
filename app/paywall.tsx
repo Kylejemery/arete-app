@@ -49,7 +49,7 @@ interface PlanDisplay {
 const PRODUCT_IDS = ['arete_monthly', 'arete_annual', 'arete_pro'];
 
 function tierForProductId(productId: string): Tier {
-  return productId === 'arete_pro' ? 'pro' : 'arete';
+  return productId === 'arete_pro' ? 'pro' : 'premium';
 }
 
 const PLAN_DISPLAY: PlanDisplay[] = [

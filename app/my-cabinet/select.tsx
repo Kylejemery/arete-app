@@ -35,7 +35,9 @@ export default function CabinetSelectScreen() {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [tier, setTier] = useState<SubscriptionTier>('arete');
+  // Fail closed: assume free until the real tier resolves, so locked
+  // counselors never flash as selectable during the initial fetch.
+  const [tier, setTier] = useState<SubscriptionTier>('free');
   const [showLockedUpgrade, setShowLockedUpgrade] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

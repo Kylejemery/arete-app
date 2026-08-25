@@ -146,7 +146,10 @@ export interface Counselor {
   sort_order?: number;
 }
 
-export type SubscriptionTier = 'free' | 'arete' | 'pro';
+// Canonical tier vocabulary, shared with web and written by the Stripe
+// webhook. 'arete' and 'scholar' are legacy spellings of 'premium' — read
+// paths normalize them via normalizeTier(); nothing should write them.
+export type SubscriptionTier = 'free' | 'premium' | 'pro';
 
 // The living philosophical portrait, rebuilt weekly by the Longitudinal User
 // Model Agent (server/longitudinal-user-model.js). Every field is nullable —

@@ -6,7 +6,7 @@ import type { SubscriptionTier } from '@/lib/types';
 // Paid tiers are gated server-side and show no counter.
 const MAX_MESSAGES_BY_TIER: Record<SubscriptionTier, number | null> = {
   free: 10,
-  arete: null,
+  premium: null,
   pro: null,
 };
 
