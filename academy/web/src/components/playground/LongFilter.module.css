@@ -378,20 +378,26 @@
   height: 3px;
   background: linear-gradient(90deg, #3e5c93 0%, #3e5c93 60%, #8e4030 68%, #8e4030 100%);
 }
+/* A tick spans from its label down to the track: top: -2.9rem is where the
+ * label starts, 6.3rem later is the track itself (2.9rem back up plus the
+ * 3.4rem of padding above it). The leader is a flex item taking whatever
+ * height the label leaves, so a one-line and a two-line tick both land on the
+ * track instead of stopping short at different heights. */
 .gaugeTick {
   position: absolute;
   top: -2.9rem;
+  height: 6.3rem;
+  width: 8rem;
   transform: translateX(-50%);
   text-align: center;
-  width: 8rem;
+  display: flex;
+  flex-direction: column;
 }
 .gaugeTick::after {
   content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -0.55rem;
+  flex: 1;
   width: 1px;
-  height: 2.4rem;
+  margin: 0.35rem auto 0;
   background: rgba(255, 255, 255, 0.28);
 }
 .gaugeTick span {
