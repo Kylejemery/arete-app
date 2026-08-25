@@ -42,6 +42,7 @@ const AGENT_SCHEDULE = [
   { agent: 'tension',      dow: 1, hour: 5,  minute: 30, caption: 'the corpus is holding contradictions open' },
   { agent: 'synthesis',    dow: 1, hour: 6,  minute: 0,  caption: 'the corpus is writing across its sources' },
   { agent: 'inquiry',      dow: 1, hour: 6,  minute: 30, caption: 'the corpus is asking what it cannot answer' },
+  { agent: 'convergence',  dow: 1, hour: 6,  minute: 45, caption: 'the corpus is assembling what it never said' },
   { agent: 'dispatch',     daily: true, hour: 10, minute: 0, caption: 'the corpus is composing the dispatch' },
 ];
 

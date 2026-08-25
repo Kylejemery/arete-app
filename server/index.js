@@ -4607,6 +4607,48 @@ app.get('/api/observatory/inquiries', async (req, res) => {
   }
 });
 
+// GET /api/observatory/convergences — the Convergence Agent's conclusions for
+// the Observatory, under "The Corpus Concludes". Unlike inquiries/tensions,
+// convergences have no observatory_visible flag: the review status IS the gate,
+// so approved AND starred both surface (starred first, then most recent). Each
+// is a conclusion the corpus ASSEMBLED, not a passage it holds — the frontend
+// discloses that. Public (no auth) — same posture as the other endpoints.
+app.get('/api/observatory/convergences', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('convergences')
+      .select('id, title, conclusion_text, entailment_strength, novelty, source_authors, source_traditions, mean_pairwise_distance, pursuit_text, breakpoint_text, created_at, status')
+      .in('status', ['approved', 'starred'])
+      .order('created_at', { ascending: false })
+      .limit(6);
+    if (error) throw error;
+
+    // Starred convergences lead (Kyle marked them dispatch-worthy), then the
+    // rest by recency.
+    const convergences = (data || [])
+      .map(r => ({
+        id: r.id,
+        title: r.title,
+        conclusion: r.conclusion_text,
+        entailment: r.entailment_strength,
+        novelty: r.novelty,
+        authors: Array.isArray(r.source_authors) ? r.source_authors : [],
+        traditions: Array.isArray(r.source_traditions) ? r.source_traditions : [],
+        spread: r.mean_pairwise_distance,
+        pursuit: r.pursuit_text,
+        breakpoint: r.breakpoint_text,
+        starred: r.status === 'starred',
+        created_at: r.created_at,
+      }))
+      .sort((a, b) => (b.starred ? 1 : 0) - (a.starred ? 1 : 0));
+
+    return res.json({ convergences });
+  } catch (err) {
+    console.error('[/api/observatory/convergences] error:', err.message);
+    return res.status(500).json({ error: 'The convergences could not be read' });
+  }
+});
+
 // GET /api/observatory/tensions — the Tension Agent's approved, publicly
 // surfaced philosophical contradictions for the Observatory sidebar. Only
 // tensions Kyle has approved AND marked observatory_visible are ever returned;
