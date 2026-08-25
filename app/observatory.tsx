@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Linking,
+    Modal,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -14,6 +15,10 @@ import {
 import { API_BASE_URL } from '../services/claudeService';
 
 const WEB_OBSERVATORY_URL = 'https://academy.pursuearete.com/library';
+
+// The corpus-concludes hue — a cool cyan, distinct from the greens/golds of the
+// other kinds: a conclusion is arrived-at, not found.
+const CONV = '#5ab0c9';
 
 interface WorldObservation {
     dominantSignal: string;
@@ -41,12 +46,45 @@ interface Dream {
     firstLine: string | null;
     seedAuthors: string[];
 }
+interface Convergence {
+    id: string;
+    title: string;
+    conclusion: string;
+    entailment: string | null;
+    novelty: string | null;
+    authors: string[];
+    traditions: string[];
+    spread: number | null;
+    pursuit: string | null;
+    breakpoint: string | null;
+    starred: boolean;
+}
+
+type Kind = 'conclude' | 'inquiry' | 'tension' | 'imagines' | 'world';
+type Filter = 'all' | Kind;
+
+const KIND_LABEL: Record<Kind, string> = {
+    conclude: 'Concludes', inquiry: 'Inquiries', tension: 'Tensions', imagines: 'Imagines', world: 'World',
+};
+const KIND_DOT: Record<Kind, string> = {
+    conclude: CONV, inquiry: '#c9a84c', tension: '#d97a6a', imagines: '#9a7ad9', world: '#d99a6a',
+};
+
+interface FeedItem {
+    kind: Kind;
+    key: string;
+    tag: string;
+    line: string;
+    meta: string;
+    conv?: Convergence;
+}
 
 /**
  * The Observatory, simplified for the phone: the substance of the web
- * Observatory (world observation, open tensions, open inquiries, dreams) as a
- * stack of cards from the four public /api/observatory/* endpoints — without
- * the live star map, which stays web-only. Links out to the full experience.
+ * Observatory (open questions, tensions, convergences, dreams, world) as a
+ * FILTERABLE FEED of compact cards from the public /api/observatory/* endpoints,
+ * with the verbose convergence reasoning in a modal. The live star map stays
+ * web-only; this links out to the full experience.
  */
 export default function ObservatoryScreen() {
     const router = useRouter();
@@ -54,7 +92,10 @@ export default function ObservatoryScreen() {
     const [tensions, setTensions] = useState<Tension[]>([]);
     const [inquiries, setInquiries] = useState<Inquiry[]>([]);
     const [dreams, setDreams] = useState<Dream[]>([]);
+    const [convergences, setConvergences] = useState<Convergence[]>([]);
     const [loading, setLoading] = useState(true);
+    const [filter, setFilter] = useState<Filter>('all');
+    const [activeConv, setActiveConv] = useState<Convergence | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -66,21 +107,56 @@ export default function ObservatoryScreen() {
                     return null;
                 }
             };
-            const [w, t, i, d] = await Promise.all([
+            const [w, t, i, d, c] = await Promise.all([
                 get('/api/observatory/world'),
                 get('/api/observatory/tensions'),
                 get('/api/observatory/inquiries'),
                 get('/api/observatory/dreams'),
+                get('/api/observatory/convergences'),
             ]);
             setWorld(w?.world || null);
             setTensions(Array.isArray(t?.tensions) ? t.tensions : []);
             setInquiries(Array.isArray(i?.inquiries) ? i.inquiries : []);
             setDreams(Array.isArray(d?.dreams) ? d.dreams : []);
+            setConvergences(Array.isArray(c?.convergences) ? c.convergences : []);
             setLoading(false);
         })();
     }, []);
 
-    const empty = !world && tensions.length === 0 && inquiries.length === 0 && dreams.length === 0;
+    // One unified feed, convergences first (new and highest-value), then the
+    // open questions, tensions, dreams, and the world response.
+    const items = useMemo<FeedItem[]>(() => {
+        const out: FeedItem[] = [];
+        for (const c of convergences) out.push({
+            kind: 'conclude', key: 'c' + c.id, conv: c,
+            tag: c.starred ? 'The corpus concludes · starred' : 'The corpus concludes',
+            line: c.title,
+            meta: `${c.authors.length} voices · spread ${typeof c.spread === 'number' ? c.spread.toFixed(2) : 'n/a'}`,
+        });
+        for (const q of inquiries) out.push({
+            kind: 'inquiry', key: 'i' + q.id, tag: 'Open inquiry', line: q.question,
+            meta: `Pursued across ${q.authorCount} ${q.authorCount === 1 ? 'author' : 'authors'}${q.confidence ? `, ${q.confidence}` : ''}`,
+        });
+        for (const t of tensions) out.push({
+            kind: 'tension', key: 't' + t.id, tag: 'Open tension', line: t.title,
+            meta: [t.firstSentence, (t.authors || []).join(', ')].filter(Boolean).join(' — '),
+        });
+        for (const d of dreams) out.push({
+            kind: 'imagines', key: 'd' + d.id, tag: 'The corpus imagines',
+            line: d.content || d.title || d.firstLine || 'A thought',
+            meta: d.seedAuthors.length ? `Dreamed from ${d.seedAuthors.join(', ')}` : '',
+        });
+        if (world) out.push({
+            kind: 'world', key: 'w', tag: 'The corpus is responding to', line: world.dominantSignal,
+            meta: (world.authors || []).slice(0, 3).join(', '),
+        });
+        return out;
+    }, [convergences, inquiries, tensions, dreams, world]);
+
+    const order: Kind[] = ['conclude', 'inquiry', 'tension', 'imagines', 'world'];
+    const present = order.filter(k => items.some(i => i.kind === k));
+    const shown = items.filter(i => filter === 'all' || i.kind === filter);
+    const empty = items.length === 0;
 
     return (
         <SafeAreaView style={styles.container}>
@@ -100,87 +176,86 @@ export default function ObservatoryScreen() {
             ) : (
                 <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
                     <Text style={styles.intro}>
-                        What the corpus is working through right now — its open questions,
-                        unresolved tensions, and response to the week&apos;s world.
+                        What the corpus is working through right now. Filter by kind, then open one to read it in full.
                     </Text>
 
-                    {empty && (
+                    {empty ? (
                         <View style={styles.emptyBlock}>
                             <Ionicons name="telescope-outline" size={48} color="#c9a84c33" />
-                            <Text style={styles.errorText}>
-                                The sky is quiet tonight. Check back soon.
-                            </Text>
+                            <Text style={styles.errorText}>The sky is quiet tonight. Check back soon.</Text>
                         </View>
-                    )}
+                    ) : (
+                        <>
+                            {/* filter chips — only kinds that have something to show */}
+                            <ScrollView
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={styles.chipRow}
+                            >
+                                {(['all', ...present] as Filter[]).map(k => {
+                                    const on = filter === k;
+                                    const dot = k === 'all' ? '#c9a84c' : KIND_DOT[k];
+                                    return (
+                                        <TouchableOpacity
+                                            key={k}
+                                            onPress={() => setFilter(k)}
+                                            activeOpacity={0.8}
+                                            style={[styles.chip, on && styles.chipOn]}
+                                        >
+                                            <View style={[styles.chipDot, { backgroundColor: dot }]} />
+                                            <Text style={[styles.chipText, on && styles.chipTextOn]}>
+                                                {k === 'all' ? 'All' : KIND_LABEL[k]}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    );
+                                })}
+                            </ScrollView>
 
-                    {world && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>This Week in the World</Text>
-                            <View style={styles.card}>
-                                <Text style={styles.cardBody}>{world.dominantSignal}</Text>
-                                {!!world.tension && (
-                                    <Text style={styles.cardAccent}>{world.tension}</Text>
-                                )}
-                                {world.authors.length > 0 && (
-                                    <Text style={styles.cardFootnote}>
-                                        The corpus answers through {world.authors.join(', ')}
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-                    )}
-
-                    {tensions.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>Open Tensions</Text>
-                            {tensions.map(t => (
-                                <View key={t.id} style={styles.card}>
-                                    <Text style={styles.cardTitle}>{t.title}</Text>
-                                    <Text style={styles.cardBody}>{t.firstSentence}</Text>
-                                    {t.authors.length >= 2 && (
-                                        <Text style={styles.cardFootnote}>
-                                            {t.authors[0]} contra {t.authors[1]}
-                                        </Text>
-                                    )}
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    {inquiries.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>Open Inquiries</Text>
-                            {inquiries.map(q => (
-                                <View key={q.id} style={styles.card}>
-                                    <Text style={styles.cardBody}>{q.question}</Text>
-                                    {q.authorCount > 0 && (
-                                        <Text style={styles.cardFootnote}>
-                                            Pursued across {q.authorCount} {q.authorCount === 1 ? 'author' : 'authors'} — still open
-                                        </Text>
-                                    )}
-                                </View>
-                            ))}
-                        </View>
-                    )}
-
-                    {dreams.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionLabel}>The Corpus Imagines</Text>
-                            {dreams.map(d => (
-                                <View key={d.id} style={styles.card}>
-                                    <Text style={styles.dreamType}>{d.dreamType}</Text>
-                                    <Text style={styles.cardTitle}>{d.title}</Text>
-                                    <Text style={styles.cardBodyItalic}>
-                                        {d.content || d.firstLine}
-                                    </Text>
-                                    {d.seedAuthors.length > 0 && (
-                                        <Text style={styles.cardFootnote}>
-                                            Dreamt from {d.seedAuthors.join(', ')}
-                                        </Text>
-                                    )}
-                                </View>
-                            ))}
-                        </View>
+                            {/* unified compact feed — the pane scans, the modal reads */}
+                            {shown.map(it => {
+                                const dot = KIND_DOT[it.kind];
+                                const body = (
+                                    <>
+                                        <View style={styles.tagRow}>
+                                            <View style={[styles.tagDot, { backgroundColor: dot }]} />
+                                            <Text style={styles.tagText}>{it.tag.toUpperCase()}</Text>
+                                        </View>
+                                        <Text style={styles.feedLine} numberOfLines={3}>{it.line}</Text>
+                                        {it.kind === 'conclude' && it.conv && (
+                                            <View style={styles.pillRow}>
+                                                {!!it.conv.entailment && (
+                                                    <Text style={[styles.pill, styles.pillHot]}>{it.conv.entailment}</Text>
+                                                )}
+                                                {!!it.conv.novelty && (
+                                                    <Text style={styles.pill}>{it.conv.novelty.replace('_', ' ')}</Text>
+                                                )}
+                                            </View>
+                                        )}
+                                        {!!it.meta && <Text style={styles.feedMeta} numberOfLines={2}>{it.meta}</Text>}
+                                        {it.kind === 'conclude' && (
+                                            <Text style={styles.feedCta}>READ THE REASONING →</Text>
+                                        )}
+                                    </>
+                                );
+                                return it.conv ? (
+                                    <TouchableOpacity
+                                        key={it.key}
+                                        activeOpacity={0.85}
+                                        onPress={() => setActiveConv(it.conv!)}
+                                        style={[styles.feedCard, { borderLeftColor: dot }]}
+                                    >
+                                        {body}
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View key={it.key} style={[styles.feedCard, { borderLeftColor: dot }]}>
+                                        {body}
+                                    </View>
+                                );
+                            })}
+                            {shown.length === 0 && (
+                                <Text style={styles.quiet}>Nothing of this kind right now.</Text>
+                            )}
+                        </>
                     )}
 
                     <TouchableOpacity
@@ -197,6 +272,69 @@ export default function ObservatoryScreen() {
                     </Text>
                 </ScrollView>
             )}
+
+            {/* convergence detail — the reasoning the feed only teased */}
+            <Modal
+                visible={!!activeConv}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setActiveConv(null)}
+            >
+                <View style={styles.modalScrim}>
+                    <View style={styles.modalCard}>
+                        <View style={styles.modalHead}>
+                            <View style={styles.tagRow}>
+                                <View style={[styles.tagDot, { backgroundColor: CONV }]} />
+                                <Text style={[styles.tagText, { color: CONV }]}>
+                                    {activeConv?.starred ? 'THE CORPUS CONCLUDES · STARRED' : 'THE CORPUS CONCLUDES'}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setActiveConv(null)} hitSlop={10}>
+                                <Ionicons name="close" size={22} color="#888" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {!!activeConv?.title && <Text style={styles.modalTitle}>{activeConv.title}</Text>}
+                            <Text style={styles.modalConclusion}>{activeConv?.conclusion}</Text>
+                            <Text style={styles.modalDisclose}>
+                                A conclusion the corpus assembled from passages that sit far apart in it, reviewed by a human before appearing here. It is not a source text, and not the claim of any single thinker.
+                            </Text>
+                            <View style={styles.pillRow}>
+                                {!!activeConv?.entailment && (
+                                    <Text style={[styles.pill, styles.pillHot]}>entailment · {activeConv.entailment}</Text>
+                                )}
+                                {!!activeConv?.novelty && (
+                                    <Text style={styles.pill}>novelty · {activeConv.novelty.replace('_', ' ')}</Text>
+                                )}
+                                <Text style={styles.pill}>
+                                    {activeConv?.authors.length} voices{activeConv && activeConv.traditions.length ? ` · ${activeConv.traditions.length} traditions` : ''}
+                                </Text>
+                            </View>
+                            {!!activeConv?.breakpoint && (
+                                <>
+                                    <Text style={styles.modalLabel}>THE BREAKPOINT · REMOVE THIS AND IT COLLAPSES</Text>
+                                    <View style={styles.breakBox}>
+                                        <Text style={styles.breakText}>{activeConv.breakpoint}</Text>
+                                    </View>
+                                </>
+                            )}
+                            {!!activeConv?.pursuit && (
+                                <>
+                                    <Text style={styles.modalLabel}>THE PURSUIT</Text>
+                                    <Text style={styles.pursuitText}>{activeConv.pursuit}</Text>
+                                </>
+                            )}
+                            {!!activeConv?.authors.length && (
+                                <>
+                                    <Text style={styles.modalLabel}>ASSEMBLED FROM</Text>
+                                    <Text style={styles.assembled}>{activeConv.authors.join(' · ')}</Text>
+                                </>
+                            )}
+                            <View style={{ height: 24 }} />
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -216,34 +354,68 @@ const styles = StyleSheet.create({
     content: { padding: 16, paddingBottom: 48 },
     intro: {
         color: '#888', fontSize: 14, fontStyle: 'italic', lineHeight: 21,
-        textAlign: 'center', marginBottom: 20, paddingHorizontal: 12,
+        textAlign: 'center', marginBottom: 18, paddingHorizontal: 12,
     },
     emptyBlock: { alignItems: 'center', gap: 14, paddingVertical: 40 },
-    section: { marginBottom: 22 },
-    sectionLabel: {
-        color: '#c9a84c', fontSize: 11, fontWeight: '700',
-        textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12,
+
+    // chips
+    chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 2, marginBottom: 14 },
+    chip: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999,
+        borderWidth: 1, borderColor: '#c9a84c1a', backgroundColor: '#ffffff08',
     },
-    card: {
-        backgroundColor: '#16213e',
-        borderRadius: 14,
-        padding: 18,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#c9a84c22',
+    chipOn: { borderColor: '#c9a84c73', backgroundColor: '#c9a84c17' },
+    chipDot: { width: 7, height: 7, borderRadius: 4 },
+    chipText: { color: '#888', fontSize: 11, fontWeight: '600', letterSpacing: 0.6 },
+    chipTextOn: { color: '#f4ead5' },
+
+    // feed
+    feedCard: {
+        backgroundColor: '#ffffff05',
+        borderRadius: 12, padding: 14, marginBottom: 9,
+        borderWidth: 1, borderColor: '#c9a84c1a', borderLeftWidth: 3,
     },
-    cardTitle: { color: '#fff', fontSize: 16, fontWeight: '600', lineHeight: 23, marginBottom: 8 },
-    cardBody: { color: '#e8e8ee', fontSize: 14, lineHeight: 22 },
-    cardBodyItalic: { color: '#e8e8ee', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
-    cardAccent: { color: '#c9a84c', fontSize: 14, lineHeight: 22, fontStyle: 'italic', marginTop: 10 },
-    cardFootnote: { color: '#666', fontSize: 12, marginTop: 10 },
-    dreamType: {
-        color: '#c9a84c', fontSize: 10, fontWeight: '700',
-        textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6,
+    tagRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 7 },
+    tagDot: { width: 6, height: 6, borderRadius: 3 },
+    tagText: { color: '#c9a84c', fontSize: 9, fontWeight: '700', letterSpacing: 1.2 },
+    feedLine: { color: '#f4ead5', fontSize: 16, lineHeight: 22, fontWeight: '500' },
+    feedMeta: { color: '#888', fontSize: 11, letterSpacing: 0.4, marginTop: 8, lineHeight: 16 },
+    feedCta: { color: '#c9a84c', fontSize: 9, fontWeight: '700', letterSpacing: 1, marginTop: 9 },
+    quiet: { color: '#888', fontSize: 14, fontStyle: 'italic', paddingVertical: 6 },
+
+    // pills
+    pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
+    pill: {
+        color: '#888', fontSize: 9, fontWeight: '700', letterSpacing: 0.6,
+        textTransform: 'uppercase', overflow: 'hidden',
+        borderWidth: 1, borderColor: '#c9a84c1f', borderRadius: 999,
+        paddingHorizontal: 8, paddingVertical: 3,
     },
+    pillHot: { color: CONV, borderColor: '#5ab0c966' },
+
+    // modal
+    modalScrim: { flex: 1, backgroundColor: '#04081266', justifyContent: 'flex-end' },
+    modalCard: {
+        backgroundColor: '#121b36', borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        borderWidth: 1, borderColor: '#5ab0c966', padding: 22, maxHeight: '88%',
+    },
+    modalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    modalTitle: { color: '#f4ead5', fontSize: 22, fontWeight: '600', lineHeight: 28, marginBottom: 8 },
+    modalConclusion: { color: '#f4ead5', fontSize: 16, lineHeight: 24, marginBottom: 14 },
+    modalDisclose: {
+        color: '#888', fontSize: 12, fontStyle: 'italic', lineHeight: 18,
+        borderWidth: 1, borderColor: '#c9a84c1a', borderRadius: 8, padding: 10, marginBottom: 14,
+    },
+    modalLabel: { color: '#c9a84c', fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginTop: 16, marginBottom: 7 },
+    breakBox: { backgroundColor: '#5ab0c910', borderWidth: 1, borderColor: '#5ab0c93a', borderRadius: 10, padding: 13 },
+    breakText: { color: '#e8e4d6', fontSize: 14, fontStyle: 'italic', lineHeight: 21 },
+    pursuitText: { color: '#e8e4d6', fontSize: 15, lineHeight: 24 },
+    assembled: { color: '#f4ead5', fontSize: 14, lineHeight: 22 },
+
     webLink: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-        backgroundColor: '#c9a84c', borderRadius: 12, padding: 15, marginTop: 8,
+        backgroundColor: '#c9a84c', borderRadius: 12, padding: 15, marginTop: 14,
     },
     webLinkText: { color: '#1a1a2e', fontWeight: '700', fontSize: 15 },
     webLinkHint: { color: '#555', fontSize: 12, textAlign: 'center', marginTop: 10, lineHeight: 18 },
