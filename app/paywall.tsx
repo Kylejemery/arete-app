@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,28 +10,14 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { syncTierToSupabase } from '@/lib/syncSubscription';
-import type { Tier } from '@/lib/useSubscription';
-
-// ─── expo-iap stubs ──────────────────────────────────────────────────────────
-// expo-iap has been removed from the project for now. These stubs disable
-// in-app purchases while keeping the paywall screen rendering. getProducts
-// returns an empty list (must stay iterable so the screen still compiles).
-
-async function getProducts(_productIds: string[]): Promise<any[]> {
-  console.log('IAP not available');
-  return [];
-}
-
-async function requestPurchase(_options: { sku: string }): Promise<null> {
-  console.log('IAP not available');
-  return null;
-}
-
-async function restorePurchases(): Promise<null> {
-  console.log('IAP not available');
-  return null;
-}
+import {
+  getAvailablePackages,
+  isPurchasesAvailable,
+  purchasePackage,
+  restorePurchases,
+  PurchaseCancelledError,
+  type PurchasePackage,
+} from '@/lib/purchases';
 
 // ─── Static fallback display data ────────────────────────────────────────────
 
@@ -46,11 +31,9 @@ interface PlanDisplay {
   description: string;
 }
 
+// App Store product ids, matching the RevenueCat packages. PLAN_DISPLAY below
+// is the static fallback shown when the store's live prices can't be fetched.
 const PRODUCT_IDS = ['arete_monthly', 'arete_annual', 'arete_pro'];
-
-function tierForProductId(productId: string): Tier {
-  return productId === 'arete_pro' ? 'pro' : 'premium';
-}
 
 const PLAN_DISPLAY: PlanDisplay[] = [
   {
@@ -94,49 +77,53 @@ export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [packages, setPackages] = useState<Record<string, any>>({});
+  const [packages, setPackages] = useState<Record<string, PurchasePackage>>({});
   const [selectedId, setSelectedId] = useState<string>('arete_annual');
   const [purchasing, setPurchasing] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loadingOfferings, setLoadingOfferings] = useState(true);
 
+  const storeReady = isPurchasesAvailable();
+
   // ── Fetch products ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (Platform.OS !== 'ios') { setLoadingOfferings(false); return; }
+    if (!storeReady) { setLoadingOfferings(false); return; }
     (async () => {
       try {
-        const products = await getProducts(PRODUCT_IDS);
-        const productMap: Record<string, any> = {};
-        for (const product of products) {
-          productMap[product.productId] = product;
+        const available = await getAvailablePackages();
+        const productMap: Record<string, PurchasePackage> = {};
+        for (const pkg of available) {
+          if (PRODUCT_IDS.includes(pkg.productId)) productMap[pkg.productId] = pkg;
         }
         setPackages(productMap);
       } catch (e) {
-        console.warn('Failed to load products:', e);
+        console.warn('Failed to load offerings:', e);
       } finally {
         setLoadingOfferings(false);
       }
     })();
-  }, []);
+  }, [storeReady]);
 
   // ── Purchase ──────────────────────────────────────────────────────────────
 
+  // Entitlement is NOT written from here. RevenueCat's webhook updates
+  // profiles.tier server-side; useSubscription re-reads on foreground. The
+  // client cannot grant itself a tier — those columns are service-role only.
   const handleSubscribe = async () => {
-    if (Platform.OS !== 'ios') return;
-    const product = packages[selectedId];
-    if (!product) { setError('Plan not available. Please try again.'); return; }
+    const pkg = packages[selectedId];
+    if (!pkg) { setError('Plan not available. Please try again.'); return; }
 
     setError(null);
     setPurchasing(true);
     try {
-      await requestPurchase({ sku: selectedId });
-      await syncTierToSupabase(tierForProductId(selectedId));
+      await purchasePackage(pkg);
       router.back();
-    } catch (e: unknown) {
-      const code = (e as { code?: string }).code;
-      if (code !== 'E_USER_CANCELLED') {
+    } catch (e) {
+      // Backing out of the App Store sheet is not an error worth surfacing.
+      if (!(e instanceof PurchaseCancelledError)) {
+        console.warn('Purchase failed:', e);
         setError('Purchase failed. Please try again.');
       }
     } finally {
@@ -147,18 +134,27 @@ export default function PaywallScreen() {
   // ── Restore ───────────────────────────────────────────────────────────────
 
   const handleRestore = async () => {
-    if (Platform.OS !== 'ios') return;
+    if (!storeReady) return;
     setError(null);
     setRestoring(true);
     try {
-      await restorePurchases();
-      router.back();
+      const tier = await restorePurchases();
+      if (tier === 'free') {
+        setError('No previous purchases found for this Apple ID.');
+      } else {
+        router.back();
+      }
     } catch {
       setError('Restore failed. Please try again.');
     } finally {
       setRestoring(false);
     }
   };
+
+  // Only offer the button when the store is reachable and the selected plan
+  // actually came back from RevenueCat — a dead Subscribe button is worse
+  // than an honestly disabled one.
+  const canSubscribe = storeReady && !purchasing && !loadingOfferings && !!packages[selectedId];
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -241,8 +237,10 @@ export default function PaywallScreen() {
                     </View>
 
                     <View style={styles.planPriceBlock}>
+                      {/* Prefer the store's localized price over the hardcoded
+                          fallback, so currency and regional pricing are right. */}
                       <Text style={[styles.planPrice, selected && styles.planPriceSelected]}>
-                        {plan.price}
+                        {packages[plan.identifier]?.priceString ?? plan.price}
                       </Text>
                       <Text style={styles.planPeriod}>{plan.period}</Text>
                     </View>
@@ -262,20 +260,22 @@ export default function PaywallScreen() {
 
         {/* Subscribe button */}
         <TouchableOpacity
-          style={[styles.subscribeButton, purchasing && styles.subscribeButtonDisabled]}
+          style={[styles.subscribeButton, !canSubscribe && styles.subscribeButtonDisabled]}
           onPress={handleSubscribe}
-          disabled={purchasing || loadingOfferings}
+          disabled={!canSubscribe}
           activeOpacity={0.85}
         >
           {purchasing ? (
             <ActivityIndicator color="#0A1628" />
           ) : (
-            <Text style={styles.subscribeButtonText}>Subscribe</Text>
+            <Text style={styles.subscribeButtonText}>
+              {storeReady ? 'Subscribe' : 'Unavailable'}
+            </Text>
           )}
         </TouchableOpacity>
 
         {/* Restore */}
-        <TouchableOpacity onPress={handleRestore} disabled={restoring} style={styles.restoreButton}>
+        <TouchableOpacity onPress={handleRestore} disabled={restoring || !storeReady} style={styles.restoreButton}>
           <Text style={styles.restoreText}>
             {restoring ? 'Restoring…' : 'Restore Purchases'}
           </Text>

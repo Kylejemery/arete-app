@@ -1,6 +1,7 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
 import { setupDispatchNotifications } from '@/lib/pushNotifications';
+import { configurePurchases } from '@/lib/purchases';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import { Slot, useRouter, useRootNavigationState } from 'expo-router';
@@ -153,6 +154,17 @@ export default function RootLayout() {
     if (dispatchSetupForUser.current === session.user.id) return;
     dispatchSetupForUser.current = session.user.id;
     setupDispatchNotifications(session).catch(() => {});
+  }, [session]);
+
+  // Configure RevenueCat once the session resolves. appUserID must be the
+  // Supabase user id — that is how the RevenueCat webhook attributes a
+  // purchase back to an Arete account. configurePurchases swallows its own
+  // errors; the previous integration was disabled behind a "crash isolation"
+  // flag and never re-enabled, so keep this guarded but actually running.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!session?.user?.id) return;
+    configurePurchases(session.user.id);
   }, [session]);
 
   try {
