@@ -72,6 +72,17 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Rise above →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/the-long-filter">
+          <p className="pg-card-kicker">The Long Filter</p>
+          <h2>Why the sky is quiet</h2>
+          <p>
+            A civilization that can end itself eventually will. Set annual risk
+            against the rate we improve, and the Fermi question reduces to one
+            ratio — a galaxy quietly crowded, or empty.
+          </p>
+          <span className="pg-card-go">Run the odds →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>

@@ -1,0 +1,770 @@
+/* The Long Filter — a Playground working note.
+ *
+ * Unlike the tape-dark experiments, this one is printed on a plate: a pale
+ * mineral ground with oxide and indigo for the two populations, inverted to ink
+ * for the gauge and the close. Fraunces and IBM Plex Mono come from
+ * app/playground/layout.tsx; Spectral is loaded by the route's own layout,
+ * since the body text here is set in it rather than in Newsreader.
+ */
+
+.page {
+  --plate: #d7dad1;
+  --plate-deep: #c2c6bb;
+  --plate-edge: #b0b5a8;
+  --ink: #161a17;
+  --ink-soft: #4c544c;
+  --ink-faint: #7c8479;
+  --oxide: #7a2e23;
+  --indigo: #243456;
+  --rule: rgba(22, 26, 23, 0.18);
+  --measure: 34rem;
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-spectral), 'Spectral', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+
+  position: relative;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--plate);
+  color: var(--ink);
+  font-family: var(--book);
+  font-size: 1.0625rem;
+  line-height: 1.62;
+  letter-spacing: 0.004em;
+  -webkit-text-size-adjust: 100%;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--oxide);
+  outline-offset: 3px;
+}
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 255, 255, 0.5), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, rgba(22, 26, 23, 0.1), transparent 60%);
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+.col {
+  max-width: var(--measure);
+  margin: 0 auto;
+}
+.colWide {
+  max-width: 54rem;
+  margin: 0 auto;
+}
+
+/* ── type ── */
+.page h1,
+.page h2,
+.page h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1;
+  line-height: 1.02;
+  margin: 0;
+}
+.page h1 {
+  font-size: clamp(2.9rem, 9vw, 6.4rem);
+  letter-spacing: -0.028em;
+  font-weight: 700;
+}
+.page h2 {
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  letter-spacing: -0.018em;
+}
+.page p {
+  margin: 0 0 1.15rem;
+}
+.page strong {
+  font-weight: 600;
+}
+.lede {
+  font-size: clamp(1.15rem, 2.1vw, 1.34rem);
+  line-height: 1.52;
+  color: var(--ink-soft);
+}
+.page .eyebrow {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--oxide);
+  margin: 0 0 1.1rem;
+}
+.mono {
+  font-family: var(--mono);
+}
+.footnote {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+
+/* ── top bar / back ── */
+.topBar {
+  position: relative;
+  z-index: 1;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: 1.6rem 1.5rem 0;
+}
+.backLink {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+.backLink:hover {
+  color: var(--oxide);
+}
+
+/* ── structure ── */
+.section {
+  padding: 5.5rem 0;
+  border-top: 1px solid var(--rule);
+}
+.secHead {
+  margin-bottom: 2.6rem;
+}
+.secHead h2 {
+  margin-bottom: 0.85rem;
+}
+
+/* ── hero ── */
+.hero {
+  padding: 4.5rem 0 4.5rem;
+  border-top: 0;
+  text-align: center;
+}
+.heroCol {
+  max-width: 52rem;
+  margin: 0 auto;
+}
+.hero h1 {
+  margin-bottom: 1.6rem;
+}
+.hero .lede {
+  max-width: 34rem;
+  margin: 0 auto;
+}
+.plateFrame {
+  margin: 3.5rem auto 0;
+  max-width: 60rem;
+  position: relative;
+  background: linear-gradient(160deg, #e2e4db, #cbcfc4);
+  border: 1px solid var(--plate-edge);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 18px 44px -30px rgba(22, 26, 23, 0.7);
+  padding: 0.6rem;
+}
+.plateFrame canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.plateCap {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0.2rem 0;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* ── controls ── */
+.ctrl {
+  margin-bottom: 1.9rem;
+}
+.ctrlTight {
+  margin-bottom: 0.6rem;
+}
+.ctrlTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.55rem;
+}
+.ctrlLabel {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.ctrlVal {
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  color: var(--oxide);
+  font-variant-numeric: tabular-nums;
+}
+.page input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  background: transparent;
+  margin: 0;
+  padding: 0.4rem 0;
+  cursor: pointer;
+}
+.page input[type='range']::-webkit-slider-runnable-track {
+  height: 2px;
+  background: rgba(22, 26, 23, 0.3);
+}
+.page input[type='range']::-moz-range-track {
+  height: 2px;
+  background: rgba(22, 26, 23, 0.3);
+}
+.page input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--ink);
+  margin-top: -6.5px;
+  border: 2px solid var(--plate-deep);
+}
+.page input[type='range']::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--plate-deep);
+}
+.toggle {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  cursor: pointer;
+  padding: 1rem;
+  border: 1px dashed var(--rule);
+}
+.toggle input {
+  margin: 0.25rem 0 0;
+  accent-color: var(--indigo);
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+.toggle span {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+.toggle:focus-within {
+  outline: 2px solid var(--oxide);
+  outline-offset: 3px;
+}
+
+/* ── engine ── */
+.engine {
+  background: var(--plate-deep);
+}
+.engineGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 3rem;
+  align-items: start;
+}
+.readout {
+  border: 1px solid var(--rule);
+  background: rgba(255, 255, 255, 0.32);
+  padding: 1.5rem 1.4rem;
+}
+.readout + .readout {
+  margin-top: 1rem;
+}
+.bigNum {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(2.4rem, 6.5vw, 3.6rem);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  display: block;
+  margin-bottom: 0.3rem;
+  font-variant-numeric: tabular-nums;
+}
+.dying {
+  color: var(--oxide);
+}
+.living {
+  color: var(--indigo);
+}
+.readoutLabel {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.verdict {
+  font-family: var(--mono);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  display: block;
+  color: var(--ink-soft);
+}
+
+/* ── the gauge: signature element ── */
+.gaugeBlock {
+  position: relative;
+  z-index: 1;
+  background: var(--ink);
+  color: #cfd3c9;
+  padding: 4rem 0 4.5rem;
+  margin: 0;
+  border-top: 0;
+}
+.gaugeBlock .eyebrow {
+  color: #b0704f;
+}
+.gaugeBlock h2 {
+  color: #f0f2ea;
+}
+.gaugeBlock p {
+  color: #b7bdb2;
+}
+.gaugeBlock .ctrlLabel {
+  color: #9aa298;
+}
+.gaugeBlock .ctrlVal {
+  color: #d08a63;
+}
+.gaugeBlock input[type='range']::-webkit-slider-runnable-track {
+  background: rgba(255, 255, 255, 0.22);
+}
+.gaugeBlock input[type='range']::-moz-range-track {
+  background: rgba(255, 255, 255, 0.22);
+}
+.gaugeBlock input[type='range']::-webkit-slider-thumb {
+  background: #f0f2ea;
+  border-color: var(--ink);
+}
+.gaugeBlock input[type='range']::-moz-range-thumb {
+  background: #f0f2ea;
+  border-color: var(--ink);
+}
+.gauge {
+  position: relative;
+  margin: 3.2rem 0 0;
+  padding-top: 3.4rem;
+}
+.gaugeTrack {
+  position: relative;
+  height: 3px;
+  background: linear-gradient(90deg, #3e5c93 0%, #3e5c93 60%, #8e4030 68%, #8e4030 100%);
+}
+/* A tick spans from its label down to the track: top: -2.9rem is where the
+ * label starts, 6.3rem later is the track itself (2.9rem back up plus the
+ * 3.4rem of padding above it). The leader is a flex item taking whatever
+ * height the label leaves, so a one-line and a two-line tick both land on the
+ * track instead of stopping short at different heights. */
+.gaugeTick {
+  position: absolute;
+  top: -2.9rem;
+  height: 6.3rem;
+  width: 8rem;
+  transform: translateX(-50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+.gaugeTick::after {
+  content: '';
+  flex: 1;
+  width: 1px;
+  margin: 0.35rem auto 0;
+  background: rgba(255, 255, 255, 0.28);
+}
+.gaugeTick span {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #8a9186;
+  line-height: 1.5;
+  display: block;
+}
+.gaugeTick.thresh span {
+  color: #d08a63;
+}
+.gaugeHandle {
+  position: absolute;
+  top: 50%;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: #f0f2ea;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 6px rgba(240, 242, 234, 0.14);
+  transition:
+    left 0.12s ease-out,
+    background 0.12s;
+}
+.gaugeScale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.1rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #6e766d;
+}
+.gaugeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  margin-top: 3.4rem;
+  align-items: start;
+}
+.verdictNum {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: clamp(3rem, 9vw, 5rem);
+  line-height: 0.9;
+  letter-spacing: -0.035em;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+.verdictLabel {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a9186;
+}
+.gaugeBlock .gaugeVerdict {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.5;
+  color: #c5cabf;
+}
+.gaugeBlock .gaugeNote {
+  margin: 1.1rem 0 0;
+  color: #7a8179;
+}
+
+/* ── derivation steps ── */
+.deriv {
+  list-style: none;
+  counter-reset: d;
+  margin: 0;
+  padding: 0;
+}
+.deriv li {
+  counter-increment: d;
+  position: relative;
+  padding: 0 0 1.5rem 3.4rem;
+  border-left: 1px solid var(--rule);
+  margin-left: 0.6rem;
+}
+.deriv li::before {
+  content: counter(d);
+  position: absolute;
+  left: -0.62rem;
+  top: 0.15rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--oxide);
+}
+.deriv li:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+.deriv b {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--oxide);
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
+}
+.page .afterDeriv {
+  margin-top: 2.4rem;
+}
+
+/* ── formula ── */
+.formula {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--oxide);
+  background: rgba(255, 255, 255, 0.3);
+  padding: 2rem 1.6rem;
+  margin: 0 0 2.2rem;
+  font-family: var(--mono);
+  text-align: center;
+  overflow-x: auto;
+}
+.line {
+  font-size: clamp(0.9rem, 2.3vw, 1.22rem);
+  white-space: nowrap;
+}
+.line + .line {
+  margin-top: 1.1rem;
+}
+.sub {
+  font-size: 0.85rem;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+.terms {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 0.55rem 1.2rem;
+  font-size: 0.95rem;
+}
+.terms dt {
+  font-family: var(--mono);
+  color: var(--oxide);
+  font-size: 0.86rem;
+  padding-top: 0.12rem;
+}
+.terms dd {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.page .afterTerms {
+  margin-top: 2.4rem;
+}
+
+/* ── matrix ── */
+.mtxScroll {
+  overflow-x: auto;
+}
+.mtx {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 32rem;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+}
+.mtx th {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.63rem;
+  color: var(--ink-faint);
+  padding: 0.6rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--rule);
+}
+.mtx th.rowhead,
+.mtx td.rowhead {
+  text-align: left;
+  white-space: nowrap;
+  padding-right: 1.1rem;
+  color: var(--ink);
+}
+.mtx td {
+  padding: 0.7rem 0.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+.mtxCaption {
+  caption-side: bottom;
+  text-align: left;
+  padding-top: 0.9rem;
+}
+
+/* ── the fork ── */
+.fork {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--rule);
+  margin-bottom: 1.4rem;
+}
+.fork > div {
+  padding: 1.6rem 1.4rem;
+}
+.fork > div + div {
+  border-left: 1px solid var(--rule);
+}
+.fork h3 {
+  font-size: 1.02rem;
+  margin-bottom: 0.5rem;
+}
+.fork .k {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.7rem;
+}
+.fork p {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+.forkLeft {
+  background: rgba(36, 52, 86, 0.07);
+}
+.forkLeft .k {
+  color: var(--indigo);
+}
+.forkRight {
+  background: rgba(122, 46, 35, 0.06);
+}
+.forkRight .k {
+  color: var(--oxide);
+}
+
+/* ── ledger ── */
+.ledger {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--rule);
+  background: rgba(255, 255, 255, 0.24);
+}
+.ledgerHead {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 0.85rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-faint);
+}
+.ledgerHead.right {
+  border-left: 1px solid var(--rule);
+}
+.ledgerRow {
+  display: contents;
+}
+.gone,
+.stays {
+  padding: 1.05rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.97rem;
+  line-height: 1.45;
+}
+.stays {
+  border-left: 1px solid var(--rule);
+}
+.gone {
+  color: var(--ink-faint);
+}
+.gone b {
+  font-weight: 400;
+  color: var(--oxide);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  display: block;
+  font-size: 1.02rem;
+  margin-bottom: 0.15rem;
+}
+.stays b {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  color: var(--indigo);
+}
+.ledgerRow:last-child .gone,
+.ledgerRow:last-child .stays {
+  border-bottom: 0;
+}
+
+/* ── close ── */
+.close {
+  background: var(--ink);
+  color: #cfd3c9;
+  border-top: 0;
+}
+.close h2 {
+  color: #f0f2ea;
+}
+.close .eyebrow {
+  color: #b0704f;
+}
+.close .footnote {
+  color: #8a9186;
+}
+.close em {
+  color: #e8ebe1;
+}
+.page .closeNote {
+  margin-top: 2rem;
+}
+.colophon {
+  padding: 3rem 0 4rem;
+  text-align: center;
+}
+.colophonLine {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+}
+
+@media (max-width: 860px) {
+  .engineGrid,
+  .gaugeGrid,
+  .ledger,
+  .fork {
+    grid-template-columns: 1fr;
+  }
+  .gaugeGrid {
+    gap: 1.8rem;
+  }
+  .fork > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .stays {
+    border-left: 0;
+  }
+  .ledgerHead.right {
+    border-left: 0;
+  }
+  .section {
+    padding: 4rem 0;
+  }
+  .hero {
+    padding: 3rem 0 3rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
