@@ -72,6 +72,17 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Rise above →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/the-long-filter">
+          <p className="pg-card-kicker">The Long Filter</p>
+          <h2>Why the sky is quiet</h2>
+          <p>
+            A civilization that can end itself eventually will. Drag the risk and
+            the years, split the Drake equation in two, and find the filter that
+            predicts a crowded galaxy — and still explains the silence.
+          </p>
+          <span className="pg-card-go">Run the odds →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
