@@ -1,0 +1,428 @@
+/* The Long Filter, formal statement — the companion note to the essay.
+ *
+ * Same plate as the essay, set denser and more technical: a numbered spine down
+ * the left, mono for every symbol, and tables that carry the numbers rather
+ * than prose. Fraunces and IBM Plex Mono come from app/playground/layout.tsx;
+ * Spectral comes from the-long-filter/layout.tsx, which this route sits under.
+ */
+
+.page {
+  --plate: #d7dad1;
+  --plate-deep: #c2c6bb;
+  --plate-edge: #b0b5a8;
+  --ink: #161a17;
+  --ink-soft: #4c544c;
+  --ink-faint: #7c8479;
+  --oxide: #7a2e23;
+  --indigo: #243456;
+  --rule: rgba(22, 26, 23, 0.18);
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-spectral), 'Spectral', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+
+  position: relative;
+  min-height: 100vh;
+  margin: 0;
+  background: var(--plate);
+  color: var(--ink);
+  font-family: var(--book);
+  font-size: 1.0625rem;
+  line-height: 1.62;
+  letter-spacing: 0.004em;
+  -webkit-text-size-adjust: 100%;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--oxide);
+  outline-offset: 3px;
+}
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(255, 255, 255, 0.5), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, rgba(22, 26, 23, 0.1), transparent 60%);
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+/* ── type ── */
+.page h1,
+.page h2,
+.page h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1;
+  line-height: 1.04;
+  margin: 0;
+}
+.page h1 {
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  letter-spacing: -0.026em;
+  font-weight: 700;
+}
+.page h2 {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  letter-spacing: -0.016em;
+}
+.page h3 {
+  font-size: 1.02rem;
+  letter-spacing: -0.005em;
+  color: var(--ink-soft);
+}
+.page p {
+  margin: 0 0 1.05rem;
+}
+.page strong {
+  font-weight: 600;
+}
+.mono {
+  font-family: var(--mono);
+}
+.footnote {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--oxide);
+  margin: 0 0 1.1rem;
+}
+
+/* ── top bar ── */
+.topBar {
+  position: relative;
+  z-index: 1;
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: 1.6rem 1.5rem 0;
+}
+.backLink {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-decoration: none;
+}
+.backLink:hover {
+  color: var(--oxide);
+}
+
+/* ── hero ── */
+.hero {
+  padding: 3.5rem 0 3rem;
+}
+.hero h1 {
+  margin-bottom: 1.4rem;
+}
+.standfirst {
+  font-size: 1.06rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  font-style: italic;
+  max-width: 40rem;
+}
+.revision {
+  border-left: 2px solid var(--oxide);
+  padding: 0.1rem 0 0.1rem 1.1rem;
+  margin-top: 1.8rem;
+  max-width: 40rem;
+}
+.page .revision p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  font-style: italic;
+}
+
+/* ── sections ── */
+.section {
+  padding: 3.2rem 0;
+  border-top: 1px solid var(--rule);
+}
+.secNum {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--oxide);
+  display: block;
+  margin-bottom: 0.8rem;
+}
+.section h2 {
+  margin-bottom: 1.6rem;
+}
+.sub {
+  margin-top: 2.4rem;
+}
+.sub h3 {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--oxide);
+  margin-bottom: 0.9rem;
+}
+
+/* ── derivation blocks ── */
+.block {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  line-height: 1.75;
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--oxide);
+  padding: 1.2rem 1.3rem;
+  margin: 0 0 1.4rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--ink);
+}
+/* A result the note wants you to carry away — the boxed lines in the source. */
+.result {
+  font-family: var(--mono);
+  font-size: clamp(0.82rem, 2vw, 0.95rem);
+  line-height: 1.7;
+  background: rgba(36, 52, 86, 0.06);
+  border: 1px solid rgba(36, 52, 86, 0.3);
+  padding: 1.3rem 1.4rem;
+  margin: 0 0 1.4rem;
+  text-align: center;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--indigo);
+}
+
+/* ── tables ── */
+.tableScroll {
+  overflow-x: auto;
+  margin: 0 0 1.4rem;
+}
+.tbl {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 24rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.tbl th {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.64rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-align: left;
+  padding: 0.55rem 0.9rem 0.55rem 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: bottom;
+}
+.tbl td {
+  padding: 0.6rem 0.9rem 0.6rem 0;
+  border-bottom: 1px solid rgba(22, 26, 23, 0.08);
+  vertical-align: top;
+  color: var(--ink-soft);
+}
+.tbl tr:last-child td {
+  border-bottom: 0;
+}
+/* First column carries the symbol or the key, so it is set in mono and inked. */
+.tbl td:first-child {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--ink);
+  white-space: nowrap;
+}
+/* Numeric tables read down the columns; prose tables do not. */
+.numeric td {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.caption {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: -0.6rem 0 1.4rem;
+}
+
+/* ── assumptions ledger ── */
+.assumptions {
+  border: 1px solid var(--rule);
+  background: rgba(255, 255, 255, 0.24);
+}
+.assumption {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr;
+  gap: 0 1rem;
+  padding: 1.1rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+.assumption:last-child {
+  border-bottom: 0;
+}
+.aid {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--oxide);
+  padding-top: 0.1rem;
+}
+.aclaim {
+  font-size: 0.97rem;
+  line-height: 1.45;
+  margin-bottom: 0.35rem;
+}
+.akind {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  display: block;
+  margin-bottom: 0.45rem;
+}
+.loadBearing {
+  color: var(--oxide);
+}
+.afail {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+.afail::before {
+  content: 'if it fails — ';
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+/* ── falsifiers ── */
+.falsifiers {
+  list-style: none;
+  counter-reset: f;
+  margin: 0;
+  padding: 0;
+}
+.falsifiers li {
+  counter-increment: f;
+  position: relative;
+  padding: 0 0 1.2rem 3.2rem;
+  border-left: 1px solid var(--rule);
+  margin-left: 0.6rem;
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+.falsifiers li::before {
+  content: counter(f);
+  position: absolute;
+  left: -0.62rem;
+  top: 0.1rem;
+  width: 1.25rem;
+  height: 1.25rem;
+  background: var(--plate);
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--oxide);
+}
+.falsifiers li:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+.falsifiers b {
+  font-weight: 600;
+}
+
+/* ── close ── */
+.summary {
+  background: var(--ink);
+  color: #cfd3c9;
+  border-top: 0;
+}
+.summary h2 {
+  color: #f0f2ea;
+}
+.summary .secNum {
+  color: #b0704f;
+}
+.summary p {
+  color: #b7bdb2;
+}
+.summary .block {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.14);
+  border-left-color: #b0704f;
+  color: #cfd3c9;
+  font-size: 0.78rem;
+}
+.summary strong {
+  color: #f0f2ea;
+}
+
+.colophon {
+  padding: 2.6rem 0 4rem;
+  text-align: center;
+}
+.page .colophonLink {
+  margin-bottom: 1.4rem;
+}
+.colophonLink a {
+  color: var(--oxide);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(122, 46, 35, 0.35);
+}
+.colophonLink a:hover {
+  border-bottom-color: var(--oxide);
+}
+.colophonLine {
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+}
+
+@media (max-width: 700px) {
+  .section {
+    padding: 2.6rem 0;
+  }
+  .assumption {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

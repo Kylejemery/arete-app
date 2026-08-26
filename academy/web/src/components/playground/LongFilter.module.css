@@ -374,6 +374,9 @@
   border-top: 1px solid var(--rule);
 }
 .page .hzNote {
+  margin-top: 1.8rem;
+}
+.page .hzCaveat {
   margin-top: 1.4rem;
 }
 
@@ -529,6 +532,12 @@
 }
 .phaseBlock .phaseNote {
   margin-top: 2rem;
+}
+.phaseBlock .phaseBody {
+  margin-bottom: 0;
+}
+.phaseBlock .phaseCaveat {
+  margin-top: 1.4rem;
   color: #7a8179;
 }
 
@@ -752,6 +761,17 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-size: 0.66rem;
+}
+.page .colophonLink {
+  margin-bottom: 1.4rem;
+}
+.colophonLink a {
+  color: var(--oxide);
+  text-decoration: none;
+  border-bottom: 1px solid rgba(122, 46, 35, 0.35);
+}
+.colophonLink a:hover {
+  border-bottom-color: var(--oxide);
 }
 
 @media (max-width: 900px) {

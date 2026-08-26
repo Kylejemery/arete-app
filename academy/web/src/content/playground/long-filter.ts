@@ -30,9 +30,6 @@ export const LOG_DISTANCE = Math.log(1 / PHOENIX_RATE)
 /** Technological civilizations arising per year in the galaxy (Ṅ). */
 export const ARISING_PER_YEAR = 0.01
 
-/** Baseline annual error hazard at the start of the transition (p_e0). */
-export const ERROR_HAZARD_BASE = 1e-5
-
 /** Irreducible external hazard (p_x). Its reciprocal is L_ℓ. */
 export const EXTERNAL_HAZARD = 1e-8
 
@@ -48,8 +45,8 @@ export const MORAL_THRESHOLD =
 /** Phase-diagram axes: the moral ratio R, log-scaled, and the capability gap d. */
 export const RATIO_MIN = 0.02
 export const RATIO_MAX = 2.5
-export const GAP_MIN = -0.002
-export const GAP_MAX = 0.004
+export const GAP_MIN = -0.005
+export const GAP_MAX = 0.003
 
 /** One line of the survivors' ledger — what goes, and what takes its place. */
 export type LedgerRow = {
