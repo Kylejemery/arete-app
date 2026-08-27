@@ -19,6 +19,7 @@ import {
   useImperativeHandle,
   useLayoutEffect,
   useRef,
+  useState,
   type CSSProperties,
 } from 'react';
 import { buildSegments, type SpanInput } from '@/lib/annotations';
@@ -27,6 +28,20 @@ export interface DraftEditorHandle {
   focusRange: (start: number, end: number) => void;
   focus: () => void;
 }
+
+// A passage the writer has selected, with where it sits on screen. A textarea
+// selection is not a DOM range, so it cannot be measured directly; the rect
+// comes from the backdrop, which renders the same characters at the same
+// metrics and therefore knows exactly where they are.
+export interface PassageSelection {
+  start: number;
+  end: number;
+  text: string;
+  rect: DOMRect | null;
+}
+
+// Shortest selection worth offering an action on.
+const MIN_SELECTION = 4;
 
 // Metrics shared by the textarea and the backdrop. Anything that affects where a
 // character lands has to live here, on both, or the colour drifts off the words.
@@ -81,13 +96,21 @@ export const DraftEditor = forwardRef<
     onCaretSpan?: (id: string | null) => void;
     placeholder?: string;
     showToolbar?: boolean;
+    /** Voice-meter ranges, painted on their own layer so they never fight the marks. */
+    highlights?: SpanInput[];
+    /** Must be stable (useCallback) — it is called from a layout effect. */
+    onSelection?: (sel: PassageSelection | null) => void;
   }
 >(function DraftEditor(
-  { value, onChange, spans, activeId = null, onCaretSpan, placeholder, showToolbar = true },
+  {
+    value, onChange, spans, activeId = null, onCaretSpan, placeholder,
+    showToolbar = true, highlights, onSelection,
+  },
   ref
 ) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [sel, setSel] = useState<{ start: number; end: number } | null>(null);
 
   // Grow the textarea to fit its content so the page, not the box, scrolls.
   useLayoutEffect(() => {
@@ -112,13 +135,31 @@ export const DraftEditor = forwardRef<
   }));
 
   const reportCaret = useCallback(() => {
-    if (!onCaretSpan) return;
     const el = taRef.current;
     if (!el) return;
     const pos = el.selectionStart;
-    const hit = spans.find(s => pos >= s.start && pos < s.end);
-    onCaretSpan(hit?.id ?? null);
+    if (onCaretSpan) {
+      const hit = spans.find(s => pos >= s.start && pos < s.end);
+      onCaretSpan(hit?.id ?? null);
+    }
+    const { selectionStart: s, selectionEnd: e } = el;
+    setSel(e - s >= MIN_SELECTION ? { start: s, end: e } : null);
   }, [onCaretSpan, spans]);
+
+  // Measure the selection off the backdrop once it has rendered its anchor.
+  useLayoutEffect(() => {
+    if (!onSelection) return;
+    if (!sel) {
+      onSelection(null);
+      return;
+    }
+    const anchor = scrollRef.current?.querySelector('[data-sel-anchor="1"]');
+    onSelection({
+      ...sel,
+      text: value.slice(sel.start, sel.end),
+      rect: anchor ? anchor.getBoundingClientRect() : null,
+    });
+  }, [sel, value, onSelection]);
 
   // ── Formatting ─────────────────────────────────────────────────────────────
   const apply = useCallback(
@@ -181,6 +222,23 @@ export const DraftEditor = forwardRef<
   };
 
   const segments = buildSegments(value, spans);
+  // Separate layers so a voice-meter hit inside a marked sentence shows both,
+  // rather than one span winning ownership of the characters.
+  const highlightSegments = highlights?.length ? buildSegments(value, highlights) : null;
+  const selSegments = sel ? buildSegments(value, [{ id: '__sel__', start: sel.start, end: sel.end, severity: 'sel' }]) : null;
+
+  // Backdrop layers share the textarea's box and metrics exactly; anything that
+  // moves a character has to be in METRICS or the paint drifts off the words.
+  const layer = (children: React.ReactNode, key: string) => (
+    <div
+      key={key}
+      aria-hidden
+      className="absolute inset-0 pointer-events-none select-none"
+      style={{ ...METRICS, color: 'transparent' }}
+    >
+      {children}
+    </div>
+  );
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -203,6 +261,35 @@ export const DraftEditor = forwardRef<
 
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto bg-academy-surface/30">
         <div className="relative mx-auto w-full min-h-full" style={{ maxWidth: '46rem' }}>
+          {/* Voice-meter paint, under the marks. */}
+          {highlightSegments &&
+            layer(
+              highlightSegments.map((seg, i) =>
+                seg.annId ? (
+                  <span
+                    key={i}
+                    style={{ background: '#C9A84C33', borderBottom: '2px dotted #C9A84C', borderRadius: 2 }}
+                  >
+                    {seg.text}
+                  </span>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                )
+              ),
+              'highlights'
+            )}
+
+          {/* Invisible anchor the passage bar is positioned from. */}
+          {selSegments &&
+            layer(
+              selSegments.map((seg, i) => (
+                <span key={i} data-sel-anchor={seg.annId ? '1' : '0'}>
+                  {seg.text}
+                </span>
+              )),
+              'selection'
+            )}
+
           {/* Backdrop: the same text, invisible, carrying the colour. */}
           <div
             aria-hidden
@@ -239,6 +326,11 @@ export const DraftEditor = forwardRef<
             onKeyDown={onKeyDown}
             onSelect={reportCaret}
             onClick={reportCaret}
+            // onSelect alone is not enough: it does not fire on every path that
+            // ends a selection (a drag released outside the box, shift+arrow
+            // held down), and the passage bar has to appear on all of them.
+            onMouseUp={reportCaret}
+            onKeyUp={reportCaret}
             className="relative block w-full resize-none bg-transparent text-academy-text placeholder-academy-muted/60 focus:outline-none"
             style={{ ...METRICS, caretColor: '#C9A84C', overflow: 'hidden', minHeight: '100%' }}
           />

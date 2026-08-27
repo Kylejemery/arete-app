@@ -6,22 +6,57 @@
 // type on. Reuses the Scribe prose parser, which deliberately passes anything it
 // does not recognise through as body text.
 
-import { Fragment } from 'react';
-import { parseProse, parseInline, type Block } from '@/lib/scribe/prose';
+import { Fragment, createContext, useContext, type ReactNode } from 'react';
+import { highlightSpans, parseProse, parseInline, type Block } from '@/lib/scribe/prose';
+import type { MetricKind } from '@/lib/scribe/voice-metrics';
+
+// The voice-meter category being shown, if any. Context rather than a prop
+// because every block and list item renders inline text and none of them care
+// what a highlight is.
+const HighlightCtx = createContext<MetricKind | null>(null);
+
+const HIT = 'rounded-sm bg-academy-gold/30 underline decoration-dotted decoration-academy-gold underline-offset-2';
 
 function Inlines({ text }: { text: string }) {
+  const metric = useContext(HighlightCtx);
+  const segs = parseInline(text);
+  // Ranges are measured over the text with its markdown already stripped, which
+  // is the same string the segments concatenate to, so the offsets line up.
+  const spans = metric ? highlightSpans(segs.map(s => s.text).join(''), { kind: 'metric', metric }) : [];
+
+  let cursor = 0;
   return (
     <>
-      {parseInline(text).map((seg, i) => {
-        if (seg.type === 'strong') return <strong key={i} className="font-semibold text-academy-text">{seg.text}</strong>;
-        if (seg.type === 'em') return <em key={i}>{seg.text}</em>;
+      {segs.map((seg, i) => {
+        const from = cursor;
+        const to = cursor + seg.text.length;
+        cursor = to;
+
+        let inner: ReactNode = seg.text;
+        const overlapping = spans.filter(s => s.start < to && s.end > from);
+        if (overlapping.length) {
+          const parts: ReactNode[] = [];
+          let at = from;
+          for (const s of overlapping) {
+            const hs = Math.max(s.start, from);
+            const he = Math.min(s.end, to);
+            if (hs > at) parts.push(seg.text.slice(at - from, hs - from));
+            parts.push(<mark key={hs} className={HIT}>{seg.text.slice(hs - from, he - from)}</mark>);
+            at = he;
+          }
+          if (at < to) parts.push(seg.text.slice(at - from));
+          inner = parts;
+        }
+
+        if (seg.type === 'strong') return <strong key={i} className="font-semibold text-academy-text">{inner}</strong>;
+        if (seg.type === 'em') return <em key={i}>{inner}</em>;
         if (seg.type === 'gap')
           return (
             <mark key={i} className="bg-academy-gold/20 text-academy-gold rounded px-1">
-              {seg.text}
+              {inner}
             </mark>
           );
-        return <Fragment key={i}>{seg.text}</Fragment>;
+        return <Fragment key={i}>{inner}</Fragment>;
       })}
     </>
   );
@@ -58,17 +93,27 @@ function BlockView({ block }: { block: Block }) {
   }
 }
 
-export function ProsePage({ text, title }: { text: string; title?: string }) {
+export function ProsePage({
+  text,
+  title,
+  highlight = null,
+}: {
+  text: string;
+  title?: string;
+  highlight?: MetricKind | null;
+}) {
   const blocks = parseProse(text);
   return (
-    <div className="h-full overflow-auto bg-academy-surface/30">
-      <div className="mx-auto w-full text-academy-text" style={{ maxWidth: '46rem', padding: '3rem 3.25rem 6rem' }}>
-        {title && <p className="font-mono text-academy-muted text-[10px] uppercase tracking-widest mb-6">{title}</p>}
-        {blocks.length === 0 && (
-          <p className="font-serif italic text-academy-muted">Nothing written yet.</p>
-        )}
-        {blocks.map((b, i) => <BlockView key={i} block={b} />)}
+    <HighlightCtx.Provider value={highlight}>
+      <div className="h-full overflow-auto bg-academy-surface/30">
+        <div className="mx-auto w-full text-academy-text" style={{ maxWidth: '46rem', padding: '3rem 3.25rem 6rem' }}>
+          {title && <p className="font-mono text-academy-muted text-[10px] uppercase tracking-widest mb-6">{title}</p>}
+          {blocks.length === 0 && (
+            <p className="font-serif italic text-academy-muted">Nothing written yet.</p>
+          )}
+          {blocks.map((b, i) => <BlockView key={i} block={b} />)}
+        </div>
       </div>
-    </div>
+    </HighlightCtx.Provider>
   );
 }

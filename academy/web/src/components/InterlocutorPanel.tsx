@@ -12,7 +12,7 @@
 // verdict. Keep that distinction visible in the copy, since a button next to
 // "Submit for Examination" invites the assumption that it is a pre-grade.
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const MIN_CRITIQUE_CHARS = 40;
 
@@ -83,12 +83,16 @@ export function InterlocutorChat({
   critiqueId,
   pieceTitle,
   placeholder = 'Ask about the draft…',
+  seed,
 }: {
   excerpt: string;
   critique?: string;
   critiqueId?: string | null;
   pieceTitle?: string;
   placeholder?: string;
+  /** A question written for the writer elsewhere — selecting a passage in the
+   *  document, say. The nonce is what makes asking the same thing twice work. */
+  seed?: { text: string; nonce: number };
 }) {
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [draft, setDraft] = useState('');
@@ -96,6 +100,19 @@ export function InterlocutorChat({
   const [error, setError] = useState<string | null>(null);
 
   const ready = draft.trim().length > 0 && excerpt.trim().length > 0 && !busy;
+  const boxRef = useRef<HTMLTextAreaElement>(null);
+
+  // A seeded question lands in the box rather than sending itself: the writer
+  // still gets to add to it, and nothing is asked on their behalf.
+  useEffect(() => {
+    if (!seed?.text) return;
+    setDraft(seed.text);
+    const el = boxRef.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(seed.text.length, seed.text.length);
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [seed?.nonce, seed?.text]);
 
   const send = async () => {
     if (!ready) return;
@@ -151,6 +168,7 @@ export function InterlocutorChat({
       )}
 
       <textarea
+        ref={boxRef}
         className="w-full bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text text-sm placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y min-h-[4.5rem] leading-relaxed"
         placeholder={placeholder}
         value={draft}
