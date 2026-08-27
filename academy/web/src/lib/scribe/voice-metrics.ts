@@ -20,6 +20,13 @@ export interface VoiceMetrics {
   // Per-100-words rates.
   adverbRate: number // words ending in -ly
   toBeRate: number // is/are/was/were/be/been/being/am
+  // Dashes standing between clauses or fencing off an aside: the em dash, the
+  // en dash used as one, and the spaced hyphen. Kyle bans these outright in
+  // the essays, so zero is the target and any count is worth seeing. Hyphens
+  // inside compound words and markdown bullets are not counted.
+  dashes: number
+  dashRate: number // per 1000 words
+  dashLabel: 'clean' | 'some' | 'heavy'
   tellHits: TellHit[]
   tellTotal: number
 }
@@ -93,6 +100,16 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
   const lower = ` ${clean.toLowerCase()} `
   const toBe = (lower.match(/\b(is|are|was|were|be|been|being|am)\b/g) || []).length
 
+  // Em/en dashes always count. A hyphen only counts when it floats between
+  // spaces mid-line, which is the dash usage; requiring a non-space character
+  // and no newline before it keeps markdown bullets and rule lines out.
+  const dashChars = (clean.match(/[—–]/g) || []).length
+  const spacedHyphens = (clean.match(/[^\s][ \t]+-{1,2}[ \t]+/g) || []).length
+  const dashes = dashChars + spacedHyphens
+  const dashRate = wordCount ? Math.round((dashes / wordCount) * 10000) / 10 : 0
+  const dashLabel: VoiceMetrics['dashLabel'] =
+    dashes === 0 ? 'clean' : dashRate <= 2 ? 'some' : 'heavy'
+
   const tellHits: TellHit[] = []
   for (const t of TELLS) {
     const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
@@ -110,6 +127,9 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
     burstinessLabel,
     adverbRate: per100(adverbs),
     toBeRate: per100(toBe),
+    dashes,
+    dashRate,
+    dashLabel,
     tellHits,
     tellTotal,
   }

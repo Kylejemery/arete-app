@@ -30,6 +30,8 @@ THE AUTHOR'S MATERIAL: the notes are the best material you have. Reuse the autho
 
 CANONICAL STYLE: name classical authors and works in scholarly form in the prose (Epictetus' Discourses, Marcus Aurelius' Meditations, Seneca's Letters). If you state a canonical passage number, put it in the citation map's "locator" field — passage numbers are rendered but flagged as unverified, so include them only when you are confident.
 
+NO DASHES IN THE DRAFT: the em dash (the long one), the en dash used as one, and the spaced hyphen used as one are the loudest machine tell in the language, and the author will not publish them. Where you reach for a dash, use the punctuation that actually fits: a period, a colon, a semicolon, a comma, or parentheses. If none of those work, rewrite the sentence. Hyphens inside compound words and in ranges are correct and stay; what is banned is a dash standing between clauses or fencing off an aside. These instructions use dashes freely, which is not permission: the ban is on the draft. Never use em dashes or en dashes in any output.
+
 OUTPUT PROTOCOL — follow exactly:
 1. The complete draft in markdown.
 2. A line containing only: ${CITATIONS_SENTINEL}

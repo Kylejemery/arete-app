@@ -1,0 +1,343 @@
+/* Draft workspace — typeset prose, the change review, and the full-page skin.
+   Palette matches admin.module.css: navy page (#0A1628), white paper, cream
+   headings on navy, #3C3489 / #AFA9EC accent. */
+
+/* ── Typeset prose ───────────────────────────────────────────────────────── */
+
+.prose {
+  color: #1a1a1a;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: 17.5px;
+  line-height: 1.72;
+  word-break: break-word;
+}
+.proseCompact { font-size: 14px; line-height: 1.62; }
+
+.prose .p { margin: 0 0 1em; }
+.prose .p:last-child { margin-bottom: 0; }
+
+.h1 {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 1.5em;
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 1.4em 0 0.5em;
+  letter-spacing: -0.01em;
+}
+.h2 {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 1.22em;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.5em 0 0.45em;
+}
+.h3 {
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 1.02em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b6b6b;
+  margin: 1.5em 0 0.4em;
+}
+.prose > .h1:first-child,
+.prose > .h2:first-child,
+.prose > .h3:first-child { margin-top: 0; }
+
+.quote {
+  margin: 1.1em 0;
+  padding: 0.15em 0 0.15em 1.1em;
+  border-left: 2px solid #afa9ec;
+  color: #3f3f46;
+  font-style: italic;
+}
+
+.list { margin: 0 0 1em; padding-left: 1.4em; }
+.list li { margin-bottom: 0.35em; }
+
+.hr {
+  border: none;
+  border-top: 0.5px solid #e2e2e2;
+  margin: 1.9em auto;
+  width: 42%;
+}
+
+/* [YOUR TURN: ...] — the gaps only Kyle can close. */
+.gap {
+  background: #fff5d8;
+  border-bottom: 1px dashed #d8b23a;
+  color: #7a5b06;
+  border-radius: 3px;
+  padding: 0 3px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  font-size: 0.86em;
+  font-style: normal;
+}
+
+/* ── Tabs + header actions ───────────────────────────────────────────────── */
+
+.tabs { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.tab {
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #9a9a9a;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover { color: #3C3489; background: #f3f2fb; }
+.tabOn { color: #3C3489; background: #edebfa; font-weight: 700; }
+
+.headActions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.headActions button { height: 30px; padding: 0 12px; font-size: 12.5px; }
+
+/* ── Outside read ────────────────────────────────────────────────────────── */
+
+.reviewMeta { font-size: 11.5px; color: #888; margin-bottom: 10px; }
+.reviewGroup { margin-bottom: 14px; }
+.reviewGroupLabel { font-weight: 600; opacity: 0.8; margin-bottom: 3px; font-size: 13px; }
+.reviewList { margin: 0; padding-left: 16px; font-size: 13.5px; line-height: 1.5; color: #1a1a1a; }
+.reviewList li { margin-bottom: 6px; }
+.reviewLine { font-style: italic; }
+.reviewWhy { opacity: 0.75; }
+
+/* ── Change review ───────────────────────────────────────────────────────── */
+
+.diffBar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #fff;
+  border-bottom: 0.5px solid #eee;
+  padding: 8px 0 10px;
+  margin-bottom: 12px;
+}
+.diffBarLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #aaa;
+}
+.baseSelect {
+  font-family: inherit;
+  font-size: 12.5px;
+  color: #1a1a1a;
+  background: #fff;
+  border: 0.5px solid #ddd;
+  border-radius: 8px;
+  padding: 5px 8px;
+  max-width: 240px;
+}
+.diffBarCount { font-size: 12px; color: #666; margin-right: auto; }
+.diffBar :global(button) { height: 30px; padding: 0 14px; font-size: 12.5px; }
+
+.diffDoc { display: flex; flex-direction: column; }
+.diffSame { opacity: 0.72; }
+
+.hunk {
+  border: 1px solid #e6e6e6;
+  border-left-width: 3px;
+  border-radius: 8px;
+  margin: 10px 0 14px;
+  background: #fcfcfd;
+  overflow: hidden;
+}
+.hunkKept { border-left-color: #2e7d32; }
+.hunkReverted { border-left-color: #c0392b; background: #fdf7f7; }
+.hunkEdited { border-left-color: #3C3489; background: #fafaff; }
+
+.hunkBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 0.5px solid #eee;
+  background: #fff;
+  flex-wrap: wrap;
+}
+.hunkKind {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+.kind_added { background: #e7f4ea; color: #2c7a3f; }
+.kind_removed { background: #fbeaea; color: #a83a2c; }
+.kind_revised { background: #edebfa; color: #3C3489; }
+
+.hunkState {
+  font-size: 11px;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: auto;
+}
+
+.hunkBtns { display: flex; gap: 4px; }
+.hunkBtn {
+  font-size: 11.5px;
+  font-family: inherit;
+  border: 0.5px solid #ddd;
+  border-radius: 999px;
+  padding: 3px 11px;
+  background: #fff;
+  color: #555;
+  cursor: pointer;
+}
+.hunkBtn:hover { border-color: #afa9ec; color: #1a1a1a; }
+.hunkBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.hunkBtnOn { background: #3C3489; border-color: #3C3489; color: #fff; }
+.hunkBtnOn:hover { color: #fff; }
+
+.hunkBody {
+  padding: 10px 12px;
+  font-size: 14.5px;
+  line-height: 1.62;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #1a1a1a;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+}
+.hunkBodyMuted { color: #7a7a7a; }
+
+.ins {
+  background: #e3f6e6;
+  color: #14532d;
+  text-decoration: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #cfead4;
+}
+.del {
+  background: #fdeaea;
+  color: #8b1d13;
+  text-decoration: line-through;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #f4d3d0;
+}
+
+.hunkEdit { padding: 10px 12px; }
+.hunkTextarea {
+  width: 100%;
+  border: 0.5px solid #afa9ec;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #1a1a1a;
+  background: #fff;
+  outline: none;
+  resize: vertical;
+}
+.hunkEditBtns { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ── Voice meter ─────────────────────────────────────────────────────────── */
+
+.meter {
+  flex-shrink: 0;
+  border-top: 0.5px solid #eee;
+  padding: 7px 14px;
+  font-size: 11.5px;
+  color: #555;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  align-items: center;
+}
+.meterLabel { text-transform: uppercase; letter-spacing: 0.06em; color: #aaa; font-size: 10px; }
+.meterStats { margin-left: auto; color: #999; }
+.good { color: #2e7d32; }
+.ok { color: #b8860b; }
+.bad { color: #c0392b; }
+
+/* ── Full-page skin ──────────────────────────────────────────────────────── */
+
+.fsOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: #0A1628;
+  display: flex;
+  flex-direction: column;
+}
+
+.fsHead {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: #0d1c31;
+  border-bottom: 0.5px solid #1e2f4a;
+}
+.fsTitle { margin-right: auto; min-width: 0; }
+.fsKicker {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #6e819b;
+  margin-bottom: 2px;
+}
+.fsTitle h2 {
+  font-size: 17px;
+  font-weight: 500;
+  color: #f4ead5;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 40vw;
+}
+/* Tabs and buttons sit on navy up here, so they get the dark-surface variant. */
+.fsHead .tab { color: #8ea2bd; }
+.fsHead .tab:hover { color: #f4ead5; background: #17263d; }
+.fsHead .tabOn { color: #0A1628; background: #AFA9EC; }
+.fsHead .headActions :global(button) { border-color: #2b3f5d; color: #c8d4e3; }
+.fsHead .headActions :global(button:hover) { background: #17263d; }
+.fsHead .headActions :global(button:disabled) { opacity: 0.4; }
+
+.fsBody { flex: 1; overflow-y: auto; padding: 34px 20px 48px; }
+.fsColumn {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 48px 60px 56px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.fsColumnWide {
+  max-width: 940px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px 32px 36px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+.fsFoot {
+  flex-shrink: 0;
+  background: #fff;
+  border-top: 0.5px solid #e5e5e5;
+  max-height: 32vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 780px) {
+  .fsColumn { padding: 28px 22px 34px; }
+  .fsColumnWide { padding: 20px 16px 28px; }
+  .fsTitle h2 { max-width: 60vw; }
+}

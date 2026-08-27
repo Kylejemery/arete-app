@@ -5,42 +5,25 @@
 // re-retrieves live and the whole thread persists. Sibling of the pipeline
 // at /admin/scribe; export is copy-out only — the hand-retype gate stays.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import admin from '../../admin.module.css'
 import styles from './chat.module.css'
+import DraftWorkspace, { type DraftTab } from './DraftWorkspace'
+import type { DiffBase, Draft, Entry, Message, Review, Source } from './types'
 import { withAttribution } from '@/lib/scribe/attribution'
-import { computeVoiceMetrics } from '@/lib/scribe/voice-metrics'
-
-type Entry = { id: string; title: string | null; raw_text: string; created_at: string; updated_at: string }
-type Source = {
-  chunk_id: string
-  author: string
-  work: string
-  section_label: string | null
-  translator: string | null
-  mode: 'quote' | 'paraphrase'
-  similarity: number
-  query: string
-}
-type Message = { id: string; role: 'user' | 'scribe'; content: string; sources_used: Source[] | null; created_at: string }
-type ReviewFinding = { line: string; why: string }
-type Review = {
-  model: string
-  not_kyle: ReviewFinding[]
-  unearned: ReviewFinding[]
-  narrated_over: ReviewFinding[]
-  tells?: ReviewFinding[]
-  error?: string
-}
-type Draft = { id: string; stage: 'middle' | 'full' | 'final'; draft_text: string; sources_used: Source[] | null; review: Review | null; created_at: string }
-
-function reviewHasFindings(r: Review | null | undefined): boolean {
-  return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || (r.tells?.length ?? 0) > 0)
-}
 
 function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
   return m ? m[1].trim() : null
+}
+
+// Kyle's hand revisions come back through the thread as ordinary user turns
+// carrying the whole draft; the marker is how the UI tells them apart.
+function isHandRevision(content: string): boolean {
+  return content.includes('<kyle-edit')
+}
+function revisionSummary(content: string): string {
+  return content.match(/<kyle-edit summary="([^"]*)"/)?.[1] ?? ''
 }
 
 // Chat-bubble text: commentary only — the draft lives in its own pane.
@@ -84,11 +67,13 @@ export default function ScribeChatPage() {
   // the next turn starts; a viewed snapshot's own stored review takes priority.
   const [liveReview, setLiveReview] = useState<Review | null>(null)
 
-  // Composer + draft pane
+  // Composer + draft workspace
   const [input, setInput] = useState('')
   const [viewedDraftId, setViewedDraftId] = useState<string | null>(null) // null = working draft
   const [snapshotting, setSnapshotting] = useState(false)
-  const [rightTab, setRightTab] = useState<'draft' | 'review'>('draft') // draft-pane view
+  const [applying, setApplying] = useState(false)
+  const [rightTab, setRightTab] = useState<DraftTab>('draft')
+  const [fullscreen, setFullscreen] = useState(false)
 
   const threadRef = useRef<HTMLDivElement>(null)
   // Deep link from the Log: ?entry=<id>&run=1 opens an entry and, if Scribe
@@ -143,6 +128,14 @@ export default function ScribeChatPage() {
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight })
   }, [messages, streamText])
+
+  // Escape leaves the full-page draft rather than the browser's fullscreen.
+  useEffect(() => {
+    if (!fullscreen) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreen(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fullscreen])
 
   // Run one Scribe turn (message === undefined → opening turn / retry).
   const runTurn = useCallback(async (entryId: string, message?: string) => {
@@ -247,19 +240,51 @@ export default function ScribeChatPage() {
     await runTurn(selectedId, msg)
   }
 
-  // Working draft: latest scribe message containing <draft>, unless a snapshot
-  // is being viewed; while streaming, the partial draft streams in live.
-  const lastScribeDraft = (() => {
-    for (let i = messages.length - 1; i >= 0; i--) {
-      if (messages[i].role !== 'scribe') continue
-      const d = extractDraft(messages[i].content)
-      if (d) return d
+  // Every committed draft in thread order, whoever produced it — Scribe's turns
+  // and Kyle's hand revisions alike. The last one is the working draft.
+  const draftTrail = useMemo(() => {
+    const out: { key: string; role: 'user' | 'scribe'; text: string }[] = []
+    for (const m of messages) {
+      const d = extractDraft(m.content)
+      if (d) out.push({ key: m.id, role: m.role, text: d })
     }
-    return null
-  })()
+    return out
+  }, [messages])
+
+  const committedDraft = draftTrail.length ? draftTrail[draftTrail.length - 1].text : null
   const streamingDraft = streaming ? partialDraft(streamText) : null
-  const viewedSnapshot = viewedDraftId ? drafts.find(d => d.id === viewedDraftId) : null
-  const draftShown = viewedSnapshot?.draft_text ?? streamingDraft ?? lastScribeDraft
+  const viewedSnapshot = viewedDraftId ? drafts.find(d => d.id === viewedDraftId) ?? null : null
+  const draftShown = viewedSnapshot?.draft_text ?? streamingDraft ?? committedDraft
+
+  // What the shown draft gets compared against in the changes view. First entry
+  // is the default: the state the draft was in immediately before this one.
+  const bases = useMemo<DiffBase[]>(() => {
+    const out: DiffBase[] = []
+    if (viewedSnapshot) {
+      const i = drafts.findIndex(d => d.id === viewedSnapshot.id)
+      if (i > 0) {
+        out.push({ id: 'prev', label: `Previous snapshot · ${drafts[i - 1].stage}`, text: drafts[i - 1].draft_text })
+      }
+    } else {
+      // Mid-stream the previous state is the last committed draft; once the
+      // turn lands, that draft IS the current one, so step back one further.
+      const prev = draftTrail[draftTrail.length - (streamingDraft ? 1 : 2)]
+      if (prev) {
+        out.push({
+          id: 'prev',
+          label: prev.role === 'user' ? 'Your last hand revision' : 'Previous Scribe draft',
+          text: prev.text,
+        })
+      }
+    }
+    drafts.forEach((d, i) => {
+      if (viewedSnapshot?.id === d.id) return
+      out.push({ id: `snap-${d.id}`, label: `Snapshot ${i + 1} · ${d.stage}`, text: d.draft_text })
+    })
+    if (entry?.raw_text) out.push({ id: 'raw', label: 'Original journal fragment', text: entry.raw_text })
+    return out.filter(b => b.text.trim() && b.text.trim() !== draftShown?.trim())
+  }, [viewedSnapshot, drafts, draftTrail, streamingDraft, entry, draftShown])
+
   // A viewed final snapshot shows its own stored read. On the working view:
   // the live read from the turn just finished, else the last saved final
   // snapshot's read — which is persisted in the DB, so it survives reloads and
@@ -268,13 +293,6 @@ export default function ScribeChatPage() {
   const reviewShown = viewedSnapshot?.review ?? (viewedDraftId ? null : (liveReview ?? latestFinalWithReview?.review ?? null))
   // True when the shown read is the saved fallback (may predate current edits).
   const reviewIsSavedFallback = !viewedDraftId && !liveReview && !!latestFinalWithReview
-  const reviewCount = reviewShown
-    ? reviewShown.not_kyle.length + reviewShown.unearned.length + reviewShown.narrated_over.length + (reviewShown.tells?.length ?? 0)
-    : 0
-  // The review tab only shows when there's a read to show.
-  const effTab: 'draft' | 'review' = rightTab === 'review' && reviewShown ? 'review' : 'draft'
-  // Deterministic voice meter — recomputed from whatever draft is shown.
-  const voiceMetrics = draftShown ? computeVoiceMetrics(draftShown) : null
 
   // Source panel: live during a turn, else the latest scribe turn's sources.
   const latestSources = (() => {
@@ -288,13 +306,13 @@ export default function ScribeChatPage() {
   })()
 
   async function snapshot(stage: 'middle' | 'full') {
-    if (!selectedId || !lastScribeDraft) return
+    if (!selectedId || !committedDraft) return
     setSnapshotting(true)
     try {
       const res = await fetch(`/api/admin/scribe/entries/${selectedId}/drafts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stage, draft_text: lastScribeDraft, sources_used: latestSources.length ? latestSources : null }),
+        body: JSON.stringify({ stage, draft_text: committedDraft, sources_used: latestSources.length ? latestSources : null }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Snapshot failed')
@@ -309,8 +327,29 @@ export default function ScribeChatPage() {
   // The final handoff: Scribe stops developing, produces the final draft plus
   // the retype punch-list, and the server fires one cold outside read.
   async function finalize() {
-    if (!selectedId || streaming || !lastScribeDraft) return
+    if (!selectedId || streaming || !committedDraft) return
     await runTurn(selectedId, 'Finalize the draft and hand it off: produce the final draft and the retype punch-list. No new directions or sources.')
+  }
+
+  // Kyle's resolved version of a turn's changes becomes the working draft, as a
+  // real turn in the thread so Scribe carries his decisions forward.
+  async function applyRevision(text: string, summary: string) {
+    if (!selectedId) return
+    setApplying(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/entries/${selectedId}/revise`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_text: text, summary }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Could not apply the revision')
+      showToast(`Working draft updated — ${summary}`)
+      await Promise.all([loadEntry(selectedId), loadEntries()])
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not apply the revision')
+    }
+    setApplying(false)
   }
 
   async function exportDraft() {
@@ -320,8 +359,10 @@ export default function ScribeChatPage() {
     showToast('Draft copied — retype by hand before publishing')
   }
 
-  const canChat = selectedId && messages.length > 0
-  const needsOpening = canChat && !streaming && messages[messages.length - 1].role === 'user'
+  const canChat = !!selectedId && messages.length > 0
+  const lastMessage = messages[messages.length - 1]
+  const needsOpening =
+    canChat && !streaming && lastMessage.role === 'user' && !isHandRevision(lastMessage.content)
 
   // Auto-run the opening turn when arriving from the Log with &run=1.
   useEffect(() => {
@@ -346,6 +387,29 @@ export default function ScribeChatPage() {
     }
   }
 
+  const workspaceProps = {
+    tab: rightTab,
+    onTabChange: setRightTab,
+    title: entry?.title ?? null,
+    draftText: draftShown,
+    bases,
+    review: reviewShown,
+    reviewIsSavedFallback,
+    viewingSnapshotStage: viewedSnapshot?.stage ?? null,
+    drafts,
+    viewedDraftId,
+    onViewDraft: setViewedDraftId,
+    streaming,
+    snapshotting,
+    canSnapshot: !!committedDraft,
+    onSnapshot: snapshot,
+    onFinalize: finalize,
+    onExport: exportDraft,
+    onSaveToLog: saveToLog,
+    onApplyRevision: applyRevision,
+    applying,
+  }
+
   return (
     <div className={styles.wrap}>
       <div className={styles.header}>
@@ -358,6 +422,14 @@ export default function ScribeChatPage() {
 
       {error && <div className={admin.errorBanner}>{error}</div>}
       {toast && <div className={admin.toast}>{toast}</div>}
+
+      {fullscreen && (
+        <DraftWorkspace
+          {...workspaceProps}
+          fullscreen
+          onToggleFullscreen={() => setFullscreen(false)}
+        />
+      )}
 
       <div className={styles.grid}>
         {/* ── Entries ── */}
@@ -408,12 +480,22 @@ export default function ScribeChatPage() {
           <div className={styles.paneBody} ref={threadRef}>
             {!selectedId && <p className={styles.draftEmpty}>Pick an entry or start a new one.</p>}
             <div className={styles.thread}>
-              {messages.map(m => (
-                <div key={m.id} className={`${styles.msg} ${m.role === 'user' ? styles.msgUser : styles.msgScribe}`}>
-                  <div className={styles.msgRole}>{m.role === 'user' ? 'Kyle' : 'Scribe'}</div>
-                  {m.role === 'scribe' ? commentaryOf(m.content) : m.content}
-                </div>
-              ))}
+              {messages.map(m => {
+                if (m.role === 'user' && isHandRevision(m.content)) {
+                  const summary = revisionSummary(m.content)
+                  return (
+                    <div key={m.id} className={styles.revisionNote}>
+                      You settled the changes by hand{summary ? ` — ${summary}` : ''}
+                    </div>
+                  )
+                }
+                return (
+                  <div key={m.id} className={`${styles.msg} ${m.role === 'user' ? styles.msgUser : styles.msgScribe}`}>
+                    <div className={styles.msgRole}>{m.role === 'user' ? 'Kyle' : 'Scribe'}</div>
+                    {m.role === 'scribe' ? commentaryOf(m.content) : m.content}
+                  </div>
+                )
+              })}
               {streaming && (
                 <div className={`${styles.msg} ${styles.msgScribe}`}>
                   <div className={styles.msgRole}>Scribe</div>
@@ -452,121 +534,13 @@ export default function ScribeChatPage() {
 
         {/* ── Draft + sources ── */}
         <div className={styles.rightCol}>
-          <div className={`${styles.pane} ${styles.draftPane}`}>
-            <div className={styles.paneHead}>
-              <span style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  className={admin.ghostBtn}
-                  onClick={() => setRightTab('draft')}
-                  style={{ fontWeight: effTab === 'draft' ? 700 : 400, opacity: effTab === 'draft' ? 1 : 0.55 }}
-                >
-                  {viewedSnapshot ? `Snapshot · ${viewedSnapshot.stage}` : 'Working draft'}
-                </button>
-                {reviewShown && (
-                  <button
-                    className={admin.ghostBtn}
-                    onClick={() => setRightTab('review')}
-                    style={{ fontWeight: effTab === 'review' ? 700 : 400, opacity: effTab === 'review' ? 1 : 0.55 }}
-                    title="The cold gpt-4o outside read of this draft"
-                  >
-                    Outside read{reviewCount ? ` (${reviewCount})` : ''}
-                  </button>
-                )}
-              </span>
-              <span>
-                <button className={admin.ghostBtn} onClick={saveToLog} disabled={!draftShown}>
-                  Save to log
-                </button>{' '}
-                <button className={admin.ghostBtn} onClick={exportDraft} disabled={!draftShown}>
-                  Export
-                </button>
-              </span>
-            </div>
-            <div className={styles.paneBody}>
-              {effTab === 'review' && reviewShown ? (
-                <>
-                  <div style={{ fontSize: 11.5, color: '#888', marginBottom: 10 }}>
-                    {reviewShown.model ? `${reviewShown.model} · read the draft cold` : 'outside read'}
-                    {reviewIsSavedFallback && ' · saved from your last finalize — re-finalize to refresh after edits'}
-                  </div>
-                  {reviewShown.error ? (
-                    <p className={styles.draftEmpty}>Outside read unavailable: {reviewShown.error}</p>
-                  ) : !reviewHasFindings(reviewShown) ? (
-                    <p className={styles.draftEmpty}>Nothing flagged — the honest all-clear. What&apos;s left is yours in the retype.</p>
-                  ) : (
-                    ([
-                      ['Reads like AI, not you', reviewShown.not_kyle],
-                      ['Claims not yet earned', reviewShown.unearned],
-                      ['Philosophy narrating over your story', reviewShown.narrated_over],
-                      ['Mechanical AI tells', reviewShown.tells ?? []],
-                    ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
-                      <div key={label} style={{ marginBottom: 12 }}>
-                        <div style={{ fontWeight: 600, opacity: 0.8, marginBottom: 3 }}>{label}</div>
-                        <ul style={{ margin: 0, paddingLeft: 16 }}>
-                          {items.map((f, i) => (
-                            <li key={i} style={{ marginBottom: 5 }}>
-                              <span style={{ fontStyle: 'italic' }}>“{f.line}”</span>
-                              {f.why ? <span style={{ opacity: 0.75 }}> — {f.why}</span> : null}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))
-                  )}
-                </>
-              ) : draftShown ? (
-                <div className={styles.draftText}>{draftShown}</div>
-              ) : (
-                <p className={styles.draftEmpty}>The working draft appears here as Scribe writes.</p>
-              )}
-            </div>
-            {effTab === 'draft' && voiceMetrics && (
-              <div style={{ flexShrink: 0, borderTop: '0.5px solid #eee', padding: '7px 14px', fontSize: 11.5, color: '#555', display: 'flex', flexWrap: 'wrap', gap: '3px 14px', alignItems: 'center' }}>
-                <span style={{ textTransform: 'uppercase', letterSpacing: '0.06em', color: '#aaa', fontSize: 10 }}>Voice meter</span>
-                <span title="Std-dev of sentence length in words. Higher = more human rhythm variation; flat prose is an AI tell.">
-                  rhythm <strong style={{ color: voiceMetrics.burstinessLabel === 'good' ? '#2e7d32' : voiceMetrics.burstinessLabel === 'ok' ? '#b8860b' : '#c0392b' }}>{voiceMetrics.burstiness}</strong> ({voiceMetrics.burstinessLabel})
-                </span>
-                <span title="Average words per sentence.">avg {voiceMetrics.meanSentenceLen}w</span>
-                <span title="-ly adverbs per 100 words. Lower is usually tighter.">adverbs {voiceMetrics.adverbRate}</span>
-                <span title="to-be verbs (is/are/was…) per 100 words. High = flatter prose.">to-be {voiceMetrics.toBeRate}</span>
-                <span title={voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'no cliché tells found'}>
-                  AI tells <strong style={{ color: voiceMetrics.tellTotal === 0 ? '#2e7d32' : '#c0392b' }}>{voiceMetrics.tellTotal}</strong>
-                </span>
-              </div>
-            )}
-            <div className={styles.draftActions}>
-              <button className={styles.snapshotChip} onClick={() => snapshot('middle')} disabled={snapshotting || !lastScribeDraft || streaming}>
-                Save as middle
-              </button>
-              <button className={styles.snapshotChip} onClick={() => snapshot('full')} disabled={snapshotting || !lastScribeDraft || streaming}>
-                Save as full
-              </button>
-              <button className={styles.snapshotChip} onClick={finalize} disabled={!lastScribeDraft || streaming} title="Stop developing; produce the final draft, the retype punch-list, and a cold outside read">
-                Finalize + outside read
-              </button>
-              {drafts.length > 0 && (
-                <>
-                  <span className={styles.sourceLoc} style={{ fontSize: 11 }}>Snapshots:</span>
-                  <button
-                    className={`${styles.snapshotChip} ${viewedDraftId === null ? styles.snapshotChipOn : ''}`}
-                    onClick={() => setViewedDraftId(null)}
-                  >
-                    working
-                  </button>
-                  {drafts.map((d, i) => (
-                    <button
-                      key={d.id}
-                      className={`${styles.snapshotChip} ${viewedDraftId === d.id ? styles.snapshotChipOn : ''}`}
-                      onClick={() => setViewedDraftId(d.id)}
-                      title={new Date(d.created_at).toLocaleString()}
-                    >
-                      {i + 1} · {d.stage}
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
+          {!fullscreen && (
+            <DraftWorkspace
+              {...workspaceProps}
+              fullscreen={false}
+              onToggleFullscreen={() => setFullscreen(true)}
+            />
+          )}
 
           <div className={`${styles.pane} ${styles.sourcePane}`}>
             <div className={styles.paneHead}>Sources · this turn</div>

@@ -28,7 +28,7 @@ Read the draft once, as a stranger would. Then report ONLY what you are genuinel
   "not_kyle": [ { "line": "<the exact phrase or sentence>", "why": "<why it reads like generic AI prose rather than a specific person who lived this>" } ],
   "unearned": [ { "line": "<the claim>", "why": "<why it is asserted as universal or settled when the essay hasn't earned it>" } ],
   "narrated_over": [ { "line": "<the passage>", "why": "<where the philosophy talks over the author's own story instead of enriching it>" } ],
-  "tells": [ { "line": "<the exact phrase or sentence>", "why": "<the mechanical AI-writing tell: uniform sentence rhythm, rule-of-three / parallelism overuse, signposting (firstly/in conclusion), hedging, thesaurus diction (delve, tapestry, underscore), or cliché phrasing>" } ]
+  "tells": [ { "line": "<the exact phrase or sentence>", "why": "<the mechanical AI-writing tell: a dash used between clauses or to fence off an aside (the author bans these outright, so flag EVERY one), uniform sentence rhythm, rule-of-three / parallelism overuse, signposting (firstly/in conclusion), hedging, thesaurus diction (delve, tapestry, underscore), or cliché phrasing>" } ]
 }
 
 Rules:

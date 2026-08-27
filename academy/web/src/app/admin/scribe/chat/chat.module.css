@@ -232,3 +232,17 @@
   margin-bottom: 6px;
 }
 .newEntryText:focus { border-color: #afa9ec; }
+
+/* Kyle's hand revision of a turn's changes, landed back in the thread as a
+   real user turn. The draft itself lives in the draft pane, so the bubble
+   collapses to a one-line note. */
+.revisionNote {
+  align-self: center;
+  font-size: 11.5px;
+  color: #6f6a9e;
+  background: #f3f2fb;
+  border: 0.5px solid #e2dff5;
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+.revisionNote::before { content: '✎ '; opacity: 0.7; }
