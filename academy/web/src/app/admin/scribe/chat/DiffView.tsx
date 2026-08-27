@@ -5,6 +5,10 @@
 // Scribe's revision, Revert restores what the draft said before, Edit lets him
 // write the passage himself. Unchanged prose renders normally around them so
 // the essay still reads as an essay while he works through the changes.
+//
+// A hunk starts undecided. Keeping is the same text as doing nothing, but it
+// is not the same act: marking it kept is how he tracks what he has actually
+// read, and the count in the bar is that progress.
 
 import { useState } from 'react'
 import ProseView from './ProseView'
@@ -17,9 +21,9 @@ const KIND_LABEL: Record<'added' | 'removed' | 'revised', string> = {
   revised: 'Revised',
 }
 
-function currentText(part: Extract<DiffPart, { kind: 'hunk' }>, d: Decision): string {
-  if (d.mode === 'edit') return d.text
-  if (d.mode === 'dismiss') return part.baseLines.join('\n')
+function currentText(part: Extract<DiffPart, { kind: 'hunk' }>, d: Decision | undefined): string {
+  if (d?.mode === 'edit') return d.text
+  if (d?.mode === 'dismiss') return part.baseLines.join('\n')
   return part.headLines.join('\n')
 }
 
@@ -29,7 +33,7 @@ function HunkCard({
   onDecide,
 }: {
   part: Extract<DiffPart, { kind: 'hunk' }>
-  decision: Decision
+  decision: Decision | undefined
   onDecide: (d: Decision) => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -42,7 +46,8 @@ function HunkCard({
   }
 
   const stateClass =
-    decision.mode === 'dismiss' ? styles.hunkReverted
+    !decision ? styles.hunkOpen
+    : decision.mode === 'dismiss' ? styles.hunkReverted
     : decision.mode === 'edit' ? styles.hunkEdited
     : styles.hunkKept
 
@@ -51,26 +56,28 @@ function HunkCard({
       <div className={styles.hunkBar}>
         <span className={`${styles.hunkKind} ${styles[`kind_${kind}`]}`}>{KIND_LABEL[kind]}</span>
         <span className={styles.hunkState}>
-          {decision.mode === 'dismiss' ? 'reverted' : decision.mode === 'edit' ? 'your wording' : 'keeping'}
+          {!decision ? 'not reviewed'
+            : decision.mode === 'dismiss' ? 'reverted'
+            : decision.mode === 'edit' ? 'your wording'
+            : 'kept'}
         </span>
         <span className={styles.hunkBtns}>
           <button
-            className={`${styles.hunkBtn} ${decision.mode === 'accept' ? styles.hunkBtnOn : ''}`}
+            className={`${styles.hunkBtn} ${decision?.mode === 'accept' ? styles.hunkBtnOn : ''}`}
             onClick={() => { setEditing(false); onDecide({ mode: 'accept' }) }}
             title="Keep Scribe's revision"
           >
             Keep
           </button>
           <button
-            className={`${styles.hunkBtn} ${decision.mode === 'dismiss' ? styles.hunkBtnOn : ''}`}
+            className={`${styles.hunkBtn} ${decision?.mode === 'dismiss' ? styles.hunkBtnOn : ''}`}
             onClick={() => { setEditing(false); onDecide({ mode: 'dismiss' }) }}
-            disabled={!part.baseLines.length && !part.headLines.length}
             title="Put back what the draft said before"
           >
             Revert
           </button>
           <button
-            className={`${styles.hunkBtn} ${decision.mode === 'edit' ? styles.hunkBtnOn : ''}`}
+            className={`${styles.hunkBtn} ${decision?.mode === 'edit' ? styles.hunkBtnOn : ''}`}
             onClick={startEdit}
             title="Write this passage yourself"
           >
@@ -87,6 +94,14 @@ function HunkCard({
             autoFocus
             rows={Math.min(18, Math.max(3, buffer.split('\n').length + 1))}
             onChange={e => setBuffer(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Escape') { e.preventDefault(); setEditing(false) }
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                onDecide({ mode: 'edit', text: buffer })
+                setEditing(false)
+              }
+            }}
           />
           <div className={styles.hunkEditBtns}>
             <button
@@ -98,9 +113,9 @@ function HunkCard({
             <button className={styles.hunkBtn} onClick={() => setEditing(false)}>Cancel</button>
           </div>
         </div>
-      ) : decision.mode === 'edit' ? (
+      ) : decision?.mode === 'edit' ? (
         <div className={styles.hunkBody}>{decision.text}</div>
-      ) : decision.mode === 'dismiss' ? (
+      ) : decision?.mode === 'dismiss' ? (
         <div className={`${styles.hunkBody} ${styles.hunkBodyMuted}`}>
           {part.baseLines.length ? part.baseLines.join('\n') : '(nothing — the addition is dropped)'}
         </div>
@@ -150,7 +165,7 @@ export default function DiffView({
           <HunkCard
             key={`h${p.id}`}
             part={p}
-            decision={decisions[p.id] ?? { mode: 'accept' }}
+            decision={decisions[p.id]}
             onDecide={d => onDecide(p.id, d)}
           />
         )

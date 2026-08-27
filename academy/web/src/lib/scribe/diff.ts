@@ -156,8 +156,9 @@ export function hunkKind(part: Extract<DiffPart, { kind: 'hunk' }>): 'added' | '
 }
 
 // Accepted hunks keep Scribe's text, dismissed hunks restore Kyle's, edited
-// hunks take whatever he typed. Missing decision = accept (the head draft is
-// already the working state, so accepting is the no-op).
+// hunks take whatever he typed. A missing decision means "not reviewed yet",
+// which resolves the same as accept — the head draft is already the working
+// state — but is counted separately so the UI can show real progress.
 export function resolveDiff(parts: DiffPart[], decisions: Record<number, Decision>): string {
   const out: string[] = []
   for (const p of parts) {
@@ -177,27 +178,44 @@ export function countHunks(parts: DiffPart[]): number {
   return parts.reduce((n, p) => n + (p.kind === 'hunk' ? 1 : 0), 0)
 }
 
+export interface DecisionTally {
+  kept: number
+  reverted: number
+  rewrote: number
+  unreviewed: number
+  total: number
+}
+
+export function tallyDecisions(
+  parts: DiffPart[],
+  decisions: Record<number, Decision>
+): DecisionTally {
+  const t: DecisionTally = { kept: 0, reverted: 0, rewrote: 0, unreviewed: 0, total: 0 }
+  for (const p of parts) {
+    if (p.kind !== 'hunk') continue
+    t.total++
+    const d = decisions[p.id]
+    if (!d) t.unreviewed++
+    else if (d.mode === 'dismiss') t.reverted++
+    else if (d.mode === 'edit') t.rewrote++
+    else t.kept++
+  }
+  return t
+}
+
 // One-line description of what Kyle did, stored on the revision message so the
 // thread (and Scribe) can see it.
 export function describeDecisions(
   parts: DiffPart[],
   decisions: Record<number, Decision>
 ): string {
-  let accepted = 0
-  let dismissed = 0
-  let edited = 0
-  for (const p of parts) {
-    if (p.kind !== 'hunk') continue
-    const mode = decisions[p.id]?.mode ?? 'accept'
-    if (mode === 'dismiss') dismissed++
-    else if (mode === 'edit') edited++
-    else accepted++
-  }
+  const t = tallyDecisions(parts, decisions)
+  if (!t.total) return 'no changes'
   const bits = [
-    accepted ? `kept ${accepted}` : '',
-    dismissed ? `reverted ${dismissed}` : '',
-    edited ? `rewrote ${edited}` : '',
+    t.kept ? `kept ${t.kept}` : '',
+    t.reverted ? `reverted ${t.reverted}` : '',
+    t.rewrote ? `rewrote ${t.rewrote}` : '',
+    t.unreviewed ? `left ${t.unreviewed} as written` : '',
   ].filter(Boolean)
-  if (!bits.length) return 'no changes'
-  return `${bits.join(', ')} of ${accepted + dismissed + edited} changes`
+  return `${bits.join(', ')} of ${t.total} changes`
 }
