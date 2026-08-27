@@ -9,8 +9,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import admin from '../../admin.module.css'
 import styles from './chat.module.css'
 import DraftWorkspace, { type DraftTab } from './DraftWorkspace'
+import SourceList from './SourceList'
 import type { DiffBase, Draft, Entry, Message, Review, Source } from './types'
 import { withAttribution } from '@/lib/scribe/attribution'
+import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
+import type { Highlight } from '@/lib/scribe/prose'
 
 function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
@@ -74,6 +77,9 @@ export default function ScribeChatPage() {
   const [applying, setApplying] = useState(false)
   const [rightTab, setRightTab] = useState<DraftTab>('draft')
   const [fullscreen, setFullscreen] = useState(false)
+  // "Show me where" is one shared piece of state, because the voice meter, an
+  // outside-read finding, and the source list all paint the same draft.
+  const [highlight, setHighlight] = useState<Highlight | null>(null)
 
   const threadRef = useRef<HTMLDivElement>(null)
   // Deep link from the Log: ?entry=<id>&run=1 opens an entry and, if Scribe
@@ -268,7 +274,17 @@ export default function ScribeChatPage() {
     } else {
       // Mid-stream the previous state is the last committed draft; once the
       // turn lands, that draft IS the current one, so step back one further.
-      const prev = draftTrail[draftTrail.length - (streamingDraft ? 1 : 2)]
+      const prevIdx = draftTrail.length - (streamingDraft ? 1 : 2)
+      const prev = draftTrail[prevIdx]
+      // When the working draft is one of Kyle's own hand revisions, diffing
+      // against it would only show him his own edit and hide the Scribe turn
+      // he has not reviewed yet. Reach back past Scribe's last draft instead,
+      // so the changes view shows that turn and his edits together.
+      const lastScribeIdx = draftTrail.map(d => d.role).lastIndexOf('scribe')
+      const beforeScribe = lastScribeIdx > 0 ? draftTrail[lastScribeIdx - 1] : undefined
+      if (beforeScribe && beforeScribe !== prev) {
+        out.push({ id: 'before-scribe', label: 'Before Scribe’s last turn', text: beforeScribe.text })
+      }
       if (prev) {
         out.push({
           id: 'prev',
@@ -387,9 +403,24 @@ export default function ScribeChatPage() {
     }
   }
 
+  // A passage Kyle highlighted in the draft, sent as a narrowly scoped
+  // instruction. Same turn machinery as the composer; the difference is that
+  // Scribe is told to change that passage and reproduce everything else.
+  function runScopedTurn(prompt: string) {
+    if (!selectedId || streaming) return
+    setHighlight(null)
+    setFullscreen(false)
+    runTurn(selectedId, prompt)
+  }
+
   const workspaceProps = {
     tab: rightTab,
     onTabChange: setRightTab,
+    sources: latestSources,
+    highlight,
+    onHighlight: setHighlight,
+    onScopedTurn: runScopedTurn,
+    onNotice: showToast,
     title: entry?.title ?? null,
     draftText: draftShown,
     bases,
@@ -489,10 +520,11 @@ export default function ScribeChatPage() {
                     </div>
                   )
                 }
+                const scoped = m.role === 'user' ? describeScopedTurn(m.content) : null
                 return (
                   <div key={m.id} className={`${styles.msg} ${m.role === 'user' ? styles.msgUser : styles.msgScribe}`}>
                     <div className={styles.msgRole}>{m.role === 'user' ? 'Kyle' : 'Scribe'}</div>
-                    {m.role === 'scribe' ? commentaryOf(m.content) : m.content}
+                    {m.role === 'scribe' ? commentaryOf(m.content) : (scoped ?? m.content)}
                   </div>
                 )
               })}
@@ -545,22 +577,13 @@ export default function ScribeChatPage() {
           <div className={`${styles.pane} ${styles.sourcePane}`}>
             <div className={styles.paneHead}>Sources · this turn</div>
             <div className={styles.paneBody}>
-              {latestSources.length === 0 && (
-                <p className={styles.draftEmpty}>Corpus passages Scribe retrieves each turn land here.</p>
-              )}
-              {latestSources.map(s => (
-                <div key={s.chunk_id} className={styles.sourceItem}>
-                  <span className={`${styles.sourceMode} ${s.mode === 'quote' ? styles.modeQuote : styles.modeParaphrase}`}>
-                    {s.mode === 'quote' ? 'QUOTE' : 'PARAPHRASE'}
-                  </span>
-                  <strong>{s.author}</strong>{' '}
-                  <span className={styles.sourceLoc}>
-                    — {[s.work, s.section_label].filter(Boolean).join(' ')}
-                    {s.translator ? `, trans. ${s.translator}` : ''}
-                  </span>
-                  <div className={styles.sourceQuery}>for: “{s.query}”</div>
-                </div>
-              ))}
+              <SourceList
+                sources={latestSources}
+                draftText={draftShown}
+                highlight={highlight}
+                onHighlight={h => { setHighlight(h); if (h) setRightTab('draft') }}
+                emptyNote="Corpus passages Scribe retrieves each turn land here."
+              />
             </div>
           </div>
         </div>

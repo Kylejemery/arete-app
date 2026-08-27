@@ -41,11 +41,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     `do not reintroduce anything I took out, and do not undo my wording.\n\n` +
     `<draft>\n${draft_text.trim()}\n</draft>`
 
-  const { data: saved, error } = await admin
+  // Each hand revision carries the whole draft, so a run of them (fix a
+  // paragraph, fix another, resolve the changes) would put several full copies
+  // of the essay into the thread and into every later Anthropic call. When the
+  // last turn is already a hand revision, overwrite it instead: the draft it
+  // held was superseded by this one anyway, so nothing is lost.
+  const { data: last } = await admin
     .from('scribe_messages')
-    .insert({ entry_id: id, role: 'user', content })
-    .select('id, role, content, sources_used, created_at')
-    .single()
+    .select('id, role, content')
+    .eq('entry_id', id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const collapsible = last?.role === 'user' && last.content.includes('<kyle-edit')
+
+  const { data: saved, error } = collapsible
+    ? await admin
+        .from('scribe_messages')
+        .update({ content })
+        .eq('id', last!.id)
+        .select('id, role, content, sources_used, created_at')
+        .single()
+    : await admin
+        .from('scribe_messages')
+        .insert({ entry_id: id, role: 'user', content })
+        .select('id, role, content, sources_used, created_at')
+        .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   await admin.from('scribe_entries').update({ updated_at: new Date().toISOString() }).eq('id', id)

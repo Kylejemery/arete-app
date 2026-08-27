@@ -3,10 +3,22 @@
 // burstiness; predictable, padded diction) plus a cliché/tell wordlist, so
 // Kyle can see how machine-shaped a draft reads before he retypes it. These
 // are heuristics, not a verdict; the retype is what fixes them.
+//
+// Every lexical metric is computed from spans rather than counted separately,
+// so the number in the meter and the passages the meter highlights are always
+// the same set. `metricSpans` is what the draft pane paints.
 
 export interface TellHit {
   phrase: string
   count: number
+}
+
+export type MetricKind = 'dash' | 'adverb' | 'tobe' | 'tell'
+
+export interface Span {
+  start: number
+  end: number
+  label?: string
 }
 
 export interface VoiceMetrics {
@@ -19,7 +31,9 @@ export interface VoiceMetrics {
   burstinessLabel: 'flat' | 'ok' | 'good'
   // Per-100-words rates.
   adverbRate: number // words ending in -ly
+  adverbCount: number
   toBeRate: number // is/are/was/were/be/been/being/am
+  toBeCount: number
   // Dashes standing between clauses or fencing off an aside: the em dash, the
   // en dash used as one, and the spaced hyphen. Kyle bans these outright in
   // the essays, so zero is the target and any count is worth seeing. Hyphens
@@ -71,6 +85,53 @@ const TELLS: string[] = [
   'rich tapestry',
 ]
 
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+// Sorted, non-overlapping spans for one metric. The draft pane wraps exactly
+// these ranges, so anything counted here is something Kyle can go look at.
+export function metricSpans(text: string, kind: MetricKind): Span[] {
+  const src = text || ''
+  const spans: Span[] = []
+
+  if (kind === 'dash') {
+    for (const m of src.matchAll(/[—–]/g)) {
+      spans.push({ start: m.index!, end: m.index! + m[0].length, label: 'dash' })
+    }
+    // A hyphen only counts when it floats between spaces mid-line, which is
+    // the dash usage. Requiring a non-space before it and no newline in the
+    // gap keeps markdown bullets and rule lines out.
+    for (const m of src.matchAll(/(\S)([ \t]+)(-{1,2})(?=[ \t]+\S)/g)) {
+      const start = m.index! + m[1].length + m[2].length
+      spans.push({ start, end: start + m[3].length, label: 'dash' })
+    }
+  } else if (kind === 'adverb') {
+    for (const m of src.matchAll(/\b[A-Za-z]{3,}ly\b/g)) {
+      spans.push({ start: m.index!, end: m.index! + m[0].length, label: m[0].toLowerCase() })
+    }
+  } else if (kind === 'tobe') {
+    for (const m of src.matchAll(/\b(?:is|are|was|were|be|been|being|am)\b/gi)) {
+      spans.push({ start: m.index!, end: m.index! + m[0].length, label: m[0].toLowerCase() })
+    }
+  } else {
+    for (const phrase of TELLS) {
+      for (const m of src.matchAll(new RegExp(escapeRe(phrase), 'gi'))) {
+        spans.push({ start: m.index!, end: m.index! + m[0].length, label: phrase })
+      }
+    }
+  }
+
+  spans.sort((a, b) => a.start - b.start || b.end - a.end)
+  const out: Span[] = []
+  for (const s of spans) {
+    const last = out[out.length - 1]
+    if (last && s.start < last.end) continue // drop the nested duplicate
+    out.push(s)
+  }
+  return out
+}
+
 function stdev(nums: number[]): number {
   if (nums.length < 2) return 0
   const mean = nums.reduce((a, b) => a + b, 0) / nums.length
@@ -96,28 +157,25 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
     burstiness >= 8 ? 'good' : burstiness >= 5 ? 'ok' : 'flat'
 
   const per100 = (n: number) => (wordCount ? Math.round((n / wordCount) * 1000) / 10 : 0)
-  const adverbs = words.filter(w => /[a-z]{3,}ly[.,;:!?)"']*$/i.test(w)).length
-  const lower = ` ${clean.toLowerCase()} `
-  const toBe = (lower.match(/\b(is|are|was|were|be|been|being|am)\b/g) || []).length
 
-  // Em/en dashes always count. A hyphen only counts when it floats between
-  // spaces mid-line, which is the dash usage; requiring a non-space character
-  // and no newline before it keeps markdown bullets and rule lines out.
-  const dashChars = (clean.match(/[—–]/g) || []).length
-  const spacedHyphens = (clean.match(/[^\s][ \t]+-{1,2}[ \t]+/g) || []).length
-  const dashes = dashChars + spacedHyphens
+  const adverbSpans = metricSpans(clean, 'adverb')
+  const toBeSpans = metricSpans(clean, 'tobe')
+  const dashSpans = metricSpans(clean, 'dash')
+  const tellSpans = metricSpans(clean, 'tell')
+
+  const dashes = dashSpans.length
   const dashRate = wordCount ? Math.round((dashes / wordCount) * 10000) / 10 : 0
   const dashLabel: VoiceMetrics['dashLabel'] =
     dashes === 0 ? 'clean' : dashRate <= 2 ? 'some' : 'heavy'
 
-  const tellHits: TellHit[] = []
-  for (const t of TELLS) {
-    const re = new RegExp(t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi')
-    const count = (lower.match(re) || []).length
-    if (count > 0) tellHits.push({ phrase: t, count })
+  const byPhrase = new Map<string, number>()
+  for (const s of tellSpans) {
+    const key = s.label ?? ''
+    byPhrase.set(key, (byPhrase.get(key) ?? 0) + 1)
   }
-  tellHits.sort((a, b) => b.count - a.count)
-  const tellTotal = tellHits.reduce((a, h) => a + h.count, 0)
+  const tellHits: TellHit[] = [...byPhrase.entries()]
+    .map(([phrase, count]) => ({ phrase, count }))
+    .sort((a, b) => b.count - a.count)
 
   return {
     words: wordCount,
@@ -125,12 +183,14 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
     meanSentenceLen: Math.round(meanSentenceLen * 10) / 10,
     burstiness: Math.round(burstiness * 10) / 10,
     burstinessLabel,
-    adverbRate: per100(adverbs),
-    toBeRate: per100(toBe),
+    adverbRate: per100(adverbSpans.length),
+    adverbCount: adverbSpans.length,
+    toBeRate: per100(toBeSpans.length),
+    toBeCount: toBeSpans.length,
     dashes,
     dashRate,
     dashLabel,
     tellHits,
-    tellTotal,
+    tellTotal: tellSpans.length,
   }
 }

@@ -3,21 +3,42 @@
 // The draft pane and the full-page draft workspace are the same component in
 // two skins. Compact rides in the right-hand column of the chat; fullscreen
 // takes over the viewport so the essay can be read at a real measure with real
-// typography. Three tabs: the typeset draft, this turn's changes (colour-coded,
-// each one keepable / revertable / editable), and the cold outside read.
+// typography. Four tabs: the typeset draft (editable in place, and selectable
+// into scoped instructions), this turn's changes, the cold outside read, and
+// the sources this turn retrieved.
+//
+// Everything that says "show me where" resolves to the same highlight range
+// vocabulary, so the voice meter, a reviewer's finding, and a retrieved source
+// all paint the draft the same way.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import admin from '../../admin.module.css'
 import chat from './chat.module.css'
 import styles from './draft.module.css'
 import ProseView from './ProseView'
 import DiffView from './DiffView'
-import { computeVoiceMetrics } from '@/lib/scribe/voice-metrics'
-import { proseStats } from '@/lib/scribe/prose'
-import { countHunks, describeDecisions, diffDraft, resolveDiff, type Decision } from '@/lib/scribe/diff'
-import type { DiffBase, Draft, Review, ReviewFinding } from './types'
+import SelectionBar from './SelectionBar'
+import SourceList from './SourceList'
+import { computeVoiceMetrics, type MetricKind } from '@/lib/scribe/voice-metrics'
+import {
+  containsPhrase,
+  proseStats,
+  replaceBlockLines,
+  type Block,
+  type Highlight,
+} from '@/lib/scribe/prose'
+import { findingPrompt, scopedPrompt, type ScopedAction } from '@/lib/scribe/scoped-turns'
+import {
+  countHunks,
+  describeDecisions,
+  diffDraft,
+  resolveDiff,
+  tallyDecisions,
+  type Decision,
+} from '@/lib/scribe/diff'
+import type { DiffBase, Draft, Review, ReviewFinding, Source } from './types'
 
-export type DraftTab = 'draft' | 'changes' | 'review'
+export type DraftTab = 'draft' | 'changes' | 'review' | 'sources'
 
 function reviewHasFindings(r: Review | null | undefined): boolean {
   return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || (r.tells?.length ?? 0) > 0)
@@ -39,6 +60,11 @@ export interface DraftWorkspaceProps {
   drafts: Draft[]
   viewedDraftId: string | null
   onViewDraft: (id: string | null) => void
+  sources: Source[]
+  highlight: Highlight | null
+  onHighlight: (h: Highlight | null) => void
+  onScopedTurn: (prompt: string) => void
+  onNotice: (msg: string) => void
   streaming: boolean
   snapshotting: boolean
   canSnapshot: boolean
@@ -54,12 +80,16 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
   const {
     fullscreen, onToggleFullscreen, tab, onTabChange, title, draftText, bases,
     review, reviewIsSavedFallback, viewingSnapshotStage, drafts, viewedDraftId,
-    onViewDraft, streaming, snapshotting, canSnapshot, onSnapshot, onFinalize,
+    onViewDraft, sources, highlight, onHighlight, onScopedTurn, onNotice,
+    streaming, snapshotting, canSnapshot, onSnapshot, onFinalize,
     onExport, onSaveToLog, onApplyRevision, applying,
   } = props
 
   const [baseId, setBaseId] = useState<string | null>(bases[0]?.id ?? null)
   const [decisions, setDecisions] = useState<Record<number, Decision>>({})
+  const [dismissedFindings, setDismissedFindings] = useState<string[]>([])
+  const [scrollNonce, setScrollNonce] = useState(0)
+  const proseRef = useRef<HTMLDivElement>(null)
 
   // Keep the selection valid as the conversation moves under it.
   useEffect(() => {
@@ -70,34 +100,70 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
 
   // A new draft or a new comparison point means the old verdicts are stale.
   useEffect(() => { setDecisions({}) }, [draftText, baseId])
+  useEffect(() => { setScrollNonce(n => n + 1) }, [highlight])
 
   const parts = useMemo(
     () => (base && draftText && base.text !== draftText ? diffDraft(base.text, draftText) : []),
     [base, draftText]
   )
   const hunkCount = countHunks(parts)
+  const tally = useMemo(() => tallyDecisions(parts, decisions), [parts, decisions])
   const resolved = useMemo(
     () => (parts.length ? resolveDiff(parts, decisions) : null),
     [parts, decisions]
   )
-  const touched = Object.values(decisions).some(d => d.mode !== 'accept')
+  // What the draft would say if the current decisions were applied. Null while
+  // they add up to the draft as it already stands.
+  const preview = resolved && resolved !== draftText ? resolved : null
+  const shown = preview ?? draftText
 
   const effTab: DraftTab =
     tab === 'review' && review ? 'review'
     : tab === 'changes' && hunkCount > 0 ? 'changes'
+    : tab === 'sources' ? 'sources'
     : 'draft'
 
-  const voiceMetrics = draftText ? computeVoiceMetrics(draftText) : null
-  const stats = draftText ? proseStats(draftText) : null
+  const voiceMetrics = shown ? computeVoiceMetrics(shown) : null
+  const stats = shown ? proseStats(shown) : null
   const reviewCount = review
     ? review.not_kyle.length + review.unearned.length + review.narrated_over.length + (review.tells?.length ?? 0)
     : 0
 
-  async function applyRevision() {
-    if (!resolved || resolved === draftText) return
-    await onApplyRevision(resolved, describeDecisions(parts, decisions))
+  const canApply =
+    tally.total > 0 && !applying && !streaming && (!!preview || tally.unreviewed === 0)
+
+  async function applyDecisions() {
+    if (!resolved || !canApply) return
+    if (preview) await onApplyRevision(resolved, describeDecisions(parts, decisions))
+    else onNotice(`All ${tally.total} changes kept as written — the draft is unchanged.`)
     setDecisions({})
     onTabChange('draft')
+  }
+
+  // An in-place block edit commits whatever is pending along with it, so the
+  // saved draft is exactly what was on screen when he typed.
+  async function editBlock(block: Block, nextSource: string) {
+    if (!shown) return
+    const next = replaceBlockLines(shown, block, nextSource)
+    if (next === draftText) { setDecisions({}); return }
+    await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then edited a passage by hand` : 'edited a passage by hand')
+    setDecisions({})
+  }
+
+  function runScoped(action: ScopedAction, selection: string, note?: string) {
+    onHighlight(null)
+    onScopedTurn(scopedPrompt(action, selection, note))
+  }
+
+  function focusPhrase(line: string) {
+    onHighlight({ kind: 'phrases', phrases: [line] })
+    onTabChange('draft')
+  }
+
+  function toggleMetric(metric: MetricKind) {
+    const on = highlight?.kind === 'metric' && highlight.metric === metric
+    onHighlight(on ? null : { kind: 'metric', metric })
+    if (!on) onTabChange('draft')
   }
 
   const tabs = (
@@ -114,7 +180,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           onClick={() => onTabChange('changes')}
           title="What this turn changed — keep, revert, or rewrite each change"
         >
-          Changes ({hunkCount})
+          Changes ({tally.unreviewed ? `${tally.total - tally.unreviewed}/${tally.total}` : tally.total})
         </button>
       )}
       {review && (
@@ -126,13 +192,22 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           Outside read{reviewCount ? ` (${reviewCount})` : ''}
         </button>
       )}
+      {sources.length > 0 && (
+        <button
+          className={`${styles.tab} ${effTab === 'sources' ? styles.tabOn : ''}`}
+          onClick={() => onTabChange('sources')}
+          title="Corpus passages retrieved this turn, and where they landed"
+        >
+          Sources ({sources.length})
+        </button>
+      )}
     </span>
   )
 
   const actions = (
     <span className={styles.headActions}>
-      <button className={admin.ghostBtn} onClick={onSaveToLog} disabled={!draftText}>Save to log</button>
-      <button className={admin.ghostBtn} onClick={onExport} disabled={!draftText}>Export</button>
+      <button className={admin.ghostBtn} onClick={onSaveToLog} disabled={!shown}>Save to log</button>
+      <button className={admin.ghostBtn} onClick={onExport} disabled={!shown}>Export</button>
       <button className={admin.ghostBtn} onClick={onToggleFullscreen} title={fullscreen ? 'Back to the conversation' : 'Open the draft full page'}>
         {fullscreen ? 'Close' : 'Expand'}
       </button>
@@ -155,19 +230,58 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           ['Claims not yet earned', review.unearned],
           ['Philosophy narrating over your story', review.narrated_over],
           ['Mechanical AI tells', review.tells ?? []],
-        ] as [string, ReviewFinding[]][]).map(([label, items]) => items.length > 0 && (
-          <div key={label} className={styles.reviewGroup}>
-            <div className={styles.reviewGroupLabel}>{label}</div>
-            <ul className={styles.reviewList}>
-              {items.map((f, i) => (
-                <li key={i}>
-                  <span className={styles.reviewLine}>&ldquo;{f.line}&rdquo;</span>
-                  {f.why ? <span className={styles.reviewWhy}> — {f.why}</span> : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
+        ] as [string, ReviewFinding[]][]).map(([label, items]) => {
+          const live = items.filter(f => !dismissedFindings.includes(f.line))
+          if (!live.length) return null
+          return (
+            <div key={label} className={styles.reviewGroup}>
+              <div className={styles.reviewGroupLabel}>{label}</div>
+              <ul className={styles.reviewList}>
+                {live.map((f, i) => {
+                  const stillThere = !shown || containsPhrase(shown, f.line)
+                  return (
+                    <li key={i} className={styles.finding}>
+                      <button
+                        className={styles.findingQuote}
+                        onClick={() => focusPhrase(f.line)}
+                        disabled={!stillThere}
+                        title={stillThere ? 'Show this line in the draft' : 'This line is no longer in the draft'}
+                      >
+                        “{f.line}”
+                      </button>
+                      {f.why ? <span className={styles.reviewWhy}> — {f.why}</span> : null}
+                      <span className={styles.findingBtns}>
+                        {!stillThere && <span className={styles.findingGone}>already gone</span>}
+                        {stillThere && (
+                          <button
+                            className={styles.hunkBtn}
+                            onClick={() => onScopedTurn(findingPrompt(f.line, f.why))}
+                            disabled={streaming}
+                            title="Send this to Scribe as a scoped fix"
+                          >
+                            Fix this
+                          </button>
+                        )}
+                        <button
+                          className={styles.hunkBtn}
+                          onClick={() => setDismissedFindings(d => [...d, f.line])}
+                          title="Hide this finding for now"
+                        >
+                          Dismiss
+                        </button>
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })
+      )}
+      {dismissedFindings.length > 0 && (
+        <button className={styles.hunkBtn} onClick={() => setDismissedFindings([])}>
+          Show {dismissedFindings.length} dismissed
+        </button>
       )}
     </>
   )
@@ -184,16 +298,22 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           {bases.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
         </select>
         <span className={styles.diffBarCount}>
-          {hunkCount} change{hunkCount === 1 ? '' : 's'}
-          {touched ? ` · ${describeDecisions(parts, decisions)}` : ''}
+          {describeDecisions(parts, decisions)}
         </span>
+        {!!preview && (
+          <button className={styles.hunkBtn} onClick={() => setDecisions({})}>Discard</button>
+        )}
         <button
           className={admin.primaryBtn}
-          onClick={applyRevision}
-          disabled={applying || streaming || !touched || !resolved || resolved === draftText}
-          title="Write your resolved version back as the working draft — Scribe carries it forward from there"
+          onClick={applyDecisions}
+          disabled={!canApply}
+          title={
+            canApply
+              ? 'Write your resolved version back as the working draft'
+              : 'Review the remaining changes, or revert or edit one, to have something to apply'
+          }
         >
-          {applying ? 'Applying…' : 'Apply to draft'}
+          {applying ? 'Applying…' : preview ? 'Apply to draft' : 'Mark reviewed'}
         </button>
       </div>
       <DiffView
@@ -205,11 +325,62 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     </>
   )
 
+  const draftBody = shown ? (
+    <>
+      {preview && (
+        <div className={styles.previewBar}>
+          <span>Previewing your resolution of {tally.total} changes. Not saved yet.</span>
+          <button className={styles.hunkBtn} onClick={() => setDecisions({})}>Discard</button>
+          <button className={styles.hunkBtn} onClick={applyDecisions} disabled={!canApply}>
+            {applying ? 'Applying…' : 'Apply to draft'}
+          </button>
+        </div>
+      )}
+      {highlight && (
+        <div className={styles.highlightBar}>
+          <span>
+            {highlight.kind === 'metric'
+              ? `Showing every ${highlight.metric === 'tobe' ? 'to-be verb' : highlight.metric}`
+              : 'Showing where that lands in the draft'}
+          </span>
+          <button className={styles.hunkBtn} onClick={() => onHighlight(null)}>Clear</button>
+        </div>
+      )}
+      <ProseView
+        text={shown}
+        compact={!fullscreen}
+        highlight={highlight}
+        scrollKey={scrollNonce}
+        onEditBlock={streaming || viewingSnapshotStage ? undefined : editBlock}
+      />
+    </>
+  ) : (
+    <p className={chat.draftEmpty}>The working draft appears here as Scribe writes.</p>
+  )
+
   const body =
     effTab === 'review' ? reviewBody
     : effTab === 'changes' ? changesBody
-    : draftText ? <ProseView text={draftText} compact={!fullscreen} />
-    : <p className={chat.draftEmpty}>The working draft appears here as Scribe writes.</p>
+    : effTab === 'sources' ? (
+      <SourceList
+        sources={sources}
+        draftText={shown}
+        highlight={highlight}
+        onHighlight={h => { onHighlight(h); if (h) onTabChange('draft') }}
+        emptyNote="Corpus passages Scribe retrieves each turn land here."
+      />
+    )
+    : draftBody
+
+  const meterChip = (metric: MetricKind, label: string, value: string | number, tone: string, hint: string) => (
+    <button
+      className={`${styles.meterChip} ${highlight?.kind === 'metric' && highlight.metric === metric ? styles.meterChipOn : ''}`}
+      onClick={() => toggleMetric(metric)}
+      title={`${hint} Click to show them in the draft.`}
+    >
+      {label} <strong className={tone}>{value}</strong>
+    </button>
+  )
 
   const meter = effTab === 'draft' && voiceMetrics && (
     <div className={styles.meter}>
@@ -226,21 +397,10 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         ({voiceMetrics.burstinessLabel})
       </span>
       <span title="Average words per sentence.">avg {voiceMetrics.meanSentenceLen}w</span>
-      <span title="-ly adverbs per 100 words. Lower is usually tighter.">adverbs {voiceMetrics.adverbRate}</span>
-      <span title="to-be verbs (is/are/was…) per 100 words. High = flatter prose.">to-be {voiceMetrics.toBeRate}</span>
-      <span title="Dashes used between clauses or around an aside (em dash, en dash, spaced hyphen). Banned in the draft: rewrite each one with a period, colon, semicolon, comma, or parentheses. Compound-word hyphens are not counted.">
-        dashes{' '}
-        <strong className={
-          voiceMetrics.dashLabel === 'clean' ? styles.good
-          : voiceMetrics.dashLabel === 'some' ? styles.ok
-          : styles.bad
-        }>
-          {voiceMetrics.dashes}
-        </strong>
-      </span>
-      <span title={voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'no cliché tells found'}>
-        AI tells <strong className={voiceMetrics.tellTotal === 0 ? styles.good : styles.bad}>{voiceMetrics.tellTotal}</strong>
-      </span>
+      {meterChip('adverb', 'adverbs', voiceMetrics.adverbRate, styles.plain, '-ly adverbs per 100 words. Lower is usually tighter.')}
+      {meterChip('tobe', 'to-be', voiceMetrics.toBeRate, styles.plain, 'to-be verbs (is/are/was…) per 100 words. High means flatter prose.')}
+      {meterChip('dash', 'dashes', voiceMetrics.dashes, voiceMetrics.dashLabel === 'clean' ? styles.good : voiceMetrics.dashLabel === 'some' ? styles.ok : styles.bad, 'Dashes standing between clauses or around an aside. Banned in the draft.')}
+      {meterChip('tell', 'AI tells', voiceMetrics.tellTotal, voiceMetrics.tellTotal === 0 ? styles.good : styles.bad, voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'No cliché tells found.')}
       {stats && <span className={styles.meterStats}>{stats.words} words · {stats.minutes} min read</span>}
     </div>
   )
@@ -285,11 +445,20 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     </div>
   )
 
+  const selectionBar = (
+    <SelectionBar
+      containerRef={proseRef}
+      disabled={streaming || effTab !== 'draft' || !!viewingSnapshotStage}
+      onAction={runScoped}
+    />
+  )
+
   if (!fullscreen) {
     return (
       <div className={`${chat.pane} ${chat.draftPane}`}>
         <div className={chat.paneHead}>{tabs}{actions}</div>
-        <div className={chat.paneBody}>{body}</div>
+        <div className={chat.paneBody} ref={proseRef}>{body}</div>
+        {selectionBar}
         {meter}
         {footer}
       </div>
@@ -306,9 +475,10 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         {tabs}
         {actions}
       </div>
-      <div className={styles.fsBody}>
+      <div className={styles.fsBody} ref={proseRef}>
         <div className={effTab === 'draft' ? styles.fsColumn : styles.fsColumnWide}>{body}</div>
       </div>
+      {selectionBar}
       <div className={styles.fsFoot}>
         {meter}
         {footer}
