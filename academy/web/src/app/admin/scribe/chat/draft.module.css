@@ -341,3 +341,181 @@
   .fsColumnWide { padding: 20px 16px 28px; }
   .fsTitle h2 { max-width: 60vw; }
 }
+
+/* ── Highlighting: one look for every "show me where" affordance ─────────── */
+
+.hit {
+  background: #fff2a8;
+  color: inherit;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px #e6cf5e;
+  padding: 0 1px;
+}
+
+.highlightBar,
+.previewBar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 7px 10px;
+  margin-bottom: 14px;
+}
+.highlightBar { background: #fdf8e1; border: 0.5px solid #ecdca4; color: #6b5710; }
+.previewBar { background: #edebfa; border: 0.5px solid #cfc9f2; color: #3C3489; }
+.highlightBar span,
+.previewBar span { margin-right: auto; }
+
+/* ── In-place block editing ──────────────────────────────────────────────── */
+
+.blockWrap { position: relative; }
+.blockEditBtn {
+  position: absolute;
+  top: 2px;
+  right: -30px;
+  width: 24px;
+  height: 24px;
+  border: 0.5px solid #e3e3e3;
+  border-radius: 6px;
+  background: #fff;
+  color: #9a93d8;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.blockWrap:hover .blockEditBtn { opacity: 1; }
+.blockEditBtn:hover { border-color: #afa9ec; background: #f5f4fb; }
+
+.blockEditor {
+  margin: 0 0 1em;
+  border: 1px solid #afa9ec;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fafaff;
+}
+.blockTextarea {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  resize: vertical;
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: #1a1a1a;
+}
+.blockEditorBtns { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.blockEditorHint { font-size: 10.5px; color: #aaa; font-family: var(--font-sans, system-ui, sans-serif); }
+
+/* ── Selection action bar ────────────────────────────────────────────────── */
+
+.selBar {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 300;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  background: #14243c;
+  border: 0.5px solid #2b3f5d;
+  border-radius: 999px;
+  padding: 4px 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+.selBtn {
+  border: none;
+  background: none;
+  color: #d3dce8;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.selBtn:hover { background: #23374f; color: #fff; }
+.selInput {
+  border: none;
+  outline: none;
+  background: #0f1d31;
+  color: #eef3f9;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  width: 240px;
+}
+.selInput::placeholder { color: #6e819b; }
+
+/* ── Outside-read findings, wired to the text ────────────────────────────── */
+
+.finding { margin-bottom: 9px; }
+.findingQuote {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-style: italic;
+  color: #3C3489;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.findingQuote:disabled { color: #999; cursor: default; text-decoration: none; }
+.findingBtns { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; }
+.findingGone {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #2e7d32;
+  align-self: center;
+}
+
+/* ── Sources, anchored to where they land ────────────────────────────────── */
+
+.sourceClickable { cursor: pointer; }
+.sourceClickable:hover { border-color: #afa9ec; background: #fafaff; }
+.sourceOn { border-color: #afa9ec; background: #f3f2fb; }
+.placed,
+.unplaced {
+  display: inline-block;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+.placed { background: #e7f4ea; color: #2c7a3f; }
+.unplaced { background: #f1f1f1; color: #888; }
+
+/* ── Clickable voice meter ───────────────────────────────────────────────── */
+
+.meterChip {
+  border: 0.5px solid transparent;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  padding: 1px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.meterChip:hover { border-color: #ddd; background: #f7f7fb; }
+.meterChipOn { background: #fdf8e1; border-color: #ecdca4; }
+.plain { color: #444; }
+
+/* An undecided change: neutral until Kyle has actually looked at it. */
+.hunkOpen { border-left-color: #cfcfcf; }
