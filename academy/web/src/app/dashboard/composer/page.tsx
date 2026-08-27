@@ -22,9 +22,12 @@ import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/
 import { CommentList, MarkedUpText, SummaryLead, type Annotation } from '@/components/MarkedUpDraft';
 import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
 import { StageStepper } from '@/components/StageStepper';
-import { DraftEditor, type DraftEditorHandle } from '@/components/DraftEditor';
+import { DraftEditor, type DraftEditorHandle, type PassageSelection } from '@/components/DraftEditor';
 import { ProsePage } from '@/components/ProsePage';
+import { PassageBar } from '@/components/PassageBar';
+import { VoiceMeter } from '@/components/VoiceMeter';
 import { WorksList, type WorkSummary } from '@/components/WorksList';
+import { metricSpans, type MetricKind } from '@/lib/scribe/voice-metrics';
 import {
   acceptAllRewrites,
   acceptRewrite,
@@ -103,6 +106,35 @@ export default function ComposerPage() {
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  // The voice meter's current category, painted in the document; and the
+  // passage the writer has selected, which the margin can be asked about.
+  const [meter, setMeter] = useState<MetricKind | null>(null);
+  const [passage, setPassage] = useState<PassageSelection | null>(null);
+  const [seed, setSeed] = useState<{ text: string; nonce: number } | null>(null);
+
+  // Stable identity: DraftEditor calls this from a layout effect.
+  const onSelection = useCallback((s: PassageSelection | null) => setPassage(s), []);
+
+  const askAboutPassage = (question: string) => {
+    setSeed({ text: question, nonce: Date.now() });
+    setPane('ask');
+    setPassage(null);
+  };
+
+  // Meter ranges as editor spans, so the existing backdrop paints them.
+  const meterSpans = useMemo(
+    () =>
+      meter
+        ? metricSpans(text, meter).map((s, i) => ({
+            id: `meter-${i}`,
+            start: s.start,
+            end: s.end,
+            severity: 'meter',
+          }))
+        : [],
+    [meter, text]
+  );
 
   // ── The version rail ────────────────────────────────────────────────────────
   const loadHistory = useCallback(async (pid: string) => {
@@ -656,6 +688,8 @@ export default function ComposerPage() {
               value={text}
               onChange={handleTextChange}
               spans={spans}
+              highlights={meterSpans}
+              onSelection={onSelection}
               activeId={activeId}
               onCaretSpan={id => {
                 setActiveId(id);
@@ -666,7 +700,11 @@ export default function ComposerPage() {
               placeholder="Begin."
             />
           ) : (
-            <ProsePage text={text} title={title || undefined} />
+            <ProsePage text={text} title={title || undefined} highlight={meter} />
+          )}
+
+          {mode === 'write' && !past && passage && (
+            <PassageBar rect={passage.rect} passage={passage.text} onAsk={askAboutPassage} />
           )}
 
           {/* ── The status bar ───────────────────────────────────────────── */}
@@ -674,6 +712,13 @@ export default function ComposerPage() {
             <span>{words} word{words === 1 ? '' : 's'}</span>
             {marks && <span>draft v{marks.version}</span>}
             {marks && <span>{openMarks.length} open mark{openMarks.length === 1 ? '' : 's'}</span>}
+            {!past && (
+              <VoiceMeter
+                text={text}
+                active={meter}
+                onToggle={m => setMeter(cur => (cur === m ? null : m))}
+              />
+            )}
             {submission.length > 0 && submission.length < MIN_CHARS && (
               <span className="text-academy-gold/80">too little to judge</span>
             )}
@@ -777,6 +822,7 @@ export default function ComposerPage() {
                   excerpt={past?.content ?? text}
                   pieceTitle={title}
                   placeholder="Ask about the draft, or push back on a judgment…"
+                  seed={seed ?? undefined}
                 />
               ) : (
                 <p className="text-academy-muted text-sm leading-relaxed">
