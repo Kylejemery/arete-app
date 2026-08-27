@@ -324,3 +324,14 @@ export function acceptAllRewrites<T extends RewriteTarget>(
   }
   return { content: cur, annotations: anns, accepted: ids }
 }
+
+// Re-anchor an annotation into a text it was not written against: used when a
+// piece is reopened and the working copy has drifted from the snapshot the
+// Interlocutor marked. Offsets are meaningless across texts, so the quote is
+// the only thing worth trusting; what cannot be found stands as a general note.
+export function reanchorByQuote<T extends Anchored>(a: T, text: string): T {
+  const found = a.quote ? locate(text, a.quote) : null
+  return found
+    ? { ...a, start_offset: found.start, end_offset: found.end }
+    : { ...a, start_offset: null, end_offset: null }
+}

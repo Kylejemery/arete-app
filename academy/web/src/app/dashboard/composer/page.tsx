@@ -24,11 +24,13 @@ import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
 import { StageStepper } from '@/components/StageStepper';
 import { DraftEditor, type DraftEditorHandle } from '@/components/DraftEditor';
 import { ProsePage } from '@/components/ProsePage';
+import { WorksList, type WorkSummary } from '@/components/WorksList';
 import {
   acceptAllRewrites,
   acceptRewrite,
   diffRegion,
   reanchor,
+  reanchorByQuote,
   type EditRegion,
   type SpanInput,
 } from '@/lib/annotations';
@@ -38,6 +40,15 @@ const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
 const PIECE_KEY = 'interlocutor-piece-id';
 const ASIDE_KEY = 'interlocutor-aside-w';
+
+// Each piece keeps its own working copy, so switching between works never costs
+// you the unsubmitted edits in either. The bare key holds the scratch draft
+// written before a piece exists (and the copy left by earlier versions of the
+// composer, which knew only one draft).
+const draftKey = (pieceId: string | null) => (pieceId ? `${DRAFT_KEY}:${pieceId}` : DRAFT_KEY);
+
+const ANNOTATION_COLUMNS =
+  'id, start_offset, end_offset, quote, dimension, severity, comment, suggestion, status';
 
 interface Marks {
   draftId: string;
@@ -59,7 +70,7 @@ interface Snapshot {
   label: string;
 }
 
-type Pane = 'comments' | 'ask' | 'drafts';
+type Pane = 'comments' | 'ask' | 'works';
 
 // A mark that survives an edit somewhere else in the draft: see reanchor().
 const shiftAnn = (a: Annotation, region: EditRegion, nextText: string) =>
@@ -75,9 +86,11 @@ export default function ComposerPage() {
   const [pieceId, setPieceId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>(DEFAULT_STAGE);
 
+  const [userId, setUserId] = useState<string | null>(null);
   const [marks, setMarks] = useState<Marks | null>(null);
   const [past, setPast] = useState<PastDraft | null>(null);
   const [history, setHistory] = useState<DraftSummary[]>([]);
+  const [works, setWorks] = useState<WorkSummary[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [undoable, setUndoable] = useState<Snapshot | null>(null);
 
@@ -123,6 +136,39 @@ export default function ComposerPage() {
     );
   }, []);
 
+  // ── Every piece the student has written ─────────────────────────────────────
+  const loadWorks = useCallback(async (uid: string) => {
+    const { data: pieces } = await supabase
+      .from('writing_pieces')
+      .select('id, title, stage, updated_at')
+      .eq('user_id', uid)
+      .order('updated_at', { ascending: false });
+    const rows = (pieces as { id: string; title: string; stage: string; updated_at: string }[]) ?? [];
+    if (rows.length === 0) {
+      setWorks([]);
+      return;
+    }
+    const { data: drafts } = await supabase
+      .from('piece_drafts')
+      .select('piece_id, version, word_count')
+      .eq('user_id', uid);
+    const latest: Record<string, { version: number; words: number }> = {};
+    for (const d of (drafts as { piece_id: string; version: number; word_count: number }[]) ?? []) {
+      const cur = latest[d.piece_id];
+      if (!cur || d.version > cur.version) latest[d.piece_id] = { version: d.version, words: d.word_count ?? 0 };
+    }
+    setWorks(
+      rows.map(r => ({
+        id: r.id,
+        title: r.title ?? '',
+        stage: r.stage,
+        updatedAt: r.updated_at,
+        versions: latest[r.id]?.version ?? 0,
+        words: latest[r.id]?.words ?? 0,
+      }))
+    );
+  }, []);
+
   // ── Auth, restore ───────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -130,11 +176,14 @@ export default function ComposerPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
       if (cancelled) return;
+      setUserId(user.id);
       let pid: string | null = null;
       try {
-        setText(localStorage.getItem(DRAFT_KEY) ?? '');
-        setTitle(localStorage.getItem(TITLE_KEY) ?? '');
         pid = localStorage.getItem(PIECE_KEY);
+        // The per-piece working copy, falling back to the single draft older
+        // versions of the composer kept.
+        setText(localStorage.getItem(draftKey(pid)) ?? localStorage.getItem(DRAFT_KEY) ?? '');
+        setTitle(localStorage.getItem(TITLE_KEY) ?? '');
         const w = Number(localStorage.getItem(ASIDE_KEY));
         if (!Number.isNaN(w) && w >= 260) setAsideW(w);
       } catch {}
@@ -142,20 +191,22 @@ export default function ComposerPage() {
         setPieceId(pid);
         const { data: piece } = await supabase
           .from('writing_pieces')
-          .select('stage')
+          .select('title, stage')
           .eq('id', pid)
           .maybeSingle();
-        const st = (piece as { stage?: string } | null)?.stage;
-        if (isStage(st)) setStage(st);
+        const row = piece as { title?: string; stage?: string } | null;
+        if (isStage(row?.stage)) setStage(row.stage);
+        if (row?.title) setTitle(row.title);
         await loadHistory(pid);
       }
+      await loadWorks(user.id);
       setLoaded(true);
     })();
     return () => { cancelled = true; };
-  }, [router, loadHistory]);
+  }, [router, loadHistory, loadWorks]);
 
-  const persistText = (v: string) => {
-    try { localStorage.setItem(DRAFT_KEY, v); } catch {}
+  const persistText = (v: string, pid: string | null = pieceId) => {
+    try { localStorage.setItem(draftKey(pid), v); } catch {}
   };
 
   // Every keystroke re-bases the marks so a comment keeps pointing at the words
@@ -235,6 +286,9 @@ export default function ComposerPage() {
       };
       setPieceId(d.pieceId);
       try { localStorage.setItem(PIECE_KEY, d.pieceId); } catch {}
+      // A first submission is where a piece gets its id, so the scratch copy
+      // becomes that piece's working copy.
+      persistText(text, d.pieceId);
       setMarks({
         draftId: d.draftId,
         version: d.version,
@@ -248,6 +302,7 @@ export default function ComposerPage() {
         setNotice('This pass was not written to your history, so it will not shape your profile.');
       }
       await loadHistory(d.pieceId);
+      if (userId) await loadWorks(userId);
     } catch {
       setError('The Interlocutor could not be reached.');
     } finally {
@@ -353,11 +408,80 @@ export default function ComposerPage() {
     const d = draft as { id: string; version: number; content: string };
     const { data: anns } = await supabase
       .from('draft_annotations')
-      .select('id, start_offset, end_offset, quote, dimension, severity, comment, suggestion, status')
+      .select(ANNOTATION_COLUMNS)
       .eq('draft_id', draftId);
     setPast({ id: d.id, version: d.version, content: d.content, annotations: (anns as Annotation[]) ?? [] });
     setActiveId(null);
     setPane('comments');
+  };
+
+  // ── Open another work ───────────────────────────────────────────────────────
+  // The piece's own working copy if there is one, otherwise its latest draft.
+  // The marks come from that draft, so they are re-anchored by quote whenever
+  // the working copy has drifted from the text they were written against.
+  const openPiece = async (id: string) => {
+    if (id === pieceId) return;
+    setError(null);
+    setNotice(null);
+    persistText(text);
+
+    const { data: piece } = await supabase
+      .from('writing_pieces')
+      .select('id, title, stage')
+      .eq('id', id)
+      .maybeSingle();
+    if (!piece) { setError('That work could not be opened.'); return; }
+    const p = piece as { id: string; title: string | null; stage: string | null };
+
+    const { data: latest } = await supabase
+      .from('piece_drafts')
+      .select('id, version, content')
+      .eq('piece_id', id)
+      .order('version', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const d = latest as { id: string; version: number; content: string } | null;
+
+    let anns: Annotation[] = [];
+    if (d) {
+      const { data } = await supabase
+        .from('draft_annotations')
+        .select(ANNOTATION_COLUMNS)
+        .eq('draft_id', d.id);
+      anns = (data as Annotation[]) ?? [];
+    }
+
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(draftKey(id)); } catch {}
+    const content = saved ?? d?.content ?? '';
+
+    setPieceId(id);
+    try { localStorage.setItem(PIECE_KEY, id); } catch {}
+    handleTitleChange(p.title ?? '');
+    setStage(isStage(p.stage) ? p.stage : DEFAULT_STAGE);
+    setText(content);
+    persistText(content, id);
+    setMarks(
+      d
+        ? {
+            draftId: d.id,
+            version: d.version,
+            summary: '',
+            annotations:
+              content === d.content ? anns : anns.map(a => reanchorByQuote(a, content)),
+          }
+        : null
+    );
+    setPast(null);
+    setUndoable(null);
+    setActiveId(null);
+    setMode('write');
+    await loadHistory(id);
+    setNotice(
+      d
+        ? `Opened “${p.title?.trim() || 'Untitled'}” at draft v${d.version}.`
+        : `Opened “${p.title?.trim() || 'Untitled'}”. It has no submitted drafts yet.`
+    );
   };
 
   const changeStage = async (s: Stage) => {
@@ -371,7 +495,10 @@ export default function ComposerPage() {
     }
   };
 
+  // Starting a new piece no longer puts the old one out of reach: it keeps its
+  // working copy under its own key and stays in the Works list.
   const newPiece = () => {
+    persistText(text);
     setPieceId(null);
     setMarks(null);
     setPast(null);
@@ -380,8 +507,9 @@ export default function ComposerPage() {
     setStage(DEFAULT_STAGE);
     handleTitleChange('');
     setText('');
-    persistText('');
+    persistText('', null);
     try { localStorage.removeItem(PIECE_KEY); } catch {}
+    setNotice('New piece. Your other work is under Drafts, in the margin.');
   };
 
   // ── The draggable margin ────────────────────────────────────────────────────
@@ -584,7 +712,7 @@ export default function ComposerPage() {
           style={{ width: asideW }}
         >
           <div className="flex-shrink-0 flex items-center border-b border-academy-border">
-            {(['comments', 'ask', 'drafts'] as const).map(p => (
+            {(['comments', 'ask', 'works'] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPane(p)}
@@ -659,11 +787,14 @@ export default function ComposerPage() {
             </div>
           )}
 
-          {pane === 'drafts' && (
+          {pane === 'works' && (
             <div className="flex-1 min-h-0 overflow-auto p-3">
+              <WorksList works={works} activePieceId={pieceId} onOpen={openPiece} />
               {history.length === 0 ? (
                 <p className="font-serif italic text-academy-muted text-sm">
-                  No versions yet. Each submission snapshots one.
+                  {works.length === 0
+                    ? 'Nothing written yet. Each submission for markup snapshots a version.'
+                    : 'This piece has no submitted versions yet.'}
                 </p>
               ) : (
                 <DraftHistory
