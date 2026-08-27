@@ -40,6 +40,21 @@ function authorized(req: NextRequest): boolean {
   return timingSafeEqual(a, b)
 }
 
+// Only the fields this handler actually reads. RevenueCat sends a great deal
+// more, and the body is attacker-reachable until `authorized` has passed, so
+// every field stays optional and nothing here is trusted to exist.
+interface RevenueCatEvent {
+  type?: string
+  app_user_id?: string
+  entitlement_ids?: unknown
+  expiration_at_ms?: number
+  product_id?: string
+}
+
+interface RevenueCatPayload {
+  event?: RevenueCatEvent
+}
+
 function tierForEntitlements(entitlementIds: unknown): string | null {
   const ids = Array.isArray(entitlementIds) ? entitlementIds : []
   for (const { entitlement, tier } of ENTITLEMENT_TIERS) {
@@ -53,9 +68,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  let payload: any
+  let payload: RevenueCatPayload
   try {
-    payload = await req.json()
+    payload = (await req.json()) as RevenueCatPayload
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
