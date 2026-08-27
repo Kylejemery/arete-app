@@ -1,65 +1,97 @@
 'use client';
 
-// The composer — the Interlocutor Studio. A long-form editor and one explicit
-// invocation, as before, but the response is now marked up in place: the draft
-// is snapshotted as an immutable version and returned with annotations anchored
-// to the sentences that earned them, colored by severity, some carrying a
-// concrete rewrite the student accepts or rejects.
+// The composer, the Interlocutor Studio. One document, full height, with the
+// Interlocutor's marks living in it rather than in a separate review screen.
 //
-// The loop the studio adds: write -> submit for markup -> accept/dismiss and
-// revise -> submit again as the next version, with the version rail showing the
-// argument getting less red over time. Revision happens back in the textarea
-// (academy has no rich-text editor), so accepting a rewrite repopulates the
-// editor rather than mutating the reviewed snapshot.
+// The loop: write, submit for markup, then work the margin. Accepting a rewrite
+// splices it into the document you are already typing in, the way accepting a
+// tracked change does in a word processor, and every other mark re-anchors
+// itself around the edit. Rejecting clears the mark and leaves the sentence
+// alone. When the marks are worked through, submit again and the next version
+// is snapshotted, so the version rail still shows the argument getting less red
+// over time.
+//
+// Text stays plain (markdown for headings, emphasis, quotations) because every
+// annotation is a character offset into it. The toolbar writes that markdown for
+// you, and the read view typesets it.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { InterlocutorChat, MIN_CRITIQUE_CHARS as MIN_CHARS } from '@/components/InterlocutorPanel';
-import { MarkedUpDraft, CommentList, type Annotation } from '@/components/MarkedUpDraft';
+import { CommentList, MarkedUpText, SummaryLead, type Annotation } from '@/components/MarkedUpDraft';
 import { DraftHistory, type DraftSummary } from '@/components/DraftHistory';
 import { StageStepper } from '@/components/StageStepper';
-import { ResizableSplit } from '@/components/ResizableSplit';
-import { applyAccepted, type AcceptedEdit } from '@/lib/annotations';
-import { DEFAULT_STAGE, isStage, type Stage } from '@/lib/interlocutor';
+import { DraftEditor, type DraftEditorHandle } from '@/components/DraftEditor';
+import { ProsePage } from '@/components/ProsePage';
+import {
+  acceptAllRewrites,
+  acceptRewrite,
+  diffRegion,
+  reanchor,
+  type EditRegion,
+  type SpanInput,
+} from '@/lib/annotations';
+import { DEFAULT_STAGE, isStage, STAGES, type Stage } from '@/lib/interlocutor';
 
 const DRAFT_KEY = 'interlocutor-draft';
 const TITLE_KEY = 'interlocutor-draft-title';
 const PIECE_KEY = 'interlocutor-piece-id';
-const RAIL_KEY = 'interlocutor-show-rail';
+const ASIDE_KEY = 'interlocutor-aside-w';
 
-interface ReviewData {
+interface Marks {
   draftId: string;
   version: number;
-  content: string;
   summary: string;
-  annotations: Annotation[];
-  generalNotes: Annotation[];
+  annotations: Annotation[]; // located and general together
 }
+
+interface PastDraft {
+  id: string;
+  version: number;
+  content: string;
+  annotations: Annotation[];
+}
+
+interface Snapshot {
+  text: string;
+  annotations: Annotation[];
+  label: string;
+}
+
+type Pane = 'comments' | 'ask' | 'drafts';
+
+// A mark that survives an edit somewhere else in the draft: see reanchor().
+const shiftAnn = (a: Annotation, region: EditRegion, nextText: string) =>
+  reanchor(a, region, nextText);
 
 export default function ComposerPage() {
   const router = useRouter();
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<DraftEditorHandle>(null);
 
   const [loaded, setLoaded] = useState(false);
   const [title, setTitle] = useState('');
   const [text, setText] = useState('');
   const [pieceId, setPieceId] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>(DEFAULT_STAGE);
-  const [showRail, setShowRail] = useState(true);
 
-  const [view, setView] = useState<'editor' | 'review'>('editor');
-  const [review, setReview] = useState<ReviewData | null>(null);
-  // The draft produced by this session's latest submit is editable; a version
-  // opened from the rail is read-only.
-  const [liveDraftId, setLiveDraftId] = useState<string | null>(null);
+  const [marks, setMarks] = useState<Marks | null>(null);
+  const [past, setPast] = useState<PastDraft | null>(null);
   const [history, setHistory] = useState<DraftSummary[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [undoable, setUndoable] = useState<Snapshot | null>(null);
+
+  const [mode, setMode] = useState<'write' | 'read'>('write');
+  const [pane, setPane] = useState<Pane>('comments');
+  const [asideW, setAsideW] = useState(360);
+  const [showGuide, setShowGuide] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  // ── Load the draft's version rail for the rail + counts ──────────────────────
+  // ── The version rail ────────────────────────────────────────────────────────
   const loadHistory = useCallback(async (pid: string) => {
     const { data: drafts } = await supabase
       .from('piece_drafts')
@@ -91,7 +123,7 @@ export default function ComposerPage() {
     );
   }, []);
 
-  // ── Auth + restore ───────────────────────────────────────────────────────────
+  // ── Auth, restore ───────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -103,7 +135,8 @@ export default function ComposerPage() {
         setText(localStorage.getItem(DRAFT_KEY) ?? '');
         setTitle(localStorage.getItem(TITLE_KEY) ?? '');
         pid = localStorage.getItem(PIECE_KEY);
-        if (localStorage.getItem(RAIL_KEY) === '0') setShowRail(false);
+        const w = Number(localStorage.getItem(ASIDE_KEY));
+        if (!Number.isNaN(w) && w >= 260) setAsideW(w);
       } catch {}
       if (pid) {
         setPieceId(pid);
@@ -121,10 +154,23 @@ export default function ComposerPage() {
     return () => { cancelled = true; };
   }, [router, loadHistory]);
 
-  const handleTextChange = (v: string) => {
-    setText(v);
+  const persistText = (v: string) => {
     try { localStorage.setItem(DRAFT_KEY, v); } catch {}
   };
+
+  // Every keystroke re-bases the marks so a comment keeps pointing at the words
+  // it was written about while the draft moves under it.
+  const handleTextChange = (next: string) => {
+    const region = diffRegion(text, next);
+    setText(next);
+    persistText(next);
+    if (region) {
+      setMarks(prev =>
+        prev ? { ...prev, annotations: prev.annotations.map(a => shiftAnn(a, region, next)) } : prev
+      );
+    }
+  };
+
   const handleTitleChange = (v: string) => {
     setTitle(v);
     try { localStorage.setItem(TITLE_KEY, v); } catch {}
@@ -134,12 +180,34 @@ export default function ComposerPage() {
   const canSubmit = submission.length >= MIN_CHARS && !working;
   const words = useMemo(() => (submission ? submission.split(/\s+/).length : 0), [submission]);
 
-  // ── Submit for markup ─────────────────────────────────────────────────────────
+  const openMarks = useMemo(
+    () => (marks ? marks.annotations.filter(a => a.status === 'open') : []),
+    [marks]
+  );
+  const spans: SpanInput[] = useMemo(
+    () =>
+      openMarks
+        .filter(a => a.start_offset !== null && a.end_offset !== null)
+        .map(a => ({
+          id: a.id,
+          start: a.start_offset as number,
+          end: a.end_offset as number,
+          severity: a.severity,
+        })),
+    [openMarks]
+  );
+  const acceptable = useMemo(
+    () => openMarks.filter(a => a.suggestion && a.start_offset !== null && a.end_offset !== null),
+    [openMarks]
+  );
+
+  // ── Submit for markup ───────────────────────────────────────────────────────
   const invoke = async () => {
     if (!canSubmit) return;
     setWorking(true);
     setError(null);
     setNotice(null);
+    setPast(null);
     try {
       const res = await fetch('/api/interlocutor/annotate', {
         method: 'POST',
@@ -167,16 +235,15 @@ export default function ComposerPage() {
       };
       setPieceId(d.pieceId);
       try { localStorage.setItem(PIECE_KEY, d.pieceId); } catch {}
-      setReview({
+      setMarks({
         draftId: d.draftId,
         version: d.version,
-        content: text,
         summary: d.summary,
-        annotations: d.annotations ?? [],
-        generalNotes: d.generalNotes ?? [],
+        annotations: [...(d.annotations ?? []), ...(d.generalNotes ?? [])],
       });
-      setLiveDraftId(d.draftId);
-      setView('review');
+      setUndoable(null);
+      setPane('comments');
+      setMode('write');
       if (!d.recorded) {
         setNotice('This pass was not written to your history, so it will not shape your profile.');
       }
@@ -188,53 +255,94 @@ export default function ComposerPage() {
     }
   };
 
-  // ── Accept / dismiss on the live draft ────────────────────────────────────────
-  const setAnnStatus = async (a: Annotation, status: 'accepted' | 'dismissed') => {
-    setReview(prev =>
-      prev
-        ? {
-            ...prev,
-            annotations: prev.annotations.map(x => (x.id === a.id ? { ...x, status } : x)),
-            generalNotes: prev.generalNotes.map(x => (x.id === a.id ? { ...x, status } : x)),
-          }
-        : prev
-    );
+  // ── Accept and reject, in the document ──────────────────────────────────────
+  const persistStatus = async (ids: string[], status: 'accepted' | 'dismissed') => {
+    if (ids.length === 0) return;
     const { error: upErr } = await supabase
       .from('draft_annotations')
       .update({ status })
-      .eq('id', a.id);
-    if (upErr) {
-      setNotice('That change did not save. It will apply here but may not persist.');
+      .in('id', ids);
+    if (upErr) setNotice('That change did not save. It applies here but may not persist.');
+  };
+
+  const snapshot = (label: string) => {
+    if (marks) setUndoable({ text, annotations: marks.annotations, label });
+  };
+
+  const acceptOne = (a: Annotation) => {
+    if (!marks) return;
+    snapshot('accept');
+    const r = acceptRewrite(text, marks.annotations, a.id);
+    setText(r.content);
+    persistText(r.content);
+    setMarks({ ...marks, annotations: r.annotations });
+    setActiveId(null);
+    void persistStatus([a.id], 'accepted');
+  };
+
+  const rejectOne = (a: Annotation) => {
+    if (!marks) return;
+    snapshot('reject');
+    setMarks(prev =>
+      prev
+        ? {
+            ...prev,
+            annotations: prev.annotations.map(x =>
+              x.id === a.id ? { ...x, status: 'dismissed' } : x
+            ),
+          }
+        : prev
+    );
+    setActiveId(null);
+    void persistStatus([a.id], 'dismissed');
+  };
+
+  const acceptAll = () => {
+    if (!marks || acceptable.length === 0) return;
+    snapshot('accept all');
+    const r = acceptAllRewrites(text, marks.annotations);
+    setText(r.content);
+    persistText(r.content);
+    setMarks({ ...marks, annotations: r.annotations });
+    setActiveId(null);
+    setNotice(`${r.accepted.length} rewrite${r.accepted.length === 1 ? '' : 's'} applied to the draft.`);
+    void persistStatus(r.accepted, 'accepted');
+  };
+
+  const rejectAll = () => {
+    if (!marks || openMarks.length === 0) return;
+    snapshot('reject all');
+    const ids = openMarks.map(a => a.id);
+    setMarks({
+      ...marks,
+      annotations: marks.annotations.map(a =>
+        a.status === 'open' ? { ...a, status: 'dismissed' } : a
+      ),
+    });
+    setActiveId(null);
+    setNotice(`${ids.length} mark${ids.length === 1 ? '' : 's'} cleared.`);
+    void persistStatus(ids, 'dismissed');
+  };
+
+  const undo = () => {
+    if (!undoable || !marks) return;
+    const before = undoable;
+    const byId = new Map(before.annotations.map(a => [a.id, a.status]));
+    const reopened = marks.annotations
+      .filter(a => byId.get(a.id) === 'open' && a.status !== 'open')
+      .map(a => a.id);
+    setText(before.text);
+    persistText(before.text);
+    setMarks({ ...marks, annotations: before.annotations });
+    setUndoable(null);
+    setNotice(null);
+    if (reopened.length) {
+      void supabase.from('draft_annotations').update({ status: 'open' }).in('id', reopened);
     }
   };
 
-  const acceptedEdits: AcceptedEdit[] = useMemo(() => {
-    if (!review) return [];
-    return review.annotations
-      .filter(a => a.status === 'accepted' && a.start_offset !== null && a.end_offset !== null && a.suggestion)
-      .map(a => ({
-        start: a.start_offset as number,
-        end: a.end_offset as number,
-        suggestion: a.suggestion as string,
-      }));
-  }, [review]);
-
-  // Carry the reviewed version (with accepted rewrites spliced in) back into the
-  // editor. The next submit becomes the following version.
-  const reviseInEditor = () => {
-    if (!review) return;
-    const revised = applyAccepted(review.content, acceptedEdits);
-    handleTextChange(revised);
-    setView('editor');
-    setNotice(
-      acceptedEdits.length
-        ? `${acceptedEdits.length} accepted rewrite${acceptedEdits.length === 1 ? '' : 's'} applied. Keep revising, then submit again for the next draft.`
-        : 'Back in the editor. Keep revising, then submit again for the next draft.'
-    );
-  };
-
-  // ── Open a past version from the rail (read-only) ──────────────────────────────
-  const openDraft = async (draftId: string) => {
+  // ── Past versions, read-only ────────────────────────────────────────────────
+  const openPast = async (draftId: string) => {
     setError(null);
     const { data: draft } = await supabase
       .from('piece_drafts')
@@ -247,20 +355,11 @@ export default function ComposerPage() {
       .from('draft_annotations')
       .select('id, start_offset, end_offset, quote, dimension, severity, comment, suggestion, status')
       .eq('draft_id', draftId);
-    const all = (anns as Annotation[]) ?? [];
-    setReview({
-      draftId: d.id,
-      version: d.version,
-      content: d.content,
-      summary: '',
-      annotations: all.filter(a => a.start_offset !== null),
-      generalNotes: all.filter(a => a.start_offset === null),
-    });
-    setView('review');
+    setPast({ id: d.id, version: d.version, content: d.content, annotations: (anns as Annotation[]) ?? [] });
+    setActiveId(null);
+    setPane('comments');
   };
 
-  // Set the guided-flow stage. Non-blocking; persists to the piece when one
-  // exists, otherwise rides along on the next submit.
   const changeStage = async (s: Stage) => {
     setStage(s);
     if (pieceId) {
@@ -274,217 +373,327 @@ export default function ComposerPage() {
 
   const newPiece = () => {
     setPieceId(null);
-    setReview(null);
-    setLiveDraftId(null);
+    setMarks(null);
+    setPast(null);
     setHistory([]);
+    setUndoable(null);
     setStage(DEFAULT_STAGE);
-    setView('editor');
     handleTitleChange('');
-    handleTextChange('');
+    setText('');
+    persistText('');
     try { localStorage.removeItem(PIECE_KEY); } catch {}
+  };
+
+  // ── The draggable margin ────────────────────────────────────────────────────
+  const dragRef = useRef(false);
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      if (!dragRef.current) return;
+      const w = Math.min(640, Math.max(260, window.innerWidth - e.clientX));
+      setAsideW(w);
+    };
+    const up = () => {
+      if (!dragRef.current) return;
+      dragRef.current = false;
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+      setAsideW(w => {
+        try { localStorage.setItem(ASIDE_KEY, String(Math.round(w))); } catch {}
+        return w;
+      });
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    return () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+  }, []);
+
+  const focusMark = (id: string) => {
+    setActiveId(id);
+    const a = marks?.annotations.find(x => x.id === id) ?? past?.annotations.find(x => x.id === id);
+    if (past) {
+      document.getElementById(`mark-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (a && a.start_offset !== null && a.end_offset !== null && mode === 'write') {
+      editorRef.current?.focusRange(a.start_offset, a.end_offset);
+    }
   };
 
   if (!loaded) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center h-screen">
         <p className="text-academy-muted italic text-sm">Opening the composer…</p>
       </div>
     );
   }
 
-  const reviewReadOnly = review ? review.draftId !== liveDraftId : true;
+  const stageLabel = STAGES.find(s => s.id === stage)?.label ?? '';
+  const barBtn =
+    'font-mono text-[10px] uppercase tracking-wider border border-academy-border rounded px-2.5 py-1.5 text-academy-muted hover:text-academy-text hover:border-academy-gold/50 transition-colors';
 
   return (
-    <div className="w-full">
-      <header className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <p className="font-mono text-academy-gold text-xs uppercase tracking-[0.3em] mb-2">
-            The Interlocutor
-          </p>
-          <p className="text-academy-muted text-sm leading-relaxed max-w-2xl">
-            Write the argument, then submit it for markup. The Interlocutor returns your
-            draft marked up in place: each judgment fastened to the sentence that earned it,
-            colored by how much it costs the argument. Where a fix is better shown than
-            described, it offers a rewrite you can accept or reject. Revise, and submit again.
-          </p>
-        </div>
-        <div className="flex-shrink-0 flex items-center gap-2">
-          <button
-            onClick={() =>
-              setShowRail(v => {
-                const nv = !v;
-                try { localStorage.setItem(RAIL_KEY, nv ? '1' : '0'); } catch {}
-                return nv;
-              })
-            }
-            className="font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
-          >
-            {showRail ? 'Hide drafts' : 'Show drafts'}
-          </button>
-          {(pieceId || text.trim()) && (
-            <button
-              onClick={newPiece}
-              className="font-mono text-[10px] uppercase tracking-wider text-academy-muted hover:text-academy-text border border-academy-border rounded px-3 py-1.5"
-            >
-              New piece
+    <div className="flex flex-col h-[100dvh] pb-16 md:pb-0">
+      {/* ── The bar over the page ───────────────────────────────────────────── */}
+      <header className="flex-shrink-0 border-b border-academy-border bg-academy-bg">
+        <div className="flex items-center gap-3 px-4 py-2.5">
+          <input
+            className="flex-1 min-w-0 bg-transparent font-serif text-academy-text text-xl focus:outline-none placeholder-academy-muted/60"
+            placeholder="Untitled"
+            value={title}
+            onChange={e => handleTitleChange(e.target.value)}
+          />
+
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button onClick={() => setShowGuide(v => !v)} className={barBtn} title="Guided flow">
+              {stageLabel}
             </button>
-          )}
-        </div>
-      </header>
-
-      <div className={showRail ? 'grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-start' : ''}>
-        <div className="min-w-0">
-          {view === 'editor' ? (
-            <>
-              <StageStepper stage={stage} onChange={changeStage} />
-              {(() => {
-                const editorPane = (
-                  <div className="min-w-0 lg:pr-2">
-                    <input
-                      className="w-full bg-transparent border-b border-academy-border focus:border-academy-gold focus:outline-none font-serif text-academy-text text-2xl pb-2 mb-6 placeholder-academy-muted"
-                      placeholder="Untitled"
-                      value={title}
-                      onChange={e => handleTitleChange(e.target.value)}
-                    />
-
-                    <textarea
-                      ref={editorRef}
-                      className="w-full min-h-[55vh] bg-navy border border-academy-border rounded-lg px-5 py-4 font-serif text-academy-text text-[15px] leading-[1.8] placeholder-academy-muted focus:border-academy-gold focus:outline-none resize-y"
-                      placeholder="Begin."
-                      value={text}
-                      onChange={e => handleTextChange(e.target.value)}
-                    />
-
-                    <div className="flex items-center justify-between mt-2 text-xs text-academy-muted font-mono">
-                      <span>{words} word{words === 1 ? '' : 's'}</span>
-                      {review && (
-                        <button onClick={() => setView('review')} className="hover:text-academy-text">
-                          ← back to the markup
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="mt-8 border-t border-academy-gold/20 pt-6 flex flex-wrap items-center gap-4">
-                      <button
-                        onClick={invoke}
-                        disabled={!canSubmit}
-                        className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-6 py-3 text-sm hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {working ? 'Reading…' : review ? 'Submit the next draft' : 'Submit for markup'}
-                      </button>
-                      {submission.length > 0 && submission.length < MIN_CHARS && (
-                        <span className="text-academy-muted text-xs">Too little to judge.</span>
-                      )}
-                    </div>
-                  </div>
-                );
-
-                // No markup yet: the editor takes the whole width. Once there is a
-                // review, split it with the comments and let the divider be dragged.
-                if (!review) return editorPane;
-                return (
-                  <ResizableSplit
-                    storageKey="il-editor-split"
-                    initialLeft={760}
-                    aside={
-                      <div className="lg:sticky lg:top-4 lg:pl-2">
-                        <p className="font-mono text-academy-gold text-[10px] uppercase tracking-widest mb-3">
-                          Comments · draft v{review.version}
-                        </p>
-                        <CommentList
-                          annotations={review.annotations}
-                          generalNotes={review.generalNotes}
-                          summary={review.summary || undefined}
-                          readOnly
-                        />
-                      </div>
-                    }
-                  >
-                    {editorPane}
-                  </ResizableSplit>
-                );
-              })()}
-            </>
-          ) : (
-            review && (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-academy-gold text-xs uppercase tracking-widest">
-                      Draft v{review.version}
-                    </span>
-                    {reviewReadOnly && (
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-academy-muted">
-                        read-only
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {!reviewReadOnly && (
-                      <button
-                        onClick={reviseInEditor}
-                        className="bg-academy-gold text-academy-bg font-semibold rounded-lg px-4 py-2 text-xs hover:opacity-90"
-                      >
-                        {acceptedEdits.length
-                          ? `Apply ${acceptedEdits.length} & revise`
-                          : 'Revise in editor'}
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setView('editor')}
-                      className="border border-academy-border text-academy-muted hover:text-academy-text rounded-lg px-4 py-2 text-xs"
-                    >
-                      To editor
-                    </button>
-                  </div>
-                </div>
-
-                <MarkedUpDraft
-                  content={review.content}
-                  annotations={review.annotations}
-                  generalNotes={review.generalNotes}
-                  summary={review.summary || undefined}
-                  readOnly={reviewReadOnly}
-                  onAccept={a => setAnnStatus(a, 'accepted')}
-                  onDismiss={a => setAnnStatus(a, 'dismissed')}
-                />
-              </>
-            )
-          )}
-
-          {notice && <p className="text-academy-gold text-xs mt-4 leading-relaxed">{notice}</p>}
-          {error && <p className="text-red-400 text-xs mt-4">{error}</p>}
+            <div className="flex rounded border border-academy-border overflow-hidden">
+              {(['write', 'read'] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setMode(m)}
+                  className={`font-mono text-[10px] uppercase tracking-wider px-2.5 py-1.5 transition-colors ${
+                    mode === m
+                      ? 'bg-academy-gold text-academy-bg'
+                      : 'text-academy-muted hover:text-academy-text'
+                  }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+            {(pieceId || text.trim()) && (
+              <button onClick={newPiece} className={barBtn}>New</button>
+            )}
+            <button onClick={() => setShowAbout(v => !v)} className={barBtn} title="What this does">?</button>
+            <button
+              onClick={invoke}
+              disabled={!canSubmit}
+              className="bg-academy-gold text-academy-bg font-semibold rounded px-4 py-1.5 text-xs hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {working ? 'Reading…' : marks ? 'Submit next draft' : 'Submit for markup'}
+            </button>
+          </div>
         </div>
 
-        {/* ── The version rail (collapsible to give the editor full width) ──── */}
-        {showRail && (
-          <div className="lg:sticky lg:top-4">
-            <DraftHistory
-              versions={history}
-              activeDraftId={review?.draftId ?? null}
-              onSelect={openDraft}
-            />
+        {showAbout && (
+          <p className="px-4 pb-3 text-academy-muted text-[13px] leading-relaxed max-w-3xl">
+            Write the argument, then submit it for markup. The Interlocutor returns your draft
+            marked up in place: each judgment fastened to the sentence that earned it, coloured by
+            how much it costs the argument. Where a fix is better shown than described, it offers a
+            rewrite. Accept it and the sentence changes here, in the document; reject it and the
+            mark clears. Submit again for the next version.
+          </p>
+        )}
+
+        {showGuide && (
+          <div className="px-4 pb-4 border-t border-academy-border pt-4">
+            <StageStepper stage={stage} onChange={changeStage} />
           </div>
         )}
+      </header>
+
+      {/* ── Document and margin ─────────────────────────────────────────────── */}
+      <div className="flex-1 min-h-0 flex">
+        <div className="flex-1 min-w-0 flex flex-col">
+          {past ? (
+            <>
+              <div className="flex-shrink-0 flex items-center gap-3 px-4 py-2 border-b border-academy-border bg-academy-surface/60">
+                <span className="font-mono text-academy-gold text-[10px] uppercase tracking-widest">
+                  Draft v{past.version}
+                </span>
+                <span className="font-mono text-[10px] uppercase tracking-wider text-academy-muted">
+                  read only
+                </span>
+                <button onClick={() => setPast(null)} className={`${barBtn} ml-auto`}>
+                  Back to your draft
+                </button>
+              </div>
+              <MarkedUpText
+                content={past.content}
+                annotations={past.annotations}
+                activeId={activeId}
+                onSpanClick={id => {
+                  setActiveId(id);
+                  document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+              />
+            </>
+          ) : mode === 'write' ? (
+            <DraftEditor
+              ref={editorRef}
+              value={text}
+              onChange={handleTextChange}
+              spans={spans}
+              activeId={activeId}
+              onCaretSpan={id => {
+                setActiveId(id);
+                if (id) {
+                  document.getElementById(`card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+              }}
+              placeholder="Begin."
+            />
+          ) : (
+            <ProsePage text={text} title={title || undefined} />
+          )}
+
+          {/* ── The status bar ───────────────────────────────────────────── */}
+          <div className="flex-shrink-0 flex items-center gap-4 px-4 py-1.5 border-t border-academy-border bg-academy-bg font-mono text-[10px] uppercase tracking-wider text-academy-muted">
+            <span>{words} word{words === 1 ? '' : 's'}</span>
+            {marks && <span>draft v{marks.version}</span>}
+            {marks && <span>{openMarks.length} open mark{openMarks.length === 1 ? '' : 's'}</span>}
+            {submission.length > 0 && submission.length < MIN_CHARS && (
+              <span className="text-academy-gold/80">too little to judge</span>
+            )}
+            {undoable && (
+              <button onClick={undo} className="text-academy-gold hover:opacity-80 ml-auto">
+                Undo {undoable.label}
+              </button>
+            )}
+          </div>
+
+          {(notice || error) && (
+            <div className="flex-shrink-0 px-4 py-2 border-t border-academy-border bg-academy-bg">
+              {notice && <p className="text-academy-gold text-xs leading-relaxed">{notice}</p>}
+              {error && <p className="text-red-400 text-xs">{error}</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Drag to widen the margin. */}
+        <div
+          onPointerDown={e => {
+            e.preventDefault();
+            dragRef.current = true;
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = 'col-resize';
+          }}
+          role="separator"
+          aria-orientation="vertical"
+          title="Drag to resize"
+          className="hidden lg:flex w-1.5 flex-shrink-0 cursor-col-resize items-stretch bg-academy-border/60 hover:bg-academy-gold/60 transition-colors"
+        />
+
+        {/* ── The margin ───────────────────────────────────────────────────── */}
+        <aside
+          className="hidden lg:flex flex-col flex-shrink-0 border-l border-academy-border bg-academy-bg min-h-0"
+          style={{ width: asideW }}
+        >
+          <div className="flex-shrink-0 flex items-center border-b border-academy-border">
+            {(['comments', 'ask', 'drafts'] as const).map(p => (
+              <button
+                key={p}
+                onClick={() => setPane(p)}
+                className={`flex-1 font-mono text-[10px] uppercase tracking-wider py-2.5 transition-colors border-b-2 ${
+                  pane === p
+                    ? 'text-academy-gold border-academy-gold'
+                    : 'text-academy-muted border-transparent hover:text-academy-text'
+                }`}
+              >
+                {p === 'comments' && marks ? `Comments ${openMarks.length}` : p}
+              </button>
+            ))}
+          </div>
+
+          {pane === 'comments' && (
+            <>
+              {!past && marks && openMarks.length > 0 && (
+                <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-academy-border">
+                  <button
+                    onClick={acceptAll}
+                    disabled={acceptable.length === 0}
+                    className="font-mono text-[10px] uppercase tracking-wider bg-academy-gold/90 text-academy-bg rounded px-2.5 py-1 disabled:opacity-30"
+                    title="Apply every rewrite on offer"
+                  >
+                    Accept all {acceptable.length > 0 ? `(${acceptable.length})` : ''}
+                  </button>
+                  <button onClick={rejectAll} className={barBtn}>Reject all</button>
+                </div>
+              )}
+              <div className="flex-1 min-h-0 overflow-auto p-3">
+                {past ? (
+                  <CommentList
+                    annotations={past.annotations}
+                    readOnly
+                    activeId={activeId}
+                    onCardFocus={focusMark}
+                  />
+                ) : marks ? (
+                  <CommentList
+                    annotations={marks.annotations}
+                    summary={marks.summary || undefined}
+                    onAccept={acceptOne}
+                    onDismiss={rejectOne}
+                    activeId={activeId}
+                    onCardFocus={focusMark}
+                  />
+                ) : (
+                  <p className="font-serif italic text-academy-muted text-sm leading-relaxed">
+                    Nothing marked yet. Write the argument, then submit it for markup and the
+                    judgments will appear here, fastened to the sentences that earned them.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
+          {pane === 'ask' && (
+            <div className="flex-1 min-h-0 overflow-auto p-3">
+              {text.trim().length >= MIN_CHARS ? (
+                <InterlocutorChat
+                  key={marks?.draftId ?? 'no-draft'}
+                  excerpt={past?.content ?? text}
+                  pieceTitle={title}
+                  placeholder="Ask about the draft, or push back on a judgment…"
+                />
+              ) : (
+                <p className="text-academy-muted text-sm leading-relaxed">
+                  The conversation is anchored to the draft, so it opens once there is a draft to
+                  anchor it to. Write a few sentences.
+                </p>
+              )}
+            </div>
+          )}
+
+          {pane === 'drafts' && (
+            <div className="flex-1 min-h-0 overflow-auto p-3">
+              {history.length === 0 ? (
+                <p className="font-serif italic text-academy-muted text-sm">
+                  No versions yet. Each submission snapshots one.
+                </p>
+              ) : (
+                <DraftHistory
+                  versions={history}
+                  activeDraftId={past?.id ?? marks?.draftId ?? null}
+                  onSelect={openPast}
+                />
+              )}
+            </div>
+          )}
+        </aside>
       </div>
 
-      {/* ── Conversation, anchored to the draft ──────────────────────────────── */}
-      <section className="mt-12 border-t border-academy-gold/20 pt-6 max-w-3xl">
-        <p className="font-mono text-academy-gold text-xs uppercase tracking-widest mb-4">Ask</p>
-        {text.trim().length >= MIN_CHARS ? (
-          <InterlocutorChat
-            key={review?.draftId ?? 'no-draft'}
-            excerpt={review?.content ?? text}
-            pieceTitle={title}
-            placeholder="Ask about the draft, or push back on a judgment…"
+      {/* ── Below lg the margin cannot sit beside the page, so it sits under it ─ */}
+      {!past && marks && (
+        <div className="lg:hidden flex-shrink-0 max-h-[38vh] overflow-auto border-t border-academy-border p-3">
+          {marks.summary && (
+            <div className="rounded-lg border border-academy-gold/25 bg-academy-surface/40 p-3 mb-2.5">
+              <SummaryLead summary={marks.summary} />
+            </div>
+          )}
+          <CommentList
+            annotations={marks.annotations}
+            onAccept={acceptOne}
+            onDismiss={rejectOne}
+            activeId={activeId}
+            onCardFocus={focusMark}
           />
-        ) : (
-          <p className="text-academy-muted text-sm leading-relaxed">
-            The conversation is anchored to the draft, so it opens once there is a draft to
-            anchor it to. Write a few sentences above.
-          </p>
-        )}
-      </section>
+        </div>
+      )}
     </div>
   );
 }
