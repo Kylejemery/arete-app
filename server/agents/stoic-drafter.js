@@ -56,9 +56,33 @@ async function embed(text) {
   return data.data[0].embedding;
 }
 
+// Rewrite the post as one clean sentence of philosophical need before
+// embedding. Raw post bodies (slang, ellipses, all-caps) crater pgvector
+// similarity (~0.45 → ~0.15 measured) and drag retrieval to junk passages;
+// a distilled sentence in classical vocabulary finds the right corner of
+// the corpus. One cheap Haiku call per draft, capped at 8 drafts per run.
+const DISTILL_MODEL = process.env.STOIC_DISTILL_MODEL || 'claude-haiku-4-5';
+
+async function distillNeed(candidate) {
+  try {
+    const raw = await callClaude(
+      DISTILL_MODEL,
+      'Rewrite the post as ONE plain sentence stating the underlying philosophical difficulty, in the vocabulary of classical philosophy (control, judgment, opinion of others, fortune, grief, desire). No names, no slang, no quotation. Return the sentence only.',
+      `POST:\n\n${candidate.body.slice(0, 1500)}`,
+      150
+    );
+    const sentence = raw.replace(/^["']|["']$/g, '').trim();
+    return sentence.length >= 15 && sentence.length <= 400 ? sentence : null;
+  } catch (err) {
+    console.error('[stoic-drafter] distill failed, falling back to doctrine hint:', err.message);
+    return null;
+  }
+}
+
 async function retrievePassages(supabase, candidate) {
   const doctrineHint = DOCTRINE_QUERIES[candidate.doctrine] || DOCTRINE_QUERIES.none;
-  const query = `${doctrineHint}\n\n${candidate.body.slice(0, 1500)}`;
+  const distilled = await distillNeed(candidate);
+  const query = distilled ? `${doctrineHint}\n${distilled}` : doctrineHint;
   const embedding = await embed(query);
   const { data, error } = await supabase.rpc('match_rag_corpus_cited', {
     query_embedding: embedding,
