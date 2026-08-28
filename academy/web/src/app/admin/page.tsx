@@ -191,6 +191,10 @@ const PIPELINE: { when: string; icon: string; name: string; tag: string; text: s
     text: 'Queues and publishes social posts (X, Bluesky, LinkedIn). The fleet’s outward voice; runs off content you approve.',
   },
   {
+    when: 'every 6h', icon: '🏛️', name: 'Stoic Replies', tag: 'outward-facing',
+    text: 'Scouts public posts (HN first) for the phrasings of everyday difficulty, exits anything a professional should handle before scoring Stoic fit and openness, then drafts a corpus-grounded reply under 120 words. Everything lands in a review queue: you approve, edit, or reject each draft, and posting is a manual paste from your own account. Hard caps of 3 approvals per platform per day and one reply per author per 30 days.',
+  },
+  {
     when: '07:00 Sun', icon: '🪞', name: 'Self-Reflection', tag: 'meta',
     text: 'The meta-agent. Once a week it reviews the whole fleet — corpus growth, whether each agent fired, engagement, dispatch delivery — detects anomalies, and writes one honest health report with specific recommended actions. Reads everything, changes nothing; its reader is you.',
   },

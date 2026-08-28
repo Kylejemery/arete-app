@@ -31,6 +31,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/scribe/chat', label: 'Scribe Chat' },
   { href: '/admin/scribe/log', label: 'Log' },
   { href: '/admin/scheduler', label: 'Scheduler' },
+  { href: '/admin/stoic-replies', label: 'Stoic Replies' },
   { href: '/admin/corpus', label: 'Corpus Ingestion' },
   { href: '/admin/papers', label: 'Papers' },
   { href: '/admin/architecture', label: 'Architecture' },
