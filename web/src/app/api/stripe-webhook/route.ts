@@ -8,9 +8,21 @@ import { createSupabaseAdminClient, requireEnv } from '@/lib/supabaseServer'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// Stripe price → Arete tier. Monthly and yearly are both the premium tier;
-// Pro is its own tier and unlocks via is_premium=true under getIsPremium()'s
-// OR logic. Read lazily so a missing env var fails the request, not the build.
+// Stripe product → Arete tier. Keyed on the PRODUCT, not the price, per
+// Stripe's guidance: prices come and go (promos, regional pricing, price
+// changes), and a price the map doesn't know would grant nothing to a paying
+// customer. The product ids are stable and identical in sandbox and live —
+// both were created with these explicit ids. Monthly and yearly are both the
+// premium tier; Pro is its own tier and unlocks via is_premium=true under
+// getIsPremium()'s OR logic.
+const PRODUCT_TIER_MAP: Record<string, string> = {
+  prod_arete_premium: 'premium',
+  prod_arete_pro: 'pro',
+}
+
+// Fallback for any subscription whose product isn't in the map — the three
+// checkout price ids still resolve. Read lazily so a missing env var fails
+// the request, not the build.
 function getPriceTierMap(): Record<string, string> {
   return {
     [requireEnv('STRIPE_PRICE_MONTHLY')]: 'premium',
@@ -65,8 +77,11 @@ export async function POST(req: NextRequest) {
         }
         break
       }
+      case 'customer.subscription.created':
       case 'customer.subscription.updated':
-      case 'customer.subscription.deleted': {
+      case 'customer.subscription.deleted':
+      case 'customer.subscription.paused':
+      case 'customer.subscription.resumed': {
         await syncStripeSubscription(event.data.object, null)
         break
       }
@@ -118,9 +133,16 @@ async function syncStripeSubscription(
 
   const item = subscription.items.data[0]
   const priceId = item?.price.id ?? null
-  const tier = priceId ? getPriceTierMap()[priceId] ?? null : null
+  const productId =
+    typeof item?.price.product === 'string' ? item.price.product : item?.price.product?.id ?? null
+  const tier =
+    (productId ? PRODUCT_TIER_MAP[productId] : undefined) ??
+    (priceId ? getPriceTierMap()[priceId] : undefined) ??
+    null
   if (priceId && !tier) {
-    console.error(`[stripe-webhook] unmapped Stripe price ${priceId} — recording row without tier`)
+    console.error(
+      `[stripe-webhook] unmapped Stripe product ${productId} / price ${priceId} — recording row without tier`
+    )
   }
   const status = subscription.status
   // API 2025-03-31+ keeps current_period_end on the subscription item

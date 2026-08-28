@@ -76,6 +76,9 @@ export async function POST(req: NextRequest) {
     }
 
     const appUrl = req.headers.get('origin') ?? FALLBACK_APP_URL
+    // Idempotency: a double-click or client retry inside the same 10-minute
+    // window returns the same session instead of minting duplicates.
+    const idempotencyKey = `checkout:${user.id}:${resolvedPriceId}:${Math.floor(Date.now() / 600_000)}`
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -87,7 +90,8 @@ export async function POST(req: NextRequest) {
       // webhook can resolve the user without a customer lookup
       metadata: { supabase_user_id: user.id },
       subscription_data: { metadata: { supabase_user_id: user.id } },
-    })
+    },
+    { idempotencyKey })
 
     return NextResponse.json({ url: session.url })
   } catch (error) {
