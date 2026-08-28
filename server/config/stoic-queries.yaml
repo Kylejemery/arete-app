@@ -30,6 +30,12 @@ limits:
   max_triage_per_run: 40           # safety gate + scoring calls per run
   max_drafts_per_run: 8            # Opus calls per run
 
+# Bluesky posts cap at 300 characters, so the global 200-char floor would
+# exclude nearly everything. These keys override `filters` for Bluesky only.
+# Needs BLUESKY_HANDLE + BLUESKY_APP_PASSWORD in the server environment.
+bluesky:
+  min_body_chars: 150
+
 # Reddit is v2. When it lands, replies are allowed ONLY in subreddits listed
 # here (an explicit allowlist, never a blocklist).
 reddit_allowlist: []
