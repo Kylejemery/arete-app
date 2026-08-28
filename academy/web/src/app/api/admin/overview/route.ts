@@ -265,12 +265,36 @@ export async function GET() {
     } catch { return null }
   })()
 
+  // --- Stoic reply pipeline ---
+  const stoicReplies = (async () => {
+    try {
+      const todayStart = new Date()
+      todayStart.setUTCHours(0, 0, 0, 0)
+      const [{ count: pending }, { count: promoted }, { count: approvedToday }] = await Promise.all([
+        admin.from('reply_drafts').select('id', { count: 'exact', head: true }).in('status', ['pending', 'edited']),
+        admin.from('reply_candidates').select('id', { count: 'exact', head: true }).eq('status', 'promoted'),
+        admin.from('reply_drafts').select('id', { count: 'exact', head: true })
+          .eq('status', 'approved').gte('posted_at', todayStart.toISOString()),
+      ])
+      const { data: latest } = await admin.from('reply_candidates')
+        .select('fetched_at').order('fetched_at', { ascending: false }).limit(1).maybeSingle()
+      return {
+        pending: pending ?? 0,
+        promoted: promoted ?? 0,
+        approvedToday: approvedToday ?? 0,
+        lastFetchedAt: latest?.fetched_at ?? null,
+      }
+    } catch { return null }
+  })()
+
   const [
     corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData,
     tensionData, inquiryData, dreamsData, longitudinalData, worldData, consolidationData,
+    stoicRepliesData,
   ] = await Promise.all([
     corpus, journal, gap, synthesis, scheduler, dispatch, reflection,
     tension, inquiry, dreams, longitudinal, world, consolidation,
+    stoicReplies,
   ])
 
   return NextResponse.json({
@@ -288,5 +312,6 @@ export async function GET() {
     longitudinal: longitudinalData,
     world: worldData,
     consolidation: consolidationData,
+    stoicReplies: stoicRepliesData,
   })
 }

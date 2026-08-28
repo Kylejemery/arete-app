@@ -82,6 +82,12 @@ type Overview = {
     latestSignal: string | null
     lastGeneratedAt: string | null
   } | null
+  stoicReplies: {
+    pending: number
+    promoted: number
+    approvedToday: number
+    lastFetchedAt: string | null
+  } | null
 }
 
 function timeAgo(iso: string | null): string {
@@ -486,6 +492,27 @@ export default function AdminOverviewPage() {
               ? `Latest: ${data.inquiry.latestQuestion.slice(0, 38)}${data.inquiry.latestQuestion.length > 38 ? '…' : ''} · next Mon 06:30 UTC`
               : 'No inquiries yet · next Mon 06:30 UTC'}
             href="/admin/inquiry"
+          />
+
+          <AgentCard
+            icon="🏛️"
+            name="Stoic Replies"
+            status={!data.stoicReplies ? 'no data' : data.stoicReplies.pending > 0 ? 'review needed' : 'idle'}
+            statusKind={!data.stoicReplies ? 'idle' : data.stoicReplies.pending > 0 ? 'warn' : 'ok'}
+            metrics={[
+              {
+                label: 'Pending review',
+                value: (data.stoicReplies?.pending ?? 0) > 0
+                  ? <span className={styles.redBadge}>{data.stoicReplies?.pending}</span>
+                  : 0,
+              },
+              { label: 'Awaiting draft', value: data.stoicReplies?.promoted ?? 0 },
+              { label: 'Approved today', value: data.stoicReplies?.approvedToday ?? 0 },
+            ]}
+            footer={data.stoicReplies?.lastFetchedAt
+              ? `Last scouted ${timeAgo(data.stoicReplies.lastFetchedAt)} · every 6h · posting is manual`
+              : 'No candidates yet · every 6h · posting is manual'}
+            href="/admin/stoic-replies"
           />
 
           <AgentCard

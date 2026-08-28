@@ -1,0 +1,35 @@
+# Stoic Reply Pipeline — scout configuration.
+# Tune this weekly; it is config on purpose so the query list never lives in code.
+#
+# queries: the phrasings people actually use in the moment of difficulty.
+# Do NOT add topic nouns ("stoicism", "anxiety") — they surface commentary,
+# not people in the middle of something.
+
+queries:
+  - "can't stop thinking about"
+  - "why do I care so much"
+  - "I keep replaying"
+  - "everyone else seems to"
+  - "I did everything right and"
+  - "got passed over"
+  - "laid off"
+  - "let go from my job"
+  - "I'm so angry at"
+  - "nothing I do matters"
+
+filters:
+  min_age_hours: 2      # younger: the thread hasn't settled
+  max_age_days: 7       # older: the moment has passed
+  min_body_chars: 200   # shorter: not enough to respond to
+  max_body_chars: 4000  # longer: usually a blog post
+  max_comments: 50      # crowded threads bury replies
+
+# Per-run ceilings, so a 6-hourly run stays cheap and reviewable.
+limits:
+  max_new_candidates_per_run: 40   # scout stops writing rows past this
+  max_triage_per_run: 40           # safety gate + scoring calls per run
+  max_drafts_per_run: 8            # Opus calls per run
+
+# Reddit is v2. When it lands, replies are allowed ONLY in subreddits listed
+# here (an explicit allowlist, never a blocklist).
+reddit_allowlist: []

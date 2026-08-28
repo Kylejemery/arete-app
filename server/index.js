@@ -138,6 +138,7 @@ const { runConsolidationAgent } = require('./agents/consolidation-agent');
 // via the Observatory under "The Corpus Concludes".
 // This require backs the on-demand admin trigger POST /api/admin/convergence/run.
 const { runConvergenceAgent } = require('./agents/convergence-agent');
+const { runStoicReplyAgent } = require('./agents/stoic-reply-agent');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -4023,6 +4024,11 @@ app.post('/api/admin/consolidation/run', makeAgentRunEndpoint('consolidation', {
 // (deferred) Monday 06:30 UTC cron. Embeds for selection + novelty, so OpenAI
 // is required.
 app.post('/api/admin/convergence/run', makeAgentRunEndpoint('convergence', { running: false }, runConvergenceAgent));
+
+// POST /api/admin/stoic-replies/run — run the Stoic Reply Pipeline now
+// (scout → safety gate → scoring → drafting) instead of the 6-hourly cron.
+// Fills the review queue at /admin/stoic-replies; never posts anything.
+app.post('/api/admin/stoic-replies/run', makeAgentRunEndpoint('stoic-replies', { running: false }, runStoicReplyAgent));
 
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
