@@ -51,6 +51,18 @@ export default function SettingsPage() {
           </Link>
         </div>
 
+        {/* Subscription — /upgrade shows plans to free users and the Stripe
+            Customer Portal entry (manage/cancel) to paid users */}
+        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
+          <p className="text-arete-text font-semibold mb-3">Subscription</p>
+          <Link
+            href="/upgrade"
+            className="block w-full text-center bg-arete-bg border border-arete-border text-arete-text rounded-lg px-4 py-2 text-sm hover:border-arete-gold transition-colors"
+          >
+            Manage Subscription
+          </Link>
+        </div>
+
         {/* Account */}
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-text font-semibold mb-3">Account</p>
