@@ -17,6 +17,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { loadConfig } = require('./stoic-scout');
 
 const DRAFT_MODEL = process.env.STOIC_DRAFT_MODEL || 'claude-opus-5';
 const EMBEDDING_MODEL = 'text-embedding-3-small';
@@ -84,12 +85,16 @@ async function retrievePassages(supabase, candidate) {
   const distilled = await distillNeed(candidate);
   const query = distilled ? `${doctrineHint}\n${distilled}` : doctrineHint;
   const embedding = await embed(query);
+  // Over-fetch, then keep only Stoic authors: the RPC has no author filter,
+  // and the corpus holds non-Stoics (Adam Smith, Montaigne, Plutarch...) who
+  // must not end up quoted in a reply.
   const { data, error } = await supabase.rpc('match_rag_corpus_cited', {
     query_embedding: embedding,
-    match_count: PASSAGE_COUNT,
+    match_count: PASSAGE_COUNT * 8,
   });
   if (error) throw new Error(`match_rag_corpus_cited: ${error.message}`);
-  return (data || []).map(p => ({
+  const allowed = new Set(loadConfig().drafting.stoic_authors);
+  return (data || []).filter(p => allowed.has(p.author)).slice(0, PASSAGE_COUNT).map(p => ({
     author: p.author,
     work: p.work,
     section: p.section_label,
@@ -111,6 +116,8 @@ Rules:
 - No em dashes or en dashes anywhere in the output.
 - Do not console. Do not diagnose. Do not tell them what they feel.
 - Do not mention Arete, Substack, or link anything.
+- If the message states a platform character limit, the reply MUST fit within it, counting every character and space. That limit overrides the 120-word rule.
+- Ground the reply in the Stoic passages provided. Do not bring in non-Stoic thinkers.
 - If the honest answer is that Stoicism has nothing useful to say here, return {"draft": null, "reason": "..."}. This is an acceptable and expected outcome.
 
 You will be given the post, the doctrine the triage stage tagged it with, and up to three corpus passages. Choose at most one passage to ground the reply, or discard them all and decline.
@@ -167,14 +174,34 @@ async function draftOne(supabase, candidate) {
       ).join('\n\n')
     : '(no corpus passages matched — decline unless you can ground the reply honestly without one)';
 
+  const charLimit = loadConfig().drafting.platform_char_limits[candidate.platform] ?? null;
+  const limitLine = charLimit
+    ? `PLATFORM CHARACTER LIMIT: ${charLimit} characters including spaces (${candidate.platform} hard limit). Aim under ${charLimit - 20}.\n\n`
+    : '';
   const userMessage =
     `POST (from ${candidate.platform}):\n\n${candidate.body}\n\n` +
     (candidate.parent_context ? `IN REPLY TO:\n\n${candidate.parent_context}\n\n` : '') +
-    `TRIAGE DOCTRINE TAG: ${candidate.doctrine}\n\n${passagesText}`;
+    `TRIAGE DOCTRINE TAG: ${candidate.doctrine}\n\n${limitLine}${passagesText}`;
 
   const raw = await callClaude(DRAFT_MODEL, DRAFT_SYSTEM, userMessage);
-  const parsed = parseJson(raw);
+  let parsed = parseJson(raw);
   if (!parsed) throw new Error(`unparseable drafter response: ${raw.slice(0, 160)}`);
+
+  // One compress retry when the platform has a hard character cap; a draft
+  // that cannot honestly fit gets declined rather than truncated.
+  if (parsed.draft && charLimit && stripDashes(String(parsed.draft)).trim().length > charLimit) {
+    const over = stripDashes(String(parsed.draft)).trim().length;
+    const retry = await callClaude(
+      DRAFT_MODEL,
+      DRAFT_SYSTEM,
+      `${userMessage}\n\nYour previous draft was ${over} characters, over the ${charLimit}-character hard limit:\n\n${parsed.draft}\n\nRewrite it to fit: same single idea, same grounding, under ${charLimit - 20} characters. If it cannot survive that compression honestly, return {"draft": null, "reason": "..."}.`
+    );
+    parsed = parseJson(retry);
+    if (!parsed) throw new Error(`unparseable drafter retry: ${retry.slice(0, 160)}`);
+    if (parsed.draft && stripDashes(String(parsed.draft)).trim().length > charLimit) {
+      parsed = { draft: null, reason: `could not fit the reply under ${charLimit} characters without gutting it` };
+    }
+  }
 
   if (!parsed.draft) {
     await supabase.from('reply_candidates').update({

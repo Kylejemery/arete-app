@@ -36,6 +36,25 @@ limits:
 bluesky:
   min_body_chars: 150
 
+drafting:
+  # Replies are grounded ONLY in these authors (exact rag_corpus values —
+  # note the umlaut in Laërtius). Primary Stoic voices; scholarship and
+  # non-Stoics (Adam Smith, Montaigne, Plutarch...) stay out of replies.
+  stoic_authors:
+    - Seneca
+    - Epictetus
+    - Marcus Aurelius
+    - Musonius Rufus
+    - Cicero
+    - Cleanthes
+    - Zeno of Citium
+    - Antipater of Tarsus
+    - Diogenes Laërtius
+  # Hard reply-length limit per platform, in characters. Platforms not listed
+  # use the spec's under-120-words rule alone.
+  platform_char_limits:
+    bluesky: 300
+
 # Reddit is v2. When it lands, replies are allowed ONLY in subreddits listed
 # here (an explicit allowlist, never a blocklist).
 reddit_allowlist: []

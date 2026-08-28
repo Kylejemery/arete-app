@@ -37,6 +37,11 @@ function loadConfig() {
       ...(parsed.limits || {}),
     },
     bluesky: parsed.bluesky || {},
+    drafting: {
+      stoic_authors: ['Seneca', 'Epictetus', 'Marcus Aurelius', 'Musonius Rufus', 'Cicero'],
+      platform_char_limits: { bluesky: 300 },
+      ...(parsed.drafting || {}),
+    },
     reddit_allowlist: parsed.reddit_allowlist || [],
   };
 }

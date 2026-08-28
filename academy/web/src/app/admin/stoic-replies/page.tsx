@@ -166,6 +166,10 @@ export default function StoicRepliesPage() {
   const platformCount = cand ? (data?.approvedToday[cand.platform] ?? 0) : 0
   const capReached = !!data && !!cand && platformCount >= data.dailyCap
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0
+  // Mirrors drafting.platform_char_limits in server/config/stoic-queries.yaml.
+  const PLATFORM_CHAR_LIMITS: Record<string, number> = { bluesky: 300 }
+  const charLimit = cand ? PLATFORM_CHAR_LIMITS[cand.platform] ?? null : null
+  const overCharLimit = charLimit !== null && text.length > charLimit
 
   return (
     <div className={styles.page}>
@@ -248,8 +252,9 @@ export default function StoicRepliesPage() {
               <span className={styles.sectionLabel} style={{ margin: 0 }}>
                 Draft ({current.model ?? 'model unknown'}{current.passage_used ? ` · grounded in ${current.passage_used}` : ''})
               </span>
-              <span className={styles.muted} style={{ fontSize: 12 }}>
-                {wordCount} words{wordCount > 120 ? ' — over the 120 limit' : ''}
+              <span className={overCharLimit ? styles.errText : styles.muted} style={{ fontSize: 12 }}>
+                {wordCount} words{wordCount > 120 ? ' (over the 120 limit)' : ''}
+                {charLimit !== null && ` · ${text.length}/${charLimit} chars${overCharLimit ? ` (${text.length - charLimit} over, won't fit on ${cand?.platform})` : ''}`}
               </span>
             </div>
             <textarea
@@ -269,7 +274,8 @@ export default function StoicRepliesPage() {
               <button
                 className={styles.primaryBtn}
                 onClick={approve}
-                disabled={busy || capReached || !text.trim()}
+                disabled={busy || capReached || overCharLimit || !text.trim()}
+                title={overCharLimit ? `Over the ${charLimit}-character ${cand?.platform} limit — trim the draft first` : undefined}
               >
                 Approve · copy + open thread
               </button>
