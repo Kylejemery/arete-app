@@ -51,6 +51,23 @@ export async function POST(req: NextRequest) {
     if (lookupError) throw lookupError
 
     let customerId = existing?.stripe_customer_id ?? null
+
+    // A stored id can go stale — most commonly a sandbox customer id left in
+    // the row after a test/live mode switch ("No such customer"). Verify it
+    // before reuse and fall through to creation if it's gone or deleted.
+    if (customerId) {
+      try {
+        const customer = await stripe.customers.retrieve(customerId)
+        if ((customer as { deleted?: boolean }).deleted) customerId = null
+      } catch (err) {
+        if ((err as { code?: string }).code === 'resource_missing') {
+          customerId = null
+        } else {
+          throw err
+        }
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
