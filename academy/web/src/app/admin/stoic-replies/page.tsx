@@ -34,11 +34,19 @@ type Draft = {
   candidate: Candidate | null
 }
 
+type RecentApproval = {
+  id: string
+  final_text: string | null
+  posted_at: string | null
+  candidate: { platform: string; permalink: string; author_handle: string } | null
+}
+
 type QueueData = {
   queue: Draft[]
   approvedToday: Record<string, number>
   dailyCap: number
   pipeline: Record<string, number>
+  recent: RecentApproval[]
 }
 
 const REJECT_REASONS = ['not_relevant', 'bad_draft', 'wrong_tone', 'too_late', 'unsafe']
@@ -116,14 +124,20 @@ export default function StoicRepliesPage() {
     }
   }
 
-  // Approve: clipboard + open the thread synchronously in the click gesture,
-  // then record the approval. You paste it yourself; the pipeline never posts.
-  function approve() {
+  // Approve: copy FIRST and await it — opening the thread steals focus, and an
+  // unfocused page is refused clipboard access. Only then open the tab and
+  // record the approval. You paste it yourself; the pipeline never posts.
+  // Approved text is also kept in the Recently approved list below, so a
+  // failed paste is never lost.
+  async function approve() {
     if (!current?.candidate) return
+    const permalink = current.candidate.permalink
     try {
-      navigator.clipboard.writeText(text)
-    } catch { /* clipboard can fail outside secure contexts; the text stays on screen */ }
-    window.open(current.candidate.permalink, '_blank', 'noopener')
+      await navigator.clipboard.writeText(text)
+    } catch {
+      setNotice('Clipboard copy failed — use the Copy button in Recently approved below.')
+    }
+    window.open(permalink, '_blank', 'noopener')
     act('approve')
   }
 
@@ -274,6 +288,43 @@ export default function StoicRepliesPage() {
             </div>
           </div>
         </>
+      )}
+
+      {(data?.recent?.length ?? 0) > 0 && (
+        <div className={styles.card}>
+          <span className={styles.sectionLabel} style={{ margin: 0 }}>Recently approved</span>
+          {data!.recent.map(r => (
+            <div key={r.id} style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid #eee' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', fontSize: 12 }}>
+                <span className={styles.muted}>
+                  {r.candidate?.platform} · {r.candidate?.author_handle} · {r.posted_at ? new Date(r.posted_at).toLocaleString() : ''}
+                </span>
+                <span style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                  <button
+                    className={styles.ghostBtn}
+                    style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(r.final_text ?? '')
+                        setNotice('Copied.')
+                      } catch {
+                        setNotice('Clipboard unavailable — select the text and copy manually.')
+                      }
+                    }}
+                  >
+                    Copy
+                  </button>
+                  {r.candidate?.permalink && (
+                    <a href={r.candidate.permalink} target="_blank" rel="noreferrer noopener" style={{ fontSize: 12 }}>
+                      Thread ↗
+                    </a>
+                  )}
+                </span>
+              </div>
+              <p style={{ whiteSpace: 'pre-wrap', fontSize: 13, lineHeight: 1.5, marginTop: 6 }}>{r.final_text}</p>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   )

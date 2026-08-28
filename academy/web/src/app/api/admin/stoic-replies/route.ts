@@ -37,7 +37,7 @@ export async function GET() {
     const todayStart = new Date()
     todayStart.setUTCHours(0, 0, 0, 0)
 
-    const [queueRes, approvedTodayRes, countsRes] = await Promise.all([
+    const [queueRes, approvedTodayRes, countsRes, recentRes] = await Promise.all([
       admin
         .from('reply_drafts')
         .select(`
@@ -57,6 +57,14 @@ export async function GET() {
       admin
         .from('reply_candidates')
         .select('status'),
+      // The last few approved replies, so a missed clipboard paste is never
+      // lost — the UI shows these with a Copy button.
+      admin
+        .from('reply_drafts')
+        .select('id, final_text, posted_at, candidate:reply_candidates(platform, permalink, author_handle)')
+        .eq('status', 'approved')
+        .order('posted_at', { ascending: false })
+        .limit(5),
     ])
 
     if (queueRes.error) throw new Error(queueRes.error.message)
@@ -78,6 +86,7 @@ export async function GET() {
       approvedToday,
       dailyCap: DAILY_CAP_PER_PLATFORM,
       pipeline,
+      recent: recentRes.data ?? [],
     })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed' }, { status: 500 })
