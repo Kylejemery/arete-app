@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,16 +8,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  getAvailablePackages,
-  isPurchasesAvailable,
-  purchasePackage,
-  restorePurchases,
-  PurchaseCancelledError,
-  type PurchasePackage,
-} from '@/lib/purchases';
+import * as WebBrowser from 'expo-web-browser';
 
-// ─── Static fallback display data ────────────────────────────────────────────
+// ─── Web checkout, not IAP ────────────────────────────────────────────────────
+// Subscriptions are purchased on the web (Stripe) and unlock the app through
+// Supabase: the Stripe webhook writes profiles.tier, and useSubscription
+// re-reads it when the app foregrounds — so returning from Safari after
+// paying updates entitlement automatically. There is deliberately no IAP in
+// this app; do not reintroduce react-native-purchases-ui (it broke the New
+// Architecture build in May 2026). External-purchase links are permitted on
+// the US storefront post Epic v. Apple — re-check the current App Review
+// Guidelines at each submission.
+
+const UPGRADE_URL = 'https://app.pursuearete.com/upgrade';
 
 interface PlanDisplay {
   identifier: string;
@@ -31,13 +32,9 @@ interface PlanDisplay {
   description: string;
 }
 
-// App Store product ids, matching the RevenueCat packages. PLAN_DISPLAY below
-// is the static fallback shown when the store's live prices can't be fetched.
-const PRODUCT_IDS = ['arete_monthly', 'arete_annual', 'arete_pro'];
-
 const PLAN_DISPLAY: PlanDisplay[] = [
   {
-    identifier: 'arete_monthly',
+    identifier: 'premium_monthly',
     label: 'Arete',
     price: '$9.99',
     period: '/mo',
@@ -46,7 +43,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     description: '50 messages/day · All 23 counselors',
   },
   {
-    identifier: 'arete_annual',
+    identifier: 'premium_yearly',
     label: 'Arete Annual',
     price: '$79.99',
     period: '/yr',
@@ -55,7 +52,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     description: '$6.67/mo · Save 33% · All 23 counselors',
   },
   {
-    identifier: 'arete_pro',
+    identifier: 'pro_monthly',
     label: 'Arete Pro',
     price: '$19.99',
     period: '/mo',
@@ -66,8 +63,8 @@ const PLAN_DISPLAY: PlanDisplay[] = [
 ];
 
 const FEATURES = [
-  { label: 'Messages/day',   free: '10',        arete: '50',      pro: 'Unlimited' },
-  { label: 'Counselors',     free: '3',         arete: '23',      pro: '23' },
+  { label: 'Messages/day',   free: '10',        arete: '50',       pro: 'Unlimited' },
+  { label: 'Counselors',     free: '3',         arete: '23',       pro: '23' },
   { label: 'Token budget',   free: 'Standard',  arete: 'Extended', pro: 'Max' },
 ];
 
@@ -77,86 +74,9 @@ export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [packages, setPackages] = useState<Record<string, PurchasePackage>>({});
-  const [selectedId, setSelectedId] = useState<string>('arete_annual');
-  const [purchasing, setPurchasing] = useState(false);
-  const [restoring, setRestoring] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingOfferings, setLoadingOfferings] = useState(true);
-
-  const storeReady = isPurchasesAvailable();
-
-  // ── Fetch products ────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!storeReady) { setLoadingOfferings(false); return; }
-    (async () => {
-      try {
-        const available = await getAvailablePackages();
-        const productMap: Record<string, PurchasePackage> = {};
-        for (const pkg of available) {
-          if (PRODUCT_IDS.includes(pkg.productId)) productMap[pkg.productId] = pkg;
-        }
-        setPackages(productMap);
-      } catch (e) {
-        console.warn('Failed to load offerings:', e);
-      } finally {
-        setLoadingOfferings(false);
-      }
-    })();
-  }, [storeReady]);
-
-  // ── Purchase ──────────────────────────────────────────────────────────────
-
-  // Entitlement is NOT written from here. RevenueCat's webhook updates
-  // profiles.tier server-side; useSubscription re-reads on foreground. The
-  // client cannot grant itself a tier — those columns are service-role only.
-  const handleSubscribe = async () => {
-    const pkg = packages[selectedId];
-    if (!pkg) { setError('Plan not available. Please try again.'); return; }
-
-    setError(null);
-    setPurchasing(true);
-    try {
-      await purchasePackage(pkg);
-      router.back();
-    } catch (e) {
-      // Backing out of the App Store sheet is not an error worth surfacing.
-      if (!(e instanceof PurchaseCancelledError)) {
-        console.warn('Purchase failed:', e);
-        setError('Purchase failed. Please try again.');
-      }
-    } finally {
-      setPurchasing(false);
-    }
+  const openWebCheckout = () => {
+    WebBrowser.openBrowserAsync(UPGRADE_URL).catch(() => {});
   };
-
-  // ── Restore ───────────────────────────────────────────────────────────────
-
-  const handleRestore = async () => {
-    if (!storeReady) return;
-    setError(null);
-    setRestoring(true);
-    try {
-      const tier = await restorePurchases();
-      if (tier === 'free') {
-        setError('No previous purchases found for this Apple ID.');
-      } else {
-        router.back();
-      }
-    } catch {
-      setError('Restore failed. Please try again.');
-    } finally {
-      setRestoring(false);
-    }
-  };
-
-  // Only offer the button when the store is reachable and the selected plan
-  // actually came back from RevenueCat — a dead Subscribe button is worse
-  // than an honestly disabled one.
-  const canSubscribe = storeReady && !purchasing && !loadingOfferings && !!packages[selectedId];
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -200,89 +120,48 @@ export default function PaywallScreen() {
           ))}
         </View>
 
-        {/* Plan cards */}
-        {loadingOfferings ? (
-          <ActivityIndicator color="#C9A84C" style={{ marginVertical: 24 }} />
-        ) : (
-          <View style={styles.plansContainer}>
-            {PLAN_DISPLAY.map(plan => {
-              const selected = plan.identifier === selectedId;
-              return (
-                <TouchableOpacity
-                  key={plan.identifier}
-                  style={[
-                    styles.planCard,
-                    plan.highlighted && styles.planCardHighlighted,
-                    selected && styles.planCardSelected,
-                  ]}
-                  onPress={() => setSelectedId(plan.identifier)}
-                  activeOpacity={0.8}
-                >
-                  {/* Badge */}
-                  {plan.badge && (
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>{plan.badge}</Text>
-                    </View>
-                  )}
+        {/* Plan cards — informational; purchase happens on the web */}
+        <View style={styles.plansContainer}>
+          {PLAN_DISPLAY.map(plan => (
+            <TouchableOpacity
+              key={plan.identifier}
+              style={[styles.planCard, plan.highlighted && styles.planCardHighlighted]}
+              onPress={openWebCheckout}
+              activeOpacity={0.8}
+            >
+              {plan.badge && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{plan.badge}</Text>
+                </View>
+              )}
 
-                  <View style={styles.planRow}>
-                    {/* Selection indicator */}
-                    <View style={[styles.radio, selected && styles.radioSelected]}>
-                      {selected && <View style={styles.radioDot} />}
-                    </View>
+              <View style={styles.planRow}>
+                <View style={styles.planInfo}>
+                  <Text style={styles.planLabel}>{plan.label}</Text>
+                  <Text style={styles.planDescription}>{plan.description}</Text>
+                </View>
 
-                    <View style={styles.planInfo}>
-                      <Text style={styles.planLabel}>{plan.label}</Text>
-                      <Text style={styles.planDescription}>{plan.description}</Text>
-                    </View>
+                <View style={styles.planPriceBlock}>
+                  <Text style={styles.planPrice}>{plan.price}</Text>
+                  <Text style={styles.planPeriod}>{plan.period}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-                    <View style={styles.planPriceBlock}>
-                      {/* Prefer the store's localized price over the hardcoded
-                          fallback, so currency and regional pricing are right. */}
-                      <Text style={[styles.planPrice, selected && styles.planPriceSelected]}>
-                        {packages[plan.identifier]?.priceString ?? plan.price}
-                      </Text>
-                      <Text style={styles.planPeriod}>{plan.period}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        )}
-
-        {/* Error */}
-        {error && (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* Subscribe button */}
-        <TouchableOpacity
-          style={[styles.subscribeButton, !canSubscribe && styles.subscribeButtonDisabled]}
-          onPress={handleSubscribe}
-          disabled={!canSubscribe}
-          activeOpacity={0.85}
-        >
-          {purchasing ? (
-            <ActivityIndicator color="#0A1628" />
-          ) : (
-            <Text style={styles.subscribeButtonText}>
-              {storeReady ? 'Subscribe' : 'Unavailable'}
-            </Text>
-          )}
+        {/* CTA — opens the web checkout */}
+        <TouchableOpacity style={styles.subscribeButton} onPress={openWebCheckout} activeOpacity={0.85}>
+          <Text style={styles.subscribeButtonText}>Subscribe on the Web</Text>
         </TouchableOpacity>
 
-        {/* Restore */}
-        <TouchableOpacity onPress={handleRestore} disabled={restoring || !storeReady} style={styles.restoreButton}>
-          <Text style={styles.restoreText}>
-            {restoring ? 'Restoring…' : 'Restore Purchases'}
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.syncNote}>
+          Payment is handled securely at pursuearete.com.{'\n'}
+          Your subscription unlocks this app automatically.
+        </Text>
 
         <Text style={styles.legal}>
-          Subscriptions auto-renew. Cancel anytime in your App Store settings.
+          Subscriptions auto-renew. Manage or cancel anytime from your account on the web.
         </Text>
       </ScrollView>
     </View>
@@ -413,10 +292,6 @@ const styles = StyleSheet.create({
     borderColor: GOLD + '55',
     backgroundColor: '#0F1E38',
   },
-  planCardSelected: {
-    borderColor: GOLD,
-    backgroundColor: '#12213D',
-  },
   badge: {
     alignSelf: 'flex-start',
     backgroundColor: GOLD,
@@ -435,25 +310,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: BORDER,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  radioSelected: {
-    borderColor: GOLD,
-  },
-  radioDot: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: GOLD,
   },
   planInfo: {
     flex: 1,
@@ -477,27 +333,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
-  planPriceSelected: {
-    color: GOLD,
-  },
   planPeriod: {
     color: MUTED,
     fontSize: 11,
-  },
-
-  // Error
-  errorBox: {
-    backgroundColor: 'rgba(200,50,50,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(200,50,50,0.4)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#E07070',
-    fontSize: 13,
-    textAlign: 'center',
   },
 
   // Subscribe button
@@ -508,9 +346,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  subscribeButtonDisabled: {
-    opacity: 0.6,
-  },
   subscribeButtonText: {
     color: NAVY,
     fontSize: 16,
@@ -518,15 +353,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 
-  // Restore
-  restoreButton: {
-    alignItems: 'center',
-    paddingVertical: 8,
-    marginBottom: 16,
-  },
-  restoreText: {
+  // Web sync note
+  syncNote: {
     color: MUTED,
-    fontSize: 13,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
   },
 
   // Legal
