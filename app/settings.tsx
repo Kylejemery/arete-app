@@ -20,8 +20,10 @@ import {
     View
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings } from '@/lib/db';
+import { useSubscription } from '@/lib/useSubscription';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
 
@@ -105,6 +107,7 @@ const futureSelfMessages = (name?: string) => {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { tier } = useSubscription();
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState('7');
@@ -552,6 +555,26 @@ export default function SettingsScreen() {
         </Text>
         {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute)}
       </View>
+
+      {/* Subscription — purchase and management both live on the web (no IAP
+          in this app), so paid users manage/cancel through the Stripe
+          Customer Portal reached from the web upgrade page. */}
+      <TouchableOpacity
+        onPress={() => {
+          if (tier === 'free') {
+            router.push('/paywall' as any);
+          } else {
+            WebBrowser.openBrowserAsync('https://app.pursuearete.com/upgrade').catch(() => {});
+          }
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={tier === 'free' ? 'Upgrade to premium' : 'Manage subscription'}
+        style={styles.privacyRow}
+      >
+        <Text style={styles.privacyText}>
+          {tier === 'free' ? 'Upgrade to Premium' : 'Manage Subscription'}
+        </Text>
+      </TouchableOpacity>
 
       {/* Privacy Policy */}
       <TouchableOpacity
