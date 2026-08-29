@@ -197,6 +197,38 @@ function resolveCounselorModel(requested) {
   return ALLOWED_COUNSELOR_MODELS.has(requested) ? requested : DEFAULT_COUNSELOR_MODEL;
 }
 
+// ---------------------------------------------------------------------------
+// Tier → model ladder. The subscription tier caps which model a chat runs on,
+// regardless of what the client requests — model choice is a paid feature and
+// per-message cost must scale with revenue (free Opus was ~3-4¢/message):
+//   free    → Haiku only
+//   premium → Sonnet by default; Haiku selectable
+//   pro     → full picker (Opus default, GPT/Gemini/Grok honored)
+// ---------------------------------------------------------------------------
+const HAIKU_MODEL = 'claude-haiku-4-5';
+const PREMIUM_MODEL = 'claude-sonnet-4-6';
+
+function resolveModelForTier(tier, requested) {
+  if (tier === 'pro') {
+    return requested === HAIKU_MODEL ? HAIKU_MODEL : resolveCounselorModel(requested);
+  }
+  if (tier === 'premium') {
+    return requested === HAIKU_MODEL ? HAIKU_MODEL : PREMIUM_MODEL;
+  }
+  return HAIKU_MODEL;
+}
+
+// Split an enriched system prompt into cacheable + volatile blocks for the
+// Anthropic API. The static block (persona, profile, self-knowledge) is
+// byte-identical across turns of a conversation, so cache_control makes
+// repeat reads ~10% of full input price. Volatile content (timestamps, RAG
+// retrievals, observatory pulse) must come after the breakpoint.
+function buildSystemBlocks(staticText, volatileText) {
+  const blocks = [{ type: 'text', text: staticText, cache_control: { type: 'ephemeral' } }];
+  if (volatileText) blocks.push({ type: 'text', text: volatileText });
+  return blocks;
+}
+
 function isNonAnthropicModel(model) {
   return typeof model === 'string' && /^(gpt-|gemini|grok)/.test(model);
 }
@@ -597,25 +629,47 @@ async function isAdmin(userId) {
   return data?.is_admin === true;
 }
 
-const MESSAGE_LIMITS = { free: 10, arete: 50, pro: null };
+const MESSAGE_LIMITS = { free: 10, premium: 50, pro: null };
 
-async function enforceMessageLimit(req, res) {
+// Canonical tiers are free | premium | pro (profiles.tier + is_premium,
+// written only by the billing webhooks). Legacy spellings fold into premium;
+// the old profiles.subscription_tier column is dead — never read it.
+function normalizeTier(rawTier, isPremium) {
+  if (rawTier === 'pro') return 'pro';
+  if (rawTier === 'premium' || rawTier === 'arete' || rawTier === 'scholar') return 'premium';
+  return isPremium ? 'premium' : 'free';
+}
+
+// Resolve the caller's subscription tier. Verified JWT identity is preferred;
+// the client-supplied body user id is the fallback so app builds that don't
+// send Authorization yet still resolve their real tier (matches the trust
+// model these endpoints already use for cabinet lookups). No id → free.
+async function resolveUserTier(req) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
-  if (!token) return false;
+  let userId = null;
+  if (token) {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (!error && user) userId = user.id;
+  }
+  if (!userId) userId = req.body?.user_id || req.body?.userId || null;
+  if (!userId) return { userId: null, tier: 'free' };
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-  if (authError || !user) return false;
-
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile, error } = await supabase
     .from('profiles')
-    .select('subscription_tier')
-    .eq('id', user.id)
+    .select('tier, is_premium')
+    .eq('id', userId)
     .single();
+  if (error || !profile) return { userId, tier: 'free' };
+  return { userId, tier: normalizeTier(profile.tier, profile.is_premium) };
+}
 
-  if (profileError || !profile) return false;
+async function enforceMessageLimit(req, res) {
+  const { userId, tier } = await resolveUserTier(req);
+  // Stash for the model ladder — one lookup per request.
+  req.areteTier = tier;
+  if (!userId) return false; // anonymous flows: nothing to count against
 
-  const tier = profile.subscription_tier || 'free';
   const limit = Object.prototype.hasOwnProperty.call(MESSAGE_LIMITS, tier) ? MESSAGE_LIMITS[tier] : MESSAGE_LIMITS.free;
 
   if (limit === null) return false; // pro = unlimited
@@ -627,7 +681,7 @@ async function enforceMessageLimit(req, res) {
   // A single UPDATE avoids the read-then-write race condition where two
   // simultaneous requests both pass the count check and both get through.
   const { data: allowed, error: rpcError } = await supabase.rpc('try_increment_message_count', {
-    p_user_id: user.id,
+    p_user_id: userId,
     p_today: todayUTC,
     p_limit: limit,
   });
@@ -963,12 +1017,19 @@ app.post('/api/chat', async (req, res) => {
 
   const dateTimeLine = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeLine + resourceInstruction + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
+  // Static-first split: persona + fixed instructions cache across turns;
+  // the volatile tail (local time, observatory pulse) sits after the
+  // cache breakpoint so it can't invalidate the prefix.
+  const systemBlocks = buildSystemBlocks(
+    system + resourceInstruction + SELF_KNOWLEDGE,
+    dateTimeLine + (await getObservatoryPulseBlock())
+  );
 
   try {
     const truncatedMessages = truncateMessages(messages);
+    const effectiveModel = resolveModelForTier(req.areteTier || 'free', model);
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
-    console.log(`[/api/chat] messages: ${messages.length} → ${truncatedMessages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'} | user: ${user_id}`);
+    console.log(`[/api/chat] messages: ${messages.length} → ${truncatedMessages.length} | est. tokens: ${Math.round(estimatedTokens)} | tier: ${req.areteTier} | model: ${model} → ${effectiveModel} | user: ${user_id}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -978,9 +1039,9 @@ app.post('/api/chat', async (req, res) => {
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: model || 'claude-opus-4-5',
+        model: effectiveModel,
         max_tokens: max_tokens || 1500,
-        system: enrichedSystem,
+        system: systemBlocks,
         messages: truncatedMessages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       }),
@@ -1107,7 +1168,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext, req.areteTier || 'free');
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
@@ -1234,7 +1295,17 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
   const resourceInstruction = `\n\nWhen a user's question or goal would benefit from a specific external resource — a book, article, or research study — you may search for it and include a URL in your response. Only suggest resources you have confirmed exist via web search. Weave the suggestion naturally into your response in your own voice. Do not list links at the end of your message. One resource per response maximum — only when it genuinely adds value.`;
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
+  const pulseBlock = await getObservatoryPulseBlock();
+  // Full string for the OpenAI-compatible providers (no block-level caching
+  // there); a static/volatile block split for the Anthropic path. The static
+  // half (persona, profile, catalog, self-knowledge) is byte-stable across a
+  // conversation's turns; RAG retrievals, session context, and the pulse vary
+  // per message and must stay after the cache breakpoint.
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + pulseBlock;
+  const counselorSystemBlocks = buildSystemBlocks(
+    system + profileBlock + catalogBlock + resourceInstruction + SELF_KNOWLEDGE,
+    dateTimeBlock + sharedContext + longitudinalContext + ragContext + libraryContext + pulseBlock
+  );
 
   // Shared session: mirror this single-counselor turn into session_messages so
   // the partner's realtime listener receives it. Same pattern as the parallel
@@ -1274,9 +1345,12 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   // OpenAI-compatible client (no web search tool) and answer in the
   // Anthropic response shape the client expects. Missing provider key
   // falls through to the default Claude path below.
-  let anthropicModel = model;
-  if (isNonAnthropicModel(model)) {
-    const compatModel = ALLOWED_COUNSELOR_MODELS.has(model) ? model : DEFAULT_COUNSELOR_MODEL;
+  // Tier ladder: free → Haiku, premium → Sonnet, pro → full picker. Clamping
+  // before provider routing means non-Anthropic models are pro-only for free.
+  const tierModel = resolveModelForTier(req.areteTier || 'free', model);
+  let anthropicModel = tierModel;
+  if (isNonAnthropicModel(tierModel)) {
+    const compatModel = ALLOWED_COUNSELOR_MODELS.has(tierModel) ? tierModel : DEFAULT_COUNSELOR_MODEL;
     const route = isNonAnthropicModel(compatModel) ? compatRouteFor(compatModel) : undefined;
     if (route) {
       try {
@@ -1303,7 +1377,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
 
   try {
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
-    console.log(`[/api/chat/counselor] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: ${model || 'claude-opus-4-5'}`);
+    console.log(`[/api/chat/counselor] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | tier: ${req.areteTier} | model: ${model} → ${anthropicModel}`);
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -1313,9 +1387,9 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: anthropicModel || 'claude-opus-4-5',
+        model: anthropicModel || HAIKU_MODEL,
         max_tokens: serverMaxTokens,
-        system: enrichedSystem,
+        system: counselorSystemBlocks,
         messages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
       }),
@@ -2756,7 +2830,7 @@ function fallbackDialogue(roster) {
  * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '') {
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '', tier = 'free') {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
@@ -2791,7 +2865,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
       ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already spoken in this turn. You are speaking after them. Do not repeat their points. You may briefly react to one of them by name — agree, sharpen, or push back in a sentence — then add what only you can add.\n${colleagues.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
       : '';
 
-    const model = resolveCounselorModel(counselorModels[counselor.id]);
+    const model = resolveModelForTier(tier, counselorModels[counselor.id]);
     const t0 = Date.now();
     try {
       const responseText = await callCounselorModel({

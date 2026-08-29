@@ -3,6 +3,18 @@ import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, ge
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 
+
+// Attach the Supabase JWT so the server can verify identity for tier
+// resolution and message limits, instead of trusting the body user id.
+async function authHeaders(): Promise<Record<string, string>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 export class MessageLimitError extends Error {
   constructor(
     public readonly tier: SubscriptionTier,
@@ -657,6 +669,7 @@ The week has ended. Give me your honest assessment.`;
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(await authHeaders()),
     },
     body: JSON.stringify({
       model: 'claude-opus-4-5',
@@ -730,6 +743,7 @@ export async function sendMessageToCabinet(
       headers: {
         'Content-Type': 'application/json',
         'x-subscription-tier': limitStatus.tier,
+        ...(await authHeaders()),
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
@@ -833,6 +847,7 @@ export async function sendCheckInToCabinet(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(await authHeaders()),
       },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
@@ -938,6 +953,7 @@ export async function sendMessageToCounselor(
       headers: {
         'Content-Type': 'application/json',
         'x-subscription-tier': limitStatus.tier,
+        ...(await authHeaders()),
       },
       body: JSON.stringify({
         model: assignedModel,
@@ -976,7 +992,7 @@ export async function sendMessageToCounselor(
         const counselorName = nameMap[counselorId] || counselorId;
         fetch(`${API_BASE_URL}/api/memory/summarize`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
           body: JSON.stringify({
             counselorSlug: counselorId,
             counselorName,
@@ -1017,7 +1033,7 @@ export async function prefetchDailyQuestion(counselorId: string, question: strin
 
     const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({
         model: 'claude-opus-4-5',
         max_tokens: 1500,
@@ -1094,7 +1110,7 @@ export async function sendBeliefJournalMessage(
   const { data: { user: _bjUser } } = await supabase.auth.getUser();
   const response = await fetch(`${API_BASE_URL}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({
       model: 'claude-opus-4-5',
       max_tokens: 2000,
