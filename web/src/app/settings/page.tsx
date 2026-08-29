@@ -29,6 +29,41 @@ export default function SettingsPage() {
     router.replace('/login');
   };
 
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deletingAccount) return;
+    const first = window.confirm(
+      'This permanently deletes your account and all of your data — conversations, journal entries, beliefs, progress, and subscription records. This cannot be undone.\n\nContinue?'
+    );
+    if (!first) return;
+    const second = window.confirm('Are you absolutely sure? Your account and every trace of your data will be gone forever.');
+    if (!second) return;
+    setDeletingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        alert('Please sign in again and retry.');
+        return;
+      }
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.success) {
+        alert(data?.error || 'Account deletion failed. Please try again or contact support@pursuearete.com.');
+        return;
+      }
+      await supabase.auth.signOut().catch(() => {});
+      router.replace('/login');
+    } catch {
+      alert('Could not reach the server. Please try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const toggleSimulateFree = () => {
     const next = !simulatingFree;
     setSimulatingFree(next);
@@ -72,6 +107,13 @@ export default function SettingsPage() {
             className="w-full text-left text-red-400 hover:text-red-300 text-sm disabled:opacity-50 transition-colors"
           >
             {signOutLoading ? 'Signing out…' : '🚪 Sign Out'}
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            disabled={deletingAccount}
+            className="w-full text-left text-red-500/70 hover:text-red-400 text-xs mt-3 disabled:opacity-50 transition-colors"
+          >
+            {deletingAccount ? 'Deleting account…' : 'Delete Account'}
           </button>
         </div>
 

@@ -108,6 +108,37 @@ const futureSelfMessages = (name?: string) => {
 export default function SettingsScreen() {
   const router = useRouter();
   const { tier } = useSubscription();
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    if (deletingAccount) return;
+    setDeletingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        Alert.alert('Not signed in', 'Please sign in again and retry.');
+        return;
+      }
+      const response = await fetch('https://app.pursuearete.com/api/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.success) {
+        Alert.alert('Deletion failed', data?.error || 'Something went wrong. Please try again or contact support@pursuearete.com.');
+        return;
+      }
+      await supabase.auth.signOut().catch(() => {});
+      Alert.alert('Account Deleted', 'Your account and all of your data have been permanently deleted.', [
+        { text: 'OK', onPress: () => router.replace('/(auth)/login' as any) },
+      ]);
+    } catch {
+      Alert.alert('Deletion failed', 'Could not reach the server. Please try again.');
+    } finally {
+      setDeletingAccount(false);
+    }
+  };
+
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState('7');
@@ -611,6 +642,41 @@ export default function SettingsScreen() {
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
 
+      {/* Delete Account — required by App Review 5.1.1(v). Two confirmations
+          (Apple permits these), then the web API cancels any live Stripe
+          subscription, deletes all data, and removes the auth user. */}
+      <TouchableOpacity
+        style={styles.deleteAccountButton}
+        disabled={deletingAccount}
+        onPress={() => {
+          Alert.alert(
+            'Delete Account',
+            'This permanently deletes your account and all of your data — conversations, journal entries, beliefs, progress, and subscription records. This cannot be undone.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Continue',
+                style: 'destructive',
+                onPress: () => {
+                  Alert.alert(
+                    'Are you absolutely sure?',
+                    'Your account and every trace of your data will be gone forever.',
+                    [
+                      { text: 'Keep My Account', style: 'cancel' },
+                      { text: 'Delete Everything', style: 'destructive', onPress: handleDeleteAccount },
+                    ]
+                  );
+                },
+              },
+            ]
+          );
+        }}
+      >
+        <Text style={styles.deleteAccountText}>
+          {deletingAccount ? 'Deleting Account…' : 'Delete Account'}
+        </Text>
+      </TouchableOpacity>
+
       <Text style={styles.footer}>
         Note: Notifications work on physical devices. They may not appear in web/simulator.
       </Text>
@@ -803,6 +869,20 @@ const styles = StyleSheet.create({
     color: '#ff6666',
     fontWeight: 'bold',
     fontSize: 15,
+  },
+  deleteAccountButton: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ff444433',
+  },
+  deleteAccountText: {
+    color: '#ff4444',
+    fontWeight: '600',
+    fontSize: 13,
   },
   sectionTitle: {
     color: '#e6eef8',
