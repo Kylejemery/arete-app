@@ -88,8 +88,10 @@ export default function SetupScreen() {
   const [futureSelfYears, setFutureSelfYears] = useState(10);
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
   // Step 10
+  // Seed matches FREE_COUNSELOR_SLUGS — new users start free, and seeding a
+  // locked counselor would surface as mysteriously missing from the cabinet.
   const [activeMembers, setActiveMembers] = useState<string[]>([
-    'marcus', 'epictetus', 'goggins', 'roosevelt', 'futureSelf',
+    'marcus', 'goggins', 'roosevelt', 'futureSelf',
   ]);
 
   const isOptionalStep = (): boolean => OPTIONAL_STEPS.includes(step);

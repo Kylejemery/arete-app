@@ -758,7 +758,11 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 // SUBSCRIPTION TIER
 // ----------------------------------------------------------------
 
-export const FREE_COUNSELOR_SLUGS = ['marcus', 'epictetus', 'goggins', 'roosevelt'] as const;
+// Must stay a superset of STARTER/DEFAULT_CABINET_SLUGS (the free-tier
+// fallback). 3 counselors, matching the paywall table and TIER_LIMITS.free —
+// epictetus moved behind the paywall 2026-08-28; Marcus carries the free
+// Stoic voice.
+export const FREE_COUNSELOR_SLUGS = ['marcus', 'goggins', 'roosevelt'] as const;
 
 export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
   free: 10,
