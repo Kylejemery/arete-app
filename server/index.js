@@ -1441,6 +1441,63 @@ async function getAuthenticatedUserId(req) {
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 // POST /api/sessions/invite — create a pending participant row + email the partner.
+// ---------------------------------------------------------------------------
+// Contact form (www.pursuearete.com/contact) → email via Resend.
+// The site form posts here; the owner's inbox address lives server-side only
+// so it never appears in the page source for scrapers.
+// ---------------------------------------------------------------------------
+const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'kemery9585@gmail.com';
+const contactHits = new Map(); // ip → [timestamps]
+
+app.post('/api/contact', async (req, res) => {
+  if (!resend) {
+    console.warn('[contact] RESEND_API_KEY not set — cannot send');
+    return res.status(503).json({ error: 'Contact form is temporarily unavailable.' });
+  }
+
+  const { name, email, message, website } = req.body || {};
+
+  // Honeypot: "website" is a hidden field humans never fill. Bots that do get
+  // a fake success so they don't adapt.
+  if (website) return res.json({ success: true });
+
+  if (!message || typeof message !== 'string' || !message.trim()) {
+    return res.status(400).json({ error: 'Please include a message.' });
+  }
+  if (!email || typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Please include a valid email so we can reply.' });
+  }
+  if (message.length > 5000) {
+    return res.status(400).json({ error: 'Message is too long (5000 characters max).' });
+  }
+
+  // 5 submissions per IP per hour — plenty for humans, a wall for scripts.
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip || 'unknown';
+  const now = Date.now();
+  const hits = (contactHits.get(ip) || []).filter(t => now - t < 60 * 60 * 1000);
+  if (hits.length >= 5) {
+    return res.status(429).json({ error: 'Too many messages — please try again later.' });
+  }
+  hits.push(now);
+  contactHits.set(ip, hits);
+
+  const cleanName = typeof name === 'string' ? name.trim().slice(0, 200) : '';
+
+  try {
+    await resend.emails.send({
+      from: INVITE_FROM_EMAIL,
+      to: CONTACT_TO_EMAIL,
+      replyTo: email,
+      subject: `[Arete Contact] ${cleanName || email}`,
+      text: `From: ${cleanName || '(no name)'} <${email}>\n\n${message.trim()}`,
+    });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[contact] send failed:', err.message || err);
+    return res.status(502).json({ error: 'Could not send your message. Please try again.' });
+  }
+});
+
 app.post('/api/sessions/invite', async (req, res) => {
   const authenticatedUserId = await getAuthenticatedUserId(req);
   if (!authenticatedUserId) return res.status(401).json({ error: 'Unauthorized' });
