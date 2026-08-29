@@ -4318,7 +4318,25 @@ app.get('/api/library/text', async (req, res) => {
 // POST /api/library/related — "reads itself alongside": semantic neighbors of
 // an open text, drawn from a representative passage. Non-critical: failures
 // return an empty list rather than erroring the reader.
+// "Read the originals free, converse with the Library on Pro": texts/text
+// stay open; related + debate (the RAG/LLM spend) gate behind Pro when
+// PRO_LIBRARY_GATES=true is set on the environment. Off by default so this
+// deploys inert — flip the var only after App Review approves 1.3.1 and the
+// academy library page forwards user identity. The mobile app only ever
+// calls texts/text, so no binary is affected either way.
+async function enforceProLibraryGate(req, res) {
+  if (process.env.PRO_LIBRARY_GATES !== 'true') return false;
+  const { tier } = await resolveUserTier(req);
+  if (tier === 'pro') return false;
+  res.status(403).json({
+    error: 'pro_required',
+    message: 'Conversing with the Library is an Arete Pro feature. Reading the originals is always free.',
+  });
+  return true;
+}
+
 app.post('/api/library/related', async (req, res) => {
+  if (await enforceProLibraryGate(req, res)) return;
   try {
     const { author, work } = req.body || {};
     if (!author || !work) return res.status(400).json({ error: 'author and work are required' });
@@ -4386,6 +4404,7 @@ const DEBATE_MASTERS = {
 };
 
 app.post('/api/library/debate', async (req, res) => {
+  if (await enforceProLibraryGate(req, res)) return;
   try {
     if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
 
