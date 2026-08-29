@@ -11,9 +11,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Stripe calls the webhook server-to-server with no session cookie; it must
-  // never be auth-redirected. Signature verification is its authentication.
-  if (pathname === '/api/stripe-webhook') {
+  // Routes that carry their own authentication and must never be cookie-auth
+  // redirected: Stripe calls the webhook server-to-server (signature
+  // verification is its authentication), and the mobile app calls
+  // delete-account with a Supabase Bearer JWT the route verifies itself —
+  // a 307 to /login here hands the app an HTML page instead of JSON.
+  if (pathname === '/api/stripe-webhook' || pathname === '/api/delete-account') {
     return NextResponse.next()
   }
 
