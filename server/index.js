@@ -1544,7 +1544,31 @@ app.get('/api/sessions/join', async (req, res) => {
   if (!valid) {
     return res.redirect(`${PUBLIC_WEB_URL}?invite=expired`);
   }
-  return res.redirect(`arete://join-session?token=${encodeURIComponent(token)}`);
+  // An HTTP redirect straight to a custom scheme dies silently in most email
+  // in-app browsers (Gmail's webview especially). Serve a tiny interstitial
+  // that attempts the deep link via JS and keeps a tappable button + guidance
+  // as the fallback, so the tap never lands on a blank dead-end.
+  const deepLink = `arete://join-session?token=${encodeURIComponent(token)}`;
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  return res.send(`<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Join your Arete session</title>
+<style>
+  body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;background:#1a1a2e;color:#e0d5b5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:24px;text-align:center}
+  .card{max-width:420px}
+  h1{color:#c9a84c;font-size:22px;margin-bottom:8px}
+  p{color:#8A9BB0;font-size:15px;line-height:1.5}
+  a.btn{display:inline-block;background:#c9a84c;color:#1a1a2e;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;margin:20px 0 12px}
+  .hint{font-size:13px;color:#666}
+</style></head>
+<body><div class="card">
+  <h1>Join your shared Cabinet session</h1>
+  <p>Opening the Arete app&hellip;</p>
+  <a class="btn" href="${deepLink}">Open in Arete</a>
+  <p class="hint">Nothing happening? Make sure the Arete app is installed on this device, then tap the button above. If you opened this link on a computer, open it on your phone instead.</p>
+</div>
+<script>setTimeout(function(){ window.location.href = ${JSON.stringify(deepLink)}; }, 400);</script>
+</body></html>`);
 });
 
 // POST /api/sessions/accept — partner consumes the token and becomes active.

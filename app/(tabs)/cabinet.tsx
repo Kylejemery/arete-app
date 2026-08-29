@@ -151,17 +151,57 @@ export default function CabinetScreen() {
 
   // Resolve the current user id and the group-cabinet conversation row id.
   // The conversation id doubles as the shared-session id when inviting.
+  // Then restore shared mode: sessionType only lived in component state, so a
+  // restart silently dropped both sides of a shared session back to solo.
   useEffect(() => {
     (async () => {
+      let userId: string | null = null;
       try {
         const { data } = await supabase.auth.getUser();
-        setCurrentUserId(data.user?.id ?? null);
+        userId = data.user?.id ?? null;
+        setCurrentUserId(userId);
       } catch { /* unauthenticated — leave null */ }
+      let ownConversationId: string | null = null;
       try {
-        const id = await getOrCreateCabinetConversationId();
-        setCurrentSessionId(id);
+        ownConversationId = await getOrCreateCabinetConversationId();
+        setCurrentSessionId(ownConversationId);
       } catch (err) {
         console.warn('[Cabinet] Failed to resolve session id:', err);
+      }
+      if (!userId) return;
+      try {
+        // Inviter side: an active participant row on my own conversation
+        // (someone accepted my invite). Partner side: my own active row on
+        // someone else's conversation (I accepted theirs).
+        if (ownConversationId) {
+          const { data: partnerRows } = await supabase
+            .from('session_participants')
+            .select('user_id, display_name')
+            .eq('session_id', ownConversationId)
+            .eq('status', 'active')
+            .neq('user_id', userId);
+          if (partnerRows && partnerRows.length > 0) {
+            setSessionType('shared');
+            setSessionPartners(partnerRows.map(r => ({
+              userId: r.user_id as string,
+              displayName: (r.display_name as string) || 'Partner',
+            })));
+            return;
+          }
+        }
+        const { data: myRows } = await supabase
+          .from('session_participants')
+          .select('session_id')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .limit(1);
+        if (myRows && myRows.length > 0 && myRows[0].session_id !== ownConversationId) {
+          setCurrentSessionId(myRows[0].session_id as string);
+          setSessionType('shared');
+          setSessionPartners([{ userId: 'partner', displayName: 'Partner' }]);
+        }
+      } catch (err) {
+        console.warn('[Cabinet] Failed to restore shared session:', err);
       }
     })();
   }, []);
@@ -180,9 +220,9 @@ export default function CabinetScreen() {
     }
   }, [params.sharedSessionId, params.sharedPartnerName, router]);
 
-  // Realtime sync for shared sessions. Scaffolding: the send pipeline does not
-  // yet write to session_messages, so no rows arrive in this build — the
-  // subscription is wired and ready for when shared sends are routed here.
+  // Realtime sync for shared sessions. The server mirrors each shared turn
+  // (user prompt + counselor replies) into session_messages; rows tagged with
+  // our own user_id are skipped because they're already shown optimistically.
   useEffect(() => {
     if (sessionType !== 'shared' || !currentSessionId) return;
 
@@ -458,6 +498,20 @@ export default function CabinetScreen() {
   };
 
   const handleEndSharedSession = () => {
+    // Delete the participant rows server-side too — shared mode is restored
+    // from session_participants on mount, so local state alone would
+    // resurrect the session on next launch. RLS allows either side to
+    // delete ("Participants can leave sessions"). Best-effort.
+    const sid = currentSessionId;
+    if (sid) {
+      supabase
+        .from('session_participants')
+        .delete()
+        .eq('session_id', sid)
+        .then(({ error }) => {
+          if (error) console.warn('[Cabinet] Failed to end shared session:', error.message);
+        });
+    }
     setSessionType('solo');
     setSessionPartners([]);
   };
