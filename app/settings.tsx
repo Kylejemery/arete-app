@@ -22,71 +22,63 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
-import { getUserSettings } from '@/lib/db';
+import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 
 
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
+// Reminder senders rotate through the user's ACTUAL cabinet (resolved at
+// schedule time), so message bodies are voice-neutral: firm and stoic without
+// impersonating any specific counselor.
 const MORNING_MESSAGES = [
-  "The impediment to action advances action. What stands in the way becomes the way. Your morning awaits.",
-  "Waste no more time arguing about what a good man should be. Be one. Begin your morning.",
-  "You have power over your mind — not outside events. Realize this, and you will find strength. Open the Cabinet.",
-  "It is not death that a man should fear, but he should fear never beginning to live. Start your morning.",
-  "Begin at once to live, and count each separate day as a separate life. Your cabinet is waiting.",
-  "The first rule is to keep an untroubled spirit. The second is to look things in the face. Morning check-in time.",
-  "Do not indulge in dreams of what you have not, but count up the chief of the blessings you do have. Good morning.",
+  "The day is unwritten. Decide who you will be in it, then begin.",
+  "Before the world makes its demands, make yours. Open your morning practice.",
+  "You do not need to feel ready. You need to begin. Your Cabinet is waiting.",
+  "One deliberate morning changes the whole day. This is that morning.",
+  "Begin at once: name the day's purpose and take the first step.",
+  "An untroubled start is built, not found. Take five minutes with your Cabinet.",
+  "Count your blessings, name your aims, and step into the day on purpose.",
 ];
 
 const EVENING_MESSAGES = [
-  "Confine yourself to the present. The evening asks: did you live virtuously today?",
-  "The day is ending. Give an account of it to your cabinet.",
-  "Before you sleep: what progress did you make today toward the person you are trying to become?",
-  "Evening review: did your actions today match your values? Your cabinet is ready to reflect.",
-  "A day well-lived makes sleep easy. What was well-lived today?",
-  "Marcus reminded himself every evening: what emotion did I let control me today? What will you answer?",
-  "End the day with honesty. Your cabinet awaits your debrief.",
-];
-
-// Midday task reminder — counselor rotates by day (Sun–Sat)
-const TASK_COUNSELORS = [
-  'Theodore Roosevelt', // Sunday (0)
-  'Marcus Aurelius',    // Monday (1)
-  'David Goggins',      // Tuesday (2)
-  'Epictetus',          // Wednesday (3)
-  'Theodore Roosevelt', // Thursday (4)
-  'David Goggins',      // Friday (5)
-  'Future Self',        // Saturday (6) — replaced with the user's Future name at schedule time
+  "The day is ending. Give an account of it to your Cabinet.",
+  "Before you sleep: what progress did you make toward the person you are becoming?",
+  "Evening review: did your actions match your values today?",
+  "A day well lived makes sleep easy. What was well lived today?",
+  "What emotion ran the show today, and what will you do about it tomorrow?",
+  "Close the day with honesty. Your Cabinet awaits the debrief.",
+  "Confine yourself to the present, then review it. The evening asks for ten minutes.",
 ];
 
 const TASK_MESSAGES = [
-  "Get action! Do things — be sane, don't fritter away your time. Check your task list.",
-  "How are your tasks progressing? What remains undone is still within your power.",
-  "Midday check. What's left on your list? Stop making excuses and get after it.",
-  "What is within your control today that remains undone? Address it. Now.",
-  "Get action! Do things — be sane, don't fritter away your time. Check your task list.",
-  "Midday check. What's left on your list? Stop making excuses and get after it.",
-  "Hey. It's afternoon. I know what's on your list. Do not let yourself down.",
+  "Midday check. What remains undone is still within your power.",
+  "How are your tasks progressing? Address what is left. Now.",
+  "Half the day is spent. Spend the rest on purpose. Check your list.",
+  "What is within your control today that remains undone? Go do it.",
+  "Stop negotiating with your list. Take back the afternoon.",
+  "Midday check. No excuses, just the next task.",
+  "It's afternoon. You know what's on the list. Do not let yourself down.",
 ];
 
 const WORKOUT_MESSAGES = [
-  "Sunday is not a rest day from becoming who you need to be. Get after it.",
-  "Monday sets the tone for the whole week. Do not waste it. Get your workout in.",
+  "Your body is the one instrument you cannot replace. Train it today.",
   "You told yourself you'd train today. That conversation is over. Go.",
-  "Midweek. Most people take their foot off the gas. That is exactly why you won't.",
-  "Thursday. You've put in the work this week. Don't stop now.",
-  "Friday. Some people are already coasting into the weekend. Not you. Train.",
-  "Saturday. No meetings, no excuses. The best workout of the week is waiting for you.",
+  "The workout you skip is the one you needed most. Get moving.",
+  "Midweek. Most people ease off here. That is exactly why you won't.",
+  "Discipline is a muscle too. Train both today.",
+  "Some people are already coasting into the weekend. Not you. Train.",
+  "No meetings, no excuses. The best workout of the week is waiting.",
 ];
 
 const READING_MESSAGES = [
-  "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane. Read tonight.",
-  "You have a book waiting. What excuse will you offer the man you are trying to become?",
-  "Receive without pride, relinquish without struggle. But first — read.",
-  "He who lives in harmony with himself lives in harmony with the universe. Have you read today?",
-  "If it is not right, do not do it. If it is not true, do not say it. But reading — always reading.",
-  "Never esteem anything as of advantage to you that will make you break your word — or lose your self-respect. Or miss your reading.",
-  "The impediment to reading? There is none. Only the choice.",
+  "You have a book waiting. What excuse will you offer the person you are becoming?",
+  "Ten pages tonight. Small deposits, compounding wisdom.",
+  "The wisest minds left you their notes. Read them tonight.",
+  "Have you read today? The impediment is only the choice.",
+  "Trade the scroll for the page tonight. Your mind will thank you.",
+  "A chapter before sleep beats an hour of noise. Read.",
+  "Reading tonight is a conversation with the wise. Join them.",
 ];
 
 // Messages are signed by the user's own Future Self — name resolved at
@@ -316,6 +308,22 @@ export default function SettingsScreen() {
     const futureLabel = scheduleFirstName ? `Future ${scheduleFirstName}` : 'Future Self';
     const fsMessages = futureSelfMessages(scheduleFirstName || undefined);
 
+    // Reminders are "sent" by the user's actual cabinet, resolved fresh at
+    // schedule time so edits to the cabinet propagate on the next reschedule.
+    // Defaults only cover the pre-customization case.
+    let cabinetNames: string[] = [];
+    try {
+      const cab = await getUserCabinet();
+      cabinetNames = cab.map(c => c.name).filter(Boolean);
+    } catch { /* fall back to defaults */ }
+    if (cabinetNames.length === 0) {
+      cabinetNames = ['Marcus Aurelius', 'Epictetus', 'David Goggins', 'Theodore Roosevelt'];
+    }
+    const senders = [...cabinetNames, futureLabel];
+    // Offset per reminder type so one day doesn't hear from the same
+    // counselor across every reminder.
+    const senderFor = (day: number, offset: number) => senders[(day + offset) % senders.length];
+
     // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
     // Expo CalendarTrigger weekday: 1=Sunday, 2=Monday, …, 7=Saturday
     const scheduleWeekly = async (
@@ -345,7 +353,7 @@ export default function SettingsScreen() {
     // Morning check-in
     if (settings.morningEnabled) {
       await scheduleWeekly(
-        () => 'Marcus Aurelius — Morning Check-In',
+        (day) => `${senderFor(day, 0)} — Morning Check-In`,
         (day) => MORNING_MESSAGES[day],
         parseInt(settings.morningHour),
         parseInt(settings.morningMinute),
@@ -355,37 +363,37 @@ export default function SettingsScreen() {
     // Evening check-in
     if (settings.eveningEnabled) {
       await scheduleWeekly(
-        () => 'Marcus Aurelius — Evening Check-In',
+        (day) => `${senderFor(day, 1)} — Evening Check-In`,
         (day) => EVENING_MESSAGES[day],
         parseInt(settings.eveningHour),
         parseInt(settings.eveningMinute),
       );
     }
 
-    // Midday task reminder — rotating counselors (Saturday is the Future Self)
+    // Midday task reminder
     if (settings.taskReminderEnabled) {
       await scheduleWeekly(
-        (day) => (day === 6 ? futureLabel : TASK_COUNSELORS[day]),
+        (day) => senderFor(day, 2),
         (day) => TASK_MESSAGES[day],
         parseInt(settings.taskReminderHour),
         parseInt(settings.taskReminderMinute),
       );
     }
 
-    // Goggins — workout reminder
+    // Workout reminder
     if (settings.workoutReminderEnabled) {
       await scheduleWeekly(
-        () => 'David Goggins — Workout Reminder',
+        (day) => `${senderFor(day, 3)} — Workout Reminder`,
         (day) => WORKOUT_MESSAGES[day],
         parseInt(settings.workoutReminderHour),
         parseInt(settings.workoutReminderMinute),
       );
     }
 
-    // Marcus — reading reminder
+    // Reading reminder
     if (settings.readingReminderEnabled) {
       await scheduleWeekly(
-        () => 'Marcus Aurelius — Chair',
+        (day) => `${senderFor(day, 4)} — Reading Reminder`,
         (day) => READING_MESSAGES[day],
         parseInt(settings.readingReminderHour),
         parseInt(settings.readingReminderMinute),
