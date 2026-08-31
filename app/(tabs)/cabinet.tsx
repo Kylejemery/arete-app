@@ -821,10 +821,14 @@ export default function CabinetScreen() {
                   &ldquo;Bring your questions, struggles, and victories to the Cabinet.&rdquo;
                 </Text>
                 <View style={styles.counselorList}>
-                  <Text style={styles.counselorName}>Marcus Aurelius — Chair</Text>
-                  <Text style={styles.counselorName}>Epictetus</Text>
-                  <Text style={styles.counselorName}>David Goggins</Text>
-                  <Text style={styles.counselorName}>Theodore Roosevelt</Text>
+                  {/* Mirror the header: the user's actual cabinet, falling
+                      back to the default four before it loads. */}
+                  {(cabinetCounselors.length > 0
+                    ? cabinetCounselors.map(c => c.name)
+                    : ['Marcus Aurelius', 'Epictetus', 'David Goggins', 'Theodore Roosevelt']
+                  ).map(name => (
+                    <Text key={name} style={styles.counselorName}>{name}</Text>
+                  ))}
                   <Text style={styles.counselorName}>{futureName}</Text>
                 </View>
                 {knowThyselfIncomplete && (
