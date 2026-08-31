@@ -446,7 +446,7 @@ export default function CabinetScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push('/paywall' as any);
+      router.push({ pathname: '/paywall', params: { src: 'cabinet_daily_limit' } } as any);
       return;
     }
 
@@ -479,7 +479,7 @@ export default function CabinetScreen() {
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push('/paywall' as any);
+        router.push({ pathname: '/paywall', params: { src: 'cabinet_daily_limit' } } as any);
       }
     } finally {
       setIsLoading(false);
@@ -496,7 +496,7 @@ export default function CabinetScreen() {
     const stored = await AsyncStorage.getItem(dateKey);
     const count = stored !== null ? parseInt(stored, 10) : 0;
     if (maxMessages !== null && count >= maxMessages) {
-      router.push('/paywall' as any);
+      router.push({ pathname: '/paywall', params: { src: 'shared_daily_limit' } } as any);
       return;
     }
 
@@ -530,7 +530,7 @@ export default function CabinetScreen() {
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push('/paywall' as any);
+        router.push({ pathname: '/paywall', params: { src: 'shared_daily_limit' } } as any);
       }
     } finally {
       setSharedLoading(false);
@@ -713,7 +713,7 @@ export default function CabinetScreen() {
                 onPress={() => {
                   // Shared sessions are Premium: free tier routes to the paywall.
                   if (tier === 'free') {
-                    router.push('/paywall' as any);
+                    router.push({ pathname: '/paywall', params: { src: 'shared_invite_gate' } } as any);
                   } else {
                     setShowInviteModal(true);
                   }
@@ -912,14 +912,15 @@ export default function CabinetScreen() {
           {dailyLimitReached ? (
             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
               <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
-                You've reached your 10 free messages for today.
+                The Cabinet was mid-counsel.
               </Text>
               <Text style={{ color: '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                Upgrade to Premium for unlimited access.
+                Your 10 free messages are spent, and the conversation isn't finished. Premium
+                continues it: 50 messages a day, deeper reasoning, all 23 counselors.
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => router.push('/paywall' as any)}
+                onPress={() => router.push({ pathname: '/paywall', params: { src: 'cabinet_limit_card' } } as any)}
                 activeOpacity={0.8}
               >
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Upgrade to Premium →</Text>
@@ -995,6 +996,21 @@ export default function CabinetScreen() {
                 Waiting for your partner to join — they can start talking as soon as they accept.
               </Text>
             </View>
+          )}
+
+          {/* Guest upsell: free users in a shared session were invited (only
+              Premium can invite), so they just experienced the feature. */}
+          {tier === 'free' && (
+            <TouchableOpacity
+              style={styles.sharedBanner}
+              onPress={() => router.push({ pathname: '/paywall', params: { src: 'shared_guest_banner' } } as any)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="sparkles-outline" size={16} color="#c9a84c" />
+              <Text style={styles.sharedBannerText}>
+                Enjoying this shared session? With Premium you can host your own. Upgrade →
+              </Text>
+            </TouchableOpacity>
           )}
 
           <ScrollView

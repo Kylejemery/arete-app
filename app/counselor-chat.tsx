@@ -120,7 +120,7 @@ export default function CounselorChatScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push('/paywall' as any);
+      router.push({ pathname: '/paywall', params: { src: 'counselor_daily_limit' } } as any);
       return;
     }
 
@@ -155,7 +155,7 @@ export default function CounselorChatScreen() {
     } catch (e) {
       setMessages(prev => prev.slice(0, -1));
       if (e instanceof MessageLimitError) {
-        router.push('/paywall' as any);
+        router.push({ pathname: '/paywall', params: { src: 'counselor_daily_limit' } } as any);
       }
     } finally {
       setIsLoading(false);
@@ -341,7 +341,7 @@ export default function CounselorChatScreen() {
             </Text>
             <TouchableOpacity
               style={styles.accessUpgradeButton}
-              onPress={() => router.push('/paywall' as any)}
+              onPress={() => router.push({ pathname: '/paywall', params: { src: 'locked_counselor' } } as any)}
               activeOpacity={0.8}
             >
               <Text style={styles.accessUpgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>

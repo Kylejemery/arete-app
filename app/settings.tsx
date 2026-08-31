@@ -601,7 +601,7 @@ export default function SettingsScreen() {
       <TouchableOpacity
         onPress={() => {
           if (tier === 'free') {
-            router.push('/paywall' as any);
+            router.push({ pathname: '/paywall', params: { src: 'settings_upgrade' } } as any);
           } else {
             WebBrowser.openBrowserAsync('https://app.pursuearete.com/upgrade').catch(() => {});
           }

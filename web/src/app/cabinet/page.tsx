@@ -893,6 +893,22 @@ export default function CabinetPage() {
             </div>
           )}
 
+          {/* Guest upsell: free users in a shared session were invited (only
+              Premium can invite), so they just experienced the feature. */}
+          {!subLoading && !isPremium && (
+            <div className="mx-4 mb-1 flex-shrink-0">
+              <button
+                onClick={() => router.push('/upgrade')}
+                className="w-full text-left px-3 py-2 rounded-xl transition-opacity hover:opacity-80"
+                style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)' }}
+              >
+                <span className="text-[12px]" style={{ color: '#c9a84c' }}>
+                  ✨ Enjoying this shared session? With Premium you can host your own. Upgrade →
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* Messages */}
           <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 flex flex-col gap-3.5">
             {sharedMessages.length === 0 && !sharedLoading && (

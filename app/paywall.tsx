@@ -6,9 +6,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import { useEffect, useRef } from 'react';
+import { supabase } from '@/lib/supabase';
 
 // ─── Web checkout, not IAP ────────────────────────────────────────────────────
 // Subscriptions are purchased on the web (Stripe) and unlock the app through
@@ -40,7 +42,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     period: '/mo',
     badge: null,
     highlighted: false,
-    description: '50 messages/day · All 23 counselors',
+    description: '50 messages/day · All 23 counselors · Shared sessions',
   },
   {
     identifier: 'premium_yearly',
@@ -49,7 +51,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     period: '/yr',
     badge: 'BEST VALUE',
     highlighted: true,
-    description: '$6.67/mo · Save 33% · All 23 counselors',
+    description: '$6.67/mo · Save 33% · Everything in Arete',
   },
   {
     identifier: 'pro_monthly',
@@ -58,14 +60,17 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     period: '/mo',
     badge: 'UNLIMITED',
     highlighted: false,
-    description: 'Unlimited messages · All 23 counselors',
+    description: 'Unlimited messages · Deepest reasoning · Model choice',
   },
 ];
 
 const FEATURES = [
-  { label: 'Messages/day',   free: '10',        arete: '50',       pro: 'Unlimited' },
-  { label: 'Counselors',     free: '3',         arete: '23',       pro: '23' },
-  { label: 'Token budget',   free: 'Standard',  arete: 'Extended', pro: 'Max' },
+  { label: 'Messages/day',     free: '10',       arete: '50',     pro: 'Unlimited' },
+  { label: 'Counselors',       free: '3',        arete: '23',     pro: '23' },
+  { label: 'Reasoning depth',  free: 'Standard', arete: 'Deeper', pro: 'Deepest' },
+  { label: 'Custom cabinet',   free: '—',        arete: '✓',      pro: '✓' },
+  { label: 'Shared sessions',  free: '—',        arete: '✓',      pro: '✓' },
+  { label: 'Weekly insights',  free: 'Preview',  arete: 'Full',   pro: 'Full' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -73,6 +78,26 @@ const FEATURES = [
 export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ src?: string }>();
+  const loggedRef = useRef(false);
+
+  // Funnel telemetry: one row per view, labeled with what triggered it, so we
+  // can see which gate actually converts. Fire-and-forget; never blocks UI.
+  useEffect(() => {
+    if (loggedRef.current) return;
+    loggedRef.current = true;
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        await supabase.from('paywall_events').insert({
+          user_id: user.id,
+          source: params.src ? String(params.src) : 'unknown',
+        });
+      } catch { /* telemetry is best-effort */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openWebCheckout = () => {
     WebBrowser.openBrowserAsync(UPGRADE_URL).catch(() => {});

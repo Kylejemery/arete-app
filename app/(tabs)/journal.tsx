@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import { useTierLimits } from '../../hooks/useTierLimits';
 import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJournalEntry, getGoals, upsertGoal, completeGoal, getReadingData } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../../services/claudeService';
@@ -95,6 +96,7 @@ type GoalStatus = 'active' | 'in_progress' | 'achieved';
 export default function JournalScreen() {
     const router = useRouter();
     const swipeHandlers = useSwipeNavigation('/journal');
+    const { tier } = useTierLimits();
 
     // ── Tab ──────────────────────────────────────────────────────────────────
     const [activeTab, setActiveTab] = useState<'journal' | 'goals'>('journal');
@@ -745,7 +747,15 @@ export default function JournalScreen() {
                         <TouchableOpacity
                             activeOpacity={0.85}
                             style={styles.insightCard}
-                            onPress={() => setInsightExpanded(prev => !prev)}
+                            onPress={() => {
+                                // Free tier sees the 3-line preview; the full
+                                // insight is the premium moment.
+                                if (tier === 'free') {
+                                    router.push({ pathname: '/paywall', params: { src: 'insight_tease' } } as any);
+                                } else {
+                                    setInsightExpanded(prev => !prev);
+                                }
+                            }}
                         >
                             <View style={styles.dispatchHeaderRow}>
                                 <Text style={styles.dispatchEyebrow}>
@@ -765,7 +775,9 @@ export default function JournalScreen() {
                                 {weeklyInsight.insight_text}
                             </Text>
                             <Text style={styles.dispatchReadMore}>
-                                {insightExpanded ? 'Show less' : 'Read insight →'}
+                                {tier === 'free'
+                                  ? 'Your counselors noticed a pattern this week. Unlock the full insight →'
+                                  : insightExpanded ? 'Show less' : 'Read insight →'}
                             </Text>
                         </TouchableOpacity>
                     )}

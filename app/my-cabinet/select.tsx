@@ -239,7 +239,7 @@ export default function CabinetSelectScreen() {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => { setShowLockedUpgrade(false); router.push('/paywall' as any); }}
+              onPress={() => { setShowLockedUpgrade(false); router.push({ pathname: '/paywall', params: { src: 'cabinet_select_locked' } } as any); }}
               activeOpacity={0.8}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
