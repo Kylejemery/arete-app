@@ -44,11 +44,17 @@ export async function POST(req: NextRequest) {
     // Reuse an existing Stripe customer so we never create duplicates
     const { data: existing, error: lookupError } = await admin
       .from('subscriptions')
-      .select('id, stripe_customer_id')
+      .select('id, stripe_customer_id, stripe_subscription_id')
       .eq('user_id', user.id)
       .eq('billing_source', 'stripe')
       .maybeSingle()
     if (lookupError) throw lookupError
+
+    // 7-day free trial for first-time subscribers only. A row that has ever
+    // held a subscription id means this user subscribed before, so a
+    // cancel-and-resubscribe never re-trials. Checkout still collects the
+    // card up front, so trials convert automatically unless cancelled.
+    const trialEligible = !existing?.stripe_subscription_id
 
     let customerId = existing?.stripe_customer_id ?? null
 
@@ -106,7 +112,10 @@ export async function POST(req: NextRequest) {
       // Stamp the user id on both the session and the subscription so the
       // webhook can resolve the user without a customer lookup
       metadata: { supabase_user_id: user.id },
-      subscription_data: { metadata: { supabase_user_id: user.id } },
+      subscription_data: {
+        metadata: { supabase_user_id: user.id },
+        ...(trialEligible ? { trial_period_days: 7 } : {}),
+      },
     },
     { idempotencyKey })
 

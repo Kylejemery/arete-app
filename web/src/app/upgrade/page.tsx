@@ -106,6 +106,9 @@ function UpgradeContent() {
             <p className="font-mono text-[12px] text-arete-muted mt-1">
               Unlock the full cabinet and every premium feature
             </p>
+            <p className="font-mono text-[12px] text-arete-gold mt-1">
+              New members start with a 7-day free trial
+            </p>
           </div>
         </div>
 
@@ -148,6 +151,7 @@ function UpgradeContent() {
             </p>
           </div>
         ) : (
+          <>
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
               <div
@@ -176,11 +180,17 @@ function UpgradeContent() {
                       : 'border border-arete-gold text-arete-gold'
                   }`}
                 >
-                  {busyPlan === plan.key ? 'Redirecting…' : 'Choose plan'}
+                  {busyPlan === plan.key ? 'Redirecting…' : 'Start free trial'}
                 </button>
               </div>
             ))}
           </div>
+          <p className="text-arete-muted text-xs mt-6 max-w-lg">
+            New subscribers get 7 days free on any plan. Cancel anytime during the trial
+            and you won&apos;t be charged. If you&apos;ve subscribed before, checkout
+            starts your plan immediately.
+          </p>
+          </>
         )}
       </div>
     </div>

@@ -125,6 +125,7 @@ export default function PaywallScreen() {
           <Text style={styles.subtitle}>
             More counselors. More conversations.{'\n'}The discipline to actually use them.
           </Text>
+          <Text style={styles.trialLine}>New members start with a 7-day free trial</Text>
         </View>
 
         {/* Feature comparison table */}
@@ -251,6 +252,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 21,
+  },
+  trialLine: {
+    color: '#c9a84c',
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 10,
   },
 
   // Table
