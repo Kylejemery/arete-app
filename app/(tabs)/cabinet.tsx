@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -458,12 +459,24 @@ export default function CabinetScreen() {
   };
 
   const handleSendInvite = async () => {
-    const email = inviteEmail.trim();
-    if (!email || inviteLoading) return;
+    const contact = inviteEmail.trim();
+    if (!contact || inviteLoading) return;
     if (!currentSessionId || !currentUserId) {
       setInviteError("Your session isn't ready yet. Try again in a moment.");
       return;
     }
+
+    // Email invites are sent server-side via Resend. Phone invites open the
+    // inviter's own Messages composer with the join link, so no SMS provider
+    // is needed and the text comes from a number the partner recognizes.
+    const phoneCandidate = contact.replace(/[\s().-]/g, '');
+    const isPhone = /^\+?\d{7,15}$/.test(phoneCandidate);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+    if (!isPhone && !isEmail) {
+      setInviteError('Enter a valid email address or phone number.');
+      return;
+    }
+
     setInviteLoading(true);
     setInviteError(null);
     try {
@@ -477,15 +490,25 @@ export default function CabinetScreen() {
         },
         body: JSON.stringify({
           sessionId: currentSessionId,
-          partnerEmail: email,
+          ...(isEmail ? { partnerEmail: contact } : { partnerPhone: phoneCandidate }),
         }),
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok && data?.success) {
         setSessionType('shared');
-        setSessionPartners([{ userId: 'pending', displayName: email }]);
+        setSessionPartners([{ userId: 'pending', displayName: contact }]);
         setShowInviteModal(false);
         setInviteEmail('');
+        if (isPhone && data?.smsBody) {
+          // iOS wants '&' before the body param in sms: URLs; Android wants '?'.
+          const sep = Platform.OS === 'ios' ? '&' : '?';
+          Linking.openURL(`sms:${phoneCandidate}${sep}body=${encodeURIComponent(data.smsBody)}`).catch(() => {
+            Alert.alert(
+              'Invite created',
+              `Could not open Messages automatically. Share this link with your partner to let them join:\n\n${data.joinUrl || ''}`
+            );
+          });
+        }
       } else {
         setInviteError(data?.error || 'Could not send the invite. Please try again.');
       }
@@ -877,16 +900,16 @@ export default function CabinetScreen() {
           <View style={styles.beliefSeedCard}>
             <Text style={styles.beliefSeedTitle}>Start a Shared Session</Text>
             <Text style={styles.beliefSeedSubtitle}>
-              Invite someone to join your Cabinet session. Both of your Know Thyself profiles
-              will be shared with your counselors.
+              Invite someone by email or phone number to join your Cabinet session. Both of
+              your Know Thyself profiles will be shared with your counselors.
             </Text>
             <TextInput
               style={styles.beliefSeedInput}
-              placeholder="partner@email.com"
+              placeholder="Email or phone number"
               placeholderTextColor="#555"
               value={inviteEmail}
               onChangeText={setInviteEmail}
-              keyboardType="email-address"
+              keyboardType="default"
               autoCapitalize="none"
               autoCorrect={false}
             />

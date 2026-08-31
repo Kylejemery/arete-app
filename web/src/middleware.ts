@@ -49,7 +49,9 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirectTo', pathname)
+    // Keep the query string so token-carrying links (/join?token=...) survive
+    // the trip through the login screen.
+    loginUrl.searchParams.set('redirectTo', pathname + request.nextUrl.search)
     return NextResponse.redirect(loginUrl)
   }
 

@@ -1440,6 +1440,9 @@ async function getAuthenticatedUserId(req) {
 
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000; // 48 hours
 
+const APP_STORE_URL = 'https://apps.apple.com/us/app/arete-know-thyself/id6762371595';
+const WEB_APP_URL = 'https://app.pursuearete.com';
+
 // POST /api/sessions/invite — create a pending participant row + email the partner.
 // ---------------------------------------------------------------------------
 // Contact form (www.pursuearete.com/contact) → email via Resend.
@@ -1502,10 +1505,14 @@ app.post('/api/sessions/invite', async (req, res) => {
   const authenticatedUserId = await getAuthenticatedUserId(req);
   if (!authenticatedUserId) return res.status(401).json({ error: 'Unauthorized' });
 
-  const { sessionId, partnerEmail } = req.body || {};
-  if (!sessionId || !partnerEmail) {
-    return res.status(400).json({ error: 'Missing required fields: sessionId, partnerEmail' });
+  // Invites go out by email (we send it via Resend) or by phone (the app opens
+  // the inviter's own Messages composer with the join link, so no SMS provider
+  // is needed server-side).
+  const { sessionId, partnerEmail, partnerPhone } = req.body || {};
+  if (!sessionId || (!partnerEmail && !partnerPhone)) {
+    return res.status(400).json({ error: 'Missing required fields: sessionId and partnerEmail or partnerPhone' });
   }
+  const partnerContact = partnerEmail || partnerPhone;
 
   // Verify the session exists and the inviter owns it. cabinet_conversations
   // has one row per user; the owning user_id is the session creator.
@@ -1546,10 +1553,10 @@ app.post('/api/sessions/invite', async (req, res) => {
       user_id: authenticatedUserId,
       status: 'pending',
       invite_token: token,
-      invite_email: partnerEmail,
+      invite_email: partnerContact, // contact-of-record; holds the phone for SMS invites
       invited_by: authenticatedUserId,
       invite_expires_at: expiresAt,
-      display_name: partnerEmail,
+      display_name: partnerContact,
     }, { onConflict: 'session_id,user_id' });
   if (upsertErr) {
     console.error('[sessions/invite] upsert error:', upsertErr.message);
@@ -1557,32 +1564,45 @@ app.post('/api/sessions/invite', async (req, res) => {
   }
 
   const joinUrl = `${RAILWAY_PUBLIC_URL}/api/sessions/join?token=${token}`;
+  const webJoinUrl = `${WEB_APP_URL}/join?token=${token}`;
 
-  if (resend) {
-    const text = `You've been invited to join a shared Cabinet session on Arete.\n\nIn a shared session, you and your partner each bring your philosophical profile, and your Cabinet counselors respond to both of you together.\n\nJoin here: ${joinUrl}\n\nThis invite expires in 48 hours.\n\nIf you don't have an Arete account, you'll be prompted to create one.`;
+  // Prewritten text for SMS invites: the app opens the inviter's Messages
+  // composer with this body, so the text goes out from their own number.
+  const smsBody = `${inviterName} is inviting you to join a philosophical discussion within the Arete app. Join here: ${joinUrl}`;
+
+  if (resend && partnerEmail) {
+    const text = `${inviterName} is inviting you to join a philosophical discussion within the Arete app.\n\nIn a shared Cabinet session, you and ${inviterName} each bring your philosophical profile, and your Cabinet counselors respond to both of you together.\n\nJoin in the app: ${joinUrl}\n\nPrefer the web? Sign up or sign in and join here: ${webJoinUrl}\n\nDon't have the Arete app yet? Download it first, then tap the join link on your phone: ${APP_STORE_URL}\n\nThis invite expires in 48 hours.\n\nIf you don't have an Arete account, you'll be prompted to create one.`;
     const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1a1a2e;line-height:1.5;">
-      <p>You've been invited to join a <strong>shared Cabinet session</strong> on Arete.</p>
-      <p>In a shared session, you and your partner each bring your philosophical profile, and your Cabinet counselors respond to both of you together.</p>
+      <p><strong>${inviterName}</strong> is inviting you to join a <strong>philosophical discussion</strong> within the Arete app.</p>
+      <p>In a shared Cabinet session, you and ${inviterName} each bring your philosophical profile, and your Cabinet counselors respond to both of you together.</p>
       <p><a href="${joinUrl}" style="display:inline-block;background:#c9a84c;color:#1a1a2e;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:700;">Join Session</a></p>
+      <p style="color:#666;font-size:13px;">Prefer the web? <a href="${webJoinUrl}" style="color:#8a6d1f;">Sign up or sign in and join at app.pursuearete.com</a>.</p>
+      <p style="color:#666;font-size:13px;">Don't have the Arete app yet? <a href="${APP_STORE_URL}" style="color:#8a6d1f;">Download it from the App Store</a> first, then tap Join Session on your phone.</p>
       <p style="color:#666;font-size:13px;">This invite expires in 48 hours. If you don't have an Arete account, you'll be prompted to create one.</p>
     </div>`;
     try {
       await resend.emails.send({
         from: INVITE_FROM_EMAIL,
         to: partnerEmail,
-        subject: `${inviterName} invited you to a shared Cabinet session`,
+        subject: `${inviterName} is inviting you to a philosophical discussion on Arete`,
         text,
         html,
       });
     } catch (err) {
       console.error('[sessions/invite] email send failed:', err.message || err);
-      return res.json({ success: true, emailSent: false });
+      return res.json({ success: true, emailSent: false, joinUrl, webJoinUrl, smsBody });
     }
-  } else {
+  } else if (partnerEmail) {
     console.warn('[sessions/invite] RESEND_API_KEY not set — skipping email send');
   }
 
-  return res.json({ success: true, emailSent: !!resend });
+  return res.json({
+    success: true,
+    emailSent: !!resend && !!partnerEmail,
+    joinUrl,
+    webJoinUrl,
+    smsBody,
+  });
 });
 
 // GET /api/sessions/join — validate token, then bounce into the app deep link.
@@ -1616,13 +1636,17 @@ app.get('/api/sessions/join', async (req, res) => {
   h1{color:#c9a84c;font-size:22px;margin-bottom:8px}
   p{color:#8A9BB0;font-size:15px;line-height:1.5}
   a.btn{display:inline-block;background:#c9a84c;color:#1a1a2e;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;margin:20px 0 12px}
+  a.store{display:inline-block;color:#c9a84c;text-decoration:underline;font-size:14px;margin-bottom:8px}
   .hint{font-size:13px;color:#666}
 </style></head>
 <body><div class="card">
   <h1>Join your shared Cabinet session</h1>
   <p>Opening the Arete app&hellip;</p>
   <a class="btn" href="${deepLink}">Open in Arete</a>
-  <p class="hint">Nothing happening? Make sure the Arete app is installed on this device, then tap the button above. If you opened this link on a computer, open it on your phone instead.</p>
+  <p class="hint">Nothing happening? You may not have the Arete app installed yet.</p>
+  <a class="store" href="${APP_STORE_URL}">Get Arete on the App Store</a>
+  <p class="hint">After installing, come back to your invite and tap the join link again. If you opened this link on a computer, open it on your phone instead.</p>
+  <a class="store" href="${WEB_APP_URL}/join?token=${encodeURIComponent(token)}">Or join on the web instead</a>
 </div>
 <script>setTimeout(function(){ window.location.href = ${JSON.stringify(deepLink)}; }, 400);</script>
 </body></html>`);

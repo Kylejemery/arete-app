@@ -8,7 +8,10 @@ type Mode = 'signin' | 'signup' | 'forgot'
 
 function LoginForm() {
   const searchParams = useSearchParams()
-  const [mode, setMode] = useState<Mode>('signin')
+  // Arrived via a shared-session invite link; invitees usually need an account,
+  // so default them to sign-up.
+  const isInvite = (searchParams.get('redirectTo') || '').startsWith('/join')
+  const [mode, setMode] = useState<Mode>(isInvite ? 'signup' : 'signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -20,6 +23,12 @@ function LoginForm() {
     setMode(next)
     setError(null)
     setMessage(null)
+  }
+
+  // Only ever bounce to same-origin paths; anything else falls back to home.
+  const safeRedirectTo = () => {
+    const target = searchParams.get('redirectTo') || '/'
+    return target.startsWith('/') && !target.startsWith('//') ? target : '/'
   }
 
   const handleSignIn = async () => {
@@ -37,8 +46,7 @@ function LoginForm() {
       if (authError) {
         setError(authError.message)
       } else {
-        const redirectTo = searchParams.get('redirectTo') || '/'
-        window.location.href = redirectTo
+        window.location.href = safeRedirectTo()
       }
     } catch {
       setError('An unexpected error occurred. Please try again.')
@@ -63,12 +71,17 @@ function LoginForm() {
     }
     setLoading(true)
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       })
       if (authError) {
         setError(authError.message)
+      } else if (data.session) {
+        // Auto-confirm is on, so the account is live immediately. Honoring
+        // redirectTo here lets shared-session invitees land on /join?token=...
+        // right after creating their account.
+        window.location.href = safeRedirectTo()
       } else {
         setMessage('Account created! Check your email to confirm your account, then sign in.')
       }
@@ -117,6 +130,15 @@ function LoginForm() {
           <h1 className="text-5xl font-bold text-arete-gold tracking-widest mb-2">ARETE</h1>
           <p className="text-gray-500 italic text-sm">Be who you want to be.</p>
         </div>
+
+        {isInvite && (
+          <div className="bg-arete-gold/10 border border-arete-gold/40 rounded-xl p-4 mb-6">
+            <p className="text-arete-text text-sm text-center leading-relaxed">
+              You&apos;ve been invited to a shared Cabinet session. Sign in or create an
+              account to join.
+            </p>
+          </div>
+        )}
 
         {mode === 'forgot' ? (
 

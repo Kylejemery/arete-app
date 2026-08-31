@@ -33,8 +33,9 @@ export default function JoinSessionScreen() {
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
         if (!user || !session?.access_token) {
-          // Not signed in — send them to login; they can re-tap the link after.
-          router.replace('/login' as any);
+          // Not signed in (or no account yet): hand the token to the login
+          // screen so it can bounce back here after sign-in or sign-up.
+          router.replace({ pathname: '/login', params: { inviteToken: token } } as any);
           return;
         }
         const settings = await getUserSettings();

@@ -10,14 +10,20 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 type Mode = 'signin' | 'signup';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>('signin');
+  // Set when the user arrived via a shared-session invite link while signed
+  // out. After auth we bounce back to join-session so the invite completes
+  // without re-tapping the email link. Invitees usually have no account yet,
+  // so default them to sign-up.
+  const params = useLocalSearchParams<{ inviteToken?: string }>();
+  const inviteToken = params.inviteToken ? String(params.inviteToken) : null;
+  const [mode, setMode] = useState<Mode>(inviteToken ? 'signup' : 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -38,6 +44,8 @@ export default function LoginScreen() {
       });
       if (authError) {
         setError(authError.message);
+      } else if (inviteToken) {
+        router.replace({ pathname: '/join-session', params: { token: inviteToken } } as any);
       } else {
         router.replace('/' as any);
       }
@@ -70,6 +78,10 @@ export default function LoginScreen() {
       });
       if (authError) {
         setError(authError.message);
+      } else if (inviteToken) {
+        // Joining the shared session comes first; onboarding is offered via
+        // the home-tab banner later, never forced.
+        router.replace({ pathname: '/join-session', params: { token: inviteToken } } as any);
       } else {
         router.replace('/setup' as any);
       }
@@ -100,6 +112,14 @@ export default function LoginScreen() {
           <Text style={styles.logo}>ARETE</Text>
           <Text style={styles.tagline}>Be who you want to be.</Text>
         </View>
+
+        {inviteToken && (
+          <View style={styles.inviteBanner}>
+            <Text style={styles.inviteBannerText}>
+              You've been invited to a shared Cabinet session. Sign in or create an account to join.
+            </Text>
+          </View>
+        )}
 
         {/* Mode Toggle */}
         <View style={styles.toggleContainer}>
@@ -221,6 +241,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontStyle: 'italic',
     marginTop: 6,
+  },
+  inviteBanner: {
+    backgroundColor: '#c9a84c22',
+    borderWidth: 1,
+    borderColor: '#c9a84c66',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 24,
+  },
+  inviteBannerText: {
+    color: '#e0d5b5',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   toggleContainer: {
     flexDirection: 'row',
