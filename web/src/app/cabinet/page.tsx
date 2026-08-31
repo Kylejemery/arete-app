@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getUserCabinet } from '@/lib/db';
+import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, type CabinetReply } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
@@ -39,6 +39,19 @@ export default function CabinetPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+
+  // Shared sessions (Arete for Couples) — same contract as the mobile app:
+  // the cabinet_conversations row id doubles as the shared-session id.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [sessionType, setSessionType] = useState<'solo' | 'shared'>('solo');
+  const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteContact, setInviteContact] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteShare, setInviteShare] = useState<{ smsBody: string; joinUrl: string } | null>(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
 
   const [selectedCounselor, setSelectedCounselor] = useState<string | null>(null);
   const [counselorMessages, setCounselorMessages] = useState<ThreadMessage[]>([]);
@@ -86,6 +99,104 @@ export default function CabinetPage() {
     load();
   }, [router]);
 
+  // Resolve user + conversation ids, then restore shared mode from
+  // session_participants (inviter side: someone's active row on my
+  // conversation; partner side: my active row on someone else's).
+  useEffect(() => {
+    (async () => {
+      let userId: string | null = null;
+      try {
+        const { data } = await supabase.auth.getUser();
+        userId = data.user?.id ?? null;
+        setCurrentUserId(userId);
+      } catch { /* unauthenticated — middleware will bounce */ }
+      let ownConversationId: string | null = null;
+      try {
+        ownConversationId = await getOrCreateCabinetConversationId();
+        setCurrentSessionId(ownConversationId);
+      } catch (err) {
+        console.warn('[Cabinet] Failed to resolve session id:', err);
+      }
+      if (!userId) return;
+      try {
+        if (ownConversationId) {
+          const { data: partnerRows } = await supabase
+            .from('session_participants')
+            .select('user_id, display_name')
+            .eq('session_id', ownConversationId)
+            .eq('status', 'active')
+            .neq('user_id', userId);
+          if (partnerRows && partnerRows.length > 0) {
+            setSessionType('shared');
+            setSessionPartners(partnerRows.map(r => ({
+              userId: r.user_id as string,
+              displayName: (r.display_name as string) || 'Partner',
+            })));
+            return;
+          }
+        }
+        const { data: myRows } = await supabase
+          .from('session_participants')
+          .select('session_id')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .limit(1);
+        if (myRows && myRows.length > 0 && myRows[0].session_id !== ownConversationId) {
+          setCurrentSessionId(myRows[0].session_id as string);
+          setSessionType('shared');
+          setSessionPartners([{ userId: 'partner', displayName: 'Partner' }]);
+        }
+      } catch (err) {
+        console.warn('[Cabinet] Failed to restore shared session:', err);
+      }
+    })();
+  }, []);
+
+  // Realtime sync for shared sessions: the server mirrors each shared turn
+  // into session_messages; rows tagged with our own user_id are skipped
+  // because they're already shown optimistically.
+  useEffect(() => {
+    if (sessionType !== 'shared' || !currentSessionId) return;
+
+    const channel = supabase
+      .channel(`cabinet-session-${currentSessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'session_messages',
+          filter: `session_id=eq.${currentSessionId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            user_id: string | null;
+            role: 'user' | 'assistant';
+            content: string;
+            counselor_id: string | null;
+            counselor_name: string | null;
+            created_at: string;
+          };
+          if (row.user_id && row.user_id === currentUserId) return;
+          setCabinetMessages(prev => [
+            ...prev,
+            {
+              role: row.role,
+              content: row.content,
+              timestamp: new Date(row.created_at).getTime(),
+              counselorId: row.counselor_id ?? undefined,
+              counselorName: row.counselor_name ?? undefined,
+            },
+          ]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionType, currentSessionId, currentUserId]);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cabinetMessages]);
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
 
@@ -97,7 +208,11 @@ export default function CabinetPage() {
     setInput('');
     setIsLoading(true);
     try {
-      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages);
+      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages, {
+        sessionType,
+        sessionId: currentSessionId ?? undefined,
+        partnerIds: sessionPartners.map(p => p.userId),
+      });
       const assistantMsgs: ThreadMessage[] = replies.map(r => ({
         role: 'assistant',
         content: r.text,
@@ -119,6 +234,94 @@ export default function CabinetPage() {
     if (!confirm('Clear the entire Cabinet conversation? This cannot be undone.')) return;
     await clearThread('cabinet');
     setCabinetMessages([]);
+  };
+
+  const handleSendInvite = async () => {
+    const contact = inviteContact.trim();
+    if (!contact || inviteLoading) return;
+    if (!currentSessionId || !currentUserId) {
+      setInviteError("Your session isn't ready yet. Try again in a moment.");
+      return;
+    }
+
+    // Email invites are sent server-side via Resend. Phone invites return a
+    // prewritten message the user copies into their own texting app (the web
+    // can't reliably open Messages the way the mobile app can).
+    const phoneCandidate = contact.replace(/[\s().-]/g, '');
+    const isPhone = /^\+?\d{7,15}$/.test(phoneCandidate);
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
+    if (!isPhone && !isEmail) {
+      setInviteError('Enter a valid email address or phone number.');
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteError(null);
+    try {
+      // Backend derives the inviter from this Bearer token (JWT), not the body.
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await fetch(`${API_BASE_URL}/api/sessions/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          sessionId: currentSessionId,
+          ...(isEmail ? { partnerEmail: contact } : { partnerPhone: phoneCandidate }),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data?.success) {
+        setSessionType('shared');
+        setSessionPartners([{ userId: 'pending', displayName: contact }]);
+        setInviteContact('');
+        if (isPhone && data?.smsBody) {
+          // Keep the modal open showing the prewritten text to copy.
+          setInviteShare({ smsBody: data.smsBody, joinUrl: data.joinUrl || '' });
+        } else {
+          setShowInviteModal(false);
+        }
+      } else {
+        setInviteError(data?.error || 'Could not send the invite. Please try again.');
+      }
+    } catch (err) {
+      console.error('Invite error:', err);
+      setInviteError('Could not reach the server. Please try again.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const handleCopyInvite = async () => {
+    if (!inviteShare) return;
+    try {
+      await navigator.clipboard.writeText(inviteShare.smsBody);
+      setInviteCopied(true);
+      setTimeout(() => setInviteCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable — the text is visible to copy manually */
+    }
+  };
+
+  const handleEndSharedSession = async () => {
+    if (!confirm('End the shared session? Your Cabinet returns to a private solo session.')) return;
+    // Delete the participant rows server-side too — shared mode is restored
+    // from session_participants on load, so local state alone would resurrect
+    // the session on next visit. RLS allows either side to leave. Best-effort.
+    if (currentSessionId) {
+      try {
+        await supabase.from('session_participants').delete().eq('session_id', currentSessionId);
+      } catch (err) {
+        console.warn('[Cabinet] Failed to delete participant rows:', err);
+      }
+    }
+    setSessionType('solo');
+    setSessionPartners([]);
+    try {
+      const ownId = await getOrCreateCabinetConversationId();
+      setCurrentSessionId(ownId);
+    } catch { /* keep current id */ }
   };
 
   const handleSelectCounselor = async (id: string) => {
@@ -227,6 +430,18 @@ export default function CabinetPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => { setShowInviteModal(true); setInviteError(null); setInviteShare(null); }}
+              className="px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
+              style={{
+                fontFamily: 'var(--font-mono, monospace)',
+                color: '#c9a84c',
+                border: '1px solid rgba(201,168,76,0.4)',
+                background: 'rgba(201,168,76,0.06)',
+              }}
+            >
+              + Invite
+            </button>
             <Link
               href="/cabinet/minds"
               className="px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
@@ -253,6 +468,29 @@ export default function CabinetPage() {
             </Link>
           </div>
         </div>
+
+        {/* Shared-session badge */}
+        {sessionType === 'shared' && (
+          <div
+            className="flex items-center justify-between px-3 py-2 mb-3 rounded-xl"
+            style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)' }}
+          >
+            <span
+              className="text-[11px] truncate"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+            >
+              👥 Shared Session · {sessionPartners.map(p => p.displayName).join(' & ')}
+              {sessionPartners.some(p => p.userId === 'pending') && ' (invite pending)'}
+            </span>
+            <button
+              onClick={handleEndSharedSession}
+              className="text-[10px] tracking-[1px] uppercase ml-3 flex-shrink-0 transition-colors hover:text-red-400"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+            >
+              End
+            </button>
+          </div>
+        )}
 
         {/* Tab switcher */}
         <div
@@ -758,6 +996,100 @@ export default function CabinetPage() {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* ── Invite a Partner modal ───────────────────────────────── */}
+      {showInviteModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          onClick={() => { if (!inviteLoading) { setShowInviteModal(false); setInviteContact(''); setInviteError(null); setInviteShare(null); } }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{ background: '#131b2e', border: '1px solid rgba(201,168,76,0.3)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2
+              className="text-[18px] font-medium mb-2"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+            >
+              Start a Shared Session
+            </h2>
+
+            {inviteShare ? (
+              <>
+                <p className="text-[13px] leading-relaxed mb-3" style={{ color: '#9aa0a6' }}>
+                  Invite created. Copy this message and text it to your partner from your
+                  own phone, or share the link any way you like:
+                </p>
+                <div
+                  className="rounded-xl px-4 py-3 mb-4 text-[13px] leading-relaxed break-all"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(201,168,76,0.2)', color: '#e6eef8' }}
+                >
+                  {inviteShare.smsBody}
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => { setShowInviteModal(false); setInviteShare(null); }}
+                    className="px-4 py-2 rounded-xl text-[13px]"
+                    style={{ color: '#9aa0a6', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    Done
+                  </button>
+                  <button
+                    onClick={handleCopyInvite}
+                    className="px-4 py-2 rounded-xl text-[13px] font-bold transition-opacity hover:opacity-90"
+                    style={{ background: '#c9a84c', color: '#0f1724' }}
+                  >
+                    {inviteCopied ? 'Copied ✓' : 'Copy Message'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-[13px] leading-relaxed mb-4" style={{ color: '#9aa0a6' }}>
+                  Invite someone by email or phone number to join your Cabinet session. Both
+                  of your Know Thyself profiles will be shared with your counselors.
+                </p>
+                <input
+                  className="w-full px-4 py-3 rounded-xl text-[14px] outline-none mb-3"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(201,168,76,0.2)',
+                    color: '#e6eef8',
+                  }}
+                  placeholder="Email or phone number"
+                  value={inviteContact}
+                  onChange={e => setInviteContact(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSendInvite(); }}
+                  autoFocus
+                />
+                {inviteError && (
+                  <p className="text-[12px] mb-3" style={{ color: '#f87171' }}>{inviteError}</p>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => { setShowInviteModal(false); setInviteContact(''); setInviteError(null); }}
+                    disabled={inviteLoading}
+                    className="px-4 py-2 rounded-xl text-[13px]"
+                    style={{ color: '#9aa0a6', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSendInvite}
+                    disabled={!inviteContact.trim() || inviteLoading}
+                    className="px-4 py-2 rounded-xl text-[13px] font-bold transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+                    style={{ background: '#c9a84c', color: '#0f1724' }}
+                  >
+                    {inviteLoading ? 'Sending…' : 'Send Invite'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

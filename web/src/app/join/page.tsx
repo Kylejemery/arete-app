@@ -91,18 +91,22 @@ function JoinPageInner() {
           <div className="space-y-5">
             <p className="text-arete-text text-lg font-semibold">You&apos;re in.</p>
             <p className="text-gray-400 text-sm leading-relaxed">
-              You&apos;ve joined the shared Cabinet session. The conversation itself lives in
-              the Arete app: sign in there with this same account and the shared session
-              will be waiting in your Cabinet.
+              You&apos;ve joined the shared Cabinet session. Open your Cabinet to start the
+              conversation together, here on the web or in the Arete app with this same
+              account.
             </p>
             <a
-              href={APP_STORE_URL}
+              href="/cabinet"
               className="inline-block bg-arete-gold text-arete-bg font-bold py-3 px-8 rounded-xl hover:opacity-90 transition-opacity"
             >
-              Get Arete on the App Store
+              Open your Cabinet
             </a>
             <p className="text-gray-500 text-xs">
-              Already have the app? Just open it, sign in, and head to the Cabinet tab.
+              Prefer your phone?{' '}
+              <a href={APP_STORE_URL} className="underline hover:opacity-80" style={{ color: '#c9a84c' }}>
+                Get Arete on the App Store
+              </a>{' '}
+              and sign in with this account.
             </p>
           </div>
         )}

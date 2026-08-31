@@ -340,6 +340,15 @@ export async function getCabinetConversation() {
   return data;
 }
 
+// The conversation row id doubles as the shared-session id when inviting a
+// partner (same contract as the mobile app).
+export async function getOrCreateCabinetConversationId(): Promise<string | null> {
+  const existing = await getCabinetConversation();
+  if (existing?.id) return existing.id as string;
+  const created = await saveCabinetConversation([]);
+  return (created?.id as string) ?? null;
+}
+
 // ----------------------------------------------------------------
 // CABINET THREADS
 // ----------------------------------------------------------------

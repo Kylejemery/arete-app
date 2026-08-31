@@ -33,7 +33,7 @@ export interface BeliefEntry {
   topic: string;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
 export async function gatherUserProfile(): Promise<string> {
   const settings = await getUserSettings();
@@ -385,7 +385,10 @@ export interface CabinetReply {
   text: string;
 }
 
-export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<CabinetReply[]> {
+export async function sendMessageToCabinet(
+  messages: ThreadMessage[],
+  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] }
+): Promise<CabinetReply[]> {
   const asSingleReply = (text: string): CabinetReply[] => [
     { counselorId: null, counselorName: null, text },
   ];
@@ -402,6 +405,18 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const { data: { session: cabinetSession } } = await supabase.auth.getSession();
+
+    // Shared session (Arete for Couples): include every participant so the
+    // server can fetch their Know Thyself profiles and respond to the group.
+    // Solo (the default) sends no participant list and behaves unchanged.
+    const sessionType = sessionOptions?.sessionType ?? 'solo';
+    const participantIds =
+      sessionType === 'shared'
+        ? [cabinetSession?.user?.id, ...(sessionOptions?.partnerIds ?? [])].filter(
+            (id): id is string => typeof id === 'string' && id.length > 0 && id !== 'pending'
+          )
+        : undefined;
+
     const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${cabinetSession?.access_token}` },
@@ -420,6 +435,9 @@ export async function sendMessageToCabinet(messages: ThreadMessage[]): Promise<C
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         activeCounselorId: 'cabinet',
         userId: cabinetSession?.user?.id,
+        sessionType,
+        sessionId: sessionOptions?.sessionId,
+        participantIds,
       }),
     });
 
