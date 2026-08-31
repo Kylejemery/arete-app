@@ -41,11 +41,16 @@ export async function thread(postId) {
 }
 
 export async function comment(postId, body, verification) {
-  return call("POST", "/comments", {
-    post_id: postId,
-    content: body,
-    ...(verification ? { verification } : {}),
-  });
+  const payload = { content: body, ...(verification ? { verification } : {}) };
+  // The comments route has moved before: the flat POST /comments shape started
+  // 404ing in 2026. Try the RESTful path (which mirrors the GET) first, and
+  // fall back to the flat one so a future flip back doesn't break us either.
+  try {
+    return await call("POST", `/posts/${postId}/comments`, payload);
+  } catch (err) {
+    if (err.status !== 404) throw err;
+    return call("POST", "/comments", { post_id: postId, ...payload });
+  }
 }
 
 export async function post({ submolt, title, content, verification }) {
