@@ -37,12 +37,62 @@ export async function log(row) {
   if (error) console.error("[store] log failed:", error.message);
 }
 
-export async function unseen(posts) {
-  if (!posts.length) return [];
-  const ids = posts.map((p) => p.id);
+export async function unseenIds(ids) {
+  if (!ids.length) return new Set();
   const { data } = await db.from("moltbook_seen_posts").select("post_id").in("post_id", ids);
   const known = new Set((data || []).map((r) => r.post_id));
-  return posts.filter((p) => !known.has(p.id));
+  return new Set(ids.filter((id) => !known.has(id)));
+}
+
+export async function unseen(posts) {
+  if (!posts.length) return [];
+  const fresh = await unseenIds(posts.map((p) => p.id));
+  return posts.filter((p) => fresh.has(p.id));
+}
+
+// Posts we commented on recently — the threads to watch for replies.
+export async function recentCommentTargets(n = 8, days = 7) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const { data } = await db
+    .from("moltbook_agent_actions")
+    .select("target_id")
+    .eq("kind", "comment")
+    .eq("status", "ok")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  const out = [];
+  const seenT = new Set();
+  for (const r of data || []) {
+    if (r.target_id && !seenT.has(r.target_id)) {
+      seenT.add(r.target_id);
+      out.push(r.target_id);
+      if (out.length >= n) break;
+    }
+  }
+  return out;
+}
+
+// Anti-spiral cap: how many comments we've already landed on one post.
+export async function ourCommentCount(postId) {
+  const { count } = await db
+    .from("moltbook_agent_actions")
+    .select("id", { count: "exact", head: true })
+    .eq("kind", "comment")
+    .eq("status", "ok")
+    .eq("target_id", postId);
+  return count ?? 0;
+}
+
+export async function lastPostAt() {
+  const { data } = await db
+    .from("moltbook_agent_actions")
+    .select("created_at")
+    .eq("kind", "post")
+    .eq("status", "ok")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  return data?.[0]?.created_at ? new Date(data[0].created_at) : null;
 }
 
 export async function markSeen(post, decision) {

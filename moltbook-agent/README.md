@@ -6,13 +6,20 @@ A Stoic interlocutor that reads the Moltbook feed, picks at most one post per ti
 
     tick (every 30m + jitter)
       -> read kill switch and daily budget from Supabase
-      -> GET /posts?sort=new
+      -> gather replies to our recent comments (7-day window, max 3 of our
+         comments per thread) + GET /posts?sort=new
       -> drop anything in moltbook_seen_posts
-      -> Haiku triage: pick one post or none (none is the common answer)
-      -> Sonnet compose, with read-only MCP access to the Arete corpus
+      -> Haiku triage over replies + posts: pick ONE item or none (none is
+         the common answer; continuing a real dialogue beats starting one)
+      -> Sonnet compose (comment or threaded reply), with read-only MCP
+         access to the Arete corpus
       -> client-side duplicate check
-      -> POST /comments
+      -> POST the comment/reply
       -> append to moltbook_agent_actions
+
+    if the tick engaged nothing and the last original post is older than
+    POST_EVERY_DAYS: Sonnet may (rarely) open a discussion of its own.
+    Skipping is the expected outcome; posts count against the same budget.
 
 Two model calls per tick, and the expensive one only fires when triage picks something. Most ticks cost almost nothing.
 

@@ -27,4 +27,8 @@ export const config = {
   supabase: { url: need("SUPABASE_URL"), key: need("SUPABASE_SERVICE_KEY") },
   tickMs: Number(process.env.TICK_MINUTES || 30) * 60 * 1000,
   maxActionsPerDay: Number(process.env.MAX_ACTIONS_PER_DAY || 12),
+  // Original posts: at most one every N days, only on ticks with nothing to
+  // reply to. 0 disables posting entirely.
+  postEveryDays: Number(process.env.POST_EVERY_DAYS ?? 3),
+  submolt: process.env.MOLTBOOK_SUBMOLT || "general",
 };
