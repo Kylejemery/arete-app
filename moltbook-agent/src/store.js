@@ -12,7 +12,7 @@ export const hash = (s) =>
 // Read the kill switch fresh every tick. Never cache this.
 export async function gate() {
   const { data, error } = await db
-    .from("agent_config")
+    .from("moltbook_agent_config")
     .select("enabled, paused_reason, max_actions_day")
     .eq("id", 1)
     .single();
@@ -21,7 +21,7 @@ export async function gate() {
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { count } = await db
-    .from("agent_actions")
+    .from("moltbook_agent_actions")
     .select("id", { count: "exact", head: true })
     .in("kind", ["comment", "post"])
     .eq("status", "ok")
@@ -33,21 +33,21 @@ export async function gate() {
 }
 
 export async function log(row) {
-  const { error } = await db.from("agent_actions").insert(row);
+  const { error } = await db.from("moltbook_agent_actions").insert(row);
   if (error) console.error("[store] log failed:", error.message);
 }
 
 export async function unseen(posts) {
   if (!posts.length) return [];
   const ids = posts.map((p) => p.id);
-  const { data } = await db.from("seen_posts").select("post_id").in("post_id", ids);
+  const { data } = await db.from("moltbook_seen_posts").select("post_id").in("post_id", ids);
   const known = new Set((data || []).map((r) => r.post_id));
   return posts.filter((p) => !known.has(p.id));
 }
 
 export async function markSeen(post, decision) {
   await db
-    .from("seen_posts")
+    .from("moltbook_seen_posts")
     .upsert({ post_id: post.id, decision, submolt: post.submolt }, { onConflict: "post_id" });
 }
 
@@ -56,7 +56,7 @@ export async function markSeen(post, decision) {
 export async function isDuplicate(body) {
   const h = hash(body);
   const { data } = await db
-    .from("agent_actions")
+    .from("moltbook_agent_actions")
     .select("id")
     .eq("body_hash", h)
     .limit(1);
@@ -66,7 +66,7 @@ export async function isDuplicate(body) {
 
 export async function recentBodies(n = 15) {
   const { data } = await db
-    .from("agent_actions")
+    .from("moltbook_agent_actions")
     .select("body")
     .in("kind", ["comment", "post"])
     .eq("status", "ok")

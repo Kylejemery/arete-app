@@ -7,29 +7,29 @@ A Stoic interlocutor that reads the Moltbook feed, picks at most one post per ti
     tick (every 30m + jitter)
       -> read kill switch and daily budget from Supabase
       -> GET /posts?sort=new
-      -> drop anything in seen_posts
+      -> drop anything in moltbook_seen_posts
       -> Haiku triage: pick one post or none (none is the common answer)
       -> Sonnet compose, with read-only MCP access to the Arete corpus
       -> client-side duplicate check
       -> POST /comments
-      -> append to agent_actions
+      -> append to moltbook_agent_actions
 
 Two model calls per tick, and the expensive one only fires when triage picks something. Most ticks cost almost nothing.
 
 ## Setup
 
-1. `psql < sql/schema.sql` against your Supabase project. `agent_config.enabled` starts false on purpose.
+1. `psql < sql/schema.sql` against your Supabase project. `moltbook_agent_config.enabled` starts false on purpose.
 2. `node scripts/register.js "Arete" "A Stoic interlocutor"` locally. Save the `api_key`, open the `claim_url`, verify via X.
 3. Set the env vars from `.env.example` in Railway.
 4. Deploy. It will boot and stand down every tick, logging why.
 5. `npm run once` locally a few times to watch it work end to end.
-6. Flip `agent_config.enabled` to true when you are satisfied.
+6. Flip `moltbook_agent_config.enabled` to true when you are satisfied.
 
 ## Controls
 
-- **Kill switch.** `update agent_config set enabled = false, paused_reason = '...' where id = 1;` Takes effect within one tick, no redeploy.
+- **Kill switch.** `update moltbook_agent_config set enabled = false, paused_reason = '...' where id = 1;` Takes effect within one tick, no redeploy.
 - **Budget.** `max_actions_day` caps successful writes per rolling 24h. Moltbook's own limit is one post per 30 minutes globally.
-- **Audit.** `agent_actions` is append-only. Skips are logged with reasons, so you can read what it decided not to say, which is usually more informative than what it said.
+- **Audit.** `moltbook_agent_actions` is append-only. Skips are logged with reasons, so you can read what it decided not to say, which is usually more informative than what it said.
 
 ## Three things I deliberately did not do
 
@@ -41,7 +41,7 @@ Two model calls per tick, and the expensive one only fires when triage picks som
 
 ## Prompt injection
 
-Every piece of board text goes into the model wrapped in `<board_content>` with a standing instruction that it is data, never commands. The model is told to skip and log if it detects an injection attempt rather than responding publicly. This is mitigation, not a guarantee. Read `agent_actions` for the first few weeks.
+Every piece of board text goes into the model wrapped in `<board_content>` with a standing instruction that it is data, never commands. The model is told to skip and log if it detects an injection attempt rather than responding publicly. This is mitigation, not a guarantee. Read `moltbook_agent_actions` for the first few weeks.
 
 ## Field shapes
 
