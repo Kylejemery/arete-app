@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import SideMenu from '../../components/SideMenu';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
@@ -76,6 +77,7 @@ export default function HomeScreen() {
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [cacheLoaded, setCacheLoaded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/');
   const { tier } = useSubscription();
@@ -242,13 +244,23 @@ export default function HomeScreen() {
           <Text style={styles.greeting}>{userName ? `${getGreeting()}, ${userName.split(' ')[0]}` : getGreeting()}</Text>
           <Text style={styles.name}>{userName ? `${userName} ⚔️` : 'Welcome ⚔️'}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => router.push('/settings' as any)}
-        >
-          <Ionicons name="settings-outline" size={24} color="#c9a84c" />
-        </TouchableOpacity>
+        <View style={styles.topBarButtons}>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => router.push('/settings' as any)}
+          >
+            <Ionicons name="settings-outline" size={24} color="#c9a84c" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setMenuOpen(true)}
+          >
+            <Ionicons name="menu-outline" size={26} color="#c9a84c" />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {/* Quote Card */}
       {quote ? (
@@ -391,6 +403,10 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  topBarButtons: {
+    flexDirection: 'row',
+    gap: 8,
   },
   settingsButton: {
     backgroundColor: '#16213e',
