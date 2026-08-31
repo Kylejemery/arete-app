@@ -10,7 +10,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
+import { getLocales } from 'expo-localization';
 import { supabase } from '@/lib/supabase';
+
+// External-purchase links are permitted without an entitlement ONLY on the US
+// storefront (App Review Guideline 3.1.1a). Elsewhere (incl. EU/DMA terms)
+// links, prices, and even naming the purchase site require entitlements and
+// commissions — so outside the US the paywall shows features only, with no
+// purchase path (the Netflix model). Web-purchased plans still unlock the app.
+const IS_US_STOREFRONT = (getLocales()[0]?.regionCode ?? 'US') === 'US';
 
 // ─── Web checkout, not IAP ────────────────────────────────────────────────────
 // Subscriptions are purchased on the web (Stripe) and unlock the app through
@@ -125,7 +133,9 @@ export default function PaywallScreen() {
           <Text style={styles.subtitle}>
             More counselors. More conversations.{'\n'}The discipline to actually use them.
           </Text>
-          <Text style={styles.trialLine}>New members start with a 7-day free trial</Text>
+          {IS_US_STOREFRONT && (
+            <Text style={styles.trialLine}>New members start with a 7-day free trial</Text>
+          )}
         </View>
 
         {/* Feature comparison table */}
@@ -147,6 +157,13 @@ export default function PaywallScreen() {
         </View>
 
         {/* Plan cards — informational; purchase happens on the web */}
+        {!IS_US_STOREFRONT ? (
+          <Text style={styles.syncNote}>
+            In-app upgrades aren&apos;t available in your region. If your Arete account
+            has an active plan, Premium unlocks here automatically.
+          </Text>
+        ) : (
+        <>
         <View style={styles.plansContainer}>
           {PLAN_DISPLAY.map(plan => (
             <TouchableOpacity
@@ -189,6 +206,8 @@ export default function PaywallScreen() {
         <Text style={styles.legal}>
           Subscriptions auto-renew. Manage or cancel anytime from your account on the web.
         </Text>
+        </>
+        )}
       </ScrollView>
     </View>
   );

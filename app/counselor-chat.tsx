@@ -344,7 +344,7 @@ export default function CounselorChatScreen() {
               onPress={() => router.push({ pathname: '/paywall', params: { src: 'locked_counselor' } } as any)}
               activeOpacity={0.8}
             >
-              <Text style={styles.accessUpgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>
+              <Text style={styles.accessUpgradeButtonText}>Upgrade to Arete</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.replace('/(tabs)/cabinet' as any)}
