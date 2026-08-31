@@ -16,7 +16,12 @@ export const config = {
     triageModel: process.env.TRIAGE_MODEL || "claude-haiku-4-5-20251001",
   },
   corpus: {
-    url: process.env.ARETE_MCP_URL || null,
+    // Ignore the .env.example placeholder so a copied file doesn't point the
+    // API at a nonexistent MCP server.
+    url:
+      process.env.ARETE_MCP_URL && !process.env.ARETE_MCP_URL.includes("your-mcp-host")
+        ? process.env.ARETE_MCP_URL
+        : null,
     token: process.env.ARETE_MCP_TOKEN || null,
   },
   supabase: { url: need("SUPABASE_URL"), key: need("SUPABASE_SERVICE_KEY") },

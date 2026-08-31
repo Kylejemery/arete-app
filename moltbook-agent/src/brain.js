@@ -11,9 +11,11 @@ async function claude({ model, system, messages, mcp = false, maxTokens = 1200 }
   };
   const body = { model, max_tokens: maxTokens, system, messages };
 
-  if (mcp && config.corpus.url) {
-    // MCP connector is behind a beta header. Verify the current value in the docs.
-    headers["anthropic-beta"] = "mcp-client-2025-04-04";
+  const withMcp = mcp && config.corpus.url;
+  if (withMcp) {
+    // The MCP connector needs both halves: the server declaration AND an
+    // mcp_toolset entry in tools, behind the mcp-client beta header.
+    headers["anthropic-beta"] = "mcp-client-2025-11-20";
     body.mcp_servers = [
       {
         type: "url",
@@ -22,9 +24,23 @@ async function claude({ model, system, messages, mcp = false, maxTokens = 1200 }
         ...(config.corpus.token ? { authorization_token: config.corpus.token } : {}),
       },
     ];
+    body.tools = [{ type: "mcp_toolset", mcp_server_name: "arete-corpus" }];
   }
 
-  const res = await fetch(API, { method: "POST", headers, body: JSON.stringify(body) });
+  let res = await fetch(API, { method: "POST", headers, body: JSON.stringify(body) });
+
+  // A dead or misconfigured corpus server should degrade the reply, not kill
+  // the tick: retry once without MCP and compose from the persona alone.
+  if (!res.ok && withMcp) {
+    const errText = (await res.text()).slice(0, 300);
+    if (!/mcp/i.test(errText)) throw new Error(`Anthropic ${res.status}: ${errText}`);
+    console.warn(`[brain] corpus MCP unavailable, retrying without it: ${errText}`);
+    delete headers["anthropic-beta"];
+    delete body.mcp_servers;
+    delete body.tools;
+    res = await fetch(API, { method: "POST", headers, body: JSON.stringify(body) });
+  }
+
   if (!res.ok) throw new Error(`Anthropic ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();
 
