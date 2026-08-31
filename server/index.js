@@ -30,6 +30,10 @@ const { SELF_KNOWLEDGE } = require('./lib/self-knowledge');
 // is the fire-and-forget retrieval-event logger the retrieval paths below call.
 const observatory = require('./routes/observatory');
 
+// Read-only MCP server over rag_corpus for external agents (the Moltbook
+// agent). Token-gated; disabled until ARETE_MCP_TOKEN is set.
+const corpusMcp = require('./routes/corpus-mcp');
+
 // Canonical concept layer (Observatory repair Part 1) — every raw theme label
 // maps through concept_aliases to one canonical concept; the Observatory only
 // ever speaks canonical names. Unmapped labels resolve lazily and are never
@@ -567,6 +571,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(observatory.router);
+app.use(corpusMcp.router);
 
 // ---------------------------------------------------------------------------
 // Local datetime helper
