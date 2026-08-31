@@ -8,6 +8,31 @@ export const dynamic = 'force-dynamic'
 // request — allow the full five minutes rather than the platform default.
 export const maxDuration = 300
 
+// The admin UIs send language codes ('en' | 'grc' | 'lat') but rag_corpus
+// stores full names, which is what every retrieval function filters on
+// (language = 'english'). Same mapping as corpusLanguage in the queue-based
+// corpus agents (academy/corpus-ingestion/corpus-agent.js and its server
+// twin). A rag_corpus check constraint now rejects unmapped values, so an
+// unknown code fails the ingest loudly instead of writing chunks retrieval
+// can never see.
+function normalizeLanguage(lang: unknown): string {
+  const code = String(lang || 'en').toLowerCase()
+  switch (code) {
+    case 'en':
+    case 'english':
+      return 'english'
+    case 'grc':
+    case 'ancient_greek':
+      return 'ancient_greek'
+    case 'lat':
+    case 'latin':
+      return 'latin'
+    default:
+      // Unmapped values pass through and hit the check constraint.
+      return code
+  }
+}
+
 // POST /api/corpus-ingest/ingest — chunk → embed → upsert the (summary or
 // verbatim) text into rag_corpus. Verbatim requires explicit public-domain
 // confirmation. Admin-gated. Never throws unhandled.
@@ -78,7 +103,7 @@ export async function POST(req: NextRequest) {
       work: work.trim(),
       // Fold an optional page reference into section_label (e.g. "Chapter 3, pp. 81–84").
       section_label: [section?.trim(), pages?.trim()].filter(Boolean).join(', ') || null,
-      language: language || 'en',
+      language: normalizeLanguage(language),
       course_relevance: courseRelevance?.trim() || null,
       difficulty: difficulty?.trim() || null,
       text_type: mode === 'summary' ? (textType || 'summary') : 'public_domain',
