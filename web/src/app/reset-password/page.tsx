@@ -10,16 +10,31 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
+  const [linkInvalid, setLinkInvalid] = useState(false)
 
-  // Supabase processes the #access_token hash automatically on load and
-  // fires PASSWORD_RECOVERY. Wait for that before showing the form.
+  // PKCE recovery links land here as ?code=..., which the Supabase client
+  // exchanges for a session on load. That exchange fires SIGNED_IN (not
+  // PASSWORD_RECOVERY, which only the legacy hash flow emits) and may finish
+  // before this effect runs, so check for an existing session too. If no
+  // session appears, the link was expired or already used.
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+    let active = true
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session) {
         setReady(true)
       }
     })
-    return () => subscription.unsubscribe()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active && session) setReady(true)
+    })
+    const timer = setTimeout(() => {
+      if (active) setLinkInvalid(true)
+    }, 8000)
+    return () => {
+      active = false
+      clearTimeout(timer)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleUpdate = async () => {
@@ -77,6 +92,20 @@ export default function ResetPasswordPage() {
           <div className="bg-green-900/30 border border-green-500/50 rounded-xl p-5 text-center">
             <p className="text-green-400 text-sm font-semibold">Password updated.</p>
             <p className="text-gray-500 text-xs mt-1">Returning home…</p>
+          </div>
+        ) : !ready && linkInvalid ? (
+          <div className="text-center py-10 space-y-4">
+            <p
+              className="text-sm"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+            >
+              This reset link is invalid or has expired.
+            </p>
+            <p className="text-gray-500 text-sm">
+              <a href="/login" className="text-arete-gold font-semibold hover:opacity-80">
+                Request a new one from the sign-in page
+              </a>
+            </p>
           </div>
         ) : !ready ? (
           <div className="text-center py-10">
