@@ -1505,6 +1505,17 @@ app.post('/api/sessions/invite', async (req, res) => {
   const authenticatedUserId = await getAuthenticatedUserId(req);
   if (!authenticatedUserId) return res.status(401).json({ error: 'Unauthorized' });
 
+  // Shared sessions are a Premium feature for the INVITER only. Accepting an
+  // invite stays free — the partner may not have an account yet, and joining
+  // free is the growth loop.
+  const { tier } = await resolveUserTier(req);
+  if (tier === 'free') {
+    return res.status(403).json({
+      error: 'Shared sessions are an Arete Premium feature. Upgrade to invite a partner.',
+      code: 'premium_required',
+    });
+  }
+
   // Invites go out by email (we send it via Resend) or by phone (the app opens
   // the inviter's own Messages composer with the join link, so no SMS provider
   // is needed server-side).

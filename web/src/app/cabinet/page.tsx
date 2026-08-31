@@ -7,6 +7,7 @@ import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } fro
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
+import { useSubscription } from '@/lib/useSubscription';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
 import GlassCard from '@/components/GlassCard';
@@ -34,6 +35,7 @@ function parseBlocks(text: string): { type: 'quote' | 'para'; content: string }[
 
 export default function CabinetPage() {
   const router = useRouter();
+  const { isPremium, loading: subLoading } = useSubscription();
   const [tab, setTab] = useState<Tab>('cabinet');
   const [cabinetMessages, setCabinetMessages] = useState<ThreadMessage[]>([]);
   const [input, setInput] = useState('');
@@ -515,7 +517,16 @@ export default function CabinetPage() {
 
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
-              onClick={() => { setShowInviteModal(true); setInviteError(null); setInviteShare(null); }}
+              onClick={() => {
+                // Shared sessions are Premium: free tier routes to /upgrade.
+                // While the subscription is still loading, open the modal and
+                // let the server-side gate be the backstop.
+                if (!subLoading && !isPremium) {
+                  router.push('/upgrade');
+                  return;
+                }
+                setShowInviteModal(true); setInviteError(null); setInviteShare(null);
+              }}
               className="px-3 py-1 rounded-full text-[10px] tracking-[1.2px] uppercase transition-opacity hover:opacity-80"
               style={{
                 fontFamily: 'var(--font-mono, monospace)',

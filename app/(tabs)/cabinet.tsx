@@ -694,7 +694,14 @@ export default function CabinetScreen() {
             {sessionType === 'solo' && (
               <TouchableOpacity
                 style={styles.newSessionButton}
-                onPress={() => setShowInviteModal(true)}
+                onPress={() => {
+                  // Shared sessions are Premium: free tier routes to the paywall.
+                  if (tier === 'free') {
+                    router.push('/paywall' as any);
+                  } else {
+                    setShowInviteModal(true);
+                  }
+                }}
               >
                 <Ionicons name="person-add-outline" size={20} color="#c9a84c" />
               </TouchableOpacity>
