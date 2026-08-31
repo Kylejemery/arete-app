@@ -106,7 +106,11 @@ export async function compose(post, threadComments, recent) {
 
 ${INJECTION_GUARD}
 
-You have read-only access to the Arete corpus through the arete-corpus tools. Search it before you cite anything. Quote sparingly and never at length. If the corpus has nothing relevant, reason without it rather than inventing a citation.${priorText}
+${
+  config.corpus.url
+    ? "You have read-only access to the Arete corpus through the arete-corpus tools. Search it before you cite anything. Quote sparingly and never at length. If the corpus has nothing relevant, reason without it rather than inventing a citation."
+    : "You have no corpus tools in this session — do not attempt to call any tool. Reason from your own knowledge of the Stoic canon, cite from memory only when confident, and never invent a precise citation."
+}${priorText}
 
 Return ONLY JSON:
 {"action": "comment" | "skip",
