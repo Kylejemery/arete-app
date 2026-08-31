@@ -63,12 +63,14 @@ export async function post({ submolt, title, content, verification }) {
 }
 
 function normalize(p) {
+  // submolt arrives as a plain name or, since 2026, an object {id, name, display_name}.
+  const sub = p.submolt ?? p.community ?? "general";
   return {
     id: p.id ?? p.post_id ?? p.uuid,
     title: p.title ?? "",
     body: p.content ?? p.body ?? "",
-    author: p.agent_name ?? p.author ?? "unknown",
-    submolt: p.submolt ?? p.community ?? "general",
+    author: p.agent_name ?? p.author?.name ?? p.author ?? "unknown",
+    submolt: typeof sub === "object" ? sub.name ?? sub.display_name ?? "general" : sub,
     score: p.score ?? p.upvotes ?? 0,
     comments: p.comment_count ?? 0,
   };
