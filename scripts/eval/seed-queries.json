@@ -1,0 +1,310 @@
+{
+  "comment": "Seed queries for the retrieval eval harness. 40 register user, 20 register scholarly. User queries are written the way a person in difficulty actually types: first person, concrete particulars, no philosophical vocabulary. Scholarly queries use the technical vocabulary on purpose, as a control that isolates the vocabulary gap. Doctrine other queries are ones where the honest answer is that the corpus has little to offer.",
+  "queries": [
+    {
+      "query_text": "my flight got cancelled and I missed my best friend's wedding and I keep replaying what I could have done differently",
+      "doctrine": "dichotomy_of_control",
+      "register": "user"
+    },
+    {
+      "query_text": "I did everything right on the application and they still gave the scholarship to someone else's kid",
+      "doctrine": "dichotomy_of_control",
+      "register": "user"
+    },
+    {
+      "query_text": "my mom keeps drinking no matter what I say and I stay up at night trying to think of the magic words that will fix her",
+      "doctrine": "dichotomy_of_control",
+      "register": "user"
+    },
+    {
+      "query_text": "the rain wrecked the outdoor fundraiser I spent six months planning and people keep saying these things happen but it still feels like it is on me",
+      "doctrine": "dichotomy_of_control",
+      "register": "user"
+    },
+    {
+      "query_text": "What is the dichotomy of control in Epictetus, and how does the opening of the Enchiridion define what is up to us and what is not?",
+      "doctrine": "dichotomy_of_control",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "How do the Stoics distinguish things in our power from things not in our power, and what practical discipline follows from the distinction?",
+      "doctrine": "dichotomy_of_control",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "two people got the exact same email from our boss and one of them shrugged it off in five minutes while I have been sick about it for days",
+      "doctrine": "judgment_not_events",
+      "register": "user"
+    },
+    {
+      "query_text": "the barking from next door does not seem to bother my wife at all but it is wrecking me, same dog, same noise",
+      "doctrine": "judgment_not_events",
+      "register": "user"
+    },
+    {
+      "query_text": "someone cut me off on the highway this morning and my whole day has been off since, which seems like a lot for three seconds of driving",
+      "doctrine": "judgment_not_events",
+      "register": "user"
+    },
+    {
+      "query_text": "I found out the comment that crushed me last month was not even about me, and now I feel ridiculous about the weeks I spent hurting over it",
+      "doctrine": "judgment_not_events",
+      "register": "user"
+    },
+    {
+      "query_text": "Explain the Stoic doctrine that men are disturbed not by things but by their judgments and opinions about things.",
+      "doctrine": "judgment_not_events",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "What role do impressions and assent play in the Stoic account of how the passions arise?",
+      "doctrine": "judgment_not_events",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "my husband is perfectly healthy but I lie awake imagining the phone call that says he is not, and I wonder whether the imagining is doing me any good",
+      "doctrine": "premeditatio",
+      "register": "user"
+    },
+    {
+      "query_text": "the company folding blindsided me even though the signs were all there, how do people brace for the worst without becoming paranoid",
+      "doctrine": "premeditatio",
+      "register": "user"
+    },
+    {
+      "query_text": "every time life goes well for a few weeks I catch myself waiting for the other shoe to drop, and I do not know whether to lean into that or fight it",
+      "doctrine": "premeditatio",
+      "register": "user"
+    },
+    {
+      "query_text": "What is premeditatio malorum, and how does Seneca recommend rehearsing future evils in advance?",
+      "doctrine": "premeditatio",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "How does the Stoic practice of negative visualization fortify the mind against fortune, and where in the Letters does Seneca treat it?",
+      "doctrine": "premeditatio",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "I turned fifty last week and did the math on how many summers I realistically have left and now I cannot stop thinking about the number",
+      "doctrine": "memento_mori",
+      "register": "user"
+    },
+    {
+      "query_text": "the doctor found something on my scan and while we wait for results everything I usually worry about seems completely ridiculous",
+      "doctrine": "memento_mori",
+      "register": "user"
+    },
+    {
+      "query_text": "scrolling my phone at midnight I keep feeling like I am spending something I can never get back, and then I keep scrolling anyway",
+      "doctrine": "memento_mori",
+      "register": "user"
+    },
+    {
+      "query_text": "How does Marcus Aurelius use the contemplation of death in the Meditations, and what is the exercise meant to accomplish?",
+      "doctrine": "memento_mori",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "What do the Stoics mean by memento mori, and how does Seneca argue in De Brevitate Vitae that life is long enough if well used?",
+      "doctrine": "memento_mori",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "I screamed at my son over a broken dish and the look on his face is all I can see now",
+      "doctrine": "anger",
+      "register": "user"
+    },
+    {
+      "query_text": "my coworker presents my work as his in every meeting and I sit there with my jaw clenched, planning what I will say and never saying it",
+      "doctrine": "anger",
+      "register": "user"
+    },
+    {
+      "query_text": "I have been drafting and deleting the same furious text to my sister for three days",
+      "doctrine": "anger",
+      "register": "user"
+    },
+    {
+      "query_text": "when the referee made that call at my daughter's game I heard myself yelling things I would fire an employee for saying",
+      "doctrine": "anger",
+      "register": "user"
+    },
+    {
+      "query_text": "Summarize Seneca's De Ira: what is anger, is it ever useful, and what remedies does he prescribe?",
+      "doctrine": "anger",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "Do the Stoics permit righteous indignation, and how do they answer the Peripatetic claim that anger is useful to the virtuous man?",
+      "doctrine": "anger",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "my college roommate just sold his company for more than I will earn in my life and I could not even bring myself to like the announcement post",
+      "doctrine": "envy",
+      "register": "user"
+    },
+    {
+      "query_text": "everyone in my group chat is buying houses and posting babies and I close the app feeling worse about my own life every single time",
+      "doctrine": "envy",
+      "register": "user"
+    },
+    {
+      "query_text": "my younger brother got promoted past me at the same company and family dinners have become unbearable for me",
+      "doctrine": "envy",
+      "register": "user"
+    },
+    {
+      "query_text": "How do the Stoics analyze envy among the passions, and why is another's good fortune no injury to me?",
+      "doctrine": "envy",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "What remedies does Stoic philosophy prescribe for envy and for comparing one's lot with the fortunes of other men?",
+      "doctrine": "envy",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "I found out what they say about me in the office group chat that I am not in",
+      "doctrine": "reputation",
+      "register": "user"
+    },
+    {
+      "query_text": "a stranger left a one star review calling my bakery a scam and I have read it maybe two hundred times",
+      "doctrine": "reputation",
+      "register": "user"
+    },
+    {
+      "query_text": "I keep rehearsing speeches to defend myself to people who probably have not thought about me since Tuesday",
+      "doctrine": "reputation",
+      "register": "user"
+    },
+    {
+      "query_text": "my post got dogpiled and now thousands of strangers are sure I am a terrible person based on twelve words",
+      "doctrine": "reputation",
+      "register": "user"
+    },
+    {
+      "query_text": "What is the Stoic position on fame and the opinion of the crowd, and why does Marcus Aurelius call posthumous reputation worthless?",
+      "doctrine": "reputation",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "How does Epictetus counsel his students to meet insult, mockery, and slander?",
+      "doctrine": "reputation",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "my dad needs more care than I can give while keeping my job and my marriage together, and something has to give",
+      "doctrine": "duty",
+      "register": "user"
+    },
+    {
+      "query_text": "I can take the easy assignment nobody would blame me for, or the hard one that actually needs doing",
+      "doctrine": "duty",
+      "register": "user"
+    },
+    {
+      "query_text": "I shovel the walk for the old lady next door every winter and lately I resent it, and then I feel bad about resenting it",
+      "doctrine": "duty",
+      "register": "user"
+    },
+    {
+      "query_text": "How do the Stoics understand kathekonta, the appropriate actions, and how do our roles and relations determine them?",
+      "doctrine": "duty",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "What does the Stoic doctrine of oikeiosis imply about our obligations to family, fellow citizens, and strangers?",
+      "doctrine": "duty",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "it has been a year since we buried my mother and everyone else seems to have moved on and I have not",
+      "doctrine": "grief",
+      "register": "user"
+    },
+    {
+      "query_text": "my dog died on Tuesday and I am embarrassed by how completely wrecked I am over an animal",
+      "doctrine": "grief",
+      "register": "user"
+    },
+    {
+      "query_text": "my friend lost her daughter and I am seeing her on Saturday and I have no idea what a person is supposed to say",
+      "doctrine": "grief",
+      "register": "user"
+    },
+    {
+      "query_text": "I still set out two cups for coffee in the morning even though he has been gone since March",
+      "doctrine": "grief",
+      "register": "user"
+    },
+    {
+      "query_text": "How does Seneca console the bereaved in the consolations to Marcia and Polybius, and what limits does he place on mourning?",
+      "doctrine": "grief",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "Is grief compatible with Stoic apatheia, and how do the Stoics distinguish natural tears from the passion of distress?",
+      "doctrine": "grief",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "I know exactly what I need to do every single morning and by ten o'clock I have done none of it, again",
+      "doctrine": "akrasia",
+      "register": "user"
+    },
+    {
+      "query_text": "I promised myself one episode and it is two in the morning and the screen is still on",
+      "doctrine": "akrasia",
+      "register": "user"
+    },
+    {
+      "query_text": "I write the gym into my calendar like it is a meeting with someone I hate",
+      "doctrine": "akrasia",
+      "register": "user"
+    },
+    {
+      "query_text": "How does Epictetus explain why a person who knows the better course still does the worse, and what is the Stoic account of akrasia?",
+      "doctrine": "akrasia",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "How does the Stoic theory of assent explain failures of self mastery in someone who already knows what is right?",
+      "doctrine": "akrasia",
+      "register": "scholarly"
+    },
+    {
+      "query_text": "my landlord is keeping my security deposit even though I have photos proving the apartment was clean, what are my options",
+      "doctrine": "other",
+      "register": "user",
+      "notes": "Legal question. The honest answer is that the corpus has little to offer. A confident retrieval here is a false positive signal."
+    },
+    {
+      "query_text": "is an a1c of 6.1 something to worry about or is that still normal",
+      "doctrine": "other",
+      "register": "user",
+      "notes": "Medical question. The honest answer is that the corpus has little to offer."
+    },
+    {
+      "query_text": "how do I get my toddler to stop throwing food on the floor without turning every dinner into a standoff",
+      "doctrine": "other",
+      "register": "user",
+      "notes": "Practical parenting logistics. The corpus has little concrete to offer beyond generic patience themes."
+    },
+    {
+      "query_text": "my car makes a clicking sound when I turn left, is that going to be expensive",
+      "doctrine": "other",
+      "register": "user",
+      "notes": "Mechanical question. The honest answer is that the corpus has nothing to offer."
+    },
+    {
+      "query_text": "should I take my pension as a lump sum or as the monthly annuity option",
+      "doctrine": "other",
+      "register": "user",
+      "notes": "Financial planning question. The honest answer is that the corpus has little to offer beyond generic wealth themes."
+    }
+  ]
+}
