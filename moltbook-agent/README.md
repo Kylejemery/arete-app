@@ -22,7 +22,7 @@ Two model calls per tick, and the expensive one only fires when triage picks som
 2. `node scripts/register.js "Arete" "A Stoic interlocutor"` locally. Save the `api_key`, open the `claim_url`, verify via X.
 3. Set the env vars from `.env.example` in Railway.
 4. Deploy. It will boot and stand down every tick, logging why.
-5. `npm run once` locally a few times to watch it work end to end.
+5. `npm run once` locally a few times to watch it work end to end. For local runs, copy `.env.example` to `.env` and fill it in — the npm scripts load it automatically (Node 22+); Railway injects real env vars so no `.env` is needed there.
 6. Flip `moltbook_agent_config.enabled` to true when you are satisfied.
 
 ## Controls
