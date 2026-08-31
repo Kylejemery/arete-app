@@ -14,7 +14,12 @@ import GlassCard from '@/components/GlassCard';
 
 type Tab = 'cabinet' | 'shared' | 'counselors';
 
-type SharedMessage = ThreadMessage & { senderName?: string };
+// Shared-thread message: adds 'system' for join/leave notices and a sender
+// label for user bubbles. System rows never go to the model.
+type SharedMessage = Omit<ThreadMessage, 'role'> & {
+  role: 'user' | 'assistant' | 'system';
+  senderName?: string;
+};
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -186,7 +191,7 @@ export default function CabinetPage() {
           .order('created_at', { ascending: true });
         if (data) {
           setSharedMessages(data.map(row => ({
-            role: row.role as 'user' | 'assistant',
+            role: row.role as 'user' | 'assistant' | 'system',
             content: row.content as string,
             timestamp: new Date(row.created_at as string).getTime(),
             counselorId: (row.counselor_id as string) ?? undefined,
@@ -219,7 +224,7 @@ export default function CabinetPage() {
         (payload) => {
           const row = payload.new as {
             user_id: string | null;
-            role: 'user' | 'assistant';
+            role: 'user' | 'assistant' | 'system';
             content: string;
             counselor_id: string | null;
             counselor_name: string | null;
@@ -299,7 +304,8 @@ export default function CabinetPage() {
     setSharedInput('');
     setSharedLoading(true);
     try {
-      const replies: CabinetReply[] = await sendMessageToCabinet(newShared, {
+      // System notices (joined/left) stay out of the model's context.
+      const replies: CabinetReply[] = await sendMessageToCabinet(newShared.filter(m => m.role !== 'system') as ThreadMessage[], {
         sessionType: 'shared',
         sessionId: currentSessionId ?? undefined,
         partnerIds: sessionPartners.map(p => p.userId),
@@ -395,6 +401,14 @@ export default function CabinetPage() {
     // the session on next visit. RLS allows either side to leave. Best-effort.
     if (currentSessionId) {
       try {
+        // Leave notice first (while still a participant, so RLS allows the
+        // insert), then remove the participant rows.
+        await supabase.from('session_messages').insert({
+          session_id: currentSessionId,
+          user_id: currentUserId,
+          role: 'system',
+          content: `${userName} left the session`,
+        });
         await supabase.from('session_participants').delete().eq('session_id', currentSessionId);
       } catch (err) {
         console.warn('[Cabinet] Failed to delete participant rows:', err);
@@ -900,8 +914,15 @@ export default function CabinetPage() {
             )}
 
             {sharedMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'user' ? (
+              <div key={i} className={`flex ${msg.role === 'system' ? 'justify-center' : msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'system' ? (
+                  <span
+                    className="px-3 py-1 rounded-full text-[12px] italic"
+                    style={{ background: 'rgba(255,255,255,0.04)', color: '#9aa0a6' }}
+                  >
+                    {msg.content}
+                  </span>
+                ) : msg.role === 'user' ? (
                   <div
                     className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
                     style={{

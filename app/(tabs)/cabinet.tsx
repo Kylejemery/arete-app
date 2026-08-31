@@ -66,6 +66,13 @@ function getInitials(name: string): string {
   return name.substring(0, 2).toUpperCase();
 }
 
+// Shared-thread message: adds 'system' for join/leave notices and a sender
+// label for user bubbles. System rows never go to the model.
+type SharedMsg = Omit<ThreadMessage, 'role'> & {
+  role: 'user' | 'assistant' | 'system';
+  senderName?: string;
+};
+
 export default function CabinetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -91,7 +98,7 @@ export default function CabinetScreen() {
   // same history and the solo Cabinet thread stays private.
   const [sessionType, setSessionType] = useState<'solo' | 'shared'>('solo');
   const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
-  const [sharedMessages, setSharedMessages] = useState<(ThreadMessage & { senderName?: string })[]>([]);
+  const [sharedMessages, setSharedMessages] = useState<SharedMsg[]>([]);
   const [sharedInput, setSharedInput] = useState('');
   const [sharedLoading, setSharedLoading] = useState(false);
   const sharedScrollRef = useRef<ScrollView>(null);
@@ -250,7 +257,7 @@ export default function CabinetScreen() {
           .order('created_at', { ascending: true });
         if (data) {
           setSharedMessages(data.map(row => ({
-            role: row.role as 'user' | 'assistant',
+            role: row.role as 'user' | 'assistant' | 'system',
             content: row.content as string,
             timestamp: new Date(row.created_at as string).getTime(),
             counselorId: (row.counselor_id as string) ?? undefined,
@@ -284,7 +291,7 @@ export default function CabinetScreen() {
         (payload) => {
           const row = payload.new as {
             user_id: string | null;
-            role: 'user' | 'assistant';
+            role: 'user' | 'assistant' | 'system';
             content: string;
             counselor_id: string | null;
             counselor_name: string | null;
@@ -493,7 +500,7 @@ export default function CabinetScreen() {
       return;
     }
 
-    const userMessage: ThreadMessage & { senderName?: string } = {
+    const userMessage: SharedMsg = {
       role: 'user',
       content: text,
       timestamp: Date.now(),
@@ -506,7 +513,8 @@ export default function CabinetScreen() {
     setTimeout(() => sharedScrollRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const replies = await sendMessageToCabinet(updatedShared, {
+      // System notices (joined/left) stay out of the model's context.
+      const replies = await sendMessageToCabinet(updatedShared.filter(m => m.role !== 'system') as ThreadMessage[], {
         sessionType: 'shared',
         sessionId: currentSessionId ?? undefined,
         partnerIds: sessionPartners.map(p => p.userId),
@@ -618,12 +626,20 @@ export default function CabinetScreen() {
     // delete ("Participants can leave sessions"). Best-effort.
     const sid = currentSessionId;
     if (sid) {
+      // Leave notice first (while still a participant, so RLS allows the
+      // insert), then remove the participant rows. Both best-effort.
+      const leaveNotice = `${userSettings?.user_name || 'Your partner'} left the session`;
       supabase
-        .from('session_participants')
-        .delete()
-        .eq('session_id', sid)
-        .then(({ error }) => {
-          if (error) console.warn('[Cabinet] Failed to end shared session:', error.message);
+        .from('session_messages')
+        .insert({ session_id: sid, user_id: currentUserId, role: 'system', content: leaveNotice })
+        .then(() => {
+          supabase
+            .from('session_participants')
+            .delete()
+            .eq('session_id', sid)
+            .then(({ error }) => {
+              if (error) console.warn('[Cabinet] Failed to end shared session:', error.message);
+            });
         });
     }
     setSessionType('solo');
@@ -993,7 +1009,11 @@ export default function CabinetScreen() {
               </View>
             ) : (
               sharedMessages.map((msg, index) =>
-                msg.role === 'user' ? (
+                msg.role === 'system' ? (
+                  <View key={index} style={styles.systemNoticeRow}>
+                    <Text style={styles.systemNoticeText}>{msg.content}</Text>
+                  </View>
+                ) : msg.role === 'user' ? (
                   <View key={index} style={styles.userMessageRow}>
                     <View style={styles.userBubble}>
                       {msg.senderName && (
@@ -1611,6 +1631,20 @@ const styles = StyleSheet.create({
     color: '#e0d5b5',
     fontSize: 12,
     fontWeight: '600',
+  },
+  systemNoticeRow: {
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  systemNoticeText: {
+    color: '#888',
+    fontSize: 12,
+    fontStyle: 'italic',
+    backgroundColor: '#ffffff0a',
+    borderRadius: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+    overflow: 'hidden',
   },
   sharedSenderLabel: {
     color: '#1a1a2e',

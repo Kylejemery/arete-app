@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
+import PendingInviteModal from '../../components/PendingInviteModal';
 
 function getRoutineTab(): string | null {
   const hour = new Date().getHours();
@@ -22,6 +23,8 @@ export default function TabsLayout() {
   }, []);
 
   return (
+    <>
+    <PendingInviteModal />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#c9a84c',
@@ -113,5 +116,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }

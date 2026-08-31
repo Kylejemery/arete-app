@@ -1616,6 +1616,50 @@ app.post('/api/sessions/invite', async (req, res) => {
   });
 });
 
+// GET /api/sessions/pending-invite — surface an invite in-app for users who
+// never opened the email. Matches pending, unexpired invites addressed to the
+// authenticated user's email (phone invites can't be matched to an account).
+app.get('/api/sessions/pending-invite', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!bearer) return res.status(401).json({ error: 'Unauthorized' });
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(bearer);
+  if (authErr || !user) return res.status(401).json({ error: 'Unauthorized' });
+
+  const email = (user.email || '').trim();
+  if (!email) return res.json({ invite: null });
+
+  // ilike gives case-insensitive matching; escape its wildcards so an email
+  // containing _ can't match other addresses.
+  const emailPattern = email.replace(/[\\%_]/g, '\\$&');
+  const { data: rows, error } = await supabase
+    .from('session_participants')
+    .select('invite_token, invited_by, invite_expires_at')
+    .eq('status', 'pending')
+    .ilike('invite_email', emailPattern)
+    .neq('invited_by', user.id)
+    .gt('invite_expires_at', new Date().toISOString())
+    .order('invite_expires_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    console.error('[sessions/pending-invite] lookup error:', error.message);
+    return res.status(500).json({ error: 'Failed to look up invites' });
+  }
+  const row = rows?.[0];
+  if (!row?.invite_token) return res.json({ invite: null });
+
+  let inviterName = 'Someone';
+  try {
+    const { data: inv } = await supabase
+      .from('user_settings').select('user_name').eq('user_id', row.invited_by).maybeSingle();
+    if (inv?.user_name) inviterName = inv.user_name;
+  } catch { /* fall back to 'Someone' */ }
+
+  return res.json({
+    invite: { token: row.invite_token, inviterName, expiresAt: row.invite_expires_at },
+  });
+});
+
 // GET /api/sessions/join — validate token, then bounce into the app deep link.
 app.get('/api/sessions/join', async (req, res) => {
   const token = req.query.token;
@@ -1700,6 +1744,20 @@ app.post('/api/sessions/accept', async (req, res) => {
     console.error('[sessions/accept] update error:', updateErr.message);
     return res.status(500).json({ error: 'Failed to accept invite' });
   }
+
+  // Drop a system notice into the shared thread so both sides see the join.
+  // Best-effort; realtime delivers it to the inviter, history to the joiner.
+  try {
+    await supabase.from('session_messages').insert({
+      session_id: row.session_id,
+      user_id: authenticatedUserId,
+      role: 'system',
+      content: `${partnerDisplayName || 'Your partner'} joined the session`,
+    });
+  } catch (err) {
+    console.error('[sessions/accept] join notice failed:', err.message || err);
+  }
+
   return res.json({ success: true, sessionId: row.session_id });
 });
 
