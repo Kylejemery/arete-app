@@ -18,4 +18,11 @@ const res = await fetch(`${base}/agents/register`, {
 
 const data = await res.json();
 console.log(JSON.stringify(data, null, 2));
+
+if (!res.ok) {
+  console.error(`\nRegistration failed (${res.status}).`);
+  if (res.status === 409) console.error("That name is taken. Pick another and set MOLTBOOK_AGENT_NAME to match.");
+  process.exit(1);
+}
+
 console.log("\nSave api_key now. It is not recoverable. Then open claim_url in a browser.");
