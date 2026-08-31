@@ -70,7 +70,7 @@ export default function CabinetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const swipeHandlers = useSwipeNavigation('/cabinet');
-  const [activeTab, setActiveTab] = useState<'cabinet' | 'counselors'>('cabinet');
+  const [activeTab, setActiveTab] = useState<'cabinet' | 'shared' | 'counselors'>('cabinet');
   const mountedRef = useRef(false);
 
   // --- Cabinet (Group) Tab State ---
@@ -86,8 +86,15 @@ export default function CabinetScreen() {
   const [showSearch, setShowSearch] = useState(false);
 
   // --- Shared session state (Arete for Couples) ---
+  // The shared conversation lives in its own tab, backed by session_messages
+  // (the server mirrors every shared turn there), so both partners see the
+  // same history and the solo Cabinet thread stays private.
   const [sessionType, setSessionType] = useState<'solo' | 'shared'>('solo');
   const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
+  const [sharedMessages, setSharedMessages] = useState<(ThreadMessage & { senderName?: string })[]>([]);
+  const [sharedInput, setSharedInput] = useState('');
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const sharedScrollRef = useRef<ScrollView>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -213,13 +220,50 @@ export default function CabinetScreen() {
     const sid = params.sharedSessionId;
     if (sid && !consumedSharedSessionRef.current) {
       consumedSharedSessionRef.current = true;
-      setActiveTab('cabinet');
+      setActiveTab('shared');
       setSessionType('shared');
       setCurrentSessionId(String(sid));
       setSessionPartners([{ userId: 'partner', displayName: params.sharedPartnerName ? String(params.sharedPartnerName) : 'Partner' }]);
       router.setParams({ sharedSessionId: undefined, sharedPartnerName: undefined });
     }
   }, [params.sharedSessionId, params.sharedPartnerName, router]);
+
+  // Resolves a sender's display name for shared-tab labels.
+  const senderNameFor = useCallback((senderId: string | null) => {
+    if (!senderId) return undefined;
+    if (senderId === currentUserId) return userSettings?.user_name || 'You';
+    const partner = sessionPartners.find(p => p.userId === senderId);
+    return partner?.displayName || 'Partner';
+  }, [currentUserId, userSettings?.user_name, sessionPartners]);
+
+  // Load the shared conversation history from session_messages. Both sides
+  // read the same rows (RLS: participants + conversation owner), so the
+  // shared tab shows one canonical thread on every device.
+  useEffect(() => {
+    if (sessionType !== 'shared' || !currentSessionId) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('session_messages')
+          .select('user_id, role, content, counselor_id, counselor_name, created_at')
+          .eq('session_id', currentSessionId)
+          .order('created_at', { ascending: true });
+        if (data) {
+          setSharedMessages(data.map(row => ({
+            role: row.role as 'user' | 'assistant',
+            content: row.content as string,
+            timestamp: new Date(row.created_at as string).getTime(),
+            counselorId: (row.counselor_id as string) ?? undefined,
+            counselorName: (row.counselor_name as string) ?? undefined,
+            senderName: row.role === 'user' ? senderNameFor(row.user_id as string | null) : undefined,
+          })));
+        }
+      } catch (err) {
+        console.warn('[Cabinet] Failed to load shared history:', err);
+      }
+    })();
+    // senderNameFor changes when partners resolve; reload then to fix labels.
+  }, [sessionType, currentSessionId, senderNameFor]);
 
   // Realtime sync for shared sessions. The server mirrors each shared turn
   // (user prompt + counselor replies) into session_messages; rows tagged with
@@ -248,7 +292,7 @@ export default function CabinetScreen() {
           };
           // Skip our own messages — they're already in state optimistically.
           if (row.user_id && row.user_id === currentUserId) return;
-          setMessages(prev => [
+          setSharedMessages(prev => [
             ...prev,
             {
               role: row.role,
@@ -256,8 +300,10 @@ export default function CabinetScreen() {
               timestamp: new Date(row.created_at).getTime(),
               counselorId: row.counselor_id ?? undefined,
               counselorName: row.counselor_name ?? undefined,
+              senderName: row.role === 'user' ? senderNameFor(row.user_id) : undefined,
             },
           ]);
+          setTimeout(() => sharedScrollRef.current?.scrollToEnd({ animated: true }), 100);
         }
       )
       .subscribe();
@@ -265,7 +311,7 @@ export default function CabinetScreen() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionType, currentSessionId, currentUserId]);
+  }, [sessionType, currentSessionId, currentUserId, senderNameFor]);
 
   const loadCounselorsData = useCallback(async () => {
     try {
@@ -347,11 +393,7 @@ export default function CabinetScreen() {
             const updated = [...prev, userMessage];
             setIsLoading(true);
             appendMessages('cabinet', [userMessage]);
-            sendMessageToCabinet(updated, {
-              sessionType,
-              sessionId: currentSessionId ?? undefined,
-              partnerIds: sessionPartners.map(p => p.userId),
-            }).then(replies => {
+            sendMessageToCabinet(updated).then(replies => {
               const assistantMessages = repliesToMessages(replies);
               setMessages(u => [...u, ...assistantMessages]);
               setIsLoading(false);
@@ -414,11 +456,9 @@ export default function CabinetScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const replies = await sendMessageToCabinet(updatedMessages, {
-        sessionType,
-        sessionId: currentSessionId ?? undefined,
-        partnerIds: sessionPartners.map(p => p.userId),
-      });
+      // The Cabinet tab is always the private solo thread; the shared
+      // conversation lives in the Shared tab with its own send path.
+      const replies = await sendMessageToCabinet(updatedMessages);
       const assistantMessages = repliesToMessages(replies);
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
@@ -436,6 +476,56 @@ export default function CabinetScreen() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Send into the shared session: optimistic append locally, the server
+  // mirrors the turn into session_messages for the partner's realtime feed.
+  const handleSendShared = async () => {
+    const text = sharedInput.trim();
+    if (!text || sharedLoading) return;
+
+    const dateKey = getTodayDateKey();
+    const stored = await AsyncStorage.getItem(dateKey);
+    const count = stored !== null ? parseInt(stored, 10) : 0;
+    if (maxMessages !== null && count >= maxMessages) {
+      router.push('/paywall' as any);
+      return;
+    }
+
+    const userMessage: ThreadMessage & { senderName?: string } = {
+      role: 'user',
+      content: text,
+      timestamp: Date.now(),
+      senderName: userSettings?.user_name || 'You',
+    };
+    const updatedShared = [...sharedMessages, userMessage];
+    setSharedMessages(updatedShared);
+    setSharedInput('');
+    setSharedLoading(true);
+    setTimeout(() => sharedScrollRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const replies = await sendMessageToCabinet(updatedShared, {
+        sessionType: 'shared',
+        sessionId: currentSessionId ?? undefined,
+        partnerIds: sessionPartners.map(p => p.userId),
+      });
+      const assistantMessages = repliesToMessages(replies);
+      setSharedMessages(prev => [...prev, ...assistantMessages]);
+      const newCount = count + 1;
+      await AsyncStorage.setItem(dateKey, String(newCount));
+      setMessageCount(newCount);
+      setTimeout(() => sharedScrollRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (e) {
+      setSharedMessages(prev => prev.slice(0, -1));
+      if (e instanceof DailyLimitError) {
+        setDailyLimitReached(true);
+      } else if (e instanceof MessageLimitError) {
+        router.push('/paywall' as any);
+      }
+    } finally {
+      setSharedLoading(false);
     }
   };
 
@@ -499,6 +589,7 @@ export default function CabinetScreen() {
         setSessionPartners([{ userId: 'pending', displayName: contact }]);
         setShowInviteModal(false);
         setInviteEmail('');
+        setActiveTab('shared');
         if (isPhone && data?.smsBody) {
           // iOS wants '&' before the body param in sms: URLs; Android wants '?'.
           const sep = Platform.OS === 'ios' ? '&' : '?';
@@ -537,6 +628,8 @@ export default function CabinetScreen() {
     }
     setSessionType('solo');
     setSessionPartners([]);
+    setSharedMessages([]);
+    setActiveTab('cabinet');
   };
 
   const futureName = userSettings?.user_name
@@ -586,16 +679,19 @@ export default function CabinetScreen() {
             </>
           )}
         </View>
+        {activeTab === 'shared' && (
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.newSessionButton}
+              onPress={handleEndSharedSession}
+            >
+              <Ionicons name="exit-outline" size={20} color="#c9a84c" />
+            </TouchableOpacity>
+          </View>
+        )}
         {activeTab === 'cabinet' && (
           <View style={styles.headerButtons}>
-            {sessionType === 'shared' ? (
-              <TouchableOpacity
-                style={styles.newSessionButton}
-                onPress={handleEndSharedSession}
-              >
-                <Ionicons name="exit-outline" size={20} color="#c9a84c" />
-              </TouchableOpacity>
-            ) : (
+            {sessionType === 'solo' && (
               <TouchableOpacity
                 style={styles.newSessionButton}
                 onPress={() => setShowInviteModal(true)}
@@ -641,6 +737,16 @@ export default function CabinetScreen() {
             Cabinet
           </Text>
         </TouchableOpacity>
+        {sessionType === 'shared' && (
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'shared' && styles.tabActive]}
+            onPress={() => setActiveTab('shared')}
+          >
+            <Text style={[styles.tabText, activeTab === 'shared' && styles.tabTextActive]}>
+              Shared
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[styles.tab, activeTab === 'counselors' && styles.tabActive]}
           onPress={() => setActiveTab('counselors')}
@@ -677,16 +783,6 @@ export default function CabinetScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
         >
-          {/* Shared session banner */}
-          {sessionType === 'shared' && sessionPartners.some(p => p.userId === 'pending') && (
-            <View style={styles.sharedBanner}>
-              <Ionicons name="people-outline" size={16} color="#c9a84c" />
-              <Text style={styles.sharedBannerText}>
-                Shared session active — waiting for partner to join
-              </Text>
-            </View>
-          )}
-
           {/* Messages */}
           <ScrollView
             ref={scrollViewRef}
@@ -840,6 +936,113 @@ export default function CabinetScreen() {
               )}
             </>
           )}
+        </KeyboardAvoidingView>
+      ) : activeTab === 'shared' ? (
+        /* Shared Session Tab — one canonical thread both partners see */
+        <KeyboardAvoidingView
+          style={styles.flex}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+        >
+          {/* Members of the group */}
+          <View style={styles.participantsRow}>
+            {[
+              { userId: currentUserId ?? 'me', displayName: userSettings?.user_name || 'You', pending: false },
+              ...sessionPartners.map(p => ({ userId: p.userId, displayName: p.displayName, pending: p.userId === 'pending' })),
+            ].map((member, i) => (
+              <View key={`${member.userId}-${i}`} style={styles.participantChip}>
+                <View style={[styles.participantAvatar, member.pending && styles.participantAvatarPending]}>
+                  <Text style={styles.participantInitials}>{getInitials(member.displayName)}</Text>
+                </View>
+                <Text style={styles.participantName} numberOfLines={1}>
+                  {member.displayName}{member.pending ? ' · invited' : ''}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {sessionPartners.some(p => p.userId === 'pending') && (
+            <View style={styles.sharedBanner}>
+              <Ionicons name="people-outline" size={16} color="#c9a84c" />
+              <Text style={styles.sharedBannerText}>
+                Waiting for your partner to join — they can start talking as soon as they accept.
+              </Text>
+            </View>
+          )}
+
+          <ScrollView
+            ref={sharedScrollRef}
+            style={styles.messagesContainer}
+            contentContainerStyle={styles.messagesContent}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={() => sharedScrollRef.current?.scrollToEnd({ animated: true })}
+          >
+            {sharedMessages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="people-outline" size={56} color="#c9a84c44" />
+                <Text style={styles.emptyQuote}>
+                  &ldquo;This is your shared session. Your counselors will speak to both of you together.&rdquo;
+                </Text>
+              </View>
+            ) : (
+              sharedMessages.map((msg, index) =>
+                msg.role === 'user' ? (
+                  <View key={index} style={styles.userMessageRow}>
+                    <View style={styles.userBubble}>
+                      {msg.senderName && (
+                        <Text style={styles.sharedSenderLabel}>{msg.senderName}</Text>
+                      )}
+                      <Text style={styles.userText} selectable>{msg.content}</Text>
+                    </View>
+                  </View>
+                ) : (
+                  <View key={index} style={styles.cabinetMessageRow}>
+                    <View style={styles.cabinetBubble}>
+                      <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                      <Text style={styles.cabinetText} selectable>{msg.content}</Text>
+                    </View>
+                  </View>
+                )
+              )
+            )}
+
+            {sharedLoading && (
+              <View style={styles.cabinetMessageRow}>
+                <View style={styles.cabinetBubble}>
+                  <Text style={styles.cabinetLabel}>The Cabinet</Text>
+                  <View style={styles.loadingRow}>
+                    <ActivityIndicator size="small" color="#c9a84c" />
+                    <Text style={styles.loadingText}>The Cabinet is convening...</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.inputBar}>
+            <TextInput
+              style={styles.textInput}
+              placeholder="Speak to the Cabinet together..."
+              placeholderTextColor="#555"
+              value={sharedInput}
+              onChangeText={setSharedInput}
+              multiline
+              maxLength={2000}
+              onSubmitEditing={handleSendShared}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!sharedInput.trim() || sharedLoading) && styles.sendButtonDisabled]}
+              onPress={handleSendShared}
+              disabled={!sharedInput.trim() || sharedLoading}
+            >
+              <Ionicons
+                name="send"
+                size={18}
+                color={!sharedInput.trim() || sharedLoading ? '#555' : '#1a1a2e'}
+              />
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       ) : (
         /* Counselors Tab */
@@ -1359,6 +1562,56 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   // Shared session (Arete for Couples)
+  participantsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a3e',
+  },
+  participantChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#c9a84c11',
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+    borderRadius: 16,
+    paddingVertical: 4,
+    paddingLeft: 4,
+    paddingRight: 10,
+    maxWidth: 180,
+  },
+  participantAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#c9a84c33',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  participantAvatarPending: {
+    backgroundColor: '#88888833',
+  },
+  participantInitials: {
+    color: '#c9a84c',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  participantName: {
+    color: '#e0d5b5',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sharedSenderLabel: {
+    color: '#1a1a2e',
+    fontSize: 11,
+    fontWeight: '700',
+    opacity: 0.7,
+    marginBottom: 3,
+  },
   sharedSessionLabel: {
     fontSize: 11,
     color: '#c9a84c',

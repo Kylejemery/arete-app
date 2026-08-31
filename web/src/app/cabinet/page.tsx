@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
@@ -11,7 +11,9 @@ import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
 import GlassCard from '@/components/GlassCard';
 
-type Tab = 'cabinet' | 'counselors';
+type Tab = 'cabinet' | 'shared' | 'counselors';
+
+type SharedMessage = ThreadMessage & { senderName?: string };
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -46,6 +48,13 @@ export default function CabinetPage() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [sessionType, setSessionType] = useState<'solo' | 'shared'>('solo');
   const [sessionPartners, setSessionPartners] = useState<{ userId: string; displayName: string }[]>([]);
+  // The shared conversation lives in its own tab, backed by session_messages,
+  // so both partners see one canonical thread and the solo Cabinet thread
+  // stays private.
+  const [sharedMessages, setSharedMessages] = useState<SharedMessage[]>([]);
+  const [sharedInput, setSharedInput] = useState('');
+  const [sharedLoading, setSharedLoading] = useState(false);
+  const [userName, setUserName] = useState<string>('You');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteContact, setInviteContact] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
@@ -62,6 +71,7 @@ export default function CabinetPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const counselorEndRef = useRef<HTMLDivElement>(null);
+  const sharedEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -75,6 +85,7 @@ export default function CabinetPage() {
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
+      setUserName(settings.user_name);
 
       setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
 
@@ -152,6 +163,41 @@ export default function CabinetPage() {
     })();
   }, []);
 
+  // Resolves a sender's display name for shared-tab labels.
+  const senderNameFor = useCallback((senderId: string | null) => {
+    if (!senderId) return undefined;
+    if (senderId === currentUserId) return userName;
+    const partner = sessionPartners.find(p => p.userId === senderId);
+    return partner?.displayName || 'Partner';
+  }, [currentUserId, userName, sessionPartners]);
+
+  // Load the shared conversation history from session_messages. Both sides
+  // read the same rows (RLS: participants + conversation owner).
+  useEffect(() => {
+    if (sessionType !== 'shared' || !currentSessionId) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('session_messages')
+          .select('user_id, role, content, counselor_id, counselor_name, created_at')
+          .eq('session_id', currentSessionId)
+          .order('created_at', { ascending: true });
+        if (data) {
+          setSharedMessages(data.map(row => ({
+            role: row.role as 'user' | 'assistant',
+            content: row.content as string,
+            timestamp: new Date(row.created_at as string).getTime(),
+            counselorId: (row.counselor_id as string) ?? undefined,
+            counselorName: (row.counselor_name as string) ?? undefined,
+            senderName: row.role === 'user' ? senderNameFor(row.user_id as string | null) : undefined,
+          })));
+        }
+      } catch (err) {
+        console.warn('[Cabinet] Failed to load shared history:', err);
+      }
+    })();
+  }, [sessionType, currentSessionId, senderNameFor]);
+
   // Realtime sync for shared sessions: the server mirrors each shared turn
   // into session_messages; rows tagged with our own user_id are skipped
   // because they're already shown optimistically.
@@ -178,7 +224,7 @@ export default function CabinetPage() {
             created_at: string;
           };
           if (row.user_id && row.user_id === currentUserId) return;
-          setCabinetMessages(prev => [
+          setSharedMessages(prev => [
             ...prev,
             {
               role: row.role,
@@ -186,6 +232,7 @@ export default function CabinetPage() {
               timestamp: new Date(row.created_at).getTime(),
               counselorId: row.counselor_id ?? undefined,
               counselorName: row.counselor_name ?? undefined,
+              senderName: row.role === 'user' ? senderNameFor(row.user_id) : undefined,
             },
           ]);
         }
@@ -195,10 +242,11 @@ export default function CabinetPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionType, currentSessionId, currentUserId]);
+  }, [sessionType, currentSessionId, currentUserId, senderNameFor]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cabinetMessages]);
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
+  useEffect(() => { sharedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sharedMessages]);
 
   const handleSendCabinet = async () => {
     if (!input.trim() || isLoading) return;
@@ -208,11 +256,9 @@ export default function CabinetPage() {
     setInput('');
     setIsLoading(true);
     try {
-      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages, {
-        sessionType,
-        sessionId: currentSessionId ?? undefined,
-        partnerIds: sessionPartners.map(p => p.userId),
-      });
+      // The Cabinet tab is always the private solo thread; the shared
+      // conversation lives in the Shared tab with its own send path.
+      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages);
       const assistantMsgs: ThreadMessage[] = replies.map(r => ({
         role: 'assistant',
         content: r.text,
@@ -234,6 +280,41 @@ export default function CabinetPage() {
     if (!confirm('Clear the entire Cabinet conversation? This cannot be undone.')) return;
     await clearThread('cabinet');
     setCabinetMessages([]);
+  };
+
+  // Send into the shared session: optimistic append locally, the server
+  // mirrors the turn into session_messages for the partner's realtime feed.
+  const handleSendShared = async () => {
+    if (!sharedInput.trim() || sharedLoading) return;
+    const userMsg: SharedMessage = {
+      role: 'user',
+      content: sharedInput.trim(),
+      timestamp: Date.now(),
+      senderName: userName,
+    };
+    const newShared = [...sharedMessages, userMsg];
+    setSharedMessages(newShared);
+    setSharedInput('');
+    setSharedLoading(true);
+    try {
+      const replies: CabinetReply[] = await sendMessageToCabinet(newShared, {
+        sessionType: 'shared',
+        sessionId: currentSessionId ?? undefined,
+        partnerIds: sessionPartners.map(p => p.userId),
+      });
+      const assistantMsgs: SharedMessage[] = replies.map(r => ({
+        role: 'assistant',
+        content: r.text,
+        timestamp: Date.now(),
+        counselorId: r.counselorId ?? undefined,
+        counselorName: r.counselorName ?? undefined,
+      }));
+      setSharedMessages(prev => [...prev, ...assistantMsgs]);
+    } catch {
+      setSharedMessages(prev => prev.slice(0, -1));
+    } finally {
+      setSharedLoading(false);
+    }
   };
 
   const handleSendInvite = async () => {
@@ -275,6 +356,7 @@ export default function CabinetPage() {
       if (response.ok && data?.success) {
         setSessionType('shared');
         setSessionPartners([{ userId: 'pending', displayName: contact }]);
+        setTab('shared');
         setInviteContact('');
         if (isPhone && data?.smsBody) {
           // Keep the modal open showing the prewritten text to copy.
@@ -318,6 +400,8 @@ export default function CabinetPage() {
     }
     setSessionType('solo');
     setSessionPartners([]);
+    setSharedMessages([]);
+    setTab('cabinet');
     try {
       const ownId = await getOrCreateCabinetConversationId();
       setCurrentSessionId(ownId);
@@ -497,7 +581,7 @@ export default function CabinetPage() {
           className="flex gap-1 p-1 rounded-xl"
           style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
-          {(['cabinet', 'counselors'] as Tab[]).map(t => (
+          {((sessionType === 'shared' ? ['cabinet', 'shared', 'counselors'] : ['cabinet', 'counselors']) as Tab[]).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -728,6 +812,211 @@ export default function CabinetPage() {
             <button
               onClick={handleSendCabinet}
               disabled={isLoading || !input.trim()}
+              className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Shared session tab ───────────────────────────────────── */}
+      {tab === 'shared' && (
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Members of the group */}
+          <div className="px-4 pt-3 pb-2 flex flex-wrap gap-2 flex-shrink-0 items-center">
+            {[
+              { userId: currentUserId ?? 'me', displayName: userName, pending: false },
+              ...sessionPartners.map(p => ({ userId: p.userId, displayName: p.displayName, pending: p.userId === 'pending' })),
+            ].map((member, i) => (
+              <div
+                key={`${member.userId}-${i}`}
+                className="flex items-center gap-2 pl-1 pr-3 py-1 rounded-full"
+                style={{
+                  background: 'rgba(201,168,76,0.08)',
+                  border: '1px solid rgba(201,168,76,0.3)',
+                }}
+              >
+                <div
+                  className="flex items-center justify-center rounded-full flex-shrink-0"
+                  style={{
+                    width: 24, height: 24,
+                    background: member.pending ? 'rgba(255,255,255,0.08)' : 'rgba(201,168,76,0.2)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                    fontSize: 8, fontWeight: 700,
+                    color: member.pending ? '#9aa0a6' : '#c9a84c',
+                  }}
+                >
+                  {getInitials(member.displayName)}
+                </div>
+                <span
+                  className="text-[11px] truncate max-w-[140px]"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e6eef8' }}
+                >
+                  {member.displayName}{member.pending ? ' · invited' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {sessionPartners.some(p => p.userId === 'pending') && (
+            <div className="mx-4 mb-1 flex-shrink-0">
+              <p className="text-[12px]" style={{ color: '#9aa0a6' }}>
+                Waiting for your partner to join — they can start talking as soon as they accept.
+              </p>
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-2 flex flex-col gap-3.5">
+            {sharedMessages.length === 0 && !sharedLoading && (
+              <div className="flex flex-col items-center justify-center flex-1 py-16 text-center">
+                <div className="text-[40px] mb-3 opacity-15">👥</div>
+                <p
+                  className="text-[15px] italic"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
+                >
+                  This is your shared session.
+                </p>
+                <p
+                  className="text-[11px] tracking-[1px] uppercase mt-1"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
+                >
+                  Your counselors speak to both of you together.
+                </p>
+              </div>
+            )}
+
+            {sharedMessages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'user' ? (
+                  <div
+                    className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
+                    style={{
+                      background: 'rgba(201,168,76,0.12)',
+                      border: '1px solid rgba(201,168,76,0.2)',
+                      borderRadius: '18px 18px 6px 18px',
+                      fontFamily: 'var(--font-serif, Georgia, serif)',
+                      color: '#e6eef8',
+                    }}
+                  >
+                    {msg.senderName && (
+                      <div
+                        className="text-[10px] tracking-[1px] uppercase mb-1"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                      >
+                        {msg.senderName}
+                      </div>
+                    )}
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="max-w-[90%] flex gap-3 items-start">
+                    <div
+                      className="flex-shrink-0 flex items-center justify-center rounded-full mt-1"
+                      style={{
+                        width: 32, height: 32,
+                        background: 'rgba(201,168,76,0.15)',
+                        border: '1px solid rgba(201,168,76,0.3)',
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: 9, fontWeight: 700,
+                        color: '#c9a84c',
+                      }}
+                    >
+                      {msg.counselorName ? getInitials(msg.counselorName) : 'TC'}
+                    </div>
+                    <div
+                      className="flex flex-col gap-2 px-4 py-3 flex-1"
+                      style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: '18px 18px 18px 6px',
+                      }}
+                    >
+                      <div
+                        className="text-[10px] tracking-[1.2px] uppercase"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                      >
+                        {msg.counselorName || 'The Cabinet'}
+                      </div>
+                      {parseBlocks(msg.content).map((block, bi) =>
+                        block.type === 'quote' ? (
+                          <div
+                            key={bi}
+                            className="pl-3 py-1 italic text-[14px] leading-relaxed"
+                            style={{
+                              borderLeft: '3px solid rgba(201,168,76,0.5)',
+                              fontFamily: 'var(--font-serif, Georgia, serif)',
+                              color: '#c9a84c',
+                            }}
+                          >
+                            &ldquo;{block.content}&rdquo;
+                          </div>
+                        ) : (
+                          <p
+                            key={bi}
+                            className="text-[14px] leading-relaxed"
+                            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                          >
+                            {block.content}
+                          </p>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {sharedLoading && (
+              <div className="flex justify-start">
+                <div
+                  className="px-4 py-3 italic text-[14px]"
+                  style={{
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '18px 18px 18px 6px',
+                    fontFamily: 'var(--font-serif, Georgia, serif)',
+                    color: '#9aa0a6',
+                  }}
+                >
+                  The Cabinet deliberates…
+                </div>
+              </div>
+            )}
+            <div ref={sharedEndRef} />
+          </div>
+
+          {/* Composer */}
+          <div
+            className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
+            style={{
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(10,14,28,0.5)',
+              backdropFilter: 'blur(8px)',
+            }}
+          >
+            <textarea
+              className="flex-1 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                borderRadius: 22,
+                color: '#e6eef8',
+                fontFamily: 'var(--font-serif, Georgia, serif)',
+              }}
+              rows={2}
+              placeholder="Speak to the Cabinet together…"
+              value={sharedInput}
+              onChange={e => setSharedInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendShared(); }
+              }}
+            />
+            <button
+              onClick={handleSendShared}
+              disabled={sharedLoading || !sharedInput.trim()}
               className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
             >
