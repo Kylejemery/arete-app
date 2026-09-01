@@ -66,6 +66,12 @@
         }
       ],
       [
+        "expo-calendar",
+        {
+          "calendarPermission": "Arete reads today's events so your Cabinet of counselors can speak to the shape of your day — never to sell or share."
+        }
+      ],
+      [
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Arete reads your sleep, steps, and exercise minutes so your Cabinet of counselors can speak to your real days — never to sell or share.",

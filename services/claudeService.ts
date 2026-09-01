@@ -5,6 +5,7 @@ import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
 import { buildFocusContext, buildMetaSignalsContext } from '../lib/cabinetSignals';
 import { buildHealthContext } from '../lib/health';
+import { buildCalendarContext } from '../lib/calendar';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -533,6 +534,13 @@ export async function gatherAppContext(): Promise<string> {
     if (healthContext) {
       lines.push('');
       lines.push(healthContext);
+    }
+
+    // Calendar (opt-in, read-only): today's agenda — same contract and gate.
+    const calendarContext = await buildCalendarContext(attendTier !== 'free');
+    if (calendarContext) {
+      lines.push('');
+      lines.push(calendarContext);
     }
   } catch { /* skip */ }
 

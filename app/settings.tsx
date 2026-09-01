@@ -53,6 +53,14 @@ import {
   getShareHealthWithCabinet,
   setShareHealthWithCabinet,
 } from '@/lib/health';
+import {
+  calendarIsSupported,
+  calendarIsConnected,
+  connectCalendar,
+  disconnectCalendar,
+  getShareCalendarWithCabinet,
+  setShareCalendarWithCabinet,
+} from '@/lib/calendar';
 
 // Native FamilyActivityPicker sheet — only in builds with the module.
 let AttendSelectionSheet: any = null;
@@ -175,6 +183,18 @@ export default function SettingsScreen() {
     (async () => {
       setHealthConnected(await healthIsConnected());
       setShareHealth(await getShareHealthWithCabinet());
+    })().catch(() => {});
+  }, []);
+
+  // Calendar & Cabinet (builds with expo-calendar)
+  const [calConnected, setCalConnected] = useState(false);
+  const [shareCalendar, setShareCalendar] = useState(true);
+
+  useEffect(() => {
+    if (!calendarIsSupported()) return;
+    (async () => {
+      setCalConnected(await calendarIsConnected());
+      setShareCalendar(await getShareCalendarWithCabinet());
     })().catch(() => {});
   }, []);
 
@@ -897,6 +917,75 @@ export default function SettingsScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.attendBlocklistText}>Disconnect Apple Health</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* Calendar & Cabinet — today's agenda, read-only. Rendered on any
+          build with expo-calendar (iOS and Android). */}
+      {calendarIsSupported() && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🗓️ Calendar & Cabinet</Text>
+          {!calConnected ? (
+            <>
+              <Text style={styles.attendToggleHint}>
+                Connect your calendar (read-only) so your counselors can speak to the
+                shape of your day — what's next, how packed it is, whether tomorrow
+                starts early.
+              </Text>
+              <TouchableOpacity
+                style={styles.attendBlocklistButton}
+                onPress={async () => {
+                  const result = await connectCalendar();
+                  if (result === 'granted') setCalConnected(true);
+                  else if (result === 'denied') {
+                    Alert.alert('Calendar Access Needed', 'Enable calendar access for Arete in system Settings.');
+                  }
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.attendBlocklistText}>Connect Calendar…</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <View style={styles.cardHeader}>
+                <Text style={styles.attendToggleLabel}>
+                  Cabinet sees today's calendar{tier === 'free' ? <Text style={styles.premiumTag}>  PREMIUM</Text> : null}
+                </Text>
+                <Switch
+                  value={tier === 'free' ? false : shareCalendar}
+                  onValueChange={(val) => {
+                    if (tier === 'free') {
+                      router.push({ pathname: '/paywall', params: { src: 'calendar_cabinet_sight' } } as any);
+                      return;
+                    }
+                    setShareCalendar(val); setShareCalendarWithCabinet(val);
+                  }}
+                  trackColor={{ false: '#333', true: '#c9a84c' }}
+                  thumbColor="#fff"
+                />
+              </View>
+              <Text style={styles.attendToggleHint}>
+                Today's events and tomorrow's first — read on your device when you
+                open a conversation, never stored elsewhere.
+              </Text>
+              <TouchableOpacity
+                style={styles.attendBlocklistButton}
+                onPress={() => {
+                  Alert.alert('Disconnect Calendar?', 'The Cabinet stops seeing your schedule. To fully revoke access, also remove it in system Settings.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Disconnect', style: 'destructive',
+                      onPress: async () => { await disconnectCalendar(); setCalConnected(false); },
+                    },
+                  ]);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.attendBlocklistText}>Disconnect Calendar</Text>
               </TouchableOpacity>
             </>
           )}
