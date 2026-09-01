@@ -8,7 +8,9 @@ import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { appendMessages } from '../services/threadService';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Normally started by index.ts before anything else loads; this is a
@@ -66,26 +68,74 @@ function NotificationTapHandler() {
     if (Platform.OS === 'web') return;
     if (!navState?.key) return; // navigation tree not mounted yet
 
+    // Counselor reminders and Attend nudges are messages FROM a counselor:
+    // seed the line into the Cabinet thread (once per delivery) so the
+    // notification becomes the opening of a conversation the user can
+    // continue in the chat. Deduped per delivery because repeating weekly
+    // schedules reuse one notification identifier.
+    const seed = async (notification: Notifications.Notification | null | undefined) => {
+      try {
+        const content = notification?.request?.content;
+        const data: any = content?.data;
+        if (!data?.seedMessage || !data?.counselorName) return;
+        const minuteBucket = Math.floor((Number((notification as any)?.date) || Date.now()) / 60000);
+        const id = `${notification?.request?.identifier || 'n'}:${minuteBucket}`;
+        const raw = await AsyncStorage.getItem('cabinet_seeded_notifications');
+        const seen: string[] = raw ? JSON.parse(raw) : [];
+        if (seen.includes(id)) return;
+        seen.push(id);
+        while (seen.length > 80) seen.shift();
+        await AsyncStorage.setItem('cabinet_seeded_notifications', JSON.stringify(seen));
+        await appendMessages('cabinet', [{
+          role: 'assistant',
+          content: String(data.seedMessage),
+          timestamp: Date.now(),
+          counselorName: String(data.counselorName),
+        }]);
+        breadcrumb('notification seeded into cabinet thread');
+      } catch { /* best effort — never block boot or navigation */ }
+    };
+
     const route = (data: any) => {
       if (data?.type === 'daily_dispatch') {
         breadcrumb('notification tap: daily_dispatch');
         router.push({ pathname: '/dispatch', params: { dispatch_id: String(data.dispatch_id || '') } } as any);
+      } else if (data?.route === '/cabinet') {
+        breadcrumb('notification tap: cabinet');
+        router.push('/cabinet' as any);
       }
     };
 
     // Cold start: app opened by tapping the notification.
     Notifications.getLastNotificationResponseAsync()
       .then(response => {
+        seed(response?.notification);
         const data = response?.notification?.request?.content?.data;
         if (data) route(data);
       })
       .catch(() => {});
 
     // Warm: notification tapped while app is running/backgrounded.
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+    const tapSub = Notifications.addNotificationResponseReceivedListener(response => {
+      seed(response.notification);
       route(response.notification.request.content.data);
     });
-    return () => subscription.remove();
+
+    // Delivered while the app is open: seed the thread silently, no redirect.
+    const receivedSub = Notifications.addNotificationReceivedListener(n => { seed(n); });
+
+    // The icon badge means "a counselor is waiting": clear it whenever the
+    // app comes to the foreground.
+    Notifications.setBadgeCountAsync(0).catch(() => {});
+    const appStateSub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') Notifications.setBadgeCountAsync(0).catch(() => {});
+    });
+
+    return () => {
+      tapSub.remove();
+      receivedSub.remove();
+      appStateSub.remove();
+    };
   }, [navState?.key, router]);
 
   return null;

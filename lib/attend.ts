@@ -74,18 +74,26 @@ function todayKey(d = new Date()): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function goalLine(counselor: string, goalMinutes: number): { title: string; body: string } {
+function goalLine(counselor: string, goalMinutes: number) {
   const hours = goalMinutes % 60 === 0 ? `${goalMinutes / 60} hour${goalMinutes === 60 ? '' : 's'}` : `${goalMinutes} minutes`;
+  const body = `You have crossed the ${hours} you set for yourself today. The rest of the evening is still within your power. Choose it deliberately.`;
   return {
     title: counselor,
-    body: `You have crossed the ${hours} you set for yourself today. The rest of the evening is still within your power. Choose it deliberately.`,
+    body,
+    badge: 1,
+    // NotificationBridge reads these to seed the line into the Cabinet
+    // thread and open the chat on tap — the nudge becomes a conversation.
+    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body },
   };
 }
 
-function wellOverLine(counselor: string): { title: string; body: string } {
+function wellOverLine(counselor: string) {
+  const body = 'You are now well past your own line. Not a failure, a signal. Put the glass down and give five minutes to something you will remember.';
   return {
     title: counselor,
-    body: 'You are now well past your own line. Not a failure, a signal. Put the glass down and give five minutes to something you will remember.',
+    body,
+    badge: 1,
+    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body },
   };
 }
 

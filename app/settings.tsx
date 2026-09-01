@@ -406,11 +406,22 @@ export default function SettingsScreen() {
       minute: number,
     ) => {
       for (let day = 0; day < 7; day++) {
+        const title = titleFn(day);
+        const body = bodyFn(day);
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: titleFn(day),
-            body: bodyFn(day),
+            title,
+            body,
             sound: true,
+            // Reminders are messages FROM a counselor: badge the icon, and
+            // carry the data the NotificationBridge needs to seed this line
+            // into the Cabinet thread and open the chat on tap.
+            badge: 1,
+            data: {
+              route: '/cabinet',
+              counselorName: title.split(' — ')[0],
+              seedMessage: body,
+            },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
