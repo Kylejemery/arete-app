@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import ShareQuoteModal from '../../components/ShareQuoteModal';
 import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, API_BASE_URL } from '../../services/claudeService';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
@@ -109,6 +110,9 @@ export default function CabinetScreen() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const consumedSharedSessionRef = useRef(false);
+
+  // --- Shareable quote card state ---
+  const [shareQuote, setShareQuote] = useState<{ text: string; counselor: string } | null>(null);
 
   // --- Know Thyself nudge state ---
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
@@ -883,7 +887,15 @@ export default function CabinetScreen() {
                         ) : (
                           <View key={index} style={styles.cabinetMessageRow}>
                             <View style={styles.cabinetBubble}>
-                              <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                              <View style={styles.cabinetLabelRow}>
+                                <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                                <TouchableOpacity
+                                  onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
+                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                >
+                                  <Ionicons name="share-outline" size={14} color="#888" />
+                                </TouchableOpacity>
+                              </View>
                               <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                             </View>
                           </View>
@@ -1045,7 +1057,15 @@ export default function CabinetScreen() {
                 ) : (
                   <View key={index} style={styles.cabinetMessageRow}>
                     <View style={styles.cabinetBubble}>
-                      <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                      <View style={styles.cabinetLabelRow}>
+                        <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                        <TouchableOpacity
+                          onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <Ionicons name="share-outline" size={14} color="#888" />
+                        </TouchableOpacity>
+                      </View>
                       <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                     </View>
                   </View>
@@ -1138,6 +1158,14 @@ export default function CabinetScreen() {
 
         </>
       )}
+
+      {/* Shareable quote card */}
+      <ShareQuoteModal
+        visible={!!shareQuote}
+        onClose={() => setShareQuote(null)}
+        quote={shareQuote?.text || ''}
+        counselorName={shareQuote?.counselor || 'The Cabinet'}
+      />
 
       {/* Invite a Partner modal — scaffolding for the full invite system */}
       <Modal
@@ -1356,6 +1384,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
     padding: 14,
     maxWidth: '85%',
+  },
+  cabinetLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   cabinetLabel: {
     color: '#c9a84c',

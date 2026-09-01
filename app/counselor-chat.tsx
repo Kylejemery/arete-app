@@ -20,6 +20,7 @@ import { sendMessageToCounselor, MessageLimitError } from '../services/claudeSer
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
 import { useTierLimits } from '../hooks/useTierLimits';
+import ShareQuoteModal from '../components/ShareQuoteModal';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -53,6 +54,7 @@ export default function CounselorChatScreen() {
   const scrollViewRef = useRef<ScrollView>(null);
   const hasSentInitialRef = useRef(false);
   const [accessBlocked, setAccessBlocked] = useState(false);
+  const [shareQuote, setShareQuote] = useState<string | null>(null);
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
 
@@ -264,7 +266,15 @@ export default function CounselorChatScreen() {
               ) : (
                 <View key={index} style={styles.counselorMessageRow}>
                   <View style={styles.counselorBubble}>
-                    <Text style={styles.counselorLabel}>{counselorName}</Text>
+                    <View style={styles.counselorLabelRow}>
+                      <Text style={styles.counselorLabel}>{counselorName}</Text>
+                      <TouchableOpacity
+                        onPress={() => setShareQuote(msg.content)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="share-outline" size={14} color="#888" />
+                      </TouchableOpacity>
+                    </View>
                     <Text style={styles.counselorText} selectable>{msg.content}</Text>
                   </View>
                 </View>
@@ -330,6 +340,14 @@ export default function CounselorChatScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {/* Shareable quote card */}
+      <ShareQuoteModal
+        visible={!!shareQuote}
+        onClose={() => setShareQuote(null)}
+        quote={shareQuote || ''}
+        counselorName={counselorName}
+      />
 
       {/* Access blocked overlay for free tier */}
       {accessBlocked && (
@@ -460,6 +478,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 4,
     padding: 14,
     maxWidth: '85%',
+  },
+  counselorLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   counselorLabel: {
     color: '#c9a84c',

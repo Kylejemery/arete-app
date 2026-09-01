@@ -5,6 +5,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import SideMenu from '../../components/SideMenu';
+import DispatchNudge from '../../components/DispatchNudge';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
@@ -261,6 +262,8 @@ export default function HomeScreen() {
       </View>
 
       <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      <DispatchNudge />
 
       {/* Quote Card */}
       {quote ? (

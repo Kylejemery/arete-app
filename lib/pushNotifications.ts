@@ -18,13 +18,17 @@ const EAS_PROJECT_ID = '84e0593d-d728-4e1a-b522-f8d51ce8a069';
  * Android dispatch channel, and returns the Expo push token — or null when
  * permission is denied or the platform can't issue one (web, simulator).
  */
-export async function registerForPushNotifications(): Promise<string | null> {
+export async function registerForPushNotifications(
+  options: { requestIfNeeded?: boolean } = {}
+): Promise<string | null> {
   if (Platform.OS === 'web') return null;
 
   try {
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
+    if (existingStatus !== 'granted' && options.requestIfNeeded) {
+      // iOS shows its system prompt exactly once, so this should only run
+      // from a primed UI moment (see DispatchNudge), never cold at boot.
       const { status } = await Notifications.requestPermissionsAsync();
       finalStatus = status;
     }
@@ -89,12 +93,42 @@ export async function saveTimezone(session: Session): Promise<void> {
 }
 
 /**
- * One-shot setup run after authentication: detect timezone, register for push,
- * and persist the token. Best-effort — failures are logged, never thrown, so a
- * denied permission or offline launch can't break app boot.
+ * One-shot setup run after authentication: detect timezone and, when
+ * notification permission is ALREADY granted, refresh + persist the push
+ * token. Deliberately never triggers the iOS permission prompt — cold-boot
+ * prompts with no context get denied, and iOS never re-asks (this is why only
+ * ~a quarter of users had tokens). The DispatchNudge card owns the ask.
+ * Best-effort — failures are logged, never thrown.
  */
 export async function setupDispatchNotifications(session: Session): Promise<void> {
   await saveTimezone(session);
-  const token = await registerForPushNotifications();
+  const token = await registerForPushNotifications({ requestIfNeeded: false });
   if (token) await savePushToken(token, session);
+}
+
+/**
+ * The primed ask: request permission (system prompt fires here, from a UI
+ * moment that just explained why) and register + persist on grant. Returns
+ * whether a token was saved.
+ */
+export async function promptAndRegisterForDispatch(session: Session): Promise<boolean> {
+  const token = await registerForPushNotifications({ requestIfNeeded: true });
+  if (token) {
+    await savePushToken(token, session);
+    return true;
+  }
+  return false;
+}
+
+/** Current notification permission, for deciding whether to show the nudge. */
+export async function getPushPermissionStatus(): Promise<'granted' | 'denied' | 'undetermined'> {
+  if (Platform.OS === 'web') return 'denied';
+  try {
+    const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+    if (status === 'granted') return 'granted';
+    if (status === 'undetermined' || canAskAgain) return 'undetermined';
+    return 'denied';
+  } catch {
+    return 'denied';
+  }
 }
