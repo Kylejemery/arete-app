@@ -225,6 +225,101 @@ export async function recordAttendDay(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Watchlists — named app groups with their own threshold ladders, so the
+// Cabinet can call out "Instagram crossed 2h" by the name the USER gave the
+// list. Apple's picker returns opaque tokens (the app never learns real app
+// names); the label is the user's own, which is what makes the callout
+// possible at all. iOS caps concurrent DeviceActivity monitors, so watchlists
+// are limited to 5.
+// ---------------------------------------------------------------------------
+
+const KEY_WATCHLISTS = 'attend_watchlists';
+export const MAX_WATCHLISTS = 5;
+
+export interface AttendWatchlist {
+  id: string;
+  label: string;
+  selection: string;
+}
+
+export async function getWatchlists(): Promise<AttendWatchlist[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_WATCHLISTS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+const watchActivityName = (id: string) => `attend-watch-${id}`;
+
+export async function addWatchlist(label: string, selection: string): Promise<boolean> {
+  const mod = nativeModule();
+  if (!mod) return false;
+  const lists = await getWatchlists();
+  if (lists.length >= MAX_WATCHLISTS) return false;
+  const id = `${Date.now().toString(36)}`;
+  try {
+    await mod.startMonitoring(
+      watchActivityName(id),
+      {
+        intervalStart: { hour: 0, minute: 0, second: 0 },
+        intervalEnd: { hour: 23, minute: 59, second: 59 },
+        repeats: true,
+      },
+      ATTEND_LADDER.map((minutes) => ({
+        eventName: `threshold_${minutes}`,
+        familyActivitySelection: selection,
+        threshold: { minute: minutes },
+        includesPastActivity: true,
+      }))
+    );
+    await AsyncStorage.setItem(
+      KEY_WATCHLISTS,
+      JSON.stringify([...lists, { id, label: label.trim().slice(0, 30), selection }])
+    );
+    return true;
+  } catch (e) {
+    console.warn('[attend] addWatchlist failed:', (e as Error)?.message);
+    return false;
+  }
+}
+
+export async function removeWatchlist(id: string): Promise<void> {
+  const mod = nativeModule();
+  try {
+    mod?.stopMonitoring([watchActivityName(id)]);
+  } catch { /* best effort */ }
+  const lists = await getWatchlists();
+  await AsyncStorage.setItem(KEY_WATCHLISTS, JSON.stringify(lists.filter((w) => w.id !== id)));
+}
+
+/** Today's highest crossed threshold per watchlist, in minutes (0 = none). */
+export async function getWatchlistTodayStatus(): Promise<{ label: string; highestMinutes: number }[]> {
+  const mod = nativeModule();
+  const lists = await getWatchlists();
+  if (!mod || lists.length === 0) return [];
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return lists.map((w) => {
+    let highest = 0;
+    try {
+      for (const ev of mod.getEvents(watchActivityName(w.id)) || []) {
+        if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
+        if (new Date(ev.lastCalledAt) < start) continue;
+        const m = parseInt(String(ev.eventName).replace('threshold_', ''), 10);
+        if (Number.isFinite(m) && m > highest) highest = m;
+      }
+    } catch { /* leave at 0 */ }
+    return { label: w.label, highestMinutes: highest };
+  });
+}
+
+function fmtMinutes(m: number): string {
+  return m >= 60 ? `${Math.floor(m / 60)}h${m % 60 ? ` ${m % 60}m` : ''}` : `${m}m`;
+}
+
+// ---------------------------------------------------------------------------
 // Cabinet visibility toggles + Focus-session distraction blocking
 // ---------------------------------------------------------------------------
 
@@ -322,14 +417,19 @@ export async function buildAttendContext(): Promise<string | null> {
     const overDays = last7.filter(([, v]) => v.overGoal).length;
 
     const goalText = goalMinutes % 60 === 0 ? `${goalMinutes / 60}h` : `${goalMinutes}m`;
+    const watchStatus = await getWatchlistTodayStatus();
+    const watchLines = watchStatus
+      .filter((w) => w.highestMinutes > 0)
+      .map((w) => `Their "${w.label}" watchlist crossed the ${fmtMinutes(w.highestMinutes)} mark today.`);
     const lines = [
       '[ATTEND CONTEXT — the user shares coarse Screen Time signals with you]',
       `Daily screen-time goal: ${goalText}.`,
       today.connected
         ? today.highestMinutes > 0
-          ? `Today: phone use has crossed the ${today.highestMinutes >= 60 ? `${Math.floor(today.highestMinutes / 60)}h${today.highestMinutes % 60 ? ` ${today.highestMinutes % 60}m` : ''}` : `${today.highestMinutes}m`} mark${today.overGoal ? ' — OVER their goal' : ' (still under their goal)'}.`
+          ? `Today: phone use has crossed the ${fmtMinutes(today.highestMinutes)} mark${today.overGoal ? ' — OVER their goal' : ' (still under their goal)'}.`
           : 'Today: no usage thresholds crossed yet.'
         : 'Today: no signal.',
+      ...watchLines,
       last7.length >= 3 ? `Past week: over their goal on ${overDays} of the last ${last7.length} tracked days.` : '',
       'If phone use, attention, or distraction is relevant, you may speak to these patterns in your own voice — as one who has been watching, not auditing. Never cite exact numbers beyond these, never mention "Screen Time" or "Attend" by name.',
       '[END ATTEND CONTEXT]',

@@ -36,6 +36,11 @@ import {
   setFocusBlockEnabled,
   getFocusBlocklist,
   setFocusBlocklist,
+  getWatchlists,
+  addWatchlist,
+  removeWatchlist,
+  MAX_WATCHLISTS,
+  type AttendWatchlist,
 } from '@/lib/attend';
 
 // Native FamilyActivityPicker sheet — only in builds with the module.
@@ -156,6 +161,8 @@ export default function SettingsScreen() {
   const [focusBlockEnabled, setFocusBlockEnabledState] = useState(false);
   const [hasBlocklist, setHasBlocklist] = useState(false);
   const [showBlocklistPicker, setShowBlocklistPicker] = useState(false);
+  const [watchlists, setWatchlists] = useState<AttendWatchlist[]>([]);
+  const [pendingWatchLabel, setPendingWatchLabel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!attendIsSupported()) return;
@@ -164,8 +171,33 @@ export default function SettingsScreen() {
       setShareRoutines(await getShareRoutinesWithCabinet());
       setFocusBlockEnabledState(await getFocusBlockEnabled());
       setHasBlocklist(!!(await getFocusBlocklist()));
+      setWatchlists(await getWatchlists());
     })().catch(() => {});
   }, []);
+
+  const promptAddWatchlist = async () => {
+    if (tier === 'free') {
+      router.push({ pathname: '/paywall', params: { src: 'attend_watchlists' } } as any);
+      return;
+    }
+    if (watchlists.length >= MAX_WATCHLISTS) {
+      Alert.alert('Watchlist limit', `iOS allows up to ${MAX_WATCHLISTS} watchlists.`);
+      return;
+    }
+    const auth = await requestAttendAuthorization();
+    if (auth !== 'approved') {
+      if (auth === 'denied') Alert.alert('Screen Time Access Needed', 'Enable Screen Time access for Arete in iOS Settings.');
+      return;
+    }
+    Alert.prompt(
+      'Name this watchlist',
+      'The Cabinet will refer to it by this name ("Instagram", "Games", "Doom scroll"...).',
+      (label) => {
+        const clean = (label || '').trim();
+        if (clean) setPendingWatchLabel(clean);
+      }
+    );
+  };
 
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
@@ -639,10 +671,18 @@ export default function SettingsScreen() {
           <Text style={styles.cardTitle}>🛡️ Attend & Cabinet Privacy</Text>
 
           <View style={styles.cardHeader}>
-            <Text style={styles.attendToggleLabel}>Cabinet sees Screen Time signals</Text>
+            <Text style={styles.attendToggleLabel}>
+              Cabinet sees Screen Time signals{tier === 'free' ? <Text style={styles.premiumTag}>  PREMIUM</Text> : null}
+            </Text>
             <Switch
-              value={shareScreen}
-              onValueChange={(val) => { setShareScreen(val); setShareScreenWithCabinet(val); }}
+              value={tier === 'free' ? false : shareScreen}
+              onValueChange={(val) => {
+                if (tier === 'free') {
+                  router.push({ pathname: '/paywall', params: { src: 'attend_cabinet_sight' } } as any);
+                  return;
+                }
+                setShareScreen(val); setShareScreenWithCabinet(val);
+              }}
               trackColor={{ false: '#333', true: '#c9a84c' }}
               thumbColor="#fff"
             />
@@ -669,6 +709,10 @@ export default function SettingsScreen() {
             <Switch
               value={focusBlockEnabled}
               onValueChange={async (val) => {
+                if (val && tier === 'free') {
+                  router.push({ pathname: '/paywall', params: { src: 'attend_focus_block' } } as any);
+                  return;
+                }
                 setFocusBlockEnabledState(val);
                 await setFocusBlockEnabled(val);
                 if (val && !hasBlocklist) setShowBlocklistPicker(true);
@@ -696,6 +740,39 @@ export default function SettingsScreen() {
             <Text style={styles.attendBlocklistText}>
               {hasBlocklist ? 'Edit blocked apps & websites' : 'Choose apps & websites to block…'}
             </Text>
+          </TouchableOpacity>
+
+          {/* Watchlists — named app groups the Cabinet can call out by name */}
+          <Text style={styles.attendWatchHeader}>Watchlists</Text>
+          <Text style={styles.attendToggleHint}>
+            Name a group of apps ("Instagram", "Games") and the Cabinet can call out when
+            it crosses 30m, 1h, 2h and beyond. Names are yours; Apple never shows the app
+            names to Arete.
+          </Text>
+          {watchlists.map((w) => (
+            <View key={w.id} style={styles.attendWatchRow}>
+              <Text style={styles.attendWatchLabel}>👁 {w.label}</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert('Remove watchlist?', `Stop watching "${w.label}"?`, [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Remove', style: 'destructive',
+                      onPress: async () => {
+                        await removeWatchlist(w.id);
+                        setWatchlists(await getWatchlists());
+                      },
+                    },
+                  ]);
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#888" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.attendBlocklistButton} onPress={promptAddWatchlist} activeOpacity={0.8}>
+            <Text style={styles.attendBlocklistText}>Add a watchlist…</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -838,6 +915,31 @@ export default function SettingsScreen() {
         />
       </Modal>
     )}
+
+    {/* Attend: native picker for a new watchlist's apps */}
+    {pendingWatchLabel !== null && AttendSelectionSheet && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setPendingWatchLabel(null)}>
+        <AttendSelectionSheet
+          style={{ flex: 1 }}
+          headerText={`What counts as "${pendingWatchLabel}"?`}
+          footerText="Pick the apps or categories this watchlist tracks."
+          onSelectionChange={(e: any) => {
+            const sel = e?.nativeEvent?.familyActivitySelection ?? null;
+            if (sel && pendingWatchLabel) {
+              const label = pendingWatchLabel;
+              setPendingWatchLabel(null);
+              addWatchlist(label, sel)
+                .then(async (ok) => {
+                  if (ok) setWatchlists(await getWatchlists());
+                  else Alert.alert('Could not add watchlist', 'Please try again.');
+                })
+                .catch(() => {});
+            }
+          }}
+          onDismissRequest={() => setPendingWatchLabel(null)}
+        />
+      </Modal>
+    )}
     </SafeAreaView>
   );
 }
@@ -902,6 +1004,34 @@ const styles = StyleSheet.create({
   },
   attendBlocklistText: {
     color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  premiumTag: {
+    color: '#c9a84c',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  attendWatchHeader: {
+    color: '#c9a84c',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  attendWatchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ffffff0d',
+  },
+  attendWatchLabel: {
+    color: '#e0d5b5',
     fontSize: 14,
     fontWeight: '600',
   },

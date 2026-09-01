@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
@@ -494,12 +494,17 @@ export async function gatherAppContext(): Promise<string> {
   } catch { /* skip */ }
 
   // Attend (opt-in): coarse Screen Time signals — threshold crossings only,
-  // never raw usage data. Null when Attend is off or unsupported.
+  // never raw usage data. Null when Attend is off or unsupported. The
+  // Cabinet SEEING the signals is the premium half of Attend: free tier
+  // still gets monitoring, the goal card, and goal notifications.
   try {
-    const attendContext = await buildAttendContext();
-    if (attendContext) {
-      lines.push('');
-      lines.push(attendContext);
+    const attendTier = await getSubscriptionTier().catch(() => 'free');
+    if (attendTier !== 'free') {
+      const attendContext = await buildAttendContext();
+      if (attendContext) {
+        lines.push('');
+        lines.push(attendContext);
+      }
     }
   } catch { /* skip */ }
 

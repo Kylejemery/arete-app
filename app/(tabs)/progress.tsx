@@ -18,6 +18,7 @@ import {
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed, getLongitudinalPortrait, getUserCabinet } from '@/lib/db';
 import type { LongitudinalPortrait } from '@/lib/types';
+import { useSubscription } from '@/lib/useSubscription';
 import {
   attendIsSupported,
   requestAttendAuthorization,
@@ -72,6 +73,7 @@ export default function ProgressScreen() {
   const [todayScreenTime, setTodayScreenTime] = useState('');
 
   // Attend — iOS Screen Time monitoring (only in builds with the native module)
+  const { tier } = useSubscription();
   const [attendStatus, setAttendStatus] = useState<AttendTodayStatus | null>(null);
   const [attendBusy, setAttendBusy] = useState(false);
   const [showAttendPicker, setShowAttendPicker] = useState(false);
@@ -439,6 +441,16 @@ export default function ProgressScreen() {
                     <Text style={styles.attendDisconnect}>Disconnect</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {attendStatus?.connected && tier === 'free' && (
+                <TouchableOpacity
+                  onPress={() => router.push({ pathname: '/paywall', params: { src: 'attend_context_tease' } } as any)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.attendTease}>
+                    ✨ Your counselors could see this and hold you to it. Unlock with Premium →
+                  </Text>
+                </TouchableOpacity>
               )}
 
               <View style={styles.screenTimeRow}>
@@ -828,6 +840,7 @@ const styles = StyleSheet.create({
   attendUnder: { color: '#7cb87c' },
   attendMonitoredBy: { color: '#666', fontSize: 11, marginTop: 3 },
   attendDisconnect: { color: '#888', fontSize: 12, textDecorationLine: 'underline' },
+  attendTease: { color: '#c9a84c', fontSize: 12, lineHeight: 17, marginTop: -6, marginBottom: 14 },
   screenTimeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginBottom: 15 },
   screenTimeStat: { alignItems: 'center', gap: 4 },
   screenTimeHours: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
