@@ -2,7 +2,7 @@ import { ThreadMessage, appendMessages, getContextWindow } from './threadService
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
-import { buildAttendContext } from '../lib/attend';
+import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -342,25 +342,28 @@ export async function gatherAppContext(): Promise<string> {
     lines.push('NOTE: This user has not completed their Know Thyself profile yet. Do not assume or invent any profile details. Engage with what they bring to the conversation, and where natural, you may suggest they meet their Future Self to complete their profile.');
   }
 
-  // Morning routine
-  try {
-    const morningTasks = checkin?.morning_tasks ?? [];
-    if (morningTasks.length > 0) {
-      lines.push('');
-      lines.push('MORNING ROUTINE:');
-      morningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-    }
-  } catch { /* skip */ }
+  // Morning/evening routines — user can hide these from the Cabinet in
+  // Settings (Attend & Cabinet Privacy).
+  const shareRoutines = await getShareRoutinesWithCabinet().catch(() => true);
+  if (shareRoutines) {
+    try {
+      const morningTasks = checkin?.morning_tasks ?? [];
+      if (morningTasks.length > 0) {
+        lines.push('');
+        lines.push('MORNING ROUTINE:');
+        morningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+      }
+    } catch { /* skip */ }
 
-  // Evening tasks
-  try {
-    const eveningTasks = checkin?.evening_tasks ?? [];
-    if (eveningTasks.length > 0) {
-      lines.push('');
-      lines.push('EVENING TASKS:');
-      eveningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-    }
-  } catch { /* skip */ }
+    try {
+      const eveningTasks = checkin?.evening_tasks ?? [];
+      if (eveningTasks.length > 0) {
+        lines.push('');
+        lines.push('EVENING TASKS:');
+        eveningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
+      }
+    } catch { /* skip */ }
+  }
 
   // Evening reflection
   lines.push('');

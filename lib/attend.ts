@@ -224,13 +224,94 @@ export async function recordAttendDay(): Promise<void> {
   } catch { /* best effort */ }
 }
 
+// ---------------------------------------------------------------------------
+// Cabinet visibility toggles + Focus-session distraction blocking
+// ---------------------------------------------------------------------------
+
+const KEY_SHARE_SCREEN = 'attend_share_screen_with_cabinet';    // default on
+const KEY_SHARE_ROUTINES = 'attend_share_routines_with_cabinet'; // default on
+const KEY_FOCUS_BLOCKLIST = 'attend_focus_blocklist';
+const KEY_FOCUS_BLOCK_ENABLED = 'attend_focus_block_enabled';
+
+async function boolSetting(key: string, fallback: boolean): Promise<boolean> {
+  const raw = await AsyncStorage.getItem(key);
+  return raw === null ? fallback : raw === 'true';
+}
+
+export const getShareScreenWithCabinet = () => boolSetting(KEY_SHARE_SCREEN, true);
+export const setShareScreenWithCabinet = (v: boolean) => AsyncStorage.setItem(KEY_SHARE_SCREEN, String(v));
+export const getShareRoutinesWithCabinet = () => boolSetting(KEY_SHARE_ROUTINES, true);
+export const setShareRoutinesWithCabinet = (v: boolean) => AsyncStorage.setItem(KEY_SHARE_ROUTINES, String(v));
+
+export const getFocusBlockEnabled = () => boolSetting(KEY_FOCUS_BLOCK_ENABLED, false);
+export const setFocusBlockEnabled = (v: boolean) => AsyncStorage.setItem(KEY_FOCUS_BLOCK_ENABLED, String(v));
+
+export async function setFocusBlocklist(familyActivitySelection: string): Promise<void> {
+  await AsyncStorage.setItem(KEY_FOCUS_BLOCKLIST, familyActivitySelection);
+}
+
+export async function getFocusBlocklist(): Promise<string | null> {
+  return AsyncStorage.getItem(KEY_FOCUS_BLOCKLIST);
+}
+
+/**
+ * Shield the user's chosen distraction list for the duration of a Focus
+ * session. The shield screen (ShieldConfiguration extension) is dressed in
+ * the Cabinet's voice. Returns true when a block actually started.
+ */
+export async function startFocusBlock(): Promise<boolean> {
+  const mod = nativeModule();
+  if (!mod) return false;
+  try {
+    if (!(await getFocusBlockEnabled())) return false;
+    if (getAttendAuthStatus() !== 'approved') return false;
+    const selection = await getFocusBlocklist();
+    if (!selection) return false;
+    mod.updateShield(
+      {
+        title: 'The Cabinet holds the door.',
+        subtitle: 'You are in a focus session. This can wait until the work is done.',
+        primaryButtonLabel: 'Return to focus',
+        backgroundColor: { red: 26, green: 26, blue: 46, alpha: 1 },
+        titleColor: { red: 224, green: 213, blue: 181, alpha: 1 },
+        subtitleColor: { red: 138, green: 155, blue: 176, alpha: 1 },
+        primaryButtonBackgroundColor: { red: 201, green: 168, blue: 76, alpha: 1 },
+        primaryButtonLabelColor: { red: 26, green: 26, blue: 46, alpha: 1 },
+      },
+      { primary: { behavior: 'close' } },
+      'focus-session'
+    );
+    mod.blockSelection({ activitySelectionToken: selection }, 'focus-session');
+    return true;
+  } catch (e) {
+    console.warn('[attend] focus block failed:', (e as Error)?.message);
+    return false;
+  }
+}
+
+/** Lift the focus-session shield. Safe to call unconditionally. */
+export async function stopFocusBlock(): Promise<void> {
+  const mod = nativeModule();
+  if (!mod) return;
+  try {
+    const selection = await getFocusBlocklist();
+    if (selection) {
+      mod.unblockSelection({ activitySelectionToken: selection }, 'focus-session');
+    }
+  } catch (e) {
+    console.warn('[attend] focus unblock failed:', (e as Error)?.message);
+  }
+}
+
 /**
  * Coarse usage context for counselor prompts — crossings only, no raw data,
- * per the Attend spec privacy principle. Returns null when Attend is off or
- * there is nothing meaningful to say.
+ * per the Attend spec privacy principle. Returns null when Attend is off,
+ * there is nothing meaningful to say, or the user has turned Cabinet
+ * visibility off in Settings.
  */
 export async function buildAttendContext(): Promise<string | null> {
   try {
+    if (!(await getShareScreenWithCabinet())) return null;
     if (!(await attendIsEnabled())) return null;
     const goalMinutes = await getAttendGoalMinutes();
     const today = await getAttendTodayStatus();

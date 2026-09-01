@@ -17,6 +17,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
+import { startFocusBlock, stopFocusBlock } from '@/lib/attend';
 
 const POMODORO_SESSIONS_KEY = 'arete:pomodoro_sessions';
 
@@ -114,6 +115,7 @@ export default function TimerScreen() {
             setPomodoroRunning(false);
             Notifications.cancelAllScheduledNotificationsAsync();
             if (pomodoroModeRef.current === 'work') {
+              stopFocusBlock().catch(() => {});
               setPomodoroSessions(s => s + 1);
               setPomodoroMode('break');
               setPomodoroTimeLeft(5 * 60);
@@ -138,6 +140,7 @@ export default function TimerScreen() {
           setPomodoroRunning(false);
           Notifications.cancelAllScheduledNotificationsAsync();
           if (pomodoroModeRef.current === 'work') {
+            stopFocusBlock().catch(() => {});
             setPomodoroSessions(s => s + 1);
             setPomodoroMode('break');
             setPomodoroTimeLeft(5 * 60);
@@ -200,6 +203,7 @@ export default function TimerScreen() {
   const resetPomodoro = () => {
     setPomodoroRunning(false);
     Notifications.cancelAllScheduledNotificationsAsync();
+    stopFocusBlock().catch(() => {});
     setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
   };
 
@@ -207,6 +211,7 @@ export default function TimerScreen() {
     clearInterval(pomodoroRef.current);
     setPomodoroRunning(false);
     Notifications.cancelAllScheduledNotificationsAsync();
+    stopFocusBlock().catch(() => {});
     setPomodoroSessions(s => s + 1);
     setPomodoroMode('break');
     setPomodoroTimeLeft(5 * 60);
@@ -232,6 +237,9 @@ export default function TimerScreen() {
     pausedDurationRef.current = 0;
     setIsRunning(true);
     setIsPaused(false);
+    // Focus shield: block the user's chosen distraction apps for the session
+    // (opt-in, configured in Settings; no-op when off or unsupported).
+    startFocusBlock().catch(() => {});
     intervalRef.current = setInterval(() => {
       setSessionSeconds(Math.floor((Date.now() - sessionStartTime.current - pausedDurationRef.current) / 1000));
     }, 1000);
@@ -255,6 +263,7 @@ export default function TimerScreen() {
     clearInterval(intervalRef.current);
     setIsRunning(false);
     setIsPaused(false);
+    stopFocusBlock().catch(() => {});
     setShowEndPageModal(true);
   };
 
@@ -438,8 +447,10 @@ export default function TimerScreen() {
                     if (!pomodoroRunning) {
                       pomodoroEndTimeRef.current = Date.now() + pomodoroTimeLeft * 1000;
                       scheduleTimerNotification(pomodoroTimeLeft * 1000, pomodoroMode === 'work' ? 'Focus' : 'Break');
+                      if (pomodoroMode === 'work') startFocusBlock().catch(() => {});
                     } else {
                       Notifications.cancelAllScheduledNotificationsAsync();
+                      stopFocusBlock().catch(() => {});
                     }
                     setPomodoroRunning(r => !r);
                   }}

@@ -25,6 +25,25 @@ import { supabase } from '@/lib/supabase';
 import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
+import {
+  attendIsSupported,
+  requestAttendAuthorization,
+  getShareScreenWithCabinet,
+  setShareScreenWithCabinet,
+  getShareRoutinesWithCabinet,
+  setShareRoutinesWithCabinet,
+  getFocusBlockEnabled,
+  setFocusBlockEnabled,
+  getFocusBlocklist,
+  setFocusBlocklist,
+} from '@/lib/attend';
+
+// Native FamilyActivityPicker sheet — only in builds with the module.
+let AttendSelectionSheet: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  AttendSelectionSheet = require('react-native-device-activity').DeviceActivitySelectionSheetView;
+} catch { /* module absent in this build */ }
 
 
 // Day index 0 = Sunday … 6 = Saturday (matches Expo weekday - 1)
@@ -130,6 +149,23 @@ export default function SettingsScreen() {
       setDeletingAccount(false);
     }
   };
+
+  // Attend & Cabinet Privacy (iOS Screen Time builds only)
+  const [shareScreen, setShareScreen] = useState(true);
+  const [shareRoutines, setShareRoutines] = useState(true);
+  const [focusBlockEnabled, setFocusBlockEnabledState] = useState(false);
+  const [hasBlocklist, setHasBlocklist] = useState(false);
+  const [showBlocklistPicker, setShowBlocklistPicker] = useState(false);
+
+  useEffect(() => {
+    if (!attendIsSupported()) return;
+    (async () => {
+      setShareScreen(await getShareScreenWithCabinet());
+      setShareRoutines(await getShareRoutinesWithCabinet());
+      setFocusBlockEnabledState(await getFocusBlockEnabled());
+      setHasBlocklist(!!(await getFocusBlocklist()));
+    })().catch(() => {});
+  }, []);
 
   const [morningEnabled, setMorningEnabled] = useState(true);
   const [eveningEnabled, setEveningEnabled] = useState(true);
@@ -499,7 +535,7 @@ export default function SettingsScreen() {
       {/* Morning Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>☀️ Marcus Aurelius — Morning Check-In</Text>
+          <Text style={styles.cardTitle}>☀️ Morning Check-In</Text>
           <Switch
             value={morningEnabled}
             onValueChange={(val) => { setMorningEnabled(val); persistAndReschedule({ morningEnabled: val }); }}
@@ -516,7 +552,7 @@ export default function SettingsScreen() {
       {/* Evening Check-In */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>🌙 Marcus Aurelius — Evening Check-In</Text>
+          <Text style={styles.cardTitle}>🌙 Evening Check-In</Text>
           <Switch
             value={eveningEnabled}
             onValueChange={(val) => { setEveningEnabled(val); persistAndReschedule({ eveningEnabled: val }); }}
@@ -563,7 +599,7 @@ export default function SettingsScreen() {
       {/* Marcus — Reading Reminder */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>📖 Marcus Aurelius — Reading Reminder</Text>
+          <Text style={styles.cardTitle}>📖 Reading Reminder</Text>
           <Switch
             value={readingReminderEnabled}
             onValueChange={(val) => { setReadingReminderEnabled(val); persistAndReschedule({ readingReminderEnabled: val }); }}
@@ -594,6 +630,75 @@ export default function SettingsScreen() {
         </Text>
         {futureKyleEnabled && renderTimeInputs(futureKyleHour, setFutureKyleHour, futureKyleMinute, setFutureKyleMinute)}
       </View>
+
+      {/* Attend & Cabinet Privacy — what the counselors see, and what the
+          Focus timer may block. Only rendered on builds with the Screen Time
+          native module. */}
+      {attendIsSupported() && (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🛡️ Attend & Cabinet Privacy</Text>
+
+          <View style={styles.cardHeader}>
+            <Text style={styles.attendToggleLabel}>Cabinet sees Screen Time signals</Text>
+            <Switch
+              value={shareScreen}
+              onValueChange={(val) => { setShareScreen(val); setShareScreenWithCabinet(val); }}
+              trackColor={{ false: '#333', true: '#c9a84c' }}
+              thumbColor="#fff"
+            />
+          </View>
+          <Text style={styles.attendToggleHint}>
+            Goal crossings only — never exact usage, never raw data.
+          </Text>
+
+          <View style={styles.cardHeader}>
+            <Text style={styles.attendToggleLabel}>Cabinet sees routine completion</Text>
+            <Switch
+              value={shareRoutines}
+              onValueChange={(val) => { setShareRoutines(val); setShareRoutinesWithCabinet(val); }}
+              trackColor={{ false: '#333', true: '#c9a84c' }}
+              thumbColor="#fff"
+            />
+          </View>
+          <Text style={styles.attendToggleHint}>
+            Morning and evening checklists, done or not done.
+          </Text>
+
+          <View style={styles.cardHeader}>
+            <Text style={styles.attendToggleLabel}>Block distractions during Focus</Text>
+            <Switch
+              value={focusBlockEnabled}
+              onValueChange={async (val) => {
+                setFocusBlockEnabledState(val);
+                await setFocusBlockEnabled(val);
+                if (val && !hasBlocklist) setShowBlocklistPicker(true);
+              }}
+              trackColor={{ false: '#333', true: '#c9a84c' }}
+              thumbColor="#fff"
+            />
+          </View>
+          <Text style={styles.attendToggleHint}>
+            While a Focus or reading session runs, your chosen apps and websites are
+            shielded — the Cabinet holds the door.
+          </Text>
+
+          <TouchableOpacity
+            style={styles.attendBlocklistButton}
+            onPress={async () => {
+              const auth = await requestAttendAuthorization();
+              if (auth === 'approved') setShowBlocklistPicker(true);
+              else if (auth === 'denied') {
+                Alert.alert('Screen Time Access Needed', 'Enable Screen Time access for Arete in iOS Settings.');
+              }
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.attendBlocklistText}>
+              {hasBlocklist ? 'Edit blocked apps & websites' : 'Choose apps & websites to block…'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Subscription — purchase and management both live on the web (no IAP
           in this app), so paid users manage/cancel through the Stripe
@@ -715,6 +820,24 @@ export default function SettingsScreen() {
         </View>
       )}
     </ScrollView>
+
+    {/* Attend: native picker for the Focus blocklist (apps + websites) */}
+    {showBlocklistPicker && AttendSelectionSheet && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setShowBlocklistPicker(false)}>
+        <AttendSelectionSheet
+          style={{ flex: 1 }}
+          headerText="What should the Cabinet block during Focus?"
+          footerText="These apps and websites are shielded while a Focus or reading session runs."
+          onSelectionChange={(e: any) => {
+            const sel = e?.nativeEvent?.familyActivitySelection ?? null;
+            if (sel) {
+              setFocusBlocklist(sel).then(() => setHasBlocklist(true)).catch(() => {});
+            }
+          }}
+          onDismissRequest={() => setShowBlocklistPicker(false)}
+        />
+      </Modal>
+    )}
     </SafeAreaView>
   );
 }
@@ -755,6 +878,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  attendToggleLabel: {
+    color: '#e0d5b5',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
+    paddingRight: 10,
+  },
+  attendToggleHint: {
+    color: '#777',
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 12,
+  },
+  attendBlocklistButton: {
+    borderWidth: 1,
+    borderColor: '#c9a84c66',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  attendBlocklistText: {
+    color: '#c9a84c',
+    fontSize: 14,
+    fontWeight: '600',
   },
   cardTitle: {
     color: '#fff',
