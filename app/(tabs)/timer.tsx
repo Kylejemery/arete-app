@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,8 +17,7 @@ import * as Notifications from 'expo-notifications';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
 import { startFocusBlock, stopFocusBlock } from '@/lib/attend';
-
-const POMODORO_SESSIONS_KEY = 'arete:pomodoro_sessions';
+import { getPomodoroCountToday, setPomodoroCountToday } from '@/lib/cabinetSignals';
 
 /** Returns today's date as a local YYYY-MM-DD string (not UTC). */
 function getLocalDateString(): string {
@@ -92,13 +90,11 @@ export default function TimerScreen() {
 
   useEffect(() => { pomodoroModeRef.current = pomodoroMode; }, [pomodoroMode]);
 
-  // Persist session count whenever it increments
+  // Persist session count whenever it increments — into the rolling history
+  // the Cabinet reads (lib/cabinetSignals), not just today's count.
   useEffect(() => {
     if (pomodoroSessions === 0) return;
-    AsyncStorage.setItem(
-      POMODORO_SESSIONS_KEY,
-      JSON.stringify({ date: getLocalDateString(), count: pomodoroSessions })
-    ).catch(() => {});
+    setPomodoroCountToday(pomodoroSessions);
   }, [pomodoroSessions]);
 
   useEffect(() => {
@@ -158,9 +154,9 @@ export default function TimerScreen() {
 
   const loadData = async () => {
     try {
-      const [readingData, storedSessions] = await Promise.all([
+      const [readingData, pomodoroToday] = await Promise.all([
         getReadingData(),
-        AsyncStorage.getItem(POMODORO_SESSIONS_KEY),
+        getPomodoroCountToday(),
       ]);
       if (readingData) {
         setCurrentBooks(readingData.current_books ?? []);
@@ -170,10 +166,7 @@ export default function TimerScreen() {
           setTodaySeconds(readingData.today_reading_seconds ?? 0);
         }
       }
-      if (storedSessions) {
-        const { date, count } = JSON.parse(storedSessions);
-        setPomodoroSessions(date === getLocalDateString() ? count : 0);
-      }
+      setPomodoroSessions(pomodoroToday);
     } catch (e) {
       console.error(e);
     }

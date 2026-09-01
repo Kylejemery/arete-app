@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, Te
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import SideMenu from '../../components/SideMenu';
 import DispatchNudge from '../../components/DispatchNudge';
+import WhatsNewModal from '../../components/WhatsNewModal';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
@@ -238,6 +239,10 @@ export default function HomeScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* One-time What's New announcement — hidden while the name prompt is
+          up (a brand-new user doesn't need "what's new"). */}
+      {!namePromptVisible && <WhatsNewModal />}
 
       {/* Top Bar */}
       <View style={styles.topBar}>

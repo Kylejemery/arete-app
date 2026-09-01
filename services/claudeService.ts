@@ -3,6 +3,9 @@ import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, ge
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
+import { buildFocusContext, buildMetaSignalsContext, takeCabinetWhatsNewNote } from '../lib/cabinetSignals';
+import { buildHealthContext } from '../lib/health';
+import { buildCalendarContext } from '../lib/calendar';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -493,18 +496,51 @@ export async function gatherAppContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
+  // Focus sessions (pomodoro) — on-device rolling history from the timer tab.
+  try {
+    lines.push('');
+    lines.push(await buildFocusContext());
+  } catch { /* skip */ }
+
+  // Accountability meta-signals: journaling gaps and stale goals, computed
+  // here so counselors never do their own date math (and never invent gaps).
+  try {
+    const { data: { user: metaUser } } = await supabase.auth.getUser();
+    const metaGoals = metaUser ? await getGoals(metaUser.id).catch(() => []) : [];
+    const metaContext = buildMetaSignalsContext({ journalEntries, goals: metaGoals });
+    if (metaContext) {
+      lines.push('');
+      lines.push(metaContext);
+    }
+  } catch { /* skip */ }
+
   // Attend (opt-in): coarse Screen Time signals — threshold crossings only,
-  // never raw usage data. Null when Attend is off or unsupported. The
-  // Cabinet SEEING the signals is the premium half of Attend: free tier
-  // still gets monitoring, the goal card, and goal notifications.
+  // never raw usage data. The block is ALWAYS injected: with signals when
+  // available, otherwise an honest "you cannot see it because …" so a direct
+  // "how's my screen time?" never gets an invented answer. The Cabinet
+  // SEEING the signals is the premium half of Attend: free tier still gets
+  // monitoring, the goal card, and goal notifications.
   try {
     const attendTier = await getSubscriptionTier().catch(() => 'free');
-    if (attendTier !== 'free') {
-      const attendContext = await buildAttendContext();
-      if (attendContext) {
-        lines.push('');
-        lines.push(attendContext);
-      }
+    const attendContext = await buildAttendContext(attendTier !== 'free');
+    if (attendContext) {
+      lines.push('');
+      lines.push(attendContext);
+    }
+
+    // Apple Health (opt-in, read-only): sleep, steps, exercise — same
+    // always-injected honesty contract and premium gate as Attend.
+    const healthContext = await buildHealthContext(attendTier !== 'free');
+    if (healthContext) {
+      lines.push('');
+      lines.push(healthContext);
+    }
+
+    // Calendar (opt-in, read-only): today's agenda — same contract and gate.
+    const calendarContext = await buildCalendarContext(attendTier !== 'free');
+    if (calendarContext) {
+      lines.push('');
+      lines.push(calendarContext);
     }
   } catch { /* skip */ }
 
@@ -740,7 +776,12 @@ export async function sendMessageToCabinet(
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+    // One-time Cabinet-voiced announcement after an update that expanded the
+    // counselors' sight. Only conversation sites consume it (not the daily
+    // question prefetch), so the one shot lands where the user will read it.
+    const cabWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
+      + (cabWhatsNew ? '\n\n' + cabWhatsNew : '');
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const cabinetSettings = await getUserSettings();
@@ -859,7 +900,9 @@ export async function sendCheckInToCabinet(
       userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
     }
 
-    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+    const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
+      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '');
 
     const { data: { user: _ciUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -960,7 +1003,9 @@ export async function sendMessageToCounselor(
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
+    const cnWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext())
+      + (cnWhatsNew ? '\n\n' + cnWhatsNew : '');
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const userProfile = await getKnowThyselfProfile();
