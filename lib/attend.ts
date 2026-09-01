@@ -16,15 +16,21 @@ import { Platform } from 'react-native';
 // degrade to the manual screen-time log.
 
 export const ATTEND_ACTIVITY = 'attend-daily';
+export const ATTEND_NIGHT_ACTIVITY = 'attend-night';
 export const ATTEND_SELECTION_ID = 'attend-selection';
 
 // Coarse daily ladder (minutes). Crossings are the only usage signal we get.
 export const ATTEND_LADDER = [30, 60, 90, 120, 180, 240, 300];
 
+// Late-night window (23:00–05:00): its own monitor with a finer ladder,
+// because 15 minutes at 1am says more than an hour at noon.
+export const ATTEND_NIGHT_LADDER = [15, 30, 60, 120];
+
 const KEY_ENABLED = 'attend_enabled';
 const KEY_SELECTION = 'attend_family_selection';
 const KEY_GOAL_MINUTES = 'attend_goal_minutes';
 const KEY_HISTORY = 'attend_daily_history'; // { [YYYY-MM-DD]: { highest: number, overGoal: boolean } }
+const KEY_NIGHT_HISTORY = 'attend_night_history'; // { [YYYY-MM-DD of the morning]: highest minutes }
 
 type DeviceActivityModule = typeof import('react-native-device-activity');
 
@@ -109,7 +115,7 @@ export async function enableAttend(
 
   try {
     try {
-      mod.stopMonitoring([ATTEND_ACTIVITY]);
+      mod.stopMonitoring([ATTEND_ACTIVITY, ATTEND_NIGHT_ACTIVITY]);
     } catch { /* nothing running yet */ }
 
     const ladder = [...new Set([...ATTEND_LADDER, goalMinutes, Math.round(goalMinutes * 1.5)])]
@@ -130,6 +136,29 @@ export async function enableAttend(
         includesPastActivity: true,
       }))
     );
+
+    // Late-night monitor: same selection, 23:00–05:00 (DeviceActivity
+    // supports overnight intervals), finer ladder, no notifications — it
+    // feeds counselor context quietly. Failure here never takes down the
+    // daily monitor.
+    try {
+      await mod.startMonitoring(
+        ATTEND_NIGHT_ACTIVITY,
+        {
+          intervalStart: { hour: 23, minute: 0, second: 0 },
+          intervalEnd: { hour: 5, minute: 0, second: 0 },
+          repeats: true,
+        },
+        ATTEND_NIGHT_LADDER.map((minutes) => ({
+          eventName: `night_${minutes}`,
+          familyActivitySelection,
+          threshold: { minute: minutes },
+          includesPastActivity: true,
+        }))
+      );
+    } catch (e) {
+      console.warn('[attend] night monitor failed:', (e as Error)?.message);
+    }
 
     // Notifications: goal + well-over only.
     mod.configureActions({
@@ -160,7 +189,7 @@ export async function enableAttend(
 export async function disableAttend(): Promise<void> {
   const mod = nativeModule();
   try {
-    mod?.stopMonitoring([ATTEND_ACTIVITY]);
+    mod?.stopMonitoring([ATTEND_ACTIVITY, ATTEND_NIGHT_ACTIVITY]);
   } catch { /* best effort */ }
   await AsyncStorage.multiRemove([KEY_ENABLED, KEY_SELECTION]);
 }
@@ -221,6 +250,28 @@ export async function getAttendTodayStatus(): Promise<AttendTodayStatus> {
   }
 }
 
+/**
+ * Highest late-night threshold crossed in the most recent night window
+ * (events within the last 24h), in minutes; 0 = clean night or no data.
+ */
+export async function getAttendNightStatus(): Promise<number> {
+  const mod = nativeModule();
+  if (!mod || !(await attendIsEnabled())) return 0;
+  try {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    let highest = 0;
+    for (const ev of mod.getEvents(ATTEND_NIGHT_ACTIVITY) || []) {
+      if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
+      if (new Date(ev.lastCalledAt).getTime() < cutoff) continue;
+      const m = parseInt(String(ev.eventName).replace('night_', ''), 10);
+      if (Number.isFinite(m) && m > highest) highest = m;
+    }
+    return highest;
+  } catch {
+    return 0;
+  }
+}
+
 /** Snapshot today's status into the rolling local history (call on app open). */
 export async function recordAttendDay(): Promise<void> {
   try {
@@ -233,6 +284,15 @@ export async function recordAttendDay(): Promise<void> {
     const keys = Object.keys(history).sort();
     while (keys.length > 30) delete history[keys.shift() as string];
     await AsyncStorage.setItem(KEY_HISTORY, JSON.stringify(history));
+
+    // Night history, keyed by the morning it ended on.
+    const night = await getAttendNightStatus();
+    const nraw = await AsyncStorage.getItem(KEY_NIGHT_HISTORY);
+    const nights: Record<string, number> = nraw ? JSON.parse(nraw) : {};
+    nights[todayKey()] = Math.max(nights[todayKey()] ?? 0, night);
+    const nkeys = Object.keys(nights).sort();
+    while (nkeys.length > 30) delete nights[nkeys.shift() as string];
+    await AsyncStorage.setItem(KEY_NIGHT_HISTORY, JSON.stringify(nights));
   } catch { /* best effort */ }
 }
 
@@ -502,6 +562,22 @@ export async function buildAttendContext(cabinetCanSee: boolean = true): Promise
     const watchLines = watchStatus
       .filter((w) => w.highestMinutes > 0)
       .map((w) => `Their "${w.label}" watchlist crossed the ${fmtMinutes(w.highestMinutes)} mark today.`);
+
+    // Late-night window: last night + how many of the last 7 nights.
+    const nightHighest = await getAttendNightStatus();
+    const nraw = await AsyncStorage.getItem(KEY_NIGHT_HISTORY);
+    const nights: Record<string, number> = nraw ? JSON.parse(nraw) : {};
+    const last7Nights = Object.entries(nights).sort().slice(-7);
+    const lateNights = last7Nights.filter(([, m]) => m > 0).length;
+    const nightLines = [
+      nightHighest > 0
+        ? `Last night: phone use between 11pm and 5am crossed the ${fmtMinutes(nightHighest)} mark.`
+        : '',
+      last7Nights.length >= 3 && lateNights > 0
+        ? `Late-night phone use (past 11pm) on ${lateNights} of the last ${last7Nights.length} tracked nights.`
+        : '',
+    ];
+
     return wrap([
       'The user shares coarse Screen Time signals with you (threshold crossings only — you never see exact minutes).',
       `Their self-set daily limit: ${goalText}.`,
@@ -511,6 +587,7 @@ export async function buildAttendContext(cabinetCanSee: boolean = true): Promise
           : 'Today: no usage thresholds crossed yet — well under their limit so far.'
         : 'Today: no signal yet.',
       ...watchLines,
+      ...nightLines,
       last7.length >= 3 ? `Past week: over their limit on ${overDays} of the last ${last7.length} tracked days.` : '',
       'When the user asks directly about their screen time, answer plainly from the lines above. If they are over their limit, tell them straight — e.g. "You went over your limit today." — then speak to it in your own voice. If under, tell them they are still within it. Only your precision is limited (crossings, not exact minutes), never your honesty.',
       'When they have NOT asked, you may still speak to phone use, attention, or distraction where relevant — as one who has been watching, not auditing. Do not volunteer numbers beyond these thresholds, and do not mention the feature name "Attend."',

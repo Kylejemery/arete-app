@@ -4,6 +4,7 @@ import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
 import { buildFocusContext, buildMetaSignalsContext } from '../lib/cabinetSignals';
+import { buildHealthContext } from '../lib/health';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -524,6 +525,14 @@ export async function gatherAppContext(): Promise<string> {
     if (attendContext) {
       lines.push('');
       lines.push(attendContext);
+    }
+
+    // Apple Health (opt-in, read-only): sleep, steps, exercise — same
+    // always-injected honesty contract and premium gate as Attend.
+    const healthContext = await buildHealthContext(attendTier !== 'free');
+    if (healthContext) {
+      lines.push('');
+      lines.push(healthContext);
     }
   } catch { /* skip */ }
 
