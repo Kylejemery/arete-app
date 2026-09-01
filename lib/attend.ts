@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 
 // Attend (Phase 1) — Screen Time awareness via the iOS Family Controls /
@@ -26,6 +27,7 @@ export const ATTEND_LADDER = [30, 60, 90, 120, 180, 240, 300];
 // because 15 minutes at 1am says more than an hour at noon.
 export const ATTEND_NIGHT_LADDER = [15, 30, 60, 120];
 
+const KEY_ARMED_VERSION = 'attend_armed_app_version';
 const KEY_ENABLED = 'attend_enabled';
 const KEY_SELECTION = 'attend_family_selection';
 const KEY_GOAL_MINUTES = 'attend_goal_minutes';
@@ -122,6 +124,12 @@ export async function enableAttend(
   const overCounselor = names[(new Date().getDay() + 1) % names.length];
 
   try {
+    // Snapshot today's crossings into history BEFORE restarting: re-arming
+    // (goal change, reconnect) resets the native counters, and on iOS
+    // < 17.4 they re-accumulate from zero — without this, a mid-day goal
+    // change silently un-crosses thresholds already seen today.
+    try { await recordAttendDay(); } catch { /* best effort */ }
+
     try {
       mod.stopMonitoring([ATTEND_ACTIVITY, ATTEND_NIGHT_ACTIVITY]);
     } catch { /* nothing running yet */ }
@@ -186,6 +194,7 @@ export async function enableAttend(
       [KEY_ENABLED, 'true'],
       [KEY_SELECTION, familyActivitySelection],
       [KEY_GOAL_MINUTES, String(goalMinutes)],
+      [KEY_ARMED_VERSION, Constants.expoConfig?.version ?? ''],
     ]);
     return true;
   } catch (e) {
@@ -216,7 +225,34 @@ export async function updateAttendGoal(goalMinutes: number, counselorNames: stri
   if (!(await attendIsEnabled())) return false;
   const selection = await AsyncStorage.getItem(KEY_SELECTION);
   if (!selection) return false;
-  return enableAttend(selection, goalMinutes, counselorNames);
+  const previousGoal = await getAttendGoalMinutes();
+  const ok = await enableAttend(selection, goalMinutes, counselorNames);
+  if (!ok) {
+    // enableAttend stops the old monitor before starting the new one, so a
+    // failure here would otherwise leave NO monitor running and nothing
+    // recording — restore the previous arm rather than dying silently.
+    await enableAttend(selection, previousGoal, counselorNames);
+  }
+  return ok;
+}
+
+/**
+ * Re-arm once per app version. The extension's config — notification
+ * payloads, thresholds, the night monitor — is baked in at arm time, so
+ * after an app update the monitor keeps serving the OLD build's behavior
+ * (e.g. notifications without the open-into-chat route) until re-armed.
+ * Call on app/tab focus; a no-op when Attend is off or already current.
+ */
+export async function ensureAttendArmedForVersion(counselorNames: string[]): Promise<void> {
+  try {
+    if (!(await attendIsEnabled())) return;
+    const version = Constants.expoConfig?.version ?? '';
+    if (!version) return;
+    const armed = await AsyncStorage.getItem(KEY_ARMED_VERSION);
+    if (armed === version) return;
+    const goal = await getAttendGoalMinutes();
+    await updateAttendGoal(goal, counselorNames);
+  } catch { /* best effort */ }
 }
 
 export async function getAttendGoalMinutes(): Promise<number> {
@@ -233,17 +269,29 @@ export interface AttendTodayStatus {
   goalMinutes: number;
 }
 
-/** Today's coarse status from extension-recorded threshold crossings. */
+/**
+ * Today's coarse status: extension-recorded threshold crossings, merged with
+ * today's history snapshot. The merge is what lets a crossing survive a
+ * mid-day re-arm (goal change, reconnect) — the native counters reset, but
+ * the snapshot taken before the restart still remembers the highest mark.
+ * overGoal is always judged against the CURRENT goal, so raising the goal
+ * can legitimately move a day back under it.
+ */
 export async function getAttendTodayStatus(): Promise<AttendTodayStatus> {
   const goalMinutes = await getAttendGoalMinutes();
   const base: AttendTodayStatus = { connected: false, highestMinutes: 0, overGoal: false, goalMinutes };
   const mod = nativeModule();
   if (!mod || !(await attendIsEnabled())) return base;
+  let highest = 0;
+  try {
+    const raw = await AsyncStorage.getItem(KEY_HISTORY);
+    const history: Record<string, { highest: number }> = raw ? JSON.parse(raw) : {};
+    highest = history[todayKey()]?.highest ?? 0;
+  } catch { /* no snapshot */ }
   try {
     const events = mod.getEvents(ATTEND_ACTIVITY) || [];
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    let highest = 0;
     for (const ev of events) {
       if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
       const at = new Date(ev.lastCalledAt);
@@ -254,7 +302,7 @@ export async function getAttendTodayStatus(): Promise<AttendTodayStatus> {
     return { connected: true, highestMinutes: highest, overGoal: highest >= goalMinutes, goalMinutes };
   } catch (e) {
     console.warn('[attend] status read failed:', (e as Error)?.message);
-    return { ...base, connected: true };
+    return { ...base, connected: true, highestMinutes: highest, overGoal: highest >= goalMinutes };
   }
 }
 
@@ -265,9 +313,16 @@ export async function getAttendTodayStatus(): Promise<AttendTodayStatus> {
 export async function getAttendNightStatus(): Promise<number> {
   const mod = nativeModule();
   if (!mod || !(await attendIsEnabled())) return 0;
+  // Seed from today's snapshot so a re-arm can't erase last night (mirrors
+  // getAttendTodayStatus).
+  let highest = 0;
+  try {
+    const nraw = await AsyncStorage.getItem(KEY_NIGHT_HISTORY);
+    const nights: Record<string, number> = nraw ? JSON.parse(nraw) : {};
+    highest = nights[todayKey()] ?? 0;
+  } catch { /* no snapshot */ }
   try {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    let highest = 0;
     for (const ev of mod.getEvents(ATTEND_NIGHT_ACTIVITY) || []) {
       if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
       if (new Date(ev.lastCalledAt).getTime() < cutoff) continue;
@@ -276,7 +331,7 @@ export async function getAttendNightStatus(): Promise<number> {
     }
     return highest;
   } catch {
-    return 0;
+    return highest;
   }
 }
 

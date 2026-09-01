@@ -27,6 +27,8 @@ import {
   getAttendTodayStatus,
   recordAttendDay,
   updateAttendGoal,
+  attendIsEnabled,
+  ensureAttendArmedForVersion,
   type AttendTodayStatus,
 } from '@/lib/attend';
 
@@ -83,6 +85,12 @@ export default function ProgressScreen() {
     if (!attendIsSupported()) return;
     try {
       await recordAttendDay();
+      // After an app update, re-arm so the extension picks up new payloads
+      // (snapshot above keeps today's crossings across the restart).
+      try {
+        const names = (await getUserCabinet()).map((c: any) => c.name).filter(Boolean);
+        await ensureAttendArmedForVersion(names);
+      } catch { /* re-arm is opportunistic */ }
       setAttendStatus(await getAttendTodayStatus());
     } catch { /* stays null */ }
   }, []);
@@ -148,7 +156,16 @@ export default function ProgressScreen() {
             counselorNames = (await getUserCabinet()).map((c: any) => c.name).filter(Boolean);
           } catch { /* defaults inside enableAttend */ }
           const rearmed = await updateAttendGoal(Math.round(hours * 60), counselorNames);
-          if (rearmed) await refreshAttend();
+          if (rearmed) {
+            await refreshAttend();
+          } else if (await attendIsEnabled()) {
+            // The goal saved, but the monitor could not re-arm with it —
+            // surface it instead of silently tracking the old thresholds.
+            Alert.alert(
+              'Goal saved, monitor not updated',
+              'Screen Time monitoring could not restart with the new goal. Disconnect and reconnect Screen Time on this card to fix it.'
+            );
+          }
         } catch { /* manual mode keeps working regardless */ }
       },
       'plain-text',
