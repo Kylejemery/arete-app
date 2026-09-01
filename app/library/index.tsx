@@ -167,6 +167,24 @@ export default function ReadingRoomScreen() {
                         <Ionicons name="chevron-forward" size={18} color="#c9a84c" />
                     </TouchableOpacity>
 
+                    {/* Observatory door */}
+                    <TouchableOpacity
+                        style={styles.symposiumCard}
+                        onPress={() => router.push('/library/observatory' as any)}
+                        activeOpacity={0.85}
+                    >
+                        <View style={styles.symposiumIcon}>
+                            <Ionicons name="telescope-outline" size={20} color="#c9a84c" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.symposiumTitle}>The Observatory</Text>
+                            <Text style={styles.symposiumSub}>
+                                What the corpus is thinking — open questions, tensions, and where it converges.
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#c9a84c" />
+                    </TouchableOpacity>
+
                     {/* Search the shelves */}
                     <View style={styles.searchRow}>
                         <TextInput

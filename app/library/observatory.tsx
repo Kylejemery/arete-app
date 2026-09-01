@@ -12,7 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { API_BASE_URL } from '../services/claudeService';
+import { API_BASE_URL } from '../../services/claudeService';
 
 const WEB_OBSERVATORY_URL = 'https://academy.pursuearete.com/library';
 

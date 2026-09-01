@@ -103,7 +103,8 @@ export default function ScrollsTab() {
         </TouchableOpacity>
       </View>
 
-      {/* The Library of Arete — public reading rooms over the corpus */}
+      {/* The Library of Arete — the Reading Room, the Symposium, and the
+          Observatory all live inside /library, as on the web. */}
       <View style={styles.libraryRow}>
         <TouchableOpacity
           style={styles.libraryCard}
@@ -111,17 +112,8 @@ export default function ScrollsTab() {
           onPress={() => router.push('/library' as any)}
         >
           <Ionicons name="library-outline" size={20} color="#c9a84c" />
-          <Text style={styles.libraryCardTitle}>Reading Room</Text>
-          <Text style={styles.libraryCardSubtitle}>The primary texts, in full</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.libraryCard}
-          activeOpacity={0.85}
-          onPress={() => router.push('/observatory' as any)}
-        >
-          <Ionicons name="telescope-outline" size={20} color="#c9a84c" />
-          <Text style={styles.libraryCardTitle}>Observatory</Text>
-          <Text style={styles.libraryCardSubtitle}>What the corpus is thinking</Text>
+          <Text style={styles.libraryCardTitle}>The Library</Text>
+          <Text style={styles.libraryCardSubtitle}>Reading Room · Symposium · Observatory</Text>
         </TouchableOpacity>
       </View>
 
