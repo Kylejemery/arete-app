@@ -3,6 +3,7 @@ import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, ge
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
+import { buildFocusContext, buildMetaSignalsContext } from '../lib/cabinetSignals';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -490,6 +491,24 @@ export async function gatherAppContext(): Promise<string> {
           lines.push(`  [Virtue concern noted: ${b.virtue_check.concern}]`);
         }
       });
+    }
+  } catch { /* skip */ }
+
+  // Focus sessions (pomodoro) — on-device rolling history from the timer tab.
+  try {
+    lines.push('');
+    lines.push(await buildFocusContext());
+  } catch { /* skip */ }
+
+  // Accountability meta-signals: journaling gaps and stale goals, computed
+  // here so counselors never do their own date math (and never invent gaps).
+  try {
+    const { data: { user: metaUser } } = await supabase.auth.getUser();
+    const metaGoals = metaUser ? await getGoals(metaUser.id).catch(() => []) : [];
+    const metaContext = buildMetaSignalsContext({ journalEntries, goals: metaGoals });
+    if (metaContext) {
+      lines.push('');
+      lines.push(metaContext);
     }
   } catch { /* skip */ }
 
