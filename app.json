@@ -10,6 +10,7 @@
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "appleTeamId": "VAAKMM3C9G",
       "bundleIdentifier": "com.kylejemery.areteapp",
       "buildNumber": "36",
       "infoPlist": {
@@ -56,7 +57,14 @@
       "expo-status-bar",
       "expo-web-browser",
       "expo-localization",
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "react-native-device-activity",
+        {
+          "appleTeamId": "VAAKMM3C9G",
+          "appGroup": "group.com.kylejemery.areteapp"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

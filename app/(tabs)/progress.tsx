@@ -16,8 +16,25 @@ import {
     View,
 } from 'react-native';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed, getLongitudinalPortrait } from '@/lib/db';
+import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed, getLongitudinalPortrait, getUserCabinet } from '@/lib/db';
 import type { LongitudinalPortrait } from '@/lib/types';
+import {
+  attendIsSupported,
+  requestAttendAuthorization,
+  enableAttend,
+  disableAttend,
+  getAttendTodayStatus,
+  recordAttendDay,
+  type AttendTodayStatus,
+} from '@/lib/attend';
+
+// Native FamilyActivityPicker sheet — present only in builds that include the
+// device-activity module; older builds fall back to manual logging.
+let AttendSelectionSheet: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  AttendSelectionSheet = require('react-native-device-activity').DeviceActivitySelectionSheetView;
+} catch { /* module absent in this build */ }
 
 const MILESTONES = [
   { days: 7, label: '7 Day Streak', icon: '🔥' },
@@ -54,10 +71,79 @@ export default function ProgressScreen() {
   const [screenTimeLog, setScreenTimeLog] = useState<any[]>([]);
   const [todayScreenTime, setTodayScreenTime] = useState('');
 
+  // Attend — iOS Screen Time monitoring (only in builds with the native module)
+  const [attendStatus, setAttendStatus] = useState<AttendTodayStatus | null>(null);
+  const [attendBusy, setAttendBusy] = useState(false);
+  const [showAttendPicker, setShowAttendPicker] = useState(false);
+
+  const refreshAttend = useCallback(async () => {
+    if (!attendIsSupported()) return;
+    try {
+      await recordAttendDay();
+      setAttendStatus(await getAttendTodayStatus());
+    } catch { /* stays null */ }
+  }, []);
+
+  const connectAttend = async () => {
+    if (attendBusy) return;
+    setAttendBusy(true);
+    try {
+      const auth = await requestAttendAuthorization();
+      if (auth === 'approved') {
+        setShowAttendPicker(true);
+      } else if (auth === 'denied') {
+        Alert.alert(
+          'Screen Time Access Needed',
+          'Enable Screen Time access for Arete in iOS Settings > Screen Time > Apps with Screen Time Access.'
+        );
+      }
+    } finally {
+      setAttendBusy(false);
+    }
+  };
+
+  const onAttendSelection = async (selection: string | null) => {
+    setShowAttendPicker(false);
+    if (!selection) return;
+    setAttendBusy(true);
+    try {
+      let counselorNames: string[] = [];
+      try {
+        counselorNames = (await getUserCabinet()).map((c: any) => c.name).filter(Boolean);
+      } catch { /* defaults inside enableAttend */ }
+      const ok = await enableAttend(selection, Math.round(screenTimeGoal * 60), counselorNames);
+      if (ok) {
+        Alert.alert(
+          'Attend is on',
+          'Your counselors will notice when you cross your daily goal — even when Arete is closed.'
+        );
+        await refreshAttend();
+      } else {
+        Alert.alert('Could not start monitoring', 'Please try again.');
+      }
+    } finally {
+      setAttendBusy(false);
+    }
+  };
+
+  const disconnectAttend = () => {
+    Alert.alert('Disconnect Screen Time?', 'Attend monitoring and goal notifications stop.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Disconnect', style: 'destructive',
+        onPress: async () => {
+          await disableAttend();
+          setAttendStatus(null);
+        },
+      },
+    ]);
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadAllData();
-    }, [])
+      refreshAttend();
+    }, [refreshAttend])
   );
 
   const loadAllData = async () => {
@@ -312,6 +398,49 @@ export default function ProgressScreen() {
             {/* Screen Time Card */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionTitle}>📱 Screen Time</Text>
+
+              {/* Attend: live iOS Screen Time monitoring */}
+              {attendIsSupported() && !attendStatus?.connected && (
+                <TouchableOpacity
+                  style={styles.attendConnectButton}
+                  onPress={connectAttend}
+                  disabled={attendBusy}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="hourglass-outline" size={16} color="#1a1a2e" />
+                  <Text style={styles.attendConnectText}>
+                    {attendBusy ? 'Connecting…' : 'Connect iOS Screen Time'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {attendIsSupported() && !attendStatus?.connected && (
+                <Text style={styles.attendCaption}>
+                  Your counselors will notice when you cross your daily goal, even when Arete is
+                  closed. Usage data never leaves your phone.
+                </Text>
+              )}
+              {attendStatus?.connected && (
+                <View style={styles.attendStatusRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.attendStatusLine}>
+                      {attendStatus.highestMinutes > 0
+                        ? `Today: crossed ${attendStatus.highestMinutes >= 60
+                            ? `${Math.floor(attendStatus.highestMinutes / 60)}h${attendStatus.highestMinutes % 60 ? ` ${attendStatus.highestMinutes % 60}m` : ''}`
+                            : `${attendStatus.highestMinutes}m`}`
+                        : 'Today: under every threshold so far'}
+                      {'  '}
+                      <Text style={attendStatus.overGoal ? styles.attendOver : styles.attendUnder}>
+                        {attendStatus.overGoal ? '⚠ over goal' : '✓ under goal'}
+                      </Text>
+                    </Text>
+                    <Text style={styles.attendMonitoredBy}>Monitored by iOS Screen Time</Text>
+                  </View>
+                  <TouchableOpacity onPress={disconnectAttend} hitSlop={8}>
+                    <Text style={styles.attendDisconnect}>Disconnect</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <View style={styles.screenTimeRow}>
                 <View style={styles.screenTimeStat}>
                   <Text style={styles.screenTimeHours}>
@@ -552,6 +681,22 @@ export default function ProgressScreen() {
       </ScrollView>
 
       {/* Add Book Modal */}
+      {/* Attend: native FamilyActivityPicker — choose what counts as screen time */}
+      {showAttendPicker && AttendSelectionSheet && (
+        <Modal visible transparent animationType="slide" onRequestClose={() => setShowAttendPicker(false)}>
+          <AttendSelectionSheet
+            style={{ flex: 1 }}
+            headerText="What counts toward your goal?"
+            footerText="Pick the apps or categories your daily goal applies to. Choosing whole categories keeps future apps covered."
+            onSelectionChange={(e: any) => {
+              const sel = e?.nativeEvent?.familyActivitySelection ?? null;
+              if (sel) onAttendSelection(sel);
+            }}
+            onDismissRequest={() => setShowAttendPicker(false)}
+          />
+        </Modal>
+      )}
+
       <Modal visible={showBookModal} transparent animationType="slide">
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={styles.modalOverlay}>
@@ -667,6 +812,22 @@ const styles = StyleSheet.create({
   sectionCard: { backgroundColor: '#16213e', borderRadius: 16, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: '#c9a84c22' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 },
   sectionTitle: { color: '#c9a84c', fontSize: 16, fontWeight: 'bold', marginBottom: 15 },
+  attendConnectButton: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 11, marginBottom: 8,
+  },
+  attendConnectText: { color: '#1a1a2e', fontSize: 14, fontWeight: '700' },
+  attendCaption: { color: '#777', fontSize: 12, lineHeight: 17, marginBottom: 14 },
+  attendStatusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#c9a84c11', borderWidth: 1, borderColor: '#c9a84c33',
+    borderRadius: 10, padding: 12, marginBottom: 14,
+  },
+  attendStatusLine: { color: '#e0d5b5', fontSize: 13, fontWeight: '600' },
+  attendOver: { color: '#e08a4c' },
+  attendUnder: { color: '#7cb87c' },
+  attendMonitoredBy: { color: '#666', fontSize: 11, marginTop: 3 },
+  attendDisconnect: { color: '#888', fontSize: 12, textDecorationLine: 'underline' },
   screenTimeRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginBottom: 15 },
   screenTimeStat: { alignItems: 'center', gap: 4 },
   screenTimeHours: { color: '#fff', fontSize: 28, fontWeight: 'bold' },
