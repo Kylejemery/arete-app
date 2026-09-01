@@ -1129,6 +1129,24 @@ app.post('/api/chat/counselor', async (req, res) => {
   // system prompt below so they know this person over time. Empty for new users.
   const longitudinalContext = await getLongitudinalContext(userId);
 
+  // --- Client app data (routines, journal, goals, ATTEND context) ---
+  // The client's `system` is buildSystemPrompt + gatherAppContext, but the
+  // parallel Cabinet path builds each counselor's persona server-side and
+  // historically discarded `system` entirely — which silently dropped the
+  // user's routines/journal/Screen Time context from Cabinet chat. Extract
+  // the app-data tail (it starts at "=== <NAME>'S CURRENT APP DATA") and
+  // inject it into every counselor alongside the other context blocks.
+  let clientAppContext = '';
+  if (typeof system === 'string') {
+    const marker = system.indexOf("'S CURRENT APP DATA");
+    if (marker >= 0) {
+      const start = system.lastIndexOf('===', marker);
+      if (start >= 0) {
+        clientAppContext = `\n\n[USER APP DATA — from the user's own tracking in Arete]\n${system.slice(start).trim()}\n[END USER APP DATA]`;
+      }
+    }
+  }
+
   // --- Parallel Cabinet branch ---
   const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
 
@@ -1173,7 +1191,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext, req.areteTier || 'free');
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free');
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
