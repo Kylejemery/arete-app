@@ -20,15 +20,18 @@ export async function gate() {
   if (!data.enabled) return { go: false, why: data.paused_reason || "kill switch off" };
 
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // The cap is a compose budget, not a posted-comment budget: a declined or
+  // failed compose burns the same tokens as a posted one, so every row that
+  // ran the compose model counts (meta.composed), alongside legacy
+  // comment/post rows from before the flag existed.
   const { count } = await db
     .from("moltbook_agent_actions")
     .select("id", { count: "exact", head: true })
-    .in("kind", ["comment", "post"])
-    .eq("status", "ok")
+    .or("kind.in.(comment,post),meta->>composed.eq.true")
     .gte("created_at", since);
 
   const cap = data.max_actions_day ?? config.maxActionsPerDay;
-  if ((count ?? 0) >= cap) return { go: false, why: `daily cap reached (${count}/${cap})` };
+  if ((count ?? 0) >= cap) return { go: false, why: `daily compose budget reached (${count}/${cap})` };
   return { go: true, remaining: cap - (count ?? 0) };
 }
 

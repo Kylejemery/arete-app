@@ -37,7 +37,7 @@ async function handleReply(candidate) {
 
   if (draft.action !== "comment" || !draft.body?.trim()) {
     await markSeen({ id: candidate.reply.id }, "reply_declined");
-    await log({ kind: "skip", target_id: candidate.postId, reason: draft.reason, status: "ok", meta: { in_reply_to: candidate.reply.id } });
+    await log({ kind: "skip", target_id: candidate.postId, reason: draft.reason, status: "ok", meta: { in_reply_to: candidate.reply.id, composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     console.log(`[tick] declined reply: ${draft.reason}`);
     return;
   }
@@ -45,7 +45,7 @@ async function handleReply(candidate) {
   const dup = await isDuplicate(draft.body);
   if (dup.dup) {
     await markSeen({ id: candidate.reply.id }, "reply_duplicate");
-    await log({ kind: "skip", target_id: candidate.postId, body: draft.body, body_hash: hash(draft.body), reason: `duplicate (${dup.kind})`, status: "blocked" });
+    await log({ kind: "skip", target_id: candidate.postId, body: draft.body, body_hash: hash(draft.body), reason: `duplicate (${dup.kind})`, status: "blocked", meta: { composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     console.log("[tick] reply blocked as duplicate");
     return;
   }
@@ -60,7 +60,7 @@ async function handleReply(candidate) {
       body_hash: hash(draft.body),
       reason: draft.reason,
       status: "ok",
-      meta: { in_reply_to: candidate.reply.id, epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.comment?.id ?? null },
+      meta: { in_reply_to: candidate.reply.id, composed: true, epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.comment?.id ?? null },
     });
     console.log(`[tick] replied to ${candidate.reply.author} on ${candidate.postId} (${draft.epistemic_status})`);
   } catch (err) {
@@ -71,7 +71,7 @@ async function handleReply(candidate) {
       body_hash: hash(draft.body),
       status: "failed",
       error: `${err.message} ${JSON.stringify(err.payload ?? "")}`.slice(0, 800),
-      meta: { in_reply_to: candidate.reply.id },
+      meta: { in_reply_to: candidate.reply.id, composed: true, usage: draft.usage },
     });
     console.error("[tick] reply failed:", err.message, err.payload);
   }
@@ -83,7 +83,7 @@ async function handlePost(target) {
 
   if (draft.action !== "comment" || !draft.body?.trim()) {
     await markSeen(target, "declined");
-    await log({ kind: "skip", target_id: target.id, submolt: target.submolt, reason: draft.reason, status: "ok" });
+    await log({ kind: "skip", target_id: target.id, submolt: target.submolt, reason: draft.reason, status: "ok", meta: { composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     console.log(`[tick] declined: ${draft.reason}`);
     return false;
   }
@@ -91,7 +91,7 @@ async function handlePost(target) {
   const dup = await isDuplicate(draft.body);
   if (dup.dup) {
     await markSeen(target, "duplicate");
-    await log({ kind: "skip", target_id: target.id, body: draft.body, body_hash: hash(draft.body), reason: `duplicate (${dup.kind})`, status: "blocked" });
+    await log({ kind: "skip", target_id: target.id, body: draft.body, body_hash: hash(draft.body), reason: `duplicate (${dup.kind})`, status: "blocked", meta: { composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     console.log("[tick] blocked as duplicate");
     return false;
   }
@@ -107,7 +107,7 @@ async function handlePost(target) {
       body_hash: hash(draft.body),
       reason: draft.reason,
       status: "ok",
-      meta: { epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.comment?.id ?? null },
+      meta: { composed: true, epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.comment?.id ?? null },
     });
     console.log(`[tick] commented on ${target.id} (${draft.epistemic_status})`);
     return true;
@@ -120,6 +120,7 @@ async function handlePost(target) {
       body_hash: hash(draft.body),
       status: "failed",
       error: `${err.message} ${JSON.stringify(err.payload ?? "")}`.slice(0, 800),
+      meta: { composed: true, usage: draft.usage },
     });
     console.error("[tick] post failed:", err.message, err.payload);
     return false;
@@ -135,14 +136,14 @@ async function maybeOriginalPost() {
 
   const draft = await composePost(await recentBodies());
   if (draft.action !== "post" || !draft.title?.trim() || !draft.body?.trim()) {
-    await log({ kind: "skip", reason: draft.reason || "nothing worth posting", status: "ok", meta: { considered: "original_post" } });
+    await log({ kind: "skip", reason: draft.reason || "nothing worth posting", status: "ok", meta: { considered: "original_post", composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     console.log(`[tick] no original post: ${draft.reason}`);
     return;
   }
 
   const dup = await isDuplicate(draft.body);
   if (dup.dup) {
-    await log({ kind: "skip", body: draft.body, body_hash: hash(draft.body), reason: `duplicate post (${dup.kind})`, status: "blocked" });
+    await log({ kind: "skip", body: draft.body, body_hash: hash(draft.body), reason: `duplicate post (${dup.kind})`, status: "blocked", meta: { composed: true, usage: draft.usage, corpus_hits: draft.corpusHits } });
     return;
   }
 
@@ -155,7 +156,7 @@ async function maybeOriginalPost() {
       body_hash: hash(draft.body),
       reason: draft.reason,
       status: "ok",
-      meta: { epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.post?.id ?? null },
+      meta: { composed: true, epistemic_status: draft.epistemic_status, corpus_hits: draft.corpusHits, usage: draft.usage, response_id: res?.id ?? res?.post?.id ?? null },
     });
     console.log(`[tick] posted: ${draft.title}`);
   } catch (err) {
@@ -165,6 +166,7 @@ async function maybeOriginalPost() {
       body_hash: hash(draft.body),
       status: "failed",
       error: `${err.message} ${JSON.stringify(err.payload ?? "")}`.slice(0, 800),
+      meta: { composed: true, usage: draft.usage },
     });
     console.error("[tick] original post failed:", err.message, err.payload);
   }
@@ -223,7 +225,9 @@ async function main() {
       await tick();
     } catch (err) {
       console.error("[tick] error:", err);
-      await log({ kind: "error", status: "failed", error: String(err).slice(0, 800) });
+      // Parse failures out of brain.js carry the burned call's usage — record
+      // it so failed calls show up in the cost log instead of hiding.
+      await log({ kind: "error", status: "failed", error: String(err).slice(0, 800), meta: { composed: err.composed ?? false, usage: err.usage ?? null } });
     }
     if (ONCE) break;
     // Jitter so the agent is not a metronome.

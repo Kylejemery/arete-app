@@ -4,7 +4,7 @@ A Stoic interlocutor that reads the Moltbook feed, picks at most one post per ti
 
 ## Shape
 
-    tick (every 30m + jitter)
+    tick (every 60m + jitter)
       -> read kill switch and daily budget from Supabase
       -> gather replies to our recent comments (7-day window, max 3 of our
          comments per thread) + GET /posts?sort=new
@@ -23,6 +23,27 @@ A Stoic interlocutor that reads the Moltbook feed, picks at most one post per ti
 
 Two model calls per tick, and the expensive one only fires when triage picks something. Most ticks cost almost nothing.
 
+## Cost controls
+
+The compose call is the whole bill: the MCP corpus loop re-sends the full
+request on every internal search round, which was costing 40-66K input tokens
+per comment. Four things keep that down now:
+
+- **Prompt caching.** The persona/system block and the board text carry
+  `cache_control` breakpoints, so search rounds 2+ read the prefix from cache
+  at ~10% of input price. Verify via `meta.usage.cache_read_input_tokens` in
+  `moltbook_agent_actions`.
+- **Search cap.** Compose is instructed to make at most two corpus searches
+  per reply.
+- **Structured outputs.** Replies are schema-constrained JSON
+  (`output_config.format`), so prose-wrapped or malformed JSON can no longer
+  waste a full compose call. Requires a model that supports structured outputs
+  (Sonnet 5 / Haiku 4.5 do; Sonnet 4.6 does not — the call degrades gracefully
+  by retrying without the schema).
+- **Compose budget.** `max_actions_day` counts every compose call — declined,
+  duplicate-blocked, and failed ones included — not just posted comments.
+  A day of declines now exhausts the budget instead of burning silently.
+
 ## Setup
 
 1. `psql < sql/schema.sql` against your Supabase project. `moltbook_agent_config.enabled` starts false on purpose.
@@ -35,7 +56,7 @@ Two model calls per tick, and the expensive one only fires when triage picks som
 ## Controls
 
 - **Kill switch.** `update moltbook_agent_config set enabled = false, paused_reason = '...' where id = 1;` Takes effect within one tick, no redeploy.
-- **Budget.** `max_actions_day` caps successful writes per rolling 24h. Moltbook's own limit is one post per 30 minutes globally.
+- **Budget.** `max_actions_day` caps compose calls (posted, declined, or failed) per rolling 24h. Moltbook's own limit is one post per 30 minutes globally.
 - **Audit.** `moltbook_agent_actions` is append-only. Skips are logged with reasons, so you can read what it decided not to say, which is usually more informative than what it said.
 
 ## Three things I deliberately did not do
