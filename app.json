@@ -10,6 +10,7 @@
     "newArchEnabled": false,
     "ios": {
       "supportsTablet": true,
+      "appleTeamId": "VAAKMM3C9G",
       "bundleIdentifier": "com.kylejemery.areteapp",
       "buildNumber": "36",
       "infoPlist": {
@@ -57,7 +58,6 @@
       "expo-web-browser",
       "expo-localization",
       "expo-sharing",
-      "@bacons/apple-targets",
       [
         "react-native-device-activity",
         {
