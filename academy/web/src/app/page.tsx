@@ -31,20 +31,20 @@ export default function LandingPage() {
     <div className="min-h-screen bg-navy">
 
       {/* Nav */}
-      <nav className="border-b border-navy-border px-8 py-5 flex items-center justify-between">
-        <div>
-          <span className="font-serif text-gold text-xl tracking-[0.2em] uppercase">Arete</span>
-          <span className="text-gold/40 mx-3">|</span>
-          <span className="font-serif text-cream/60 text-sm tracking-[0.15em] uppercase">Academy</span>
+      <nav className="border-b border-navy-border px-4 sm:px-8 py-5 flex items-center justify-between gap-3">
+        <div className="whitespace-nowrap">
+          <span className="font-serif text-gold text-lg sm:text-xl tracking-[0.2em] uppercase">Arete</span>
+          <span className="hidden sm:inline text-gold/40 mx-3">|</span>
+          <span className="hidden sm:inline font-serif text-cream/60 text-sm tracking-[0.15em] uppercase">Academy</span>
         </div>
-        <div className="flex items-center gap-6">
-          <Link href="/library" className="text-cream/50 text-sm hover:text-gold transition-colors tracking-wider">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <Link href="/library" className="text-cream/50 text-xs sm:text-sm hover:text-gold transition-colors tracking-wider whitespace-nowrap">
             The Library
           </Link>
-          <Link href="/login" className="text-cream/50 text-sm hover:text-gold transition-colors tracking-wider">
+          <Link href="/login" className="text-cream/50 text-xs sm:text-sm hover:text-gold transition-colors tracking-wider whitespace-nowrap">
             Sign In
           </Link>
-          <Link href="/waitlist" className="btn-primary text-xs">
+          <Link href="/waitlist" className="btn-primary text-xs whitespace-nowrap">
             Apply
           </Link>
         </div>
