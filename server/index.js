@@ -4413,6 +4413,50 @@ app.get('/api/library/text', async (req, res) => {
   }
 });
 
+// GET /api/widget/quote — the home-screen widget's daily line. Public, no
+// auth (WidgetKit timeline providers fetch anonymously), deterministic per
+// day so every refresh in a day shows the same line.
+const WIDGET_QUOTES = [
+  { text: 'You have power over your mind, not outside events. Realize this, and you will find strength.', author: 'Marcus Aurelius' },
+  { text: 'It is not that we have a short time to live, but that we waste a lot of it.', author: 'Seneca' },
+  { text: 'First say to yourself what you would be; and then do what you have to do.', author: 'Epictetus' },
+  { text: 'The impediment to action advances action. What stands in the way becomes the way.', author: 'Marcus Aurelius' },
+  { text: 'No man is free who is not master of himself.', author: 'Epictetus' },
+  { text: 'Begin at once to live, and count each separate day as a separate life.', author: 'Seneca' },
+  { text: 'Waste no more time arguing about what a good man should be. Be one.', author: 'Marcus Aurelius' },
+  { text: 'Man is not worried by real problems so much as by his imagined anxieties about real problems.', author: 'Epictetus' },
+  { text: 'Luck is what happens when preparation meets opportunity.', author: 'Seneca' },
+  { text: 'Confine yourself to the present.', author: 'Marcus Aurelius' },
+  { text: 'Wealth consists not in having great possessions, but in having few wants.', author: 'Epictetus' },
+  { text: 'He who fears death will never do anything worthy of a living man.', author: 'Seneca' },
+  { text: 'The best revenge is to be unlike him who performed the injury.', author: 'Marcus Aurelius' },
+  { text: 'Only the educated are free.', author: 'Epictetus' },
+  { text: 'Difficulties strengthen the mind, as labor does the body.', author: 'Seneca' },
+  { text: 'Very little is needed to make a happy life; it is all within yourself, in your way of thinking.', author: 'Marcus Aurelius' },
+  { text: 'Do not seek for things to happen the way you want them to; rather, wish that what happens happen the way it happens.', author: 'Epictetus' },
+  { text: 'While we wait for life, life passes.', author: 'Seneca' },
+  { text: 'If it is not right, do not do it. If it is not true, do not say it.', author: 'Marcus Aurelius' },
+  { text: 'It is impossible for a man to learn what he thinks he already knows.', author: 'Epictetus' },
+  { text: 'Hang on to your youthful enthusiasms; you will be able to use them better when you are older.', author: 'Seneca' },
+  { text: 'When you arise in the morning, think of what a precious privilege it is to be alive.', author: 'Marcus Aurelius' },
+  { text: 'Freedom is the only worthy goal in life. It is won by disregarding things that lie beyond our control.', author: 'Epictetus' },
+  { text: 'Every night before going to sleep, we must ask ourselves: what weakness did I overcome today? What virtue did I acquire?', author: 'Seneca' },
+  { text: 'The soul becomes dyed with the color of its thoughts.', author: 'Marcus Aurelius' },
+  { text: 'Circumstances do not make the man; they only reveal him to himself.', author: 'Epictetus' },
+  { text: 'As is a tale, so is life: not how long it is, but how good it is, is what matters.', author: 'Seneca' },
+  { text: 'Dwell on the beauty of life. Watch the stars, and see yourself running with them.', author: 'Marcus Aurelius' },
+  { text: 'Seek not the good in external things; seek it in yourself.', author: 'Epictetus' },
+  { text: 'True happiness is to enjoy the present, without anxious dependence upon the future.', author: 'Seneca' },
+];
+
+app.get('/api/widget/quote', (req, res) => {
+  const now = new Date();
+  const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const quote = WIDGET_QUOTES[dayOfYear % WIDGET_QUOTES.length];
+  res.set('Cache-Control', 'public, max-age=3600');
+  return res.json(quote);
+});
+
 // GET /api/library/outline?author=&work= — section headings with the reader
 // page each begins on (pages are LIBRARY_PAGE_CHUNKS rows). Powers the
 // reader's linked table of contents.
