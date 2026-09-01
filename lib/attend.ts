@@ -170,6 +170,18 @@ export async function attendIsEnabled(): Promise<boolean> {
   return (await AsyncStorage.getItem(KEY_ENABLED)) === 'true';
 }
 
+/**
+ * Re-arm monitoring with a new goal using the stored selection. Thresholds
+ * are baked in at startMonitoring time, so a goal change must restart the
+ * monitor. No-op (false) when Attend isn't connected.
+ */
+export async function updateAttendGoal(goalMinutes: number, counselorNames: string[]): Promise<boolean> {
+  if (!(await attendIsEnabled())) return false;
+  const selection = await AsyncStorage.getItem(KEY_SELECTION);
+  if (!selection) return false;
+  return enableAttend(selection, goalMinutes, counselorNames);
+}
+
 export async function getAttendGoalMinutes(): Promise<number> {
   const raw = await AsyncStorage.getItem(KEY_GOAL_MINUTES);
   const n = raw ? parseInt(raw, 10) : NaN;

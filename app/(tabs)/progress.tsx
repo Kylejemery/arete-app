@@ -26,6 +26,7 @@ import {
   disableAttend,
   getAttendTodayStatus,
   recordAttendDay,
+  updateAttendGoal,
   type AttendTodayStatus,
 } from '@/lib/attend';
 
@@ -128,6 +129,33 @@ export default function ProgressScreen() {
     }
   };
 
+  const editScreenTimeGoal = () => {
+    Alert.prompt(
+      'Daily Screen Time Goal',
+      'Hours per day (e.g., 2 or 1.5)',
+      async (value) => {
+        const hours = parseFloat(value);
+        if (!hours || hours < 0.25 || hours > 16) {
+          Alert.alert('Invalid', 'Enter a goal between 0.25 and 16 hours.');
+          return;
+        }
+        setScreenTimeGoal(hours);
+        try { await AsyncStorage.setItem('screen_time_goal_hours', String(hours)); } catch {}
+        // Re-arm the iOS monitor so notifications and status use the new goal.
+        try {
+          let counselorNames: string[] = [];
+          try {
+            counselorNames = (await getUserCabinet()).map((c: any) => c.name).filter(Boolean);
+          } catch { /* defaults inside enableAttend */ }
+          const rearmed = await updateAttendGoal(Math.round(hours * 60), counselorNames);
+          if (rearmed) await refreshAttend();
+        } catch { /* manual mode keeps working regardless */ }
+      },
+      'plain-text',
+      String(screenTimeGoal)
+    );
+  };
+
   const disconnectAttend = () => {
     Alert.alert('Disconnect Screen Time?', 'Attend monitoring and goal notifications stop.', [
       { text: 'Cancel', style: 'cancel' },
@@ -153,6 +181,13 @@ export default function ProgressScreen() {
     try {
       const cached = await AsyncStorage.getItem('arete:progress_streak');
       if (cached) setStreak(JSON.parse(cached).streak ?? 0);
+    } catch {}
+
+    // Persisted screen-time goal (editable by tapping the Daily Goal stat)
+    try {
+      const g = await AsyncStorage.getItem('screen_time_goal_hours');
+      const hours = g ? parseFloat(g) : NaN;
+      if (Number.isFinite(hours) && hours > 0) setScreenTimeGoal(hours);
     } catch {}
 
     try {
@@ -461,7 +496,7 @@ export default function ProgressScreen() {
                   <Text style={styles.screenTimeLabel}>Today</Text>
                 </View>
                 <View style={styles.screenTimeDivider} />
-                <View style={styles.screenTimeStat}>
+                <TouchableOpacity style={styles.screenTimeStat} onPress={editScreenTimeGoal} activeOpacity={0.7}>
                   <Text style={[
                     styles.screenTimeHours,
                     todayScreenEntry && todayScreenEntry.hours <= screenTimeGoal
@@ -469,8 +504,8 @@ export default function ProgressScreen() {
                   ]}>
                     {screenTimeGoal}h
                   </Text>
-                  <Text style={styles.screenTimeLabel}>Daily Goal</Text>
-                </View>
+                  <Text style={styles.screenTimeLabel}>Daily Goal ✎</Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.pagesInputRow}>
                 <TextInput
