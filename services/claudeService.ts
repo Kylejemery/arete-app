@@ -2,6 +2,7 @@ import { ThreadMessage, appendMessages, getContextWindow } from './threadService
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
+import { buildAttendContext } from '../lib/attend';
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -486,6 +487,16 @@ export async function gatherAppContext(): Promise<string> {
           lines.push(`  [Virtue concern noted: ${b.virtue_check.concern}]`);
         }
       });
+    }
+  } catch { /* skip */ }
+
+  // Attend (opt-in): coarse Screen Time signals — threshold crossings only,
+  // never raw usage data. Null when Attend is off or unsupported.
+  try {
+    const attendContext = await buildAttendContext();
+    if (attendContext) {
+      lines.push('');
+      lines.push(attendContext);
     }
   } catch { /* skip */ }
 

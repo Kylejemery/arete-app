@@ -57,7 +57,14 @@
       "expo-web-browser",
       "expo-localization",
       "expo-sharing",
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      [
+        "react-native-device-activity",
+        {
+          "appleTeamId": "VAAKMM3C9G",
+          "appGroup": "group.com.kylejemery.areteapp"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
