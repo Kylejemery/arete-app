@@ -191,7 +191,7 @@ export const LIBRARY_ITEMS: LibraryItem[] = [
   {
     id: 'sep-epictetus',
     title: 'Epictetus',
-    author: 'Seddon, K.',
+    author: 'Graver, M.',
     year: 2023,
     type: 'encyclopedia',
     accessType: 'open-access',

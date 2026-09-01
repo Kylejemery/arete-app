@@ -1904,7 +1904,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "content": [
         "The word anapodeiktos means 'not requiring demonstration' — immediate, self-evident in its validity. Chrysippus identified five such argument forms. They are the atomic units of valid propositional inference: all other valid arguments in Stoic logic are constructed by combining these five, or by reducing complex arguments to sequences of them.",
         "This is a remarkable anticipation of modern proof theory. In natural deduction systems (Gentzen, Prawitz), logical validity is also established by reduction to basic inference rules — introduction and elimination rules for each connective. The Stoics got there first, working from a propositional rather than predicate base.",
-        "Each indemonstrable has a fixed structure: one or two premises (called the leading premise and co-assumption) and a conclusion. The Stoics called the major premise the hēgoumenon (leader) and the minor premise the proslēpsis (co-assumption). Together they yield the epilogos (conclusion)."
+        "Each indemonstrable has a fixed structure: one or two premises (called the leading premise and co-assumption) and a conclusion. The Stoics called the major premise the hēgoumenon (leader) and the minor premise the proslēpsis (co-assumption). Together they yield the epiphora (conclusion)."
       ]
     },
     {
@@ -1968,7 +1968,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "title": "Part 3 — Validity, Soundness, and the Stoic Difference",
       "content": [
-        "The Stoics distinguished between a valid argument (akolouthia — following) and a sound or true argument (alēthes). A valid argument is one whose conclusion cannot be false if the premises are true — the logical form preserves truth. A sound argument is one that is valid AND whose premises are actually true.",
+        "The Stoics distinguished between a valid (conclusive) argument (synaktikos) and a sound or true argument (alēthes). (Akolouthia — 'following' — names the consequence relation that holds in a true conditional.) A valid argument is one whose conclusion cannot be false if the premises are true — the logical form preserves truth. A sound argument is one that is valid AND whose premises are actually true.",
         "The indemonstrables give us validity — they are forms that guarantee the conclusion follows. Whether any particular instance is sound depends on whether the premises are true. 'If Cato is a fool, Cato is vicious. Cato is a fool. Therefore Cato is vicious' is a valid first indemonstrable. Whether it is sound depends on whether Cato is in fact a fool — which the Stoics would deny.",
         "The Stoics also identified invalid argument forms — what we would call formal fallacies. The two most discussed are the affirmation of the consequent ('If P then Q; Q; therefore P' — invalid) and the denial of the antecedent ('If P then Q; not-P; therefore not-Q' — invalid). These are NOT indemonstrables, and Chrysippus was explicit that they do not preserve truth.",
         "'The Stoics say that the simplest arguments, those not resolvable into simpler ones, are the five indemonstrables, to which all other arguments are reduced.' — Sextus Empiricus, Against the Logicians 8.223"
@@ -2709,7 +2709,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "The Stoic answer runs something like this: freedom is not the capacity to choose badly. Freedom is the full expression of rational nature. The Sage's assent is not determined by external compulsion — it flows from complete rational understanding. The Sage assents correctly not because they are forced to but because they fully understand the grounds and no alternative assent is rational. This is freedom in the deepest sense: perfect self-determination by reason, with no element of ignorance or compulsion.",
         "Compare: a master mathematician who 'cannot' assent to 2+2=5 is not unfree. Their inability is the expression of complete understanding, not constraint. The Sage's immunity to false assent is the same: not a cage but a perfection.",
         "Marcus Aurelius, writing alone in his tent, returns to this point repeatedly. His Meditations are a record of a prokopton who knows the theory and struggles with the practice — who understands, intellectually, that externals are indifferent, but finds himself pulled by impressions of loss, insult, and fatigue. The gap between knowing the theory and living it is the gap between the prokopton and the Sage.",
-        "'You have power over your mind, not outside events. Realize this, and you will find strength.' — Marcus Aurelius, Meditations 8.7 (traditional rendering)"
+        "'If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.' — Marcus Aurelius, Meditations 8.47"
       ]
     }
   ],

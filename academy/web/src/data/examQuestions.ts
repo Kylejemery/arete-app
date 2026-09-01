@@ -60,7 +60,7 @@ export const PHIL701_EXAM_QUESTIONS: Record<number, SessionExamData> = {
     passages: [
       { text: 'Men are disturbed not by the things which happen, but by the opinions about the things: for example, death is nothing terrible, for if it were, it would have seemed so to Socrates.', attribution: 'Epictetus, Enchiridion §5' },
       { text: 'Never say about anything that I have lost it, but that I have restored it.', attribution: 'Epictetus, Enchiridion §11' },
-      { text: 'The faculty of choice — the hegemonikon — is the faculty that assents or withholds assent. It is the only faculty that is entirely ours.', attribution: 'Epictetus, Discourses I.1' },
+      { text: 'The faculty of choice — prohairesis, Epictetus\'s term — is the faculty that assents or withholds assent. It is the only faculty that is entirely ours.', attribution: 'Epictetus, Discourses I.1' },
     ],
     morning: [
       { id: 's3m1', prompt: 'An impression will arrive this morning that makes a demand on you — a piece of news, a message, a situation. Before you encounter it: practice naming the impression and the opinion layered on top of it as two separate things.' },
@@ -83,7 +83,7 @@ export const PHIL701_EXAM_QUESTIONS: Record<number, SessionExamData> = {
     ],
     morning: [
       { id: 's4m1', prompt: 'The discipline of desire says: desire only what is up to you, and accept what is not. What are you desiring this morning that is not in your power? Can you set it down?' },
-      { id: 's4m2', prompt: 'Epictetus distinguishes between desire (which should be directed only at virtue) and appetite (which grasps at externals). What is your primary appetite right now? Is it pulling your attention?' },
+      { id: 's4m2', prompt: 'Epictetus pairs desire (orexis — to be directed only at what is genuinely good) with aversion (ekklisis — to be directed only at genuine evils, the vices). What external is your desire currently reaching toward? Is it pulling your attention?' },
       { id: 's4m3', prompt: 'Amor fati — love of what is. Name one thing in your current circumstances that you have been resisting rather than accepting. Is resistance costing you more than the thing itself?' },
     ],
     evening: [
@@ -193,7 +193,7 @@ export const PHIL701_EXAM_QUESTIONS: Record<number, SessionExamData> = {
     passages: [
       { text: 'Live according to nature. For the Stoics, nature is rational. To live naturally is to live rationally — to use your hegemonikon as it was designed to be used.', attribution: 'Marcus Aurelius, Meditations VII.9 (paraphrase)' },
       { text: 'Ask yourself at every moment: is this necessary? Is this noble? Is this the best use of my rational nature right now?', attribution: 'Marcus Aurelius, Meditations IV.24 (paraphrase)' },
-      { text: 'You have power over your mind, not outside events. Realize this, and you will find strength.', attribution: 'Marcus Aurelius, Meditations (attributed)' },
+      { text: 'If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.', attribution: 'Marcus Aurelius, Meditations VIII.47' },
     ],
     morning: [
       { id: 's10m1', prompt: 'Living according to nature means using your rational faculty well — it is not about simplicity or outdoors. Where today will your rational nature be most tested? Where are you most likely to act against it?' },

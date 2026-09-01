@@ -8,9 +8,9 @@ import type { Task, RoutineTemplate } from '@/types';
 
 const AFFIRMATIONS = [
   'Confine yourself to the present. — Marcus Aurelius',
-  'Do not indulge in expectations — meet each moment. — Epictetus',
+  'Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are, and you will have a tranquil flow of life. — Epictetus, Enchiridion 8',
   'It is not the man who has too little, but the man who craves more, that is poor. — Seneca',
-  'You have power over your mind, not outside events. — Marcus Aurelius',
+  'If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment. — Marcus Aurelius, Meditations 8.47',
   'Seek not the good in external things; seek it in yourself. — Epictetus',
   'He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. — Epictetus',
   'Begin at once to live, and count each separate day as a separate life. — Seneca',

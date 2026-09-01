@@ -118,7 +118,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "tables": [
           [
             [
-              "Seneca: 'Omnia aliena sunt, virtus propria.' Everything else belongs to others; virtue is our own. (Epistulae 77.15)"
+              "Seneca: 'Omnia, Lucili, aliena sunt, tempus tantum nostrum est.' Everything, Lucilius, belongs to others; time alone is ours. (Epistulae 1.3)"
             ]
           ]
         ]
@@ -157,7 +157,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Exercise 2.1 — Categorize",
         "body": "Categorize each of the following as good, bad, or indifferent (with preferred/dispreferred where applicable): 1. wisdom  2. poverty  3. a courageous action  4. physical health  5. cowardice  6. death  7. reputation  8. justice",
-        "answer": "1. Good (virtue)  2. Dispreferred indifferent  3. Good (virtuous action)  4. Preferred indifferent  5. Bad (vice)  6. Indifferent (neither preferred nor dispreferred by default — context matters)  7. Dispreferred when lost, but indifferent in itself  8. Good (virtue)"
+        "answer": "1. Good (virtue)  2. Dispreferred indifferent  3. Good (virtuous action)  4. Preferred indifferent  5. Bad (vice)  6. Dispreferred indifferent (life is preferable to death — DL VII.102–106)  7. Preferred indifferent (its loss is dispreferred)  8. Good (virtue)"
       },
       {
         "title": "Exercise 2.2 — The Benefit Condition",
@@ -204,8 +204,8 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "answer": "Virtue is sufficient for happiness (eudaimonia) — the Sage needs nothing beyond virtue to live a complete and flourishing life."
       },
       {
-        "question": "7. Translate: 'Omnia aliena sunt, virtus propria.'",
-        "answer": "'Everything else belongs to others; virtue is our own.' (Seneca, Ep. 77.15)"
+        "question": "7. Translate: 'Omnia, Lucili, aliena sunt, tempus tantum nostrum est.'",
+        "answer": "'Everything, Lucilius, belongs to others; time alone is ours.' (Seneca, Ep. 1.3)"
       },
       {
         "type": "mc",
@@ -262,7 +262,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "title": "Part 1 — The Hēgemonikon: The Ruling Faculty",
         "content": [
           "The Stoics held that the soul has a ruling part — the {{hegemonikon|hēgemonikon}} — which is the seat of rational activity, located (they believed) in the heart. All the distinctively human operations of mind — perception, thought, impulse, judgment — are functions of the hēgemonikon. It is not a metaphor; for the Stoics it is a specific physical locus of pneumatic activity in the chest.",
-          "The hēgemonikon performs seven functions, of which the most philosophically important are: receiving impressions ({{phantasia|phantasiai}}), giving or withholding assent ({{synkatathesis|synkatathesis}}), generating impulse toward or away from action (hormē and ekklinsis), and exercising reason (logos). These functions are not separable faculties — they are aspects of a single unified activity.",
+          "The hēgemonikon commands the soul's seven other parts (the five senses, speech, and reproduction); its own operations are four: receiving impressions ({{phantasia|phantasiai}}), giving or withholding assent ({{synkatathesis|synkatathesis}}), generating impulse toward or away from action (hormē and aphormē), and exercising reason (logos). These operations are not separable faculties — they are aspects of a single unified activity.",
           "Why does this matter ethically? Because if the hēgemonikon is the seat of assent, and assent is voluntary, then every judgment you form is up to you. You cannot be forced to believe something. You cannot be compelled to desire something. This is the philosophical basis for Stoic freedom."
         ]
       },
@@ -338,7 +338,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Exercise 3.4 — A Hard Case",
         "body": "Consider physical pain — the impression that accompanies injury or illness. Can the Stoic account of assent extend to physical pain? Can you 'withhold assent' from pain?",
-        "answer": "This is a genuine hard case the Stoics acknowledged. Physical pain involves an impression — the hēgemonikon registers a bodily disturbance as painful. The Stoic does not claim you can suppress the impression of pain or make it not arise. What you can govern is the second-order judgment: 'this is an evil' or 'this is intolerable' or 'this will destroy my happiness.' The Stoics distinguish between the pre-passion (propatheia) — the involuntary initial impression of pain — and the full passion (pathos) — the assent that it is genuinely bad and the resulting distress. You cannot prevent the first; you can govern the second. Epictetus: 'I see the cup — even I see it; but I am not compelled to believe that it is not good to be broken.' Pain is a pre-passion; suffering is an assented-to judgment that the pain constitutes a harm to your good. Whether this is psychologically achievable is a different question from whether it is philosophically correct."
+        "answer": "This is a genuine hard case the Stoics acknowledged. Physical pain involves an impression — the hēgemonikon registers a bodily disturbance as painful. The Stoic does not claim you can suppress the impression of pain or make it not arise. What you can govern is the second-order judgment: 'this is an evil' or 'this is intolerable' or 'this will destroy my happiness.' The Stoics distinguish between the pre-passion (propatheia) — the involuntary initial impression of pain — and the full passion (pathos) — the assent that it is genuinely bad and the resulting distress. You cannot prevent the first; you can govern the second. Aulus Gellius preserves the classic Stoic illustration (Noctes Atticae 19.1): a Stoic philosopher caught in a storm at sea grows pale like everyone else — even the sage cannot prevent the involuntary first impression — but he withholds assent to the judgment that the danger is a genuine evil, and so the pallor never becomes the passion of fear. Pain is a pre-passion; suffering is an assented-to judgment that the pain constitutes a harm to your good. Whether this is psychologically achievable is a different question from whether it is philosophically correct."
       }
     ],
     "quiz": [
@@ -458,7 +458,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Part 2 — Epictetus's Instruction: Redirect, Don't Suppress",
         "content": [
-          "The core instruction is in Encheiridion 2: 'Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are, and you will have a tranquil flow of life.' This is often misread as passive resignation. It is not.",
+          "The core instruction is in Encheiridion 8: 'Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are, and you will have a tranquil flow of life.' This is often misread as passive resignation. It is not.",
           "Epictetus distinguishes three moves: (1) Suspend desire for externals temporarily — at the start of practice, it is safer to desire nothing external than to form desires that cannot be satisfied. (2) Redirect desire toward what is genuinely eph' hēmin: your own virtue, judgments, and choices. (3) Redirect {{ekklisis|aversion}} away from externals (illness, poverty, death) toward what is genuinely bad: vice, your own failures of character.",
           "The point of the redirection: if your desire is directed entirely at what is up to you, it can always be satisfied. If your aversion is directed entirely at what is up to you (your own vices), you can always avoid what you avoid. The Stoic is not someone without desire — she is someone whose desires track the one domain where desire can always be fulfilled."
         ],
@@ -545,7 +545,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "explanation": "The reserve clause separates commitment to action from attachment to outcome: full effort, with the result held as fate permits."
       },
       {
-        "question": "5. Translate Encheiridion §2's core instruction.",
+        "question": "5. Translate Encheiridion §8's core instruction.",
         "answer": "'Seek not that the things which happen should happen as you wish; but wish the things which happen to be as they are.'"
       },
       {
@@ -573,7 +573,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "coreIdea": "Desire for externals produces frustrated longing. Aversion to externals produces fear. Both are errors of assent. The discipline is to redirect desire toward what is genuinely up to you.",
       "assignment": "Write down your top three current desires — things you want that you do not have. For each one, ask: is this up to me entirely, partially, or not at all? For the ones that are partially or not at all up to you, rewrite the desire so it targets only the part that is up to you. 'I want to get promoted' becomes 'I want to do excellent work today.'",
       "duration": "15 min",
-      "greekTerms": "hormē — impulse toward / ekklisis — aversion"
+      "greekTerms": "orexis — desire / ekklisis — aversion"
     }
   },
   {
@@ -615,9 +615,9 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Part 2 — Roles and Obligations",
         "content": [
-          "Epictetus presents the role framework in Discourses 2.10: 'Remember that you are an actor in a play, the character of which is determined by the author.' Each person plays multiple roles simultaneously — human being, citizen of a specific city, member of a family, practitioner of a profession. Each role generates a set of appropriate actions.",
+          "Epictetus presents the role framework in Enchiridion 17: 'Remember that you are an actor in a play, the character of which is determined by the author.' Each person plays multiple roles simultaneously — human being, citizen of a specific city, member of a family, practitioner of a profession. Each role generates a set of appropriate actions.",
           "The human role is most fundamental: as rational, social animals, we are obligated to act for the common good, to reason well, to live in accordance with nature. The other roles particularize this general obligation. As a parent, you have obligations of care and formation toward your children. As a citizen, obligations of civic participation and respect for law. As a friend, obligations of honesty and support.",
-          "The discipline of action involves correctly identifying the kathēkon in each situation and fulfilling it — not as an external imposition but as the expression of who you are. Epictetus: 'Your role determines the action. But you yourself determine what role you play.'"
+          "The discipline of action involves correctly identifying the kathēkon in each situation and fulfilling it — not as an external imposition but as the expression of who you are. Epictetus: 'For this is your business, to act well the part that is given to you; but to select the part belongs to another.' (Ench. 17)"
         ],
         "tables": [
           [
@@ -775,13 +775,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "content": [
           "Pierre Hadot, in Philosophy as a Way of Life, identifies {{prosoche|prosochē}} — continuous attention to oneself and one's present state — as the fundamental Stoic spiritual exercise from which all others derive. 'It is a continuous vigilance and presence of mind, self-consciousness which never sleeps, and a constant tension of the spirit.'",
           "What is one attending to? Not feelings, not memories, not future plans — but impressions as they arise in the {{hegemonikon|ruling faculty}}. The practice is: when an {{phantasia|impression}} arises, see it for what it is — a presentation of the world as being a certain way — before deciding whether to {{synkatathesis|assent}} to it. The Stoic does not sleepwalk through the day, automatically assenting to every impression the world sends. She watches.",
-          "This is why the Stoics devoted such attention to the morning preparation and evening review. Epictetus begins the Discourses with: 'Of all existing things some are in our power and some are not.' This is not a philosophical proposition to be evaluated once — it is a frame to be rehearsed daily, so that when impressions arise they are automatically placed in their correct category."
+          "This is why the Stoics devoted such attention to the morning preparation and evening review. Epictetus opens the Enchiridion with: 'Of all existing things some are in our power and some are not.' (The Discourses open differently — with the faculty that contemplates itself.) This is not a philosophical proposition to be evaluated once — it is a frame to be rehearsed daily, so that when impressions arise they are automatically placed in their correct category."
         ]
       },
       {
         "title": "Part 2 — Testing Impressions",
         "content": [
-          "The discipline of assent in practice involves testing each impression before giving assent. Epictetus gives a specific procedure in Encheiridion §1 and elaborated in the Discourses: 'Never say about anything, I have lost it; but, I have returned it.'",
+          "The discipline of assent in practice involves testing each impression before giving assent. Epictetus gives a specific procedure in Encheiridion §11 and elaborated in the Discourses: 'Never say about anything, I have lost it; but, I have returned it.'",
           "The test: when an impression arises with evaluative content ('this is a catastrophe,' 'that person is my enemy,' 'I have been harmed'), ask: (1) Is this within my power or outside it? (2) Is this a genuine good or bad, or an indifferent? (3) Is the content of this impression accurate, or is it a distorted presentation?",
           "The Stoic does not demand certainty before acting — that would be paralyzing. The demand is for a moment of rational evaluation before assent, not an extended philosophical inquiry in every situation. With practice, the evaluation becomes rapid and automatic — what Epictetus calls the 'character' (ēthos) of the philosopher, the stable disposition to see things rightly."
         ],
@@ -814,13 +814,13 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "title": "Part 3 — The Discipline of Assent and the Sage",
         "content": [
           "The Stoic Sage is defined partly by the perfection of the discipline of assent. The Sage never gives false assent — she never affirms an impression whose content is inaccurate, never judges an indifferent to be a genuine good or bad, never allows the evaluative overlay of passion to distort her perception of reality.",
-          "The Stoics acknowledged that the Sage is rare — 'like the Ethiopian phoenix,' Epictetus says, appearing perhaps once every several generations. But the Sage is not an idle ideal. The concept defines the direction of progress. The prokopton's practice is the progressive refinement of assent — becoming more accurate, faster, more reliable in the evaluation of impressions.",
+          "The Stoics acknowledged that the Sage is rare — born, Seneca says, 'like the phoenix, once every five hundred years' (Ep. 42.1). But the Sage is not an idle ideal. The concept defines the direction of progress. The prokopton's practice is the progressive refinement of assent — becoming more accurate, faster, more reliable in the evaluation of impressions.",
           "Hadot's reading adds depth here: the practice of prosochē is not merely the application of a logical test. It is a transformation of perception itself. The philosopher who has practiced long enough does not merely test impressions and correct them — she begins to see the world differently. Things that previously appeared catastrophic appear as indifferents. Things that previously appeared enormously desirable appear as preferred but not necessary. The discipline of assent, fully developed, is a new way of seeing."
         ],
         "tables": [
           [
             [
-              "Hadot: 'The Stoic lives in a state of constant vigilance... Attention (prosochē) is, in a sense, the most fundamental spiritual exercise, because all others presuppose it.'"
+              "Hadot: 'Attention (prosochē) is the fundamental Stoic spiritual attitude.'"
             ]
           ]
         ]
@@ -872,8 +872,8 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "answer": "The Sage never gives false assent — she never affirms an inaccurate impression. This perfection of assent is what defines the Sage's wisdom."
       },
       {
-        "question": "5. Why is the Sage described as 'like the Ethiopian phoenix'?",
-        "answer": "The Sage appears extremely rarely — perhaps once every several generations. The concept defines the direction of progress, not an easily achievable standard."
+        "question": "5. Why is the Sage compared to the phoenix?",
+        "answer": "Seneca (Ep. 42.1) says the truly good man is born, like the phoenix, once every five hundred years. The Sage appears extremely rarely — the concept defines the direction of progress, not an easily achievable standard."
       },
       {
         "question": "6. What is the difference between a prokopton and a Sage?",
@@ -1092,7 +1092,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         },
         {
           "source": "Cleanthes",
-          "passage": "Hymn to Zeus (complete — 14 lines)",
+          "passage": "Hymn to Zeus (complete — about 39 lines)",
           "note": "Primary text — required reading."
         },
         {
@@ -1121,7 +1121,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "tables": [
           [
             [
-              "Chrysippus: 'It is the nature of the cylinder to roll, and being pushed gives it the occasion, not the power, of rolling.' The character of the soul, not external events, is the proximate cause of action."
+              "Chrysippus's illustration, as Cicero reports it (De Fato 42–43): it is the nature of the cylinder to roll, and the push gives it the occasion, not the power, of rolling. The character of the soul, not external events, is the proximate cause of action."
             ]
           ]
         ]
@@ -1129,8 +1129,8 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Part 3 — Amor Fati: Love of Fate",
         "content": [
-          "Amor fati — the love of fate — is the emotional corollary of the Stoic metaphysics. If the universe is governed by a rational, providential logos, and if every event is an expression of that logos, then the appropriate response to every event is not mere acceptance but affirmative embrace.",
-          "Marcus Aurelius: 'Love the discipline you have been given, and love it with your whole heart.' (Med. 6.2) This is not cheerful submission — it is the recognition that what has been given is precisely the material needed for the exercise of virtue. The illness, the loss, the limitation — these are not obstacles to virtue; they are the occasions for virtue's exercise. Courage requires difficulty; patience requires frustration; generosity requires that someone be in need.",
+          "Amor fati — the love of fate — is the emotional corollary of the Stoic metaphysics. (The Latin phrase itself is Nietzsche's coinage, not an ancient Stoic term: the Stoics expressed the attitude as philein ta symbainonta — loving what happens (Med. 3.16, 5.8) — and in Seneca's 'ducunt volentem fata, nolentem trahunt,' 'the fates lead the willing and drag the unwilling' (Ep. 107.11).) If the universe is governed by a rational, providential logos, and if every event is an expression of that logos, then the appropriate response to every event is not mere acceptance but affirmative embrace.",
+          "Marcus Aurelius: 'Everything harmonises with me which is harmonious to thee, O Universe.' (Med. 4.23) This is not cheerful submission — it is the recognition that what has been given is precisely the material needed for the exercise of virtue. The illness, the loss, the limitation — these are not obstacles to virtue; they are the occasions for virtue's exercise. Courage requires difficulty; patience requires frustration; generosity requires that someone be in need.",
           "The Stoic distinction between acceptance and love: acceptance says 'I cannot change this, so I will endure it.' Amor fati says 'I would not change this even if I could, because it is exactly what the logos — through which I live and act — has brought forth.' This is the most demanding and the most transformative Stoic commitment. It requires not just the discipline of desire but a complete reorientation of one's relationship to reality."
         ],
         "tables": [
@@ -1169,7 +1169,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "title": "Exercise 8.3 — The Problem of Evil",
         "body": "If the Stoic logos is rational and providential, why does it produce events that appear evil — disease, natural disasters, violence? How do the Stoics defend the goodness of their universe?",
-        "answer": "The Stoics gave several responses. (1) The perspective argument: what appears evil from a partial perspective is not evil from the perspective of the whole. A city's destruction may be necessary for a larger historical development; an individual's death is the return of borrowed elements to the whole. The logos, seeing the whole, orders what we see only in part. (2) The moral development argument: apparent evils are necessary conditions for virtue. Courage requires danger; patience requires hardship; generosity requires poverty in others. A universe without apparent evils would be a universe without the occasions for the virtues. (3) The character formation argument: adversity is the logos's way of testing and developing rational souls. Seneca: 'God treats the good the way a good teacher treats a student — he makes them work.' These arguments are not fully convincing by modern standards — the scale of natural suffering is hard to accommodate. But they are the Stoic position and should be engaged on their terms."
+        "answer": "The Stoics gave several responses. (1) The perspective argument: what appears evil from a partial perspective is not evil from the perspective of the whole. A city's destruction may be necessary for a larger historical development; an individual's death is the return of borrowed elements to the whole. The logos, seeing the whole, orders what we see only in part. (2) The moral development argument: apparent evils are necessary conditions for virtue. Courage requires danger; patience requires hardship; generosity requires poverty in others. A universe without apparent evils would be a universe without the occasions for the virtues. (3) The character formation argument: adversity is the logos's way of testing and developing rational souls. Seneca (De Providentia 4.7): 'quos deus probat, quos amat, indurat, recognoscit, exercet' — those whom god approves and loves, he hardens, examines, and trains. These arguments are not fully convincing by modern standards — the scale of natural suffering is hard to accommodate. But they are the Stoic position and should be engaged on their terms."
       },
       {
         "title": "Exercise 8.4 — Is Amor Fati Too Demanding?",
@@ -1209,8 +1209,8 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "answer": "Acceptance says 'I cannot change this, so I endure it.' Amor fati says 'I would not change this even if I could — it is exactly what the logos has brought forth and is the material for virtue.'"
       },
       {
-        "question": "7. Marcus Aurelius: 'Love the discipline you have been given.' What does this mean?",
-        "answer": "The circumstances of your life — including difficulties — are exactly the material needed for the exercise of virtue. They are not obstacles to the good life; they are the occasions for living it."
+        "question": "7. Marcus Aurelius: 'Everything harmonises with me which is harmonious to thee, O Universe.' (Med. 4.23) What does this express?",
+        "answer": "The affirmative embrace of fate: whatever the cosmos brings — including difficulties — is exactly the material needed for the exercise of virtue. Circumstances are not obstacles to the good life; they are the occasions for living it."
       },
       {
         "question": "8. What is pneuma?",
@@ -1229,7 +1229,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "coreIdea": "What happens to you is not random and not personal. It is the unfolding of a rational order. The practice is not resignation — it is active love of what is.",
       "assignment": "Think of one thing that happened to you in the last month that you resisted, resented, or tried to undo. Write one paragraph about it as if it were exactly what was supposed to happen — not because you are certain it was, but as a practice of the perspective. What would you do differently if you genuinely accepted it?",
       "duration": "20 min writing",
-      "greekTerms": "amor fati — love of fate / heimarmenê — providence"
+      "greekTerms": "heimarmenê — fate / philein ta symbainonta — loving what happens"
     }
   },
   {
@@ -1265,7 +1265,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
         "content": [
           "The Stoic Sage ({{sophos|sophos}}, or spoudaios — the serious person) is a person of complete and unshakeable virtue. The Sage possesses all four virtues perfectly and simultaneously — wisdom (phronēsis), justice (dikaiosynē), courage (andreia), and temperance (sōphrosynē). The Stoics held that the virtues are unified — you cannot have any one virtue without having all of them, because each implies the others. A person of genuine courage must also have wisdom (to know what is worth being courageous about), justice (to exercise courage in the right relationships), and temperance (to hold courage in proportion).",
           "The Sage's practical characteristics: the Sage never gives false assent; has only eupatheiai (no passions); performs only katorthōmata (perfect actions); is always happy; is always free; is king, priest, prophet, and poet even in chains. The Sage is described using these paradoxical extremes deliberately — the Stoics were making a philosophical point about the sufficiency of virtue, not reporting an empirical observation.",
-          "The Sage is almost impossibly rare — 'like the Ethiopian phoenix' in Epictetus's description, possibly never having existed in pure form. Chrysippus himself may have been a prokopton. Marcus Aurelius certainly presents himself as one. The Sage is a regulative ideal — a direction of travel, not a destination most will reach."
+          "The Sage is almost impossibly rare — born 'like the phoenix, once every five hundred years' in Seneca's description (Ep. 42.1), possibly never having existed in pure form. Chrysippus himself may have been a prokopton. Marcus Aurelius certainly presents himself as one. The Sage is a regulative ideal — a direction of travel, not a destination most will reach."
         ]
       },
       {
@@ -1346,9 +1346,9 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       {
         "type": "mc",
         "question": "2. How often does a Sage appear?",
-        "options": ["In every generation of the school", "Extremely rarely — 'like the Ethiopian phoenix' — possibly never in pure form", "Whenever the disciplines are practiced for ten years", "The Stoics held that many Sages lived among them"],
+        "options": ["In every generation of the school", "Extremely rarely — 'like the phoenix, once every five hundred years' — possibly never in pure form", "Whenever the disciplines are practiced for ten years", "The Stoics held that many Sages lived among them"],
         "correct": 1,
-        "explanation": "The Sage is the direction of progress, not an attainable rank — appearing 'like the Ethiopian phoenix,' perhaps never. Everyone else is a prokoptōn."
+        "explanation": "The Sage is the direction of progress, not an attainable rank — born, Seneca says, like the phoenix once every five hundred years (Ep. 42.1), perhaps never. Everyone else is a prokoptōn."
       },
       {
         "question": "3. What is a prokopton?",
@@ -1677,7 +1677,7 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "coreIdea": "Socrates said the unexamined life is not worth living. You have spent ten sessions learning what examination means. The seminar is a test of whether you can do it with others.",
       "assignment": "Before the seminar: write the one idea from PHIL 701 that has actually changed something about how you live — not your thinking, your living. Bring it to the seminar as your stake in the ground. Philosophy that has not changed your behavior has not yet become yours.",
       "duration": "30 min reflection",
-      "greekTerms": "arge nu logoi — enough big words"
+      "greekTerms": "mēketi dialegesthai, alla einai — no more talking about the good man: be one (Med. 10.16)"
     }
   }
 ];

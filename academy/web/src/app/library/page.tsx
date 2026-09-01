@@ -180,11 +180,11 @@ const DEBATE_QS = [
 
 const MURMURS = [
   'It is not things that disturb us, but our judgments about things. — Epictetus',
-  'You have power over your mind, not outside events. — Marcus Aurelius',
+  'If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it. — Marcus Aurelius',
   'We suffer more often in imagination than in reality. — Seneca',
   'Waste no more time arguing what a good person should be. Be one. — Marcus Aurelius',
   'No one is free who is not master of themselves. — Epictetus',
-  'Every new beginning comes from some other beginning’s end. — Seneca',
+  'Every day should be regulated as if it were the one that rounds out and completes our lives. — Seneca',
 ];
 
 type SitMsg =

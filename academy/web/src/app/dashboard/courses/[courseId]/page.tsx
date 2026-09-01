@@ -173,8 +173,8 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
     assignedText: 'Marcus Aurelius — Meditations',
     sessions: {
       1: {
-        quote: '“You have power over your mind — not outside events. Realize this, and you will find strength.”',
-        quoteSource: '— Marcus Aurelius, Meditations IV.3',
+        quote: '“If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.”',
+        quoteSource: '— Marcus Aurelius, Meditations VIII.47',
         intro: [
           'The Meditations are not a treatise. They were never intended to be read. Marcus wrote to himself, in private, in a language that was not his native tongue, at the edge of the empire. They are a record of a man trying — and failing, and trying again — to live according to what he believed.',
           'This course reads the Meditations as a philosophical practice, not as a body of doctrine. The central question is not what Marcus believed but what he was doing when he wrote. Hadot’s answer: he was performing spiritual exercises. We will test that thesis book by book.',
@@ -184,7 +184,7 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
           'Marcus Aurelius, Meditations, Books I–II (Gregory Hays translation)',
           'Hadot, The Inner Citadel, Introduction',
         ],
-        prompt: 'Marcus writes to himself in the second person — “You have power over your mind.” Why? What does this grammatical choice tell us about the nature of the exercise he is performing? Is he persuading himself, commanding himself, or something else entirely?',
+        prompt: 'Marcus writes to himself in the second person — “the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.” Why? What does this grammatical choice tell us about the nature of the exercise he is performing? Is he persuading himself, commanding himself, or something else entirely?',
       },
     },
   },
@@ -242,7 +242,7 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
         quote: '“No one who either knows or believes that there is another possible course of action, better than the one he is following, will ever continue on his present course.”',
         quoteSource: '— Plato, Protagoras 358b',
         intro: [
-          'This course assembles one argument across six sessions: all anger is unnecessary because no one does wrong willingly. Anger presupposes that the offender knowingly chose evil; Socratic intellectualism denies that this ever happens; therefore anger always rests on a false judgment — and what rests on a false judgment can be eliminated, not merely managed.',
+          'This course assembles one argument across seven sessions: all anger is unnecessary because no one does wrong willingly. Anger presupposes that the offender knowingly chose evil; Socratic intellectualism denies that this ever happens; therefore anger always rests on a false judgment — and what rests on a false judgment can be eliminated, not merely managed.',
           'The argument begins four centuries before the Stoa, in three Platonic dialogues where Socrates defends the most counterintuitive claim in ancient ethics: virtue is knowledge, vice is ignorance, and nobody has ever done wrong while seeing it clearly as wrong.',
           'Your task is not yet to believe the thesis. It is to understand exactly what it claims, why Socrates thought it followed from the structure of desire itself — and to carry, unresolved, the strongest objection: "I knew it was wrong and did it anyway."',
         ],

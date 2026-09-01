@@ -42,7 +42,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: 'What the Meditations Actually Are',
         content: [
-          "Marcus Aurelius was Emperor of Rome for nineteen years. He spent those years on campaign, in the senate, in law courts, managing an empire under plague and war. He also spent part of every day writing to himself. Not dispatches. Not philosophy for publication. Notes — urgent, sometimes repetitive, occasionally despairing — addressed to himself in the second person: you, not I. 'You have power over your mind, not outside events.' 'Confine yourself to the present.' 'The impediment to action advances action.'",
+          "Marcus Aurelius was Emperor of Rome for nineteen years. He spent those years on campaign, in the senate, in law courts, managing an empire under plague and war. He also spent part of every day writing to himself. Not dispatches. Not philosophy for publication. Notes — urgent, sometimes repetitive, occasionally despairing — addressed to himself in the second person: you, not I. 'If you are distressed by anything external, the pain is not due to the thing itself, but to your estimate of it; and this you have the power to revoke at any moment.' 'Confine yourself to the present.' 'The impediment to action advances action.'",
           "The second-person address is the first clue to what the Meditations are. Marcus is not recording his conclusions. He is drilling himself. The repetition — the same principles appearing again and again across twelve books — is not carelessness. It is the repetition of an athlete who knows that knowledge without practice disappears. Hadot calls this the 'remember' function of the Meditations: Marcus is reminding himself, in the moment of pressure, of what reason requires. Not what he has already mastered. What he still needs to practice.",
           "The second clue is the absence of system. The Meditations have no argument, no structure, no progression from premise to conclusion. They are not organized by topic. They circle back. They contradict themselves at the surface level. This is what a practice log looks like, not a philosophical treatise. The carpenter does not write a theory of woodworking. He notes what the wood did today, what the chisel required, what he still cannot do well.",
         ],
@@ -138,7 +138,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: 'The Disciplines in the Meditations',
         content: [
-          "Once you understand the three disciplines, specific passages in the Meditations become legible in a new way. Book IV.3 — 'Men seek retreats for themselves, houses in the country, sea-shores and mountains' — is a discipline of desire passage: Marcus is reminding himself that the retreat he needs is internal, not geographical. The external retreat is an indifferent. Book IX.42 — 'When you wake up in the morning, tell yourself: the people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous and surly' — is a discipline of action passage: Marcus is preparing to act appropriately toward difficult people without being derailed by their behavior. Book VIII.7 — 'Do not disturb yourself by picturing your life as a whole' — is a discipline of assent passage: Marcus is refusing to assent to the catastrophic impression of his entire life as a burden.",
+          "Once you understand the three disciplines, specific passages in the Meditations become legible in a new way. Book IV.3 — 'Men seek retreats for themselves, houses in the country, sea-shores and mountains' — is a discipline of desire passage: Marcus is reminding himself that the retreat he needs is internal, not geographical. The external retreat is an indifferent. Book II.1 — 'When you wake up in the morning, tell yourself: the people I deal with today will be meddling, ungrateful, arrogant, dishonest, jealous and surly' — is a discipline of action passage: Marcus is preparing to act appropriately toward difficult people without being derailed by their behavior. Book VIII.36 — 'Do not disturb yourself by picturing your life as a whole' — is a discipline of assent passage: Marcus is refusing to assent to the catastrophic impression of his entire life as a burden.",
           "Hadot argues that this three-part structure explains the apparent randomness of the Meditations. Marcus is not writing about whatever occurs to him. He is running through the three disciplines as they bear on his current situation, returning to whichever one needs reinforcement. The repetition is not intellectual — it is practice. A musician who has not yet fully internalized a passage plays it again. Marcus, who has not yet fully internalized the discipline of desire, writes about it again.",
         ],
       },
@@ -174,7 +174,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         explanation: "Desire: Marcus reminds himself the retreat he needs is internal, not geographical — the external retreat is an indifferent he should not desire.",
       },
       {
-        question: "5. Classify Book VIII.7 ('Do not disturb yourself by picturing your life as a whole') by discipline and explain why.",
+        question: "5. Classify Book VIII.36 ('Do not disturb yourself by picturing your life as a whole') by discipline and explain why.",
         answer: "Discipline of assent. Marcus refuses to assent to the catastrophic impression of his entire life as a burden — he declines to accept a distorted impression.",
       },
       {
@@ -225,7 +225,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'Marcus and Preferred Indifferents',
         content: [
           "The Stoics were careful to distinguish genuine indifference from carelessness. Health is an indifferent — not a genuine good — but you should still pursue it, because it is a preferred indifferent: something that, all things equal, is worth having. The same applies to the welfare of your family, the success of your work, your reputation among people whose judgment matters. You pursue these things. You just do not require them for your equanimity.",
-          "Marcus makes this distinction throughout the Meditations. He does not withdraw from his responsibilities as emperor because they concern externals. He pursues them with full effort. What he refuses to do is make his peace contingent on their success. Book VI.2: 'How much more grievous are the consequences of anger than the causes of it.' Book IV.39: 'Do not disturb yourself by thinking of the whole of your life. Let not your thoughts range over the many troublesome things which have happened in the past and may happen in the future, but ask yourself with regard to every present difficulty: what is there in this that is intolerable and beyond endurance?'",
+          "Marcus makes this distinction throughout the Meditations. He does not withdraw from his responsibilities as emperor because they concern externals. He pursues them with full effort. What he refuses to do is make his peace contingent on their success. Book XI.18: 'How much more grievous are the consequences of anger than the causes of it.' Book VIII.36: 'Do not disturb yourself by thinking of the whole of your life. Let not your thoughts range over the many troublesome things which have happened in the past and may happen in the future, but ask yourself with regard to every present difficulty: what is there in this that is intolerable and beyond endurance?'",
           "The key word is intolerable. Marcus asks himself: is this actually intolerable? The answer, almost always, is no. It is uncomfortable. It is inconvenient. It is not what he would have chosen. But it is not intolerable — which means the discipline of desire can hold.",
         ],
       },
@@ -265,7 +265,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Because preferred indifferents are still worth pursuing with full effort. He refuses only to make his peace contingent on their success — he engages fully while holding the outcome lightly.",
       },
       {
-        question: "6. What is the significance of the word 'intolerable' in Book IV.39?",
+        question: "6. What is the significance of the word 'intolerable' in Book VIII.36?",
         answer: "Marcus tests each difficulty by asking whether it is actually intolerable. Almost always it is merely uncomfortable or inconvenient, not intolerable — which means the discipline of desire can hold.",
       },
       {
@@ -303,8 +303,8 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: "The Archer's Practice",
         content: [
-          "Epictetus used the image of the archer to describe the discipline of action. The archer's job is to aim carefully and release well. Whether the arrow hits the target depends on wind, distance, the quality of the bow — factors partly outside the archer's control. The archer who makes hitting the target the condition of his peace has made a mistake. His job is the aim and the release. The rest is indifferent.",
-          "Marcus applies this image constantly. He acts — fully, carefully, with complete effort — and then releases the outcome. Book VI.2: 'Confine yourself to the present.' Book IX.29: 'Nowhere can man find a quieter or more untroubled retreat than in his own soul.' The retreat to the inner citadel is available precisely because Marcus has done his job — aimed and released — and is not tormenting himself about where the arrow landed.",
+          "The early Stoics used the image of the archer to describe the discipline of action — Cicero reports it in De Finibus 3.22. (Epictetus's own preferred image is the ball-player, who plays skilfully with a ball whose value is indifferent — Discourses II.5.) The archer's job is to aim carefully and release well. Whether the arrow hits the target depends on wind, distance, the quality of the bow — factors partly outside the archer's control. The archer who makes hitting the target the condition of his peace has made a mistake. His job is the aim and the release. The rest is indifferent.",
+          "Marcus applies this image constantly. He acts — fully, carefully, with complete effort — and then releases the outcome. Book VII.29: 'Confine yourself to the present.' Book IV.3: 'Nowhere can man find a quieter or more untroubled retreat than in his own soul.' The retreat to the inner citadel is available precisely because Marcus has done his job — aimed and released — and is not tormenting himself about where the arrow landed.",
           "The discipline of action with reservation (Epictetus's hupexairesis — the mental reservation attached to every intention) means pursuing every goal with the implicit caveat: if nothing prevents it. 'I will be home for dinner — if nothing prevents it.' Not as an excuse for half-effort, but as a philosophical acknowledgment that outcomes involve factors beyond your control. The effort is unconditional. The outcome is held lightly.",
         ],
       },
@@ -312,7 +312,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'Duty Without Resentment',
         content: [
           "Marcus governed one of the largest empires in human history while wanting, apparently, to be a philosopher in a quiet room. The Meditations are full of his exhaustion with the demands of power. And yet he stayed. He fulfilled his role. Not because he was forced to — he had enough power to abdicate — but because the discipline of action required it. This was his kathēkon. His appropriate action. The action fitting for a person of his nature, in his role, in his circumstances.",
-          "The key insight here is that resentment of a duty does not discharge it. Marcus knew this. He also knew that performing a duty while resenting it produces a degraded form of action — half-hearted, contaminated by self-pity. The discipline of action requires not just doing the thing but doing it fully, as if it were exactly what you would have chosen. Book X.12: 'If it is not right, do not do it; if it is not true, do not say it.' The test is not whether the duty is pleasant. It is whether it is right.",
+          "The key insight here is that resentment of a duty does not discharge it. Marcus knew this. He also knew that performing a duty while resenting it produces a degraded form of action — half-hearted, contaminated by self-pity. The discipline of action requires not just doing the thing but doing it fully, as if it were exactly what you would have chosen. Book XII.17: 'If it is not right, do not do it; if it is not true, do not say it.' The test is not whether the duty is pleasant. It is whether it is right.",
         ],
       },
       {
@@ -351,7 +351,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "The duty remains whether or not you resent it. Performing it resentfully degrades the action — making it half-hearted and contaminated by self-pity. The discipline requires doing it fully, as if chosen.",
       },
       {
-        question: "6. What is the test in Book X.12 ('If it is not right, do not do it…') for whether to perform a duty?",
+        question: "6. What is the test in Book XII.17 ('If it is not right, do not do it…') for whether to perform a duty?",
         answer: "Whether the action is right and true, not whether it is pleasant. The discipline of action judges by rightness, not by comfort or enjoyment.",
       },
       {
@@ -390,7 +390,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'The Ruling Faculty',
         content: [
           "The Stoics located the seat of rational activity in what they called the hēgemonikon — the ruling or commanding faculty. It is not the brain in the modern anatomical sense; the Stoics located it in the heart. But the philosophical function is clear: it is the part of you that receives impressions, examines them, gives or withholds assent, forms intentions, and directs action. Everything that is genuinely up to you happens here.",
-          "Marcus returns to the hēgemonikon constantly in the Meditations. Book VIII.48: 'Confine yourself to the present. Understand what is happening to you and to others, and divide and classify it.' Book III.16: 'The universe is transformation; life is opinion.' The word translated 'opinion' is hupolēpsis — judgment, the act of the ruling faculty assenting to an impression. Marcus is saying: what disturbs you is not the event but your judgment of the event. Change the judgment and you change everything.",
+          "Marcus returns to the hēgemonikon constantly in the Meditations. Book VII.29: 'Confine yourself to the present. Understand what is happening to you and to others, and divide and classify it.' Book IV.3: 'The universe is transformation; life is opinion.' The word translated 'opinion' is hupolēpsis — judgment, the act of the ruling faculty assenting to an impression. Marcus is saying: what disturbs you is not the event but your judgment of the event. Change the judgment and you change everything.",
           "This is not a platitude. It is a precise philosophical claim. The impression 'this person has wronged me' presents itself as a fact. The discipline of assent requires examining it: what exactly happened? Is the interpretation 'wronged me' the only available interpretation? Is there another account that is more accurate and less disturbing? The pause between impression and assent is where all philosophical practice lives.",
         ],
       },
@@ -398,7 +398,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'Guarding the Gate',
         content: [
           "Hadot uses the image of a guard at a gate to describe the discipline of assent. Impressions arrive at the gate of the ruling faculty constantly. The undisciplined person lets them all through — whatever arrives, he accepts. The disciplined person examines each one at the gate: is this impression accurate? Is it catastrophizing? Is it treating an indifferent as a genuine good or evil? If so, it does not get through. The ruling faculty remains clear.",
-          "Marcus describes this practice in several of the most practically useful passages in the Meditations. Book VI.13: 'Receive without pride, relinquish without struggle.' Book V.26: 'The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane.' The 'insane' are people who have given assent to false impressions — people who have let through the gate whatever arrived, without examination. Book IV.7: 'Do not indulge your imagination. Cut it short.' The imagination — phantasia in its undisciplined form — is the source of most unnecessary suffering. Guard the gate.",
+          "Marcus describes this practice in several of the most practically useful passages in the Meditations. Book VIII.33: 'Receive without pride, relinquish without struggle.' Book VIII.48: 'The mind free from passions is a citadel; for man has nothing more secure to which he can fly for refuge.' The citadel holds precisely because the guard at the gate refuses entry to false impressions — nothing gets in that has not been examined. Book VII.29: 'Do not indulge your imagination. Cut it short.' The imagination — phantasia in its undisciplined form — is the source of most unnecessary suffering. Guard the gate.",
         ],
       },
       {
@@ -418,7 +418,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         explanation: "The ruling or commanding faculty (which the Stoics located in the heart): it receives impressions, examines them, assents or withholds, forms intentions, directs action. Everything genuinely up to you happens there.",
       },
       {
-        question: "2. What does hupolēpsis mean, and what is Marcus claiming in 'life is opinion' (III.16)?",
+        question: "2. What does hupolēpsis mean, and what is Marcus claiming in 'life is opinion' (IV.3)?",
         answer: "Hupolēpsis is judgment — the ruling faculty's act of assenting to an impression. Marcus claims that what disturbs you is not the event but your judgment of it; change the judgment and you change everything.",
       },
       {
@@ -430,11 +430,11 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         answer: "Impressions constantly arrive at the gate of the ruling faculty. The undisciplined person lets them all through; the disciplined person examines each — is it accurate? catastrophizing? treating an indifferent as good or evil? — and refuses entry to false ones.",
       },
       {
-        question: "5. In Book V.26, who are 'the insane,' and what have they done?",
-        answer: "People who have given assent to false impressions — who let whatever arrived through the gate without examination. Marcus aims to escape their ranks by guarding assent.",
+        question: "5. In Book VIII.48, why is the mind free from passions 'a citadel'?",
+        answer: "Because man has nothing more secure to which he can fly for refuge: a ruling faculty that refuses assent to false impressions cannot be taken by anything external. The citadel holds only while the gate is guarded.",
       },
       {
-        question: "6. What is phantasia in its undisciplined form, and why does Marcus say 'cut it short' (IV.7)?",
+        question: "6. What is phantasia in its undisciplined form, and why does Marcus say 'cut it short' (VII.29)?",
         answer: "Undisciplined phantasia is unchecked imagination, the source of most unnecessary suffering. Cutting it short means refusing to let the impression elaborate into catastrophe before it has been examined.",
       },
       {
@@ -476,7 +476,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'The Exercise',
         content: [
           "The view from above appears in multiple forms in the Meditations. Sometimes it is spatial — Marcus imagining the earth from a great height, the petty struggles of human beings visible as the movements of insects. Sometimes it is temporal — Marcus placing his immediate situation against the vast sweep of time, noting how many emperors, how many crises, how many apparently urgent matters have already been swallowed by time without leaving a trace. Sometimes it is both — the 'Alexander and his mule-driver' passage (Book VI.24), where Marcus notes that Alexander the Great and his mule-driver ended in the same place.",
-          "The exercise is not nihilism. Marcus is not arguing that nothing matters. He is arguing that most of what feels urgently important is not — that the perspective of ordinary human anxiety is systematically distorted by proximity, and that deliberately zooming out corrects the distortion. Book IX.30: 'Look at the past — empire succeeding empire — and from that, extrapolate the future: it will be no different, incapable of deviating from the rhythm of the present. Which means it makes no difference whether you observe human life for forty years or ten thousand: what more will you see?'",
+          "The exercise is not nihilism. Marcus is not arguing that nothing matters. He is arguing that most of what feels urgently important is not — that the perspective of ordinary human anxiety is systematically distorted by proximity, and that deliberately zooming out corrects the distortion. Book VII.49: 'Look at the past — empire succeeding empire — and from that, extrapolate the future: it will be no different, incapable of deviating from the rhythm of the present. Which means it makes no difference whether you observe human life for forty years or ten thousand: what more will you see?'",
         ],
       },
       {
@@ -548,7 +548,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       coreIdea: "The view from above restores proportion by interrupting the mind's tendency to treat immediate difficulties as ultimate catastrophes.",
       assignment: "Take your current most pressing concern — the thing occupying the most mental real estate right now. Write it down in one sentence. Then perform the spatial and temporal zoom: write a sentence about how it looks from the perspective of your city, your country, the earth, the cosmos. Then from the perspective of fifty years from now, a hundred years, a thousand. At what point does it shrink to its actual size? What remains important even from the furthest perspective?",
       duration: "20 min",
-      greekTerms: "logos — rational order / heimarmenē — providence / telos — end",
+      greekTerms: "logos — rational order / heimarmenē — fate / telos — end",
     },
   },
 
@@ -571,7 +571,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'Death as the Great Leveler',
         content: [
           "Marcus uses the contemplation of death in a second way: as an equalizer that strips false distinctions of rank, achievement, and reputation. The 'Alexander and his mule-driver' motif is one version of this. Another is the extended meditation in Book IV on all the great men of previous generations — emperors, philosophers, generals — who are now completely gone, leaving barely a trace. Not as a depressing observation but as a liberating one.",
-          "If Marcus's achievements as emperor will be forgotten — as they largely would be, were it not for the accident of the Meditations surviving — then the anxiety about his legacy is misplaced. If the great Antonines who preceded him are gone without remainder, then his own death is nothing extraordinary. If Hadrian's villa, built by one of the most powerful men in history, is now ruins, then the anxiety about what you build and leave behind is an anxiety about an indifferent.",
+          "If Marcus's achievements as emperor will be forgotten — as they largely would be, were it not for the accident of the Meditations surviving — then the anxiety about his legacy is misplaced. If the great Antonines who preceded him are gone without remainder, then his own death is nothing extraordinary. If the court of Vespasian, and after it the court of Trajan, has vanished entirely — Marcus runs exactly this meditation in Book IV.32–33, watching whole generations of the powerful disappear — then the anxiety about what you build and leave behind is an anxiety about an indifferent.",
           "This is not resignation. Marcus continues to govern, to build, to care for his empire with extraordinary conscientiousness. The point is that he does these things without requiring them to be permanent. He acts fully and releases the outcome — including the ultimate outcome of his own death and the eventual dissolution of everything he built.",
         ],
       },
@@ -657,15 +657,15 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: 'Amor Fati — Loving What Is',
         content: [
-          "The Stoic concept of amor fati — love of fate — takes the obstacle-as-way principle to its deepest level. It is not enough to accept what happens. The fully practising Stoic actively loves what happens — not because it is pleasant, but because it is the expression of rational providence, the logos working through events. What happens to you is not happening despite the rational order of things. It is happening because of it.",
-          "Marcus states this most directly in Book IV.23: 'Everything harmonizes with me, which is harmonious to thee, O Universe.' And in Book X.21: 'To you, the universe is a teacher: it dispenses what it has to each according to his nature.' The universe is not indifferent to you — it is actively educating you through the circumstances it provides. The obstacle is the lesson. Resistance to the lesson is the source of suffering; engagement with it is the source of growth.",
+          "The concept of amor fati — love of fate — takes the obstacle-as-way principle to its deepest level. (The Latin phrase is Nietzsche's coinage, not an ancient Stoic term: the Stoics spoke of philein ta symbainonta, loving what happens — Med. III.16, V.8 — and of Seneca's 'ducunt volentem fata, nolentem trahunt,' 'the fates lead the willing and drag the unwilling,' Ep. 107.11.) It is not enough to accept what happens. The fully practising Stoic actively loves what happens — not because it is pleasant, but because it is the expression of rational providence, the logos working through events. What happens to you is not happening despite the rational order of things. It is happening because of it.",
+          "Marcus states this most directly in Book IV.23: 'Everything harmonizes with me, which is harmonious to thee, O Universe.' The honest ancient source for adversity as training, though, is not Marcus but Seneca, in De Providentia 4.7: 'quos deus probat, exercet' — whom god approves, he trains. God treats the good, Seneca argues, as a demanding trainer treats a promising athlete: hardship is the training regimen of providence, not a malfunction of it. The obstacle is the training. Resistance to the training is the source of suffering; engagement with it is the source of growth.",
           "This is the philosophical foundation for a specific practice: when something unwelcome happens, pause before resisting it and ask: what is this asking me to do? Not what am I going to do to fix this — that comes second. First: what is this situation asking of the philosophical practitioner? What does reason recommend here? What does virtue require? Answer that question first, and the response becomes clear.",
         ],
       },
       {
         title: 'The Practice of Turning',
         content: [
-          "Hadot calls this the practice of antistrophē — turning. The turning of an obstacle into a path. The turning of adversity into material. The Stoics used the image of fire: fire does not merely endure the wood thrown onto it. It consumes the wood and grows stronger. The Stoic practitioner does not merely endure difficulty. They consume it — use it as material for the exercise of virtue.",
+          "Marcus's own image for this turning of adversity into material is fire (Med. IV.1): the ruling faculty in accordance with nature adapts whatever happens to its own purpose, the way a blazing fire appropriates the matter heaped on it and rises higher by means of that very material. His companion formulation is Book V.20: 'the impediment to action advances action.' Fire does not merely endure the wood thrown onto it. It consumes the wood and grows stronger. The Stoic practitioner does not merely endure difficulty. They consume it — use it as material for the exercise of virtue.",
           "This requires practice because the natural response to an obstacle is resistance, frustration, or despair. The turning is a learned skill, not a natural reflex. Marcus practises it explicitly in the Meditations: when he catches himself resisting a situation, he asks what the situation is asking of him. When he finds himself wishing things were different, he applies the discipline of desire and redirects toward what is actually up to him in the present moment.",
           "The turning does not require that you like the obstacle. Marcus clearly did not like many of the things that happened to him. It requires only that you engage with it as material — as the specific situation in which virtue must currently be exercised — rather than as an interruption of the life you were supposed to be living.",
         ],
@@ -699,16 +699,16 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         explanation: "Acceptance endures; amor fati affirms — what happens is the logos working through events, happening because of the rational order, not despite it.",
       },
       {
-        question: "6. What do Books IV.23 and X.21 reveal about the universe's relation to the practitioner?",
-        answer: "That the universe is not indifferent but actively educating you through circumstances — 'the universe is a teacher.' The obstacle is the lesson; resistance causes suffering, engagement causes growth.",
+        question: "6. What do Marcus's Book IV.23 and Seneca's De Providentia 4.7 together reveal about adversity?",
+        answer: "Marcus affirms whatever the cosmos brings ('Everything harmonizes with me, which is harmonious to thee, O Universe'); Seneca supplies the training account — 'quos deus probat, exercet,' whom god approves, he trains. Adversity is the regimen of providence; resistance causes suffering, engagement causes growth.",
       },
       {
         question: "7. What is the first question to ask when something unwelcome happens, and why does it precede 'how do I fix this'?",
         answer: "First ask: what is this situation asking of me — what does reason recommend, what does virtue require? Fixing comes second, because identifying the appropriate response clarifies what the right action actually is.",
       },
       {
-        question: "8. Explain antistrophē and the fire image.",
-        answer: "Antistrophē is 'turning' — converting an obstacle into a path and adversity into material. Like fire that consumes wood and grows stronger rather than merely enduring it, the practitioner consumes difficulty as fuel for the exercise of virtue.",
+        question: "8. Explain Marcus's fire image (IV.1) and how V.20 states the same principle.",
+        answer: "The ruling faculty in accordance with nature turns whatever befalls it to its own purpose, as a blazing fire appropriates the matter thrown onto it and rises higher by means of it — adversity becomes fuel for virtue. V.20 states the principle directly: 'the impediment to action advances action' — the obstacle itself becomes the material of the new appropriate action.",
       },
       {
         question: "9. Why is the turning described as a 'learned skill, not a natural reflex'?",
@@ -723,7 +723,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       coreIdea: "The obstacle does not stop the person whose goal is virtuous action — it simply changes the situation in which virtuous action must be performed.",
       assignment: "Identify your current most significant obstacle — the thing that feels most like it is preventing your life from going the way it should. Write it down. Then ask: if this obstacle is not going away, what does acting virtuously within it look like? Not around it, not after it — within it, now. Write one concrete action that represents virtuous engagement with the obstacle as it currently stands.",
       duration: "20 min",
-      greekTerms: "amor fati — love of fate / antistrophē — turning / hupexairesis — reservation",
+      greekTerms: "philein ta symbainonta — loving what happens / hupexairesis — reservation",
     },
   },
 
@@ -824,7 +824,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: 'What the Citadel Is',
         content: [
-          "Hadot takes the title from Marcus's Book VIII.48: 'Confine yourself to the present. Understand what is happening to you and to others, and divide and classify it. Define it.' The citadel is not a metaphor for withdrawal from the world. It is a metaphor for the inviolability of the ruling faculty when properly guarded. The three disciplines — desire, action, assent — are the walls of the citadel. They do not prevent the world from happening. They prevent the world from reaching the ruling faculty and corrupting it.",
+          "Hadot takes the title from Marcus's Book VIII.48: 'The mind free from passions is a citadel; for man has nothing more secure to which he can fly for refuge.' The citadel is not a metaphor for withdrawal from the world. It is a metaphor for the inviolability of the ruling faculty when properly guarded. The three disciplines — desire, action, assent — are the walls of the citadel. They do not prevent the world from happening. They prevent the world from reaching the ruling faculty and corrupting it.",
           "The Stoic insight is precise: you cannot be harmed in the deepest sense — in your capacity for virtue — by anything external. Pain harms the body, not the ruling faculty. Humiliation harms reputation, not the ruling faculty. Loss harms circumstances, not the ruling faculty. The ruling faculty can only be harmed by its own operations: by assenting to false impressions, by desiring things that are not genuinely good, by failing to act appropriately. These failures are within your control. Which means genuine harm is entirely within your control.",
           "This is not a comfortable claim. It requires that you accept full responsibility for your own corruption — if you are not acting virtuously, it is because of what is happening in your ruling faculty, not because of what the world has done to you. But it is also an enormously liberating claim: if genuine harm is within your control, then you have the capacity to protect the only thing that genuinely matters.",
         ],
@@ -832,7 +832,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       {
         title: 'The Citadel Under Siege',
         content: [
-          "Marcus's life was a sustained test of this claim. He was surrounded by betrayal, incompetence, flattery, and the endless degradation of power. He governed during a plague that killed millions. He fought wars he did not want to fight. He watched people he trained and trusted betray him. He knew, by the end, that the dynasty he was trying to preserve would not survive his son.",
+          "Marcus's life was a sustained test of this claim. He was surrounded by betrayal, incompetence, flattery, and the endless degradation of power. He governed during a plague that killed millions. He fought wars he did not want to fight. He watched people he trained and trusted betray him. He elevated his son Commodus to joint rule deliberately; the dark verdict on Commodus — and on Marcus's choice — is the hindsight of later historians such as Cassius Dio, not something Marcus is recorded as foreseeing.",
           "The Meditations are the record of a man keeping the citadel intact under these conditions. Not always easily — there are passages of genuine despair, exhaustion, and self-doubt. But the practice holds. The ruling faculty, again and again, returns to the three disciplines. The discipline of desire: this external is not a genuine good. The discipline of action: this situation requires this appropriate action. The discipline of assent: this impression requires examination before acceptance.",
           "The siege never ends. Marcus does not achieve a state in which the three disciplines are no longer needed. He achieves a state in which he can apply them reliably — in which the return to the citadel, when he has strayed from it, becomes faster and more natural. That is what progress looks like for the prokoptōn: not the achievement of perfect virtue, but the gradual shortening of the distance between failure and return.",
         ],
@@ -875,7 +875,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       },
       {
         question: "6. What conditions tested Marcus's claim that the citadel holds?",
-        answer: "Betrayal, incompetence, flattery, the degradation of power, a plague that killed millions, unwanted wars, trusted people betraying him, and the knowledge his dynasty would not survive his son.",
+        answer: "Betrayal, incompetence, flattery, the degradation of power, a plague that killed millions, unwanted wars, and trusted people betraying him. (The dark verdict on his son Commodus is later historians' hindsight — Cassius Dio — not something Marcus is attested to have foreseen.)",
       },
       {
         question: "7. The Meditations show 'despair, exhaustion, and self-doubt.' How does the practice still 'hold'?",
@@ -928,7 +928,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
         title: 'Socratic Prompts — Engagement and Change',
         content: [
           "Marcus governed one of the largest empires in history while practising Stoic philosophy. Was his philosophy a resource for his governance, or a refuge from it? Is there a tension between the life of philosophical practice and the life of engagement in the world?",
-          "Epictetus said enough big words — arge nu logoi. What has changed in how you live as a result of this course? If nothing has changed, what does that tell you?",
+          "Marcus told himself: 'No more talk about what a good man is: be one' (Med. X.16). Epictetus set the same standard with his image of the school as a surgery (Discourses III.23.30): you should leave in pain, not in applause. What has changed in how you live as a result of this course? If nothing has changed, what does that tell you?",
         ],
       },
     ],
@@ -970,10 +970,10 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       },
       {
         type: 'mc',
-        question: "9. What is the standard the whole course sets — captured by Epictetus's 'surgery' and 'arge nu logoi'?",
+        question: "9. What is the standard the whole course sets — captured by Epictetus's 'surgery' (Disc. III.23.30) and Marcus's 'no more talk about what a good man is: be one' (Med. X.16)?",
         options: ["Mastery of Stoic vocabulary and doctrine", "Philosophy must change how you live, not merely what you know", "Eloquence in defending Stoicism against critics", "Daily reading of the Meditations"],
         correct: 1,
-        explanation: "The school is a surgery — you should leave having felt something change; 'enough big words' demands practice and behavioral change over theoretical accumulation.",
+        explanation: "The school is a surgery — you should leave having felt something change; and Marcus's command to stop discussing goodness and simply be good demands practice and behavioral change over theoretical accumulation.",
       },
       {
         question: "10. What distinguishes having studied PHIL 702 from having practised it?",
@@ -984,7 +984,7 @@ export const PHIL_702_SESSIONS: Phil702Session[] = [
       coreIdea: "The Qualifying Conversation is the test of whether the course has been study or practice.",
       assignment: "Before the seminar, write one page on the following: which of Marcus's practices have you actually adopted? Not admired — adopted. What does your daily practice look like now that it did not look like before PHIL 702? This is your stake in the ground for the conversation.",
       duration: "45 min",
-      greekTerms: "arge nu logoi — enough big words / askēsis — training / aretē — excellence",
+      greekTerms: "mēketi dialegesthai, alla einai — no more talking about the good man: be one (Med. 10.16) / askēsis — training / aretē — excellence",
     },
   },
 ];
