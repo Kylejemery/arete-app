@@ -29,7 +29,10 @@ import {
   updateAttendGoal,
   attendIsEnabled,
   ensureAttendArmedForVersion,
+  getManualScreenLog,
+  markManualScreenDay,
   type AttendTodayStatus,
+  type ManualScreenMark,
 } from '@/lib/attend';
 
 // Native FamilyActivityPicker sheet — present only in builds that include the
@@ -72,8 +75,7 @@ export default function ProgressScreen() {
 
   // Screen time
   const [screenTimeGoal, setScreenTimeGoal] = useState(2);
-  const [screenTimeLog, setScreenTimeLog] = useState<any[]>([]);
-  const [todayScreenTime, setTodayScreenTime] = useState('');
+  const [manualLog, setManualLog] = useState<Record<string, ManualScreenMark>>({});
 
   // Attend — iOS Screen Time monitoring (only in builds with the native module)
   const { tier } = useSubscription();
@@ -207,6 +209,9 @@ export default function ProgressScreen() {
       if (Number.isFinite(hours) && hours > 0) setScreenTimeGoal(hours);
     } catch {}
 
+    // Manual under/over marks (fallback when monitoring isn't connected)
+    try { setManualLog(await getManualScreenLog()); } catch {}
+
     try {
       const freshStreak = await checkAndResetStreakIfMissed();
       setStreak(freshStreak);
@@ -328,18 +333,10 @@ export default function ProgressScreen() {
     return cells;
   };
 
-  const logScreenTime = async () => {
-    const hours = parseFloat(todayScreenTime);
-    if (!hours || hours < 0) { Alert.alert('Invalid', 'Please enter valid hours.'); return; }
-    const today = new Date().toDateString();
-    const existing = screenTimeLog.filter((l: any) => l.date !== today);
-    const updated = [{
-      date: today, hours,
-      dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    }, ...existing];
-    setScreenTimeLog(updated);
-    const status = hours <= screenTimeGoal ? '✅ Under goal!' : '⚠️ Over goal.';
-    Alert.alert('Screen Time Logged!', `${hours}h logged. ${status}`);
+  // Manual mark — one honest bit per day, no hours: was today under or over
+  // the goal? Only shown when automatic monitoring isn't connected.
+  const markScreenDay = async (mark: ManualScreenMark) => {
+    setManualLog(await markManualScreenDay(mark));
   };
 
   const addBook = async () => {
@@ -373,7 +370,10 @@ export default function ProgressScreen() {
   const nextMonth = () => { const d = new Date(currentMonth); d.setMonth(d.getMonth() + 1); setCurrentMonth(d); };
   const monthLabel = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
-  const todayScreenEntry = screenTimeLog.find(l => l.date === new Date().toDateString());
+  const localDayKey = (d = new Date()) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const todayMark: ManualScreenMark | null = manualLog[localDayKey()] ?? null;
+  const recentMarks = Object.entries(manualLog).sort((a, b) => b[0].localeCompare(a[0])).slice(0, 5);
 
   return (
     <SafeAreaView style={styles.container} {...swipeHandlers}>
@@ -507,44 +507,62 @@ export default function ProgressScreen() {
 
               <View style={styles.screenTimeRow}>
                 <View style={styles.screenTimeStat}>
-                  <Text style={styles.screenTimeHours}>
-                    {todayScreenEntry ? `${todayScreenEntry.hours}h` : '—'}
+                  <Text style={[
+                    styles.screenTimeHours,
+                    attendStatus?.connected
+                      ? (attendStatus.overGoal ? styles.screenTimeBad : styles.screenTimeGood)
+                      : todayMark
+                        ? (todayMark === 'over' ? styles.screenTimeBad : styles.screenTimeGood)
+                        : null,
+                  ]}>
+                    {attendStatus?.connected
+                      ? (attendStatus.overGoal ? 'Over' : 'Under')
+                      : todayMark
+                        ? (todayMark === 'over' ? 'Over' : 'Under')
+                        : '—'}
                   </Text>
                   <Text style={styles.screenTimeLabel}>Today</Text>
                 </View>
                 <View style={styles.screenTimeDivider} />
                 <TouchableOpacity style={styles.screenTimeStat} onPress={editScreenTimeGoal} activeOpacity={0.7}>
-                  <Text style={[
-                    styles.screenTimeHours,
-                    todayScreenEntry && todayScreenEntry.hours <= screenTimeGoal
-                      ? styles.screenTimeGood : styles.screenTimeBad
-                  ]}>
-                    {screenTimeGoal}h
-                  </Text>
+                  <Text style={styles.screenTimeHours}>{screenTimeGoal}h</Text>
                   <Text style={styles.screenTimeLabel}>Daily Goal ✎</Text>
                 </TouchableOpacity>
               </View>
-              <View style={styles.pagesInputRow}>
-                <TextInput
-                  style={styles.pagesInput}
-                  placeholder="Log today's screen time (hrs)..."
-                  placeholderTextColor="#555"
-                  keyboardType="decimal-pad"
-                  value={todayScreenTime}
-                  onChangeText={setTodayScreenTime}
-                />
-                <TouchableOpacity style={styles.logButton} onPress={logScreenTime}>
-                  <Text style={styles.logButtonText}>Log</Text>
-                </TouchableOpacity>
-              </View>
-              {screenTimeLog.slice(0, 5).map((log, i) => (
-                <View key={i} style={styles.pagesLogRow}>
-                  <Text style={styles.pagesLogDate}>{log.dateFormatted}</Text>
+              {/* Manual mark — one honest bit per day, only when automatic
+                  monitoring isn't answering the question already. */}
+              {!attendStatus?.connected && (
+                <View style={styles.markRow}>
+                  <TouchableOpacity
+                    style={[styles.markButton, todayMark === 'under' && styles.markButtonUnderActive]}
+                    onPress={() => markScreenDay('under')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.markButtonText, todayMark === 'under' && styles.markButtonTextActive]}>
+                      ✓ Under goal
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.markButton, todayMark === 'over' && styles.markButtonOverActive]}
+                    onPress={() => markScreenDay('over')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.markButtonText, todayMark === 'over' && styles.markButtonTextActive]}>
+                      ⚠ Over goal
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!attendStatus?.connected && recentMarks.map(([day, mark]) => (
+                <View key={day} style={styles.pagesLogRow}>
+                  <Text style={styles.pagesLogDate}>
+                    {new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
                   <Text style={[
                     styles.pagesLogCount,
-                    log.hours <= screenTimeGoal ? styles.screenTimeGood : styles.screenTimeBad
+                    mark === 'under' ? styles.screenTimeGood : styles.screenTimeBad,
                   ]}>
-                    {log.hours}h {log.hours <= screenTimeGoal ? '✅' : '⚠️'}
+                    {mark === 'under' ? 'Under goal ✅' : 'Over goal ⚠️'}
                   </Text>
                 </View>
               ))}
@@ -900,6 +918,15 @@ const styles = StyleSheet.create({
   screenTimeDivider: { width: 1, height: 40, backgroundColor: '#c9a84c33' },
   screenTimeGood: { color: '#4caf50' },
   screenTimeBad: { color: '#ff4444' },
+  markRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  markButton: {
+    flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: '#c9a84c33', backgroundColor: '#c9a84c0d',
+  },
+  markButtonUnderActive: { backgroundColor: '#4caf5022', borderColor: '#4caf50' },
+  markButtonOverActive: { backgroundColor: '#ff444422', borderColor: '#ff4444' },
+  markButtonText: { color: '#8A9BB0', fontSize: 14, fontWeight: '600' },
+  markButtonTextActive: { color: '#fff' },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   weekDay: { alignItems: 'center', gap: 4 },
   weekDayLabel: { color: '#888', fontSize: 11 },

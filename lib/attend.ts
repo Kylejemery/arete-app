@@ -360,6 +360,41 @@ export async function recordAttendDay(): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Manual under/over marks — for devices and days without automatic
+// monitoring (Android, older builds, Attend disconnected). Deliberately not
+// an hours log: one honest bit per day, marked by the user.
+// ---------------------------------------------------------------------------
+
+const KEY_MANUAL_LOG = 'screen_time_manual_log'; // { [YYYY-MM-DD]: 'under' | 'over' }
+
+export type ManualScreenMark = 'under' | 'over';
+
+export async function getManualScreenLog(): Promise<Record<string, ManualScreenMark>> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_MANUAL_LOG);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+/** Mark today under/over the goal (overwrites today's mark). Rolling 30 days. */
+export async function markManualScreenDay(mark: ManualScreenMark): Promise<Record<string, ManualScreenMark>> {
+  const log = await getManualScreenLog();
+  log[todayKey()] = mark;
+  const keys = Object.keys(log).sort();
+  while (keys.length > 30) delete log[keys.shift() as string];
+  try {
+    await AsyncStorage.setItem(KEY_MANUAL_LOG, JSON.stringify(log));
+  } catch { /* best effort */ }
+  return log;
+}
+
+export async function getManualScreenToday(): Promise<ManualScreenMark | null> {
+  return (await getManualScreenLog())[todayKey()] ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Watchlists — named app groups with their own threshold ladders, so the
 // Cabinet can call out "Instagram crossed 2h" by the name the USER gave the
 // list. Apple's picker returns opaque tokens (the app never learns real app
@@ -600,17 +635,35 @@ export async function buildAttendContext(cabinetCanSee: boolean = true): Promise
       'If the user asks about their screen time, say honestly that you cannot see it and why. Never invent or estimate usage numbers.',
     ]);
   try {
-    if (!attendIsSupported()) {
-      return noData('You cannot see their screen time: monitoring is not available on this device.');
-    }
-    if (!(await attendIsEnabled())) {
-      return noData('You cannot see their screen time: they have not connected Screen Time monitoring (it can be connected on the Progress tab).');
-    }
     if (!(await getShareScreenWithCabinet())) {
       return noData('You cannot see their screen time: they chose in Settings not to share it with the Cabinet. Respect that choice without comment unless asked.');
     }
     if (!cabinetCanSee) {
       return noData('You cannot see their screen time: Cabinet visibility of Screen Time signals is part of Arete Premium, and they are on the free tier.');
+    }
+    if (!attendIsSupported() || !(await attendIsEnabled())) {
+      // No automatic monitoring — fall back to the user's own under/over
+      // marks from the Progress card, if they make them.
+      const manual = await getManualScreenLog();
+      const marked = Object.entries(manual).sort();
+      if (marked.length === 0) {
+        return noData(
+          attendIsSupported()
+            ? 'You cannot see their screen time: they have not connected Screen Time monitoring (Progress tab), and they have not marked any days by hand there either.'
+            : 'You cannot see their screen time: monitoring is not available on this device, and they have not marked any days by hand on the Progress tab.'
+        );
+      }
+      const todayMark = manual[todayKey()] ?? null;
+      const last7m = marked.slice(-7);
+      const overMarked = last7m.filter(([, v]) => v === 'over').length;
+      return wrap([
+        'No automatic monitoring is connected; the user marks by hand, day by day, whether they stayed under their screen-time limit.',
+        todayMark
+          ? `Today they marked themselves ${todayMark === 'over' ? 'OVER their limit' : 'under their limit'}.`
+          : 'Today: not marked yet.',
+        last7m.length >= 3 ? `Self-reported: over their limit on ${overMarked} of the last ${last7m.length} marked days.` : '',
+        'When the user asks about their screen time, answer plainly from these self-reports — if they marked today over, tell them straight: "You went over your limit today." You have no minutes or thresholds, only their own word; honor it as such, and never invent numbers around it.',
+      ]);
     }
     const goalMinutes = await getAttendGoalMinutes();
     const today = await getAttendTodayStatus();
