@@ -7,6 +7,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -62,6 +63,33 @@ export default function ReadingRoomScreen() {
         } as any);
     };
 
+    // Global search across every work on the shelves.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchHits, setSearchHits] = useState<
+        { author: string; work: string; title: string; section: string | null; page: number; snippet: string }[] | null
+    >(null);
+    const [searching, setSearching] = useState(false);
+
+    const runSearch = async () => {
+        const q = searchQuery.trim();
+        if (q.length < 3 || searching) return;
+        setSearching(true);
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/library/search?q=${encodeURIComponent(q)}`);
+            const data = await res.json().catch(() => ({}));
+            setSearchHits(Array.isArray(data?.results) ? data.results : []);
+        } catch {
+            setSearchHits([]);
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const clearSearch = () => {
+        setSearchQuery('');
+        setSearchHits(null);
+    };
+
     const byAuthor = (a: LibText, b: LibText) =>
         a.author.localeCompare(b.author) || a.title.localeCompare(b.title);
     const stoic = texts.filter(t => t.tradition === 'stoic').sort(byAuthor);
@@ -115,11 +143,84 @@ export default function ReadingRoomScreen() {
                     <Text style={styles.errorText}>{error}</Text>
                 </View>
             ) : (
-                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                     <Text style={styles.intro}>
                         Every primary source, in full — the Stoics first, and the wider
                         tradition beside them.
                     </Text>
+
+                    {/* Symposium door */}
+                    <TouchableOpacity
+                        style={styles.symposiumCard}
+                        onPress={() => router.push('/library/symposium' as any)}
+                        activeOpacity={0.85}
+                    >
+                        <View style={styles.symposiumIcon}>
+                            <Text style={styles.symposiumGlyph}>⟡</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                            <Text style={styles.symposiumTitle}>The Symposium</Text>
+                            <Text style={styles.symposiumSub}>
+                                Sit with a master and put your question to the tradition.
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color="#c9a84c" />
+                    </TouchableOpacity>
+
+                    {/* Search the shelves */}
+                    <View style={styles.searchRow}>
+                        <TextInput
+                            style={styles.searchInput}
+                            placeholder="Search every work on the shelves…"
+                            placeholderTextColor="#555"
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            onSubmitEditing={runSearch}
+                            returnKeyType="search"
+                        />
+                        {searchQuery.length > 0 ? (
+                            <TouchableOpacity style={styles.searchClear} onPress={clearSearch} hitSlop={8}>
+                                <Ionicons name="close-circle" size={18} color="#888" />
+                            </TouchableOpacity>
+                        ) : null}
+                        <TouchableOpacity
+                            style={styles.searchButton}
+                            onPress={runSearch}
+                            disabled={searchQuery.trim().length < 3}
+                        >
+                            <Ionicons name="search" size={17} color={searchQuery.trim().length < 3 ? '#555' : '#1a1a2e'} />
+                        </TouchableOpacity>
+                    </View>
+
+                    {searching && <ActivityIndicator color="#c9a84c" style={{ marginVertical: 16 }} />}
+
+                    {searchHits !== null && !searching ? (
+                        searchHits.length > 0 ? (
+                            <View>
+                                <Text style={styles.shelfLabel}>Found in the stacks</Text>
+                                {searchHits.map((h, i) => (
+                                    <TouchableOpacity
+                                        key={i}
+                                        style={styles.hitCard}
+                                        activeOpacity={0.85}
+                                        onPress={() => router.push({
+                                            pathname: '/library/reader',
+                                            params: { author: h.author, work: h.work, title: h.title, page: String(h.page) },
+                                        } as any)}
+                                    >
+                                        <Text style={styles.hitTitle}>
+                                            {h.author} · {h.title}
+                                            {h.section ? ` · ${h.section}` : ''}
+                                        </Text>
+                                        <Text style={styles.hitSnippet} numberOfLines={3}>…{h.snippet}…</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        ) : (
+                            <Text style={styles.noHits}>Nothing found for that on the shelves.</Text>
+                        )
+                    ) : null}
+
                     {shelf('The Stoic Shelf', stoic)}
                     {shelf('The Wider Tradition', wider)}
                     {shelf('Syntheses', synthesis)}
@@ -166,4 +267,36 @@ const styles = StyleSheet.create({
     cardExcerpt: { color: '#8890a8', fontSize: 13, fontStyle: 'italic', lineHeight: 19, marginBottom: 10 },
     cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     cardMeta: { color: '#555', fontSize: 11 },
+    symposiumCard: {
+        flexDirection: 'row', alignItems: 'center', gap: 14,
+        backgroundColor: '#c9a84c11',
+        borderWidth: 1, borderColor: '#c9a84c44',
+        borderRadius: 14, padding: 16, marginBottom: 16,
+    },
+    symposiumIcon: {
+        width: 44, height: 44, borderRadius: 22,
+        backgroundColor: '#c9a84c22',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    symposiumGlyph: { color: '#c9a84c', fontSize: 20 },
+    symposiumTitle: { color: '#e0d5b5', fontSize: 16, fontWeight: '700' },
+    symposiumSub: { color: '#888', fontSize: 12, lineHeight: 17, marginTop: 2 },
+    searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+    searchInput: {
+        flex: 1, backgroundColor: '#16213e', borderRadius: 12,
+        borderWidth: 1, borderColor: '#c9a84c33',
+        color: '#fff', fontSize: 14, paddingHorizontal: 14, paddingVertical: 10,
+    },
+    searchClear: { position: 'absolute', right: 56 },
+    searchButton: {
+        width: 42, height: 42, borderRadius: 12, backgroundColor: '#c9a84c',
+        alignItems: 'center', justifyContent: 'center',
+    },
+    hitCard: {
+        backgroundColor: '#16213e', borderRadius: 12, padding: 14, marginBottom: 10,
+        borderWidth: 1, borderColor: '#c9a84c22',
+    },
+    hitTitle: { color: '#c9a84c', fontSize: 12, fontWeight: '700', marginBottom: 5 },
+    hitSnippet: { color: '#aab', fontSize: 13, lineHeight: 19, fontStyle: 'italic' },
+    noHits: { color: '#888', fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginBottom: 16 },
 });

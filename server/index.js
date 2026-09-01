@@ -4413,6 +4413,105 @@ app.get('/api/library/text', async (req, res) => {
   }
 });
 
+// GET /api/library/outline?author=&work= — section headings with the reader
+// page each begins on (pages are LIBRARY_PAGE_CHUNKS rows). Powers the
+// reader's linked table of contents.
+app.get('/api/library/outline', async (req, res) => {
+  try {
+    const author = (req.query.author || '').toString();
+    const work = (req.query.work || '').toString();
+    if (!author || !work) {
+      return res.status(400).json({ error: 'author and work are required' });
+    }
+    const sections = [];
+    let lastLabel = null;
+    let offset = 0;
+    // PostgREST caps a page at 1000 rows; walk in batches.
+    for (;;) {
+      const { data: rows, error } = await supabase
+        .from('rag_corpus')
+        .select('section_label')
+        .eq('author', author)
+        .eq('work', work)
+        .order('chunk_index', { ascending: true })
+        .range(offset, offset + 999);
+      if (error) throw error;
+      if (!rows || rows.length === 0) break;
+      rows.forEach((r, i) => {
+        const label = (r.section_label || '').trim();
+        if (label && label !== lastLabel) {
+          sections.push({ label, page: Math.floor((offset + i) / LIBRARY_PAGE_CHUNKS) });
+          lastLabel = label;
+        }
+      });
+      if (rows.length < 1000) break;
+      offset += rows.length;
+    }
+    return res.json({ sections });
+  } catch (err) {
+    console.error('[/api/library/outline] error:', err.message);
+    return res.status(500).json({ error: 'Failed to load the outline' });
+  }
+});
+
+// GET /api/library/search?q=&author=&work= — plain-text search over the
+// readable corpus. Scoped to one work it powers in-reader search; unscoped it
+// searches the whole shelf. Each hit carries the reader page it lands on.
+app.get('/api/library/search', async (req, res) => {
+  try {
+    const q = (req.query.q || '').toString().trim();
+    const author = (req.query.author || '').toString();
+    const work = (req.query.work || '').toString();
+    if (q.length < 3) {
+      return res.status(400).json({ error: 'Search needs at least 3 characters' });
+    }
+    const esc = q.replace(/[\\%_]/g, '\\$&');
+    let query = supabase
+      .from('rag_corpus')
+      .select('author, work, chunk_index, chunk_text, section_label')
+      .ilike('chunk_text', `%${esc}%`)
+      .neq('text_type', 'paper_summary')
+      .order('author', { ascending: true })
+      .order('chunk_index', { ascending: true })
+      .limit(20);
+    if (author && work) query = query.eq('author', author).eq('work', work);
+    const { data: rows, error } = await query;
+    if (error) throw error;
+
+    // Hidden works are off the shelf, so they must not surface in search.
+    const { data: ovs } = await supabase
+      .from('library_overrides').select('author, work, hidden').eq('hidden', true);
+    const hidden = new Set((ovs || []).map(o => `${o.author}::${o.work}`));
+
+    const results = [];
+    for (const r of rows || []) {
+      if (hidden.has(`${r.author}::${r.work}`)) continue;
+      // Reader page = how many of the work's chunks precede this one.
+      const { count } = await supabase
+        .from('rag_corpus')
+        .select('id', { count: 'exact', head: true })
+        .eq('author', r.author)
+        .eq('work', r.work)
+        .lt('chunk_index', r.chunk_index);
+      const text = r.chunk_text || '';
+      const at = text.toLowerCase().indexOf(q.toLowerCase());
+      const start = Math.max(0, at - 60);
+      results.push({
+        author: r.author,
+        work: r.work,
+        title: libraryHelpers.workTitle(r.work),
+        section: r.section_label || null,
+        page: Math.floor((count || 0) / LIBRARY_PAGE_CHUNKS),
+        snippet: text.slice(start, start + 220).replace(/\s+/g, ' ').trim(),
+      });
+    }
+    return res.json({ query: q, results });
+  } catch (err) {
+    console.error('[/api/library/search] error:', err.message);
+    return res.status(500).json({ error: 'Search failed' });
+  }
+});
+
 // POST /api/library/related — "reads itself alongside": semantic neighbors of
 // an open text, drawn from a representative passage. Non-critical: failures
 // return an empty list rather than erroring the reader.

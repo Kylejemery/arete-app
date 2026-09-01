@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -16,7 +15,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSubscription } from '@/lib/useSubscription';
 
 const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
-const ACADEMY_URL = 'https://academy.pursuearete.com';
 
 /**
  * Right-slide drawer for premium destinations beyond the core tabs: the
@@ -55,11 +53,7 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
       return;
     }
     close(() => {
-      if (destination === 'library') {
-        router.push('/library' as any);
-      } else {
-        WebBrowser.openBrowserAsync(ACADEMY_URL).catch(() => {});
-      }
+      router.push(destination === 'library' ? '/library' : '/academy' as any);
     });
   };
 
