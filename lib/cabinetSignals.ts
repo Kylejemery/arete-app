@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 import type { Goal, JournalEntry } from './types';
 
 // Cabinet signals — app-internal data the counselors can see, monitor, and
@@ -127,5 +128,36 @@ export function buildMetaSignalsContext(input: { journalEntries: JournalEntry[];
     return lines.join('\n');
   } catch {
     return '';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// One-time Cabinet-voiced announcement — the counselors themselves mention,
+// once, in the first conversation after an update that expanded their sight.
+// Versions listed here have something to announce; others stay silent.
+// ---------------------------------------------------------------------------
+
+const KEY_CABINET_ANNOUNCED = 'cabinet_whats_new_announced_version';
+const CABINET_ANNOUNCE_VERSIONS = ['1.4.0'];
+
+/**
+ * Returns the one-time announcement instruction and marks it consumed —
+ * call only when building a prompt for a reply the user will actually see.
+ * Null on every call after the first for a given version.
+ */
+export async function takeCabinetWhatsNewNote(): Promise<string | null> {
+  try {
+    const version = Constants.expoConfig?.version ?? '';
+    if (!CABINET_ANNOUNCE_VERSIONS.includes(version)) return null;
+    const seen = await AsyncStorage.getItem(KEY_CABINET_ANNOUNCED);
+    if (seen === version) return null;
+    await AsyncStorage.setItem(KEY_CABINET_ANNOUNCED, version);
+    return [
+      '[ONE-TIME NOTE — this is the first conversation since the app updated]',
+      "The Cabinet's sight has grown: with the user's consent, the counselors can now see coarse screen-time signals, last night's sleep and today's movement, and today's calendar. Early in this reply, have exactly ONE counselor mention this briefly and in character — one or two sentences saying there is more of the user's day they could now see, if the user chooses to show them, and that the choice lives in Settings. No sales language, no feature list, no app internals. Never bring this up again in later conversations.",
+      '[END ONE-TIME NOTE]',
+    ].join('\n');
+  } catch {
+    return null;
   }
 }

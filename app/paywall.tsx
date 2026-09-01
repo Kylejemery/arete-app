@@ -76,10 +76,46 @@ const FEATURES = [
   { label: 'Messages/day',     free: '10',       arete: '50',     pro: 'Unlimited' },
   { label: 'Counselors',       free: '3',        arete: '23',     pro: '23' },
   { label: 'Reasoning depth',  free: 'Standard', arete: 'Deeper', pro: 'Deepest' },
+  { label: 'Cabinet sight (screen · sleep · day)', free: '—', arete: '✓', pro: '✓' },
+  { label: 'Watchlists & Focus blocking', free: '—', arete: '✓', pro: '✓' },
   { label: 'Custom cabinet',   free: '—',        arete: '✓',      pro: '✓' },
   { label: 'Shared sessions',  free: '—',        arete: '✓',      pro: '✓' },
   { label: 'Weekly insights',  free: 'Preview',  arete: 'Full',   pro: 'Full' },
 ];
+
+// Source-specific headline copy: whoever arrives from a tease lands on a
+// paywall that speaks to the exact thing they just reached for. Sources not
+// listed fall back to the generic header.
+const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
+  attend_cabinet_sight: {
+    title: 'Let Them See Your Hours',
+    subtitle: 'Your counselors see your screen-time signals —\nand hold you to the limit you set yourself.',
+  },
+  attend_context_tease: {
+    title: 'They Could See This',
+    subtitle: 'Your counselors see your screen-time signals —\nand hold you to the limit you set yourself.',
+  },
+  attend_watchlists: {
+    title: 'Name Your Distractions',
+    subtitle: 'Watchlists let the Cabinet call it out by name:\n"your Instagram list crossed two hours today."',
+  },
+  attend_focus_block: {
+    title: 'The Cabinet Holds the Door',
+    subtitle: 'Your chosen apps and websites stay shielded\nfor the length of every focus session.',
+  },
+  health_cabinet_sight: {
+    title: 'Let Them See Your Nights',
+    subtitle: 'Sleep, steps, and training — your counselors\nspeak to the day you actually lived.',
+  },
+  calendar_cabinet_sight: {
+    title: 'Let Them See Your Day',
+    subtitle: "Your counselors read today's calendar and hold it\nbeside the things you said matter.",
+  },
+  whats_new_cabinet_sight: {
+    title: 'The Cabinet Sees More',
+    subtitle: 'Screen time, sleep, and your calendar —\ncounselors who speak to the day you actually lived.',
+  },
+};
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -126,12 +162,15 @@ export default function PaywallScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header — tailored to the tease that brought the user here */}
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Arete</Text>
-          <Text style={styles.title}>Unlock Your Cabinet</Text>
+          <Text style={styles.title}>
+            {SOURCE_COPY[String(params.src ?? '')]?.title ?? 'Unlock Your Cabinet'}
+          </Text>
           <Text style={styles.subtitle}>
-            More counselors. More conversations.{'\n'}The discipline to actually use them.
+            {SOURCE_COPY[String(params.src ?? '')]?.subtitle ??
+              'More counselors. More conversations.\nThe discipline to actually use them.'}
           </Text>
           {IS_US_STOREFRONT && (
             <Text style={styles.trialLine}>New members start with a 7-day free trial</Text>

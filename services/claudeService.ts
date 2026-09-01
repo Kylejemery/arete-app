@@ -3,7 +3,7 @@ import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, ge
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
-import { buildFocusContext, buildMetaSignalsContext } from '../lib/cabinetSignals';
+import { buildFocusContext, buildMetaSignalsContext, takeCabinetWhatsNewNote } from '../lib/cabinetSignals';
 import { buildHealthContext } from '../lib/health';
 import { buildCalendarContext } from '../lib/calendar';
 
@@ -776,7 +776,12 @@ export async function sendMessageToCabinet(
     const syntheticThread = { id: 'cabinet', messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+    // One-time Cabinet-voiced announcement after an update that expanded the
+    // counselors' sight. Only conversation sites consume it (not the daily
+    // question prefetch), so the one shot lands where the user will read it.
+    const cabWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
+      + (cabWhatsNew ? '\n\n' + cabWhatsNew : '');
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const cabinetSettings = await getUserSettings();
@@ -895,7 +900,9 @@ export async function sendCheckInToCabinet(
       userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
     }
 
-    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext());
+    const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
+      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '');
 
     const { data: { user: _ciUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
@@ -996,7 +1003,9 @@ export async function sendMessageToCounselor(
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext());
+    const cnWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    const systemPrompt = (await buildCounselorSystemPrompt(counselorId)) + '\n\n---\n\n' + (await gatherAppContext())
+      + (cnWhatsNew ? '\n\n' + cnWhatsNew : '');
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
     const userProfile = await getKnowThyselfProfile();
