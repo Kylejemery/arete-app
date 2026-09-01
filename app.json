@@ -75,7 +75,7 @@
         "@kingstinct/react-native-healthkit",
         {
           "NSHealthShareUsageDescription": "Arete reads your sleep, steps, and exercise minutes so your Cabinet of counselors can speak to your real days — never to sell or share.",
-          "NSHealthUpdateUsageDescription": false,
+          "NSHealthUpdateUsageDescription": "Arete does not write to Health. This permission is required by the HealthKit framework Arete uses to read sleep, steps, and exercise minutes; Arete never adds or changes Health data.",
           "background": false
         }
       ]
