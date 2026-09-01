@@ -457,14 +457,38 @@ export async function stopFocusBlock(): Promise<void> {
 
 /**
  * Coarse usage context for counselor prompts — crossings only, no raw data,
- * per the Attend spec privacy principle. Returns null when Attend is off,
- * there is nothing meaningful to say, or the user has turned Cabinet
- * visibility off in Settings.
+ * per the Attend spec privacy principle. Always returns a block so the
+ * Cabinet is never silently blind about screen time: when the signals are
+ * unavailable (unsupported device, Attend not connected, visibility turned
+ * off, or the caller says this tier cannot see them), the block says exactly
+ * what the counselors cannot see, so a direct "how's my screen time?" gets
+ * an honest answer instead of an invented number.
+ *
+ * @param cabinetCanSee whether this user's tier lets the Cabinet see the
+ * signals (the premium half of Attend). Defaults to true for callers that
+ * do their own gating.
  */
-export async function buildAttendContext(): Promise<string | null> {
+export async function buildAttendContext(cabinetCanSee: boolean = true): Promise<string> {
+  const wrap = (lines: string[]) =>
+    ['[ATTEND CONTEXT — Screen Time]', ...lines.filter(Boolean), '[END ATTEND CONTEXT]'].join('\n');
+  const noData = (reason: string) =>
+    wrap([
+      reason,
+      'If the user asks about their screen time, say honestly that you cannot see it and why. Never invent or estimate usage numbers.',
+    ]);
   try {
-    if (!(await getShareScreenWithCabinet())) return null;
-    if (!(await attendIsEnabled())) return null;
+    if (!attendIsSupported()) {
+      return noData('You cannot see their screen time: monitoring is not available on this device.');
+    }
+    if (!(await attendIsEnabled())) {
+      return noData('You cannot see their screen time: they have not connected Screen Time monitoring (it can be connected on the Progress tab).');
+    }
+    if (!(await getShareScreenWithCabinet())) {
+      return noData('You cannot see their screen time: they chose in Settings not to share it with the Cabinet. Respect that choice without comment unless asked.');
+    }
+    if (!cabinetCanSee) {
+      return noData('You cannot see their screen time: Cabinet visibility of Screen Time signals is part of Arete Premium, and they are on the free tier.');
+    }
     const goalMinutes = await getAttendGoalMinutes();
     const today = await getAttendTodayStatus();
     const raw = await AsyncStorage.getItem(KEY_HISTORY);
@@ -478,21 +502,20 @@ export async function buildAttendContext(): Promise<string | null> {
     const watchLines = watchStatus
       .filter((w) => w.highestMinutes > 0)
       .map((w) => `Their "${w.label}" watchlist crossed the ${fmtMinutes(w.highestMinutes)} mark today.`);
-    const lines = [
-      '[ATTEND CONTEXT — the user shares coarse Screen Time signals with you]',
-      `Daily screen-time goal: ${goalText}.`,
+    return wrap([
+      'The user shares coarse Screen Time signals with you (threshold crossings only — you never see exact minutes).',
+      `Their self-set daily limit: ${goalText}.`,
       today.connected
         ? today.highestMinutes > 0
-          ? `Today: phone use has crossed the ${fmtMinutes(today.highestMinutes)} mark${today.overGoal ? ' — OVER their goal' : ' (still under their goal)'}.`
-          : 'Today: no usage thresholds crossed yet.'
-        : 'Today: no signal.',
+          ? `Today: phone use has crossed the ${fmtMinutes(today.highestMinutes)} mark — ${today.overGoal ? 'they went OVER their limit today' : 'still under their limit'}.`
+          : 'Today: no usage thresholds crossed yet — well under their limit so far.'
+        : 'Today: no signal yet.',
       ...watchLines,
-      last7.length >= 3 ? `Past week: over their goal on ${overDays} of the last ${last7.length} tracked days.` : '',
-      'If phone use, attention, or distraction is relevant, you may speak to these patterns in your own voice — as one who has been watching, not auditing. Never cite exact numbers beyond these, never mention "Screen Time" or "Attend" by name.',
-      '[END ATTEND CONTEXT]',
-    ].filter(Boolean);
-    return lines.join('\n');
+      last7.length >= 3 ? `Past week: over their limit on ${overDays} of the last ${last7.length} tracked days.` : '',
+      'When the user asks directly about their screen time, answer plainly from the lines above. If they are over their limit, tell them straight — e.g. "You went over your limit today." — then speak to it in your own voice. If under, tell them they are still within it. Only your precision is limited (crossings, not exact minutes), never your honesty.',
+      'When they have NOT asked, you may still speak to phone use, attention, or distraction where relevant — as one who has been watching, not auditing. Do not volunteer numbers beyond these thresholds, and do not mention the feature name "Attend."',
+    ]);
   } catch {
-    return null;
+    return noData('You cannot see their screen time right now: the signals could not be read.');
   }
 }

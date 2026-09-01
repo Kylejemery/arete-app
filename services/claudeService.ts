@@ -494,17 +494,17 @@ export async function gatherAppContext(): Promise<string> {
   } catch { /* skip */ }
 
   // Attend (opt-in): coarse Screen Time signals — threshold crossings only,
-  // never raw usage data. Null when Attend is off or unsupported. The
-  // Cabinet SEEING the signals is the premium half of Attend: free tier
-  // still gets monitoring, the goal card, and goal notifications.
+  // never raw usage data. The block is ALWAYS injected: with signals when
+  // available, otherwise an honest "you cannot see it because …" so a direct
+  // "how's my screen time?" never gets an invented answer. The Cabinet
+  // SEEING the signals is the premium half of Attend: free tier still gets
+  // monitoring, the goal card, and goal notifications.
   try {
     const attendTier = await getSubscriptionTier().catch(() => 'free');
-    if (attendTier !== 'free') {
-      const attendContext = await buildAttendContext();
-      if (attendContext) {
-        lines.push('');
-        lines.push(attendContext);
-      }
+    const attendContext = await buildAttendContext(attendTier !== 'free');
+    if (attendContext) {
+      lines.push('');
+      lines.push(attendContext);
     }
   } catch { /* skip */ }
 
