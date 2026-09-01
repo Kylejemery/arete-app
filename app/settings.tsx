@@ -40,6 +40,9 @@ import {
   addWatchlist,
   removeWatchlist,
   MAX_WATCHLISTS,
+  getBlockedDomains,
+  addBlockedDomain,
+  removeBlockedDomain,
   type AttendWatchlist,
 } from '@/lib/attend';
 
@@ -163,6 +166,7 @@ export default function SettingsScreen() {
   const [showBlocklistPicker, setShowBlocklistPicker] = useState(false);
   const [watchlists, setWatchlists] = useState<AttendWatchlist[]>([]);
   const [pendingWatchLabel, setPendingWatchLabel] = useState<string | null>(null);
+  const [blockedDomains, setBlockedDomains] = useState<string[]>([]);
 
   useEffect(() => {
     if (!attendIsSupported()) return;
@@ -172,6 +176,7 @@ export default function SettingsScreen() {
       setFocusBlockEnabledState(await getFocusBlockEnabled());
       setHasBlocklist(!!(await getFocusBlocklist()));
       setWatchlists(await getWatchlists());
+      setBlockedDomains(await getBlockedDomains());
     })().catch(() => {});
   }, []);
 
@@ -740,6 +745,41 @@ export default function SettingsScreen() {
             <Text style={styles.attendBlocklistText}>
               {hasBlocklist ? 'Edit blocked apps & websites' : 'Choose apps & websites to block…'}
             </Text>
+          </TouchableOpacity>
+
+          {/* Typed website blocklist — Apple's picker can't take a URL; the
+              web-content filter can. Blocked in Safari during Focus. */}
+          {blockedDomains.map((d) => (
+            <View key={d} style={styles.attendWatchRow}>
+              <Text style={styles.attendWatchLabel}>🌐 {d}</Text>
+              <TouchableOpacity
+                onPress={async () => setBlockedDomains(await removeBlockedDomain(d))}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle-outline" size={18} color="#888" />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <TouchableOpacity
+            style={styles.attendBlocklistButton}
+            onPress={() => {
+              if (tier === 'free') {
+                router.push({ pathname: '/paywall', params: { src: 'attend_focus_block' } } as any);
+                return;
+              }
+              Alert.prompt(
+                'Block a website during Focus',
+                'Type the site (e.g., reddit.com or youtube.com)',
+                async (value) => {
+                  const updated = await addBlockedDomain(value || '');
+                  if (updated) setBlockedDomains(updated);
+                  else Alert.alert('Invalid website', 'Enter a domain like reddit.com');
+                }
+              );
+            }}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.attendBlocklistText}>Block a website…</Text>
           </TouchableOpacity>
 
           {/* Watchlists — named app groups the Cabinet can call out by name */}

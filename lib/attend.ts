@@ -361,6 +361,44 @@ export async function getFocusBlocklist(): Promise<string | null> {
   return AsyncStorage.getItem(KEY_FOCUS_BLOCKLIST);
 }
 
+// Typed website blocklist — Apple's FamilyActivityPicker cannot take a typed
+// URL, but the ManagedSettings web-content filter can: these domains are
+// blocked in Safari for the duration of a Focus session.
+const KEY_BLOCKED_DOMAINS = 'attend_blocked_domains';
+
+export async function getBlockedDomains(): Promise<string[]> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_BLOCKED_DOMAINS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Normalize "https://www.reddit.com/r/all" → "reddit.com". */
+export function normalizeDomain(input: string): string | null {
+  const cleaned = input.trim().toLowerCase()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .split(/[/?#]/)[0];
+  return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/.test(cleaned) ? cleaned : null;
+}
+
+export async function addBlockedDomain(input: string): Promise<string[] | null> {
+  const domain = normalizeDomain(input);
+  if (!domain) return null;
+  const domains = await getBlockedDomains();
+  if (!domains.includes(domain)) domains.push(domain);
+  await AsyncStorage.setItem(KEY_BLOCKED_DOMAINS, JSON.stringify(domains));
+  return domains;
+}
+
+export async function removeBlockedDomain(domain: string): Promise<string[]> {
+  const domains = (await getBlockedDomains()).filter((d) => d !== domain);
+  await AsyncStorage.setItem(KEY_BLOCKED_DOMAINS, JSON.stringify(domains));
+  return domains;
+}
+
 /**
  * Shield the user's chosen distraction list for the duration of a Focus
  * session. The shield screen (ShieldConfiguration extension) is dressed in
@@ -373,7 +411,8 @@ export async function startFocusBlock(): Promise<boolean> {
     if (!(await getFocusBlockEnabled())) return false;
     if (getAttendAuthStatus() !== 'approved') return false;
     const selection = await getFocusBlocklist();
-    if (!selection) return false;
+    const domains = await getBlockedDomains();
+    if (!selection && domains.length === 0) return false;
     mod.updateShield(
       {
         title: 'The Cabinet holds the door.',
@@ -388,7 +427,12 @@ export async function startFocusBlock(): Promise<boolean> {
       { primary: { behavior: 'close' } },
       'focus-session'
     );
-    mod.blockSelection({ activitySelectionToken: selection }, 'focus-session');
+    if (selection) {
+      mod.blockSelection({ activitySelectionToken: selection }, 'focus-session');
+    }
+    if (domains.length > 0) {
+      mod.setWebContentFilterPolicy({ type: 'specific', domains }, 'focus-session');
+    }
     return true;
   } catch (e) {
     console.warn('[attend] focus block failed:', (e as Error)?.message);
@@ -405,6 +449,7 @@ export async function stopFocusBlock(): Promise<void> {
     if (selection) {
       mod.unblockSelection({ activitySelectionToken: selection }, 'focus-session');
     }
+    mod.clearWebContentFilterPolicy('focus-session');
   } catch (e) {
     console.warn('[attend] focus unblock failed:', (e as Error)?.message);
   }
