@@ -694,14 +694,19 @@ export async function buildAttendContext(cabinetCanSee: boolean = true): Promise
         : '',
     ];
 
+    // A manual mark is an explicit correction — iOS only counts the apps the
+    // user picked, so the monitor can undercount. Their own word wins.
+    const manualToday = await getManualScreenToday();
+    const todayLine = manualToday
+      ? `Today: they marked themselves ${manualToday === 'over' ? 'OVER their limit' : 'under their limit'} (their own correction — trust it over the automatic reading).`
+      : today.highestMinutes > 0
+        ? `Today: phone use has crossed the ${fmtMinutes(today.highestMinutes)} mark — ${today.overGoal ? 'they went OVER their limit today' : 'still under their limit'}.`
+        : 'Today: no usage thresholds crossed yet — under their limit so far (but the monitor only counts the apps they chose, so this can undercount).';
+
     return wrap([
       'The user shares coarse Screen Time signals with you (threshold crossings only — you never see exact minutes).',
       `Their self-set daily limit: ${goalText}.`,
-      today.connected
-        ? today.highestMinutes > 0
-          ? `Today: phone use has crossed the ${fmtMinutes(today.highestMinutes)} mark — ${today.overGoal ? 'they went OVER their limit today' : 'still under their limit'}.`
-          : 'Today: no usage thresholds crossed yet — well under their limit so far.'
-        : 'Today: no signal yet.',
+      todayLine,
       ...watchLines,
       ...nightLines,
       last7.length >= 3 ? `Past week: over their limit on ${overDays} of the last ${last7.length} tracked days.` : '',

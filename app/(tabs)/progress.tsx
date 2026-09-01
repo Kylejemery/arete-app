@@ -505,55 +505,58 @@ export default function ProgressScreen() {
                 </TouchableOpacity>
               )}
 
-              <View style={styles.screenTimeRow}>
-                <View style={styles.screenTimeStat}>
-                  <Text style={[
-                    styles.screenTimeHours,
-                    attendStatus?.connected
-                      ? (attendStatus.overGoal ? styles.screenTimeBad : styles.screenTimeGood)
-                      : todayMark
-                        ? (todayMark === 'over' ? styles.screenTimeBad : styles.screenTimeGood)
-                        : null,
-                  ]}>
-                    {attendStatus?.connected
-                      ? (attendStatus.overGoal ? 'Over' : 'Under')
-                      : todayMark
-                        ? (todayMark === 'over' ? 'Over' : 'Under')
-                        : '—'}
+              {/* Today = your own mark if you made one (it's an explicit
+                  correction), else the automatic reading. */}
+              {(() => {
+                const over = todayMark ? todayMark === 'over' : attendStatus?.connected ? attendStatus.overGoal : null;
+                return (
+                  <View style={styles.screenTimeRow}>
+                    <View style={styles.screenTimeStat}>
+                      <Text style={[
+                        styles.screenTimeHours,
+                        over === null ? null : over ? styles.screenTimeBad : styles.screenTimeGood,
+                      ]}>
+                        {over === null ? '—' : over ? 'Over' : 'Under'}
+                      </Text>
+                      <Text style={styles.screenTimeLabel}>Today</Text>
+                    </View>
+                    <View style={styles.screenTimeDivider} />
+                    <TouchableOpacity style={styles.screenTimeStat} onPress={editScreenTimeGoal} activeOpacity={0.7}>
+                      <Text style={styles.screenTimeHours}>{screenTimeGoal}h</Text>
+                      <Text style={styles.screenTimeLabel}>Daily Goal ✎</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
+              {/* Manual mark — one honest bit per day. Always available: when
+                  monitoring is connected these correct a wrong reading (iOS
+                  only counts the apps you picked, so it can undercount). */}
+              {attendStatus?.connected && (
+                <Text style={styles.attendCaption}>
+                  Set it straight yourself — your mark is what your counselors trust.
+                </Text>
+              )}
+              <View style={styles.markRow}>
+                <TouchableOpacity
+                  style={[styles.markButton, todayMark === 'under' && styles.markButtonUnderActive]}
+                  onPress={() => markScreenDay('under')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.markButtonText, todayMark === 'under' && styles.markButtonTextActive]}>
+                    ✓ Under goal
                   </Text>
-                  <Text style={styles.screenTimeLabel}>Today</Text>
-                </View>
-                <View style={styles.screenTimeDivider} />
-                <TouchableOpacity style={styles.screenTimeStat} onPress={editScreenTimeGoal} activeOpacity={0.7}>
-                  <Text style={styles.screenTimeHours}>{screenTimeGoal}h</Text>
-                  <Text style={styles.screenTimeLabel}>Daily Goal ✎</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.markButton, todayMark === 'over' && styles.markButtonOverActive]}
+                  onPress={() => markScreenDay('over')}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.markButtonText, todayMark === 'over' && styles.markButtonTextActive]}>
+                    ⚠ Over goal
+                  </Text>
                 </TouchableOpacity>
               </View>
-              {/* Manual mark — one honest bit per day, only when automatic
-                  monitoring isn't answering the question already. */}
-              {!attendStatus?.connected && (
-                <View style={styles.markRow}>
-                  <TouchableOpacity
-                    style={[styles.markButton, todayMark === 'under' && styles.markButtonUnderActive]}
-                    onPress={() => markScreenDay('under')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.markButtonText, todayMark === 'under' && styles.markButtonTextActive]}>
-                      ✓ Under goal
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.markButton, todayMark === 'over' && styles.markButtonOverActive]}
-                    onPress={() => markScreenDay('over')}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.markButtonText, todayMark === 'over' && styles.markButtonTextActive]}>
-                      ⚠ Over goal
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {!attendStatus?.connected && recentMarks.map(([day, mark]) => (
+              {recentMarks.map(([day, mark]) => (
                 <View key={day} style={styles.pagesLogRow}>
                   <Text style={styles.pagesLogDate}>
                     {new Date(`${day}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
