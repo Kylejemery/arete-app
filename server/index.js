@@ -4475,9 +4475,17 @@ app.get('/api/widget/quote', (req, res) => {
   return res.json(quote);
 });
 
-// GET /api/library/outline?author=&work= — section headings with the reader
-// page each begins on (pages are LIBRARY_PAGE_CHUNKS rows). Powers the
-// reader's linked table of contents.
+// GET /api/library/outline?author=&work= — a two-level table of contents with
+// the reader page each entry begins on (pages are LIBRARY_PAGE_CHUNKS rows).
+// Two sources, in order of preference:
+//   1. section_label, when the ingest recorded one per chunk. Labels are chunk
+//      ranges ("4.6–4.14", "15–16", "front matter"); the START of each range
+//      is the unit the chunk opens in, and "book.chapter" splits into levels.
+//   2. Otherwise the raw text, scanned for CHAPTER / BOOK / LETTER markers
+//      (Montaigne, Plato, Aristotle carry no labels at all).
+// Results are cached per work: the corpus for a work changes only on ingest.
+const OUTLINE_CACHE = new Map();
+const OUTLINE_TTL_MS = 6 * 60 * 60 * 1000;
 app.get('/api/library/outline', async (req, res) => {
   try {
     const author = (req.query.author || '').toString();
@@ -4485,31 +4493,28 @@ app.get('/api/library/outline', async (req, res) => {
     if (!author || !work) {
       return res.status(400).json({ error: 'author and work are required' });
     }
-    const sections = [];
-    let lastLabel = null;
-    let offset = 0;
-    // PostgREST caps a page at 1000 rows; walk in batches.
-    for (;;) {
-      const { data: rows, error } = await supabase
+    const cacheKey = `${author}::${work}`;
+    const cached = OUTLINE_CACHE.get(cacheKey);
+    if (cached && cached.at > Date.now() - OUTLINE_TTL_MS) return res.json(cached.payload);
+
+    // Walk every chunk of the work (PostgREST caps a page at 1000 rows).
+    const rows = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase
         .from('rag_corpus')
-        .select('section_label')
+        .select('chunk_index, section_label, chunk_text')
         .eq('author', author)
         .eq('work', work)
         .order('chunk_index', { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
-      if (!rows || rows.length === 0) break;
-      rows.forEach((r, i) => {
-        const label = (r.section_label || '').trim();
-        if (label && label !== lastLabel) {
-          sections.push({ label, page: Math.floor((offset + i) / LIBRARY_PAGE_CHUNKS) });
-          lastLabel = label;
-        }
-      });
-      if (rows.length < 1000) break;
-      offset += rows.length;
+      if (!data || data.length === 0) break;
+      rows.push(...data);
+      if (data.length < 1000) break;
     }
-    return res.json({ sections });
+    const payload = libraryHelpers.buildOutline(rows, work, LIBRARY_PAGE_CHUNKS);
+    OUTLINE_CACHE.set(cacheKey, { at: Date.now(), payload });
+    return res.json(payload);
   } catch (err) {
     console.error('[/api/library/outline] error:', err.message);
     return res.status(500).json({ error: 'Failed to load the outline' });
@@ -4545,28 +4550,33 @@ app.get('/api/library/search', async (req, res) => {
       .from('library_overrides').select('author, work, hidden').eq('hidden', true);
     const hidden = new Set((ovs || []).map(o => `${o.author}::${o.work}`));
 
-    const results = [];
-    for (const r of rows || []) {
-      if (hidden.has(`${r.author}::${r.work}`)) continue;
-      // Reader page = how many of the work's chunks precede this one.
-      const { count } = await supabase
+    // Reader page = how many of the work's chunks precede this one. A few
+    // works have gaps in chunk_index, so count rather than divide; the counts
+    // are independent, so run them together.
+    const shown = (rows || []).filter(r => !hidden.has(`${r.author}::${r.work}`));
+    const counts = await Promise.all(shown.map(r =>
+      supabase
         .from('rag_corpus')
         .select('id', { count: 'exact', head: true })
         .eq('author', r.author)
         .eq('work', r.work)
-        .lt('chunk_index', r.chunk_index);
+        .lt('chunk_index', r.chunk_index)
+        .then(({ count }) => count || 0)
+        .catch(() => 0)
+    ));
+    const results = shown.map((r, i) => {
       const text = r.chunk_text || '';
       const at = text.toLowerCase().indexOf(q.toLowerCase());
       const start = Math.max(0, at - 60);
-      results.push({
+      return {
         author: r.author,
         work: r.work,
         title: libraryHelpers.workTitle(r.work),
         section: r.section_label || null,
-        page: Math.floor((count || 0) / LIBRARY_PAGE_CHUNKS),
+        page: Math.floor(counts[i] / LIBRARY_PAGE_CHUNKS),
         snippet: text.slice(start, start + 220).replace(/\s+/g, ' ').trim(),
-      });
-    }
+      };
+    });
     return res.json({ query: q, results });
   } catch (err) {
     console.error('[/api/library/search] error:', err.message);
@@ -4760,6 +4770,115 @@ ${ctxBlock(cb)}`;
   } catch (err) {
     console.error('[/api/library/debate] error:', err.message);
     return res.status(500).json({ error: 'The house could not convene. Please try again.' });
+  }
+});
+
+// POST /api/library/annotate — the corpus weighs in on a passage as a note in
+// the margin. A signed-in reader asks; the note is grounded in passages
+// retrieved from OTHER works, names them in the prose, and is written into
+// library_comments as a corpus note (is_corpus) that every reader then sees.
+// Shares the Oracle's IP rate limit and the Pro gate with the other
+// conversing routes. One bare corpus note per paragraph: asking again on the
+// same paragraph without a quoted passage returns the note already there.
+const CORPUS_HANDLE = 'The Corpus';
+app.post('/api/library/annotate', async (req, res) => {
+  if (await enforceProLibraryGate(req, res)) return;
+  try {
+    if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'sign_in', message: 'Sign in to ask the corpus.' });
+
+    const { author, work, page, paraIndex, anchorText, passage, quote, parentId } = req.body || {};
+    if (!author || !work || typeof passage !== 'string' || passage.trim().length < 20) {
+      return res.status(400).json({ error: 'author, work and a passage are required' });
+    }
+    const pg = Math.max(0, parseInt(page, 10) || 0);
+    const pi = Math.max(0, parseInt(paraIndex, 10) || 0);
+    const q = typeof quote === 'string' && quote.trim() ? quote.trim().slice(0, 600) : null;
+
+    if (!q && !parentId) {
+      const { data: existing } = await supabase
+        .from('library_comments')
+        .select('*')
+        .eq('text_author', author).eq('text_work', work).eq('page', pg).eq('para_index', pi)
+        .eq('is_corpus', true).is('parent_id', null).is('quote', null)
+        .order('created_at', { ascending: true })
+        .limit(1);
+      if (existing && existing[0]) return res.json({ comment: existing[0], existing: true });
+    }
+
+    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const ip = rawIp.split(',')[0].trim();
+    const { data: limitData, error: limitError } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: ip });
+    if (!limitError && limitData > 15) {
+      return res.status(429).json({ error: 'Daily limit reached', message: 'The corpus has spoken enough for today. Try again tomorrow.', remaining: 0 });
+    }
+    const remaining = Math.max(0, 15 - (limitData || 1));
+
+    const focus = (q || passage).replace(/\s+/g, ' ').trim().slice(0, 1400);
+    const title = libraryHelpers.workTitle(work);
+    const chunks = await getStoicContext(focus, 10, null).catch(() => []);
+    const others = (chunks || []).filter(c => !(c.author === author && c.work === work)).slice(0, 5);
+    const ctxBlock = others
+      .map((c, i) => `[${i + 1}] ${c.author}, ${libraryHelpers.workTitle(c.work)}\n${String(c.chunk_text || '').slice(0, 900)}`)
+      .join('\n\n');
+
+    const system = `You are the Corpus of the Library of Arete: the whole tradition speaking as one reader who has the shelves by heart. A reader has marked a passage and asked what the corpus makes of it.
+
+Write a marginal note of 90 to 160 words. Say plainly what the passage claims, then set it beside one or two other voices from the passages provided below: where another author agrees, sharpens, or pushes back. Name authors and works in the prose (for example: Seneca, in the Letters, says the same of grief). Stay grounded in the passages given and do not invent citations. You are writing in a shared margin for whoever reads next. If there is a tension, name it and leave it standing rather than resolving it. Do not use em dashes or en dashes anywhere; use commas, colons, or full stops instead. No headings, no lists, no markdown: plain prose only.
+
+The passage, from ${author}, ${title}:
+"""${focus}"""
+
+Passages from elsewhere in the Library:
+${ctxBlock || '(none retrieved; write from the passage alone and say that the shelves offered no close companion)'}`;
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 500,
+        system,
+        messages: [{ role: 'user', content: 'What does the corpus make of this passage?' }],
+      }),
+    });
+    if (!claudeRes.ok) {
+      const t = await claudeRes.text();
+      console.error('[/api/library/annotate] Claude error:', claudeRes.status, t);
+      return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Please try again.' });
+    }
+    const claudeData = await claudeRes.json();
+    const body = String(claudeData.content?.[0]?.text || '')
+      .replace(/\s*[—–]\s*/g, ', ')
+      .replace(/\s+,/g, ',')
+      .trim();
+    if (!body) return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Please try again.' });
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('library_comments')
+      .insert({
+        text_author: author,
+        text_work: work,
+        page: pg,
+        para_index: pi,
+        anchor_text: String(anchorText || passage).slice(0, 120),
+        quote: q,
+        parent_id: parentId || null,
+        user_id: null,
+        handle: CORPUS_HANDLE,
+        body,
+        is_corpus: true,
+        requested_by: userId,
+        sources: others.map(c => ({ author: c.author, work: c.work, title: libraryHelpers.workTitle(c.work) })),
+      })
+      .select()
+      .single();
+    if (insErr) throw insErr;
+    return res.json({ comment: inserted, remaining });
+  } catch (err) {
+    console.error('[/api/library/annotate] error:', err.message);
+    return res.status(500).json({ error: 'failed', message: 'The corpus could not write just now. Please try again.' });
   }
 });
 

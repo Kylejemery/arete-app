@@ -233,16 +233,178 @@ function formatReadable(text) {
   // numbered aphorisms/verses: "29. As thou…", "10. 1. When…" — but not
   // numbers in citations ("v. 197.", "p. 12.", "vol. 3.")
   t = t.replace(new RegExp(`${SENT_END}(?<!\\b(?:v|p|pp|No|no|vol|Vol|ch|sec)\\. )(\\d{1,3}\\.(?: \\d{1,3}\\.)?)(?= [“"']?[A-Z])`, 'g'), '\n\n$1');
+  // mixed-case markers ("Chapter I. Every art…") after a sentence end
+  t = t.replace(new RegExp(`${SENT_END}((?:Chapter|Letter|Book|Part|Section)\\s+[IVXLCDM0-9]+\\.?)(?= [“"']?[A-Z])`, 'g'), '\n\n$1');
+
+  // A chapter marker that opens a block is followed, in most transcriptions,
+  // by its all-caps title running straight into the prose ("CHAPTER II OF
+  // SORROW No man living…"). Lift the marker and the title onto their own
+  // lines so the reader can set them as headings.
+  const blocks = t.split(/\n\n+/).map(b => b.trim()).filter(Boolean).flatMap(b => {
+    const m = b.match(HEADING_OPEN);
+    if (!m) return [b];
+    const marker = m[1].trim();
+    const title = trimTitle(m[2] || '');
+    const rest = b.slice(m[0].length).trim();
+    const out = [marker];
+    if (title) out.push(title);
+    if (rest) out.push(rest);
+    return out;
+  });
 
   // re-paragraph each block to reading size
-  return t.split(/\n\n+/)
-    .map(b => b.trim()).filter(Boolean)
+  return blocks
     .flatMap(paragraphize)
     .join('\n\n');
 }
 
+// A block that opens with a section marker, optionally followed by a run of
+// all-caps words (the chapter's title). The title stops at the first word
+// with a lowercase letter, which is where the prose begins.
+// The title run stops at the next marker word, so a contents page ("BOOK I
+// BOOK II BOOK III …") reads as separate markers, not one long title.
+const TITLE_RUN = `((?:(?!(?:BOOK|CHAPTER|CHAP\\.|LETTER|PART|SECTION)\\b)[A-Z][A-Z’'\\-,;:]*\\.?\\s+){0,16}(?!(?:BOOK|CHAPTER|CHAP\\.|LETTER|PART|SECTION)\\b)[A-Z][A-Z’'\\-,;:]*[.!?]?)`;
+const HEADING_OPEN = new RegExp(`^((?:CHAP\\.|CHAPTER|BOOK|LETTER|PART|SECTION|Chapter|Book|Letter|Part|Section)\\s+(?:THE\\s+)?[IVXLCDM0-9]+\\.?)(?:\\s+${TITLE_RUN})?(?=\\s|$)`);
+
+// The all-caps run can swallow the first word of the prose when that word is
+// a single capital ("…WHERE THE TRUE ARE WANTING A gentleman"). Drop trailing
+// one-letter words, a leading numeral that repeats the marker's ("LETTER 14.
+// XIV. ON THE REASONS…"), and refuse titles that are only one short word.
+function trimTitle(raw) {
+  const words = raw.trim().split(/\s+/).filter(Boolean);
+  if (words.length > 1 && /^[IVXLCDM]+\.?$/.test(words[0])) words.shift();
+  while (words.length > 1 && /^[A-Z][.!?]?$/.test(words[words.length - 1])) words.pop();
+  if (words.length === 1 && words[0].replace(/[.!?]/g, '').length < 3) return '';
+  return words.join(' ');
+}
+
+// --- Outline extraction --------------------------------------------------------
+// Headings found by scanning a raw chunk: [{ kind, numeral, title }]. Used by
+// the outline endpoint for works whose rows carry no usable section labels.
+// All-caps markers may follow a sentence end or another all-caps word
+// ("ARISTOTLE'S ETHICS BOOK I"), never running prose ("as in BOOK VI");
+// mixed-case ones ("Chapter IV.") must follow a sentence end, since "Book"
+// and "Letter" are ordinary words in running prose.
+const HEADING_SCAN = new RegExp(
+  `(?:(?:^|[.!?…\\]"”’)]\\s+|[A-Z’'\\-]{2,}[.,:;]?\\s+)((?:CHAP\\.|CHAPTER|BOOK|LETTER|PART)\\s+(?:THE\\s+)?([IVXLCDM]+|\\d{1,3})\\.?)` +
+  `|(?:^|[.!?…\\]"”’)]\\s+)((?:Chapter|Book|Letter|Part)\\s+([IVXLCDM]+|\\d{1,3})\\.?)(?=\\s+[A-Z“"'(]|$))(?:\\s+${TITLE_RUN})?(?=\\s|$)`, 'g');
+function extractHeadings(text) {
+  const out = [];
+  const t = (text || '').replace(/_/g, '').replace(/\s+/g, ' ').trim();
+  let m;
+  HEADING_SCAN.lastIndex = 0;
+  while ((m = HEADING_SCAN.exec(t)) !== null) {
+    const marker = m[1] || m[3];
+    const numeral = m[2] || m[4];
+    const word = marker.split(/\s+/)[0].toUpperCase();
+    const kind = word.startsWith('CHAP') ? 'CHAPTER' : word;
+    out.push({ kind, numeral, title: trimTitle(m[5] || '') });
+  }
+  return out;
+}
+
+// "OF THE PUNISHMENT OF COWARDICE" → "Of the Punishment of Cowardice"
+const SMALL_WORDS = new Set(['of', 'the', 'and', 'or', 'to', 'in', 'on', 'at', 'by', 'for', 'a', 'an', 'is', 'as', 'that', 'with', 'from', 'be', 'not', 'are', 'it', 'his', 'our', 'we', 'than', 'but', 'upon', 'into']);
+function titleCase(s) {
+  return s.toLowerCase().replace(/[.!?]+$/, '').split(' ').map((w, i) =>
+    (i > 0 && SMALL_WORDS.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
+}
+
+// Which word the outline uses for a top-level unit of a given work.
+function outlineUnitName(work, kind) {
+  if (kind) return kind.charAt(0) + kind.slice(1).toLowerCase();
+  if (/letter/i.test(work)) return 'Letter';
+  if (/essay/i.test(work)) return 'Essay';
+  return 'Book';
+}
+
+const ROMAN_RE = /^[IVXLCDM]+$/;
+
+// A two-level table of contents for one work, from its chunks in order
+// ({ section_label, chunk_text }). Two sources, in order of preference:
+//   1. section_label, when the ingest recorded one per chunk. Labels are chunk
+//      ranges ("4.6–4.14", "15–16", "front matter"); the START of each range
+//      is the unit the chunk opens in, and "book.chapter" splits into levels.
+//   2. Otherwise the raw text, scanned for CHAPTER / BOOK / LETTER markers
+//      (Montaigne, Plato, Aristotle carry no labels at all).
+// Each entry: { level, label, page, key, marker? } where page is the reader
+// folio (pageChunks rows each) and marker is the literal heading to scroll to.
+function buildOutline(rows, work, pageChunks) {
+  const pageOf = i => Math.floor(i / pageChunks);
+  const sections = [];
+  const labels = new Set(rows.map(r => (r.section_label || '').trim()).filter(Boolean));
+  // A single label for the whole work ("Jowett", "Stoicism") is a catalogue
+  // note, not a section; treat those works as unlabeled.
+  const usableLabels = labels.size > 1 && [...labels].some(l => /^\d/.test(l));
+  let source = 'labels';
+
+  if (usableLabels) {
+    let lastTop = null, lastSub = null;
+    rows.forEach((r, i) => {
+      const raw = (r.section_label || '').trim();
+      if (!raw) return;
+      if (/front matter/i.test(raw)) {
+        if (lastTop !== 'front') { sections.push({ level: 1, label: 'Front matter', page: pageOf(i), key: 'front' }); lastTop = 'front'; lastSub = null; }
+        return;
+      }
+      const start = raw.split(/[–—-]/)[0].trim();          // start of the range
+      const parts = start.split('.');
+      const top = parts[0];
+      const sub = parts.length > 1 ? parts.slice(0, 2).join('.') : null;
+      if (!/^\d+$/.test(top)) return;
+      if (top !== lastTop) {
+        sections.push({ level: 1, label: `${outlineUnitName(work)} ${top}`, page: pageOf(i), key: `t${top}` });
+        lastTop = top; lastSub = null;
+      }
+      if (sub && sub !== lastSub) {
+        sections.push({ level: 2, label: sub, page: pageOf(i), key: `s${sub}` });
+        lastSub = sub;
+      }
+    });
+  }
+
+  if (sections.length < 2) {
+    // Scan the text. A chunk with a pile of markers is a table of contents
+    // (Aristotle's chunk 0 lists BOOK I … BOOK X); skip it. The overlap
+    // window repeats a heading across two neighbouring chunks; dedupe by
+    // kind + numeral, and let a BOOK reset the chapter numbering.
+    sections.length = 0;
+    source = 'text';
+    const seen = new Map(); // key → entry, so a later titled mention can replace a bare one
+    let sawBook = false;
+    let bookNo = '';
+    rows.forEach((r, i) => {
+      const heads = extractHeadings(r.chunk_text || '');
+      if (heads.length >= 4) return;
+      for (const h of heads) {
+        if (!ROMAN_RE.test(h.numeral) && !/^\d+$/.test(h.numeral)) continue;
+        if (h.kind === 'BOOK' || h.kind === 'PART') { sawBook = true; bookNo = h.numeral; }
+        const key = `${h.kind}:${h.kind === 'CHAPTER' ? bookNo + '/' : ''}${h.numeral}`;
+        const level = (h.kind === 'CHAPTER' && sawBook) ? 2 : 1;
+        const unit = outlineUnitName(work, h.kind);
+        const label = h.title ? `${unit} ${h.numeral} · ${titleCase(h.title)}` : `${unit} ${h.numeral}`;
+        const entry = { level, label, page: pageOf(i), key, marker: `${h.kind} ${h.numeral}`, titled: !!h.title };
+        const prior = seen.get(key);
+        if (prior) {
+          // A front-matter list names the chapter bare ("CHAPTER I"); the real
+          // start carries its title. Prefer the titled one and its page.
+          if (!prior.titled && entry.titled) Object.assign(prior, entry);
+          continue;
+        }
+        seen.set(key, entry);
+        sections.push(entry);
+      }
+    });
+    sections.forEach(s => { delete s.titled; });
+  }
+
+  return { sections, source, totalPages: Math.max(1, Math.ceil(rows.length / pageChunks)) };
+}
+
 module.exports = {
   STOIC_AUTHORS,
+  buildOutline,
   tradition,
   spine,
   workTitle,
@@ -250,4 +412,5 @@ module.exports = {
   stripGutenberg,
   stitchChunks,
   formatReadable,
+  extractHeadings,
 };

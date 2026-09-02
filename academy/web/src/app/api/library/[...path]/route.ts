@@ -36,9 +36,12 @@ export async function POST(
   const upstreamUrl = `${BACKEND_URL}/api/library/${path.join('/')}`;
   try {
     const body = await request.text();
+    // The reader's session travels with Pro-gated and signed-in calls
+    // (annotate); the backend verifies it against Supabase.
+    const auth = request.headers.get('authorization');
     const upstream = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(auth ? { Authorization: auth } : {}) },
       body,
     });
     const responseBody = await upstream.text();

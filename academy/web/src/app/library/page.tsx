@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import ReaderView, { type ReaderTarget } from './Reader';
+import { SERIF, SANS, MONO, GOLD, GOLD_L, IVORY, TEXT, MUTED, foldText } from './theme';
 
 // ---------------------------------------------------------------------------
 // The Library of Arete — a living philosophical library you can "play" in.
@@ -10,29 +12,15 @@ import { supabase } from '@/lib/supabase';
 // real corpus; the Atrium is a light landing and the Observatory is forthcoming.
 // ---------------------------------------------------------------------------
 
-const SERIF = 'var(--font-cormorant), Georgia, serif';
-const SANS = 'var(--font-inter), system-ui, sans-serif';
-const MONO = 'var(--font-jetbrains), monospace';
-
 // The Railway backend, addressed directly for the one thing the Next proxy
 // cannot carry well: the Observatory's Server-Sent Events stream.
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://arete-app-production.up.railway.app';
 
-const GOLD = '#c9a84c';
-const GOLD_L = '#e3c77a';
-const IVORY = '#f4ead5';
-const TEXT = '#e8e4d6';
-const MUTED = '#8a8b8e';
 // The corpus-concludes hue — a cool cyan, distinct from the green the corpus
 // uses for freshly-ingested synthesis: a conclusion is arrived-at, not found.
 const CONV_COLOR = '#5ab0c9';
 
 type Room = 'atrium' | 'reading' | 'symposium' | 'observatory';
-
-// Lowercase and strip combining marks, so a query typed without accents still
-// matches the name as catalogued (Laërtius, Montaigne, Zeno of Citium).
-const foldText = (s: string) =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 type LibText = {
   id: string;
@@ -205,6 +193,9 @@ export default function LibraryOfArete() {
   const [reader, setReader] = useState<Reader | null>(null);
   const [readerLoading, setReaderLoading] = useState(false);
   const [related, setRelated] = useState<Related[]>([]);
+  // Where a deep link (?text=&page=&p=|&c=) asks the reader to land.
+  const [target, setTarget] = useState<ReaderTarget>(null);
+  const clearTarget = useCallback(() => setTarget(null), []);
 
   // ---- symposium ----
   const [symMode, setSymMode] = useState<'sit' | 'debate'>('sit');
@@ -265,7 +256,7 @@ export default function LibraryOfArete() {
   const go = (r: Room) => setRoom(r);
 
   // ---- reading actions ----
-  const openWork = useCallback(async (author: string, work: string, title: string) => {
+  const openWork = useCallback(async (author: string, work: string, title: string, page = 0) => {
     setRoom('reading');
     setActive({ author, work, title });
     setReader(null);
@@ -273,7 +264,7 @@ export default function LibraryOfArete() {
     setReaderLoading(true);
     try {
       const [tRes, rRes] = await Promise.all([
-        fetch(`/api/library/text?author=${encodeURIComponent(author)}&work=${encodeURIComponent(work)}&page=0`),
+        fetch(`/api/library/text?author=${encodeURIComponent(author)}&work=${encodeURIComponent(work)}&page=${page}`),
         fetch('/api/library/related', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -307,7 +298,24 @@ export default function LibraryOfArete() {
     }
   }, [active]);
 
-  const closeText = () => { setActive(null); setReader(null); setRelated([]); };
+  const closeText = () => {
+    setActive(null); setReader(null); setRelated([]); setTarget(null);
+    window.history.replaceState(null, '', window.location.pathname);
+  };
+
+  // A shared link opens straight onto its passage: /library?text=Author::Work&page=3&p=12
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const text = sp.get('text');
+    if (!text || !text.includes('::')) return;
+    const [author, work] = text.split('::');
+    if (!author || !work) return;
+    const page = Math.max(0, parseInt(sp.get('page') || '0', 10) || 0);
+    const p = sp.get('p');
+    const c = sp.get('c');
+    setTarget({ page, para: p !== null && /^\d+$/.test(p) ? parseInt(p, 10) : undefined, comment: c || undefined });
+    openWork(author, work, work, page);
+  }, [openWork]);
 
   // ---- symposium: sit ----
   const sendSit = useCallback(async (raw: string) => {
@@ -469,7 +477,7 @@ export default function LibraryOfArete() {
             stoicTexts={stoicTexts} widerTexts={widerTexts} synthTexts={synthTexts}
             textsLoading={textsLoading} active={active} reader={reader} readerLoading={readerLoading}
             related={related} openWork={openWork} gotoPage={gotoPage} closeText={closeText} goSymposium={() => go('symposium')}
-            isAdmin={isAdmin} pendingReview={pendingReview}
+            isAdmin={isAdmin} pendingReview={pendingReview} target={target} clearTarget={clearTarget}
           />
         )}
 
@@ -578,8 +586,9 @@ function ReadingRoom(props: {
   active: { author: string; work: string; title: string } | null; reader: Reader | null; readerLoading: boolean;
   related: Related[]; openWork: (a: string, w: string, t: string) => void; gotoPage: (n: number) => void;
   closeText: () => void; goSymposium: () => void; isAdmin: boolean; pendingReview: number;
+  target: ReaderTarget; clearTarget: () => void;
 }) {
-  const { stoicTexts: allStoic, widerTexts: allWider, synthTexts: allSynth, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview } = props;
+  const { stoicTexts: allStoic, widerTexts: allWider, synthTexts: allSynth, textsLoading, active, reader, readerLoading, related, openWork, gotoPage, closeText, goSymposium, isAdmin, pendingReview, target, clearTarget } = props;
 
   // Shelf search. Held here rather than in the parent so it survives opening and
   // closing a work — the reader branch below returns early, but this component
@@ -597,68 +606,12 @@ function ReadingRoom(props: {
   const shownCount = stoicTexts.length + widerTexts.length + synthTexts.length;
 
   if (active) {
-    const paras = reader ? reader.body.split(/\n\n+/).filter(Boolean) : [];
-    // Standalone section headings from the server's reader pipeline
-    // ("CHAP. XV.", "BOOK II. WEI CHANG."): short, no lowercase letters.
-    const isHeading = (p: string) => p.length <= 64 && !/[a-z]/.test(p);
     return (
-      <main style={{ height: '100%', overflowY: 'auto' }}>
-        <div className="lib-fade lib-reader-grid" style={{ maxWidth: 1140, margin: '0 auto', padding: '30px 32px 60px', display: 'grid', gridTemplateColumns: '1fr 300px', gap: 38, alignItems: 'start' }}>
-          <div>
-            <button onClick={closeText} className="lib-back" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: MUTED, marginBottom: 24 }}>← Back to the shelves</button>
-            <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 12 }}>
-              {reader?.era || (active.author)}
-            </div>
-            <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(34px,4.4vw,50px)', lineHeight: 1.04, color: IVORY, margin: '0 0 8px' }}>{active.title}</h1>
-            <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: GOLD, marginBottom: 6 }}>{active.author}</div>
-            {reader?.translator && <div style={{ fontFamily: MONO, fontSize: 9, color: MUTED, marginBottom: 24, letterSpacing: '0.06em' }}>trans. {reader.translator}</div>}
-
-            <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: 30 }}>
-              {readerLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Pulling the text from the shelf…</p>}
-              {!readerLoading && reader && paras.map((p, i) => (
-                isHeading(p) ? (
-                  <div key={i} style={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, margin: '34px 0 18px' }}>{p}</div>
-                ) : (
-                  <p key={i} style={{ fontFamily: SERIF, fontSize: 20, lineHeight: 1.72, color: i === 0 ? IVORY : TEXT, opacity: i === 0 ? 1 : 0.9, margin: '0 0 20px' }}>{p}</p>
-                )
-              ))}
-              {!readerLoading && !reader && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>This text could not be opened just now.</p>}
-            </div>
-
-            {reader && reader.totalPages > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 34, paddingTop: 20, borderTop: '1px solid rgba(201,168,76,0.16)' }}>
-                <button disabled={reader.page <= 0 || readerLoading} onClick={() => gotoPage(reader.page - 1)} className="lib-page-btn"
-                  style={{ cursor: reader.page <= 0 ? 'default' : 'pointer', opacity: reader.page <= 0 ? 0.3 : 1, fontFamily: MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, border: '1px solid rgba(201,168,76,0.3)', borderRadius: 10, padding: '9px 16px', background: 'rgba(201,168,76,0.06)' }}>← Previous</button>
-                <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED }}>Folio {reader.page + 1} of {reader.totalPages}</span>
-                <button disabled={reader.page >= reader.totalPages - 1 || readerLoading} onClick={() => gotoPage(reader.page + 1)} className="lib-page-btn"
-                  style={{ cursor: reader.page >= reader.totalPages - 1 ? 'default' : 'pointer', opacity: reader.page >= reader.totalPages - 1 ? 0.3 : 1, fontFamily: MONO, fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD, border: '1px solid rgba(201,168,76,0.3)', borderRadius: 10, padding: '9px 16px', background: 'rgba(201,168,76,0.06)' }}>Next →</button>
-              </div>
-            )}
-            {reader?.sourceUrl && (
-              <a href={reader.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', marginTop: 20, fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED, textDecoration: 'underline' }}>source edition →</a>
-            )}
-          </div>
-
-          <aside className="lib-reader-aside" style={{ position: 'sticky', top: 0, background: 'linear-gradient(180deg,rgba(18,27,54,0.5),rgba(10,18,36,0.5))', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 16, padding: '24px 22px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: GOLD, animation: 'lib-pulse-dot 3s ease-in-out infinite' }} />
-              <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD }}>Reads itself alongside</span>
-            </div>
-            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED, margin: '0 0 18px', lineHeight: 1.4 }}>Because you opened this, the corpus surfaces these.</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {related.length === 0 && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: MUTED }}>Listening for echoes…</p>}
-              {related.map(r => (
-                <button key={r.id} onClick={() => openWork(r.author, r.work, r.title)} className="lib-related" style={{ textAlign: 'left', background: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.18)', borderRadius: 11, padding: '13px 15px', cursor: 'pointer' }}>
-                  <div style={{ fontFamily: SERIF, fontSize: 17, color: IVORY, lineHeight: 1.15, marginBottom: 3 }}>{r.title}</div>
-                  <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, color: GOLD }}>{r.author}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.06em', color: MUTED, marginTop: 6 }}>{r.reason}</div>
-                </button>
-              ))}
-            </div>
-            <button onClick={goSymposium} className="lib-discuss" style={{ width: '100%', marginTop: 18, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 11, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Discuss this in the Symposium →</button>
-          </aside>
-        </div>
-      </main>
+      <ReaderView
+        active={active} reader={reader} readerLoading={readerLoading} related={related}
+        openWork={openWork} gotoPage={gotoPage} closeText={closeText} goSymposium={goSymposium}
+        target={target} clearTarget={clearTarget}
+      />
     );
   }
 
