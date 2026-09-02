@@ -22,7 +22,9 @@ drains the queue. See `concordance/README.md`.
 ## Queue row provenance and body markers
 
 Every chunk inherits `translator` and `text_type` from its queue row (defaults:
-null and `primary`). Two optional markers cut a translator's front matter so
+null and `primary`; the value set is primary, scholarship, paper_summary,
+synthesis, concordance, modern_primary, modern_summary, locked by a check
+constraint and keyed on by `server/lib/corpus-fence.js`). Two optional markers cut a translator's front matter so
 that, unlike the Republic and the Apology already in the corpus, Jowett's
 Introduction and Analysis is not ingested under Plato's name:
 

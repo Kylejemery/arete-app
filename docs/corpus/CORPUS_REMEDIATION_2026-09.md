@@ -179,3 +179,89 @@ the 08:00 UTC run fires before this branch is merged and deployed, the old
 agent ingests Timaeus whole (no marker support, no translator, text_type
 primary) and does not sync the concordance. Merge and deploy first, or set
 the Timaeus queue row to `status = 'skipped'` until then.
+
+---
+
+## Addendum, same day: Bobzien relabel and task 5 implemented
+
+Kyle approved the Bobzien relabel and asked for task 5 to be built.
+
+### Bobzien (verified)
+
+Migration `20260902155000_bobzien_identity.sql`, applied live. `rag_corpus`,
+`corpus_sources`, and `paper_submissions` now carry one author string:
+
+| author | work | chunks |
+| --- | --- | --- |
+| Susanne Bobzien | Stoic Logic (Cambridge Companion), part 1 | 3 |
+| Susanne Bobzien | Stoic Logic (Cambridge Companion), part 2 | 3 |
+| Susanne Bobzien | Stoic Logic and Multiple Generality | 3 |
+| Susanne Bobzien | Stoic Syllogistic | 3 |
+| Susanne Bobzien | XII*-CHRYSIPPUS AND THE EPISTEMIC THEORY OF VAGUENESS | 3 |
+
+The chapter attribution ("Cambridge Companion") is inferred from the section
+order and page range of the summary; if the source was a different handbook,
+relabel the work again, never the author.
+
+### text_type normalisation (verified)
+
+Migration `20260902160000_text_type_normalisation.sql`, applied live.
+
+| text_type | live | deprecated |
+| --- | --- | --- |
+| primary | 10,819 | 0 |
+| scholarship | 608 | 621 |
+| paper_summary | 268 | 0 |
+| synthesis | 99 | 0 |
+| public_domain | 0 | 0 |
+| summary | 0 | 0 |
+
+Exactly the counts the proposal predicted (paper_summary is 268 rather than
+262 because six rows were ingested upstream between the proposal and the
+build). Check constraints now lock the seven-value set on `rag_corpus`,
+`corpus_ingestion_queue`, and `corpus_sources`; `corpus_sources` defaults to
+`paper_summary`. `match_rag_corpus_ids` gained `exclude_text_types`, exercised
+in SQL with the modern fence against an existing embedding: same results as
+the unfenced call, as expected while the layer is empty.
+
+### Fences (code)
+
+`server/lib/corpus-fence.js` now has three layers: counselor (concordance and
+modern), modern (Dispatch, World, Journal, Academy seminar, Socratic
+Proctor), none (research). Call sites changed in this addendum:
+
+| file | surface | fence |
+| --- | --- | --- |
+| `server/index.js` (`retrieveAcademyChunks`, `retrieveCorpusChunks`) | Academy seminar | modern |
+| `server/retrieval.js` | Socratic Proctor, Courtyard, exam proctor. Moved from the deprecated `match_academy_chunks` to `match_rag_corpus`, similarity floor applied after the call. | modern |
+| `server/journal-analysis-agent.js` | Journal grounding passages | modern |
+| `server/dispatch-generation-agent.js` | Daily Dispatch grounding | modern |
+| `server/world-agent.js` | World observations (reach Dispatch) | modern |
+| `server/index.js` reader shelf | `modern_summary` off the shelf; `modern_primary` stays as a readable work | n/a |
+
+Web: the admin ingest route accepts `primary`, `scholarship`,
+`modern_primary` (verbatim) and `paper_summary`, `modern_summary` (summary),
+and no longer emits `public_domain` or `summary`; the Scribe quotes
+`primary`, `scholarship`, `modern_primary` and paraphrases the rest;
+references format `modern_summary` like a paper summary and `modern_primary`
+as a modern work (year parsed from `section_label` when present); the
+library labels scholarship and modern works. `tsc --noEmit` passes.
+
+Acceptance test: `scripts/eval/modern-fence-check.js` (needs the three env
+keys). Checks 1, 2 and 4 are enforceable today; check 3 reports "layer not
+present" until modern rows exist.
+
+### Deployment caveat
+
+The `rag_corpus_text_type_check` constraint is live now. Until this branch
+deploys, the currently deployed admin ingest route still writes
+`public_domain` for verbatim ingests and `summary` for default summaries, and
+those inserts will fail loudly with a constraint error. Deploy before the
+next admin ingest, or expect that error.
+
+### Housekeeping
+
+`academy/corpus-ingestion/stoic_physics_concordance.md` (added to `main`
+today, byte-identical to the synced copy) was removed in favour of
+`academy/corpus-ingestion/concordance/stoic_physics_concordance.md`, the
+file the nightly sync reads. `CLAUDE.md` points there now.

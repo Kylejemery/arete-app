@@ -1,7 +1,15 @@
 # Modern metaphysics layer: proposal
 
-Date: 2026-09-02. Scoped during the corpus physics remediation (task 5).
-Nothing in this document is built. Kyle reviews it first.
+Date: 2026-09-02. Scoped during the corpus physics remediation (task 5) and
+**implemented the same day on Kyle's approval**, on branch
+`claude/corpus-physics-remediation-u8ahjz`. Sections 1 to 3 below are now the
+record of what was built; the decisions marked "decide" in section 3 were
+resolved as follows: the Journal agent, the Academy seminar retrievals, and the
+Socratic Proctor carry the modern fence (apparatus allowed, modern layer
+excluded); the Observatory passage draw does not, because its chronology axis
+was designed to show modern scholarship as nearer stars. The acceptance test
+in section 4 exists as `scripts/eval/modern-fence-check.js`. No modern
+material has been ingested; the layer is empty and fenced.
 
 ## The plan being fenced
 

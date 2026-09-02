@@ -247,7 +247,7 @@ export default function ManageWorksPage() {
               <span className={styles.muted}>
                 {(w.override?.tradition || w.defaultTradition) === 'stoic' ? 'Stoic' : (w.override?.tradition || w.defaultTradition) === 'wider' ? 'Wider' : 'Synthesis'} shelf
                 {w.override?.hidden ? ' · 🚫 hidden' : ''}
-                {' · '}{w.chunks} chunks · {w.textType === 'summary' ? 'summary' : 'verbatim'}
+                {' · '}{w.chunks} chunks · {['paper_summary', 'modern_summary', 'summary'].includes(w.textType) ? 'summary' : 'verbatim'}
                 {w.passages.length > 0 ? ` · ${w.passages.length} passage${w.passages.length > 1 ? 's' : ''}` : ' · legacy'}
               </span>
             </div>

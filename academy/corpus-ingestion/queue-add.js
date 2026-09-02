@@ -19,6 +19,8 @@ require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 const SOURCE_TYPES = ['public_domain', 'original_language', 'summary'];
+// rag_corpus_text_type_check locks this set; server/lib/corpus-fence.js keys on it.
+const TEXT_TYPES = ['primary', 'scholarship', 'paper_summary', 'synthesis', 'concordance', 'modern_primary', 'modern_summary'];
 
 function getArg(flag) {
   const i = process.argv.indexOf(flag);
@@ -51,6 +53,12 @@ async function main() {
     process.exit(1);
   }
 
+  const textType = getArg('--text-type') ?? 'primary';
+  if (!TEXT_TYPES.includes(textType)) {
+    console.error(`--text-type must be one of ${TEXT_TYPES.join(', ')}`);
+    process.exit(1);
+  }
+
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const priorityArg = getArg('--priority');
 
@@ -66,7 +74,7 @@ async function main() {
     status: 'pending',
     source_type: sourceType,
     translator: getArg('--translator') ?? null,
-    text_type: getArg('--text-type') ?? 'primary',
+    text_type: textType,
     body_start_marker: getArg('--start-marker') ?? null,
     body_end_marker: getArg('--end-marker') ?? null,
   };

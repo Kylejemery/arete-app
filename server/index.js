@@ -16,7 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
-const { counselorRetrievalParams, isCounselorVisible } = require('./lib/corpus-fence');
+const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -2445,6 +2445,8 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
   if (authors) {
     try {
       const embedding = await embedQuery(userMessage);
+      // Seminar path: the modern philosophy of mind layer stays off the
+      // syllabus by default (server/lib/corpus-fence.js); apparatus is allowed.
       const results = await Promise.all(
         authors.map(author =>
           supabase.rpc('match_rag_corpus', {
@@ -2452,6 +2454,7 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
             match_count: 2,
             filter_author: author,
             filter_language: 'english',
+            ...modernFenceParams(),
           })
         )
       );
@@ -2459,7 +2462,7 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
       rows.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
       // Phase B: expand through the Hebbian graph before truncation (no-op
       // unless GRAPH_BOOST=true).
-      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows;
+      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows.filter(passesModernFence);
       const seen = new Set();
       const top = [];
       for (const r of rows) {
@@ -2659,11 +2662,13 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
   if (!process.env.OPENAI_API_KEY) return [];
   try {
     const embedding = await embedQuery(userMessage);
+    // Seminar path: modern layer fenced (server/lib/corpus-fence.js).
     const { data, error } = await supabase.rpc('match_rag_corpus', {
       query_embedding: embedding,
       match_count: k,
       filter_author: null,
       filter_language: 'english',
+      ...modernFenceParams(),
     });
     if (error) {
       console.error('match_rag_corpus RPC error:', error.message);
@@ -2671,7 +2676,8 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
     }
     observatory.recordRetrieval(data ?? [], 'academy'); // fire-and-forget log
     // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-    const { rows: expanded } = await expandCandidates(data ?? [], k);
+    const { rows: expandedRaw } = await expandCandidates(data ?? [], k);
+    const expanded = expandedRaw.filter(passesModernFence);
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
     return expanded.map(r => ({
@@ -4342,7 +4348,7 @@ app.get('/api/library/texts', async (req, res) => {
         work: r.work,
         title: ov.title || libraryHelpers.workTitle(r.work),
         era: ov.era || libraryHelpers.era(r.author, r.work),
-        textType: r.text_type,                                  // 'primary' | 'synthesis' ('paper_summary' filtered below)
+        textType: r.text_type,                                  // primary | scholarship | synthesis | modern_primary (others filtered below)
         tradition: ov.tradition || libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
         passages: Number(r.chunk_count) || 0,
         translator: r.translator || null,
@@ -4354,7 +4360,10 @@ app.get('/api/library/texts', async (req, res) => {
     // Paper summaries are retrieval-only: counselors quote them, but they are
     // summaries of copyrighted scholarship, not readable works — no shelf.
     // Concordances are editorial retrieval bridges, not works — no shelf.
-    }).filter(t => !t.hidden && t.textType !== 'paper_summary' && t.textType !== 'concordance');
+    // Modern summaries are summaries of copyrighted work — no shelf. Modern
+    // verbatim texts (Russell, Eddington, James) are readable public-domain
+    // works and stay; the counselor catalog fences them separately.
+    }).filter(t => !t.hidden && !['paper_summary', 'concordance', 'modern_summary'].includes(t.textType));
 
     // Count of syntheses awaiting admin review (not yet ingested, so not on a
     // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.

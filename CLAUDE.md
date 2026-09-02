@@ -57,8 +57,14 @@ Two standing rules that predate this file and still hold:
   `rag_corpus`, so months of ingests were never retrievable. Verify the write
   target against the read target before ingesting.
 - Ancient technical vocabulary is invisible to vector search because the older
-  translations render it in English. See the concordance at
-  `academy/corpus-ingestion/stoic_physics_concordance.md`.
+  translations render it in English. See the concordances in
+  `academy/corpus-ingestion/concordance/` (one numbered entry, one chunk;
+  synced into `rag_corpus` by the nightly agent; format in the README there).
+- `text_type` is the layer field and the only fence: primary, scholarship,
+  paper_summary, synthesis, concordance, modern_primary, modern_summary
+  (locked by a check constraint). The counselor, modern, and research fences
+  live in `server/lib/corpus-fence.js`; a new layer is a migration plus a
+  fence entry, never an ad hoc value.
 
 ## Conventions
 

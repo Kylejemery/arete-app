@@ -19,6 +19,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { modernFenceParams } = require('./lib/corpus-fence');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -148,11 +149,15 @@ async function getGroundingPassages(communityThemes) {
   if (!embedding) return [];
 
   // match_rag_corpus_ids(query_embedding, match_count DEFAULT 8,
-  // filter_language DEFAULT 'english') -> { id, author, work, chunk_text, similarity }.
+  // filter_language DEFAULT 'english', exclude_text_types DEFAULT '{}')
+  // -> { id, author, work, chunk_text, similarity }.
   // No match_threshold param — over-fetch and dedupe by author in JS.
+  // The Daily Dispatch never carries the modern philosophy of mind layer
+  // (server/lib/corpus-fence.js).
   const { data: passages } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: 12,
+    ...modernFenceParams(),
   });
 
   const byAuthor = {};
