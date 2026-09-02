@@ -18,6 +18,8 @@ type Recipient = {
   isAdmin: boolean
   onboarded: boolean
   createdAt: string | null
+  premiumSource: 'grant' | 'manual' | 'stripe' | 'apple' | null
+  grantExpiresAt: string | null
 }
 
 type Campaign = {
@@ -55,6 +57,7 @@ type Progress = {
 const TIERS: TierKey[] = ['free', 'premium', 'pro']
 const CHUNK_SIZE = 20
 const DRAFT_KEY = 'arete-admin-email-draft'
+const DEFAULT_GRANT_DAYS = 7
 const DEFAULT_FOOTER =
   "You're receiving this because you have an Arete account. Reply to this email if you'd rather not hear from us."
 
@@ -97,6 +100,7 @@ export default function EmailPage() {
 
   const [progress, setProgress] = useState<Progress>(IDLE)
   const [toast, setToast] = useState('')
+  const [grantBusy, setGrantBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -276,6 +280,53 @@ export default function EmailPage() {
         error: e instanceof Error ? e.message : 'Send failed', test,
       })
     }
+  }
+
+  // Temporary Premium: a manual subscriptions row with an expiry. The
+  // database refuses a grant for anyone already entitled, and pg_cron (plus
+  // every load of this tab) revokes grants whose period has ended.
+  async function grantPremium(r: Recipient) {
+    const raw = window.prompt(`Days of Premium for ${r.email}:`, String(DEFAULT_GRANT_DAYS))
+    if (raw == null) return
+    const days = Math.floor(Number(raw))
+    if (!Number.isFinite(days) || days < 1 || days > 365) {
+      setToast('Enter a number of days between 1 and 365')
+      return
+    }
+    setGrantBusy(r.id)
+    try {
+      const res = await fetch('/api/admin/email/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'grant', userId: r.id, days }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Grant failed')
+      setToast(`${r.email} has Premium until ${fmtDate(json.expiresAt)}`)
+      await load()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Grant failed')
+    }
+    setGrantBusy(null)
+  }
+
+  async function revokePremium(r: Recipient) {
+    if (!window.confirm(`End ${r.email}'s temporary Premium now?`)) return
+    setGrantBusy(r.id)
+    try {
+      const res = await fetch('/api/admin/email/grant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'revoke', userId: r.id }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Revoke failed')
+      setToast(`${r.email} is back on Free`)
+      await load()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Revoke failed')
+    }
+    setGrantBusy(null)
   }
 
   const previewHtml = useMemo(() => {
@@ -547,14 +598,14 @@ export default function EmailPage() {
                         aria-label="Select all shown"
                       />
                     </th>
-                    {['Email', 'Name', 'Tier', 'Joined'].map(h => (
+                    {['Email', 'Name', 'Tier', 'Joined', 'Premium grant'].map(h => (
                       <th key={h} className={styles.sigTd} style={{ textAlign: 'left', color: '#999', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 && (
-                    <tr><td className={styles.sigTd} colSpan={5}><span className={styles.muted}>No users match.</span></td></tr>
+                    <tr><td className={styles.sigTd} colSpan={6}><span className={styles.muted}>No users match.</span></td></tr>
                   )}
                   {filtered.map(r => {
                     const on = selected.has(r.id)
@@ -583,6 +634,38 @@ export default function EmailPage() {
                           </span>
                         </td>
                         <td className={styles.sigTd} style={{ whiteSpace: 'nowrap' }}>{fmtDate(r.createdAt)}</td>
+                        <td className={styles.sigTd} style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          {r.premiumSource === 'grant' ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                              <span className={styles.muted}>until {fmtDate(r.grantExpiresAt)}</span>
+                              <button
+                                type="button"
+                                className={styles.ghostBtn}
+                                style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+                                onClick={() => revokePremium(r)}
+                                disabled={grantBusy === r.id}
+                              >
+                                {grantBusy === r.id ? '…' : 'Revoke'}
+                              </button>
+                            </span>
+                          ) : r.premiumSource ? (
+                            <span className={styles.muted} title="Entitled through a subscription or permanent grant">
+                              via {r.premiumSource}
+                            </span>
+                          ) : r.tier === 'free' ? (
+                            <button
+                              type="button"
+                              className={styles.ghostBtn}
+                              style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+                              onClick={() => grantPremium(r)}
+                              disabled={grantBusy === r.id}
+                            >
+                              {grantBusy === r.id ? '…' : 'Grant days…'}
+                            </button>
+                          ) : (
+                            <span className={styles.muted}>—</span>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}
