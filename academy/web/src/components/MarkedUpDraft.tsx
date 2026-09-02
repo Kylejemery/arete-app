@@ -64,6 +64,7 @@ function AnnotationCard({
   readOnly,
   onFocus,
   onAccept,
+  onEdit,
   onDismiss,
 }: {
   a: Annotation;
@@ -71,6 +72,8 @@ function AnnotationCard({
   readOnly: boolean;
   onFocus?: (id: string) => void;
   onAccept?: (a: Annotation) => void;
+  /** Open the rewrite under its sentence, to be typed over before it is kept. */
+  onEdit?: (a: Annotation) => void;
   onDismiss?: (a: Annotation) => void;
 }) {
   const sev = sevOf(a.severity);
@@ -138,6 +141,18 @@ function AnnotationCard({
               >
                 Accept
               </button>
+              {onEdit && a.start_offset !== null && (
+                <button
+                  onClick={e => {
+                    e.stopPropagation();
+                    onEdit(a);
+                  }}
+                  title="Open the rewrite under the sentence and type it over in your own words"
+                  className="border border-academy-gold/50 text-academy-gold hover:bg-academy-gold/10 rounded px-3 py-1 text-[11px]"
+                >
+                  Retype it
+                </button>
+              )}
               <button
                 onClick={e => {
                   e.stopPropagation();
@@ -174,6 +189,7 @@ export function CommentList({
   summary,
   readOnly = false,
   onAccept,
+  onEdit,
   onDismiss,
   activeId = null,
   onCardFocus,
@@ -183,6 +199,7 @@ export function CommentList({
   summary?: string;
   readOnly?: boolean;
   onAccept?: (a: Annotation) => void;
+  onEdit?: (a: Annotation) => void;
   onDismiss?: (a: Annotation) => void;
   activeId?: string | null;
   onCardFocus?: (id: string) => void;
@@ -214,6 +231,7 @@ export function CommentList({
           readOnly={readOnly}
           onFocus={onCardFocus}
           onAccept={onAccept}
+          onEdit={onEdit}
           onDismiss={onDismiss}
         />
       ))}

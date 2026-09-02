@@ -12,15 +12,22 @@
 // A caret placed inside a marked sentence reports that annotation upward, so the
 // margin comment lights up as you move through the draft, and focusRange lets a
 // comment pull the caret back to its sentence.
+//
+// The retype callout also lives here, because only the backdrop knows where a
+// sentence ends on screen: a span in the retype layer marks the range, and the
+// callout is placed just under the last line of it, inside the same scroller,
+// so it moves with the page.
 
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from 'react';
 import { buildSegments, type SpanInput } from '@/lib/annotations';
 
@@ -100,17 +107,29 @@ export const DraftEditor = forwardRef<
     highlights?: SpanInput[];
     /** Must be stable (useCallback) — it is called from a layout effect. */
     onSelection?: (sel: PassageSelection | null) => void;
+    /** The range under the retype callout, painted on its own layer. */
+    retype?: { start: number; end: number } | null;
+    /** The callout itself, placed under the last line of the retype range. */
+    renderRetype?: () => ReactNode;
+    /** Ctrl+Enter, or the toolbar's Retype: the caret or selection to retype. */
+    onRetypeRequest?: (range: { start: number; end: number }) => void;
+    /** The page took focus back (a click into the text while a callout is open). */
+    onEditorFocus?: () => void;
   }
 >(function DraftEditor(
   {
     value, onChange, spans, activeId = null, onCaretSpan, placeholder,
     showToolbar = true, highlights, onSelection,
+    retype = null, renderRetype, onRetypeRequest, onEditorFocus,
   },
   ref
 ) {
   const taRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const [sel, setSel] = useState<{ start: number; end: number } | null>(null);
+  const [retypeTop, setRetypeTop] = useState<number | null>(null);
+  const [tick, setTick] = useState(0);
 
   // Grow the textarea to fit its content so the page, not the box, scrolls.
   useLayoutEffect(() => {
@@ -161,6 +180,43 @@ export const DraftEditor = forwardRef<
     });
   }, [sel, value, onSelection]);
 
+  // ── Placing the retype callout ─────────────────────────────────────────────
+  // Under the last line of the retyped range, in the wrapper's coordinates so
+  // it scrolls with the text. Re-measured whenever the text or the range moves,
+  // and on resize, since a reflow changes where the last line falls.
+  useEffect(() => {
+    const onResize = () => setTick(t => t + 1);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  const retypeStart = retype?.start ?? -1;
+  const retypeEnd = retype?.end ?? -1;
+  useLayoutEffect(() => {
+    if (!retype || !wrapRef.current) {
+      setRetypeTop(null);
+      return;
+    }
+    const anchors = wrapRef.current.querySelectorAll<HTMLElement>('[data-retype-anchor="1"]');
+    const last = anchors[anchors.length - 1];
+    if (!last) {
+      setRetypeTop(null);
+      return;
+    }
+    const rects = last.getClientRects();
+    const rect = rects[rects.length - 1] ?? last.getBoundingClientRect();
+    const wrap = wrapRef.current.getBoundingClientRect();
+    setRetypeTop(rect.bottom - wrap.top + 8);
+  }, [retype, retypeStart, retypeEnd, value, tick]);
+
+  // A newly opened range is brought into view once, with room under it for the
+  // box; later keystrokes leave the scroll position alone.
+  useEffect(() => {
+    if (retypeStart < 0) return;
+    const first = wrapRef.current?.querySelector<HTMLElement>('[data-retype-anchor="1"]');
+    first?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [retypeStart]);
+
   // ── Formatting ─────────────────────────────────────────────────────────────
   const apply = useCallback(
     (action: Action) => {
@@ -209,6 +265,12 @@ export const DraftEditor = forwardRef<
     [value, onChange]
   );
 
+  const requestRetype = useCallback(() => {
+    const el = taRef.current;
+    if (!el || !onRetypeRequest) return;
+    onRetypeRequest({ start: el.selectionStart, end: el.selectionEnd });
+  }, [onRetypeRequest]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (!(e.metaKey || e.ctrlKey)) return;
     const k = e.key.toLowerCase();
@@ -218,6 +280,9 @@ export const DraftEditor = forwardRef<
     } else if (k === 'i') {
       e.preventDefault();
       apply({ kind: 'wrap', before: '*', after: '*' });
+    } else if (k === 'enter') {
+      e.preventDefault();
+      requestRetype();
     }
   };
 
@@ -226,6 +291,10 @@ export const DraftEditor = forwardRef<
   // rather than one span winning ownership of the characters.
   const highlightSegments = highlights?.length ? buildSegments(value, highlights) : null;
   const selSegments = sel ? buildSegments(value, [{ id: '__sel__', start: sel.start, end: sel.end, severity: 'sel' }]) : null;
+  const retypeSegments =
+    retype && retype.end > retype.start
+      ? buildSegments(value, [{ id: '__retype__', start: retype.start, end: Math.min(retype.end, value.length), severity: 'retype' }])
+      : null;
 
   // Backdrop layers share the textarea's box and metrics exactly; anything that
   // moves a character has to be in METRICS or the paint drifts off the words.
@@ -256,11 +325,29 @@ export const DraftEditor = forwardRef<
               {t.label}
             </button>
           ))}
+          {onRetypeRequest && (
+            <>
+              <span className="flex-1" />
+              <button
+                type="button"
+                title="Type over the sentence at the caret, or the selection (Ctrl+Enter)"
+                onMouseDown={e => e.preventDefault()}
+                onClick={requestRetype}
+                className={`h-7 px-2.5 rounded font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                  retype
+                    ? 'text-academy-gold bg-academy-gold/15'
+                    : 'text-academy-muted hover:text-academy-gold hover:bg-academy-card'
+                }`}
+              >
+                Retype
+              </button>
+            </>
+          )}
         </div>
       )}
 
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-auto bg-academy-surface/30">
-        <div className="relative mx-auto w-full min-h-full" style={{ maxWidth: '46rem' }}>
+        <div ref={wrapRef} className="relative mx-auto w-full min-h-full" style={{ maxWidth: '46rem' }}>
           {/* Voice-meter paint, under the marks. */}
           {highlightSegments &&
             layer(
@@ -288,6 +375,29 @@ export const DraftEditor = forwardRef<
                 </span>
               )),
               'selection'
+            )}
+
+          {/* The sentence under the retype callout, and the anchor it hangs from. */}
+          {retypeSegments &&
+            layer(
+              retypeSegments.map((seg, i) =>
+                seg.annId ? (
+                  <span
+                    key={i}
+                    data-retype-anchor="1"
+                    style={{
+                      background: 'rgba(201,168,76,0.16)',
+                      boxShadow: 'inset 0 -2px 0 #C9A84C',
+                      borderRadius: 2,
+                    }}
+                  >
+                    {seg.text}
+                  </span>
+                ) : (
+                  <span key={i}>{seg.text}</span>
+                )
+              ),
+              'retype'
             )}
 
           {/* Backdrop: the same text, invisible, carrying the colour. */}
@@ -326,6 +436,7 @@ export const DraftEditor = forwardRef<
             onKeyDown={onKeyDown}
             onSelect={reportCaret}
             onClick={reportCaret}
+            onFocus={() => onEditorFocus?.()}
             // onSelect alone is not enough: it does not fire on every path that
             // ends a selection (a drag released outside the box, shift+arrow
             // held down), and the passage bar has to appear on all of them.
@@ -334,6 +445,13 @@ export const DraftEditor = forwardRef<
             className="relative block w-full resize-none bg-transparent text-academy-text placeholder-academy-muted/60 focus:outline-none"
             style={{ ...METRICS, caretColor: '#C9A84C', overflow: 'hidden', minHeight: '100%' }}
           />
+
+          {/* The callout, over the page and under the sentence. */}
+          {retype && renderRetype && retypeTop !== null && (
+            <div className="absolute z-20" style={{ top: retypeTop, left: '1.75rem', right: '1.75rem' }}>
+              {renderRetype()}
+            </div>
+          )}
         </div>
       </div>
     </div>
