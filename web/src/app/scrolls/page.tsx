@@ -1,330 +1,148 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
-import { getUserSettings, getScrolls, getKnowThyselfComplete } from '@/lib/db';
-import type { Scroll } from '@/lib/types';
 import ChapterRule from '@/components/ChapterRule';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
-
-const COUNSELOR_LABELS: Record<string, string> = {
-  marcus: 'Marcus Aurelius',
-  epictetus: 'Epictetus',
-  seneca: 'Seneca',
-};
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-interface RequestFormProps {
-  scrollRequest: string;
-  setScrollRequest: (v: string) => void;
-  requesting: boolean;
-  requestError: string | null;
-  onRequest: () => void;
-  centered?: boolean;
-}
-
-function RequestForm({ scrollRequest, setScrollRequest, requesting, requestError, onRequest, centered }: RequestFormProps) {
-  return (
-    <div className={`flex flex-col gap-2${centered ? ' items-center w-full max-w-sm' : ''}`}>
-      <textarea
-        value={scrollRequest}
-        onChange={e => setScrollRequest(e.target.value)}
-        placeholder="What are you struggling with, or working toward?"
-        rows={3}
-        disabled={requesting}
-        className="w-full rounded-lg px-3 py-2.5 text-[14px] leading-relaxed resize-none outline-none transition-colors"
-        style={{
-          fontFamily: 'var(--font-serif, Georgia, serif)',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(201,168,76,0.25)',
-          color: '#e6eef8',
-          caretColor: '#c9a84c',
-        }}
-        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.55)'; }}
-        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
-      />
-      <div className={`flex items-center gap-3${centered ? ' justify-center' : ''}`}>
-        <button
-          onClick={onRequest}
-          disabled={requesting}
-          className="px-5 py-2 rounded-lg text-[11px] tracking-[1px] uppercase font-medium transition-opacity"
-          style={{
-            fontFamily: 'var(--font-mono, monospace)',
-            background: 'rgba(201,168,76,0.15)',
-            border: '1px solid rgba(201,168,76,0.5)',
-            color: '#c9a84c',
-            opacity: requesting ? 0.6 : 1,
-            cursor: requesting ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {requesting ? 'Generating…' : 'Request a Scroll'}
-        </button>
-        {requestError && (
-          <p
-            className="text-[11px]"
-            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#e57373' }}
-          >
-            {requestError}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
+import LibraryIcon from '@/components/scrolls/LibraryIcon';
+import RequestScrollModal from '@/components/scrolls/RequestScrollModal';
+import ScrollCard from '@/components/scrolls/ScrollCard';
+import { Spinner } from '@/components/ui';
+import { useRequireUser } from '@/hooks/useRequireUser';
+import { getUserScrolls } from '@/lib/scrolls';
+import type { Scroll } from '@/lib/types';
 
 export default function ScrollsPage() {
   const router = useRouter();
+  const { user, settings, loading: authLoading } = useRequireUser();
   const [scrolls, setScrolls] = useState<Scroll[]>([]);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [ktComplete, setKtComplete] = useState(false);
-  const [requesting, setRequesting] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
-  const [scrollRequest, setScrollRequest] = useState('');
-  const [userGoal, setUserGoal] = useState('');
-  const [storedUserName, setStoredUserName] = useState('');
-  const [storedUserId, setStoredUserId] = useState('');
+  const [showRequest, setShowRequest] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
-      const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/setup'); return; }
-      const [data, ktDone] = await Promise.all([
-        getScrolls(user.id),
-        getKnowThyselfComplete(),
-      ]);
-      setScrolls(data);
-      setKtComplete(ktDone);
-      setUserGoal(settings.kt_goals || '');
-      setStoredUserName(settings.user_name || '');
-      setStoredUserId(user.id);
+  const load = useCallback(async (userId: string) => {
+    try {
+      setScrolls(await getUserScrolls(userId));
+    } catch (e) {
+      console.error('loadScrolls error:', e);
+    } finally {
       setLoading(false);
     }
-    load();
-  }, [router]);
+  }, []);
 
-  async function requestScroll() {
-    setRequesting(true);
-    setRequestError(null);
-    const goal = scrollRequest.trim() || userGoal || 'personal growth and virtue';
-    const goalSource = scrollRequest.trim() || userGoal || null;
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch(`${API_BASE_URL}/api/scrolls/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ goal, userName: storedUserName }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { error?: string };
-        throw new Error(err.error || `Request failed (${res.status})`);
-      }
-      const { title, body, counselor } = await res.json() as { title: string; body: string; counselor: string };
-      const { error: insertError } = await supabase
-        .from('scrolls')
-        .insert({ user_id: storedUserId, title, body, counselor, goal_source: goalSource });
-      if (insertError) throw new Error(insertError.message);
-      const updated = await getScrolls(storedUserId);
-      setScrolls(updated);
-      if (updated.length > 0) setExpandedId(updated[0].id);
-      setScrollRequest('');
-    } catch (e) {
-      setRequestError(e instanceof Error ? e.message : 'Something went wrong.');
-    } finally {
-      setRequesting(false);
-    }
+  useEffect(() => {
+    if (!user) return;
+    void load(user.id);
+  }, [user, load]);
+
+  async function handleCreated(created: Scroll) {
+    setShowRequest(false);
+    if (user) await load(user.id);
+    router.push(`/scrolls/${created.id}`);
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <span
-          className="text-[11px] tracking-[2px] uppercase"
-          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
-        >
-          Loading…
-        </span>
-      </div>
-    );
-  }
+  const busy = authLoading || loading;
 
   return (
     <div className="min-h-screen pb-8">
-
       {/* ── Header ──────────────────────────────────────────────── */}
-      <div className="px-5 pt-3 pb-5">
-        <div
-          className="text-[10px] tracking-[1.8px] uppercase mb-1"
-          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-        >
-          Chapter VI · Scrolls
+      <div className="px-5 pt-3 pb-5 flex items-end justify-between gap-4">
+        <div>
+          <div
+            className="text-[10px] tracking-[1.8px] uppercase mb-1"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+          >
+            Chapter VI · Scrolls
+          </div>
+          <h1
+            className="text-[32px] font-medium leading-none tracking-tight"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            Your <em style={{ color: '#c9a84c' }}>Scrolls.</em>
+          </h1>
         </div>
-        <h1
-          className="text-[32px] font-medium leading-none tracking-tight"
-          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+
+        <button
+          type="button"
+          onClick={() => setShowRequest(true)}
+          className="flex-shrink-0 rounded-lg px-3.5 py-2 text-[13px] font-semibold"
+          style={{ background: '#c9a84c', color: '#0f1724' }}
         >
-          Wisdom for<br />
-          <em style={{ color: '#c9a84c' }}>your goals.</em>
-        </h1>
+          + Request a Scroll
+        </button>
       </div>
 
       <ChapterRule className="mx-5" />
 
-      {/* ── Content ─────────────────────────────────────────────── */}
-      <div className="px-4">
-        {scrolls.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="text-[48px] mb-4" style={{ opacity: 0.12 }}>📜</div>
+      <div className="px-4 max-w-2xl">
+        {/* ── The Library ───────────────────────────────────────── */}
+        <Link
+          href="/library"
+          className="block rounded-xl px-4 py-3.5 mb-4 transition-colors"
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(201,168,76,0.16)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(201,168,76,0.16)';
+          }}
+        >
+          <LibraryIcon />
+          <p
+            className="text-[15px] mt-1.5"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            The Library
+          </p>
+          <p
+            className="text-[11px] mt-0.5"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+          >
+            Reading Room · Symposium · Observatory
+          </p>
+        </Link>
+
+        {/* ── Scrolls ───────────────────────────────────────────── */}
+        {busy ? (
+          <div className="flex items-center justify-center py-20">
+            <Spinner size={28} />
+          </div>
+        ) : scrolls.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center gap-3.5">
+            <div className="text-[48px]" style={{ opacity: 0.12 }}>
+              📜
+            </div>
             <p
-              className="text-[15px] italic mb-6"
+              className="text-[18px] font-semibold"
               style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
             >
-              No scrolls yet.
+              Your scrolls will appear here.
             </p>
-            {ktComplete ? (
-              <RequestForm
-                scrollRequest={scrollRequest}
-                setScrollRequest={setScrollRequest}
-                requesting={requesting}
-                requestError={requestError}
-                onRequest={requestScroll}
-                centered
-              />
-            ) : (
-              <p
-                className="text-[11px] tracking-[1px] uppercase"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.5)' }}
-              >
-                Complete Know Thyself to receive your first scroll.
-              </p>
-            )}
+            <p
+              className="text-[14px] leading-relaxed max-w-sm"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#6b7280' }}
+            >
+              Complete your Know Thyself profile to receive your first scroll, written for you by your
+              Counselor.
+            </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 max-w-2xl">
-
-            {/* ── Request form (above list) ──────────────────────── */}
-            <div
-              className="rounded-xl px-4 py-4 mb-1"
-              style={{
-                background: 'rgba(201,168,76,0.04)',
-                border: '1px solid rgba(201,168,76,0.15)',
-              }}
-            >
-              <p
-                className="text-[10px] tracking-[1.5px] uppercase mb-2.5"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: 'rgba(201,168,76,0.6)' }}
-              >
-                New Scroll
-              </p>
-              <RequestForm
-                scrollRequest={scrollRequest}
-                setScrollRequest={setScrollRequest}
-                requesting={requesting}
-                requestError={requestError}
-                onRequest={requestScroll}
-              />
-            </div>
-
-            {scrolls.map(scroll => {
-              const isExpanded = expandedId === scroll.id;
-              return (
-                <div
-                  key={scroll.id}
-                  className="rounded-xl overflow-hidden"
-                  style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                  }}
-                >
-                  {/* Scroll header (clickable) */}
-                  <button
-                    className="w-full text-left px-4 py-4 flex items-start justify-between gap-3 transition-opacity hover:opacity-80"
-                    onClick={() => setExpandedId(isExpanded ? null : scroll.id)}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-[16px] font-medium leading-snug mb-1.5"
-                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                      >
-                        {scroll.title}
-                      </p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className="text-[10px] tracking-[1px] uppercase"
-                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-                        >
-                          {COUNSELOR_LABELS[scroll.counselor] ?? scroll.counselor}
-                        </span>
-                        <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>
-                        <span
-                          className="text-[10px]"
-                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
-                        >
-                          {formatDate(scroll.created_at)}
-                        </span>
-                        {scroll.read_count ? (
-                          <>
-                            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 10 }}>·</span>
-                            <span
-                              className="text-[10px]"
-                              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
-                            >
-                              Read {scroll.read_count}×
-                            </span>
-                          </>
-                        ) : null}
-                      </div>
-                      {scroll.goal_source && (
-                        <p
-                          className="text-[11px] italic mt-1 truncate"
-                          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
-                        >
-                          {scroll.goal_source}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className="flex-shrink-0 mt-0.5 transition-transform duration-200"
-                      style={{
-                        color: '#c9a84c',
-                        fontSize: 13,
-                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                      }}
-                    >
-                      ▾
-                    </span>
-                  </button>
-
-                  {/* Scroll body */}
-                  {isExpanded && (
-                    <div
-                      className="px-4 pb-5"
-                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-                    >
-                      <p
-                        className="text-[15px] leading-relaxed whitespace-pre-wrap pt-4"
-                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                      >
-                        {scroll.body}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="flex flex-col gap-3">
+            {scrolls.map((scroll) => (
+              <ScrollCard key={scroll.id} scroll={scroll} />
+            ))}
           </div>
         )}
       </div>
+
+      <RequestScrollModal
+        open={showRequest}
+        onClose={() => setShowRequest(false)}
+        userName={settings?.user_name ?? null}
+        onCreated={handleCreated}
+      />
     </div>
   );
 }
