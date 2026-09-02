@@ -56,6 +56,34 @@ function stripXmlTags(text) {
   return text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+// Cut a translator's front matter (and any trailing apparatus) using the
+// queue row's body markers: the body starts at the LAST occurrence of
+// body_start_marker (a contents list often repeats the heading that opens the
+// body) and ends at the first occurrence of body_end_marker after that. A
+// marker that is not found never fails the source; the whole text is ingested
+// and the note is written to the queue row. KEEP IN SYNC with the cron twin.
+function applyBodyMarkers(text, { body_start_marker, body_end_marker } = {}) {
+  const notes = [];
+  let body = text;
+  if (body_start_marker) {
+    const at = body.lastIndexOf(body_start_marker);
+    if (at === -1) {
+      notes.push(`body_start_marker ${JSON.stringify(body_start_marker)} not found; ingested the whole text (translator front matter included)`);
+    } else {
+      body = body.slice(at);
+    }
+  }
+  if (body_end_marker) {
+    const at = body.indexOf(body_end_marker, body_start_marker ? body_start_marker.length : 0);
+    if (at === -1) {
+      notes.push(`body_end_marker ${JSON.stringify(body_end_marker)} not found; ingested to the end of the text`);
+    } else {
+      body = body.slice(0, at);
+    }
+  }
+  return { text: body.trim(), notes };
+}
+
 // Queue language codes → rag_corpus.language values used by the pipeline.
 function corpusLanguage(lang) {
   switch ((lang || 'en').toLowerCase()) {
@@ -148,8 +176,10 @@ async function ingestChunks(chunks, meta) {
         course_relevance: meta.course_relevance,
         difficulty: meta.difficulty,
         text_type: meta.text_type,
+        translator: meta.translator ?? null,
         source_url: meta.source_url ?? null,
         chunk_index: i,
+        word_count: chunks[i].split(/\s+/).filter(Boolean).length,
         embedding,
       }, {
         onConflict: 'author,work,program_id,chunk_index',
@@ -212,6 +242,17 @@ async function processSource(src) {
     cleaned = stripGutenbergBoilerplate(raw);
   }
 
+  const marked = applyBodyMarkers(cleaned, src);
+  cleaned = marked.text;
+  for (const note of marked.notes) console.warn(`[corpus-agent]   ⚠ ${note}`);
+  if (marked.notes.length > 0) {
+    const stamp = `[corpus-agent ${new Date().toISOString().slice(0, 10)}] ${marked.notes.join('; ')}`;
+    await supabase
+      .from('corpus_ingestion_queue')
+      .update({ notes: src.notes ? `${src.notes}\n${stamp}` : stamp })
+      .eq('id', src.id);
+  }
+
   const chunks = chunkText(cleaned);
   if (chunks.length === 0) {
     throw new Error('cleaning produced 0 chunks — check source format');
@@ -231,7 +272,8 @@ async function processSource(src) {
     program_id: 'stoicism-phd',
     course_relevance: src.course_relevance ?? null,
     difficulty: src.difficulty ?? null,
-    text_type: 'primary',
+    text_type: src.text_type || 'primary',
+    translator: src.translator ?? null,
     source_url: src.source_url ?? null,
   };
 
@@ -335,7 +377,10 @@ async function runCorpusIngestion() {
   return { processed: sources.length, succeeded, failed, totalChunks, failures };
 }
 
-module.exports = { runCorpusIngestion, chunkText, fetchSourceText };
+// Concordance sync (academy/corpus-ingestion/ingest-concordance.js) runs only
+// on the nightly cron twin: the concordance files live in that service's root
+// and are not deployed with the API server.
+module.exports = { runCorpusIngestion, chunkText, fetchSourceText, applyBodyMarkers };
 
 if (require.main === module) {
   runCorpusIngestion().catch(err => {

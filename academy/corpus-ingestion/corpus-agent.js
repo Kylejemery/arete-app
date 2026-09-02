@@ -18,17 +18,31 @@
 //     the embedding cost is visible in the logs) but still ingest it fully.
 //     Chosen over splitting for v1 simplicity, per the spec.
 //
+// Each run also syncs the editorial concordances in concordance/*.md into
+// rag_corpus (ingest-concordance.js: one entry, one chunk, embedded whole)
+// before draining the queue, so an edit to a concordance lands the next
+// night with no manual step.
+//
+// Queue rows may carry provenance the chunks inherit (translator, text_type)
+// and body markers that cut a translator's front matter (see applyBodyMarkers).
+//
 // Runnable two ways:
 //   node corpus-agent.js                         (manual)
 //   Railway nightly cron service (see railway.corpus-agent.json)
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { chunkText, ingestChunks } = require('./ingest-sources');
+const { syncConcordances, runProbes } = require('./ingest-concordance');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Created on first use so verify-queue.js can require the cleaning helpers
+// without credentials.
+let _supabase = null;
+function supabase() {
+  if (!_supabase) {
+    _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  }
+  return _supabase;
+}
 
 // Default to 3 only when unset/invalid — an explicit 0 must mean 0 (pause),
 // so don't use `|| 3` (which treats 0 as falsy).
@@ -62,6 +76,34 @@ function stripGutenbergBoilerplate(text) {
 // queue starts carrying 'grc'/'lat' original-language sources.
 function stripXmlTags(text) {
   return text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// Cut a translator's front matter (and any trailing apparatus) using the
+// queue row's body markers: the body starts at the LAST occurrence of
+// body_start_marker (a contents list often repeats the heading that opens the
+// body) and ends at the first occurrence of body_end_marker after that. A
+// marker that is not found never fails the source; the whole text is ingested
+// and the note is written to the queue row. KEEP IN SYNC with server/corpus-agent.js.
+function applyBodyMarkers(text, { body_start_marker, body_end_marker } = {}) {
+  const notes = [];
+  let body = text;
+  if (body_start_marker) {
+    const at = body.lastIndexOf(body_start_marker);
+    if (at === -1) {
+      notes.push(`body_start_marker ${JSON.stringify(body_start_marker)} not found; ingested the whole text (translator front matter included)`);
+    } else {
+      body = body.slice(at);
+    }
+  }
+  if (body_end_marker) {
+    const at = body.indexOf(body_end_marker, body_start_marker ? body_start_marker.length : 0);
+    if (at === -1) {
+      notes.push(`body_end_marker ${JSON.stringify(body_end_marker)} not found; ingested to the end of the text`);
+    } else {
+      body = body.slice(0, at);
+    }
+  }
+  return { text: body.trim(), notes };
 }
 
 // Queue language codes → rag_corpus.language values used by the existing pipeline.
@@ -127,7 +169,7 @@ async function buildCoverageReport() {
   const PAGE = 1000;
   let from = 0;
   for (;;) {
-    const { data, error } = await supabase
+    const { data, error } = await supabase()
       .from('rag_corpus')
       .select('author')
       .range(from, from + PAGE - 1);
@@ -146,7 +188,7 @@ async function buildCoverageReport() {
 // ── Per-source ingestion ──────────────────────────────────────────────────
 
 async function processSource(src) {
-  await supabase
+  await supabase()
     .from('corpus_ingestion_queue')
     .update({ status: 'processing' })
     .eq('id', src.id);
@@ -160,6 +202,17 @@ async function processSource(src) {
     cleaned = stripXmlTags(raw);
   } else {
     cleaned = stripGutenbergBoilerplate(raw);
+  }
+
+  const marked = applyBodyMarkers(cleaned, src);
+  cleaned = marked.text;
+  for (const note of marked.notes) console.warn(`  ⚠ ${note}`);
+  if (marked.notes.length > 0) {
+    const stamp = `[corpus-agent ${new Date().toISOString().slice(0, 10)}] ${marked.notes.join('; ')}`;
+    await supabase()
+      .from('corpus_ingestion_queue')
+      .update({ notes: src.notes ? `${src.notes}\n${stamp}` : stamp })
+      .eq('id', src.id);
   }
 
   const chunks = chunkText(cleaned);
@@ -181,7 +234,8 @@ async function processSource(src) {
     program_id: 'stoicism-phd',
     course_relevance: src.course_relevance ?? null,
     difficulty: src.difficulty ?? null,
-    text_type: 'primary',
+    text_type: src.text_type || 'primary',
+    translator: src.translator ?? null,
     source_url: src.source_url ?? null,
   };
 
@@ -190,7 +244,7 @@ async function processSource(src) {
     throw new Error(`no chunks ingested (${errors} upsert errors)`);
   }
 
-  await supabase
+  await supabase()
     .from('corpus_ingestion_queue')
     .update({ status: 'done', chunks_ingested: ingested, processed_at: new Date().toISOString() })
     .eq('id', src.id);
@@ -210,7 +264,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { data: runRow, error: runErr } = await supabase
+  const { data: runRow, error: runErr } = await supabase()
     .from('corpus_ingestion_runs')
     .insert({ status: 'running' })
     .select()
@@ -220,7 +274,24 @@ async function main() {
     process.exit(1);
   }
 
-  const { data: pending, error: queueErr } = await supabase
+  // Concordance sync: best-effort, never fails the run, costs nothing when
+  // no entry changed. Its probes print to the log so the morning report shows
+  // whether the lexical bridge still reaches the ancient passages.
+  let concordanceLine = '';
+  try {
+    const results = await syncConcordances();
+    const embedded = results.reduce((s, r) => s + r.embedded, 0);
+    const errors = results.reduce((s, r) => s + r.errors, 0);
+    concordanceLine = `Concordance: ${results.length} file(s), ${embedded} entries embedded, ${errors} errors`;
+    if (embedded > 0 || process.env.CORPUS_AGENT_PROBES === 'always') {
+      await runProbes();
+    }
+  } catch (err) {
+    concordanceLine = `Concordance sync failed: ${err.message}`;
+    console.error(concordanceLine);
+  }
+
+  const { data: pending, error: queueErr } = await supabase()
     .from('corpus_ingestion_queue')
     .select('*')
     .eq('status', 'pending')
@@ -229,7 +300,7 @@ async function main() {
     .limit(BATCH_SIZE);
   if (queueErr) {
     console.error('Failed to read queue:', queueErr.message);
-    await supabase.from('corpus_ingestion_runs')
+    await supabase().from('corpus_ingestion_runs')
       .update({ status: 'failed', run_completed_at: new Date().toISOString() })
       .eq('id', runRow.id);
     process.exit(1);
@@ -252,7 +323,7 @@ async function main() {
       const msg = err.message || String(err);
       failures.push(`${src.author} / ${src.work} — ${msg}`);
       console.error(`  ✗ ${msg}`);
-      await supabase
+      await supabase()
         .from('corpus_ingestion_queue')
         .update({ status: 'failed', error_message: msg, processed_at: new Date().toISOString() })
         .eq('id', src.id);
@@ -273,7 +344,7 @@ async function main() {
     .slice(0, 3)
     .map(([author, n]) => `${author} (${n})`);
 
-  await supabase
+  await supabase()
     .from('corpus_ingestion_runs')
     .update({
       status: 'completed',
@@ -291,12 +362,22 @@ async function main() {
   console.log(`\n=== Corpus Agent Run ${today} ===`);
   console.log(`Processed: ${sources.length} | Succeeded: ${succeeded} | Failed: ${failed} | Chunks added: ${totalChunks}`);
   for (const f of failures) console.log(`Failed: ${f}`);
+  if (concordanceLine) console.log(concordanceLine);
   console.log(`Corpus now: ${totalCorpusChunks.toLocaleString()} chunks across ${authorCount} authors`);
   if (thinnest.length > 0) console.log(`Thinnest coverage: ${thinnest.join(', ')}`);
   console.log('================================');
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err.message || err);
-  process.exit(1);
-});
+// Only run when invoked directly, so verify-queue.js can require the
+// cleaning helpers without starting a run.
+if (require.main === module) {
+  main().catch(err => {
+    console.error('Fatal error:', err.message || err);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  stripGutenbergBoilerplate, stripXmlTags, applyBodyMarkers, corpusLanguage,
+  fetchSourceText, chunkText,
+};

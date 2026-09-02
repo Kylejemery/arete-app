@@ -10,11 +10,26 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const OpenAI = require('openai');
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Clients are created on first use so chunkText / parseFilename can be
+// required (verify-queue.js, tests) without SUPABASE or OPENAI credentials.
+let _supabase = null;
+function supabase() {
+  if (!_supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set.');
+    }
+    _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  }
+  return _supabase;
+}
+let _openai = null;
+function openai() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY must be set.');
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 const SOURCE_DIR = path.join(__dirname, 'source_texts');
 const CHUNK_SIZE = 400;
@@ -72,7 +87,7 @@ function chunkText(text) {
 }
 
 async function embedChunk(text) {
-  const response = await openai.embeddings.create({
+  const response = await openai().embeddings.create({
     model: 'text-embedding-3-small',
     input: text,
   });
@@ -80,7 +95,7 @@ async function embedChunk(text) {
 }
 
 async function buildExistingCorpusSet() {
-  const { data, error } = await supabase
+  const { data, error } = await supabase()
     .from('rag_corpus')
     .select('author, work');
   if (error) throw new Error(`Failed to query existing corpus: ${error.message}`);
@@ -97,7 +112,7 @@ async function buildExistingCorpusSet() {
  * chunking/embedding/upload logic lives in exactly one place.
  *
  * meta = { author, work, section_label, language, program_id,
- *          course_relevance, difficulty, text_type, source_url? }
+ *          course_relevance, difficulty, text_type, source_url?, translator? }
  * Returns { ingested, skipped, errors }.
  */
 async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
@@ -109,7 +124,7 @@ async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
     const chunk = chunks[i];
 
     if (skipExisting) {
-      const { data: existing } = await supabase
+      const { data: existing } = await supabase()
         .from('rag_corpus')
         .select('id')
         .eq('author', meta.author)
@@ -125,7 +140,7 @@ async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
 
     const embedding = await embedChunk(chunk);
 
-    const { error } = await supabase.from('rag_corpus').upsert({
+    const { error } = await supabase().from('rag_corpus').upsert({
       chunk_text: chunk,
       author: meta.author,
       work: meta.work,
@@ -135,8 +150,10 @@ async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
       course_relevance: meta.course_relevance,
       difficulty: meta.difficulty,
       text_type: meta.text_type,
+      translator: meta.translator ?? null,
       source_url: meta.source_url ?? null,
       chunk_index: i,
+      word_count: chunk.split(/\s+/).filter(Boolean).length,
       embedding,
     }, {
       onConflict: 'author,work,program_id,chunk_index',

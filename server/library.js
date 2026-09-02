@@ -16,8 +16,12 @@ const STOIC_AUTHORS = new Set([
   'Cicero',
   'Diogenes Laërtius',
   'Musonius Rufus',  // Roman Stoic, Epictetus's teacher
-  'Arnold',  // Roman Stoicism (E. V. Arnold)
-  'Stock',   // A Guide to Stoicism (St. George Stock)
+  'E. Vernon Arnold',                 // Roman Stoicism (1911)
+  'St. George William Joseph Stock',  // A Guide to Stoicism (1908)
+  // Malformed duplicates of the two above, deprecated in the 2026-09 identity
+  // remediation; kept so any stale link still shelves on the Stoic side.
+  'Arnold',
+  'Stock',
 ]);
 
 // 'stoic' leads the rooms; 'wider' is the broader tradition; 'synthesis' is the
@@ -38,7 +42,9 @@ const SPINES = {
   'Diogenes Laërtius': '#1d2c4a',
   'Musonius Rufus': '#16304a',
   'Arnold': '#0f2e1a',
+  'E. Vernon Arnold': '#0f2e1a',
   'Stock': '#24304a',
+  'St. George William Joseph Stock': '#24304a',
   'Adam Smith': '#33301c',
   'Aesop': '#244a3a',
   'Confucius': '#4a221a',
@@ -55,6 +61,7 @@ function spine(author) {
 // Cleaner display titles for terse / Latinate work names in the corpus.
 const WORK_TITLES = {
   'Definibus': 'On the Ends of Good and Evil',
+  'De Finibus': 'On the Ends of Good and Evil',
   'Tusculan Disputations': 'Tusculan Disputations',
   'Lives Book7': 'Lives of the Eminent Philosophers · Book VII',
   'Shortness': 'On the Shortness of Life',
@@ -97,6 +104,8 @@ const ERAS = {
   'Seneca|Apocolocyntosis': 'Rome · c. 54 AD',
   'Cleanthes|Hymn To Zeus': 'Athens · 3rd century BC',
   'Cicero|Definibus': 'Rome · 45 BC',
+  'Cicero|De Finibus': 'Rome · 45 BC',
+  'Plato|Timaeus': 'Athens · c. 360 BC',
   'Cicero|Tusculan Disputations': 'Rome · 45 BC',
   'Diogenes Laërtius|Lives Book7': 'c. 3rd century AD',
 };
