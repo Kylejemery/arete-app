@@ -31,6 +31,7 @@ const KEY_ARMED_VERSION = 'attend_armed_app_version';
 const KEY_ENABLED = 'attend_enabled';
 const KEY_SELECTION = 'attend_family_selection';
 const KEY_GOAL_MINUTES = 'attend_goal_minutes';
+const KEY_LINES = 'attend_counselor_lines'; // the exact lines armed for the goal + well-over notifications
 const KEY_HISTORY = 'attend_daily_history'; // { [YYYY-MM-DD]: { highest: number, overGoal: boolean } }
 const KEY_NIGHT_HISTORY = 'attend_night_history'; // { [YYYY-MM-DD of the morning]: highest minutes }
 
@@ -121,17 +122,19 @@ function goalLine(counselor: string, goalMinutes: number) {
     badge: 1,
     // NotificationBridge reads these to seed the line into the Cabinet
     // thread and open the chat on tap — the nudge becomes a conversation.
-    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body },
+    // attendEvent keys the delivery so the tap path and the foreground
+    // recovery (which reads the recorded crossing) seed the line only once.
+    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body, attendEvent: `threshold_${goalMinutes}` },
   };
 }
 
-function wellOverLine(counselor: string) {
+function wellOverLine(counselor: string, overMinutes: number) {
   const body = 'You are now well past your own line. Not a failure, a signal. Put the glass down and give five minutes to something you will remember.';
   return {
     title: counselor,
     body,
     badge: 1,
-    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body },
+    userInfo: { route: '/cabinet', counselorName: counselor, seedMessage: body, attendEvent: `threshold_${overMinutes}` },
   };
 }
 
@@ -205,6 +208,7 @@ export async function enableAttend(
     }
 
     // Notifications: goal + well-over only.
+    const overMinutes = Math.round(goalMinutes * 1.5);
     mod.configureActions({
       activityName: ATTEND_ACTIVITY,
       callbackName: 'eventDidReachThreshold',
@@ -214,21 +218,75 @@ export async function enableAttend(
     mod.configureActions({
       activityName: ATTEND_ACTIVITY,
       callbackName: 'eventDidReachThreshold',
-      eventName: `threshold_${Math.round(goalMinutes * 1.5)}`,
-      actions: [{ type: 'sendNotification', payload: wellOverLine(overCounselor) }],
+      eventName: `threshold_${overMinutes}`,
+      actions: [{ type: 'sendNotification', payload: wellOverLine(overCounselor, overMinutes) }],
     });
+
+    // Remember exactly what was armed, so a crossing that fired while the app
+    // was closed can be seeded into the Cabinet later with the same words
+    // and the same counselor the notification carried.
+    const lines: ArmedLine[] = [
+      { eventName: `threshold_${goalMinutes}`, counselor: goalCounselor, body: goalLine(goalCounselor, goalMinutes).body },
+      { eventName: `threshold_${overMinutes}`, counselor: overCounselor, body: wellOverLine(overCounselor, overMinutes).body },
+    ];
 
     await AsyncStorage.multiSet([
       [KEY_ENABLED, 'true'],
       [KEY_SELECTION, familyActivitySelection],
       [KEY_GOAL_MINUTES, String(goalMinutes)],
       [KEY_ARMED_VERSION, Constants.expoConfig?.version ?? ''],
+      [KEY_LINES, JSON.stringify(lines)],
     ]);
     return true;
   } catch (e) {
     console.warn('[attend] enable failed:', (e as Error)?.message);
     return false;
   }
+}
+
+type ArmedLine = { eventName: string; counselor: string; body: string };
+
+export type PendingAttendLine = { id: string; counselor: string; body: string; at: number };
+
+/**
+ * Counselor lines the extension has already fired today (goal and well-over
+ * crossings), read from the crossing timestamps it records in the shared
+ * store. A notification that arrived while the app was closed and was never
+ * tapped still shows up here, so the Cabinet can carry the line regardless.
+ * `fallbackCounselors` covers devices armed before the lines were stored.
+ */
+export async function getPendingAttendLines(fallbackCounselors: string[] = []): Promise<PendingAttendLine[]> {
+  const mod = nativeModule();
+  if (!mod || !(await attendIsEnabled())) return [];
+  let lines: ArmedLine[] = [];
+  try {
+    const raw = await AsyncStorage.getItem(KEY_LINES);
+    if (raw) lines = JSON.parse(raw);
+  } catch { /* fall through to the rebuild */ }
+  if (lines.length === 0) {
+    const goalMinutes = await getAttendGoalMinutes();
+    const overMinutes = Math.round(goalMinutes * 1.5);
+    const names = fallbackCounselors.length > 0 ? fallbackCounselors : ['Marcus Aurelius'];
+    const goalCounselor = names[new Date().getDay() % names.length];
+    const overCounselor = names[(new Date().getDay() + 1) % names.length];
+    lines = [
+      { eventName: `threshold_${goalMinutes}`, counselor: goalCounselor, body: goalLine(goalCounselor, goalMinutes).body },
+      { eventName: `threshold_${overMinutes}`, counselor: overCounselor, body: wellOverLine(overCounselor, overMinutes).body },
+    ];
+  }
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const day = todayKey();
+  const out: PendingAttendLine[] = [];
+  for (const line of lines) {
+    try {
+      const key = `events_${ATTEND_ACTIVITY}_eventDidReachThreshold_${line.eventName}`;
+      const at = Number(mod.userDefaultsGet<number>(key) ?? 0);
+      if (!Number.isFinite(at) || at < start.getTime()) continue;
+      out.push({ id: `attend:${line.eventName}:${day}`, counselor: line.counselor, body: line.body, at });
+    } catch { /* that event has never fired */ }
+  }
+  return out;
 }
 
 export async function disableAttend(): Promise<void> {

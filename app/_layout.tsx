@@ -9,8 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { appendMessages } from '../services/threadService';
+import { seedFromNotification, seedMissedCounselorLines } from '@/lib/counselorLines';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Normally started by index.ts before anything else loads; this is a
@@ -71,30 +70,19 @@ function NotificationTapHandler() {
     // Counselor reminders and Attend nudges are messages FROM a counselor:
     // seed the line into the Cabinet thread (once per delivery) so the
     // notification becomes the opening of a conversation the user can
-    // continue in the chat. Deduped per delivery because repeating weekly
-    // schedules reuse one notification identifier.
+    // continue in the chat. Lines that fired while the app was closed and
+    // were never tapped are recovered on every foreground (see
+    // lib/counselorLines): the badge on the icon must always have its
+    // message waiting in the Cabinet.
     const seed = async (notification: Notifications.Notification | null | undefined) => {
-      try {
-        const content = notification?.request?.content;
-        const data: any = content?.data;
-        if (!data?.seedMessage || !data?.counselorName) return;
-        const minuteBucket = Math.floor((Number((notification as any)?.date) || Date.now()) / 60000);
-        const id = `${notification?.request?.identifier || 'n'}:${minuteBucket}`;
-        const raw = await AsyncStorage.getItem('cabinet_seeded_notifications');
-        const seen: string[] = raw ? JSON.parse(raw) : [];
-        if (seen.includes(id)) return;
-        seen.push(id);
-        while (seen.length > 80) seen.shift();
-        await AsyncStorage.setItem('cabinet_seeded_notifications', JSON.stringify(seen));
-        await appendMessages('cabinet', [{
-          role: 'assistant',
-          content: String(data.seedMessage),
-          timestamp: Date.now(),
-          counselorName: String(data.counselorName),
-        }]);
-        breadcrumb('notification seeded into cabinet thread');
-      } catch { /* best effort — never block boot or navigation */ }
+      if (await seedFromNotification(notification)) breadcrumb('notification seeded into cabinet thread');
     };
+    const recover = () => {
+      seedMissedCounselorLines()
+        .then(n => { if (n > 0) breadcrumb(`recovered ${n} missed counselor line(s) into cabinet thread`); })
+        .catch(() => {});
+    };
+    recover();
 
     const route = (data: any) => {
       if (data?.type === 'daily_dispatch') {
@@ -128,7 +116,10 @@ function NotificationTapHandler() {
     // app comes to the foreground.
     Notifications.setBadgeCountAsync(0).catch(() => {});
     const appStateSub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') Notifications.setBadgeCountAsync(0).catch(() => {});
+      if (s === 'active') {
+        recover();
+        Notifications.setBadgeCountAsync(0).catch(() => {});
+      }
     });
 
     return () => {

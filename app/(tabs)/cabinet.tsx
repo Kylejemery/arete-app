@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CABINET_THREAD_UPDATED } from '@/lib/counselorLines';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  DeviceEventEmitter,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -167,6 +169,25 @@ export default function CabinetScreen() {
       }
     })();
   }, []);
+
+  // A counselor line seeded from a notification (tapped, delivered while
+  // open, or recovered on foreground) lands in the stored thread; fold any
+  // new lines into the view without disturbing what is already on screen.
+  const absorbNewLines = useCallback(async () => {
+    try {
+      const thread = await loadThread('cabinet');
+      setMessages(prev => {
+        const key = (m: { timestamp: number; content: string }) => `${m.timestamp}:${m.content.slice(0, 48)}`;
+        const have = new Set(prev.map(key));
+        const fresh = thread.messages.filter(m => !have.has(key(m)));
+        return fresh.length ? [...prev, ...fresh] : prev;
+      });
+    } catch { /* keep what we have */ }
+  }, []);
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener(CABINET_THREAD_UPDATED, absorbNewLines);
+    return () => sub.remove();
+  }, [absorbNewLines]);
 
   // Resolve the current user id and the group-cabinet conversation row id.
   // The conversation id doubles as the shared-session id when inviting.
@@ -361,9 +382,10 @@ export default function CabinetScreen() {
         const stored = await AsyncStorage.getItem(getTodayDateKey());
         setMessageCount(stored !== null ? parseInt(stored, 10) : 0);
         await loadCounselorsData();
+        await absorbNewLines();
         console.log('[Cabinet] Focus refresh complete');
       })();
-    }, [loadCounselorsData])
+    }, [loadCounselorsData, absorbNewLines])
   );
 
   // Consume beliefContext deep-link param
