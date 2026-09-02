@@ -37,10 +37,13 @@ export function PassageBar({
   rect,
   passage,
   onAsk,
+  onRetype,
 }: {
   rect: DOMRect | null;
   passage: string;
   onAsk: (question: string) => void;
+  /** Open the selection in the retype callout instead of asking about it. */
+  onRetype?: () => void;
 }) {
   if (!rect || !passage.trim()) return null;
 
@@ -51,6 +54,18 @@ export function PassageBar({
       // Keep the textarea's selection alive while the bar is clicked.
       onMouseDown={e => e.preventDefault()}
     >
+      {onRetype && (
+        <>
+          <button
+            onClick={onRetype}
+            title="Type over this passage in your own words (Ctrl+Enter)"
+            className="whitespace-nowrap rounded-full px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-academy-gold transition-colors hover:bg-academy-card"
+          >
+            Retype
+          </button>
+          <span className="mx-0.5 h-3.5 w-px bg-academy-border" aria-hidden />
+        </>
+      )}
       {ACTIONS.map(a => (
         <button
           key={a.key}

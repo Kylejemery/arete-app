@@ -20,6 +20,11 @@ export type Recipient = {
   isAdmin: boolean
   onboarded: boolean
   createdAt: string | null
+  // Where a paid tier comes from, so the tab can offer or withhold a grant:
+  // 'grant' is a temporary manual row with an expiry (revocable here),
+  // 'manual' a permanent one, 'stripe'/'apple' a real subscription.
+  premiumSource: 'grant' | 'manual' | 'stripe' | 'apple' | null
+  grantExpiresAt: string | null
 }
 
 export async function GET() {
@@ -40,13 +45,36 @@ export async function GET() {
   }
 
   try {
-    const [{ data: profiles, error: pErr }, { data: settings }] = await Promise.all([
+    // Sweep expired temporary grants first so the roster never shows a
+    // Premium that pg_cron hasn't got round to revoking yet. Best-effort: the
+    // function arrives with the manual_premium_grants migration.
+    try { await admin.rpc('expire_manual_grants') } catch { /* migration not applied */ }
+
+    const [{ data: profiles, error: pErr }, { data: settings }, { data: subs }] = await Promise.all([
       admin.from('profiles')
         .select('id, email, tier, is_premium, is_admin, know_thyself_complete, created_at')
         .order('created_at', { ascending: false }),
       admin.from('user_settings').select('user_id, user_name'),
+      admin.from('subscriptions').select('user_id, billing_source, status, current_period_end'),
     ])
     if (pErr) throw pErr
+
+    // Highest-precedence entitlement per user: a real subscription outranks a
+    // permanent manual row, which outranks a temporary grant.
+    type Src = NonNullable<Recipient['premiumSource']>
+    const RANK: Record<Src, number> = { stripe: 3, apple: 3, manual: 2, grant: 1 }
+    const source = new Map<string, { src: Src; expiresAt: string | null }>()
+    for (const s of subs ?? []) {
+      if (!s.user_id) continue
+      let src: Src | null = null
+      if (s.billing_source === 'manual') src = s.current_period_end ? 'grant' : 'manual'
+      else if ((s.billing_source === 'stripe' || s.billing_source === 'apple') && ['active', 'trialing', 'past_due'].includes(s.status ?? '')) src = s.billing_source
+      if (!src) continue
+      const prev = source.get(s.user_id)
+      if (!prev || RANK[src] > RANK[prev.src]) {
+        source.set(s.user_id, { src, expiresAt: src === 'grant' ? s.current_period_end : null })
+      }
+    }
 
     const names = new Map<string, string>()
     for (const s of settings ?? []) {
@@ -67,6 +95,8 @@ export async function GET() {
         isAdmin: !!p.is_admin || p.email === adminEmail,
         onboarded: !!p.know_thyself_complete,
         createdAt: p.created_at ?? null,
+        premiumSource: source.get(p.id)?.src ?? null,
+        grantExpiresAt: source.get(p.id)?.expiresAt ?? null,
       }))
 
     const counts: Record<TierKey, number> = { free: 0, premium: 0, pro: 0 }
