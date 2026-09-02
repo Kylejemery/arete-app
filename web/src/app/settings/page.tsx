@@ -2,156 +2,232 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
-import PageHeader from '@/components/PageHeader';
+import { getShareRoutinesWithCabinet, setShareRoutinesWithCabinet } from '@/lib/storage';
+import { useSubscription } from '@/lib/useSubscription';
+import { useRequireUser } from '@/hooks/useRequireUser';
+import { ConfirmDialog, Spinner, useToast } from '@/components/ui';
+import ChapterRule from '@/components/ChapterRule';
+import {
+  SettingsButtonRow,
+  SettingsCard,
+  SettingsLinkRow,
+  ToggleRow,
+} from '@/components/settings/SettingsControls';
+import type { SubscriptionTier } from '@/lib/types';
+
+const TIER_LABELS: Record<SubscriptionTier, string> = {
+  free: 'Free',
+  premium: 'Arete Premium',
+  pro: 'Arete Pro',
+};
 
 export default function SettingsPage() {
   const router = useRouter();
+  const toast = useToast();
+  // Settings must stay reachable before the name is set — it holds Sign Out.
+  const { loading } = useRequireUser({ requireName: false });
+  const { tier, loading: tierLoading } = useSubscription();
+
+  const [shareRoutines, setShareRoutines] = useState(true);
   const [simulatingFree, setSimulatingFree] = useState(false);
-  const [signOutLoading, setSignOutLoading] = useState(false);
+
+  const [signOutOpen, setSignOutOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
-    }
-    load();
-
-    const override = getDevPremiumOverride();
-    setSimulatingFree(override === false);
-  }, [router]);
+    setShareRoutines(getShareRoutinesWithCabinet());
+    setSimulatingFree(getDevPremiumOverride() === false);
+  }, []);
 
   const handleSignOut = async () => {
-    setSignOutLoading(true);
-    await supabase.auth.signOut();
+    setSignOutOpen(false);
+    setSigningOut(true);
+    await supabase.auth.signOut().catch(() => {});
     router.replace('/login');
   };
 
-  const [deletingAccount, setDeletingAccount] = useState(false);
-
   const handleDeleteAccount = async () => {
+    setDeleteStep(0);
     if (deletingAccount) return;
-    const first = window.confirm(
-      'This permanently deletes your account and all of your data — conversations, journal entries, beliefs, progress, and subscription records. This cannot be undone.\n\nContinue?'
-    );
-    if (!first) return;
-    const second = window.confirm('Are you absolutely sure? Your account and every trace of your data will be gone forever.');
-    if (!second) return;
     setDeletingAccount(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.access_token) {
-        alert('Please sign in again and retry.');
+        toast.show('Not signed in. Please sign in again and retry.');
         return;
       }
       const res = await fetch('/api/delete-account', {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      const data = await res.json().catch(() => ({}));
+      const data: { success?: boolean; error?: string } = await res.json().catch(() => ({}));
       if (!res.ok || !data?.success) {
-        alert(data?.error || 'Account deletion failed. Please try again or contact support@pursuearete.com.');
+        toast.show(
+          data?.error ||
+            'Deletion failed. Something went wrong. Please try again or contact support@pursuearete.com.'
+        );
         return;
       }
       await supabase.auth.signOut().catch(() => {});
       router.replace('/login');
     } catch {
-      alert('Could not reach the server. Please try again.');
+      toast.show('Deletion failed. Could not reach the server. Please try again.');
     } finally {
       setDeletingAccount(false);
     }
   };
 
-  const toggleSimulateFree = () => {
-    const next = !simulatingFree;
-    setSimulatingFree(next);
-    setDevPremiumOverride(next ? false : null);
-  };
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size={24} label="Loading" />
+      </div>
+    );
+  }
+
+  const isFree = tier === 'free';
 
   return (
-    <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      <PageHeader title="Settings" subtitle="Manage your Arete experience" />
-
-      <div className="max-w-lg space-y-4 mt-6">
-        {/* Profile */}
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-text font-semibold mb-3">Profile</p>
-          <Link
-            href="/profile"
-            className="block w-full text-center bg-arete-bg border border-arete-border text-arete-text rounded-lg px-4 py-2 text-sm hover:border-arete-gold transition-colors"
-          >
-            👤 Edit Know Thyself Profile
-          </Link>
+    <div className="min-h-screen pb-24">
+      {/* ── Header ──────────────────────────────────────────────── */}
+      <div className="px-5 pt-3 pb-5">
+        <div
+          className="text-[10px] tracking-[1.8px] uppercase mb-1"
+          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+        >
+          Settings
         </div>
+        <h1
+          className="text-[32px] font-medium leading-none tracking-tight"
+          style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+        >
+          Your account,<br />
+          <em style={{ color: '#c9a84c' }}>in order.</em>
+        </h1>
+      </div>
 
-        {/* Subscription — /upgrade shows plans to free users and the Stripe
-            Customer Portal entry (manage/cancel) to paid users */}
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-text font-semibold mb-3">Subscription</p>
-          <Link
-            href="/upgrade"
-            className="block w-full text-center bg-arete-bg border border-arete-border text-arete-text rounded-lg px-4 py-2 text-sm hover:border-arete-gold transition-colors"
-          >
-            Manage Subscription
-          </Link>
-        </div>
+      <ChapterRule className="mx-5" />
 
-        {/* Account */}
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-text font-semibold mb-3">Account</p>
-          <button
-            onClick={handleSignOut}
-            disabled={signOutLoading}
-            className="w-full text-left text-red-400 hover:text-red-300 text-sm disabled:opacity-50 transition-colors"
-          >
-            {signOutLoading ? 'Signing out…' : '🚪 Sign Out'}
-          </button>
-          <button
-            onClick={handleDeleteAccount}
-            disabled={deletingAccount}
-            className="w-full text-left text-red-500/70 hover:text-red-400 text-xs mt-3 disabled:opacity-50 transition-colors"
-          >
-            {deletingAccount ? 'Deleting account…' : 'Delete Account'}
-          </button>
-        </div>
+      <div className="px-4 flex flex-col gap-4 max-w-2xl">
+        {/* Know Thyself shortcut */}
+        <SettingsCard title="Profile">
+          <SettingsLinkRow href="/profile" label="📖 Edit Your Know Thyself Profile" />
+        </SettingsCard>
+
+        {/* Cabinet & privacy */}
+        <SettingsCard title="Cabinet & privacy">
+          <ToggleRow
+            label="Cabinet sees routine completion"
+            hint="Morning and evening checklists, done or not done."
+            checked={shareRoutines}
+            onChange={(next) => {
+              setShareRoutines(next);
+              setShareRoutinesWithCabinet(next);
+            }}
+          />
+          <p className="text-[12px] mt-4 leading-relaxed" style={{ color: '#9aa0a6' }}>
+            Screen time, health, and calendar signals are not available in the web app. Your
+            counselors are told so plainly rather than left to guess.
+          </p>
+        </SettingsCard>
+
+        {/* Subscription — purchase and management both live on the web, through
+            the Stripe Customer Portal on /upgrade. Entitlement itself is only
+            ever written by the Stripe webhook. */}
+        <SettingsCard title="Subscription">
+          <SettingsLinkRow
+            href={isFree ? '/upgrade?src=settings_upgrade' : '/upgrade'}
+            label={isFree ? 'Upgrade to Premium' : 'Manage Subscription'}
+            detail={tierLoading ? undefined : TIER_LABELS[tier]}
+          />
+        </SettingsCard>
 
         {/* Legal */}
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-text font-semibold mb-3">Legal</p>
-          <Link
-            href="/privacy"
-            className="text-arete-muted hover:text-arete-text text-sm transition-colors"
-          >
-            Privacy Policy →
-          </Link>
-        </div>
+        <SettingsCard title="Legal">
+          <SettingsLinkRow href="/privacy" label="Privacy Policy" />
+        </SettingsCard>
 
-        {/* Dev Tools */}
-        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
-          <p className="text-arete-text font-semibold mb-1">Dev Tools</p>
-          <p className="text-arete-muted text-xs mb-3">These options reset on page reload and do not affect your account.</p>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-arete-text text-sm">Simulate Free Tier</p>
-              <p className="text-arete-muted text-xs">Preview the app as a non-premium user</p>
-            </div>
-            <button
-              onClick={toggleSimulateFree}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                simulatingFree ? 'bg-arete-gold' : 'bg-arete-border'
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  simulatingFree ? 'translate-x-6' : 'translate-x-1'
-                }`}
-              />
-            </button>
+        {/* Account */}
+        <SettingsCard title="Account">
+          <div className="flex flex-col gap-3">
+            <SettingsButtonRow
+              label={signingOut ? 'Signing out…' : 'Sign Out'}
+              onClick={() => setSignOutOpen(true)}
+              disabled={signingOut}
+            />
+            <SettingsButtonRow
+              label={deletingAccount ? 'Deleting Account…' : 'Delete Account'}
+              onClick={() => setDeleteStep(1)}
+              disabled={deletingAccount}
+              tone="danger"
+            />
           </div>
-        </div>
+        </SettingsCard>
+
+        {/* DEV ONLY — never rendered in production builds */}
+        {process.env.NEXT_PUBLIC_DEV_MODE === 'true' && (
+          <div className="rounded-2xl p-5" style={{ border: '2px solid #ef4444' }}>
+            <p
+              className="text-[10px] tracking-[1.8px] uppercase mb-1"
+              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#ef4444' }}
+            >
+              DEV ONLY
+            </p>
+            <p className="text-[14px] font-semibold mb-4" style={{ color: '#e6eef8' }}>
+              Developer Tools
+            </p>
+            <ToggleRow
+              label="Simulate free tier"
+              hint="Overrides isPremium in memory. Resets on reload."
+              checked={simulatingFree}
+              danger
+              onChange={(next) => {
+                setSimulatingFree(next);
+                setDevPremiumOverride(next ? false : null);
+              }}
+            />
+            {simulatingFree && (
+              <p className="text-[12px] mt-3" style={{ color: '#ef4444' }}>
+                ⚠ Premium overridden to FALSE. Reload the page to reset.
+              </p>
+            )}
+          </div>
+        )}
       </div>
+
+      <ConfirmDialog
+        open={signOutOpen}
+        title="Sign Out"
+        message="Are you sure you want to sign out?"
+        confirmLabel="Sign Out"
+        destructive
+        onConfirm={handleSignOut}
+        onCancel={() => setSignOutOpen(false)}
+      />
+
+      {/* Two confirmations, as on mobile (App Review 5.1.1(v)). */}
+      <ConfirmDialog
+        open={deleteStep === 1}
+        title="Delete Account"
+        message="This permanently deletes your account and all of your data — conversations, journal entries, beliefs, progress, and subscription records. This cannot be undone."
+        confirmLabel="Continue"
+        destructive
+        onConfirm={() => setDeleteStep(2)}
+        onCancel={() => setDeleteStep(0)}
+      />
+      <ConfirmDialog
+        open={deleteStep === 2}
+        title="Are you absolutely sure?"
+        message="Your account and every trace of your data will be gone forever."
+        confirmLabel="Delete Everything"
+        destructive
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setDeleteStep(0)}
+      />
     </div>
   );
 }

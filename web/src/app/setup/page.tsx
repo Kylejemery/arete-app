@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { upsertUserSettings } from '@/lib/db'
+import { Spinner } from '@/components/ui'
 
 export default function SetupPage() {
   const router = useRouter()
@@ -29,7 +30,7 @@ export default function SetupPage() {
     setError(null)
     const trimmed = userName.trim()
     if (!trimmed) {
-      setError('Please enter a username.')
+      setError('Please enter your name.')
       return
     }
     setLoading(true)
@@ -45,54 +46,77 @@ export default function SetupPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-arete-bg flex items-center justify-center">
-        <div className="text-arete-muted">Loading…</div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size={24} label="Loading" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-arete-bg flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-5xl font-bold text-arete-gold tracking-widest mb-2">ARETE</h1>
-          <p className="text-gray-500 italic text-sm">Set up your profile to get started.</p>
+          <h1
+            className="text-5xl font-bold tracking-[0.2em] mb-2"
+            style={{ color: '#c9a84c', fontFamily: 'var(--font-serif, Georgia, serif)' }}
+          >
+            ARETE
+          </h1>
         </div>
 
-        <div className="bg-arete-card rounded-xl p-8">
-          <h2 className="text-white text-xl font-bold mb-2">Welcome!</h2>
-          <p className="text-gray-400 text-sm mb-6">
-            Choose a username to personalize your experience.
+        <div
+          className="rounded-2xl p-8"
+          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          {/* Copy matches the Home name prompt on mobile, verbatim. */}
+          <p
+            className="text-[10px] tracking-[1.8px] uppercase mb-2"
+            style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+          >
+            Welcome to Arete
           </p>
+          <h2
+            className="text-[26px] font-medium leading-tight mb-6"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+          >
+            What should we call you?
+          </h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">
-                Username
-              </label>
-              <input
-                type="text"
-                value={userName}
-                onChange={e => setUserName(e.target.value)}
-                placeholder="e.g. Marcus"
-                className="w-full bg-arete-bg border border-arete-gold/20 rounded-xl px-4 py-3 text-white caret-white placeholder-gray-600 focus:outline-none focus:border-arete-gold/60 transition-colors autofill:bg-arete-bg autofill:[color:white] autofill:shadow-[inset_0_0_0px_1000px_#1a1a2e]"
-                required
-              />
-            </div>
+            <input
+              type="text"
+              value={userName}
+              onChange={e => setUserName(e.target.value)}
+              placeholder="Your name"
+              maxLength={60}
+              autoCapitalize="words"
+              autoCorrect="off"
+              className="w-full rounded-xl px-4 py-3 text-[15px] caret-white outline-none transition-colors focus:border-[rgba(201,168,76,0.6)]"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#e6eef8',
+              }}
+              required
+            />
 
             {error && (
-              <div className="bg-red-900/30 border border-red-500/50 rounded-xl p-4">
-                <p className="text-red-400 text-sm">{error}</p>
+              <div
+                className="rounded-xl p-4"
+                style={{ background: 'rgba(255,68,68,0.12)', border: '1px solid rgba(255,68,68,0.4)' }}
+              >
+                <p className="text-sm" style={{ color: '#ff8080' }}>{error}</p>
               </div>
             )}
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-arete-gold text-arete-bg font-bold py-4 rounded-xl text-base hover:opacity-90 transition-opacity disabled:opacity-60 mt-2"
+              disabled={loading || !userName.trim()}
+              className="w-full font-bold py-4 rounded-xl text-base hover:opacity-90 transition-opacity disabled:opacity-60"
+              style={{ background: '#c9a84c', color: '#0f1724' }}
             >
-              {loading ? 'Saving…' : 'Continue →'}
+              {loading ? 'Saving…' : 'Continue'}
             </button>
           </form>
         </div>

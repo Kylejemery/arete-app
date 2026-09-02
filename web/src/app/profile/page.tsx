@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { getUserSettings, upsertUserSettings } from '@/lib/db';
-import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
-import { supabase } from '@/lib/supabase';
+import { upsertUserSettings } from '@/lib/db';
+import { useRequireUser } from '@/hooks/useRequireUser';
+import { Spinner, useToast } from '@/components/ui';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
+const DEFAULT_YEARS = 10;
 
 export default function ProfilePage() {
-  const router = useRouter();
+  const { settings, loading } = useRequireUser();
+  const toast = useToast();
+
   const [background, setBackground] = useState('');
   const [identity, setIdentity] = useState('');
   const [goals, setGoals] = useState('');
@@ -19,56 +21,64 @@ export default function ProfilePage() {
   const [weaknesses, setWeaknesses] = useState('');
   const [patterns, setPatterns] = useState('');
   const [majorEvents, setMajorEvents] = useState('');
-  const [futureSelfYears, setFutureSelfYears] = useState(10);
+  const [futureSelfYears, setFutureSelfYears] = useState(DEFAULT_YEARS);
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
   const [saved, setSaved] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [simulatingFree, setSimulatingFree] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { router.replace('/login'); return; }
-      const settings = await getUserSettings();
-      if (!settings?.user_name) { router.replace('/setup'); return; }
-
-      setBackground(settings.kt_background || '');
-      setIdentity(settings.kt_identity || '');
-      setGoals(settings.kt_goals || '');
-      setStrengths(settings.kt_strengths || '');
-      setWeaknesses(settings.kt_weaknesses || '');
-      setPatterns(settings.kt_patterns || '');
-      setMajorEvents(settings.kt_major_events || '');
-      setFutureSelfYears(settings.future_self_years ?? 10);
-      setFutureSelfDescription(settings.future_self_description || '');
-      setSimulatingFree(getDevPremiumOverride() === false);
-      setLoaded(true);
-    }
-    load();
-  }, [router]);
+    if (!settings) return;
+    setBackground(settings.kt_background || '');
+    setIdentity(settings.kt_identity || '');
+    setGoals(settings.kt_goals || '');
+    setStrengths(settings.kt_strengths || '');
+    setWeaknesses(settings.kt_weaknesses || '');
+    setPatterns(settings.kt_patterns || '');
+    setMajorEvents(settings.kt_major_events || '');
+    // Numeric guard: mobile parseInt()s a free-text field and can persist NaN.
+    const years = Number(settings.future_self_years);
+    setFutureSelfYears(Number.isFinite(years) && years > 0 ? Math.round(years) : DEFAULT_YEARS);
+    setFutureSelfDescription(settings.future_self_description || '');
+  }, [settings]);
 
   const handleSave = async () => {
-    await upsertUserSettings({
-      kt_background: background.trim(),
-      kt_identity: identity.trim(),
-      kt_goals: goals.trim(),
-      user_goals: goals.trim(),
-      kt_strengths: strengths.trim(),
-      kt_weaknesses: weaknesses.trim(),
-      kt_patterns: patterns.trim(),
-      kt_major_events: majorEvents.trim(),
-      future_self_years: futureSelfYears,
-      future_self_description: futureSelfDescription.trim(),
-    });
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    if (saving) return;
+    setSaving(true);
+    try {
+      const years = Number(futureSelfYears);
+      await upsertUserSettings({
+        kt_background: background.trim(),
+        kt_identity: identity.trim(),
+        kt_goals: goals.trim(),
+        user_goals: goals.trim(),
+        kt_strengths: strengths.trim(),
+        kt_weaknesses: weaknesses.trim(),
+        kt_patterns: patterns.trim(),
+        kt_major_events: majorEvents.trim(),
+        future_self_description: futureSelfDescription.trim(),
+        // Only written when it is a real, positive number — never NaN.
+        ...(Number.isFinite(years) && years > 0 ? { future_self_years: Math.round(years) } : {}),
+      });
+      setSaved(true);
+      toast.show('Profile saved. Changes take effect on your next session.');
+      setTimeout(() => setSaved(false), 3000);
+    } catch {
+      toast.show('Could not save profile.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  if (!loaded) return null;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size={24} label="Loading" />
+      </div>
+    );
+  }
 
-  const textareaClass = [
-    'w-full px-4 py-3 rounded-xl text-[14px] leading-relaxed resize-none outline-none',
-  ].join(' ');
+  const textareaClass =
+    'w-full px-4 py-3 rounded-xl text-[14px] leading-relaxed resize-none outline-none';
   const textareaStyle = {
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
@@ -77,13 +87,13 @@ export default function ProfilePage() {
   };
 
   const sections = [
-    { label: 'Background & Life Story', sub: 'Where did you come from? What shaped you?', value: background, onChange: setBackground, rows: 5 },
-    { label: 'Professional Identity & Pursuits', sub: 'What do you do? What are you building?', value: identity, onChange: setIdentity, rows: 4 },
-    { label: 'Goals', sub: 'What are you working toward? Be specific.', value: goals, onChange: setGoals, rows: 4 },
-    { label: 'Strengths', sub: 'What are you genuinely good at?', value: strengths, onChange: setStrengths, rows: 3 },
-    { label: 'Weaknesses', sub: 'Where do you consistently fall short?', value: weaknesses, onChange: setWeaknesses, rows: 3 },
-    { label: 'Patterns & Failure Modes', sub: 'What do you do when things get hard?', value: patterns, onChange: setPatterns, rows: 4 },
-    { label: 'Major Life Events', sub: 'What defining moments shaped who you are?', value: majorEvents, onChange: setMajorEvents, rows: 4 },
+    { label: 'Background & Life Story', sub: 'Where are you from, and how did you get to where you are today?', placeholder: 'I grew up in…', value: background, onChange: setBackground, rows: 5 },
+    { label: 'Professional Identity & Pursuits', sub: 'What do you do professionally? What are you pursuing outside of work?', placeholder: 'Professionally, I…', value: identity, onChange: setIdentity, rows: 4 },
+    { label: 'Goals', sub: 'What are you working toward?', placeholder: 'I am here to…', value: goals, onChange: setGoals, rows: 4 },
+    { label: 'Strengths', sub: 'What are you genuinely good at?', placeholder: 'I am strong at…', value: strengths, onChange: setStrengths, rows: 3 },
+    { label: 'Weaknesses', sub: 'Where do you consistently fall short?', placeholder: 'I struggle with…', value: weaknesses, onChange: setWeaknesses, rows: 3 },
+    { label: 'Patterns & Failure Modes', sub: 'What patterns do you notice in yourself? What tends to derail you?', placeholder: 'When under pressure, I tend to…', value: patterns, onChange: setPatterns, rows: 4 },
+    { label: 'Major Life Events', sub: 'What crucible experiences shaped who you are?', placeholder: '', value: majorEvents, onChange: setMajorEvents, rows: 4 },
   ];
 
   return (
@@ -119,7 +129,7 @@ export default function ProfilePage() {
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          Changes take effect on your next Cabinet session. The more honest and specific you are, the more useful your counselors will be.
+          Your profile gives the Cabinet deep context about who you are. Update it any time — changes take effect on your next session.
         </p>
       </div>
 
@@ -144,6 +154,7 @@ export default function ProfilePage() {
                 className={textareaClass}
                 style={textareaStyle}
                 rows={section.rows}
+                placeholder={section.placeholder}
                 value={section.value}
                 onChange={e => section.onChange(e.target.value)}
               />
@@ -186,7 +197,7 @@ export default function ProfilePage() {
               className={textareaClass}
               style={textareaStyle}
               rows={5}
-              placeholder={`Describe who you are ${futureSelfYears} years from now…`}
+              placeholder={`In ${futureSelfYears} years, I have…`}
               value={futureSelfDescription}
               onChange={e => setFutureSelfDescription(e.target.value)}
             />
@@ -198,57 +209,17 @@ export default function ProfilePage() {
       <div className="px-4 mt-6 sticky bottom-6 max-w-2xl">
         <button
           onClick={handleSave}
-          className="w-full rounded-2xl px-4 py-4 font-bold text-[14px] tracking-[0.5px] transition-all"
+          disabled={saving}
+          className="w-full rounded-2xl px-4 py-4 font-bold text-[14px] tracking-[0.5px] transition-all disabled:opacity-60"
           style={
             saved
               ? { background: 'rgba(74,222,128,0.2)', border: '1px solid rgba(74,222,128,0.4)', color: '#4ade80' }
               : { background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }
           }
         >
-          {saved ? '✓ Profile Saved' : 'Save Profile'}
+          {saved ? '✓ Profile Saved' : saving ? 'Saving…' : 'Save Profile'}
         </button>
       </div>
-
-      {/* ── DEV section — preserved exactly ─────────────────────── */}
-      {process.env.NEXT_PUBLIC_DEV_MODE === 'true' && (
-        <div className="px-4 mt-8 max-w-2xl">
-          <div className="border-2 border-red-500 rounded-lg p-5">
-            <p className="text-red-400 text-xs font-bold tracking-widest uppercase mb-1">DEV ONLY</p>
-            <p className="text-arete-text font-semibold mb-4">Developer Tools</p>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-arete-text text-sm">Simulate free tier</p>
-                <p className="text-arete-muted text-xs">Overrides getIsPremium() in memory. Resets on reload.</p>
-              </div>
-              <button
-                onClick={() => {
-                  const current = getDevPremiumOverride();
-                  // Toggle: null/true → simulate free (false), false → back to real DB (null)
-                  if (current === false) {
-                    setDevPremiumOverride(null);
-                    setSimulatingFree(false);
-                  } else {
-                    setDevPremiumOverride(false);
-                    setSimulatingFree(true);
-                  }
-                }}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  simulatingFree
-                    ? 'bg-red-500 text-white'
-                    : 'bg-arete-surface border border-arete-border text-arete-muted'
-                }`}
-              >
-                {simulatingFree ? 'Free Tier Active' : 'Simulate Free Tier'}
-              </button>
-            </div>
-            {simulatingFree && (
-              <p className="text-red-400 text-xs mt-3">
-                ⚠ Premium is currently overridden to FALSE. Reload the page to reset.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
