@@ -14,6 +14,7 @@ import styles from './admin.module.css'
 const TABS: { href: string; label: string }[] = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/usage', label: 'Usage' },
+  { href: '/admin/email', label: 'Email' },
   { href: '/admin/corpus-agent', label: 'Corpus Agent' },
   { href: '/admin/journal-agent', label: 'Journal Agent' },
   { href: '/admin/world', label: 'World' },
