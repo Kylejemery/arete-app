@@ -33,12 +33,20 @@ export interface Thread {
 const MAX_STORED_MESSAGES = 200;
 export const CONTEXT_WINDOW_SIZE = 15;
 
+// Some seeded counselor lines were stored with a timestamp in seconds (iOS
+// reports a delivered notification's date that way). Read them back as ms.
+function normalizeTimestamp(m: ThreadMessage): ThreadMessage {
+  const t = Number(m.timestamp);
+  if (Number.isFinite(t) && t > 0 && t < 1e12) return { ...m, timestamp: Math.round(t * 1000) };
+  return m;
+}
+
 export async function loadThread(threadId: string): Promise<Thread> {
   try {
     const messages = await getThread(threadId);
     return {
       id: threadId,
-      messages: messages as unknown as ThreadMessage[],
+      messages: (messages as unknown as ThreadMessage[]).map(normalizeTimestamp),
       lastUpdated: Date.now(),
     };
   } catch { /* ignore errors */ }

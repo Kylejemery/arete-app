@@ -19,6 +19,12 @@ import { getReadingData, upsertReadingData } from '@/lib/db';
 import { startFocusBlock, stopFocusBlock } from '@/lib/attend';
 import { getPomodoroCountToday, setPomodoroCountToday } from '@/lib/cabinetSignals';
 
+// The timer owns exactly one scheduled notification. Cancelling by this id
+// leaves the weekly counselor reminders (scheduled in Settings) untouched.
+const TIMER_NOTIFICATION_ID = 'focus-timer-complete';
+const cancelTimerNotification = () =>
+  Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => {});
+
 /** Returns today's date as a local YYYY-MM-DD string (not UTC). */
 function getLocalDateString(): string {
   const d = new Date();
@@ -109,7 +115,7 @@ export default function TimerScreen() {
           if (remaining === 0) {
             clearInterval(pomodoroRef.current);
             setPomodoroRunning(false);
-            Notifications.cancelAllScheduledNotificationsAsync();
+            cancelTimerNotification();
             if (pomodoroModeRef.current === 'work') {
               stopFocusBlock().catch(() => {});
               setPomodoroSessions(s => s + 1);
@@ -134,7 +140,7 @@ export default function TimerScreen() {
         if (remaining === 0) {
           clearInterval(pomodoroRef.current);
           setPomodoroRunning(false);
-          Notifications.cancelAllScheduledNotificationsAsync();
+          cancelTimerNotification();
           if (pomodoroModeRef.current === 'work') {
             stopFocusBlock().catch(() => {});
             setPomodoroSessions(s => s + 1);
@@ -186,8 +192,9 @@ export default function TimerScreen() {
   };
 
   const scheduleTimerNotification = async (durationMs: number, label: string) => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    await cancelTimerNotification();
     await Notifications.scheduleNotificationAsync({
+      identifier: TIMER_NOTIFICATION_ID,
       content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.floor(durationMs / 1000), repeats: false },
     });
@@ -195,7 +202,7 @@ export default function TimerScreen() {
 
   const resetPomodoro = () => {
     setPomodoroRunning(false);
-    Notifications.cancelAllScheduledNotificationsAsync();
+    cancelTimerNotification();
     stopFocusBlock().catch(() => {});
     setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
   };
@@ -203,7 +210,7 @@ export default function TimerScreen() {
   const handlePomodoroManualDone = () => {
     clearInterval(pomodoroRef.current);
     setPomodoroRunning(false);
-    Notifications.cancelAllScheduledNotificationsAsync();
+    cancelTimerNotification();
     stopFocusBlock().catch(() => {});
     setPomodoroSessions(s => s + 1);
     setPomodoroMode('break');
@@ -416,7 +423,7 @@ export default function TimerScreen() {
                     key={m}
                     style={[styles.pomodoroModeBtn, pomodoroMode === m && styles.pomodoroModeBtnActive]}
                     onPress={() => {
-                      Notifications.cancelAllScheduledNotificationsAsync();
+                      cancelTimerNotification();
                       setPomodoroMode(m);
                       setPomodoroTimeLeft(m === 'work' ? 25 * 60 : 5 * 60);
                       setPomodoroRunning(false);
@@ -442,7 +449,7 @@ export default function TimerScreen() {
                       scheduleTimerNotification(pomodoroTimeLeft * 1000, pomodoroMode === 'work' ? 'Focus' : 'Break');
                       if (pomodoroMode === 'work') startFocusBlock().catch(() => {});
                     } else {
-                      Notifications.cancelAllScheduledNotificationsAsync();
+                      cancelTimerNotification();
                       stopFocusBlock().catch(() => {});
                     }
                     setPomodoroRunning(r => !r);

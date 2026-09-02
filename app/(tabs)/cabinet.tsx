@@ -173,13 +173,25 @@ export default function CabinetScreen() {
   // A counselor line seeded from a notification (tapped, delivered while
   // open, or recovered on foreground) lands in the stored thread; fold any
   // new lines into the view without disturbing what is already on screen.
+  // A counselor line is identified by sender and text, not timestamp: the
+  // same reminder can be recovered by more than one path with different
+  // clocks, and it must never appear twice.
   const absorbNewLines = useCallback(async () => {
     try {
       const thread = await loadThread('cabinet');
       setMessages(prev => {
-        const key = (m: { timestamp: number; content: string }) => `${m.timestamp}:${m.content.slice(0, 48)}`;
+        const key = (m: ThreadMessage) =>
+          m.role === 'assistant' && m.counselorName
+            ? `${m.counselorName}:${m.content}`
+            : `${m.role}:${m.timestamp}:${m.content.slice(0, 48)}`;
         const have = new Set(prev.map(key));
-        const fresh = thread.messages.filter(m => !have.has(key(m)));
+        const fresh: ThreadMessage[] = [];
+        for (const m of thread.messages) {
+          const k = key(m);
+          if (have.has(k)) continue;
+          have.add(k);
+          fresh.push(m);
+        }
         return fresh.length ? [...prev, ...fresh] : prev;
       });
     } catch { /* keep what we have */ }
