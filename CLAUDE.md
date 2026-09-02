@@ -68,7 +68,10 @@ Two standing rules that predate this file and still hold:
 
 ## Conventions
 
-- Migrations go in `supabase/migrations/` with a timestamp prefix. Do not
-  apply schema changes directly to the remote project.
+- Migrations go in `supabase/migrations/` with a timestamp prefix, and are
+  applied to the remote project through the Supabase migration tool (which
+  records them in the migration history) in the same session, with the
+  result verified by query. Keep the file and the applied SQL identical;
+  never apply SQL that is not also committed.
 - Ask before deleting rows from any table. Deprecation is almost always the
   right move instead.
