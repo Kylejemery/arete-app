@@ -483,9 +483,17 @@ export default function ProgressScreen() {
                             : `${attendStatus.highestMinutes}m`}`
                         : 'Today: under every threshold so far'}
                       {'  '}
-                      <Text style={attendStatus.overGoal ? styles.attendOver : styles.attendUnder}>
-                        {attendStatus.overGoal ? '⚠ over goal' : '✓ under goal'}
-                      </Text>
+                      {/* A manual mark overrides the monitor here too, so the
+                          badge never contradicts the headline below. */}
+                      {(() => {
+                        const over = todayMark ? todayMark === 'over' : attendStatus.overGoal;
+                        return (
+                          <Text style={over ? styles.attendOver : styles.attendUnder}>
+                            {over ? '⚠ over goal' : '✓ under goal'}
+                            {todayMark ? ' (your mark)' : ''}
+                          </Text>
+                        );
+                      })()}
                     </Text>
                     <Text style={styles.attendMonitoredBy}>Monitored by iOS Screen Time</Text>
                   </View>

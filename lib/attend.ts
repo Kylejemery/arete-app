@@ -52,6 +52,36 @@ export function attendIsSupported(): boolean {
   return nativeModule() !== null;
 }
 
+/** The daily ladder plus the user's goal and a "well over" mark at 1.5x. */
+function dailyLadder(goalMinutes: number): number[] {
+  return [...new Set([...ATTEND_LADDER, goalMinutes, Math.round(goalMinutes * 1.5)])]
+    .filter((m) => m >= 15)
+    .sort((a, b) => a - b);
+}
+
+/**
+ * Highest threshold (minutes) the extension recorded as crossed for an
+ * activity since `sinceMs`. Reads the extension's UserDefaults keys
+ * directly: the library's getEvents() splits keys on "_" and keeps only the
+ * fourth piece, so an event named "threshold_30" comes back as "threshold"
+ * with the minutes lost, and every crossing was silently dropped.
+ */
+function highestCrossed(
+  mod: DeviceActivityModule,
+  activityName: string,
+  prefix: string,
+  ladder: number[],
+  sinceMs: number
+): number {
+  let highest = 0;
+  for (const m of ladder) {
+    const key = `events_${activityName}_eventDidReachThreshold_${prefix}_${m}`;
+    const at = Number(mod.userDefaultsGet<number>(key) ?? 0);
+    if (Number.isFinite(at) && at >= sinceMs && m > highest) highest = m;
+  }
+  return highest;
+}
+
 export type AttendAuthStatus = 'unsupported' | 'notDetermined' | 'denied' | 'approved';
 
 export function getAttendAuthStatus(): AttendAuthStatus {
@@ -134,9 +164,7 @@ export async function enableAttend(
       mod.stopMonitoring([ATTEND_ACTIVITY, ATTEND_NIGHT_ACTIVITY]);
     } catch { /* nothing running yet */ }
 
-    const ladder = [...new Set([...ATTEND_LADDER, goalMinutes, Math.round(goalMinutes * 1.5)])]
-      .filter((m) => m >= 15)
-      .sort((a, b) => a - b);
+    const ladder = dailyLadder(goalMinutes);
 
     await mod.startMonitoring(
       ATTEND_ACTIVITY,
@@ -289,16 +317,12 @@ export async function getAttendTodayStatus(): Promise<AttendTodayStatus> {
     highest = history[todayKey()]?.highest ?? 0;
   } catch { /* no snapshot */ }
   try {
-    const events = mod.getEvents(ATTEND_ACTIVITY) || [];
     const start = new Date();
     start.setHours(0, 0, 0, 0);
-    for (const ev of events) {
-      if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
-      const at = new Date(ev.lastCalledAt);
-      if (at < start) continue;
-      const m = parseInt(String(ev.eventName).replace('threshold_', ''), 10);
-      if (Number.isFinite(m) && m > highest) highest = m;
-    }
+    highest = Math.max(
+      highest,
+      highestCrossed(mod, ATTEND_ACTIVITY, 'threshold', dailyLadder(goalMinutes), start.getTime())
+    );
     return { connected: true, highestMinutes: highest, overGoal: highest >= goalMinutes, goalMinutes };
   } catch (e) {
     console.warn('[attend] status read failed:', (e as Error)?.message);
@@ -323,12 +347,10 @@ export async function getAttendNightStatus(): Promise<number> {
   } catch { /* no snapshot */ }
   try {
     const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    for (const ev of mod.getEvents(ATTEND_NIGHT_ACTIVITY) || []) {
-      if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
-      if (new Date(ev.lastCalledAt).getTime() < cutoff) continue;
-      const m = parseInt(String(ev.eventName).replace('night_', ''), 10);
-      if (Number.isFinite(m) && m > highest) highest = m;
-    }
+    highest = Math.max(
+      highest,
+      highestCrossed(mod, ATTEND_NIGHT_ACTIVITY, 'night', ATTEND_NIGHT_LADDER, cutoff)
+    );
     return highest;
   } catch {
     return highest;
@@ -474,12 +496,7 @@ export async function getWatchlistTodayStatus(): Promise<{ label: string; highes
   return lists.map((w) => {
     let highest = 0;
     try {
-      for (const ev of mod.getEvents(watchActivityName(w.id)) || []) {
-        if (ev.callbackName !== 'eventDidReachThreshold' || !ev.eventName) continue;
-        if (new Date(ev.lastCalledAt) < start) continue;
-        const m = parseInt(String(ev.eventName).replace('threshold_', ''), 10);
-        if (Number.isFinite(m) && m > highest) highest = m;
-      }
+      highest = highestCrossed(mod, watchActivityName(w.id), 'threshold', ATTEND_LADDER, start.getTime());
     } catch { /* leave at 0 */ }
     return { label: w.label, highestMinutes: highest };
   });
