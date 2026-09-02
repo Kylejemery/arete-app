@@ -5,22 +5,31 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-const navItems = [
-  { href: '/',         label: 'Home',        emoji: '🏠' },
-  { href: '/morning',  label: 'Morning',      emoji: '☀️' },
-  { href: '/evening',  label: 'Evening',      emoji: '🌙' },
-  { href: '/cabinet',  label: 'Cabinet',      emoji: '🎙️' },
-  { href: '/journal',  label: 'Journal',      emoji: '📖' },
-  { href: '/goals',    label: 'Goals',        emoji: '🎯' },
-  { href: '/scrolls',  label: 'Scrolls',      emoji: '📜' },
-  { href: '/focus',    label: 'Focus',        emoji: '⏱️' },
-  { href: '/progress', label: 'Progress',     emoji: '🏆' },
-  { href: '/profile',  label: 'Know Thyself', emoji: '👤' },
-  { href: '/settings', label: 'Settings',     emoji: '⚙️' },
+type NavItem = { href: string; label: string; emoji: string; external?: boolean };
+
+// Desktop sidebar. The first eight mirror the mobile tab bar, in its order;
+// the rest are the screens mobile reaches from the side menu and headers.
+const navItems: NavItem[] = [
+  { href: '/',              label: 'Home',          emoji: '🏠' },
+  { href: '/morning',       label: 'Morning',       emoji: '☀️' },
+  { href: '/evening',       label: 'Evening',       emoji: '🌙' },
+  { href: '/cabinet',       label: 'Cabinet',       emoji: '🎙️' },
+  { href: '/journal',       label: 'Journal',       emoji: '📖' },
+  { href: '/focus',         label: 'Focus',         emoji: '⏱️' },
+  { href: '/scrolls',       label: 'Scrolls',       emoji: '📜' },
+  { href: '/progress',      label: 'Progress',      emoji: '🏆' },
+  { href: '/goals',         label: 'Goals',         emoji: '🎯' },
+  { href: '/beliefs',       label: 'Beliefs',       emoji: '🔒' },
+  { href: '/library',       label: 'The Library',   emoji: '🏛️' },
+  { href: 'https://academy.pursuearete.com', label: 'The Academy', emoji: '🎓', external: true },
+  { href: '/profile',       label: 'Know Thyself',  emoji: '👤' },
+  { href: '/settings',      label: 'Settings',      emoji: '⚙️' },
 ];
 
-// 5 primary tabs shown in the mobile bottom pill
-const BOTTOM_TABS = [
+// 5 primary tabs shown in the mobile bottom pill (matches the mobile app's
+// most-used tabs; Evening lives in the drawer because Morning and Evening
+// are rarely needed at the same time of day).
+const BOTTOM_TABS: NavItem[] = [
   { href: '/',        label: 'Home',    emoji: '🏠' },
   { href: '/morning', label: 'Morning', emoji: '☀️' },
   { href: '/cabinet', label: 'Cabinet', emoji: '🎙️' },
@@ -29,22 +38,36 @@ const BOTTOM_TABS = [
 ];
 
 // Items accessible via the More slide-up drawer
-const MORE_ITEMS = [
-  { href: '/evening',  label: 'Evening',      emoji: '🌙' },
-  { href: '/goals',    label: 'Goals',        emoji: '🎯' },
-  { href: '/scrolls',  label: 'Scrolls',      emoji: '📜' },
-  { href: '/progress', label: 'Progress',     emoji: '🏆' },
-  { href: '/profile',  label: 'Know Thyself', emoji: '👤' },
-  { href: '/settings', label: 'Settings',     emoji: '⚙️' },
+const MORE_ITEMS: NavItem[] = [
+  { href: '/evening',       label: 'Evening',       emoji: '🌙' },
+  { href: '/scrolls',       label: 'Scrolls',       emoji: '📜' },
+  { href: '/progress',      label: 'Progress',      emoji: '🏆' },
+  { href: '/goals',         label: 'Goals',         emoji: '🎯' },
+  { href: '/beliefs',       label: 'Beliefs',       emoji: '🔒' },
+  { href: '/library',       label: 'Library',       emoji: '🏛️' },
+  { href: 'https://academy.pursuearete.com', label: 'Academy', emoji: '🎓', external: true },
+  { href: '/profile',       label: 'Know Thyself',  emoji: '👤' },
+  { href: '/settings',      label: 'Settings',      emoji: '⚙️' },
 ];
+
+// Routes that are reached from elsewhere but should light up their parent.
+const PARENT_ROUTES: Record<string, string> = {
+  '/weekly-review': '/progress',
+  '/portrait': '/progress',
+  '/dispatch': '/journal',
+};
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [showMore, setShowMore] = useState(false);
 
-  const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+  const isActive = (href: string) => {
+    if (href.startsWith('http')) return false;
+    if (href === '/') return pathname === '/';
+    const parent = Object.entries(PARENT_ROUTES).find(([child]) => pathname.startsWith(child))?.[1];
+    return pathname.startsWith(href) || parent === href;
+  };
 
   // Highlight "More" tab when the current page lives in the drawer
   const moreIsActive = MORE_ITEMS.some(item => isActive(item.href));
@@ -94,6 +117,8 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noopener noreferrer' : undefined}
                 className={`
                   flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 relative
                   ${active
@@ -250,6 +275,8 @@ export default function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    target={item.external ? '_blank' : undefined}
+                    rel={item.external ? 'noopener noreferrer' : undefined}
                     onClick={() => setShowMore(false)}
                     className="flex flex-col items-center gap-1 py-3 rounded-xl text-xs transition-all"
                     style={{
