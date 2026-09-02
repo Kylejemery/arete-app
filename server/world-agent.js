@@ -29,6 +29,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { modernFenceParams } = require('./lib/corpus-fence');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -208,11 +209,15 @@ async function retrievePassages(queryText, count, minAuthors = 3) {
   const embedding = await embed(queryText);
   if (!embedding) return [];
 
-  // match_rag_corpus_ids(query_embedding, match_count, filter_language DEFAULT 'english')
-  // -> { id, chunk_text, author, work, similarity }. Over-fetch, then diversify.
+  // match_rag_corpus_ids(query_embedding, match_count, filter_language DEFAULT 'english',
+  // exclude_text_types DEFAULT '{}') -> { id, chunk_text, author, work, similarity }.
+  // Over-fetch, then diversify. World observations reach the Daily Dispatch,
+  // so the modern philosophy of mind layer is fenced here too
+  // (server/lib/corpus-fence.js).
   const { data: rows } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: Math.max(count * 3, 24),
+    ...modernFenceParams(),
   });
   const passages = rows || [];
 

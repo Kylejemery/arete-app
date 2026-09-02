@@ -21,7 +21,9 @@ const SIMILARITY_FLOOR = 0.25
 // Verbatim-quotable discriminator (settled 2026-07-18): public-domain chunks
 // are quotable; Mode-2 scholarship was summarized on ingestion — the original
 // text was never stored, so there is nothing to quote.
-const QUOTABLE_TYPES = new Set(['primary', 'public_domain'])
+// Verbatim layers may be quoted; summaries, syntheses, and apparatus are
+// paraphrased. Value set: rag_corpus_text_type_check.
+const QUOTABLE_TYPES = new Set(['primary', 'scholarship', 'modern_primary'])
 
 export interface TurnSource {
   chunk_id: string

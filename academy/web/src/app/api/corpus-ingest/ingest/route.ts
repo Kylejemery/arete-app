@@ -76,23 +76,28 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Which flavour of summary this is. 'summary' shelves the work in the
-    // Reading Room like any other; 'paper_summary' keeps it off the shelf while
-    // staying retrievable and listed in the counselor source catalog — the
-    // posture for modern in-copyright works. Defaults to 'summary' so existing
-    // callers are unaffected. Rejected outright on verbatim rather than ignored,
-    // so a caller that sends both surfaces its own bug instead of silently
+    // Which layer the text lands in (rag_corpus_text_type_check locks the
+    // set; server/lib/corpus-fence.js keys the retrieval fences on it).
+    //   summary mode:  paper_summary (default) — Mode 2 summary of copyrighted
+    //                  scholarship, off the shelf, reaches counselors;
+    //                  modern_summary — Mode 2 summary of contemporary
+    //                  philosophy of mind, off the shelf, fenced from
+    //                  counselors and the Daily Dispatch.
+    //   verbatim mode: primary (default) — the philosopher's own text;
+    //                  scholarship — public-domain secondary scholarship;
+    //                  modern_primary — public-domain modern philosophy of
+    //                  mind (Russell, Eddington, James), fenced like
+    //                  modern_summary but quotable.
+    // A textType from the wrong mode is rejected rather than ignored, so a
+    // caller that sends both surfaces its own bug instead of silently
     // publishing a copyrighted work to the shelf.
+    const SUMMARY_TYPES = ['paper_summary', 'modern_summary']
+    const VERBATIM_TYPES = ['primary', 'scholarship', 'modern_primary']
     if (textType !== undefined) {
-      if (mode !== 'summary') {
+      const allowed = mode === 'summary' ? SUMMARY_TYPES : VERBATIM_TYPES
+      if (!allowed.includes(textType)) {
         return NextResponse.json(
-          { error: 'textType only applies to mode "summary".' },
-          { status: 400 }
-        )
-      }
-      if (textType !== 'summary' && textType !== 'paper_summary') {
-        return NextResponse.json(
-          { error: 'textType must be "summary" or "paper_summary".' },
+          { error: `textType for mode "${mode}" must be one of ${allowed.map(t => `"${t}"`).join(', ')}.` },
           { status: 400 }
         )
       }
@@ -106,7 +111,7 @@ export async function POST(req: NextRequest) {
       language: normalizeLanguage(language),
       course_relevance: courseRelevance?.trim() || null,
       difficulty: difficulty?.trim() || null,
-      text_type: mode === 'summary' ? (textType || 'summary') : 'public_domain',
+      text_type: textType || (mode === 'summary' ? 'paper_summary' : 'primary'),
     }
 
     const { chunksCreated, wordCount, chunkIds } = await ingestText(text, meta)

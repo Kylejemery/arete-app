@@ -69,7 +69,7 @@ export type IngestMeta = {
   language: string | null
   course_relevance: string | null
   difficulty: string | null
-  text_type: string // 'summary' | 'public_domain'
+  text_type: string // primary | scholarship | paper_summary | synthesis | concordance | modern_primary | modern_summary
 }
 
 // Highest chunk_index already stored for this (author, work, program_id), or -1

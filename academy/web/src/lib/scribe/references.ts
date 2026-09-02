@@ -53,8 +53,9 @@ function formatClassical(r: ClassicalRef): string {
 }
 
 // Build the reference section for a draft from its citation map. Classical =
-// rag_corpus rows whose text_type is a primary/summary layer; rag_corpus
-// paper_summary rows and all scribe_source_chunks are modern works.
+// rag_corpus primary, scholarship, synthesis, and concordance rows (author,
+// work, translator); modern = rag_corpus paper_summary, modern_summary and
+// modern_primary rows plus all scribe_source_chunks.
 export async function buildReferences(
   citations: ScribeCitation[],
   style: ReferenceStyle = 'apa'
@@ -76,7 +77,7 @@ export async function buildReferences(
     if (error) throw new Error(`References (rag_corpus): ${error.message}`)
     for (const r of data ?? []) {
       const key = `${r.author}|${r.work}`
-      if (r.text_type === 'paper_summary') {
+      if (r.text_type === 'paper_summary' || r.text_type === 'modern_summary') {
         // section_label convention from lib/papers/ingest.ts:
         // 'scholarly summary — VENUE — YEAR'
         const bits = (r.section_label ?? '').split('—').map((s: string) => s.trim())
@@ -86,6 +87,20 @@ export async function buildReferences(
           year: bits[2] || null,
           title: r.work,
           venue: bits[1] || null,
+          doi: null,
+          url: r.source_url,
+        })
+      } else if (r.text_type === 'modern_primary') {
+        // A verbatim public-domain modern work (Russell 1927, Eddington 1928,
+        // James 1890). The year rides in section_label when the queue row set
+        // one ('— YEAR' suffix); otherwise n.d. until the row is labelled.
+        const yearMatch = (r.section_label ?? '').match(/\b(1[89]\d\d|20\d\d)\b/)
+        modern.set(key, {
+          authors: [],
+          authorFallback: r.author,
+          year: yearMatch ? yearMatch[1] : null,
+          title: r.work,
+          venue: null,
           doi: null,
           url: r.source_url,
         })

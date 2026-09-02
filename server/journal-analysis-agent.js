@@ -12,6 +12,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { modernFenceParams } = require('./lib/corpus-fence');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -208,11 +209,14 @@ async function getGroundingPassages(query, limit = 3) {
     if (!embRes.ok) return [];
     const embedding = (await embRes.json()).data[0].embedding;
 
-    // match_rag_corpus(query_embedding, match_count DEFAULT 5, filter_author, filter_language)
-    // NOTE: there is no match_threshold parameter on this RPC.
+    // match_rag_corpus(query_embedding, match_count DEFAULT 5, filter_author,
+    // filter_language, exclude_text_types). No match_threshold parameter.
+    // Journal analysis is a user-facing therapeutic surface: the modern
+    // philosophy of mind layer is fenced (server/lib/corpus-fence.js).
     const { data } = await supabase.rpc('match_rag_corpus', {
       query_embedding: embedding,
       match_count: limit,
+      ...modernFenceParams(),
     });
     return (data || []).map(c => ({
       author: c.author,

@@ -1,3 +1,12 @@
+---
+author: Arete Concordance
+work: Stoic Physics and Epistemology Concordance
+difficulty: Advanced
+probe: does the Stoic cosmos have a mind
+probe: what is pneuma and is it a body
+probe: how does a Stoic test whether an impression is true
+---
+
 # Stoic Physics and Epistemology: A Retrieval Concordance
 
 Editorial apparatus for the Arete corpus. Each entry names a Stoic technical term in Greek, states what it means, and then lists the English words that actually carry it in the translations held in this corpus. The purpose is lexical: a query about pneuma should be able to reach passages that say "vital breath," and a query about the cognitive impression should be able to reach passages that say "the perceptive presentation."

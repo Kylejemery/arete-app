@@ -16,6 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
+const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -388,6 +389,8 @@ async function getLibraryCatalogBlock() {
       .map(r => {
         const ov = ovMap.get(`${r.author}::${r.work}`) || {};
         if (ov.hidden) return null;
+        // Editorial apparatus is not a source a counselor may claim to hold.
+        if (!isCounselorVisible(r)) return null;
         return `- ${r.author} — ${ov.title || libraryHelpers.workTitle(r.work)}`;
       })
       .filter(Boolean);
@@ -1159,15 +1162,19 @@ app.post('/api/chat/counselor', async (req, res) => {
     if (process.env.OPENAI_API_KEY) {
       try {
         const embedding = await embedQuery(question);
+        // Counselor path: the fence excludes editorial apparatus
+        // (server/lib/corpus-fence.js), and the post-filter keeps graph-boost
+        // expansion from reintroducing it.
         const { data, error } = await supabase.rpc('match_rag_corpus', {
           query_embedding: embedding,
           match_count: 7,
           filter_author: null,
           filter_language: 'english',
+          ...counselorRetrievalParams(),
         });
         if (!error) contextChunks = (data ?? []);
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-        contextChunks = (await expandCandidates(contextChunks, 7)).rows;
+        contextChunks = (await expandCandidates(contextChunks, 7)).rows.filter(isCounselorVisible);
       } catch (err) {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
@@ -1282,15 +1289,17 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
   if (process.env.OPENAI_API_KEY) {
     try {
       const embedding = await embedQuery(lastUserMessage);
+      // Counselor path: fenced (server/lib/corpus-fence.js).
       const { data, error } = await supabase.rpc('match_rag_corpus', {
         query_embedding: embedding,
         match_count: 5,
         filter_author: null,
         filter_language: 'english',
+        ...counselorRetrievalParams(),
       });
       if (!error && Array.isArray(data) && data.length > 0) {
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-        libraryChunks = (await expandCandidates(data, 5)).rows;
+        libraryChunks = (await expandCandidates(data, 5)).rows.filter(isCounselorVisible);
         pulseFromChunks(libraryChunks, lastUserMessage);
         libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
           libraryChunks.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
@@ -2436,6 +2445,8 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
   if (authors) {
     try {
       const embedding = await embedQuery(userMessage);
+      // Seminar path: the modern philosophy of mind layer stays off the
+      // syllabus by default (server/lib/corpus-fence.js); apparatus is allowed.
       const results = await Promise.all(
         authors.map(author =>
           supabase.rpc('match_rag_corpus', {
@@ -2443,6 +2454,7 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
             match_count: 2,
             filter_author: author,
             filter_language: 'english',
+            ...modernFenceParams(),
           })
         )
       );
@@ -2450,7 +2462,7 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
       rows.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
       // Phase B: expand through the Hebbian graph before truncation (no-op
       // unless GRAPH_BOOST=true).
-      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows;
+      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows.filter(passesModernFence);
       const seen = new Set();
       const top = [];
       for (const r of rows) {
@@ -2650,11 +2662,13 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
   if (!process.env.OPENAI_API_KEY) return [];
   try {
     const embedding = await embedQuery(userMessage);
+    // Seminar path: modern layer fenced (server/lib/corpus-fence.js).
     const { data, error } = await supabase.rpc('match_rag_corpus', {
       query_embedding: embedding,
       match_count: k,
       filter_author: null,
       filter_language: 'english',
+      ...modernFenceParams(),
     });
     if (error) {
       console.error('match_rag_corpus RPC error:', error.message);
@@ -2662,7 +2676,8 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
     }
     observatory.recordRetrieval(data ?? [], 'academy'); // fire-and-forget log
     // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-    const { rows: expanded } = await expandCandidates(data ?? [], k);
+    const { rows: expandedRaw } = await expandCandidates(data ?? [], k);
+    const expanded = expandedRaw.filter(passesModernFence);
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
     return expanded.map(r => ({
@@ -3521,18 +3536,22 @@ async function getStoicContext(query, topK = 5, authorFilter = null) {
   const embeddingData = await embeddingResponse.json();
   const queryEmbedding = embeddingData.data[0].embedding;
 
+  // Every getStoicContext caller speaks as a person or as the tradition
+  // (Oracle, /ask, /v1/chat/completions, library debate, margin note), so
+  // this is a counselor path: fenced (server/lib/corpus-fence.js).
   const { data: chunks, error } = await supabase.rpc('match_rag_corpus', {
     query_embedding: queryEmbedding,
     match_count: topK,
     filter_author: authorFilter || null,
-    filter_language: 'english'
+    filter_language: 'english',
+    ...counselorRetrievalParams(),
   });
 
   if (error) throw new Error(`RAG retrieval failed: ${error.message}`);
   observatory.recordRetrieval(chunks || [], 'oracle'); // fire-and-forget log
   // Phase B: Hebbian expansion for every getStoicContext caller (no-op
   // unless GRAPH_BOOST=true).
-  return (await expandCandidates(chunks || [], topK)).rows;
+  return (await expandCandidates(chunks || [], topK)).rows.filter(isCounselorVisible);
 }
 
 function buildStoicSystemPrompt(chunks) {
@@ -4329,7 +4348,7 @@ app.get('/api/library/texts', async (req, res) => {
         work: r.work,
         title: ov.title || libraryHelpers.workTitle(r.work),
         era: ov.era || libraryHelpers.era(r.author, r.work),
-        textType: r.text_type,                                  // 'primary' | 'synthesis' ('paper_summary' filtered below)
+        textType: r.text_type,                                  // primary | scholarship | synthesis | modern_primary (others filtered below)
         tradition: ov.tradition || libraryHelpers.tradition(r.author, r.text_type), // 'stoic' | 'wider' | 'synthesis'
         passages: Number(r.chunk_count) || 0,
         translator: r.translator || null,
@@ -4340,7 +4359,11 @@ app.get('/api/library/texts', async (req, res) => {
       };
     // Paper summaries are retrieval-only: counselors quote them, but they are
     // summaries of copyrighted scholarship, not readable works — no shelf.
-    }).filter(t => !t.hidden && t.textType !== 'paper_summary');
+    // Concordances are editorial retrieval bridges, not works — no shelf.
+    // Modern summaries are summaries of copyrighted work — no shelf. Modern
+    // verbatim texts (Russell, Eddington, James) are readable public-domain
+    // works and stay; the counselor catalog fences them separately.
+    }).filter(t => !t.hidden && !['paper_summary', 'concordance', 'modern_summary'].includes(t.textType));
 
     // Count of syntheses awaiting admin review (not yet ingested, so not on a
     // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.

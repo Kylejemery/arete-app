@@ -28,7 +28,7 @@ type LibText = {
   work: string;
   title: string;
   era: string;
-  textType: 'primary' | 'synthesis';
+  textType: 'primary' | 'scholarship' | 'synthesis' | 'modern_primary';
   tradition: 'stoic' | 'wider' | 'synthesis';
   passages: number;
   translator: string | null;
@@ -501,7 +501,7 @@ export default function LibraryOfArete() {
 
 /* ========================= ATRIUM ========================= */
 function Atrium({ texts, go }: { texts: LibText[]; go: (r: Room) => void }) {
-  const primaryCount = texts.filter(t => t.textType === 'primary').length;
+  const primaryCount = texts.filter(t => t.textType === 'primary' || t.textType === 'scholarship').length;
   const passageCount = texts.reduce((n, t) => n + t.passages, 0);
   const doorways = [
     { key: 'reading' as Room, glyph: '❧', name: 'The Reading Room', sub: 'Pull any text from the shelves and read it in full; let the corpus recommend the next.' },
@@ -567,7 +567,10 @@ function Shelf({ items, openWork }: { items: LibText[]; openWork: (a: string, w:
           <span style={{ width: 7, flexShrink: 0, background: t.spine }} />
           <span style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED, marginBottom: 9 }}>
-              {t.textType === 'synthesis' ? 'Synthesis' : 'Primary source'}
+              {t.textType === 'synthesis' ? 'Synthesis'
+                : t.textType === 'scholarship' ? 'Scholarship'
+                : t.textType === 'modern_primary' ? 'Modern work'
+                : 'Primary source'}
             </span>
             <span style={{ fontFamily: SERIF, fontSize: 22, lineHeight: 1.12, color: IVORY, marginBottom: 5 }}>{t.title}</span>
             <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 15, color: GOLD }}>{t.author}</span>
