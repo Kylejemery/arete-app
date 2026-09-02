@@ -1,10 +1,12 @@
-// localStorage wrapper that mirrors AsyncStorage API
-// Guards for SSR safety with typeof window !== 'undefined'
+// localStorage wrapper mirroring the mobile AsyncStorage helpers, plus the
+// typed accessors the Cabinet and the routines depend on. Every read and
+// write is SSR-guarded and try/catch-swallowed: a page rendered on the server
+// or in a browser with site data blocked must still render.
 
 export function getItem(key: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    return localStorage.getItem(key);
+    return window.localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -13,80 +15,68 @@ export function getItem(key: string): string | null {
 export function setItem(key: string, value: string): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(key, value);
+    window.localStorage.setItem(key, value);
   } catch {
-    // ignore storage errors silently
+    /* ignore storage errors silently */
   }
 }
 
 export function removeItem(key: string): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.removeItem(key);
+    window.localStorage.removeItem(key);
   } catch {
-    // ignore
+    /* ignore */
   }
 }
 
 export function getAllKeys(): string[] {
   if (typeof window === 'undefined') return [];
   try {
-    return Object.keys(localStorage);
+    return Object.keys(window.localStorage);
   } catch {
     return [];
   }
 }
 
-// Storage keys used across the app (same as mobile AsyncStorage keys)
-export const STORAGE_KEYS = {
-  // User profile
-  userName: 'userName',
-  userGoals: 'userGoals',
-  kt_background: 'kt_background',
-  kt_identity: 'kt_identity',
-  kt_goals: 'kt_goals',
-  kt_strengths: 'kt_strengths',
-  kt_weaknesses: 'kt_weaknesses',
-  kt_patterns: 'kt_patterns',
-  kt_major_events: 'kt_major_events',
-  futureSelfYears: 'futureSelfYears',
-  futureSelfDescription: 'futureSelfDescription',
+/** Local (not UTC) YYYY-MM-DD — the same date key db.ts writes to check_ins. */
+export function getTodayDateKey(d: Date = new Date()): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
-  // Cabinet
-  activeMembers: 'cabinetMembers',
+// ----------------------------------------------------------------
+// Daily message counter (per-device mirror of profiles.daily_message_count,
+// used only for optimistic UI; the authoritative counts are the Supabase
+// column checkAndIncrementMessageCount() writes and the server's own RPC).
+// ----------------------------------------------------------------
 
-  // Routines
-  morningTasks: 'morningTasks',
-  morningDone: 'morningDone',
-  eveningTasks: 'eveningTasks',
-  eveningDone: 'eveningDone',
-  reflectionAnswer: 'reflectionAnswer',
-  stoicAnswer: 'stoicAnswer',
+const DAILY_MESSAGES_PREFIX = 'daily_messages_';
 
-  // Progress
-  streak: 'streak',
-  calendarData: 'calendarData',
+export function getDailyMessageCount(dateKey: string = getTodayDateKey()): number {
+  const raw = getItem(`${DAILY_MESSAGES_PREFIX}${dateKey}`);
+  const n = raw === null ? 0 : Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
 
-  // Journal
-  journalEntries: 'journalEntries',
-  commonplaceQuotes: 'commonplaceQuotes',
-  unifiedJournalEntries: 'unifiedJournalEntries',
+export function incrementDailyMessageCount(dateKey: string = getTodayDateKey()): number {
+  const next = getDailyMessageCount(dateKey) + 1;
+  setItem(`${DAILY_MESSAGES_PREFIX}${dateKey}`, String(next));
+  return next;
+}
 
-  // Reading
-  booksRead: 'booksRead',
-  currentBooks: 'currentBooks',
-  readingSessions: 'readingSessions',
-  readingStreak: 'readingStreak',
-  todayReadingSeconds: 'todayReadingSeconds',
+// ----------------------------------------------------------------
+// Cabinet privacy: whether the morning/evening routines are shared with the
+// counselors. Mirrors mobile's attend_share_routines_with_cabinet setting;
+// defaults to on.
+// ----------------------------------------------------------------
 
-  // Beliefs
-  beliefEntries: 'beliefEntries',
+const KEY_SHARE_ROUTINES = 'attend_share_routines_with_cabinet';
 
-  // Threads
-  thread_cabinet: 'thread_cabinet',
-  thread_marcus: 'thread_marcus',
-  thread_epictetus: 'thread_epictetus',
-  thread_goggins: 'thread_goggins',
-  thread_roosevelt: 'thread_roosevelt',
-  thread_futureSelf: 'thread_futureSelf',
-} as const;
+export function getShareRoutinesWithCabinet(): boolean {
+  const raw = getItem(KEY_SHARE_ROUTINES);
+  return raw === null ? true : raw === 'true';
+}
+
+export function setShareRoutinesWithCabinet(value: boolean): void {
+  setItem(KEY_SHARE_ROUTINES, String(value));
+}

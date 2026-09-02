@@ -10,6 +10,7 @@ export interface CounselorModelOption {
 export const COUNSELOR_MODEL_OPTIONS: CounselorModelOption[] = [
   { id: 'claude-opus-4-6', label: 'Claude Opus', provider: 'Anthropic' },
   { id: 'claude-sonnet-4-6', label: 'Claude Sonnet', provider: 'Anthropic' },
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku', provider: 'Anthropic' },
   { id: 'gpt-5.1', label: 'GPT-5.1', provider: 'OpenAI' },
   { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro', provider: 'Google' },
   { id: 'grok-4-fast-non-reasoning', label: 'Grok 4', provider: 'xAI' },
