@@ -278,8 +278,11 @@ export default function ArchitecturePage() {
           <strong>Overview tab</strong> (&quot;How the fleet works&quot;), so it isn&apos;t repeated
           here. Roster: RAG Corpus, World, Journal Analysis, Longitudinal Model, Coverage Gap,
           Tension, Synthesis, Inquiry, Daily Dispatch (a generation agent plus an hourly delivery
-          agent honoring each user&apos;s local 7 AM), Content Scheduler, Self-Reflection, Dreaming,
-          and Consolidation — plus the Paper agent behind the Papers tab.
+          agent honoring each user&apos;s local 7 AM), Counselor Broadcast delivery (the one agent
+          that generates nothing — it carries a hand-written message from a counselor to the
+          Cabinet chat, hourly, at each member&apos;s chosen local hour), Content Scheduler,
+          Self-Reflection, Dreaming, and Consolidation — plus the Paper agent behind the Papers
+          tab.
         </p>
       </div>
 

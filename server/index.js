@@ -41,6 +41,23 @@ const corpusMcp = require('./routes/corpus-mcp');
 // shown raw.
 const canonicalConcepts = require('./lib/canonical-concepts');
 const { runDispatchGeneration } = require('./dispatch-generation-agent');
+// Counselor Broadcast delivery
+// Railway cron: 0 * * * * (every hour, its own service, `node
+// broadcast-delivery-agent.js`); Kyle adds the cron manually.
+// A broadcast is a message written by hand in the admin Broadcasts tab and
+// sent from a counselor to the membership. Unlike every other agent here it
+// generates nothing — it delivers. The push is only the nudge; the message
+// itself is the post the app collects from GET /api/broadcasts/pending below
+// and seeds into the member's Cabinet thread, which is why a member with no
+// notification permission still receives it. This require also backs the
+// on-demand admin trigger POST /api/admin/broadcasts/deliver.
+const { runBroadcastDelivery } = require('./broadcast-delivery-agent');
+const {
+  DEFAULT_TIMEZONE: BROADCAST_DEFAULT_TIMEZONE,
+  isDue: isBroadcastDue,
+  resolveSpeaker: resolveBroadcastSpeaker,
+  loadCounselorNames,
+} = require('./lib/broadcasts');
 const { runSynthesisAgent } = require('./synthesis-agent');
 
 // Weekly Self-Reflection Agent
@@ -1934,6 +1951,118 @@ app.get('/api/dispatch/:id', async (req, res) => {
   }
   if (!data) return res.status(404).json({ error: 'Not found' });
   return res.json({ dispatch: data });
+});
+
+// ─── Counselor broadcasts — the Cabinet post half ────────────────────────────
+//
+// A broadcast is a hand-written message from a counselor, delivered as a push
+// notification and as a post in the member's Cabinet chat. The push is only
+// the nudge (broadcast-delivery-agent.js); this is the delivery that always
+// happens. The app sweeps /pending on every foreground, seeds each line into
+// the Cabinet thread through the same path as Settings reminders and Attend
+// nudges, then acknowledges with /seen. Until it acknowledges, the message
+// stays owed — a push swiped away unread, a member who never granted
+// notification permission, and a failed acknowledgement all recover here.
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_PENDING_BROADCASTS = 20;
+
+// GET /api/broadcasts/pending — every broadcast this member is still owed and
+// whose send hour has arrived in their own timezone.
+app.get('/api/broadcasts/pending', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  try {
+    const { data: owed, error: owedError } = await supabase
+      .from('counselor_broadcast_deliveries')
+      .select('broadcast_id, pushed_at')
+      .eq('user_id', userId)
+      .is('seeded_at', null)
+      .limit(MAX_PENDING_BROADCASTS);
+    if (owedError) throw owedError;
+    if (!owed || owed.length === 0) return res.json({ broadcasts: [] });
+
+    // 'sent' is included: the push half can finish long before every member
+    // has opened the app to collect the post.
+    const { data: rows, error } = await supabase
+      .from('counselor_broadcasts')
+      .select('id, counselor_slug, fallback_counselor_slug, title, message, send_date, send_hour')
+      .in('id', owed.map(o => o.broadcast_id))
+      .in('status', ['scheduled', 'sending', 'sent']);
+    if (error) throw error;
+    if (!rows || rows.length === 0) return res.json({ broadcasts: [] });
+
+    const { data: settings } = await supabase
+      .from('user_settings')
+      .select('timezone, cabinet_members')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const timezone = settings?.timezone || BROADCAST_DEFAULT_TIMEZONE;
+    const counselorNames = await loadCounselorNames(supabase);
+    const pushedAt = new Map(owed.map(o => [o.broadcast_id, o.pushed_at]));
+
+    const broadcasts = rows
+      .filter(b => isBroadcastDue(b, timezone))
+      .map(b => ({
+        id: b.id,
+        title: b.title,
+        message: b.message,
+        counselorName: resolveBroadcastSpeaker(b, settings?.cabinet_members, counselorNames).name,
+        // When the line should read as having arrived: the push if one went
+        // out, otherwise now.
+        at: pushedAt.get(b.id) ? new Date(pushedAt.get(b.id)).getTime() : Date.now(),
+      }));
+
+    return res.json({ broadcasts });
+  } catch (err) {
+    console.error('[/api/broadcasts/pending] error:', err.message);
+    return res.status(500).json({ error: 'Failed to load broadcasts' });
+  }
+});
+
+// POST /api/broadcasts/seen — the app confirming these broadcasts are now in
+// the member's Cabinet thread. Idempotent: the app re-acknowledges anything it
+// had already seeded locally, which is how a lost acknowledgement heals.
+app.post('/api/broadcasts/seen', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const ids = Array.isArray(req.body?.ids)
+    ? req.body.ids.filter(id => typeof id === 'string' && UUID_RE.test(id)).slice(0, MAX_PENDING_BROADCASTS)
+    : [];
+  if (ids.length === 0) return res.status(400).json({ error: 'No broadcast ids' });
+
+  try {
+    // Conditional on seeded_at IS NULL, so a repeat acknowledgement neither
+    // moves the timestamp nor double-counts seeded_count.
+    const { data: marked, error } = await supabase
+      .from('counselor_broadcast_deliveries')
+      .update({ seeded_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .in('broadcast_id', ids)
+      .is('seeded_at', null)
+      .select('broadcast_id');
+    if (error) throw error;
+
+    // One row per (broadcast, member), so each id here is a first landing.
+    for (const broadcastId of (marked || []).map(m => m.broadcast_id)) {
+      const { data: current } = await supabase
+        .from('counselor_broadcasts')
+        .select('seeded_count')
+        .eq('id', broadcastId)
+        .maybeSingle();
+      await supabase
+        .from('counselor_broadcasts')
+        .update({ seeded_count: (current?.seeded_count || 0) + 1 })
+        .eq('id', broadcastId);
+    }
+
+    return res.json({ acknowledged: (marked || []).length });
+  } catch (err) {
+    console.error('[/api/broadcasts/seen] error:', err.message);
+    return res.status(500).json({ error: 'Failed to acknowledge broadcasts' });
+  }
 });
 
 // ─── Conversation memory summarization ───────────────────────────────────────
@@ -3950,6 +4079,29 @@ app.post('/api/admin/dispatch/generate', async (req, res) => {
   } catch (err) {
     console.error('[/api/admin/dispatch/generate] error:', err.message);
     return res.status(500).json({ error: err.message || 'Generation failed' });
+  }
+});
+
+// POST /api/admin/broadcasts/deliver — run the counselor-broadcast delivery
+// agent on demand (admin only), instead of waiting for the hourly cron. Used
+// by the admin Broadcasts tab's "Send now": the composer has already written
+// the rows, this pushes the notifications for whoever is at their send hour.
+// Idempotent — each delivery row moves out of 'pending' exactly once.
+app.post('/api/admin/broadcasts/deliver', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: 'Server not configured for broadcast delivery' });
+    }
+
+    const totals = await runBroadcastDelivery();
+    return res.json({ ok: true, ...totals });
+  } catch (err) {
+    console.error('[/api/admin/broadcasts/deliver] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Delivery failed' });
   }
 });
 
