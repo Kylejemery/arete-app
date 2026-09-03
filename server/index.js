@@ -4380,7 +4380,9 @@ app.get('/api/library/texts', async (req, res) => {
 });
 
 // GET /api/library/text?author=&work=&page= — full readable text, paginated by
-// chunk range and stripped of Project Gutenberg front/back matter.
+// chunk range. Front/back matter (Gutenberg headers, licences, translators'
+// prefaces and endnotes) is carried in rag_corpus with deprecated = true, so
+// every read here filters on it; nothing is stripped by pattern.
 const LIBRARY_PAGE_CHUNKS = 30;
 app.get('/api/library/text', async (req, res) => {
   try {
@@ -4395,7 +4397,8 @@ app.get('/api/library/text', async (req, res) => {
       .from('rag_corpus')
       .select('id', { count: 'exact', head: true })
       .eq('author', author)
-      .eq('work', work);
+      .eq('work', work)
+      .eq('deprecated', false);
     if (cErr) throw cErr;
 
     const total = count || 0;
@@ -4414,11 +4417,26 @@ app.get('/api/library/text', async (req, res) => {
       .select('chunk_index, chunk_text, section_label, translator, source_url, text_type')
       .eq('author', author)
       .eq('work', work)
+      .eq('deprecated', false)
       .order('chunk_index', { ascending: true })
       .range(fetchFrom, to);
     if (error) throw error;
-    const context = page > 0 ? (rows && rows[0] && rows[0].chunk_text) || null : null;
+    let context = page > 0 ? (rows && rows[0] && rows[0].chunk_text) || null : null;
     const data = page > 0 ? (rows || []).slice(1) : (rows || []);
+    // On the first page the first chunk shown usually follows deprecated front
+    // matter, and its leading overlap duplicates that matter's tail. Fetch the
+    // one row before it — deprecated or not — purely as trimming context. It
+    // is never shown.
+    if (page === 0 && data.length && data[0].chunk_index > 0) {
+      const { data: prev } = await supabase
+        .from('rag_corpus')
+        .select('chunk_text')
+        .eq('author', author)
+        .eq('work', work)
+        .eq('chunk_index', data[0].chunk_index - 1)
+        .maybeSingle();
+      context = (prev && prev.chunk_text) || null;
+    }
     if (data.length === 0) return res.status(404).json({ error: 'Page not found' });
 
     // Apply the admin override (retitle / shelf / era / hidden). A hidden work
@@ -4528,6 +4546,7 @@ app.get('/api/library/outline', async (req, res) => {
         .select('chunk_index, section_label, chunk_text')
         .eq('author', author)
         .eq('work', work)
+        .eq('deprecated', false)
         .order('chunk_index', { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
@@ -4560,6 +4579,7 @@ app.get('/api/library/search', async (req, res) => {
       .from('rag_corpus')
       .select('author, work, chunk_index, chunk_text, section_label')
       .ilike('chunk_text', `%${esc}%`)
+      .eq('deprecated', false)
       .neq('text_type', 'paper_summary')
       .order('author', { ascending: true })
       .order('chunk_index', { ascending: true })
@@ -4583,6 +4603,7 @@ app.get('/api/library/search', async (req, res) => {
         .select('id', { count: 'exact', head: true })
         .eq('author', r.author)
         .eq('work', r.work)
+        .eq('deprecated', false)
         .lt('chunk_index', r.chunk_index)
         .then(({ count }) => count || 0)
         .catch(() => 0)
