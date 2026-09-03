@@ -83,6 +83,17 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Run the odds →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/the-passage">
+          <p className="pg-card-kicker">The Passage</p>
+          <h2>What the crossing costs</h2>
+          <p>
+            The Long Filter asks whether anybody gets through. This one asks what
+            it is like from inside — set the two clocks, then drag the centuries
+            and watch which institutions dissolve, and when.
+          </p>
+          <span className="pg-card-go">Cross it →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
