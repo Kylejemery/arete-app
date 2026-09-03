@@ -5153,12 +5153,14 @@ app.get('/api/library/observatory', async (req, res) => {
 // GET /api/observatory/inquiries — the Inquiry Agent's approved, publicly
 // surfaced open questions for the Observatory sidebar. Only inquiries Kyle has
 // approved AND marked observatory_visible are ever returned; most recent 3.
+// Each carries the whole reading — the pursuit and where the corpus runs out —
+// so the sidebar card can be opened and read in full without a second request.
 // Public (no auth) — same posture as the other Observatory endpoints.
 app.get('/api/observatory/inquiries', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('open_inquiries')
-      .select('id, question, confidence, source_authors, pursuit_passages, inquiry_week')
+      .select('id, question, question_origin, pursuit_text, where_corpus_runs_out, confidence, source_authors, pursuit_passages, inquiry_week')
       .eq('status', 'approved')
       .eq('observatory_visible', true)
       .order('reviewed_at', { ascending: false })
@@ -5178,6 +5180,12 @@ app.get('/api/observatory/inquiries', async (req, res) => {
         confidence: r.confidence,
         authorCount,
         week: r.inquiry_week,
+        // The pursuit is the corpus's own attempt at the question — conjecture,
+        // labelled as such wherever it is shown, never a source text.
+        origin: r.question_origin || null,
+        pursuit: r.pursuit_text || null,
+        whereCorpusRunsOut: r.where_corpus_runs_out || null,
+        authors: r.source_authors || [],
       };
     });
 
@@ -5233,27 +5241,41 @@ app.get('/api/observatory/convergences', async (req, res) => {
 // GET /api/observatory/tensions — the Tension Agent's approved, publicly
 // surfaced philosophical contradictions for the Observatory sidebar. Only
 // tensions Kyle has approved AND marked observatory_visible are ever returned;
-// most recent 4. (The synthesis-sourced "awaiting review" tension cards in
+// most recent 4, each with its full statement, both poles and the lived stakes
+// so the sidebar card can be opened and read in full.
+// (The synthesis-sourced "awaiting review" tension cards in
 // /api/library/observatory remain separate — these are the approved catalogue.)
 // Public (no auth) — same posture as the other Observatory endpoints.
 app.get('/api/observatory/tensions', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('philosophical_tensions')
-      .select('id, title, tension_statement, position_a, position_b, source_authors, tension_week')
+      .select('id, title, tension_statement, position_a, position_b, additional_positions, lived_stakes, tension_type, is_resolvable, resolution_note, source_authors, tension_week')
       .eq('status', 'approved')
       .eq('observatory_visible', true)
       .order('reviewed_at', { ascending: false })
       .limit(4);
     if (error) throw error;
 
+    // A pole as the reader sees it: who holds it, where, and the steelmanned
+    // summary. key_passages are internal chunk ids and never leave the server.
+    const pole = p => (p && (p.author || p.position_summary))
+      ? { author: p.author || null, work: p.work || null, summary: p.position_summary || null }
+      : null;
+
     const tensions = (data || []).map(r => {
-      // First sentence of the statement only — the sidebar names the tension,
-      // it does not argue it.
+      // First sentence of the statement only — the CARD names the tension, it
+      // does not argue it. The full statement rides alongside so the reader can
+      // open the tension and read it whole without a second request.
       const firstSentence = (r.tension_statement || '').split(/(?<=[.!?])\s+/)[0] || '';
       const authors = [
         r.position_a?.author,
         r.position_b?.author,
+      ].filter(Boolean);
+      const positions = [
+        pole(r.position_a),
+        pole(r.position_b),
+        ...(Array.isArray(r.additional_positions) ? r.additional_positions.map(pole) : []),
       ].filter(Boolean);
       return {
         id: r.id,
@@ -5261,6 +5283,13 @@ app.get('/api/observatory/tensions', async (req, res) => {
         firstSentence,
         authors: authors.length >= 2 ? authors : (r.source_authors || []).slice(0, 2),
         week: r.tension_week,
+        statement: r.tension_statement || '',
+        positions,
+        livedStakes: r.lived_stakes || null,
+        tensionType: r.tension_type || null,
+        isResolvable: r.is_resolvable || null,
+        // Only meaningful when the tension is apparent_only / terminological.
+        resolutionNote: r.resolution_note || null,
       };
     });
 
@@ -5280,7 +5309,7 @@ app.get('/api/observatory/world', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('world_observations')
-      .select('id, observation_week, dominant_signal, world_corpus_tension, relevant_authors')
+      .select('id, observation_week, dominant_signal, corpus_response, world_signals, world_corpus_tension, relevant_authors')
       .in('status', ['approved', 'auto_approved'])
       .eq('observatory_visible', true)
       .order('observation_week', { ascending: false })
@@ -5290,10 +5319,23 @@ app.get('/api/observatory/world', async (req, res) => {
     const row = (data || [])[0];
     if (!row) return res.json({ world: null });
 
+    // The other signals the agent weighed before settling on the dominant one —
+    // named only, so the reader can see what the week actually held.
+    const signals = (Array.isArray(row.world_signals) ? row.world_signals : [])
+      .map(s => (s && s.signal)
+        ? { signal: s.signal, category: s.source_category || null }
+        : null)
+      .filter(Boolean)
+      .slice(0, 6);
+
     return res.json({
       world: {
         id: row.id,
         dominantSignal: row.dominant_signal,
+        // The agent's actual answer (400-600 words). The card teases the signal;
+        // this is what the reader opens the card to read.
+        response: row.corpus_response || null,
+        signals,
         tension: row.world_corpus_tension,
         authors: row.relevant_authors || [],
         week: row.observation_week,
