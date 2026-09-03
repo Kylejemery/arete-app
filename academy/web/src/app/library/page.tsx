@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { supabase } from '@/lib/supabase';
 import ReaderView, { type ReaderTarget } from './Reader';
 import { SERIF, SANS, MONO, GOLD, GOLD_L, IVORY, TEXT, MUTED, foldText } from './theme';
@@ -83,11 +83,25 @@ type ObsData = {
   recent: { mostAsked: string[]; tensions: { title: string; concept: string }[]; newIngests: { title: string; concept: string }[]; gaps: string[] };
 };
 
-// An approved, publicly-surfaced open question from the Inquiry Agent.
-type OpenInquiry = { id: string; question: string; confidence: string | null; authorCount: number };
+// An approved, publicly-surfaced open question from the Inquiry Agent. The
+// fields below `authorCount` are the full reading — the pursuit the corpus
+// attempted and where it ran out — shown in the detail overlay. They are
+// optional so an older backend (which sent the teaser alone) still renders.
+type OpenInquiry = {
+  id: string; question: string; confidence: string | null; authorCount: number;
+  origin?: string | null; pursuit?: string | null; whereCorpusRunsOut?: string | null; authors?: string[];
+};
+// A pole of a tension: who holds it, where, and the steelmanned summary.
+type TensionPole = { author: string | null; work: string | null; summary: string | null };
 // An approved, publicly-surfaced philosophical contradiction from the Tension
-// Agent — named, held open, never resolved.
-type OpenTension = { id: string; title: string; firstSentence: string; authors: string[] };
+// Agent — named, held open, never resolved. `firstSentence` names it on the
+// card; everything from `statement` on is the full reading in the overlay,
+// optional for the same backward-compatibility reason as OpenInquiry.
+type OpenTension = {
+  id: string; title: string; firstSentence: string; authors: string[];
+  statement?: string; positions?: TensionPole[]; livedStakes?: string | null;
+  tensionType?: string | null; isResolvable?: string | null; resolutionNote?: string | null;
+};
 // An approved, publicly-surfaced dream from the Dreaming Agent — corpus
 // conjecture, clearly labeled, never the words of any historical thinker.
 type OpenDream = { id: string; dreamType: string; title: string | null; content: string | null; firstLine: string | null; seedAuthors: string[] };
@@ -95,10 +109,38 @@ type OpenDream = { id: string; dreamType: string; title: string | null; content:
 // meditations and thought experiments; the ledger never does). `starred` is
 // the reviewer's mark, not a ranking.
 type FullDream = { id: string; dreamType: string; title: string | null; content: string; seedAuthors: string[]; seedSummary: string | null; starred: boolean; dreamWeek: string | null };
+// The Tension Agent's honest classification, in reader's English.
+const TENSION_TYPE_LABEL: Record<string, string> = {
+  genuine_contradiction: 'Genuine contradiction', contextual_divergence: 'Contextual divergence',
+  terminological: 'Terminological', developmental: 'Developmental',
+};
+const RESOLVABLE_LABEL: Record<string, string> = {
+  no: 'Not resolvable', possibly: 'Possibly resolvable', apparent_only: 'Apparent only',
+};
 const DREAM_TYPE_LABEL: Record<string, string> = {
   aphorism: 'Aphorism', thought_experiment: 'Thought experiment', proposition: 'Proposition', meditation: 'Meditation',
 };
-type WorldResponse = { id: string; dominantSignal: string; tension: string | null; authors: string[]; week: string };
+// The World Agent's weekly reading of the outside world. `response` is the
+// corpus's actual answer to the dominant signal (400-600 words) — the card
+// names the signal, the overlay carries the response.
+type WorldResponse = {
+  id: string; dominantSignal: string; tension: string | null; authors: string[]; week: string;
+  response?: string | null; signals?: { signal: string; category: string | null }[];
+};
+// What the detail overlay is showing. Convergences and dreams have their own
+// overlays already; this one carries the three kinds that had none.
+type FeedDetail =
+  | { kind: 'inquiry'; inquiry: OpenInquiry }
+  | { kind: 'tension'; tension: OpenTension }
+  | { kind: 'world'; world: WorldResponse };
+
+// The detail overlay's per-kind accent and heading, and the two shared bits of
+// chrome it repeats (a classification pill and a section label).
+const DETAIL_ACCENT: Record<FeedDetail['kind'], string> = { inquiry: GOLD, tension: '#d97a6a', world: '#d99a6a' };
+const DETAIL_TAG: Record<FeedDetail['kind'], string> = { inquiry: 'Open inquiry', tension: 'Open tension', world: 'The corpus is responding to' };
+const DETAIL_PILL: CSSProperties = { fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 999, border: '1px solid rgba(201,168,76,0.2)', color: MUTED };
+const DETAIL_LABEL: CSSProperties = { fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, margin: '0 0 6px' };
+
 // The Convergence Agent's conclusions — "The Corpus Concludes". A conclusion the
 // corpus assembled from far-apart passages, never stated in any one of them.
 type OpenConvergence = { id: string; title: string; conclusion: string; entailment: string | null; novelty: string | null; authors: string[]; traditions: string[]; spread: number | null; pursuit: string | null; breakpoint: string | null; starred: boolean };
@@ -1564,6 +1606,11 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
   // breakpoint) so a verbose convergence never has to live inline.
   const [feedFilter, setFeedFilter] = useState<'all' | 'inquiry' | 'tension' | 'conclude' | 'imagines' | 'world'>('all');
   const [activeConv, setActiveConv] = useState<OpenConvergence | null>(null);
+  // Every other feed kind reads in an overlay too. Inquiries, tensions and the
+  // world response used to be inert cards with their line clamped to three
+  // rows, so the reasoning behind them was simply unreachable; `detail` opens
+  // the whole thing.
+  const [detail, setDetail] = useState<FeedDetail | null>(null);
   const [dreamInfoOpen, setDreamInfoOpen] = useState(false);
   // The dream ledger: every approved+visible dream, full text, fetched once
   // on first open. `dreamView` drives the overlay — a single dream (tapped
@@ -1595,6 +1642,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [activeConv]);
+  useEffect(() => {
+    if (!detail) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDetail(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [detail]);
   const [world, setWorld] = useState<WorldResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -1916,10 +1969,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
               for (const q of inquiries) items.push({
                 kind: 'inquiry', key: 'i' + q.id, dot: GOLD, tag: 'Open inquiry', line: q.question,
                 meta: `Pursued across ${q.authorCount} author${q.authorCount === 1 ? '' : 's'}${q.confidence ? ` · ${q.confidence}` : ''}`,
+                onClick: () => setDetail({ kind: 'inquiry', inquiry: q }), cta: 'Read the pursuit →',
               });
               for (const t of tensions) items.push({
                 kind: 'tension', key: 't' + t.id, dot: '#d97a6a', tag: 'Open tension',
                 line: t.title, meta: [t.firstSentence, (t.authors || []).join(' · ')].filter(Boolean).join(' — '),
+                onClick: () => setDetail({ kind: 'tension', tension: t }), cta: 'Read the tension →',
               });
               for (const d of dreams) items.push({
                 kind: 'imagines', key: 'd' + d.id, dot: '#9a7ad9', tag: 'The corpus imagines',
@@ -1930,6 +1985,7 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
               if (world) items.push({
                 kind: 'world', key: 'w', dot: '#d99a6a', tag: 'The corpus is responding to',
                 line: world.dominantSignal, meta: (world.authors || []).slice(0, 3).join(' · '),
+                onClick: () => setDetail({ kind: 'world', world }), cta: 'Read the response →',
               });
 
               if (items.length === 0) {
@@ -2185,6 +2241,186 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* inquiry / tension / world detail: the reading the pane only teased.
+          Each card in the feed clamps to three lines so the pane scans; this
+          overlay is where the whole thing is actually readable. */}
+      {detail && (
+        <div onClick={() => setDetail(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(4,8,18,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} className="lib-fade" style={{ maxWidth: 620, width: '100%', maxHeight: '85vh', overflowY: 'auto', background: 'linear-gradient(170deg,rgba(18,27,54,0.98),rgba(10,16,34,0.98))', border: `1px solid ${DETAIL_ACCENT[detail.kind]}66`, borderRadius: 16, padding: '26px 28px', boxShadow: '0 18px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: DETAIL_ACCENT[detail.kind], boxShadow: `0 0 8px 1px ${DETAIL_ACCENT[detail.kind]}` }} />
+                <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: DETAIL_ACCENT[detail.kind] }}>{DETAIL_TAG[detail.kind]}</span>
+              </div>
+              <button onClick={() => setDetail(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+            </div>
+
+            {detail.kind === 'tension' && (() => {
+              const t = detail.tension;
+              const positions = t.positions ?? [];
+              const body = t.statement || t.firstSentence;
+              return (
+                <>
+                  <h3 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 25, lineHeight: 1.12, color: IVORY, margin: '0 0 12px' }}>{t.title}</h3>
+                  {body && <p style={{ fontFamily: SERIF, fontSize: 17.5, lineHeight: 1.6, color: IVORY, margin: '0 0 16px', whiteSpace: 'pre-wrap' }}>{body}</p>}
+
+                  <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.5, color: MUTED, margin: '0 0 16px', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, padding: '9px 11px' }}>
+                    A contradiction the corpus holds open — two thinkers who cannot both be right, read together and left unreconciled. The corpus does not resolve genuine tensions; it shows you where the fault line runs.
+                  </p>
+
+                  {(t.tensionType || t.isResolvable || (t.authors || []).length > 0) && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                      {t.tensionType && <span style={DETAIL_PILL}>{TENSION_TYPE_LABEL[t.tensionType] || t.tensionType.replace(/_/g, ' ')}</span>}
+                      {t.isResolvable && <span style={DETAIL_PILL}>{RESOLVABLE_LABEL[t.isResolvable] || t.isResolvable.replace(/_/g, ' ')}</span>}
+                      {(t.authors || []).length > 0 && <span style={DETAIL_PILL}>{t.authors.join(' vs ')}</span>}
+                    </div>
+                  )}
+
+                  {positions.map((p, pi) => (
+                    <div key={pi} style={{ borderLeft: '3px solid rgba(217,122,106,0.5)', paddingLeft: 13, marginBottom: 16 }}>
+                      <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, marginBottom: 6 }}>
+                        {[p.author, p.work].filter(Boolean).join(' · ') || `Position ${pi + 1}`}
+                      </div>
+                      {p.summary && <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.6, color: TEXT, margin: 0, whiteSpace: 'pre-wrap' }}>{p.summary}</p>}
+                    </div>
+                  ))}
+
+                  {t.resolutionNote && (
+                    <>
+                      <div style={DETAIL_LABEL}>Why the conflict may be apparent</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.6, color: TEXT, margin: '0 0 18px', whiteSpace: 'pre-wrap' }}>{t.resolutionNote}</p>
+                    </>
+                  )}
+
+                  {t.livedStakes && (
+                    <>
+                      <div style={DETAIL_LABEL}>What it costs to live with</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.62, color: TEXT, margin: '0 0 6px', whiteSpace: 'pre-wrap' }}>{t.livedStakes}</p>
+                    </>
+                  )}
+
+                  {!t.statement && positions.length === 0 && (
+                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, color: MUTED, margin: 0 }}>The full statement of this tension could not be read just now.</p>
+                  )}
+                </>
+              );
+            })()}
+
+            {detail.kind === 'inquiry' && (() => {
+              const q = detail.inquiry;
+              return (
+                <>
+                  <h3 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 25, lineHeight: 1.18, color: IVORY, margin: '0 0 12px' }}>{q.question}</h3>
+
+                  <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.5, color: MUTED, margin: '0 0 16px', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, padding: '9px 11px' }}>
+                    A question the corpus raises but does not answer. The pursuit below is the corpus following its own question — conjecture it composed from its sources, reviewed by a human before appearing here. It is not a source text.
+                  </p>
+
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
+                    {q.confidence && <span style={DETAIL_PILL}>{q.confidence}</span>}
+                    <span style={DETAIL_PILL}>pursued across {q.authorCount} author{q.authorCount === 1 ? '' : 's'}</span>
+                  </div>
+
+                  {q.origin && (
+                    <>
+                      <div style={DETAIL_LABEL}>Where the question came from</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.6, color: TEXT, margin: '0 0 18px', whiteSpace: 'pre-wrap' }}>{q.origin}</p>
+                    </>
+                  )}
+
+                  {q.pursuit && (
+                    <>
+                      <div style={DETAIL_LABEL}>The pursuit</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.62, color: TEXT, margin: '0 0 18px', whiteSpace: 'pre-wrap' }}>{q.pursuit}</p>
+                    </>
+                  )}
+
+                  {q.whereCorpusRunsOut && (
+                    <>
+                      <div style={DETAIL_LABEL}>Where the corpus runs out</div>
+                      <div style={{ background: 'rgba(201,168,76,0.05)', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 10, padding: '12px 14px', marginBottom: 18, fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, lineHeight: 1.55, color: TEXT, whiteSpace: 'pre-wrap' }}>{q.whereCorpusRunsOut}</div>
+                    </>
+                  )}
+
+                  {(q.authors || []).length > 0 && (
+                    <>
+                      <div style={DETAIL_LABEL}>Seeded from</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {(q.authors || []).map(a => (
+                          <span key={a} style={{ fontFamily: SERIF, fontSize: 13.5, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '3px 11px' }}>{a}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {!q.pursuit && !q.whereCorpusRunsOut && (
+                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, color: MUTED, margin: 0 }}>The pursuit behind this question could not be read just now.</p>
+                  )}
+                </>
+              );
+            })()}
+
+            {detail.kind === 'world' && (() => {
+              const w = detail.world;
+              return (
+                <>
+                  <h3 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 25, lineHeight: 1.18, color: IVORY, margin: '0 0 12px' }}>{w.dominantSignal}</h3>
+
+                  <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 12.5, lineHeight: 1.5, color: MUTED, margin: '0 0 16px', border: '1px solid rgba(201,168,76,0.16)', borderRadius: 8, padding: '9px 11px' }}>
+                    Once a week the corpus reads the outside world, takes the signal that matters most philosophically, and answers it from its own sources. The response below is the corpus speaking, reviewed by a human — not the words of any historical thinker.
+                  </p>
+
+                  {w.week && <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}><span style={DETAIL_PILL}>week of {w.week}</span></div>}
+
+                  {w.response && (
+                    <>
+                      <div style={DETAIL_LABEL}>What the corpus has to say</div>
+                      <p style={{ fontFamily: SERIF, fontSize: 15.5, lineHeight: 1.62, color: TEXT, margin: '0 0 18px', whiteSpace: 'pre-wrap' }}>{w.response}</p>
+                    </>
+                  )}
+
+                  {w.tension && (
+                    <>
+                      <div style={DETAIL_LABEL}>Where the world and the corpus pull apart</div>
+                      <div style={{ background: 'rgba(217,154,106,0.06)', border: '1px solid rgba(217,154,106,0.28)', borderRadius: 10, padding: '12px 14px', marginBottom: 18, fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, lineHeight: 1.55, color: TEXT, whiteSpace: 'pre-wrap' }}>{w.tension}</div>
+                    </>
+                  )}
+
+                  {(w.signals || []).length > 0 && (
+                    <>
+                      <div style={DETAIL_LABEL}>Also in view this week</div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+                        {(w.signals || []).map((sig, si) => (
+                          <div key={si} style={{ borderLeft: '3px solid rgba(217,154,106,0.4)', paddingLeft: 11 }}>
+                            <div style={{ fontFamily: SERIF, fontSize: 14.5, lineHeight: 1.45, color: IVORY }}>{sig.signal}</div>
+                            {sig.category && <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.1em', textTransform: 'uppercase', color: MUTED, marginTop: 3 }}>{sig.category.replace(/_/g, ' ')}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {(w.authors || []).length > 0 && (
+                    <>
+                      <div style={DETAIL_LABEL}>Answered from</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {(w.authors || []).map(a => (
+                          <span key={a} style={{ fontFamily: SERIF, fontSize: 13.5, color: IVORY, background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.24)', borderRadius: 999, padding: '3px 11px' }}>{a}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {!w.response && !w.tension && (
+                    <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14.5, color: MUTED, margin: 0 }}>The corpus&rsquo;s response could not be read just now.</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
