@@ -25,6 +25,9 @@ export type Recipient = {
   // 'manual' a permanent one, 'stripe'/'apple' a real subscription.
   premiumSource: 'grant' | 'manual' | 'stripe' | 'apple' | null
   grantExpiresAt: string | null
+  // Which tier a temporary grant is for, so a revoked Pro trial reads as Pro
+  // in the roster. Null for every other entitlement source.
+  grantTier: TierKey | null
 }
 
 export async function GET() {
@@ -55,7 +58,7 @@ export async function GET() {
         .select('id, email, tier, is_premium, is_admin, know_thyself_complete, created_at')
         .order('created_at', { ascending: false }),
       admin.from('user_settings').select('user_id, user_name'),
-      admin.from('subscriptions').select('user_id, billing_source, status, current_period_end'),
+      admin.from('subscriptions').select('user_id, billing_source, tier, status, current_period_end'),
     ])
     if (pErr) throw pErr
 
@@ -63,7 +66,7 @@ export async function GET() {
     // permanent manual row, which outranks a temporary grant.
     type Src = NonNullable<Recipient['premiumSource']>
     const RANK: Record<Src, number> = { stripe: 3, apple: 3, manual: 2, grant: 1 }
-    const source = new Map<string, { src: Src; expiresAt: string | null }>()
+    const source = new Map<string, { src: Src; expiresAt: string | null; tier: TierKey | null }>()
     for (const s of subs ?? []) {
       if (!s.user_id) continue
       let src: Src | null = null
@@ -72,7 +75,11 @@ export async function GET() {
       if (!src) continue
       const prev = source.get(s.user_id)
       if (!prev || RANK[src] > RANK[prev.src]) {
-        source.set(s.user_id, { src, expiresAt: src === 'grant' ? s.current_period_end : null })
+        source.set(s.user_id, {
+          src,
+          expiresAt: src === 'grant' ? s.current_period_end : null,
+          tier: src === 'grant' ? normalizeTier(s.tier, true) : null,
+        })
       }
     }
 
@@ -97,6 +104,7 @@ export async function GET() {
         createdAt: p.created_at ?? null,
         premiumSource: source.get(p.id)?.src ?? null,
         grantExpiresAt: source.get(p.id)?.expiresAt ?? null,
+        grantTier: source.get(p.id)?.tier ?? null,
       }))
 
     const counts: Record<TierKey, number> = { free: 0, premium: 0, pro: 0 }
