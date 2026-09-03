@@ -20,23 +20,47 @@ const WEB_OBSERVATORY_URL = 'https://academy.pursuearete.com/library';
 // other kinds: a conclusion is arrived-at, not found.
 const CONV = '#5ab0c9';
 
+// The World Agent's weekly reading of the outside world. `response` is the
+// corpus's actual answer to the dominant signal (400-600 words) — the card
+// names the signal, the detail sheet carries the response. Everything the sheet
+// reads is optional so a backend that still sends the teaser alone renders.
 interface WorldObservation {
     dominantSignal: string;
-    tension: string;
+    tension: string | null;
     authors: string[];
     week: string;
+    response?: string | null;
+    signals?: { signal: string; category: string | null }[];
 }
+// A pole of a tension: who holds it, where, and the steelmanned summary.
+interface TensionPole {
+    author: string | null;
+    work: string | null;
+    summary: string | null;
+}
+// `firstSentence` names the tension on the card; everything from `statement` on
+// is the full reading in the detail sheet.
 interface Tension {
     id: string;
     title: string;
     firstSentence: string;
     authors: string[];
+    statement?: string;
+    positions?: TensionPole[];
+    livedStakes?: string | null;
+    tensionType?: string | null;
+    isResolvable?: string | null;
+    resolutionNote?: string | null;
 }
 interface Inquiry {
     id: string;
     question: string;
     confidence: string | null;
     authorCount: number;
+    origin?: string | null;
+    pursuit?: string | null;
+    whereCorpusRunsOut?: string | null;
+    authors?: string[];
 }
 interface Dream {
     id: string;
@@ -70,13 +94,35 @@ const KIND_DOT: Record<Kind, string> = {
     conclude: CONV, inquiry: '#c9a84c', tension: '#d97a6a', imagines: '#9a7ad9', world: '#d99a6a',
 };
 
+// What the detail sheet is showing. Convergences have their own sheet already;
+// this one carries the three kinds that had none — their cards used to be inert,
+// with the line clamped to three rows and no way to open them.
+type FeedDetail =
+    | { kind: 'inquiry'; inquiry: Inquiry }
+    | { kind: 'tension'; tension: Tension }
+    | { kind: 'world'; world: WorldObservation };
+
+const DETAIL_TAG: Record<FeedDetail['kind'], string> = {
+    inquiry: 'Open inquiry', tension: 'Open tension', world: 'The corpus is responding to',
+};
+// The Tension Agent's honest classification, in reader's English.
+const TENSION_TYPE_LABEL: Record<string, string> = {
+    genuine_contradiction: 'Genuine contradiction', contextual_divergence: 'Contextual divergence',
+    terminological: 'Terminological', developmental: 'Developmental',
+};
+const RESOLVABLE_LABEL: Record<string, string> = {
+    no: 'Not resolvable', possibly: 'Possibly resolvable', apparent_only: 'Apparent only',
+};
+
 interface FeedItem {
     kind: Kind;
     key: string;
     tag: string;
     line: string;
     meta: string;
+    cta?: string;
     conv?: Convergence;
+    detail?: FeedDetail;
 }
 
 /**
@@ -96,6 +142,7 @@ export default function ObservatoryScreen() {
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<Filter>('all');
     const [activeConv, setActiveConv] = useState<Convergence | null>(null);
+    const [detail, setDetail] = useState<FeedDetail | null>(null);
 
     useEffect(() => {
         (async () => {
@@ -132,14 +179,17 @@ export default function ObservatoryScreen() {
             tag: c.starred ? 'The corpus concludes · starred' : 'The corpus concludes',
             line: c.title,
             meta: `${c.authors.length} voices · spread ${typeof c.spread === 'number' ? c.spread.toFixed(2) : 'n/a'}`,
+            cta: 'READ THE REASONING →',
         });
         for (const q of inquiries) out.push({
             kind: 'inquiry', key: 'i' + q.id, tag: 'Open inquiry', line: q.question,
             meta: `Pursued across ${q.authorCount} ${q.authorCount === 1 ? 'author' : 'authors'}${q.confidence ? `, ${q.confidence}` : ''}`,
+            detail: { kind: 'inquiry', inquiry: q }, cta: 'READ THE PURSUIT →',
         });
         for (const t of tensions) out.push({
             kind: 'tension', key: 't' + t.id, tag: 'Open tension', line: t.title,
             meta: [t.firstSentence, (t.authors || []).join(', ')].filter(Boolean).join(' — '),
+            detail: { kind: 'tension', tension: t }, cta: 'READ THE TENSION →',
         });
         for (const d of dreams) out.push({
             kind: 'imagines', key: 'd' + d.id, tag: 'The corpus imagines',
@@ -149,6 +199,7 @@ export default function ObservatoryScreen() {
         if (world) out.push({
             kind: 'world', key: 'w', tag: 'The corpus is responding to', line: world.dominantSignal,
             meta: (world.authors || []).slice(0, 3).join(', '),
+            detail: { kind: 'world', world }, cta: 'READ THE RESPONSE →',
         });
         return out;
     }, [convergences, inquiries, tensions, dreams, world]);
@@ -232,16 +283,21 @@ export default function ObservatoryScreen() {
                                             </View>
                                         )}
                                         {!!it.meta && <Text style={styles.feedMeta} numberOfLines={2}>{it.meta}</Text>}
-                                        {it.kind === 'conclude' && (
-                                            <Text style={styles.feedCta}>READ THE REASONING →</Text>
-                                        )}
+                                        {!!it.cta && <Text style={styles.feedCta}>{it.cta}</Text>}
                                     </>
                                 );
-                                return it.conv ? (
+                                // Every kind that has a reading behind it opens
+                                // one; the card scans, the sheet reads.
+                                const open = it.conv
+                                    ? () => setActiveConv(it.conv!)
+                                    : it.detail
+                                        ? () => setDetail(it.detail!)
+                                        : null;
+                                return open ? (
                                     <TouchableOpacity
                                         key={it.key}
                                         activeOpacity={0.85}
-                                        onPress={() => setActiveConv(it.conv!)}
+                                        onPress={open}
                                         style={[styles.feedCard, { borderLeftColor: dot }]}
                                     >
                                         {body}
@@ -335,7 +391,191 @@ export default function ObservatoryScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* inquiry / tension / world detail — the reading the feed only
+                teased. Each card clamps to three lines so the feed scans; this
+                sheet is where the whole thing is actually readable. */}
+            <Modal
+                visible={!!detail}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setDetail(null)}
+            >
+                <View style={styles.modalScrim}>
+                    <View style={[styles.modalCard, { borderColor: `${KIND_DOT[detail?.kind ?? 'tension']}66` }]}>
+                        <View style={styles.modalHead}>
+                            <View style={styles.tagRow}>
+                                <View style={[styles.tagDot, { backgroundColor: KIND_DOT[detail?.kind ?? 'tension'] }]} />
+                                <Text style={[styles.tagText, { color: KIND_DOT[detail?.kind ?? 'tension'] }]}>
+                                    {detail ? DETAIL_TAG[detail.kind].toUpperCase() : ''}
+                                </Text>
+                            </View>
+                            <TouchableOpacity onPress={() => setDetail(null)} hitSlop={10}>
+                                <Ionicons name="close" size={22} color="#888" />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            {!!detail && <FeedDetailBody detail={detail} />}
+                            <View style={{ height: 24 }} />
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
+    );
+}
+
+/**
+ * The body of the detail sheet, one branch per kind. Each carries the framing
+ * line its layer requires: a tension is held open and never resolved; a pursuit
+ * and a world response are the corpus speaking, not a source text. Every field
+ * below the teaser is optional, so a backend still sending the short payload
+ * shows what it has and says the rest could not be read.
+ */
+function FeedDetailBody({ detail }: { detail: FeedDetail }) {
+    if (detail.kind === 'tension') {
+        const t = detail.tension;
+        const positions = t.positions ?? [];
+        const body = t.statement || t.firstSentence;
+        return (
+            <>
+                <Text style={styles.modalTitle}>{t.title}</Text>
+                {!!body && <Text style={styles.modalConclusion}>{body}</Text>}
+                <Text style={styles.modalDisclose}>
+                    A contradiction the corpus holds open — two thinkers who cannot both be right, read together and left unreconciled. The corpus does not resolve genuine tensions; it shows you where the fault line runs.
+                </Text>
+                <View style={styles.pillRow}>
+                    {!!t.tensionType && (
+                        <Text style={styles.pill}>{TENSION_TYPE_LABEL[t.tensionType] || t.tensionType.replace(/_/g, ' ')}</Text>
+                    )}
+                    {!!t.isResolvable && (
+                        <Text style={styles.pill}>{RESOLVABLE_LABEL[t.isResolvable] || t.isResolvable.replace(/_/g, ' ')}</Text>
+                    )}
+                    {!!(t.authors || []).length && <Text style={styles.pill}>{t.authors.join(' vs ')}</Text>}
+                </View>
+                {positions.map((p, pi) => (
+                    <View key={pi} style={styles.poleBlock}>
+                        <Text style={styles.poleHead}>
+                            {([p.author, p.work].filter(Boolean).join(' · ') || `Position ${pi + 1}`).toUpperCase()}
+                        </Text>
+                        {!!p.summary && <Text style={styles.poleText}>{p.summary}</Text>}
+                    </View>
+                ))}
+                {!!t.resolutionNote && (
+                    <>
+                        <Text style={styles.modalLabel}>WHY THE CONFLICT MAY BE APPARENT</Text>
+                        <Text style={styles.pursuitText}>{t.resolutionNote}</Text>
+                    </>
+                )}
+                {!!t.livedStakes && (
+                    <>
+                        <Text style={styles.modalLabel}>WHAT IT COSTS TO LIVE WITH</Text>
+                        <Text style={styles.pursuitText}>{t.livedStakes}</Text>
+                    </>
+                )}
+                {!t.statement && positions.length === 0 && (
+                    <Text style={styles.quiet}>The full statement of this tension could not be read just now.</Text>
+                )}
+            </>
+        );
+    }
+
+    if (detail.kind === 'inquiry') {
+        const q = detail.inquiry;
+        return (
+            <>
+                <Text style={styles.modalTitle}>{q.question}</Text>
+                <Text style={styles.modalDisclose}>
+                    A question the corpus raises but does not answer. The pursuit below is the corpus following its own question — conjecture it composed from its sources, reviewed by a human before appearing here. It is not a source text.
+                </Text>
+                <View style={styles.pillRow}>
+                    {!!q.confidence && <Text style={styles.pill}>{q.confidence}</Text>}
+                    <Text style={styles.pill}>
+                        pursued across {q.authorCount} {q.authorCount === 1 ? 'author' : 'authors'}
+                    </Text>
+                </View>
+                {!!q.origin && (
+                    <>
+                        <Text style={styles.modalLabel}>WHERE THE QUESTION CAME FROM</Text>
+                        <Text style={styles.pursuitText}>{q.origin}</Text>
+                    </>
+                )}
+                {!!q.pursuit && (
+                    <>
+                        <Text style={styles.modalLabel}>THE PURSUIT</Text>
+                        <Text style={styles.pursuitText}>{q.pursuit}</Text>
+                    </>
+                )}
+                {!!q.whereCorpusRunsOut && (
+                    <>
+                        <Text style={styles.modalLabel}>WHERE THE CORPUS RUNS OUT</Text>
+                        <View style={styles.breakBox}>
+                            <Text style={styles.breakText}>{q.whereCorpusRunsOut}</Text>
+                        </View>
+                    </>
+                )}
+                {!!(q.authors || []).length && (
+                    <>
+                        <Text style={styles.modalLabel}>SEEDED FROM</Text>
+                        <Text style={styles.assembled}>{(q.authors || []).join(' · ')}</Text>
+                    </>
+                )}
+                {!q.pursuit && !q.whereCorpusRunsOut && (
+                    <Text style={styles.quiet}>The pursuit behind this question could not be read just now.</Text>
+                )}
+            </>
+        );
+    }
+
+    const w = detail.world;
+    return (
+        <>
+            <Text style={styles.modalTitle}>{w.dominantSignal}</Text>
+            <Text style={styles.modalDisclose}>
+                Once a week the corpus reads the outside world, takes the signal that matters most philosophically, and answers it from its own sources. The response below is the corpus speaking, reviewed by a human — not the words of any historical thinker.
+            </Text>
+            {!!w.week && (
+                <View style={styles.pillRow}>
+                    <Text style={styles.pill}>week of {w.week}</Text>
+                </View>
+            )}
+            {!!w.response && (
+                <>
+                    <Text style={styles.modalLabel}>WHAT THE CORPUS HAS TO SAY</Text>
+                    <Text style={styles.pursuitText}>{w.response}</Text>
+                </>
+            )}
+            {!!w.tension && (
+                <>
+                    <Text style={styles.modalLabel}>WHERE THE WORLD AND THE CORPUS PULL APART</Text>
+                    <View style={[styles.breakBox, { backgroundColor: '#d99a6a10', borderColor: '#d99a6a47' }]}>
+                        <Text style={styles.breakText}>{w.tension}</Text>
+                    </View>
+                </>
+            )}
+            {!!(w.signals || []).length && (
+                <>
+                    <Text style={styles.modalLabel}>ALSO IN VIEW THIS WEEK</Text>
+                    {(w.signals || []).map((sig, si) => (
+                        <View key={si} style={[styles.poleBlock, { borderLeftColor: '#d99a6a66' }]}>
+                            <Text style={styles.assembled}>{sig.signal}</Text>
+                            {!!sig.category && (
+                                <Text style={styles.feedMeta}>{sig.category.replace(/_/g, ' ').toUpperCase()}</Text>
+                            )}
+                        </View>
+                    ))}
+                </>
+            )}
+            {!!(w.authors || []).length && (
+                <>
+                    <Text style={styles.modalLabel}>ANSWERED FROM</Text>
+                    <Text style={styles.assembled}>{(w.authors || []).join(' · ')}</Text>
+                </>
+            )}
+            {!w.response && !w.tension && (
+                <Text style={styles.quiet}>The corpus&apos;s response could not be read just now.</Text>
+            )}
+        </>
     );
 }
 
@@ -411,6 +651,9 @@ const styles = StyleSheet.create({
     breakBox: { backgroundColor: '#5ab0c910', borderWidth: 1, borderColor: '#5ab0c93a', borderRadius: 10, padding: 13 },
     breakText: { color: '#e8e4d6', fontSize: 14, fontStyle: 'italic', lineHeight: 21 },
     pursuitText: { color: '#e8e4d6', fontSize: 15, lineHeight: 24 },
+    poleBlock: { borderLeftWidth: 3, borderLeftColor: '#d97a6a80', paddingLeft: 12, marginTop: 14 },
+    poleHead: { color: '#c9a84c', fontSize: 9, fontWeight: '700', letterSpacing: 1.2, marginBottom: 6 },
+    poleText: { color: '#e8e4d6', fontSize: 15, lineHeight: 23 },
     assembled: { color: '#f4ead5', fontSize: 14, lineHeight: 22 },
 
     webLink: {
