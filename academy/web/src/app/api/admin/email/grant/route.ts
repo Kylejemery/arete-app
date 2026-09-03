@@ -4,17 +4,18 @@ import { createAdminClient } from '@/lib/supabase-admin'
 
 export const dynamic = 'force-dynamic'
 
-// Temporary Premium grants from the admin Email tab. Both halves live in
-// Postgres (see the manual_premium_grants migration): grant_manual_premium
-// writes the manual subscriptions row + flips the profile in one transaction,
-// expire_manual_grants deletes a grant and downgrades the profile only when
-// no other entitlement (Stripe, Apple, permanent manual) remains. A pg_cron
-// job runs the sweep every 30 minutes; the recipients route also runs it on
-// every load as a safety net.
+// Temporary Premium/Pro grants from the admin Email tab. Both halves live in
+// Postgres (see the manual_premium_grants and manual_pro_grants migrations):
+// grant_manual_tier writes the manual subscriptions row + flips the profile in
+// one transaction, expire_manual_grants deletes a grant and downgrades the
+// profile only when no other entitlement (Stripe, Apple, permanent manual)
+// remains. A pg_cron job runs the sweep every 30 minutes; the recipients route
+// also runs it on every load as a safety net.
 
 const MAX_DAYS = 365
+type GrantTier = 'premium' | 'pro'
 
-type Body = { action?: 'grant' | 'revoke'; userId?: string; days?: number }
+type Body = { action?: 'grant' | 'revoke'; userId?: string; days?: number; tier?: string }
 
 export async function POST(req: Request) {
   const supabase = await createClient()
@@ -53,14 +54,25 @@ export async function POST(req: Request) {
     if (!Number.isFinite(days) || days < 1 || days > MAX_DAYS) {
       return NextResponse.json({ error: `days must be between 1 and ${MAX_DAYS}` }, { status: 400 })
     }
-    const { data, error } = await admin.rpc('grant_manual_premium', { p_user_id: userId, p_days: days })
+    // Absent tier means Premium, which is what the tab could grant before Pro
+    // grants existed.
+    const requested = body.tier ?? 'premium'
+    if (requested !== 'premium' && requested !== 'pro') {
+      return NextResponse.json({ error: 'tier must be "premium" or "pro"' }, { status: 400 })
+    }
+    const tier: GrantTier = requested
+    const { data, error } = await admin.rpc('grant_manual_tier', {
+      p_user_id: userId,
+      p_days: days,
+      p_tier: tier,
+    })
     if (error) {
       // The function raises a plain-text message for the two expected refusals
       // (unknown user, user already entitled); surface those as 409.
       const conflict = /already|not found/i.test(error.message)
       return NextResponse.json({ error: error.message }, { status: conflict ? 409 : 500 })
     }
-    return NextResponse.json({ ok: true, expiresAt: data })
+    return NextResponse.json({ ok: true, expiresAt: data, tier })
   }
 
   return NextResponse.json({ error: 'action must be "grant" or "revoke"' }, { status: 400 })
