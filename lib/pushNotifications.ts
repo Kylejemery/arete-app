@@ -37,10 +37,19 @@ export async function registerForPushNotifications(
       return null;
     }
 
-    // Android channel must exist before notifications can use it.
+    // Android channels must exist before notifications can use them. Both are
+    // (re)created on every registration, so a member who installed before a
+    // channel existed picks it up on their next launch.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('daily-dispatch', {
         name: 'Daily Dispatch',
+        importance: Notifications.AndroidImportance.DEFAULT,
+        vibrationPattern: [0, 250, 250, 250],
+      });
+      // Broadcasts: a message from a counselor, separable in Android settings
+      // from the morning dispatch because it is a different kind of thing.
+      await Notifications.setNotificationChannelAsync('counselor-messages', {
+        name: 'Messages from your Cabinet',
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 250, 250, 250],
       });

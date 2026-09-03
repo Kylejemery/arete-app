@@ -1,19 +1,26 @@
 // Counselor lines that arrive as notifications (reminders scheduled in
-// Settings, Attend nudges fired by the Screen Time extension) are messages
-// FROM a counselor: each one is seeded into the Cabinet thread so the
-// notification becomes the opening of a conversation.
+// Settings, Attend nudges fired by the Screen Time extension, broadcasts sent
+// from the admin console) are messages FROM a counselor: each one is seeded
+// into the Cabinet thread so the notification becomes the opening of a
+// conversation.
 //
 // A notification tapped, or delivered while the app is open, seeds itself.
 // One that fired while the app was closed and was then opened from the home
-// screen never reaches JS at all, so on every foreground we also recover
-// what was missed from three places: crossings the extension recorded,
-// notifications still in the tray, and scheduled reminders whose time has
-// passed since the last check. Every path dedupes on one id per delivery.
+// screen never reaches JS at all, so on every foreground we also recover what
+// was missed from four places: broadcasts the server says this member is
+// still owed, crossings the extension recorded, notifications still in the
+// tray, and scheduled reminders whose time has passed since the last check.
+// Every path dedupes on one id per delivery.
+//
+// Broadcasts are the one source that does not depend on a notification at
+// all — the server owes each one until the app acknowledges it — because most
+// members never grant notification permission.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { DeviceEventEmitter, Platform } from 'react-native';
 import { appendMessages } from '../services/threadService';
 import { getPendingAttendLines } from './attend';
+import { acknowledgeBroadcasts, fetchPendingBroadcasts } from './broadcasts';
 import { getUserCabinet } from './db';
 
 export const CABINET_THREAD_UPDATED = 'cabinet-thread-updated';
@@ -52,6 +59,10 @@ function deliveryId(n: Notifications.Notification): string {
   const data: any = n.request?.content?.data;
   const when = Number((n as any)?.date) || Date.now();
   const day = dayKey(new Date(when));
+  // Broadcasts: one message to the whole membership, so dedupe on its id —
+  // the same key the server-owed sweep uses. A member who taps the push and a
+  // member who only ever sees the Cabinet post both end up with one line.
+  if (typeof data?.broadcastId === 'string') return `broadcast:${data.broadcastId}`;
   // Attend nudges: the same id the crossing-based recovery uses.
   if (typeof data?.attendEvent === 'string') return `attend:${data.attendEvent}:${day}`;
   return `${n.request?.identifier || 'n'}:${day}`;
@@ -62,7 +73,11 @@ export async function seedFromNotification(n: Notifications.Notification | null 
   const data: any = n?.request?.content?.data;
   if (!n || !data?.seedMessage || !data?.counselorName) return false;
   const when = Number((n as any)?.date) || Date.now();
-  return seedCounselorLine(deliveryId(n), String(data.counselorName), String(data.seedMessage), when);
+  const seeded = await seedCounselorLine(deliveryId(n), String(data.counselorName), String(data.seedMessage), when);
+  // Acknowledge even when the line was already there: an unacknowledged
+  // broadcast is served again by the pending sweep, and this is what ends it.
+  if (typeof data.broadcastId === 'string') await acknowledgeBroadcasts([data.broadcastId]);
+  return seeded;
 }
 
 // expo-notifications reports an iOS calendar trigger's components under
@@ -80,11 +95,26 @@ function calendarParts(trigger: any): { weekday?: number; hour?: number; minute?
  * were added.
  */
 export async function seedMissedCounselorLines(): Promise<number> {
-  if (Platform.OS === 'web') return 0;
   let added = 0;
   const now = Date.now();
 
-  // 1. Attend crossings the Screen Time extension recorded today.
+  // 1. Broadcasts the server says this member is still owed. Deliberately
+  //    outside the platform guard below and independent of notification
+  //    permission: for a broadcast the Cabinet post *is* the delivery.
+  try {
+    const pending = await fetchPendingBroadcasts();
+    const collected: string[] = [];
+    for (const b of pending) {
+      if (await seedCounselorLine(`broadcast:${b.id}`, b.counselorName, b.message, b.at)) added++;
+      collected.push(b.id);
+    }
+    if (collected.length > 0) await acknowledgeBroadcasts(collected);
+  } catch { /* offline — the next foreground sweeps again */ }
+
+  // Everything below recovers notifications, which has no web equivalent.
+  if (Platform.OS === 'web') return added;
+
+  // 2. Attend crossings the Screen Time extension recorded today.
   try {
     let names: string[] = [];
     try { names = (await getUserCabinet()).map(c => c.name).filter(Boolean); } catch { /* defaults */ }
@@ -93,14 +123,14 @@ export async function seedMissedCounselorLines(): Promise<number> {
     }
   } catch { /* no extension on this build */ }
 
-  // 2. Delivered notifications still sitting in Notification Center.
+  // 3. Delivered notifications still sitting in Notification Center.
   try {
     for (const n of await Notifications.getPresentedNotificationsAsync()) {
       if (await seedFromNotification(n)) added++;
     }
   } catch { /* permissions or platform */ }
 
-  // 3. Repeating reminders whose time today has passed since the last check
+  // 4. Repeating reminders whose time today has passed since the last check
   //    (covers a tray the user cleared). The first run only records the
   //    clock, so a reminder scheduled after its slot is not seeded as missed.
   try {

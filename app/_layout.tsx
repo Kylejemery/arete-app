@@ -64,12 +64,11 @@ function NotificationTapHandler() {
   const navState = useRootNavigationState();
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
     if (!navState?.key) return; // navigation tree not mounted yet
 
-    // Counselor reminders and Attend nudges are messages FROM a counselor:
-    // seed the line into the Cabinet thread (once per delivery) so the
-    // notification becomes the opening of a conversation the user can
+    // Counselor reminders, Attend nudges and broadcasts are messages FROM a
+    // counselor: seed the line into the Cabinet thread (once per delivery) so
+    // the notification becomes the opening of a conversation the user can
     // continue in the chat. Lines that fired while the app was closed and
     // were never tapped are recovered on every foreground (see
     // lib/counselorLines): the badge on the icon must always have its
@@ -83,6 +82,11 @@ function NotificationTapHandler() {
         .catch(() => {});
     };
     recover();
+
+    // Everything below is notification plumbing, which web has none of. The
+    // broadcast sweep inside recover() is not — a broadcast is owed whether or
+    // not the platform can carry a notification — so it runs above this guard.
+    if (Platform.OS === 'web') return;
 
     const route = (data: any) => {
       if (data?.type === 'daily_dispatch') {
