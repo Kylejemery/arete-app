@@ -114,6 +114,7 @@ restart loop. `Root Directory` is `server` for every service.
 | Journal Analysis | `node journal-analysis-agent.js` | `0 9 * * *` (daily 09:00) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
 | Dispatch Generation | `node dispatch-generation-agent.js` | `0 10 * * *` (daily 10:00) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
 | Dispatch Delivery | `node dispatch-delivery-agent.js` | `0 * * * *` (hourly) | — |
+| Broadcast Delivery | `node broadcast-delivery-agent.js` | `0 * * * *` (hourly) | — |
 | World | `node world-agent.js` | `30 3 * * 1` (Mon 03:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
 | Tension | `node agents/tension-agent.js` | `30 5 * * 1` (Mon 05:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
 | Inquiry | `node agents/inquiry-agent.js` | `30 6 * * 1` (Mon 06:30) | `CLAUDE_API_KEY`, `OPENAI_API_KEY` |
@@ -147,5 +148,5 @@ portrait from week-old data.
 >
 > A new service needs its Config-as-code path set once, at creation.
 
-See `JOURNAL_AGENT.md`, `COVERAGE_GAP_AGENT.md`, `DISPATCH_AGENT.md`, and
-`SYNTHESIS_AGENT.md` for individual agent details.
+See `JOURNAL_AGENT.md`, `COVERAGE_GAP_AGENT.md`, `DISPATCH_AGENT.md`,
+`BROADCAST_AGENT.md`, and `SYNTHESIS_AGENT.md` for individual agent details.
