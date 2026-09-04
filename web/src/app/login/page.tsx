@@ -15,6 +15,7 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -242,14 +243,36 @@ function LoginForm() {
                 <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">
                   Password
                 </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 pr-12 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(v => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute inset-y-0 right-3 flex items-center text-arete-muted hover:text-arete-text transition-colors"
+                  >
+                    {showPassword ? (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
                 {mode === 'signin' && (
                   <div className="flex justify-end mt-2">
                     <button
@@ -270,7 +293,7 @@ function LoginForm() {
                     Confirm Password
                   </label>
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={e => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"

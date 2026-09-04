@@ -12,6 +12,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
 import { getLocales } from 'expo-localization';
 import { supabase } from '@/lib/supabase';
+import { refreshTier } from '@/lib/useSubscription';
 
 // External-purchase links are permitted without an entitlement ONLY on the US
 // storefront (App Review Guideline 3.1.1a). Elsewhere (incl. EU/DMA terms)
@@ -143,8 +144,15 @@ export default function PaywallScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openWebCheckout = () => {
-    WebBrowser.openBrowserAsync(UPGRADE_URL).catch(() => {});
+  // openBrowserAsync resolves when the in-app browser is dismissed. On iOS
+  // SFSafariViewController never backgrounds the app, so the AppState
+  // foreground refresh does not fire — re-read entitlement here so a user who
+  // just paid comes back to an unlocked app instead of the same locks.
+  const openWebCheckout = async () => {
+    try {
+      await WebBrowser.openBrowserAsync(UPGRADE_URL);
+    } catch { /* browser failed to open; nothing to refresh */ }
+    refreshTier();
   };
 
   return (
