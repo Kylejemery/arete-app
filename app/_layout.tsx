@@ -10,6 +10,7 @@ import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
 import { seedFromNotification, seedMissedCounselorLines } from '@/lib/counselorLines';
+import { fetchUpdateInBackground } from '@/lib/otaUpdates';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Normally started by index.ts before anything else loads; this is a
@@ -119,10 +120,12 @@ function NotificationTapHandler() {
     // The icon badge means "a counselor is waiting": clear it whenever the
     // app comes to the foreground.
     Notifications.setBadgeCountAsync(0).catch(() => {});
+    fetchUpdateInBackground();
     const appStateSub = AppState.addEventListener('change', (s) => {
       if (s === 'active') {
         recover();
         Notifications.setBadgeCountAsync(0).catch(() => {});
+        fetchUpdateInBackground();
       }
     });
 
