@@ -1,51 +1,150 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getEnrollment } from '@/lib/db';
+import { TIER_LABEL, useEntitlement, type AreteTier } from '@/lib/entitlement';
 import { Card, CardLabel } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Topbar from '@/components/navigation/Topbar';
-import type { Enrollment, Tier } from '@/types';
+import type { Enrollment } from '@/types';
 
-const TIER_DETAILS: Record<Tier, { label: string; price: string; agents: string[]; description: string }> = {
-  auditor: {
-    label: 'Auditor',
-    price: '$19/mo',
-    agents: ['Socratic Proctor'],
-    description: 'Access to PHIL 701 and the Socratic Proctor. The beginning of the examined life.',
+// What each standing includes, in the Academy's own terms. Prices match the
+// Stripe products shared with app.pursuearete.com.
+const STANDING: Record<AreteTier, { price: string; includes: string[]; description: string }> = {
+  free: {
+    price: 'Free',
+    description: 'The beginning of the examined life: the first course and the daily practices.',
+    includes: [
+      'PHIL 701 — The Art of Living',
+      'The Lexicon and the Vocab Drill',
+      'The Daily Examination',
+      'The Courtyard',
+      'The Library — every primary text, in full',
+      '5 Symposium dialogues a day',
+    ],
   },
-  scholar: {
-    label: 'Scholar',
-    price: '$39/mo',
-    agents: ['Socratic Proctor', 'The Archivist', 'The Examiner'],
-    description: 'Full curriculum and three agents. You are now a serious student.',
+  premium: {
+    price: '$9.99/mo or $79.99/yr',
+    description: 'The full curriculum and the tools of a serious student.',
+    includes: [
+      'Everything in Free',
+      'PHIL 702–707, the logic and language tracks',
+      'The Practicum, Papers, Composer, and Dissertation',
+      'The corpus writes in the margins of the Library',
+      '50 Symposium dialogues a day',
+      'In the Arete app: all 23 counselors, 50 messages a day',
+    ],
   },
-  fellow: {
-    label: 'Fellow',
-    price: '$79/mo',
-    agents: ['All five agents', 'The Interlocutor'],
-    description: 'The complete formation experience. No restrictions.',
+  pro: {
+    price: '$19.99/mo',
+    description: 'Everything, without limits.',
+    includes: [
+      'Everything in Premium',
+      'Unlimited Symposium dialogues',
+      'In the Arete app: unlimited messages, deepest reasoning, model choice',
+    ],
   },
 };
 
-export default function ProfilePage() {
+type Plan = 'monthly' | 'yearly' | 'pro';
+
+const PLANS: { key: Plan; name: string; price: string; note: string; best?: boolean }[] = [
+  { key: 'monthly', name: 'Premium Monthly', price: '$9.99 / month', note: 'Full curriculum. Cancel anytime.' },
+  { key: 'yearly', name: 'Premium Yearly', price: '$79.99 / year', note: 'Two months free.', best: true },
+  { key: 'pro', name: 'Pro', price: '$19.99 / month', note: 'No limits, in the Academy or the app.' },
+];
+
+function ProfileContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const status = searchParams.get('status');
+  const { tier, isPremium, isAdmin, loading: entitlementLoading } = useEntitlement();
+
   const [email, setEmail] = useState('');
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [loaded, setLoaded] = useState(false);
+
+  const [busy, setBusy] = useState<Plan | 'portal' | 'password' | 'signout' | null>(null);
+  const [billingError, setBillingError] = useState<string | null>(null);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) setEmail(user.email ?? '');
-      const enroll = await getEnrollment();
-      setEnrollment(enroll);
+      setEnrollment(await getEnrollment());
       setLoaded(true);
     }
     load();
   }, []);
 
-  if (!loaded) {
+  const startCheckout = async (plan: Plan) => {
+    setBillingError(null);
+    setBusy(plan);
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Checkout failed');
+      window.location.assign(data.url);
+    } catch (e) {
+      setBillingError(e instanceof Error ? e.message : 'Checkout failed. Please try again.');
+      setBusy(null);
+    }
+  };
+
+  const openPortal = async () => {
+    setBillingError(null);
+    setBusy('portal');
+    try {
+      const res = await fetch('/api/billing/portal', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error ?? 'Could not open billing portal');
+      window.location.assign(data.url);
+    } catch (e) {
+      setBillingError(e instanceof Error ? e.message : 'Could not open billing portal.');
+      setBusy(null);
+    }
+  };
+
+  const changePassword = async () => {
+    setPasswordMessage(null);
+    if (newPassword.length < 6) {
+      setPasswordMessage({ ok: false, text: 'Password must be at least 6 characters.' });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ ok: false, text: 'Passwords do not match.' });
+      return;
+    }
+    setBusy('password');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setBusy(null);
+    if (error) {
+      setPasswordMessage({ ok: false, text: error.message });
+      return;
+    }
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordMessage({ ok: true, text: 'Password updated.' });
+  };
+
+  const signOut = async () => {
+    setBusy('signout');
+    await supabase.auth.signOut();
+    router.replace('/login');
+  };
+
+  if (!loaded || entitlementLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <p className="text-academy-muted italic text-sm">Loading profile...</p>
@@ -53,8 +152,7 @@ export default function ProfilePage() {
     );
   }
 
-  const tier = (enrollment?.tier ?? 'auditor') as Tier;
-  const tierDetails = TIER_DETAILS[tier];
+  const standing = STANDING[tier];
   const enrolledDate = enrollment?.enrolled_at
     ? new Date(enrollment.enrolled_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : 'Unknown';
@@ -63,22 +161,74 @@ export default function ProfilePage() {
     <div>
       <Topbar title="Student Profile" subtitle="Know thyself" />
 
+      {status === 'success' && (
+        <div className="mb-6 rounded-lg border border-academy-gold/50 bg-academy-card p-5">
+          <p className="text-academy-gold font-semibold mb-1">Welcome to Arete Premium.</p>
+          <p className="text-academy-muted text-sm">
+            Your subscription is active. It can take a few seconds for your standing to update — refresh if you don&apos;t see it yet.
+          </p>
+        </div>
+      )}
+      {status === 'cancelled' && (
+        <div className="mb-6 rounded-lg border border-academy-border bg-academy-card p-5">
+          <p className="text-academy-text font-semibold mb-1">Checkout cancelled.</p>
+          <p className="text-academy-muted text-sm">No charge was made. The plans below will be waiting whenever you&apos;re ready.</p>
+        </div>
+      )}
+      {billingError && <p className="text-red-400 text-sm mb-6">{billingError}</p>}
+
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Account Info */}
+        {/* Account */}
         <Card>
           <CardLabel>Account</CardLabel>
           <p className="text-academy-text text-sm font-medium mb-1">{email}</p>
           <p className="text-academy-muted text-xs">Enrolled {enrolledDate}</p>
+
           <div className="mt-4 pt-4 border-t border-academy-border">
-            <p className="text-academy-muted text-xs mb-3">
-              Account settings and password changes are managed through your Arete account.
+            <p className="text-academy-muted text-xs uppercase tracking-wider mb-2">Change password</p>
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="New password"
+                  autoComplete="new-password"
+                  className="w-full bg-academy-bg border border-academy-border rounded-lg px-3 py-2 pr-16 text-sm text-academy-text placeholder:text-academy-muted focus:outline-none focus:border-academy-gold"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute inset-y-0 right-3 text-xs text-academy-muted hover:text-academy-text"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Confirm new password"
+                autoComplete="new-password"
+                className="w-full bg-academy-bg border border-academy-border rounded-lg px-3 py-2 text-sm text-academy-text placeholder:text-academy-muted focus:outline-none focus:border-academy-gold"
+              />
+              {passwordMessage && (
+                <p className={`text-xs ${passwordMessage.ok ? 'text-academy-gold' : 'text-red-400'}`}>{passwordMessage.text}</p>
+              )}
+              <Button size="sm" variant="ghost" onClick={changePassword} disabled={busy === 'password' || !newPassword}>
+                {busy === 'password' ? 'Saving…' : 'Update password'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-academy-border flex items-center justify-between">
+            <p className="text-academy-muted text-xs">
+              To delete your account, use the Arete app: Settings → Delete account.
             </p>
-            <a
-              href="https://areteapp.com/settings"
-              className="text-academy-gold text-xs hover:opacity-80 transition-opacity"
-            >
-              Manage account settings →
-            </a>
+            <Button size="sm" variant="danger" onClick={signOut} disabled={busy === 'signout'}>
+              Sign out
+            </Button>
           </div>
         </Card>
 
@@ -87,22 +237,20 @@ export default function ProfilePage() {
           <CardLabel>Academic Standing</CardLabel>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="font-serif text-2xl text-academy-text">{tierDetails.label}</p>
-              <p className="text-academy-gold text-sm">{tierDetails.price}</p>
+              <p className="font-serif text-2xl text-academy-text">{TIER_LABEL[tier]}</p>
+              <p className="text-academy-gold text-sm">{standing.price}</p>
             </div>
-            <div className="text-3xl">🎓</div>
+            <div className="text-3xl">{isPremium ? '🎓' : '📜'}</div>
           </div>
-          <p className="text-academy-muted text-sm leading-relaxed mb-4">{tierDetails.description}</p>
-          <div>
-            <p className="text-academy-muted text-xs uppercase tracking-wider mb-2">Available Agents</p>
-            <div className="flex flex-wrap gap-2">
-              {tierDetails.agents.map(a => (
-                <span key={a} className="text-xs border border-academy-border rounded-full px-3 py-1 text-academy-text">
-                  {a}
-                </span>
-              ))}
-            </div>
-          </div>
+          <p className="text-academy-muted text-sm leading-relaxed mb-4">{standing.description}</p>
+          <ul className="text-academy-text text-sm space-y-1.5">
+            {standing.includes.map(line => (
+              <li key={line} className="flex gap-2"><span className="text-academy-gold">✓</span><span>{line}</span></li>
+            ))}
+          </ul>
+          {isAdmin && (
+            <p className="text-academy-muted text-xs mt-4 italic">Admin: every lock is bypassed regardless of standing.</p>
+          )}
         </Card>
 
         {/* Current Course */}
@@ -111,31 +259,73 @@ export default function ProfilePage() {
           <p className="text-academy-text font-semibold text-sm uppercase tracking-wider">
             {enrollment?.current_course?.toUpperCase().replace('-', ' ') ?? 'PHIL 701'}
           </p>
-          <p className="text-academy-muted text-xs mt-1">
-            Program: Advanced Study in Stoic Philosophy
-          </p>
+          <p className="text-academy-muted text-xs mt-1">Program: Advanced Study in Stoic Philosophy</p>
         </Card>
 
-        {/* Upgrade CTA — only for non-fellows */}
-        {tier !== 'fellow' && (
-          <Card>
-            <CardLabel>Upgrade Standing</CardLabel>
-            <p className="text-academy-muted text-sm leading-relaxed mb-4">
-              {tier === 'auditor'
-                ? 'Upgrade to Scholar to unlock the full curriculum, The Archivist, and The Examiner.'
-                : 'Upgrade to Fellow to unlock all five agents including The Dialectician and The Chronologist.'}
-            </p>
-            <Button
-              onClick={() => alert('Stripe integration coming in Phase 2.')}
-            >
-              Upgrade to {tier === 'auditor' ? 'Scholar — $39/mo' : 'Fellow — $79/mo'}
-            </Button>
-            <p className="text-academy-muted text-xs mt-2 italic">
-              Payment integration coming in Phase 2.
-            </p>
-          </Card>
-        )}
+        {/* Upgrade / manage */}
+        <Card className="md:col-span-2" gold={!isPremium}>
+          <div id="upgrade" />
+          {!isPremium ? (
+            <>
+              <CardLabel>Upgrade Standing</CardLabel>
+              <p className="text-academy-muted text-sm leading-relaxed mb-1">
+                Premium opens the full curriculum, the Practicum, Papers, the Composer, and the corpus&apos;s voice in the margins of the Library.
+                One subscription covers the Academy and the Arete app.
+              </p>
+              <p className="text-academy-gold text-xs mb-5">New members start with a 7-day free trial.</p>
+              <div className="grid sm:grid-cols-3 gap-3">
+                {PLANS.map(plan => (
+                  <button
+                    key={plan.key}
+                    onClick={() => startCheckout(plan.key)}
+                    disabled={busy !== null}
+                    className={`text-left rounded-lg border p-4 transition-colors disabled:opacity-50 ${
+                      plan.best ? 'border-academy-gold bg-academy-gold/5' : 'border-academy-border hover:border-academy-gold'
+                    }`}
+                  >
+                    {plan.best && (
+                      <p className="text-[10px] font-bold tracking-widest uppercase text-academy-gold mb-1">Best value</p>
+                    )}
+                    <p className="text-academy-text font-semibold text-sm">{plan.name}</p>
+                    <p className="text-academy-gold text-sm mt-0.5">{plan.price}</p>
+                    <p className="text-academy-muted text-xs mt-2">{plan.note}</p>
+                    <p className="text-academy-text text-xs mt-3 font-semibold">
+                      {busy === plan.key ? 'Opening checkout…' : 'Choose →'}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <p className="text-academy-muted text-xs mt-4 italic">
+                Payment is handled securely by Stripe. Subscriptions auto-renew; cancel anytime from this page.
+              </p>
+            </>
+          ) : (
+            <>
+              <CardLabel>Subscription</CardLabel>
+              <p className="text-academy-muted text-sm leading-relaxed mb-4">
+                Change plan, update your card, or cancel through the billing portal. Plans granted directly by Arete have nothing to manage here.
+              </p>
+              <Button onClick={openPortal} disabled={busy === 'portal'}>
+                {busy === 'portal' ? 'Opening…' : 'Manage subscription'}
+              </Button>
+            </>
+          )}
+        </Card>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-academy-muted italic text-sm">Loading profile...</p>
+        </div>
+      }
+    >
+      <ProfileContent />
+    </Suspense>
   );
 }

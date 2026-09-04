@@ -10,9 +10,17 @@ const BACKEND_URL =
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
+    // The reader's session travels as a bearer token so the backend can
+    // apply the tiered quota (free 5/day, Premium 50, Pro unlimited) per
+    // user rather than per IP; anonymous readers still get the free quota.
+    const auth = request.headers.get('authorization');
     const upstream = await fetch(`${BACKEND_URL}/oracle`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': request.headers.get('x-forwarded-for') || '',
+        ...(auth ? { Authorization: auth } : {}),
+      },
       body,
     });
     const responseBody = await upstream.text();

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { ACADEMY_TIER_FOR, getEntitlement } from '@/lib/entitlement';
 import type { Enrollment, SeminarSession, SeminarMessage, Paper, AgentId, DailyCheckin, RoutineTemplate, Task } from '@/types';
 
 function localToday(): string {
@@ -19,7 +20,17 @@ async function getUserId(): Promise<string | null> {
 // ENROLLMENTS
 // ----------------------------------------------------------------
 
+// The Academy's standing is the Arete subscription (profiles.tier), mapped
+// onto the Academy tier names — see lib/entitlement. academy_enrollments.tier
+// is kept for current_course and history but is no longer authoritative.
 export async function getEnrollment(): Promise<Enrollment | null> {
+  const row = await getEnrollmentRow();
+  if (!row) return null;
+  const { tier } = await getEntitlement();
+  return { ...row, tier: ACADEMY_TIER_FOR[tier] };
+}
+
+async function getEnrollmentRow(): Promise<Enrollment | null> {
   const userId = await getUserId();
   if (!userId) return null;
   const { data, error } = await supabase

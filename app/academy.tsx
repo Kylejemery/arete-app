@@ -1,22 +1,29 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { WebView } from 'react-native-webview';
-
-const ACADEMY_URL = 'https://academy.pursuearete.com';
+import { signedInUrl } from '@/lib/webHandoff';
 
 /**
  * The Academy, inside the app: a WebView over academy.pursuearete.com with
- * native chrome. The Academy shares the app's Supabase project, so the same
- * credentials work; sharedCookiesEnabled keeps the web session across visits
- * so sign-in is a one-time step. In-page history gets its own back button.
+ * native chrome. The Academy shares the app's Supabase project, so the first
+ * load goes through a one-time sign-in link (lib/webHandoff) and the student
+ * lands on the dashboard already signed in; sharedCookiesEnabled keeps that
+ * web session across visits. In-page history gets its own back button.
  */
 export default function AcademyScreen() {
     const router = useRouter();
     const webRef = useRef<WebView>(null);
     const [loading, setLoading] = useState(true);
     const [canGoBack, setCanGoBack] = useState(false);
+    const [startUrl, setStartUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        signedInUrl('academy', '/dashboard').then(url => { if (!cancelled) setStartUrl(url); });
+        return () => { cancelled = true; };
+    }, []);
 
     return (
         <SafeAreaView style={styles.container}>
@@ -37,9 +44,10 @@ export default function AcademyScreen() {
                 </TouchableOpacity>
             </View>
 
+            {startUrl ? (
             <WebView
                 ref={webRef}
-                source={{ uri: ACADEMY_URL }}
+                source={{ uri: startUrl }}
                 style={styles.web}
                 sharedCookiesEnabled
                 onLoadStart={() => setLoading(true)}
@@ -54,6 +62,12 @@ export default function AcademyScreen() {
                     </View>
                 )}
             />
+            ) : (
+                <View style={[styles.web, styles.loadingOverlay]}>
+                    <ActivityIndicator size="large" color="#c9a84c" />
+                    <Text style={styles.loadingText}>Entering the Academy…</Text>
+                </View>
+            )}
 
             {loading && (
                 <View style={styles.loadingBar}>

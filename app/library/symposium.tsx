@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { API_BASE_URL } from '../../services/claudeService';
+import { supabase } from '@/lib/supabase';
 
 /**
  * The Symposium — sit with a master and converse with the corpus. The mobile
@@ -62,6 +63,9 @@ export default function SymposiumScreen() {
     const [input, setInput] = useState('');
     const [thinking, setThinking] = useState(false);
     const [remaining, setRemaining] = useState<number | null>(null);
+    const [quotaLimit, setQuotaLimit] = useState<number | null>(null);
+    // Set after a 429 on the free quota: the header then offers Premium.
+    const [quotaUpgrade, setQuotaUpgrade] = useState(false);
     const scrollRef = useRef<ScrollView>(null);
 
     const master = MASTERS.find(m => m.id === masterId) || MASTERS[0];
@@ -84,14 +88,22 @@ export default function SymposiumScreen() {
         setThinking(true);
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
         try {
+            // The session travels so the quota is per user and tier
+            // (free 5/day, Premium 50, Pro unlimited) rather than per IP.
+            const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`${API_BASE_URL}/oracle`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
                 body: JSON.stringify({ question: q, author: master.oracleAuthor, history }),
             });
             const data = await res.json().catch(() => ({}));
             if (res.status === 429) {
                 setRemaining(0);
+                if (typeof data?.limit === 'number') setQuotaLimit(data.limit);
+                setQuotaUpgrade(data?.upgrade === true);
                 setMessages(prev => [...prev, {
                     role: 'master',
                     text: data?.message || 'You have reached the free dialogues for today. Return tomorrow.',
@@ -99,6 +111,7 @@ export default function SymposiumScreen() {
                 return;
             }
             if (typeof data?.remaining === 'number') setRemaining(data.remaining);
+            if (typeof data?.limit === 'number') setQuotaLimit(data.limit);
             const src = (data?.sources || [])[0];
             const rec = src && src.textType !== 'paper_summary'
                 ? { author: src.author, work: src.work, title: src.work }
@@ -134,9 +147,23 @@ export default function SymposiumScreen() {
                     <Text style={styles.headerSub}>Sit with a master of the tradition</Text>
                 </View>
                 {remaining !== null && (
-                    <Text style={styles.remainingText}>{remaining} left today</Text>
+                    <Text style={styles.remainingText}>
+                        {quotaLimit !== null ? `${remaining} of ${quotaLimit} left today` : `${remaining} left today`}
+                    </Text>
                 )}
             </View>
+
+            {quotaUpgrade && (
+                <TouchableOpacity
+                    style={styles.upgradeRow}
+                    onPress={() => router.push({ pathname: '/paywall', params: { src: 'symposium_daily_limit' } } as any)}
+                    activeOpacity={0.85}
+                >
+                    <Text style={styles.upgradeText}>
+                        Premium members sit for 50 dialogues a day.  <Text style={{ textDecorationLine: 'underline' }}>See Premium</Text>
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             {/* Master picker */}
             <ScrollView
@@ -261,6 +288,8 @@ const styles = StyleSheet.create({
     headerTitle: { color: '#e0d5b5', fontSize: 18, fontWeight: '700' },
     headerSub: { color: '#888', fontSize: 12, marginTop: 1 },
     remainingText: { color: '#666', fontSize: 11 },
+    upgradeRow: { marginHorizontal: 16, marginBottom: 6, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: '#c9a84c33', backgroundColor: '#c9a84c0d' },
+    upgradeText: { color: '#c9a84c', fontSize: 12, lineHeight: 17 },
     masterRow: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: '#2a2a3e' },
     masterRowContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
     masterChip: {

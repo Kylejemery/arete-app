@@ -124,7 +124,7 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
 
         <div className="p-4 border-t border-academy-border space-y-2">
           <a
-            href="https://areteapp.com"
+            href="https://app.pursuearete.com"
             className="block text-academy-muted text-xs hover:text-academy-text transition-colors"
           >
             ← Back to Arete

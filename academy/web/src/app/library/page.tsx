@@ -5,6 +5,28 @@ import { supabase } from '@/lib/supabase';
 import ReaderView, { type ReaderTarget } from './Reader';
 import { SERIF, SANS, MONO, GOLD, GOLD_L, IVORY, TEXT, MUTED, foldText } from './theme';
 
+// The reader's session, when there is one, travels with Symposium calls so
+// the backend applies the tiered daily quota per user (free 5, Premium 50,
+// Pro unlimited) instead of per IP. Anonymous readers still get the free
+// quota — nothing here requires signing in.
+async function sessionAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+// Every Observatory piece has a public page of its own at
+// /observatory/<kind>/<id> (server-rendered, with a link preview) — that is
+// what the share buttons copy.
+type ShareKind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world';
+function shareUrl(kind: ShareKind, id: string): string {
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://academy.pursuearete.com';
+  return `${origin}/observatory/${kind}/${id}`;
+}
+
 // ---------------------------------------------------------------------------
 // The Library of Arete — a living philosophical library you can "play" in.
 // Four rooms over one shell. Phase 1 wires the Reading Room (read every primary
@@ -246,6 +268,11 @@ export default function LibraryOfArete() {
   const [symInput, setSymInput] = useState('');
   const [symThinking, setSymThinking] = useState(false);
   const [remaining, setRemaining] = useState<number | null>(null);
+  // True after a 429 on the free quota: the Symposium footer then offers the
+  // upgrade rather than just "return tomorrow".
+  const [quotaUpgrade, setQuotaUpgrade] = useState(false);
+  const [quotaLimit, setQuotaLimit] = useState<number | null | undefined>(undefined);
+  const [quotaTier, setQuotaTier] = useState<string | null>(null);
 
   const [debateInput, setDebateInput] = useState('');
   const [debateQ, setDebateQ] = useState('');
@@ -372,7 +399,7 @@ export default function LibraryOfArete() {
     try {
       const res = await fetch('/api/oracle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await sessionAuthHeader()) },
         body: JSON.stringify({ question: q, author: master.oracleAuthor, history }),
       });
       const data = await res.json();
@@ -380,9 +407,15 @@ export default function LibraryOfArete() {
         setMessages(prev => [...prev, { role: 'master', masterId: symMaster,
           text: data.message || 'You have reached the free dialogues for today. Return tomorrow.', rec: null }]);
         setRemaining(0);
+        setQuotaUpgrade(data.upgrade === true);
+        if (typeof data.limit === 'number') setQuotaLimit(data.limit);
+        if (typeof data.tier === 'string') setQuotaTier(data.tier);
         return;
       }
+      setQuotaUpgrade(false);
       if (typeof data.remaining === 'number') setRemaining(data.remaining);
+      if (typeof data.limit === 'number' || data.limit === null) setQuotaLimit(data.limit);
+      if (typeof data.tier === 'string') setQuotaTier(data.tier);
       const src = (data.sources || [])[0];
       // Paper summaries are not shelf works: link to the actual PDF when we
       // have one, and show no card at all when we don't (an uploaded paper
@@ -413,7 +446,7 @@ export default function LibraryOfArete() {
     try {
       const res = await fetch('/api/library/debate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await sessionAuthHeader()) },
         body: JSON.stringify({ question, a, b }),
       });
       const data = await res.json();
@@ -423,6 +456,8 @@ export default function LibraryOfArete() {
         return;
       }
       if (typeof data.remaining === 'number') setRemaining(data.remaining);
+      if (typeof data.limit === 'number' || data.limit === null) setQuotaLimit(data.limit);
+      if (typeof data.tier === 'string') setQuotaTier(data.tier);
       const lines: DebateLine[] = data.lines || [];
       setDebateLoading(false);
       // reveal one line at a time for the "watch them contend" effect
@@ -527,7 +562,7 @@ export default function LibraryOfArete() {
           <Symposium
             symMode={symMode} setSymMode={setSymMode} symMaster={symMaster} setSymMaster={setSymMaster}
             activeMaster={activeMaster} messages={messages} symInput={symInput} setSymInput={setSymInput}
-            symThinking={symThinking} remaining={remaining} sendSit={sendSit} openWork={openWork}
+            symThinking={symThinking} remaining={remaining} quotaLimit={quotaLimit} quotaTier={quotaTier} quotaUpgrade={quotaUpgrade} sendSit={sendSit} openWork={openWork}
             scrollRef={scrollRef}
             debateInput={debateInput} setDebateInput={setDebateInput} debateQ={debateQ} debateNote={debateNote}
             debateLines={debateLines} debatePair={debatePair} debateLoading={debateLoading} debateRunning={debateRunning}
@@ -759,14 +794,15 @@ function ReadingRoom(props: {
 function Symposium(props: {
   symMode: 'sit' | 'debate'; setSymMode: (m: 'sit' | 'debate') => void; symMaster: string; setSymMaster: (id: string) => void;
   activeMaster: Master; messages: SitMsg[]; symInput: string; setSymInput: (s: string) => void; symThinking: boolean;
-  remaining: number | null; sendSit: (s: string) => void; openWork: (a: string, w: string, t: string) => void;
+  remaining: number | null; quotaLimit: number | null | undefined; quotaTier: string | null; quotaUpgrade: boolean;
+  sendSit: (s: string) => void; openWork: (a: string, w: string, t: string) => void;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   debateInput: string; setDebateInput: (s: string) => void; debateQ: string; debateNote: string; debateLines: DebateLine[];
   debatePair: { a: string; b: string } | null; debateLoading: boolean; debateRunning: boolean;
   runDebate: (q: string, a: string, b: string) => void; resetDebate: () => void;
 }) {
   const { symMode, setSymMode, symMaster, setSymMaster, activeMaster, messages, symInput, setSymInput, symThinking,
-    remaining, sendSit, openWork, scrollRef, debateInput, setDebateInput, debateQ, debateNote, debateLines,
+    remaining, quotaLimit, quotaTier, quotaUpgrade, sendSit, openWork, scrollRef, debateInput, setDebateInput, debateQ, debateNote, debateLines,
     debatePair, debateLoading, debateRunning, runDebate, resetDebate } = props;
 
   // Which two thinkers take the chairs for a custom question. Picking the same
@@ -801,7 +837,16 @@ function Symposium(props: {
         </div>
         <div style={{ height: 1, background: 'rgba(201,168,76,0.16)', margin: '18px 0' }} />
         <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: MUTED, lineHeight: 1.7, textAlign: 'center' }}>
-          {remaining === null ? '15 free dialogues a day' : `${remaining} of 15 free dialogues remaining today`}
+          {quotaLimit === null
+            ? 'Unlimited dialogues'
+            : remaining === null
+              ? '5 dialogues a day free · 50 with Arete Premium'
+              : `${remaining} of ${quotaLimit ?? 5} dialogues remaining today`}
+          {(quotaUpgrade || (remaining !== null && quotaTier === 'free')) && (
+            <a href="/dashboard/profile#upgrade" style={{ display: 'block', marginTop: 6, color: GOLD, textDecoration: 'none', letterSpacing: '0.14em' }}>
+              Premium: 50 a day →
+            </a>
+          )}
         </div>
       </aside>
 
@@ -1594,6 +1639,16 @@ function Sky3D({ concepts, edges, freshEdges, learnedEdges, activeId, onPick, br
 
 function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDebate: (concept: string) => void; openWork: (a: string, w: string, t: string) => void }) {
   const [data, setData] = useState<ObsData | null>(null);
+  // Which Observatory piece's link was just copied, for the button's
+  // momentary "copied" state.
+  const [copiedShare, setCopiedShare] = useState<string | null>(null);
+  const copyShare = useCallback(async (kind: ShareKind, id: string) => {
+    try {
+      await navigator.clipboard.writeText(shareUrl(kind, id));
+      setCopiedShare(`${kind}:${id}`);
+      setTimeout(() => setCopiedShare(null), 1800);
+    } catch { /* clipboard unavailable — nothing to do */ }
+  }, []);
   const [obsState, setObsState] = useState<ObsState | null>(null);
   const [greeting, setGreeting] = useState<{ line: string; plaque: string } | null>(null);
   const [inquiries, setInquiries] = useState<OpenInquiry[]>([]);
@@ -2150,7 +2205,10 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
                   {dreamView.mode === 'all' ? 'The dream ledger' : 'A thought from the corpus'}
                 </span>
               </div>
-              <button onClick={() => setDreamView(null)} aria-label="Close" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {dreamView.mode === 'one' && <button onClick={() => copyShare('dream', dreamView.id)} aria-label="Copy share link" style={{ cursor: 'pointer', background: 'none', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 999, padding: '4px 10px', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: copiedShare === `${'dream'}:${dreamView.id}` ? GOLD : MUTED }}>{copiedShare === `${'dream'}:${dreamView.id}` ? 'Link copied' : 'Share'}</button>}
+                <button onClick={() => setDreamView(null)} aria-label="Close" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              </div>
             </div>
             <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, lineHeight: 1.5, color: MUTED, margin: '0 0 20px', borderBottom: '1px solid rgba(201,168,76,0.16)', paddingBottom: 14 }}>
               These are thoughts from the corpus itself — conjecture it composed from its sources, reviewed by a human before appearing here. They are not source texts, and never the words of any historical thinker.
@@ -2201,7 +2259,10 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
                   {activeConv.starred ? 'The corpus concludes · starred' : 'The corpus concludes'}
                 </span>
               </div>
-              <button onClick={() => setActiveConv(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => copyShare('convergence', activeConv.id)} aria-label="Copy share link" style={{ cursor: 'pointer', background: 'none', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 999, padding: '4px 10px', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: copiedShare === `${'convergence'}:${activeConv.id}` ? GOLD : MUTED }}>{copiedShare === `${'convergence'}:${activeConv.id}` ? 'Link copied' : 'Share'}</button>
+                <button onClick={() => setActiveConv(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              </div>
             </div>
 
             {activeConv.title && <h3 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 25, lineHeight: 1.12, color: IVORY, margin: '0 0 8px' }}>{activeConv.title}</h3>}
@@ -2256,7 +2317,10 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: DETAIL_ACCENT[detail.kind], boxShadow: `0 0 8px 1px ${DETAIL_ACCENT[detail.kind]}` }} />
                 <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: DETAIL_ACCENT[detail.kind] }}>{DETAIL_TAG[detail.kind]}</span>
               </div>
-              <button onClick={() => setDetail(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button onClick={() => copyShare(detail.kind, detail.kind === 'inquiry' ? detail.inquiry.id : detail.kind === 'tension' ? detail.tension.id : detail.world.id)} aria-label="Copy share link" style={{ cursor: 'pointer', background: 'none', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 999, padding: '4px 10px', fontFamily: MONO, fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: copiedShare === `${detail.kind}:${detail.kind === 'inquiry' ? detail.inquiry.id : detail.kind === 'tension' ? detail.tension.id : detail.world.id}` ? GOLD : MUTED }}>{copiedShare === `${detail.kind}:${detail.kind === 'inquiry' ? detail.inquiry.id : detail.kind === 'tension' ? detail.tension.id : detail.world.id}` ? 'Link copied' : 'Share'}</button>
+                <button onClick={() => setDetail(null)} aria-label="Close" style={{ cursor: 'pointer', background: 'none', border: 'none', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
+              </div>
             </div>
 
             {detail.kind === 'tension' && (() => {

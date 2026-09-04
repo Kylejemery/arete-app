@@ -17,39 +17,49 @@ const WEB_ORIGIN = 'https://app.pursuearete.com';
  * entitlement afterwards.
  */
 export async function openWebSignedIn(path: string): Promise<void> {
-  const fallback = `${WEB_ORIGIN}${path}`;
-  let target = fallback;
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.access_token) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
-      try {
-        const res = await fetch(`${WEB_ORIGIN}/api/auth/handoff`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ next: path }),
-          signal: controller.signal,
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok && typeof data?.url === 'string' && data.url.startsWith(WEB_ORIGIN)) {
-          target = data.url;
-        }
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-  } catch {
-    // fall through to the plain URL
-  }
-
+  const target = await signedInUrl('web', path);
   try {
     await WebBrowser.openBrowserAsync(target);
   } catch {
     // browser failed to open; nothing more to do
   }
+}
+
+const ACADEMY_ORIGIN = 'https://academy.pursuearete.com';
+
+/**
+ * Resolve a URL that lands on `path` already signed in — on the web app or
+ * the Academy (same Supabase project, so the same one-time link works for
+ * both). Falls back to the plain URL on any failure.
+ */
+export async function signedInUrl(target: 'web' | 'academy', path: string): Promise<string> {
+  const origin = target === 'academy' ? ACADEMY_ORIGIN : WEB_ORIGIN;
+  const fallback = `${origin}${path}`;
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return fallback;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 6000);
+    try {
+      const res = await fetch(`${WEB_ORIGIN}/api/auth/handoff`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ next: path, target }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && typeof data?.url === 'string' && data.url.startsWith(origin)) {
+        return data.url;
+      }
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch {
+    // fall through to the plain URL
+  }
+  return fallback;
 }
