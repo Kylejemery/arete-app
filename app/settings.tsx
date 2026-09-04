@@ -20,10 +20,10 @@ import {
     View
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings, getUserCabinet } from '@/lib/db';
 import { refreshTier, useSubscription } from '@/lib/useSubscription';
+import { openWebSignedIn } from '@/lib/webHandoff';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 import {
   attendIsSupported,
@@ -1011,9 +1011,7 @@ export default function SettingsScreen() {
           if (tier === 'free') {
             router.push({ pathname: '/paywall', params: { src: 'settings_upgrade' } } as any);
           } else {
-            WebBrowser.openBrowserAsync('https://app.pursuearete.com/upgrade')
-              .catch(() => {})
-              .finally(() => { refreshTier(); });
+            openWebSignedIn('/upgrade').finally(() => { refreshTier(); });
           }
         }}
         accessibilityRole="button"
