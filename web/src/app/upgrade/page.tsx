@@ -3,6 +3,8 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubscription } from '@/lib/useSubscription';
+import { supabase } from '@/lib/supabase';
+import { useEffect } from 'react';
 
 type PlanKey = 'monthly' | 'yearly' | 'pro';
 
@@ -51,6 +53,30 @@ function UpgradeContent() {
   const { tier, isPremium, loading } = useSubscription();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // How the current plan is billed. Only a plan bought through Stripe has a
+  // customer for the billing portal; plans granted by Arete (admin roster,
+  // grandfathered accounts) have nothing to manage here.
+  const [billing, setBilling] = useState<{ source: 'stripe' | 'granted'; until: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!isPremium) return;
+    let cancelled = false;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('billing_source, stripe_subscription_id, current_period_end')
+        .eq('user_id', user.id);
+      if (cancelled) return;
+      const stripeRow = (data ?? []).find(r => r.billing_source === 'stripe' && r.stripe_subscription_id);
+      const grantRow = (data ?? []).find(r => r.billing_source !== 'stripe');
+      setBilling(stripeRow
+        ? { source: 'stripe', until: null }
+        : { source: 'granted', until: grantRow?.current_period_end ?? null });
+    })();
+    return () => { cancelled = true; };
+  }, [isPremium]);
 
   const startCheckout = async (plan: PlanKey) => {
     setError(null);
@@ -139,16 +165,28 @@ function UpgradeContent() {
             <p className="text-arete-text font-serif text-2xl mb-6">
               {TIER_LABELS[tier] ?? 'Arete Premium'}
             </p>
-            <button
-              onClick={openPortal}
-              disabled={busyPlan === 'portal'}
-              className="bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90 disabled:opacity-50"
-            >
-              {busyPlan === 'portal' ? 'Opening…' : 'Manage subscription'}
-            </button>
-            <p className="text-arete-muted text-xs mt-4">
-              Change plan, update payment method, or cancel — all from the billing portal.
-            </p>
+            {billing?.source === 'granted' ? (
+              <p className="text-arete-muted text-sm">
+                This plan was granted directly by Arete
+                {billing.until
+                  ? ` and runs until ${new Date(billing.until).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+                  : '.'}
+                {' '}There is no billing to manage.
+              </p>
+            ) : (
+              <>
+                <button
+                  onClick={openPortal}
+                  disabled={busyPlan === 'portal' || billing === null}
+                  className="bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90 disabled:opacity-50"
+                >
+                  {busyPlan === 'portal' ? 'Opening…' : 'Manage subscription'}
+                </button>
+                <p className="text-arete-muted text-xs mt-4">
+                  Change plan, update payment method, or cancel — all from the billing portal.
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <>

@@ -171,11 +171,33 @@ function startHeartbeats() {
 
 let bootDiagnosticsStarted = false;
 
+// Which JavaScript is actually running: the bundle embedded in the build, or
+// an over-the-air update (and which one). Written as a breadcrumb so the
+// crash_reports table answers "did the update land on that phone?" without
+// guessing from behaviour. Wrapped because expo-updates throws in Expo Go
+// and dev builds.
+function updateIdentity(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Updates = require('expo-updates') as {
+      isEmbeddedLaunch?: boolean; updateId?: string | null;
+      runtimeVersion?: string | null; channel?: string | null; createdAt?: Date | null;
+    };
+    const which = Updates.isEmbeddedLaunch
+      ? 'embedded bundle'
+      : `update ${Updates.updateId ?? '?'}${Updates.createdAt ? ` published ${Updates.createdAt.toISOString()}` : ''}`;
+    return `updates: ${which} · runtime ${Updates.runtimeVersion ?? '?'} · channel ${Updates.channel ?? '?'}`;
+  } catch {
+    return 'updates: expo-updates unavailable';
+  }
+}
+
 export function startBootDiagnostics() {
   if (bootDiagnosticsStarted) return;
   bootDiagnosticsStarted = true;
   installCrashCapture();
   breadcrumb('entry: crashCapture loaded, app graph next');
+  breadcrumb(updateIdentity());
   replayStoredCrash();
   startHeartbeats();
 }
