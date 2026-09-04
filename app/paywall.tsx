@@ -8,10 +8,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useRef } from 'react';
 import { getLocales } from 'expo-localization';
 import { supabase } from '@/lib/supabase';
+import { refreshTier } from '@/lib/useSubscription';
+import { openWebSignedIn } from '@/lib/webHandoff';
 
 // External-purchase links are permitted without an entitlement ONLY on the US
 // storefront (App Review Guideline 3.1.1a). Elsewhere (incl. EU/DMA terms)
@@ -30,7 +31,7 @@ const IS_US_STOREFRONT = (getLocales()[0]?.regionCode ?? 'US') === 'US';
 // the US storefront post Epic v. Apple — re-check the current App Review
 // Guidelines at each submission.
 
-const UPGRADE_URL = 'https://app.pursuearete.com/upgrade';
+const UPGRADE_PATH = '/upgrade';
 
 interface PlanDisplay {
   identifier: string;
@@ -143,8 +144,14 @@ export default function PaywallScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openWebCheckout = () => {
-    WebBrowser.openBrowserAsync(UPGRADE_URL).catch(() => {});
+  // openWebSignedIn hands the app session to the web (no second login) and
+  // resolves when the in-app browser is dismissed. On iOS
+  // SFSafariViewController never backgrounds the app, so the AppState
+  // foreground refresh does not fire — re-read entitlement here so a user who
+  // just paid comes back to an unlocked app instead of the same locks.
+  const openWebCheckout = async () => {
+    await openWebSignedIn(UPGRADE_PATH);
+    refreshTier();
   };
 
   return (

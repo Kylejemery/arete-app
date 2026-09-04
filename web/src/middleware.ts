@@ -16,7 +16,15 @@ export async function middleware(request: NextRequest) {
   // verification is its authentication), and the mobile app calls
   // delete-account with a Supabase Bearer JWT the route verifies itself —
   // a 307 to /login here hands the app an HTML page instead of JSON.
-  if (pathname === '/api/stripe-webhook' || pathname === '/api/delete-account') {
+  // /api/auth/handoff is the mobile app trading its Bearer JWT for a one-time
+  // web sign-in link, and /auth/handoff is where that link creates the cookie
+  // session — by definition neither has a session yet.
+  if (
+    pathname === '/api/stripe-webhook' ||
+    pathname === '/api/delete-account' ||
+    pathname === '/api/auth/handoff' ||
+    pathname === '/auth/handoff'
+  ) {
     return NextResponse.next()
   }
 

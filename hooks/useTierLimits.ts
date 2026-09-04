@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { getSubscriptionTier } from '@/lib/db';
+import { useSubscription } from '@/lib/useSubscription';
 import type { SubscriptionTier } from '@/lib/types';
 
 // Only free tier enforces a local daily message cap.
@@ -10,16 +9,11 @@ const MAX_MESSAGES_BY_TIER: Record<SubscriptionTier, number | null> = {
   pro: null,
 };
 
+// Thin view over the shared tier store in lib/useSubscription, so the Cabinet
+// tab, counselor chat, and journal pick up a web purchase on foreground or
+// when the checkout browser closes — the old one-shot read left them on the
+// free tier until the app restarted.
 export function useTierLimits(): { tier: SubscriptionTier; maxMessages: number | null } {
-  const [tier, setTier] = useState<SubscriptionTier>('free');
-  const [maxMessages, setMaxMessages] = useState<number | null>(10);
-
-  useEffect(() => {
-    getSubscriptionTier().then(t => {
-      setTier(t);
-      setMaxMessages(MAX_MESSAGES_BY_TIER[t] ?? null);
-    });
-  }, []);
-
-  return { tier, maxMessages };
+  const { tier } = useSubscription();
+  return { tier, maxMessages: MAX_MESSAGES_BY_TIER[tier] ?? null };
 }
