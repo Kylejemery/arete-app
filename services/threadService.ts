@@ -73,6 +73,44 @@ export async function appendMessages(
   return updated;
 }
 
+const dayOf = (ms: number) => {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+};
+
+/**
+ * A counselor line (an assistant message signed with a counselorName, the
+ * shape every notification-seeded line takes) duplicates another when the
+ * same words landed on the same calendar day. Weekly reminders repeat their
+ * wording across weeks and the Attend nudges repeat daily, so the day is
+ * part of the identity; the sender is not, because the same delivery can be
+ * signed by different counselors when it arrives through two paths.
+ */
+export function sameCounselorLine(a: ThreadMessage, b: ThreadMessage): boolean {
+  return (
+    a.role === 'assistant' &&
+    b.role === 'assistant' &&
+    !!a.counselorName &&
+    !!b.counselorName &&
+    a.content === b.content &&
+    dayOf(a.timestamp) === dayOf(b.timestamp)
+  );
+}
+
+/** Drop repeated counselor lines, keeping the first of each. */
+export function dedupeCounselorLines(messages: ThreadMessage[]): { messages: ThreadMessage[]; removed: number } {
+  const kept: ThreadMessage[] = [];
+  const lines: ThreadMessage[] = [];
+  for (const m of messages) {
+    if (m.role === 'assistant' && m.counselorName) {
+      if (lines.some(l => sameCounselorLine(l, m))) continue;
+      lines.push(m);
+    }
+    kept.push(m);
+  }
+  return { messages: kept, removed: messages.length - kept.length };
+}
+
 export async function clearThread(threadId: string): Promise<void> {
   try {
     await upsertThread(threadId, []);

@@ -10,7 +10,13 @@
 // was missed from four places: broadcasts the server says this member is
 // still owed, crossings the extension recorded, notifications still in the
 // tray, and scheduled reminders whose time has passed since the last check.
-// Every path dedupes on one id per delivery.
+// Every path dedupes on one id per delivery, and every seed runs through one
+// in-process queue: the cold-start tap, the boot sweep and the foreground
+// sweep all start within milliseconds of each other, and a dedupe ledger
+// that is read, checked and written back without a lock lets two of them
+// pass the same id. The thread itself is the last line of defence: the same
+// words from the same day are never appended twice, whichever counselor
+// signed them.
 //
 // Broadcasts are the one source that does not depend on a notification at
 // all — the server owes each one until the app acknowledges it — because most
@@ -18,7 +24,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { DeviceEventEmitter, Platform } from 'react-native';
-import { appendMessages } from '../services/threadService';
+import { loadThread, sameCounselorLine, saveThread } from '../services/threadService';
 import { getPendingAttendLines } from './attend';
 import { acknowledgeBroadcasts, fetchPendingBroadcasts } from './broadcasts';
 import { getUserCabinet } from './db';
@@ -31,7 +37,22 @@ const KEY_LAST_CHECK = 'cabinet_seed_last_check';
 const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+// One seed at a time, in arrival order. A rejected seed never poisons the
+// queue for the next one.
+let seedQueue: Promise<unknown> = Promise.resolve();
+function serialized<T>(work: () => Promise<T>): Promise<T> {
+  const run = seedQueue.then(work, work);
+  seedQueue = run.catch(() => undefined);
+  return run;
+}
+
+// Ids seeded this process, checked before the stored ledger so a repeat
+// within one session never touches storage at all.
+const seenThisSession = new Set<string>();
+
 async function alreadySeeded(id: string): Promise<boolean> {
+  if (seenThisSession.has(id)) return true;
+  seenThisSession.add(id);
   const raw = await AsyncStorage.getItem(KEY_SEEN);
   const seen: string[] = raw ? JSON.parse(raw) : [];
   if (seen.includes(id)) return true;
@@ -42,15 +63,23 @@ async function alreadySeeded(id: string): Promise<boolean> {
 }
 
 /** Append one counselor line to the Cabinet thread, once per delivery id. */
-export async function seedCounselorLine(id: string, counselorName: string, body: string, timestamp = Date.now()): Promise<boolean> {
-  try {
-    if (await alreadySeeded(id)) return false;
-    await appendMessages('cabinet', [{ role: 'assistant', content: body, timestamp, counselorName }]);
-    DeviceEventEmitter.emit(CABINET_THREAD_UPDATED);
-    return true;
-  } catch {
-    return false; // best effort: never block boot or navigation
-  }
+export function seedCounselorLine(id: string, counselorName: string, body: string, timestamp = Date.now()): Promise<boolean> {
+  return serialized(async () => {
+    try {
+      if (await alreadySeeded(id)) return false;
+      const line = { role: 'assistant' as const, content: body, timestamp, counselorName };
+      const thread = await loadThread('cabinet');
+      // Same words, same day, already there: the delivery reached the thread
+      // under another id (a tray notification and the crossing it came from,
+      // a reminder rescheduled under a fresh identifier).
+      if (thread.messages.some(m => sameCounselorLine(m, line))) return false;
+      await saveThread({ ...thread, messages: [...thread.messages, line] });
+      DeviceEventEmitter.emit(CABINET_THREAD_UPDATED);
+      return true;
+    } catch {
+      return false; // best effort: never block boot or navigation
+    }
+  });
 }
 
 // A weekly reminder fires at most once a day, so its delivery id is the
@@ -94,7 +123,18 @@ function calendarParts(trigger: any): { weekday?: number; hour?: number; minute?
  * and whenever the app returns to the foreground. Returns how many lines
  * were added.
  */
-export async function seedMissedCounselorLines(): Promise<number> {
+let sweepInFlight: Promise<number> | null = null;
+
+export function seedMissedCounselorLines(): Promise<number> {
+  // Boot and the first foreground transition both ask for a sweep almost at
+  // once; the second joins the first instead of racing it.
+  if (!sweepInFlight) {
+    sweepInFlight = sweepMissedCounselorLines().finally(() => { sweepInFlight = null; });
+  }
+  return sweepInFlight;
+}
+
+async function sweepMissedCounselorLines(): Promise<number> {
   let added = 0;
   const now = Date.now();
 

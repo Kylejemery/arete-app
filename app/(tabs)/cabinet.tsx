@@ -30,9 +30,11 @@ import {
   ThreadMessage,
   appendMessages,
   clearThread,
+  dedupeCounselorLines,
   getAllThreadSummaries,
   loadThread,
   normalizeCounselorId,
+  saveThread,
 } from '../../services/threadService';
 
 function getTodayDateKey(): string {
@@ -143,8 +145,15 @@ export default function CabinetScreen() {
     try {
       console.log('[Cabinet] Mount: loading initial thread...');
       const thread = await loadThread('cabinet');
-      setMessages(thread.messages);
-      console.log('[Cabinet] Thread loaded:', thread.messages.length, 'messages');
+      // Counselor lines seeded twice by an earlier build are collapsed here
+      // and the cleaned thread written back, once.
+      const { messages: cleaned, removed } = dedupeCounselorLines(thread.messages);
+      setMessages(cleaned);
+      if (removed > 0) {
+        console.log('[Cabinet] Removed', removed, 'duplicate counselor line(s)');
+        saveThread({ ...thread, messages: cleaned }).catch(() => {});
+      }
+      console.log('[Cabinet] Thread loaded:', cleaned.length, 'messages');
     } catch (err) {
       console.error('[Cabinet] Failed to load thread:', err);
       setError('Failed to load conversation. Please try again.');
