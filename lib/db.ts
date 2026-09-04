@@ -409,13 +409,25 @@ export async function saveCabinetConversation(messages: any[]) {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const today = new Date().toISOString().split('T')[0];
-  const { data: existing } = await supabase
+  // One solo Cabinet row per user, updated in place, found the same way
+  // getCabinetConversation reads it. This used to look for a row created
+  // today and insert otherwise, so each day opened a fresh row carrying a
+  // copy of the whole history, and the row id (which session_participants
+  // references as the shared-session id) moved out from under any invite.
+  const { data: existing, error: lookupError } = await supabase
     .from('cabinet_conversations')
     .select('id')
     .eq('user_id', userId)
-    .gte('created_at', today)
+    .is('counselor_slugs', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
+  // A lookup that failed is not a missing row: inserting here would fork
+  // the thread.
+  if (lookupError) {
+    console.error('saveCabinetConversation lookup error:', lookupError);
+    throw new Error(`saveCabinetConversation: ${lookupError.message}`);
+  }
 
   if (existing) {
     const { data, error } = await supabase
@@ -448,7 +460,12 @@ export async function getCabinetConversation() {
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) console.error('getCabinetConversation error:', error);
+  // A failed fetch throws rather than looking like an empty thread: every
+  // load-then-save path would otherwise overwrite the history with one line.
+  if (error) {
+    console.error('getCabinetConversation error:', error);
+    throw new Error(`getCabinetConversation: ${error.message}`);
+  }
   return data;
 }
 
@@ -479,7 +496,10 @@ export async function getCounselorConversation(counselorId: string) {
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) console.error('getCounselorConversation error:', error);
+  if (error) {
+    console.error('getCounselorConversation error:', error);
+    throw new Error(`getCounselorConversation: ${error.message}`);
+  }
   return data;
 }
 
@@ -487,12 +507,18 @@ export async function saveCounselorConversation(counselorId: string, messages: a
   const userId = await getUserId();
   if (!userId) return null;
 
-  const { data: existing } = await supabase
+  const { data: existing, error: lookupError } = await supabase
     .from('cabinet_conversations')
     .select('id')
     .eq('user_id', userId)
     .contains('counselor_slugs', [counselorId])
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
+  if (lookupError) {
+    console.error('saveCounselorConversation lookup error:', lookupError);
+    throw new Error(`saveCounselorConversation: ${lookupError.message}`);
+  }
 
   if (existing) {
     const { data, error } = await supabase
