@@ -525,12 +525,171 @@ router.get('/api/observatory/greeting', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/observatory/passage — touch a star, draw one passage.
-// Runs the existing match_rag_corpus retrieval with the concept as the query
-// and returns ONE passage with author, work, and section attribution.
+//
+// Runs match_rag_corpus with the concept as the query, then asks Claude to
+// read the top passages and answer in two parts: a short, precise statement
+// of what these thinkers hold about the concept, and ONE quotation, verbatim,
+// beginning and ending on sentence boundaries. The quotation is verified
+// against the retrieved chunk before it is trusted; if the model paraphrased,
+// or Claude is unavailable, the star falls back to a sentence-trimmed excerpt
+// of the best chunk so nothing ever begins mid-sentence.
+//
 // Rate-limited 10/day per IP via upsert_observatory_rate_limit (same pattern
 // as the Oracle's limiter, its own table) — this is a taste, not a service.
 // ---------------------------------------------------------------------------
 const PASSAGE_DAILY_LIMIT = 10;
+const PASSAGE_MATCH_COUNT = 6;
+const PASSAGE_MODEL = process.env.OBSERVATORY_PASSAGE_MODEL || 'claude-opus-5';
+const PASSAGE_CHUNK_CHARS = 2400;   // what each passage is trimmed to before Claude reads it
+const EXCERPT_MAX_CHARS = 620;      // fallback excerpt length
+const QUOTE_MAX_CHARS = 900;        // longest quotation we will show
+
+// Plain prose from a stored chunk: collapse whitespace, drop the markdown
+// emphasis markers older ingests carry (_gladiators_, *thus*), and unify
+// the typographic quotes that break substring checks.
+function plainProse(text) {
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{2,}/g, ' ')
+    .replace(/\n/g, ' ')
+    .replace(/(^|[\s(])[_*]{1,2}([^_*]{1,80}?)[_*]{1,2}(?=[\s.,;:!?)]|$)/g, '$1$2')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+const SENTENCE_END = /[.!?]["')\]]?(?=\s|$)/g;
+
+// Split prose into sentences on terminal punctuation followed by whitespace.
+// Deliberately simple: the corpus is nineteenth-century English prose, and a
+// false split at "Mr." costs far less than a fragment shown to a reader.
+function sentencesOf(text) {
+  const out = [];
+  let last = 0;
+  SENTENCE_END.lastIndex = 0;
+  let m;
+  while ((m = SENTENCE_END.exec(text)) !== null) {
+    const end = m.index + m[0].length;
+    const s = text.slice(last, end).trim();
+    if (s) out.push(s);
+    last = end;
+  }
+  const tail = text.slice(last).trim();
+  if (tail) out.push(tail);
+  return out;
+}
+
+function looksLikeSentenceStart(s) {
+  return /^["'(]?[A-Z0-9]/.test(s);
+}
+function looksLikeSentenceEnd(s) {
+  return /[.!?]["')\]]?$/.test(s);
+}
+
+// A window of whole sentences from a chunk: skip a leading fragment (chunk
+// boundaries fall anywhere), keep whole sentences up to maxChars, drop a
+// trailing fragment. Returns '' when the chunk holds no complete sentence.
+function sentenceWindow(text, maxChars) {
+  const sentences = sentencesOf(plainProse(text));
+  let i = 0;
+  while (i < sentences.length && !looksLikeSentenceStart(sentences[i])) i++;
+  const kept = [];
+  let len = 0;
+  for (; i < sentences.length; i++) {
+    const s = sentences[i];
+    if (!looksLikeSentenceEnd(s)) break;         // trailing fragment
+    if (kept.length && len + s.length + 1 > maxChars) break;
+    kept.push(s);
+    len += s.length + 1;
+  }
+  // A single sentence longer than the cap still shows whole rather than cut.
+  return kept.join(' ');
+}
+
+// Does the model's quotation actually occur in the chunk? Compared with
+// punctuation and case stripped so a curly quote or a dropped comma does not
+// fail a genuine quotation, while a paraphrase still does.
+function quoteKey(s) {
+  return plainProse(s).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function quoteOccursIn(quote, chunk) {
+  const q = quoteKey(quote);
+  if (q.length < 40) return false;
+  return quoteKey(chunk).includes(q);
+}
+
+// Strip dashes the house style forbids in generated prose.
+function noDashes(s) {
+  return String(s || '')
+    .replace(/\s*[—–]\s*/g, ', ')
+    .replace(/\s*--\s*/g, ', ')
+    .replace(/,\s*,/g, ',')
+    .trim();
+}
+
+const PASSAGE_SYSTEM = `You are the voice of a star in the Library of Arete's Observatory. Each star is a philosophical concept. When a reader touches it, you answer from the corpus passages you are given and nothing else.
+
+Reply with a single JSON object and no other text:
+{"answer": string, "passage_index": integer, "quote": string}
+
+"answer": two or three sentences, at most 80 words, plain and precise, stating what these thinkers actually hold about the concept. Name who says what. State positions, not summaries of the passages' structure. Do not mention passages, indices, "the corpus", or that you are answering. No hedging, no preamble, no rhetorical questions. Use commas, colons, and semicolons, never dashes.
+
+"passage_index": the number of the one passage that best earns a quotation.
+
+"quote": a quotation copied EXACTLY from that passage, character for character, between 25 and 90 words. It must begin at the start of a sentence and end at the end of a sentence. Never alter, trim inside, or join non-adjacent sentences. If no passage contains a quotable whole sentence, return an empty string.`;
+
+async function composeStarAnswer(concept, chunks) {
+  if (!process.env.CLAUDE_API_KEY) return null;
+  const listing = chunks.map((c, i) => {
+    const who = [c.author, c.work, c.section_label].filter(Boolean).join(', ');
+    return `PASSAGE ${i + 1} (${who || 'unattributed'}):\n${plainProse(c.chunk_text).slice(0, PASSAGE_CHUNK_CHARS)}`;
+  }).join('\n\n');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 25000);
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: PASSAGE_MODEL,
+        max_tokens: 1200,
+        output_config: { effort: 'low' },
+        system: PASSAGE_SYSTEM,
+        messages: [{ role: 'user', content: `Concept: ${concept}\n\n${listing}` }],
+      }),
+    });
+    if (!response.ok) {
+      console.warn('[/api/observatory/passage] Claude error:', response.status, (await response.text()).slice(0, 200));
+      return null;
+    }
+    const data = await response.json();
+    if (data.stop_reason === 'refusal') return null;
+    const raw = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
+    const body = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+    const start = body.indexOf('{');
+    const end = body.lastIndexOf('}');
+    if (start < 0 || end <= start) return null;
+    const parsed = JSON.parse(body.slice(start, end + 1));
+    const idx = Number(parsed.passage_index);
+    return {
+      answer: noDashes(parsed.answer),
+      index: Number.isInteger(idx) && idx >= 1 && idx <= chunks.length ? idx - 1 : 0,
+      quote: typeof parsed.quote === 'string' ? plainProse(parsed.quote) : '',
+    };
+  } catch (err) {
+    console.warn('[/api/observatory/passage] compose failed:', err.name === 'AbortError' ? 'timeout' : err.message, err.cause ? `(${err.cause.code || err.cause.message})` : '');
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 router.post('/api/observatory/passage', async (req, res) => {
   try {
@@ -569,31 +728,42 @@ router.post('/api/observatory/passage', async (req, res) => {
     const embedding = embData.data?.[0]?.embedding;
     if (!embedding) throw new Error('embedding failed');
 
-    const { data: chunks, error } = await supabase.rpc('match_rag_corpus', {
+    const { data: rows, error } = await supabase.rpc('match_rag_corpus', {
       query_embedding: embedding,
-      match_count: 1,
+      match_count: PASSAGE_MATCH_COUNT,
       filter_author: null,
       filter_language: 'english',
     });
     if (error) throw new Error(error.message);
-    const chunk = (chunks || [])[0];
-    if (!chunk) return res.status(404).json({ error: 'The star holds no passage yet.' });
+    // Only chunks that hold at least one whole sentence can be quoted.
+    const chunks = (rows || []).filter(c => sentenceWindow(c.chunk_text, EXCERPT_MAX_CHARS));
+    if (!chunks.length) return res.status(404).json({ error: 'The star holds no passage yet.' });
+
+    const composed = await composeStarAnswer(concept, chunks);
+
+    let chunk = chunks[0];
+    let text = '';
+    let answer = '';
+    if (composed) {
+      chunk = chunks[composed.index];
+      answer = composed.answer;
+      if (composed.quote && composed.quote.length <= QUOTE_MAX_CHARS
+          && looksLikeSentenceStart(composed.quote) && looksLikeSentenceEnd(composed.quote)
+          && quoteOccursIn(composed.quote, chunk.chunk_text)) {
+        text = composed.quote;
+      }
+    }
+    if (!text) text = sentenceWindow(chunk.chunk_text, EXCERPT_MAX_CHARS);
 
     recordRetrieval([chunk], 'observatory'); // a touch is a real retrieval
 
-    // Section attribution lives on the row itself, not in the RPC's shape.
-    const sectionRows = await guarded('rag_corpus section', () => supabase
-      .from('rag_corpus').select('section_label')
-      .eq('author', chunk.author).eq('work', chunk.work)
-      .eq('chunk_text', chunk.chunk_text).limit(1));
-    const section = sectionRows && sectionRows[0] ? sectionRows[0].section_label : null;
-
     return res.json({
+      answer: answer || null,
       passage: {
-        text: chunk.chunk_text,
+        text,
         author: chunk.author || null,
         work: chunk.work || null,
-        section: section || null,
+        section: chunk.section_label || null,
       },
       remaining: Math.max(0, PASSAGE_DAILY_LIMIT - (limitData || 1)),
     });

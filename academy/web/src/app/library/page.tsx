@@ -1903,9 +1903,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
 
   // ---- touch a star: one passage, attributed ----
   type Passage = { text: string; author: string | null; work: string | null; title: string | null; section: string | null };
-  const [passage, setPassage] = useState<{ loading: boolean; concept: string; p: Passage | null; note: string | null } | null>(null);
+  // `answer` is the star's own short statement of what the thinkers hold,
+  // composed over several retrieved passages; `p` is the one quotation that
+  // grounds it. The answer is null when the server could only trim a chunk.
+  const [passage, setPassage] = useState<{ loading: boolean; concept: string; answer: string | null; p: Passage | null; note: string | null } | null>(null);
   const touchStar = useCallback(async (conceptName: string) => {
-    setPassage({ loading: true, concept: conceptName, p: null, note: null });
+    setPassage({ loading: true, concept: conceptName, answer: null, p: null, note: null });
     try {
       const res = await fetch('/api/observatory/passage', {
         method: 'POST',
@@ -1914,12 +1917,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
       });
       const json = await res.json();
       if (res.ok && json.passage) {
-        setPassage({ loading: false, concept: conceptName, p: json.passage, note: null });
+        setPassage({ loading: false, concept: conceptName, answer: typeof json.answer === 'string' && json.answer.trim() ? json.answer.trim() : null, p: json.passage, note: null });
       } else {
-        setPassage({ loading: false, concept: conceptName, p: null, note: json.message || json.error || 'The star could not be read just now.' });
+        setPassage({ loading: false, concept: conceptName, answer: null, p: null, note: json.message || json.error || 'The star could not be read just now.' });
       }
     } catch {
-      setPassage({ loading: false, concept: conceptName, p: null, note: 'The star could not be read just now.' });
+      setPassage({ loading: false, concept: conceptName, answer: null, p: null, note: 'The star could not be read just now.' });
     }
   }, []);
   useEffect(() => {
@@ -2144,7 +2147,7 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              <button onClick={() => touchStar(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L }}>✶ Touch the star — draw one passage</button>
+              <button onClick={() => touchStar(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L }}>✶ Touch the star — ask what it holds</button>
               <button onClick={() => onDebate(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Stage a debate on this →</button>
               <button onClick={() => go('reading')} className="lib-related" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Read the sources →</button>
             </div>
@@ -2160,12 +2163,21 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
               <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD }}>The star answers</div>
               <button onClick={() => setPassage(null)} aria-label="Close" style={{ cursor: 'pointer', fontFamily: MONO, fontSize: 10, color: MUTED }}>esc ✕</button>
             </div>
-            {passage.loading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: MUTED, margin: 0 }}>Drawing a passage from “{cap(passage.concept)}”…</p>}
+            {passage.loading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, color: MUTED, margin: 0 }}>Reading the star for “{cap(passage.concept)}”…</p>}
             {!passage.loading && passage.p && (
               <>
-                <p style={{ fontFamily: SERIF, fontSize: 18.5, lineHeight: 1.65, color: IVORY, margin: '0 0 16px', whiteSpace: 'pre-wrap' }}>{passage.p.text}</p>
-                <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD, marginBottom: 20 }}>
-                  {[passage.p.author, passage.p.work, passage.p.section].filter(Boolean).join(' · ')}
+                <div style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 22, lineHeight: 1.15, color: IVORY, marginBottom: passage.answer ? 12 : 16 }}>{cap(passage.concept)}</div>
+                {passage.answer && (
+                  <p style={{ fontFamily: SERIF, fontSize: 17.5, lineHeight: 1.6, color: IVORY, margin: '0 0 20px' }}>{passage.answer}</p>
+                )}
+                {/* The one quotation the answer rests on: whole sentences,
+                    verbatim, verified server-side against the stored chunk. */}
+                <div style={{ borderLeft: '2px solid rgba(201,168,76,0.45)', padding: '2px 0 2px 16px', marginBottom: 20 }}>
+                  <div style={{ fontFamily: MONO, fontSize: 8.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD, marginBottom: 8 }}>{passage.answer ? 'In their own words' : 'From the corpus'}</div>
+                  <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 16.5, lineHeight: 1.6, color: IVORY, margin: '0 0 10px' }}>“{passage.p.text}”</p>
+                  <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: GOLD }}>
+                    {[passage.p.author, passage.p.work, passage.p.section].filter(Boolean).join(' · ')}
+                  </div>
                 </div>
                 {/* Stay in the Library: open the work this passage came from
                     in the reading room. Only when the chunk lost its
