@@ -33,14 +33,24 @@ export interface Thread {
 const MAX_STORED_MESSAGES = 200;
 export const CONTEXT_WINDOW_SIZE = 15;
 
+/**
+ * Load a thread, throwing when the fetch fails. Anything that loads a thread
+ * in order to write it back must use this: a failed fetch that looked like
+ * an empty thread would be saved over the real history.
+ */
+export async function loadThreadStrict(threadId: string): Promise<Thread> {
+  const messages = await getThread(threadId);
+  return {
+    id: threadId,
+    messages: messages as unknown as ThreadMessage[],
+    lastUpdated: Date.now(),
+  };
+}
+
+/** Load a thread for display: a failed fetch reads as empty. Never save the result. */
 export async function loadThread(threadId: string): Promise<Thread> {
   try {
-    const messages = await getThread(threadId);
-    return {
-      id: threadId,
-      messages: messages as unknown as ThreadMessage[],
-      lastUpdated: Date.now(),
-    };
+    return await loadThreadStrict(threadId);
   } catch { /* ignore errors */ }
   return { id: threadId, messages: [], lastUpdated: Date.now() };
 }
@@ -62,8 +72,15 @@ export async function saveThread(thread: Thread): Promise<void> {
 export async function appendMessages(
   threadId: string,
   messages: ThreadMessage[]
-): Promise<Thread> {
-  const thread = await loadThread(threadId);
+): Promise<Thread | null> {
+  let thread: Thread;
+  try {
+    thread = await loadThreadStrict(threadId);
+  } catch (e) {
+    // Without the history there is nothing safe to append to.
+    console.warn(`[threadService] append to ${threadId} skipped, load failed:`, (e as Error)?.message);
+    return null;
+  }
   const updated: Thread = {
     ...thread,
     messages: [...thread.messages, ...messages],

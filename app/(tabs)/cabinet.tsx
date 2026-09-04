@@ -33,6 +33,7 @@ import {
   dedupeCounselorLines,
   getAllThreadSummaries,
   loadThread,
+  loadThreadStrict,
   normalizeCounselorId,
   saveThread,
 } from '../../services/threadService';
@@ -144,7 +145,9 @@ export default function CabinetScreen() {
     setInitialLoading(true);
     try {
       console.log('[Cabinet] Mount: loading initial thread...');
-      const thread = await loadThread('cabinet');
+      // Strict: a failed fetch surfaces as the error below instead of an
+      // empty thread, and is never written back.
+      const thread = await loadThreadStrict('cabinet');
       // Counselor lines seeded twice by an earlier build are collapsed here
       // and the cleaned thread written back, once.
       const { messages: cleaned, removed } = dedupeCounselorLines(thread.messages);

@@ -448,7 +448,12 @@ export async function getCabinetConversation() {
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) console.error('getCabinetConversation error:', error);
+  // A failed fetch throws rather than looking like an empty thread: every
+  // load-then-save path would otherwise overwrite the history with one line.
+  if (error) {
+    console.error('getCabinetConversation error:', error);
+    throw new Error(`getCabinetConversation: ${error.message}`);
+  }
   return data;
 }
 
@@ -479,7 +484,10 @@ export async function getCounselorConversation(counselorId: string) {
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) console.error('getCounselorConversation error:', error);
+  if (error) {
+    console.error('getCounselorConversation error:', error);
+    throw new Error(`getCounselorConversation: ${error.message}`);
+  }
   return data;
 }
 

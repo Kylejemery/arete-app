@@ -24,7 +24,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { DeviceEventEmitter, Platform } from 'react-native';
-import { loadThread, sameCounselorLine, saveThread } from '../services/threadService';
+import { loadThreadStrict, sameCounselorLine, saveThread } from '../services/threadService';
 import { getPendingAttendLines } from './attend';
 import { acknowledgeBroadcasts, fetchPendingBroadcasts } from './broadcasts';
 import { getUserCabinet } from './db';
@@ -50,16 +50,24 @@ function serialized<T>(work: () => Promise<T>): Promise<T> {
 // within one session never touches storage at all.
 const seenThisSession = new Set<string>();
 
+async function storedLedger(): Promise<string[]> {
+  const raw = await AsyncStorage.getItem(KEY_SEEN);
+  return raw ? JSON.parse(raw) : [];
+}
+
 async function alreadySeeded(id: string): Promise<boolean> {
   if (seenThisSession.has(id)) return true;
+  return (await storedLedger()).includes(id);
+}
+
+// Recorded only once the line is in the thread, so a delivery whose save
+// failed (offline, fetch error) is tried again on the next pass.
+async function markSeeded(id: string): Promise<void> {
   seenThisSession.add(id);
-  const raw = await AsyncStorage.getItem(KEY_SEEN);
-  const seen: string[] = raw ? JSON.parse(raw) : [];
-  if (seen.includes(id)) return true;
+  const seen = await storedLedger();
   seen.push(id);
   while (seen.length > 120) seen.shift();
   await AsyncStorage.setItem(KEY_SEEN, JSON.stringify(seen));
-  return false;
 }
 
 /** Append one counselor line to the Cabinet thread, once per delivery id. */
@@ -68,12 +76,18 @@ export function seedCounselorLine(id: string, counselorName: string, body: strin
     try {
       if (await alreadySeeded(id)) return false;
       const line = { role: 'assistant' as const, content: body, timestamp, counselorName };
-      const thread = await loadThread('cabinet');
+      // Strict: a fetch that failed must not read as an empty thread, or the
+      // save below would replace the history with this one line.
+      const thread = await loadThreadStrict('cabinet');
       // Same words, same day, already there: the delivery reached the thread
       // under another id (a tray notification and the crossing it came from,
       // a reminder rescheduled under a fresh identifier).
-      if (thread.messages.some(m => sameCounselorLine(m, line))) return false;
+      if (thread.messages.some(m => sameCounselorLine(m, line))) {
+        await markSeeded(id);
+        return false;
+      }
       await saveThread({ ...thread, messages: [...thread.messages, line] });
+      await markSeeded(id);
       DeviceEventEmitter.emit(CABINET_THREAD_UPDATED);
       return true;
     } catch {
