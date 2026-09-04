@@ -74,10 +74,25 @@ function ProfileContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Only a plan bought through Stripe has a customer for the billing portal;
+  // plans granted by Arete have nothing to manage.
+  const [billing, setBilling] = useState<{ source: 'stripe' | 'granted'; until: string | null } | null>(null);
+
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setEmail(user.email ?? '');
+      if (user) {
+        setEmail(user.email ?? '');
+        const { data } = await supabase
+          .from('subscriptions')
+          .select('billing_source, stripe_subscription_id, current_period_end')
+          .eq('user_id', user.id);
+        const stripeRow = (data ?? []).find(r => r.billing_source === 'stripe' && r.stripe_subscription_id);
+        const grantRow = (data ?? []).find(r => r.billing_source !== 'stripe');
+        setBilling(stripeRow
+          ? { source: 'stripe', until: null }
+          : { source: 'granted', until: grantRow?.current_period_end ?? null });
+      }
       setEnrollment(await getEnrollment());
       setLoaded(true);
     }
@@ -302,12 +317,24 @@ function ProfileContent() {
           ) : (
             <>
               <CardLabel>Subscription</CardLabel>
-              <p className="text-academy-muted text-sm leading-relaxed mb-4">
-                Change plan, update your card, or cancel through the billing portal. Plans granted directly by Arete have nothing to manage here.
-              </p>
-              <Button onClick={openPortal} disabled={busy === 'portal'}>
-                {busy === 'portal' ? 'Opening…' : 'Manage subscription'}
-              </Button>
+              {billing?.source === 'granted' ? (
+                <p className="text-academy-muted text-sm leading-relaxed">
+                  This plan was granted directly by Arete
+                  {billing.until
+                    ? ` and runs until ${new Date(billing.until).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}.`
+                    : '.'}
+                  {' '}There is no billing to manage.
+                </p>
+              ) : (
+                <>
+                  <p className="text-academy-muted text-sm leading-relaxed mb-4">
+                    Change plan, update your card, or cancel through the billing portal.
+                  </p>
+                  <Button onClick={openPortal} disabled={busy === 'portal' || billing === null}>
+                    {busy === 'portal' ? 'Opening…' : 'Manage subscription'}
+                  </Button>
+                </>
+              )}
             </>
           )}
         </Card>
