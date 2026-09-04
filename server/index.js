@@ -3899,10 +3899,6 @@ app.get('/api/crash', async (req, res) => {
 app.post('/oracle', async (req, res) => {
   try {
 
-    // 1. GET CLIENT IP
-    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    const ip = rawIp.split(',')[0].trim();
-
     // 2. VALIDATE INPUT
     const { question, author, history } = req.body;
     if (!question || typeof question !== 'string' || question.trim().length === 0) {
@@ -3912,22 +3908,11 @@ app.post('/oracle', async (req, res) => {
       return res.status(400).json({ error: 'question must be 500 characters or fewer' });
     }
 
-    // 3. ATOMIC RATE LIMIT UPSERT
-    const { data: limitData, error: limitError } = await supabase.rpc(
-      'upsert_oracle_rate_limit',
-      { p_ip: ip }
-    );
-    if (limitError) {
-      console.error('Rate limit error:', limitError);
-      // Fail open — allow query if rate limit check fails
-    } else if (limitData > 15) {
-      return res.status(429).json({
-        error: 'Daily limit reached',
-        message: "You've reached 15 free queries for today. Come back tomorrow, or begin your formation at Arete Academy.",
-        remaining: 0
-      });
-    }
-    const remaining = Math.max(0, 15 - (limitData || 1));
+    // 3. DAILY QUOTA — free 5, Premium 50, Pro unlimited; keyed by the
+    //    signed-in user when a Bearer JWT is present, else by IP.
+    const quota = await consumeSymposiumQuota(req, res);
+    if (!quota.allowed) return;
+    const remaining = quota.remaining;
 
     // 4. RETRIEVE FROM CORPUS (embed + search via getStoicContext)
     const chunks = await getStoicContext(question.trim(), 7, author || null);
@@ -4030,7 +4015,7 @@ ${contextBlock}
     if (answer && chunks.length > 0) {
       attributeUsage({ requestId, chunks, responseText: answer });
     }
-    return res.json({ answer, sources, remaining, request_id: requestId });
+    return res.json({ answer, sources, remaining, limit: quota.limit, tier: quota.tier, request_id: requestId });
 
   } catch (err) {
     console.error('/oracle error:', err);
@@ -4783,25 +4768,68 @@ app.get('/api/library/search', async (req, res) => {
 // POST /api/library/related — "reads itself alongside": semantic neighbors of
 // an open text, drawn from a representative passage. Non-critical: failures
 // return an empty list rather than erroring the reader.
-// "Read the originals free, converse with the Library on Pro": texts/text
-// stay open; related + debate (the RAG/LLM spend) gate behind Pro when
-// PRO_LIBRARY_GATES=true is set on the environment. Off by default so this
-// deploys inert — flip the var only after App Review approves 1.3.1 and the
-// academy library page forwards user identity. The mobile app only ever
-// calls texts/text, so no binary is affected either way.
-async function enforceProLibraryGate(req, res) {
-  if (process.env.PRO_LIBRARY_GATES !== 'true') return false;
-  const { tier } = await resolveUserTier(req);
-  if (tier === 'pro') return false;
-  res.status(403).json({
-    error: 'pro_required',
-    message: 'Conversing with the Library is an Arete Pro feature. Reading the originals is always free.',
-  });
-  return true;
+// Library access model (2026-09-04):
+//   • Reading the originals, related works, comments — free, no account needed.
+//   • The Symposium (Oracle "sit" + Library debate) — free 5 dialogues/day,
+//     Arete Premium 50/day, Pro unlimited.
+//   • Asking the corpus to write in the margin (annotate) — Premium and Pro
+//     only, drawing on the same daily quota.
+// Quota is keyed by the verified user when a Bearer JWT is present, otherwise
+// by IP, in the existing oracle_rate_limits table (ip_address is free text).
+
+const SYMPOSIUM_LIMITS = { free: 5, premium: 50, pro: null };
+
+async function resolveVerifiedTier(req) {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return { userId: null, tier: 'free' };
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('tier, is_premium')
+    .eq('id', userId)
+    .single();
+  if (error || !data) return { userId, tier: 'free' };
+  return { userId, tier: normalizeTier(data.tier, data.is_premium) };
+}
+
+function symposiumLimitMessage(tier, limit) {
+  if (tier === 'free') {
+    return `You've reached your ${limit} free dialogues for today. Arete Premium members get ${SYMPOSIUM_LIMITS.premium} a day — or return tomorrow.`;
+  }
+  return `You've reached ${limit} dialogues for today. Return tomorrow.`;
+}
+
+// Consume one unit of the caller's daily Symposium quota. Returns
+// { allowed, tier, limit, remaining, userId }; when !allowed the 429 has
+// already been written. Fails open on a database error, as before.
+async function consumeSymposiumQuota(req, res) {
+  const { userId, tier } = await resolveVerifiedTier(req);
+  const limit = Object.prototype.hasOwnProperty.call(SYMPOSIUM_LIMITS, tier) ? SYMPOSIUM_LIMITS[tier] : SYMPOSIUM_LIMITS.free;
+  if (limit === null) return { allowed: true, tier, limit: null, remaining: null, userId };
+
+  const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const ip = String(rawIp).split(',')[0].trim();
+  const key = userId ? `user:${userId}` : ip;
+  const { data: count, error } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: key });
+  if (error) {
+    console.error('[symposium quota] rate limit error:', error.message);
+    return { allowed: true, tier, limit, remaining: null, userId };
+  }
+  if (count > limit) {
+    res.status(429).json({
+      error: 'Daily limit reached',
+      code: 'daily_limit',
+      message: symposiumLimitMessage(tier, limit),
+      tier,
+      limit,
+      remaining: 0,
+      upgrade: tier === 'free',
+    });
+    return { allowed: false, tier, limit, remaining: 0, userId };
+  }
+  return { allowed: true, tier, limit, remaining: Math.max(0, limit - (count || 1)), userId };
 }
 
 app.post('/api/library/related', async (req, res) => {
-  if (await enforceProLibraryGate(req, res)) return;
   try {
     const { author, work } = req.body || {};
     if (!author || !work) return res.status(400).json({ error: 'author and work are required' });
@@ -4869,17 +4897,12 @@ const DEBATE_MASTERS = {
 };
 
 app.post('/api/library/debate', async (req, res) => {
-  if (await enforceProLibraryGate(req, res)) return;
   try {
     if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
 
-    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    const ip = rawIp.split(',')[0].trim();
-    const { data: limitData, error: limitError } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: ip });
-    if (!limitError && limitData > 15) {
-      return res.status(429).json({ error: 'Daily limit reached', remaining: 0 });
-    }
-    const remaining = Math.max(0, 15 - (limitData || 1));
+    const quota = await consumeSymposiumQuota(req, res);
+    if (!quota.allowed) return;
+    const remaining = quota.remaining;
 
     const { question, a = 'seneca', b = 'epictetus' } = req.body || {};
     if (!question || typeof question !== 'string' || !question.trim()) {
@@ -4962,6 +4985,8 @@ ${ctxBlock(cb)}`;
       lines,
       note: String(parsed.note || '').trim(),
       remaining,
+      limit: quota.limit,
+      tier: quota.tier,
     });
   } catch (err) {
     console.error('[/api/library/debate] error:', err.message);
@@ -4978,11 +5003,16 @@ ${ctxBlock(cb)}`;
 // same paragraph without a quoted passage returns the note already there.
 const CORPUS_HANDLE = 'The Corpus';
 app.post('/api/library/annotate', async (req, res) => {
-  if (await enforceProLibraryGate(req, res)) return;
   try {
     if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
-    const userId = await getAuthenticatedUserId(req);
+    const { userId, tier: callerTier } = await resolveVerifiedTier(req);
     if (!userId) return res.status(401).json({ error: 'sign_in', message: 'Sign in to ask the corpus.' });
+    if (callerTier === 'free') {
+      return res.status(403).json({
+        error: 'premium_required',
+        message: 'Asking the corpus to write in the margin is an Arete Premium feature. Reading and commenting are always free.',
+      });
+    }
 
     const { author, work, page, paraIndex, anchorText, passage, quote, parentId } = req.body || {};
     if (!author || !work || typeof passage !== 'string' || passage.trim().length < 20) {
@@ -5003,13 +5033,9 @@ app.post('/api/library/annotate', async (req, res) => {
       if (existing && existing[0]) return res.json({ comment: existing[0], existing: true });
     }
 
-    const rawIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-    const ip = rawIp.split(',')[0].trim();
-    const { data: limitData, error: limitError } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: ip });
-    if (!limitError && limitData > 15) {
-      return res.status(429).json({ error: 'Daily limit reached', message: 'The corpus has spoken enough for today. Try again tomorrow.', remaining: 0 });
-    }
-    const remaining = Math.max(0, 15 - (limitData || 1));
+    const quota = await consumeSymposiumQuota(req, res);
+    if (!quota.allowed) return;
+    const remaining = quota.remaining;
 
     const focus = (q || passage).replace(/\s+/g, ' ').trim().slice(0, 1400);
     const title = libraryHelpers.workTitle(work);
@@ -5581,6 +5607,139 @@ app.get('/api/observatory/dreams', async (req, res) => {
   } catch (err) {
     console.error('[/api/observatory/dreams] error:', err.message);
     return res.status(500).json({ error: 'The dreams could not be read' });
+  }
+});
+
+// GET /api/observatory/piece/:kind/:id — one Observatory piece for a share
+// link. Same visibility rules and the same shape as the feed it came from,
+// so a shared piece is readable long after it has scrolled out of the
+// feed's window. Kinds: tension | inquiry | dream | convergence | world.
+// Public (no auth) — same posture as the feeds; only approved, visible rows.
+const OBS_PIECE_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function loadObservatoryPiece(kind, id) {
+  if (kind === 'tension') {
+    const { data } = await supabase
+      .from('philosophical_tensions')
+      .select('id, title, tension_statement, position_a, position_b, additional_positions, lived_stakes, tension_type, is_resolvable, resolution_note, source_authors, tension_week')
+      .eq('id', id).eq('status', 'approved').eq('observatory_visible', true)
+      .maybeSingle();
+    if (!data) return null;
+    const pole = p => (p && (p.author || p.position_summary))
+      ? { author: p.author || null, work: p.work || null, summary: p.position_summary || null }
+      : null;
+    const authors = [data.position_a?.author, data.position_b?.author].filter(Boolean);
+    return {
+      id: data.id,
+      title: data.title,
+      firstSentence: (data.tension_statement || '').split(/(?<=[.!?])\s+/)[0] || '',
+      authors: authors.length >= 2 ? authors : (data.source_authors || []).slice(0, 2),
+      week: data.tension_week,
+      statement: data.tension_statement || '',
+      positions: [pole(data.position_a), pole(data.position_b), ...(Array.isArray(data.additional_positions) ? data.additional_positions.map(pole) : [])].filter(Boolean),
+      livedStakes: data.lived_stakes || null,
+      tensionType: data.tension_type || null,
+      isResolvable: data.is_resolvable || null,
+      resolutionNote: data.resolution_note || null,
+    };
+  }
+  if (kind === 'inquiry') {
+    const { data } = await supabase
+      .from('open_inquiries')
+      .select('id, question, question_origin, pursuit_text, where_corpus_runs_out, confidence, source_authors, pursuit_passages, inquiry_week')
+      .eq('id', id).eq('status', 'approved').eq('observatory_visible', true)
+      .maybeSingle();
+    if (!data) return null;
+    const pursuitAuthors = Array.isArray(data.pursuit_passages)
+      ? new Set(data.pursuit_passages.map(p => p && p.author).filter(Boolean)).size
+      : 0;
+    return {
+      id: data.id,
+      question: data.question,
+      confidence: data.confidence,
+      authorCount: pursuitAuthors || (data.source_authors || []).length,
+      week: data.inquiry_week,
+      origin: data.question_origin || null,
+      pursuit: data.pursuit_text || null,
+      whereCorpusRunsOut: data.where_corpus_runs_out || null,
+      authors: data.source_authors || [],
+    };
+  }
+  if (kind === 'dream') {
+    const { data } = await supabase
+      .from('corpus_dreams')
+      .select('id, dream_type, title, content, seed_authors, seed_summary, status, dream_week')
+      .eq('id', id).in('status', ['approved', 'starred']).eq('observatory_visible', true)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.id,
+      dreamType: data.dream_type,
+      title: data.title,
+      content: data.content,
+      seedAuthors: data.seed_authors || [],
+      seedSummary: data.seed_summary || null,
+      starred: data.status === 'starred',
+      dreamWeek: data.dream_week || null,
+    };
+  }
+  if (kind === 'convergence') {
+    const { data } = await supabase
+      .from('convergences')
+      .select('id, title, conclusion_text, entailment_strength, novelty, source_authors, source_traditions, mean_pairwise_distance, pursuit_text, breakpoint_text, created_at, status')
+      .eq('id', id).in('status', ['approved', 'starred'])
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.id,
+      title: data.title,
+      conclusion: data.conclusion_text,
+      entailment: data.entailment_strength,
+      novelty: data.novelty,
+      authors: Array.isArray(data.source_authors) ? data.source_authors : [],
+      traditions: Array.isArray(data.source_traditions) ? data.source_traditions : [],
+      spread: data.mean_pairwise_distance,
+      pursuit: data.pursuit_text,
+      breakpoint: data.breakpoint_text,
+      starred: data.status === 'starred',
+      created_at: data.created_at,
+    };
+  }
+  if (kind === 'world') {
+    const { data } = await supabase
+      .from('world_observations')
+      .select('id, observation_week, dominant_signal, corpus_response, world_signals, world_corpus_tension, relevant_authors')
+      .eq('id', id).in('status', ['approved', 'auto_approved']).eq('observatory_visible', true)
+      .maybeSingle();
+    if (!data) return null;
+    return {
+      id: data.id,
+      dominantSignal: data.dominant_signal,
+      response: data.corpus_response || null,
+      signals: (Array.isArray(data.world_signals) ? data.world_signals : [])
+        .map(sg => (sg && sg.signal) ? { signal: sg.signal, category: sg.source_category || null } : null)
+        .filter(Boolean).slice(0, 6),
+      tension: data.world_corpus_tension,
+      authors: data.relevant_authors || [],
+      week: data.observation_week,
+    };
+  }
+  return null;
+}
+
+app.get('/api/observatory/piece/:kind/:id', async (req, res) => {
+  const { kind, id } = req.params;
+  if (!['tension', 'inquiry', 'dream', 'convergence', 'world'].includes(kind) || !OBS_PIECE_ID_RE.test(id || '')) {
+    return res.status(404).json({ error: 'No such piece' });
+  }
+  try {
+    const piece = await loadObservatoryPiece(kind, id);
+    if (!piece) return res.status(404).json({ error: 'No such piece' });
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json({ kind, piece });
+  } catch (err) {
+    console.error('[/api/observatory/piece] error:', err.message);
+    return res.status(500).json({ error: 'The piece could not be read' });
   }
 });
 

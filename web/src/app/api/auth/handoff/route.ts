@@ -20,6 +20,9 @@ export const runtime = 'nodejs'
 // caller can mint a link for itself and nothing else.
 
 const FALLBACK_APP_URL = 'https://app.pursuearete.com'
+// The Academy shares the Supabase project, so the same one-time hash signs
+// the user in there through its /auth/confirm route (type=magiclink).
+const ACADEMY_URL = 'https://academy.pursuearete.com'
 
 // Only same-origin paths may be used as a landing target.
 function safeNextPath(raw: unknown): string {
@@ -56,10 +59,18 @@ export async function POST(req: NextRequest) {
       throw error ?? new Error('generateLink returned no token')
     }
 
-    const origin = req.headers.get('origin') ?? FALLBACK_APP_URL
-    const url = new URL('/auth/handoff', origin)
-    url.searchParams.set('token_hash', data.properties.hashed_token)
-    url.searchParams.set('next', next)
+    let url: URL
+    if (body?.target === 'academy') {
+      url = new URL('/auth/confirm', ACADEMY_URL)
+      url.searchParams.set('token_hash', data.properties.hashed_token)
+      url.searchParams.set('type', 'magiclink')
+      url.searchParams.set('next', next)
+    } else {
+      const origin = req.headers.get('origin') ?? FALLBACK_APP_URL
+      url = new URL('/auth/handoff', origin)
+      url.searchParams.set('token_hash', data.properties.hashed_token)
+      url.searchParams.set('next', next)
+    }
 
     return NextResponse.json({ url: url.toString() })
   } catch (error) {

@@ -51,7 +51,7 @@ const PLAN_DISPLAY: PlanDisplay[] = [
     period: '/mo',
     badge: null,
     highlighted: false,
-    description: '50 messages/day · All 23 counselors · Shared sessions',
+    description: '50 messages/day · All 23 counselors · Full Academy',
   },
   {
     identifier: 'premium_yearly',
@@ -82,6 +82,9 @@ const FEATURES = [
   { label: 'Custom cabinet',   free: '—',        arete: '✓',      pro: '✓' },
   { label: 'Shared sessions',  free: '—',        arete: '✓',      pro: '✓' },
   { label: 'Weekly insights',  free: 'Preview',  arete: 'Full',   pro: 'Full' },
+  { label: 'Academy courses',  free: 'PHIL 701', arete: 'All',    pro: 'All' },
+  { label: 'Symposium dialogues/day', free: '5', arete: '50',     pro: 'Unlimited' },
+  { label: 'The corpus writes in the margins', free: '—', arete: '✓', pro: '✓' },
 ];
 
 // Source-specific headline copy: whoever arrives from a tease lands on a

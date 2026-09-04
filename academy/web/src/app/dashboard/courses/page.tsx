@@ -129,9 +129,10 @@ const COURSES: Course[] = [
 
 const TIER_RANK: Record<Tier, number> = { auditor: 0, scholar: 1, fellow: 2 };
 
-// Courses accessible to every tier (no Scholar+ gate). PHIL 702–704 remain
-// tier-gated unless the admin bypass is active.
-const OPEN_ACCESS = new Set(['phil-701', 'phil-705', 'grek-101', 'latn-101', 'grek-201', 'latn-201']);
+// Courses open to the free standing. Everything else — PHIL 702–707, the
+// logic and language tracks — is Arete Premium (tier 'scholar' and up, see
+// lib/entitlement) unless the admin bypass is active.
+const OPEN_ACCESS = new Set(['phil-701']);
 
 // Track badge by course id. PHIL 701–704 show no track badge (unchanged).
 const TRACK_BADGE: Record<string, { label: string; color: string }> = {
@@ -156,8 +157,8 @@ export default function CoursesPage() {
 
   const adminBypass = isAdmin;
 
-  // Admin bypass overrides every tier/prerequisite lock. Otherwise open-access
-  // courses are always available; PHIL 702–704 require Scholar+.
+  // Admin bypass overrides every tier/prerequisite lock. Otherwise PHIL 701 is
+  // always available and every other course requires Premium (Scholar+).
   const canAccess = (course: Course) => {
     if (adminBypass) return true;
     if (OPEN_ACCESS.has(course.id)) return true;

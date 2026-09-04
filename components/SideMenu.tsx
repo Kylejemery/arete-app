@@ -12,19 +12,19 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSubscription } from '@/lib/useSubscription';
 
 const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
 /**
- * Right-slide drawer for premium destinations beyond the core tabs: the
- * Academy (web) and the Library (in-app). Free tier taps route to the
- * paywall with a labeled source. Rendered from the Home screen's menu button.
+ * Right-slide drawer for the destinations beyond the core tabs: the Academy
+ * (web) and the Library (in-app). Both are free to enter — the paid parts
+ * (the full curriculum, the corpus writing in the margins, the larger
+ * Symposium quota) are gated where they live. Rendered from the Home
+ * screen's menu button.
  */
 export default function SideMenu({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tier } = useSubscription();
   const slide = useRef(new Animated.Value(PANEL_WIDTH)).current;
   const fade = useRef(new Animated.Value(0)).current;
 
@@ -47,11 +47,7 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
     });
   };
 
-  const openGated = (destination: 'academy' | 'library') => {
-    if (tier === 'free') {
-      close(() => router.push({ pathname: '/paywall', params: { src: `menu_${destination}` } } as any));
-      return;
-    }
+  const open = (destination: 'academy' | 'library') => {
     close(() => {
       router.push(destination === 'library' ? '/library' : '/academy' as any);
     });
@@ -77,14 +73,13 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.item} onPress={() => openGated('academy')} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.item} onPress={() => open('academy')} activeOpacity={0.8}>
             <View style={styles.itemIcon}>
               <Ionicons name="school-outline" size={22} color="#c9a84c" />
             </View>
             <View style={styles.itemBody}>
               <View style={styles.itemTitleRow}>
                 <Text style={styles.itemTitle}>The Academy</Text>
-                <Text style={styles.premiumBadge}>PREMIUM</Text>
               </View>
               <Text style={styles.itemSubtitle}>
                 Courses and structured study in the classical tradition.
@@ -93,14 +88,13 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
             <Ionicons name="chevron-forward" size={16} color="#555" />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.item} onPress={() => openGated('library')} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.item} onPress={() => open('library')} activeOpacity={0.8}>
             <View style={styles.itemIcon}>
               <Ionicons name="library-outline" size={22} color="#c9a84c" />
             </View>
             <View style={styles.itemBody}>
               <View style={styles.itemTitleRow}>
                 <Text style={styles.itemTitle}>The Library</Text>
-                <Text style={styles.premiumBadge}>PREMIUM</Text>
               </View>
               <Text style={styles.itemSubtitle}>
                 Read the original texts your counselors draw from.
@@ -184,18 +178,6 @@ const styles = StyleSheet.create({
     color: '#e0d5b5',
     fontSize: 16,
     fontWeight: '600',
-  },
-  premiumBadge: {
-    color: '#c9a84c',
-    fontSize: 8,
-    fontWeight: '800',
-    letterSpacing: 1,
-    borderWidth: 1,
-    borderColor: '#c9a84c66',
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    overflow: 'hidden',
   },
   itemSubtitle: {
     color: '#888',

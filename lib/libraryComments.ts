@@ -104,7 +104,7 @@ export async function askCorpus(input: {
     body: JSON.stringify(input),
   });
   const data = await res.json().catch(() => ({}));
-  if (res.status === 403 && data?.error === 'pro_required') throw new CorpusGateError(data.message || 'Conversing with the Library is an Arete Pro feature.');
+  if (res.status === 403 && (data?.error === 'premium_required' || data?.error === 'pro_required')) throw new CorpusGateError(data.message || 'Asking the corpus to write in the margin is an Arete Premium feature.');
   if (!res.ok) throw new Error(data?.message || data?.error || 'The corpus is silent just now.');
   return data;
 }

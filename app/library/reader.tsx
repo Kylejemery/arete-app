@@ -551,7 +551,7 @@ export default function LibraryReaderScreen() {
                                 await reloadComments();
                                 return !!r.existing;
                             }}
-                            onUpgrade={() => { setSelectedPara(null); router.push('/paywall' as any); }}
+                            onUpgrade={() => { setSelectedPara(null); router.push({ pathname: '/paywall', params: { src: 'library_margin_note' } } as any); }}
                         />
                     )}
                 </KeyboardAvoidingView>
@@ -709,7 +709,7 @@ function ThreadSheet(props: {
                     <Text style={styles.askHint}>the whole tradition weighs in, citing its shelves</Text>
                     {gated && (
                         <TouchableOpacity onPress={onUpgrade} style={styles.gateRow}>
-                            <Text style={styles.gateText}>Conversing with the Library is an Arete Pro feature. Reading is always free.  <Text style={{ color: '#c9a84c', textDecorationLine: 'underline' }}>See Pro</Text></Text>
+                            <Text style={styles.gateText}>Asking the corpus to write in the margin is an Arete Premium feature. Reading and commenting are always free.  <Text style={{ color: '#c9a84c', textDecorationLine: 'underline' }}>See Premium</Text></Text>
                         </TouchableOpacity>
                     )}
                 </View>

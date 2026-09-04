@@ -7,6 +7,7 @@ import {
     Modal,
     SafeAreaView,
     ScrollView,
+    Share,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -15,6 +16,14 @@ import {
 import { API_BASE_URL } from '../../services/claudeService';
 
 const WEB_OBSERVATORY_URL = 'https://academy.pursuearete.com/library';
+
+// Every piece has a public page of its own on the Academy site, server-
+// rendered with a link preview — that is what the share sheet sends.
+type ShareKind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world';
+function sharePiece(kind: ShareKind, id: string, title: string) {
+    const url = `https://academy.pursuearete.com/observatory/${kind}/${id}`;
+    Share.share({ message: `${title}\n${url}`, url, title }).catch(() => {});
+}
 
 // The corpus-concludes hue — a cool cyan, distinct from the greens/golds of the
 // other kinds: a conclusion is arrived-at, not found.
@@ -25,6 +34,7 @@ const CONV = '#5ab0c9';
 // names the signal, the detail sheet carries the response. Everything the sheet
 // reads is optional so a backend that still sends the teaser alone renders.
 interface WorldObservation {
+    id: string;
     dominantSignal: string;
     tension: string | null;
     authors: string[];
@@ -345,9 +355,18 @@ export default function ObservatoryScreen() {
                                     {activeConv?.starred ? 'THE CORPUS CONCLUDES · STARRED' : 'THE CORPUS CONCLUDES'}
                                 </Text>
                             </View>
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity
+                                    onPress={() => activeConv && sharePiece('convergence', activeConv.id, activeConv.title)}
+                                    hitSlop={10}
+                                    accessibilityLabel="Share this piece"
+                                >
+                                    <Ionicons name="share-outline" size={20} color="#c9a84c" />
+                                </TouchableOpacity>
                             <TouchableOpacity onPress={() => setActiveConv(null)} hitSlop={10}>
                                 <Ionicons name="close" size={22} color="#888" />
                             </TouchableOpacity>
+                            </View>
                         </View>
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {!!activeConv?.title && <Text style={styles.modalTitle}>{activeConv.title}</Text>}
@@ -410,9 +429,23 @@ export default function ObservatoryScreen() {
                                     {detail ? DETAIL_TAG[detail.kind].toUpperCase() : ''}
                                 </Text>
                             </View>
+                            <View style={styles.modalActions}>
+                                <TouchableOpacity
+                                    onPress={() => {
+                                        if (!detail) return;
+                                        if (detail.kind === 'inquiry') sharePiece('inquiry', detail.inquiry.id, detail.inquiry.question);
+                                        else if (detail.kind === 'tension') sharePiece('tension', detail.tension.id, detail.tension.title);
+                                        else sharePiece('world', detail.world.id, detail.world.dominantSignal);
+                                    }}
+                                    hitSlop={10}
+                                    accessibilityLabel="Share this piece"
+                                >
+                                    <Ionicons name="share-outline" size={20} color="#c9a84c" />
+                                </TouchableOpacity>
                             <TouchableOpacity onPress={() => setDetail(null)} hitSlop={10}>
                                 <Ionicons name="close" size={22} color="#888" />
                             </TouchableOpacity>
+                            </View>
                         </View>
                         <ScrollView showsVerticalScrollIndicator={false}>
                             {!!detail && <FeedDetailBody detail={detail} />}
@@ -641,6 +674,7 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: '#5ab0c966', padding: 22, maxHeight: '88%',
     },
     modalHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+    modalActions: { flexDirection: 'row', alignItems: 'center', gap: 16 },
     modalTitle: { color: '#f4ead5', fontSize: 22, fontWeight: '600', lineHeight: 28, marginBottom: 8 },
     modalConclusion: { color: '#f4ead5', fontSize: 16, lineHeight: 24, marginBottom: 14 },
     modalDisclose: {
