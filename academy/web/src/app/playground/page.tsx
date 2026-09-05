@@ -106,6 +106,18 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Close the hand →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/the-garden">
+          <p className="pg-card-kicker">The Garden</p>
+          <h2>Wall, soil, and fruit</h2>
+          <p>
+            The Stoics drew their philosophy as a fertile field: logic the wall
+            around it, physics the soil and the trees, ethics the fruit. Walk
+            it, take a part away and see what is left, then step into each bed
+            and work it.
+          </p>
+          <span className="pg-card-go">Through the gate →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
