@@ -1,0 +1,641 @@
+/* Zeno's Hand — a Playground experiment.
+ *
+ * Shares the Playground palette (tape / bone / pomegranate) and the four type
+ * families exposed by app/playground/layout.tsx. Three movements: the gesture
+ * (an animated hand you step through), the trial (nine impressions to assent
+ * to or withhold from), and the reflection.
+ */
+
+.page {
+  --paper: #e4e5dc;
+  --tape: #16140f;
+  --tape-rule: #332f26;
+  --plate: #100e0a;
+  --bone: #c9c4b6;
+  --bone-dim: #7c7565;
+  --slate: #1d2124;
+  --pom: #8a2b2b;
+  --pom-lit: #b8473f;
+  --gold: #c9a84c;
+  --moss: #6f8a5a;
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --util: var(--font-plex-sans), 'IBM Plex Sans', system-ui, sans-serif;
+  --gap: clamp(1.5rem, 4vw, 4rem);
+  --measure: 74rem;
+
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tape);
+  color: var(--bone);
+  font-family: var(--book);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--pom-lit);
+  outline-offset: 3px;
+}
+.page button {
+  font: inherit;
+}
+
+/* ── top bar / back ── */
+.topBar {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(1.4rem, 4vw, 2.2rem) var(--gap) 0;
+}
+.backLink {
+  display: inline-block;
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  text-decoration: none;
+}
+.backLink:hover {
+  color: var(--pom-lit);
+}
+
+/* ── hero ── */
+.hero {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 3.5rem) var(--gap) clamp(1.5rem, 4vh, 2.5rem);
+}
+.eyebrow,
+.kicker {
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1.4rem;
+}
+.title {
+  font-family: var(--display);
+  font-variation-settings: 'SOFT' 0, 'WONK' 1, 'opsz' 144;
+  font-weight: 400;
+  font-size: clamp(2.4rem, 7vw, 4.6rem);
+  line-height: 0.99;
+  letter-spacing: -0.025em;
+  margin: 0;
+  color: var(--paper);
+  max-width: 18ch;
+  text-wrap: balance;
+}
+.lede {
+  font-family: var(--book);
+  font-style: italic;
+  font-size: clamp(1.1rem, 2.4vw, 1.42rem);
+  max-width: 48ch;
+  margin: 1.4rem 0 0;
+  color: var(--bone);
+  line-height: 1.42;
+}
+
+/* ── sections ── */
+.section {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(2rem, 5vh, 3.5rem) var(--gap) clamp(2.5rem, 6vh, 4rem);
+  border-top: 1px solid var(--tape-rule);
+}
+.sectionHead {
+  margin-bottom: clamp(1.4rem, 3vh, 2.2rem);
+}
+.kicker {
+  margin-bottom: 0.9rem;
+}
+.h2 {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 400;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  line-height: 1.04;
+  margin: 0;
+  color: var(--paper);
+  text-wrap: balance;
+  max-width: 24ch;
+}
+.sectionLede {
+  margin: 1rem 0 0;
+  max-width: 56ch;
+  color: var(--bone);
+  font-size: 1.02rem;
+}
+
+/* ── the plate the hand sits on ── */
+.gestureGrid,
+.trialGrid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 26rem) 1fr;
+  gap: clamp(1.2rem, 3vw, 2.6rem);
+  align-items: start;
+}
+.stagePlate {
+  position: sticky;
+  top: 1.5rem;
+  background: radial-gradient(ellipse at 50% 60%, #221d15 0%, var(--plate) 70%);
+  border: 1px solid var(--tape-rule);
+  padding: 1.2rem 1.2rem 1rem;
+}
+.stagePlateSmall {
+  padding: 0.8rem 0.8rem 0.8rem;
+}
+.plateLoose {
+  animation: loose 2.4s ease-in-out infinite;
+}
+@keyframes loose {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  30% {
+    transform: translateX(-2px);
+  }
+  60% {
+    transform: translateX(2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plateLoose {
+    animation: none;
+  }
+}
+.handSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+.stageMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--tape-rule);
+  padding-top: 0.6rem;
+}
+.stageNum {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  white-space: nowrap;
+}
+.stageHand {
+  font-family: var(--util);
+  font-size: 0.78rem;
+  color: var(--bone-dim);
+  text-align: right;
+}
+
+/* ── stepper + slider ── */
+.stageCol,
+.trialCol {
+  min-width: 0;
+}
+.stepper {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--tape-rule);
+  margin: 0 0 1.2rem;
+}
+.stepBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.8rem;
+  background: var(--plate);
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--bone-dim);
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.stepBtn + .stepBtn {
+  border-left: 1px solid var(--tape-rule);
+}
+.stepBtn:hover {
+  color: var(--bone);
+}
+.stepBtnDone {
+  color: var(--bone);
+}
+.stepBtnOn {
+  color: var(--paper);
+  background: var(--slate);
+  border-bottom-color: var(--pom-lit);
+}
+.stepNum {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--bone-dim);
+}
+.stepBtnOn .stepNum {
+  color: var(--pom-lit);
+}
+.stepName {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-size: 1rem;
+  line-height: 1.1;
+}
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  margin: 0.4rem 0 0.5rem;
+  background: var(--tape-rule);
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--pom-lit);
+  border: 2px solid var(--tape);
+  box-shadow: 0 0 8px rgba(184, 71, 63, 0.7);
+}
+.slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pom-lit);
+  border: 2px solid var(--tape);
+}
+.sliderScale {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--bone-dim);
+  margin-bottom: 1.6rem;
+}
+.playBtn {
+  font-family: var(--util);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  background: transparent;
+  border: 1px solid var(--tape-rule);
+  color: var(--bone);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.playBtn:hover:not(:disabled) {
+  border-color: var(--pom-lit);
+  color: var(--paper);
+}
+.playBtn:disabled {
+  color: var(--bone-dim);
+  cursor: default;
+}
+
+/* ── stage card ── */
+.stageCard {
+  animation: rise 0.45s ease both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stageCard {
+    animation: none;
+  }
+}
+.stageTerms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  align-items: baseline;
+  margin: 0 0 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+.stageLatin {
+  color: var(--pom-lit);
+  font-style: italic;
+}
+.stageGreek {
+  color: var(--bone-dim);
+}
+.stageName {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 400;
+  font-size: clamp(1.6rem, 3.6vw, 2.2rem);
+  line-height: 1.05;
+  margin: 0 0 1rem;
+  color: var(--paper);
+}
+.ciceroLine {
+  margin: 0 0 1.2rem;
+  padding: 1rem 1.2rem;
+  background: var(--slate);
+  border-left: 2px solid var(--pom);
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.08rem, 2.4vw, 1.3rem);
+  line-height: 1.4;
+  color: #ede9de;
+  text-wrap: pretty;
+}
+.ciceroLine cite {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--util);
+  font-size: 0.72rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+.gloss {
+  margin: 0;
+  color: var(--bone);
+  max-width: 58ch;
+}
+
+/* ── the trial ── */
+.progress {
+  list-style: none;
+  display: flex;
+  gap: 0.45rem;
+  margin: 0 0 1.6rem;
+  padding: 0;
+}
+.progressDot {
+  width: 1.7rem;
+  height: 1.7rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--tape-rule);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--bone-dim);
+  background: var(--plate);
+}
+.dotNow {
+  border-color: var(--pom-lit);
+  box-shadow: 0 0 8px rgba(184, 71, 63, 0.45);
+}
+.dot_grasp {
+  color: var(--paper);
+  background: var(--pom);
+  border-color: var(--pom);
+}
+.dot_opinion {
+  color: var(--pom-lit);
+  border-color: var(--pom-lit);
+}
+.dot_suspended {
+  color: var(--bone);
+}
+.dot_missed {
+  color: var(--bone-dim);
+}
+.caseNum {
+  font-family: var(--util);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin: 0 0 0.8rem;
+}
+.scene {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.3rem, 3vw, 1.75rem);
+  line-height: 1.32;
+  color: #ede9de;
+  margin: 0 0 1.4rem;
+  max-width: 30ch;
+  text-wrap: pretty;
+}
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.choiceBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.1rem;
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  color: var(--bone);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.choiceBtn:hover {
+  border-color: var(--pom-lit);
+  background: var(--slate);
+}
+.choiceGlyph {
+  font-size: 1.7rem;
+  line-height: 1;
+  filter: grayscale(1) brightness(1.15);
+}
+.choiceBtn strong {
+  display: block;
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1;
+  font-weight: 400;
+  font-size: 1.1rem;
+  color: var(--paper);
+}
+.choiceBtn small {
+  display: block;
+  font-family: var(--util);
+  font-size: 0.76rem;
+  color: var(--bone-dim);
+  margin-top: 0.15rem;
+}
+.reveal {
+  animation: rise 0.4s ease both;
+}
+.revealLabel {
+  font-family: var(--util);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--tape-rule);
+}
+.rv_grasp {
+  color: var(--gold);
+}
+.rv_opinion {
+  color: var(--pom-lit);
+}
+.rv_suspended {
+  color: var(--moss);
+}
+.rv_missed {
+  color: var(--bone-dim);
+}
+.why {
+  margin: 0 0 0.9rem;
+  color: var(--bone);
+  max-width: 58ch;
+}
+.source {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--bone-dim);
+  margin: 0 0 1.3rem;
+}
+.nextBtn {
+  font-family: var(--util);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 0.7rem 1.2rem;
+  background: var(--pom);
+  border: 1px solid var(--pom);
+  color: var(--paper);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.nextBtn:hover {
+  background: var(--pom-lit);
+}
+.resultName {
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 400;
+  font-size: clamp(1.5rem, 3.4vw, 2.1rem);
+  line-height: 1.08;
+  margin: 0 0 1rem;
+  color: var(--paper);
+}
+
+/* ── reflection ── */
+.prose {
+  max-width: 62ch;
+}
+.prose p {
+  margin: 0 0 1.1rem;
+  color: var(--bone);
+  font-size: 1.04rem;
+}
+.reflection {
+  margin: 2.2rem 0 0;
+  padding: 1.6rem 0 0;
+  border-top: 1px solid var(--tape-rule);
+}
+.reflectionRef {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--util);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--pom-lit);
+  margin: 0 0 1rem;
+}
+.diamond {
+  width: 6px;
+  height: 6px;
+  background: var(--pom-lit);
+  transform: rotate(45deg);
+  flex: none;
+}
+.reflectionText {
+  margin: 0;
+  font-family: var(--display);
+  font-variation-settings: 'WONK' 1, 'opsz' 40;
+  font-weight: 300;
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  line-height: 1.42;
+  color: #ede9de;
+  text-wrap: pretty;
+  max-width: 40ch;
+}
+.reflectionBy {
+  display: block;
+  margin-top: 0.9rem;
+  font-family: var(--util);
+  font-size: 0.8rem;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  color: var(--bone-dim);
+}
+.note {
+  margin: 2rem 0 0;
+  max-width: 62ch;
+  font-family: var(--util);
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+}
+
+/* ── discussion ── */
+.discuss {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: 0 var(--gap) clamp(4rem, 10vh, 7rem);
+}
+
+/* ── responsive ── */
+@media (max-width: 760px) {
+  .gestureGrid,
+  .trialGrid {
+    grid-template-columns: 1fr;
+  }
+  .stagePlate {
+    position: static;
+    max-width: 22rem;
+  }
+  .choices {
+    grid-template-columns: 1fr;
+  }
+  .stepper {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stepBtn:nth-child(3) {
+    border-left: none;
+    border-top: 1px solid var(--tape-rule);
+  }
+  .stepBtn:nth-child(4) {
+    border-top: 1px solid var(--tape-rule);
+  }
+}

@@ -94,6 +94,18 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Cross it →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/zenos-hand">
+          <p className="pg-card-kicker">Zeno&apos;s Hand</p>
+          <h2>Four positions, one hand</h2>
+          <p>
+            Zeno taught the whole of Stoic epistemology with a gesture: open,
+            curled, closed, then gripped with the other hand. Step through it,
+            then test your own assent against nine cases from the ancient
+            argument and see whether the second hand can close on yours.
+          </p>
+          <span className="pg-card-go">Close the hand →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
