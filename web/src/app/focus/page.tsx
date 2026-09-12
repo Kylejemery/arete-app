@@ -174,7 +174,9 @@ export default function FocusPage() {
       endPage,
       pagesRead,
       duration: readingSeconds,
-      date: new Date().toISOString(),
+      // Same local-day form the mobile timer writes; the reading streak on
+      // both platforms keys on it.
+      date: new Date().toDateString(),
       dateFormatted: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     };
     const updatedSessions = [...readingSessions, session];
@@ -225,7 +227,7 @@ export default function FocusPage() {
 
             {/* Mode toggle */}
             <div
-              className="flex gap-1 p-1 rounded-xl mb-6"
+              className="flex gap-1 p-1 rounded-xl mb-4"
               style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               {(['work', 'break'] as const).map(m => (
@@ -245,12 +247,12 @@ export default function FocusPage() {
             </div>
 
             {/* Orbit timer */}
-            <div className="flex justify-center mb-4">
-              <TimerOrbit elapsed={pomodoroElapsed} total={pomodoroTotal} isRunning={isRunning} />
+            <div className="flex justify-center mb-3">
+              <TimerOrbit elapsed={pomodoroElapsed} total={pomodoroTotal} isRunning={isRunning} size={200} />
             </div>
 
             {/* Controls */}
-            <div className="flex gap-3 justify-center mb-4">
+            <div className="flex gap-3 justify-center mb-3">
               <button
                 onClick={() => setIsRunning(r => !r)}
                 className="rounded-2xl px-8 py-3 font-bold text-[15px] transition-opacity hover:opacity-90"
@@ -296,7 +298,7 @@ export default function FocusPage() {
             {/* Timer display */}
             <div className="text-center mb-4">
               <div
-                className="text-[48px] font-medium leading-none"
+                className="text-[40px] font-medium leading-none"
                 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e3c77a' }}
               >
                 {formatTime(readingSeconds)}

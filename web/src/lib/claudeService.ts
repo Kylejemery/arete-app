@@ -1,4 +1,4 @@
-import { getUserSettings, getLatestCheckIn, getJournalEntries, getReadingData, getCounselorsBySlugs } from './db';
+import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 import { supabase } from '@/lib/supabase';
@@ -472,14 +472,17 @@ export async function sendMessageToCabinet(
 
 export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<string> {
   try {
-    const settings = await getUserSettings();
+    // Today's row is the source of truth for tasks and intention (the morning
+    // and evening pages write it), same as the mobile app. The old
+    // localStorage keys read here were no longer written by anything.
+    const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
+    const intention = String(checkin?.intention ?? '').trim();
 
     let userMessage: string;
 
     if (type === 'morning') {
-      const storedTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_morning_tasks') : null;
-      const morningTasks: { title: string; done: boolean }[] = storedTasks ? JSON.parse(storedTasks) : [];
+      const morningTasks = (checkin?.morning_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -494,16 +497,17 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
       const affirmation = affirmations[day];
-      userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}. Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
+      const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
+      userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
     } else {
-      const storedTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_evening_tasks') : null;
-      const eveningTasks: { title: string; done: boolean }[] = storedTasks ? JSON.parse(storedTasks) : [];
+      const eveningTasks = (checkin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = (typeof window !== 'undefined' ? localStorage.getItem('arete_reflection_answer') : null) || '(not answered)';
-      const stoic = (typeof window !== 'undefined' ? localStorage.getItem('arete_stoic_answer') : null) || '(not answered)';
-      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
+      const reflection = String(checkin?.reflection_answer ?? '') || '(not answered)';
+      const stoic = String(checkin?.stoic_answer ?? '') || '(not answered)';
+      const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
+      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
     }
 
     const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);

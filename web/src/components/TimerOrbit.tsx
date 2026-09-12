@@ -2,9 +2,12 @@ interface TimerOrbitProps {
   elapsed: number;
   total: number;
   isRunning: boolean;
+  /** Rendered diameter in px. The drawing is a fixed 280-unit viewBox that
+   *  scales down with this, and never exceeds the width of its container. */
+  size?: number;
 }
 
-export default function TimerOrbit({ elapsed, total, isRunning }: TimerOrbitProps) {
+export default function TimerOrbit({ elapsed, total, isRunning, size = 200 }: TimerOrbitProps) {
   const r = 110;
   const circumference = 2 * Math.PI * r;
   const pct = total > 0 ? Math.min(1, elapsed / total) : 0;
@@ -16,8 +19,11 @@ export default function TimerOrbit({ elapsed, total, isRunning }: TimerOrbitProp
   const dotAngle = (pct * 360 - 90) * (Math.PI / 180);
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: 280, height: 280 }}>
-      <svg width="280" height="280" viewBox="0 0 280 280">
+    <div
+      className="relative flex items-center justify-center"
+      style={{ width: size, height: size, maxWidth: '100%', aspectRatio: '1 / 1' }}
+    >
+      <svg width="100%" height="100%" viewBox="0 0 280 280">
         <defs>
           <filter id="orbit-glow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" result="blur" />
@@ -92,7 +98,7 @@ export default function TimerOrbit({ elapsed, total, isRunning }: TimerOrbitProp
           style={{
             fontFamily: 'var(--font-serif, Georgia, serif)',
             color: '#e3c77a',
-            fontSize: 52,
+            fontSize: Math.round(size * 0.17),
             fontWeight: 500,
             lineHeight: 1,
           }}
@@ -100,7 +106,7 @@ export default function TimerOrbit({ elapsed, total, isRunning }: TimerOrbitProp
           {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
         </div>
         <div
-          className="mt-2 text-[10px] tracking-[2px] uppercase"
+          className="mt-1.5 text-[9px] tracking-[2px] uppercase"
           style={{
             fontFamily: 'var(--font-mono, monospace)',
             color: isRunning ? '#c9a84c' : elapsed > 0 ? 'rgba(201,168,76,0.5)' : 'rgba(201,168,76,0.35)',

@@ -889,7 +889,9 @@ export async function sendCheckInToCabinet(
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
       const affirmation = affirmations[day];
-      userMessage = `[Morning check-in] ${userName} has just completed his morning routine. Tasks: ${taskSummary}. Affirmation shown: '${affirmation}'. Speak to him briefly as he begins the day.`;
+      const intention = (checkin?.intention || '').trim();
+      const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
+      userMessage = `[Morning check-in] ${userName} has just completed his morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to him briefly as he begins the day.`;
     } else {
       const eveningTasks = checkin?.evening_tasks ?? [];
       const taskSummary = eveningTasks.length > 0
@@ -897,7 +899,9 @@ export async function sendCheckInToCabinet(
         : '(no tasks)';
       const reflection = checkin?.reflection_answer || '(not answered)';
       const stoic = checkin?.stoic_answer || '(not answered)';
-      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}. Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
+      const intention = (checkin?.intention || '').trim();
+      const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
+      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
     }
 
     const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);

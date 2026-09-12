@@ -70,6 +70,9 @@ export default function MorningScreen() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
+  const [intention, setIntention] = useState('');
+  const intentionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingIntention = useRef<string | null>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   useFocusEffect(
@@ -137,6 +140,12 @@ export default function MorningScreen() {
         setCheckinResponse(checkin.cabinet_morning_response);
       }
 
+      // Today's intention lives on today's row (shared with the web app), so
+      // it is blank each new day rather than carrying yesterday's forward.
+      if (pendingIntention.current === null) {
+        setIntention(checkin?.intention ?? '');
+      }
+
       // Step 3: write date-stamped cache
       try {
         await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify({ date: localToday(), tasks: freshTasks }));
@@ -169,6 +178,26 @@ export default function MorningScreen() {
 
   const updateStreak = async () => {
     await incrementStreak();
+  };
+
+  // Persist the intention to today's check_ins row: debounced while typing,
+  // flushed when the field loses focus.
+  const flushIntention = async () => {
+    if (intentionSaveTimer.current) {
+      clearTimeout(intentionSaveTimer.current);
+      intentionSaveTimer.current = null;
+    }
+    const value = pendingIntention.current;
+    pendingIntention.current = null;
+    if (value === null) return;
+    await upsertTodayCheckin({ intention: value.trim() || null });
+  };
+
+  const saveIntention = (value: string) => {
+    setIntention(value);
+    pendingIntention.current = value;
+    if (intentionSaveTimer.current) clearTimeout(intentionSaveTimer.current);
+    intentionSaveTimer.current = setTimeout(() => { flushIntention(); }, 600);
   };
 
   const applyToggle = async (id: string) => {
@@ -269,6 +298,25 @@ export default function MorningScreen() {
         <View style={styles.affirmationContainer}>
           <Ionicons name="sunny-outline" size={20} color="#c9a84c" />
           <Text style={styles.affirmation}>"{affirmation}"</Text>
+        </View>
+
+        {/* Today's Intention */}
+        <View style={styles.intentionCard}>
+          <View style={styles.intentionHeader}>
+            <Ionicons name="sparkles-outline" size={16} color="#c9a84c" />
+            <Text style={styles.intentionLabel}>TODAY&apos;S INTENTION</Text>
+          </View>
+          <TextInput
+            style={styles.intentionInput}
+            placeholder="Write one sentence the Cabinet will hold you to…"
+            placeholderTextColor="#555"
+            value={intention}
+            onChangeText={saveIntention}
+            onBlur={flushIntention}
+            multiline
+            blurOnSubmit
+            returnKeyType="done"
+          />
         </View>
 
         {/* Progress Bar */}
@@ -494,6 +542,35 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     flex: 1,
     lineHeight: 22,
+  },
+  intentionCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 22,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+  },
+  intentionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  intentionLabel: {
+    color: '#c9a84c',
+    fontSize: 11,
+    letterSpacing: 1.5,
+    fontWeight: '600',
+  },
+  intentionInput: {
+    color: '#fff',
+    fontSize: 16,
+    fontStyle: 'italic',
+    lineHeight: 22,
+    minHeight: 44,
+    padding: 0,
+    textAlignVertical: 'top',
   },
   progressContainer: {
     marginBottom: 22,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, hasCheckInToday, getReadingData, getCalendarData, getJournalEntries } from '@/lib/db';
+import { getUserSettings, hasCheckInToday, getReadingData, getCalendarData, getJournalEntries, checkAndResetStreakIfMissed } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
 
@@ -12,7 +12,32 @@ interface ReadingSession {
   bookTitle: string;
   pagesRead: number;
   duration: number;
+  date?: string;
   dateFormatted: string;
+}
+
+/**
+ * Consecutive days (ending today, or yesterday if nothing is logged yet
+ * today) with at least one reading session. Mirrors the mobile Progress tab.
+ * Sessions written by the mobile timer carry `Date.toDateString()`; older
+ * web sessions carry an ISO timestamp — both normalise through `new Date`.
+ */
+function computeReadingStreak(sessions: ReadingSession[]): number {
+  const days = new Set<string>();
+  for (const s of sessions) {
+    if (!s.date) continue;
+    const d = new Date(s.date);
+    if (!isNaN(d.getTime())) days.add(d.toDateString());
+  }
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(12, 0, 0, 0); // noon avoids DST boundaries when stepping back
+  if (!days.has(cursor.toDateString())) cursor.setDate(cursor.getDate() - 1);
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
 }
 
 interface Book {
@@ -46,17 +71,20 @@ export default function ProgressPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return; }
-      const [settings, morningDoneToday, eveningDoneToday, readingData, calData, journalEntries] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, readingData, calData, journalEntries, streakVal] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
         getReadingData(),
         getCalendarData(),
         getJournalEntries(),
+        // Same profiles.streak the home page and the mobile app show; this
+        // page used to hardcode 0 here.
+        checkAndResetStreakIfMissed(),
       ]);
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      setStreak(0);
+      setStreak(streakVal);
 
       setJournalCount(journalEntries.length);
       setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
@@ -69,8 +97,9 @@ export default function ProgressPage() {
 
       setBooksRead(readingData?.books_read || []);
       setCurrentBooks(readingData?.current_books || []);
-      setReadingSessions(readingData?.reading_sessions || []);
-      setReadingStreak(0);
+      const sessions = (readingData?.reading_sessions || []) as ReadingSession[];
+      setReadingSessions(sessions);
+      setReadingStreak(computeReadingStreak(sessions));
 
       // Merge today's check-in status into calendar data
       const todayKey = new Date().toDateString();

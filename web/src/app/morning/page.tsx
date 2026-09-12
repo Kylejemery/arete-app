@@ -28,7 +28,11 @@ const DEFAULT_TASKS: Task[] = [
 ];
 
 const DONE_STORAGE_KEY = 'arete_morning_done_ids';
-const INTENTION_KEY    = 'arete_morning_intention';
+// Pre-Sept-2026 builds kept the intention under this localStorage key, which
+// never rolled over with the day. It now lives on today's check_ins row; the
+// old key is cleared on load so the stale sentence stops reappearing.
+const LEGACY_INTENTION_KEY = 'arete_morning_intention';
+const INTENTION_SAVE_DEBOUNCE_MS = 600;
 
 export default function MorningPage() {
   const router = useRouter();
@@ -45,6 +49,8 @@ export default function MorningPage() {
   // the tab is in the background.
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const loadedDateRef = useRef('');
+  const intentionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingIntention = useRef<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -83,9 +89,11 @@ export default function MorningPage() {
       if (checkin?.cabinet_morning_response)
         setCheckInResponse(checkin.cabinet_morning_response as string);
 
+      // Today's intention comes from today's row, so it is blank on a new
+      // day and shared with the mobile app.
+      setIntention(((checkin?.intention as string | null) ?? '').toString());
       if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem(INTENTION_KEY);
-        if (saved) setIntention(saved);
+        try { localStorage.removeItem(LEGACY_INTENTION_KEY); } catch { /* ignore */ }
       }
 
       // Record the calendar date this data was loaded for, so the
@@ -169,10 +177,28 @@ export default function MorningPage() {
     }
   };
 
+  // Persist to today's check_ins row, debounced while typing and flushed on
+  // blur so a sentence typed just before navigating away still lands.
+  const flushIntention = async () => {
+    if (intentionSaveTimer.current) {
+      clearTimeout(intentionSaveTimer.current);
+      intentionSaveTimer.current = null;
+    }
+    const value = pendingIntention.current;
+    pendingIntention.current = null;
+    if (value === null) return;
+    await upsertTodayCheckin({ intention: value.trim() || null });
+  };
+
   const saveIntention = (value: string) => {
     setIntention(value);
-    if (typeof window !== 'undefined') localStorage.setItem(INTENTION_KEY, value);
+    pendingIntention.current = value;
+    if (intentionSaveTimer.current) clearTimeout(intentionSaveTimer.current);
+    intentionSaveTimer.current = setTimeout(() => { flushIntention(); }, INTENTION_SAVE_DEBOUNCE_MS);
   };
+
+  // Flush a pending save when the page unmounts (navigating away mid-sentence).
+  useEffect(() => () => { flushIntention(); }, []);
 
   const doneCount = tasks.filter(t => t.done).length;
   const totalCount = tasks.length;
@@ -374,6 +400,7 @@ export default function MorningPage() {
               placeholder="Write one sentence the Cabinet will hold you to…"
               value={intention}
               onChange={e => saveIntention(e.target.value)}
+              onBlur={flushIntention}
               rows={2}
             />
           </div>

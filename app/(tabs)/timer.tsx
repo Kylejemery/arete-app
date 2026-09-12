@@ -51,6 +51,17 @@ export default function TimerScreen() {
   const [endPage, setEndPage] = useState('');
   const [sessionStartPage, setSessionStartPage] = useState(0);
   const intervalRef = useRef<any>(null);
+  const timerNotificationId = useRef<string | null>(null);
+  // Only ever cancel the timer's own "Timer Complete" notification. This used
+  // to call cancelAllScheduledNotificationsAsync(), which also wiped every
+  // daily reminder the Settings screen had scheduled (they only came back the
+  // next time Settings was opened).
+  const cancelTimerNotification = () => {
+    const id = timerNotificationId.current;
+    timerNotificationId.current = null;
+    if (id) Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
+  };
+
   const sessionStartTime = useRef<number>(0);
   const backgroundTimeRef = useRef<number | null>(null);
   const pauseStartRef = useRef<number>(0);
@@ -109,7 +120,7 @@ export default function TimerScreen() {
           if (remaining === 0) {
             clearInterval(pomodoroRef.current);
             setPomodoroRunning(false);
-            Notifications.cancelAllScheduledNotificationsAsync();
+            cancelTimerNotification();
             if (pomodoroModeRef.current === 'work') {
               stopFocusBlock().catch(() => {});
               setPomodoroSessions(s => s + 1);
@@ -134,7 +145,7 @@ export default function TimerScreen() {
         if (remaining === 0) {
           clearInterval(pomodoroRef.current);
           setPomodoroRunning(false);
-          Notifications.cancelAllScheduledNotificationsAsync();
+          cancelTimerNotification();
           if (pomodoroModeRef.current === 'work') {
             stopFocusBlock().catch(() => {});
             setPomodoroSessions(s => s + 1);
@@ -186,8 +197,8 @@ export default function TimerScreen() {
   };
 
   const scheduleTimerNotification = async (durationMs: number, label: string) => {
-    await Notifications.cancelAllScheduledNotificationsAsync();
-    await Notifications.scheduleNotificationAsync({
+    cancelTimerNotification();
+    timerNotificationId.current = await Notifications.scheduleNotificationAsync({
       content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.floor(durationMs / 1000), repeats: false },
     });
@@ -195,7 +206,7 @@ export default function TimerScreen() {
 
   const resetPomodoro = () => {
     setPomodoroRunning(false);
-    Notifications.cancelAllScheduledNotificationsAsync();
+    cancelTimerNotification();
     stopFocusBlock().catch(() => {});
     setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
   };
@@ -203,7 +214,7 @@ export default function TimerScreen() {
   const handlePomodoroManualDone = () => {
     clearInterval(pomodoroRef.current);
     setPomodoroRunning(false);
-    Notifications.cancelAllScheduledNotificationsAsync();
+    cancelTimerNotification();
     stopFocusBlock().catch(() => {});
     setPomodoroSessions(s => s + 1);
     setPomodoroMode('break');
@@ -416,7 +427,7 @@ export default function TimerScreen() {
                     key={m}
                     style={[styles.pomodoroModeBtn, pomodoroMode === m && styles.pomodoroModeBtnActive]}
                     onPress={() => {
-                      Notifications.cancelAllScheduledNotificationsAsync();
+                      cancelTimerNotification();
                       setPomodoroMode(m);
                       setPomodoroTimeLeft(m === 'work' ? 25 * 60 : 5 * 60);
                       setPomodoroRunning(false);
@@ -442,7 +453,7 @@ export default function TimerScreen() {
                       scheduleTimerNotification(pomodoroTimeLeft * 1000, pomodoroMode === 'work' ? 'Focus' : 'Break');
                       if (pomodoroMode === 'work') startFocusBlock().catch(() => {});
                     } else {
-                      Notifications.cancelAllScheduledNotificationsAsync();
+                      cancelTimerNotification();
                       stopFocusBlock().catch(() => {});
                     }
                     setPomodoroRunning(r => !r);

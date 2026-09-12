@@ -61,6 +61,8 @@ export interface DailyCheckin {
   reading_streak: number;
   cabinet_morning_response: string | null;
   cabinet_evening_response: string | null;
+  /** The one sentence the member commits to for the day (morning screen). */
+  intention?: string | null;
   created_at?: string;
   updated_at?: string;
 }
