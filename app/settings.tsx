@@ -140,6 +140,16 @@ const futureSelfMessages = (name?: string) => {
 };
 
 
+// Reminder rescheduling runs strictly one at a time, and a newer request
+// supersedes an older one still in flight. scheduleNotifications() cancels
+// every scheduled notification and then re-creates 7 per enabled reminder,
+// with network calls (cabinet, settings) in between. Two overlapping runs —
+// the silent reschedule on mount racing a toggle, or a double-tap on Save —
+// interleaved those steps: run B cancelled everything mid-way through run A,
+// then both finished scheduling, and every reminder fired twice.
+let rescheduleGeneration = 0;
+let rescheduleChain: Promise<unknown> = Promise.resolve();
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { tier } = useSubscription();
@@ -410,130 +420,145 @@ export default function SettingsScreen() {
       return false;
     }
 
-    await Notifications.cancelAllScheduledNotificationsAsync();
+    const generation = ++rescheduleGeneration;
+    const superseded = () => generation !== rescheduleGeneration;
 
-    // Resolve the user's Future Self name fresh at schedule time.
-    let scheduleFirstName = '';
-    try {
-      const us = await getUserSettings();
-      scheduleFirstName = us?.user_name ? us.user_name.trim().split(/\s+/)[0] : '';
-    } catch { /* fall back to generic labels */ }
-    const futureLabel = scheduleFirstName ? `Future ${scheduleFirstName}` : 'Future Self';
-    const fsMessages = futureSelfMessages(scheduleFirstName || undefined);
+    const run = async () => {
+      // A newer reschedule is queued behind this one and will cancel + rebuild
+      // everything itself, so this run has nothing left to do.
+      if (superseded()) return;
 
-    // Reminders are "sent" by the user's actual cabinet, resolved fresh at
-    // schedule time so edits to the cabinet propagate on the next reschedule.
-    // Defaults only cover the pre-customization case.
-    let cabinetNames: string[] = [];
-    try {
-      const cab = await getUserCabinet();
-      cabinetNames = cab.map(c => c.name).filter(Boolean);
-    } catch { /* fall back to defaults */ }
-    if (cabinetNames.length === 0) {
-      cabinetNames = ['Marcus Aurelius', 'Epictetus', 'David Goggins', 'Theodore Roosevelt'];
-    }
-    const senders = [...cabinetNames, futureLabel];
-    // Offset per reminder type so one day doesn't hear from the same
-    // counselor across every reminder.
-    const senderFor = (day: number, offset: number) => senders[(day + offset) % senders.length];
+      await Notifications.cancelAllScheduledNotificationsAsync();
 
-    // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
-    // Expo CalendarTrigger weekday: 1=Sunday, 2=Monday, …, 7=Saturday
-    const scheduleWeekly = async (
-      titleFn: (day: number) => string,
-      bodyFn: (day: number) => string,
-      hour: number,
-      minute: number,
-    ) => {
-      for (let day = 0; day < 7; day++) {
-        const title = titleFn(day);
-        const body = bodyFn(day);
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title,
-            body,
-            sound: true,
-            // Reminders are messages FROM a counselor: badge the icon, and
-            // carry the data the NotificationBridge needs to seed this line
-            // into the Cabinet thread and open the chat on tap.
-            badge: 1,
-            data: {
-              route: '/cabinet',
-              counselorName: title.split(' — ')[0],
-              seedMessage: body,
+      // Resolve the user's Future Self name fresh at schedule time.
+      let scheduleFirstName = '';
+      try {
+        const us = await getUserSettings();
+        scheduleFirstName = us?.user_name ? us.user_name.trim().split(/\s+/)[0] : '';
+      } catch { /* fall back to generic labels */ }
+      const futureLabel = scheduleFirstName ? `Future ${scheduleFirstName}` : 'Future Self';
+      const fsMessages = futureSelfMessages(scheduleFirstName || undefined);
+
+      // Reminders are "sent" by the user's actual cabinet, resolved fresh at
+      // schedule time so edits to the cabinet propagate on the next reschedule.
+      // Defaults only cover the pre-customization case.
+      let cabinetNames: string[] = [];
+      try {
+        const cab = await getUserCabinet();
+        cabinetNames = cab.map(c => c.name).filter(Boolean);
+      } catch { /* fall back to defaults */ }
+      if (cabinetNames.length === 0) {
+        cabinetNames = ['Marcus Aurelius', 'Epictetus', 'David Goggins', 'Theodore Roosevelt'];
+      }
+      const senders = [...cabinetNames, futureLabel];
+      // Offset per reminder type so one day doesn't hear from the same
+      // counselor across every reminder.
+      const senderFor = (day: number, offset: number) => senders[(day + offset) % senders.length];
+
+      // Helper: schedule 7 weekly notifications (one per day) for a rotating message set.
+      // Expo CalendarTrigger weekday: 1=Sunday, 2=Monday, …, 7=Saturday
+      const scheduleWeekly = async (
+        titleFn: (day: number) => string,
+        bodyFn: (day: number) => string,
+        hour: number,
+        minute: number,
+      ) => {
+        for (let day = 0; day < 7; day++) {
+          if (superseded()) return;
+          const title = titleFn(day);
+          const body = bodyFn(day);
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title,
+              body,
+              sound: true,
+              // Reminders are messages FROM a counselor: badge the icon, and
+              // carry the data the NotificationBridge needs to seed this line
+              // into the Cabinet thread and open the chat on tap.
+              badge: 1,
+              data: {
+                route: '/cabinet',
+                counselorName: title.split(' — ')[0],
+                seedMessage: body,
+              },
             },
-          },
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
-            weekday: day + 1, // Expo: 1=Sunday … 7=Saturday
-            hour,
-            minute,
-            repeats: true,
-          },
-        });
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+              weekday: day + 1, // Expo: 1=Sunday … 7=Saturday
+              hour,
+              minute,
+              repeats: true,
+            },
+          });
+        }
+      };
+
+      // Morning check-in
+      if (settings.morningEnabled) {
+        await scheduleWeekly(
+          (day) => `${senderFor(day, 0)} — Morning Check-In`,
+          (day) => MORNING_MESSAGES[day],
+          parseInt(settings.morningHour),
+          parseInt(settings.morningMinute),
+        );
+      }
+
+      // Evening check-in
+      if (settings.eveningEnabled) {
+        await scheduleWeekly(
+          (day) => `${senderFor(day, 1)} — Evening Check-In`,
+          (day) => EVENING_MESSAGES[day],
+          parseInt(settings.eveningHour),
+          parseInt(settings.eveningMinute),
+        );
+      }
+
+      // Midday task reminder
+      if (settings.taskReminderEnabled) {
+        await scheduleWeekly(
+          (day) => senderFor(day, 2),
+          (day) => TASK_MESSAGES[day],
+          parseInt(settings.taskReminderHour),
+          parseInt(settings.taskReminderMinute),
+        );
+      }
+
+      // Workout reminder
+      if (settings.workoutReminderEnabled) {
+        await scheduleWeekly(
+          (day) => `${senderFor(day, 3)} — Workout Reminder`,
+          (day) => WORKOUT_MESSAGES[day],
+          parseInt(settings.workoutReminderHour),
+          parseInt(settings.workoutReminderMinute),
+        );
+      }
+
+      // Reading reminder
+      if (settings.readingReminderEnabled) {
+        await scheduleWeekly(
+          (day) => `${senderFor(day, 4)} — Reading Reminder`,
+          (day) => READING_MESSAGES[day],
+          parseInt(settings.readingReminderHour),
+          parseInt(settings.readingReminderMinute),
+        );
+      }
+
+      // Future Self — big picture check-in (opt-in)
+      if (settings.futureKyleEnabled) {
+        await scheduleWeekly(
+          () => futureLabel,
+          (day) => fsMessages[day],
+          parseInt(settings.futureKyleHour),
+          parseInt(settings.futureKyleMinute),
+        );
       }
     };
 
-    // Morning check-in
-    if (settings.morningEnabled) {
-      await scheduleWeekly(
-        (day) => `${senderFor(day, 0)} — Morning Check-In`,
-        (day) => MORNING_MESSAGES[day],
-        parseInt(settings.morningHour),
-        parseInt(settings.morningMinute),
-      );
-    }
-
-    // Evening check-in
-    if (settings.eveningEnabled) {
-      await scheduleWeekly(
-        (day) => `${senderFor(day, 1)} — Evening Check-In`,
-        (day) => EVENING_MESSAGES[day],
-        parseInt(settings.eveningHour),
-        parseInt(settings.eveningMinute),
-      );
-    }
-
-    // Midday task reminder
-    if (settings.taskReminderEnabled) {
-      await scheduleWeekly(
-        (day) => senderFor(day, 2),
-        (day) => TASK_MESSAGES[day],
-        parseInt(settings.taskReminderHour),
-        parseInt(settings.taskReminderMinute),
-      );
-    }
-
-    // Workout reminder
-    if (settings.workoutReminderEnabled) {
-      await scheduleWeekly(
-        (day) => `${senderFor(day, 3)} — Workout Reminder`,
-        (day) => WORKOUT_MESSAGES[day],
-        parseInt(settings.workoutReminderHour),
-        parseInt(settings.workoutReminderMinute),
-      );
-    }
-
-    // Reading reminder
-    if (settings.readingReminderEnabled) {
-      await scheduleWeekly(
-        (day) => `${senderFor(day, 4)} — Reading Reminder`,
-        (day) => READING_MESSAGES[day],
-        parseInt(settings.readingReminderHour),
-        parseInt(settings.readingReminderMinute),
-      );
-    }
-
-    // Future Self — big picture check-in (opt-in)
-    if (settings.futureKyleEnabled) {
-      await scheduleWeekly(
-        () => futureLabel,
-        (day) => fsMessages[day],
-        parseInt(settings.futureKyleHour),
-        parseInt(settings.futureKyleMinute),
-      );
-    }
-
+    // Queue behind any reschedule still in flight; a failure in an earlier
+    // run must not block this one.
+    const thisRun = rescheduleChain.then(run, run);
+    rescheduleChain = thisRun.catch(() => {});
+    await thisRun;
     return true;
   };
 

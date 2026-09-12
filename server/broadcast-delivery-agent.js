@@ -153,6 +153,28 @@ async function deliverOne(broadcast, { expo, counselorNames, pushEnabled }) {
     console.log(`  ${skipped.length} without a push token — Cabinet post only`);
   }
 
+  // Claim before sending: the hourly cron and the admin "Send now" can run at
+  // the same time, and both would read the same pending rows and push each
+  // member twice. Only the run whose UPDATE flips a row pending -> 'sending'
+  // sends it.
+  const { data: claimedRows, error: claimError } = await supabase
+    .from('counselor_broadcast_deliveries')
+    .update({ push_status: 'sending' })
+    .in('id', sendable.map(d => d.id))
+    .eq('push_status', 'pending')
+    .select('id');
+  if (claimError) {
+    console.error('  could not claim deliveries:', claimError.message);
+    return tally;
+  }
+  const claimedIds = new Set((claimedRows || []).map(r => r.id));
+  const claimed = sendable.filter(d => claimedIds.has(d.id));
+  if (claimed.length < sendable.length) {
+    console.log(`  ${sendable.length - claimed.length} already claimed by another run — skipping`);
+  }
+  sendable.length = 0;
+  sendable.push(...claimed);
+
   const messages = sendable.map(delivery => {
     const settings = settingsByUser[delivery.user_id];
     const speaker = resolveSpeaker(broadcast, settings?.cabinet_members, counselorNames);
@@ -246,7 +268,7 @@ async function closeIfFinished(broadcast) {
     .from('counselor_broadcast_deliveries')
     .select('id', { count: 'exact', head: true })
     .eq('broadcast_id', broadcast.id)
-    .eq('push_status', 'pending');
+    .in('push_status', ['pending', 'sending']);
   if ((count ?? 0) > 0) return;
   await supabase
     .from('counselor_broadcasts')

@@ -238,8 +238,15 @@ export default function ProgressScreen() {
         setTotalReadingSeconds(sessions.reduce((sum: number, s: any) => sum + s.duration, 0));
         setTotalPages(sessions.reduce((sum: number, s: any) => sum + s.pagesRead, 0));
 
-        // Calculate reading streak — sessions store date as Date.toDateString() (local time)
-        const sessionDates = new Set(sessions.map((s: any) => s.date as string));
+        // Calculate reading streak — sessions store date as Date.toDateString()
+        // (local time); older web sessions stored an ISO timestamp. Normalise
+        // both through Date so a session logged on either platform counts.
+        const sessionDates = new Set<string>();
+        for (const s of sessions as any[]) {
+          if (!s?.date) continue;
+          const d = new Date(s.date);
+          if (!isNaN(d.getTime())) sessionDates.add(d.toDateString());
+        }
         let rStreak = 0;
         const cursor = new Date();
         cursor.setHours(12, 0, 0, 0); // noon avoids DST boundary when decrementing days

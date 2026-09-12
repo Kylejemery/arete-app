@@ -104,10 +104,31 @@ async function runDispatchDelivery() {
   }
   console.log(`Sending to ${targets.length} user(s)...`);
 
-  // Build Expo messages (only for valid Expo tokens).
-  const sendable = targets.filter(d =>
+  // Claim the rows before sending. Two runs can overlap (the hourly cron and
+  // a slow previous hour, or an admin re-run), and both would read the same
+  // pending rows and push them twice. Only the run whose UPDATE flips a row
+  // from 'pending' to 'sending' sends it; the other sees it already claimed.
+  const withToken = targets.filter(d =>
     Expo.isExpoPushToken(settingsByUser[d.user_id]?.expo_push_token)
   );
+  const { data: claimedRows, error: claimError } = await supabase
+    .from('dispatch_deliveries')
+    .update({ status: 'sending' })
+    .in('id', withToken.map(d => d.id))
+    .eq('status', 'pending')
+    .select('id');
+  if (claimError) {
+    console.error('Could not claim deliveries:', claimError.message);
+    return;
+  }
+  const claimedIds = new Set((claimedRows || []).map(r => r.id));
+  const sendable = withToken.filter(d => claimedIds.has(d.id));
+  if (sendable.length < withToken.length) {
+    console.log(`${withToken.length - sendable.length} delivery(ies) already claimed by another run — skipping.`);
+  }
+  if (sendable.length === 0) return;
+
+  // Build Expo messages (only for valid Expo tokens).
   const messages = sendable.map(d => ({
     to: settingsByUser[d.user_id].expo_push_token,
     sound: 'default',
