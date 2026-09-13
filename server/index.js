@@ -34,6 +34,7 @@ const observatory = require('./routes/observatory');
 // Read-only MCP server over rag_corpus for external agents (the Moltbook
 // agent). Token-gated; disabled until ARETE_MCP_TOKEN is set.
 const corpusMcp = require('./routes/corpus-mcp');
+const agora = require('./routes/agora');
 
 // Canonical concept layer (Observatory repair Part 1) — every raw theme label
 // maps through concept_aliases to one canonical concept; the Observatory only
@@ -592,6 +593,7 @@ app.use(cors({
 app.use(express.json());
 app.use(observatory.router);
 app.use(corpusMcp.router);
+app.use(agora.router);
 
 // ---------------------------------------------------------------------------
 // Local datetime helper
@@ -5741,6 +5743,18 @@ app.get('/api/observatory/piece/:kind/:id', async (req, res) => {
     console.error('[/api/observatory/piece] error:', err.message);
     return res.status(500).json({ error: 'The piece could not be read' });
   }
+});
+
+// The Agora's counselor-answer pipeline borrows this file's helpers rather
+// than duplicating them. Wired here, after every const it needs is defined.
+agora.init({
+  getAuthenticatedUserId,
+  isAdmin,
+  getStoicContext,
+  callCounselorModel,
+  cabinetCounselors: CABINET_COUNSELORS,
+  slugToCounselorId: SLUG_TO_COUNSELOR_ID,
+  claudeApiKey: CLAUDE_API_KEY,
 });
 
 app.listen(PORT, () => {
