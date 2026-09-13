@@ -1,0 +1,63 @@
+/* Ink and gold. One accent, many opacities. Semantic hues are state only. */
+:root {
+  /* Brand gold */
+  --gold: #c9a84c;
+  --gold-light: #e3c77a;
+  --gold-deep: #9a7a32;
+  --gold-grad: linear-gradient(135deg, #c9a84c, #e8c96a 50%, #c9a84c); /* @kind color */
+
+  /* Gold alpha ladder: hairlines, tints, washes */
+  --gold-05: rgba(201,168,76,0.05);
+  --gold-07: rgba(201,168,76,0.07);
+  --gold-08: rgba(201,168,76,0.08);
+  --gold-09: rgba(201,168,76,0.09);
+  --gold-13: rgba(201,168,76,0.13);
+  --gold-15: rgba(201,168,76,0.15);
+  --gold-20: rgba(201,168,76,0.2);
+  --gold-27: rgba(201,168,76,0.27);
+  --gold-30: rgba(201,168,76,0.3);
+  --gold-33: rgba(201,168,76,0.33);
+  --gold-40: rgba(201,168,76,0.4);
+  --gold-53: rgba(201,168,76,0.53);
+  --gold-60: rgba(201,168,76,0.6);
+  --gold-70: rgba(201,168,76,0.7);
+
+  /* Ink text (mobile app defaults) */
+  --text: #ffffff;
+  --text-body: #e0e0e0;
+  --text-soft: #cccccc;
+  --text-warm: #e0d5b5;
+  --text-quote: #e8e0d0;
+  --muted: #888888;
+  --faint: #555555;
+  --dim: #666666;
+
+  /* Semantic: state only, never decoration */
+  --success: #4caf50;
+  --danger: #ff4444;
+  --danger-soft: #f87171;
+  --evening: #4a6fa5;
+  --insight: #b39ddb;
+  --insight-surface: #241f3d;
+  --insight-border: rgba(123,94,167,0.33);
+  --over-budget: #e08a4c;
+  --under-budget: #7cb87c;
+
+  /* Counselor categories */
+  --cat-stoics-bg: rgba(201,168,76,0.2);   --cat-stoics-fg: #c9a84c;
+  --cat-warriors-bg: rgba(239,68,68,0.2);  --cat-warriors-fg: #fca5a5;
+  --cat-athletes-bg: rgba(59,130,246,0.2); --cat-athletes-fg: #93c5fd;
+  --cat-builders-bg: rgba(34,197,94,0.2);  --cat-builders-fg: #86efac;
+  --cat-writers-bg: rgba(168,85,247,0.2);  --cat-writers-fg: #d8b4fe;
+  --cat-spiritual-bg: rgba(99,102,241,0.2);--cat-spiritual-fg: #a5b4fc;
+
+  /* Challenge levels */
+  --lvl-direct-bg: rgba(239,68,68,0.15);   --lvl-direct-fg: #f87171;
+  --lvl-firm-bg: rgba(234,179,8,0.15);     --lvl-firm-fg: #fde047;
+  --lvl-gentle-bg: rgba(34,197,94,0.15);   --lvl-gentle-fg: #86efac;
+
+  /* Scrims */
+  --scrim: rgba(0,0,0,0.55);
+  --scrim-deep: rgba(0,0,0,0.75);
+  --scrim-sheet: rgba(0,0,0,0.65);
+}

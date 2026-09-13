@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" name="Cards and labels" viewport="700x560" subtitle="Quote, prompt, streak, stat, dispatch, insight, reflection, plan, share" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Arete: Cards and labels</title><link rel="stylesheet" href="../../styles.css">
+<style>*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;padding:20px}
+a{color:var(--gold)}a:hover{color:var(--gold-light)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.mono{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Icon, IconWell, Kicker, Card, QuoteCard, PromptCard, StreakCard, StatTile, Badge, StreakPill, DispatchCard, InsightCard, ReflectionCard, PlanCard, ShareCard, Input, SearchBar, TaskRow, EditCard, ProgressBar, Chip, SegmentedTabs, UnderlineTabs, TabBar, RoutineToggle, ScreenHeader, MenuRow, SidePanel, ChatBubble, TypingIndicator, Composer, CounselorCard, CabinetPill, CounselorRow, WeekStrip, BottomSheet, PhoneFrame, GoldRule, GoldGradientText, AcademyButton, AcademyCard, GlassCard } = window.AreteDesignSystem_59bb36;
+function Demo(){ return (
+<div className="row" style={{alignItems:'flex-start',gap:16}}>
+  <div className="col" style={{width:330}}>
+    <QuoteCard quote="The impediment to action advances action. What stands in the way becomes the way." attribution="Marcus Aurelius" />
+    <PromptCard question="What did you avoid today that you knew you should face?" attribution="Seneca" />
+    <StreakCard count={14} />
+    <div className="row" style={{gap:12,flexWrap:'nowrap'}}><StatTile value="32" label="Reflections" /><StatTile value="6" label="Books read" /><StatTile value="4h" label="Focus this week" /></div>
+    <div className="row"><Kicker>Today's question</Kicker><Kicker dim>Prompt</Kicker><Kicker variant="eyebrow">Arete Premium</Kicker><StreakPill count={14} /></div>
+    <div className="row"><Badge tone="stoics">stoics</Badge><Badge tone="warriors">warriors</Badge><Badge tone="athletes">athletes</Badge><Badge tone="builders">builders</Badge><Badge tone="writers">writers</Badge><Badge tone="spiritual">spiritual</Badge></div>
+    <div className="row"><Badge tone="direct">direct</Badge><Badge tone="firm">firm</Badge><Badge tone="gentle">gentle</Badge><Badge tone="outline">Starter</Badge><Badge tone="locked"><Icon name="lockClosed" size={12} /> Arete</Badge><Badge tone="gold">Most popular</Badge></div>
+  </div>
+  <div className="col" style={{width:330}}>
+    <DispatchCard from="Dispatch from Epictetus" time="Today" title="On the things not up to us" body="You wrote that the meeting went badly. Which part of that was yours to command?" />
+    <InsightCard label="Pattern: avoidance" body="Three entries this week circle the same unsent message." />
+    <ReflectionCard date="Sep 12" prompt="What would your future self thank you for?" body="Finishing the draft instead of rereading it. I keep polishing the first page as a way of not writing the last one." />
+    <PlanCard badge="Best value" name="Annual" note="Two months free" price="$59.99" period="per year" selected />
+    <ShareCard style={{width:330}} quote="You could leave life right now. Let that determine what you do and say and think." attribution="Marcus Aurelius" />
+  </div>
+</div>); }
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script></body></html>

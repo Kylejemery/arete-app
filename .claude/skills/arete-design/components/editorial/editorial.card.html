@@ -1,0 +1,37 @@
+<!-- @dsCard group="Components" name="Editorial and web" viewport="700x340" subtitle="Academy cards and buttons on navy, web glass surfaces, the one gold text gradient" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Arete: Editorial and web</title><link rel="stylesheet" href="../../styles.css">
+<style>*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;padding:20px}
+a{color:var(--gold)}a:hover{color:var(--gold-light)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.mono{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Icon, IconWell, Kicker, Card, QuoteCard, PromptCard, StreakCard, StatTile, Badge, StreakPill, DispatchCard, InsightCard, ReflectionCard, PlanCard, ShareCard, Input, SearchBar, TaskRow, EditCard, ProgressBar, Chip, SegmentedTabs, UnderlineTabs, TabBar, RoutineToggle, ScreenHeader, MenuRow, SidePanel, ChatBubble, TypingIndicator, Composer, CounselorCard, CabinetPill, CounselorRow, WeekStrip, BottomSheet, PhoneFrame, GoldRule, GoldGradientText, AcademyButton, AcademyCard, GlassCard } = window.AreteDesignSystem_59bb36;
+function Demo(){ return (
+<div className="row" style={{alignItems:'flex-start',gap:20}}>
+  <div className="academy" style={{width:330,background:'#0a1628',border:'1px solid #1e3258',padding:24,fontFamily:'var(--font-ui)'}}>
+    <Kicker variant="eyebrow" style={{color:'var(--gold-70)'}}>The Academy</Kicker>
+    <div style={{fontFamily:'var(--font-serif-academy)',fontSize:30,color:'#f5edd6',lineHeight:1.15,marginTop:8}}>Read the way the Greeks argued</div>
+    <GoldRule />
+    <div style={{fontSize:14,lineHeight:1.6,color:'#e8d9b0',marginBottom:18}}>Seminar-style courses on the texts, with an interlocutor who has read everything in the room.</div>
+    <AcademyCard kicker="Course" title="Nicomachean Ethics, Book I" style={{marginBottom:16}} />
+    <div className="row" style={{gap:10}}><AcademyButton>Enroll</AcademyButton><AcademyButton variant="outline">Syllabus</AcademyButton></div>
+  </div>
+  <div className="web" style={{width:310,background:'#0f1724',padding:24,fontFamily:'var(--font-ui)'}}>
+    <div style={{fontFamily:'var(--font-serif)',fontSize:32,color:'#e6eef8',lineHeight:1.1,marginBottom:6}}>The Cabinet, <GoldGradientText>replayed</GoldGradientText></div>
+    <div style={{fontSize:13,color:'#9aa0a6',marginBottom:18}}>Your sessions, on the web.</div>
+    <GlassCard style={{marginBottom:12}}>
+      <Kicker style={{letterSpacing:'0.5px',marginBottom:6}}>Marcus Aurelius</Kicker>
+      <div style={{fontFamily:'var(--font-serif)',fontSize:17,lineHeight:1.5,color:'#e6eef8'}}>Confine yourself to the present.</div>
+    </GlassCard>
+    <GlassCard tint="gold"><div style={{fontSize:14,lineHeight:1.5,color:'#e6eef8'}}>How, when the calendar is next week?</div></GlassCard>
+  </div>
+</div>); }
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script></body></html>

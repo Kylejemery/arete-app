@@ -1,0 +1,32 @@
+<!-- @dsCard group="Components" name="Forms" viewport="700x330" subtitle="Field, search, routine task rows, in-place editor, progress" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Arete: Forms</title><link rel="stylesheet" href="../../styles.css">
+<style>*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;padding:20px}
+a{color:var(--gold)}a:hover{color:var(--gold-light)}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.mono{font-family:var(--font-mono);font-size:10px;color:var(--muted)}
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script></head>
+<body><div id="root"></div>
+<script type="text/babel">
+const { Button, IconButton, Icon, IconWell, Kicker, Card, QuoteCard, PromptCard, StreakCard, StatTile, Badge, StreakPill, DispatchCard, InsightCard, ReflectionCard, PlanCard, ShareCard, Input, SearchBar, TaskRow, EditCard, ProgressBar, Chip, SegmentedTabs, UnderlineTabs, TabBar, RoutineToggle, ScreenHeader, MenuRow, SidePanel, ChatBubble, TypingIndicator, Composer, CounselorCard, CabinetPill, CounselorRow, WeekStrip, BottomSheet, PhoneFrame, GoldRule, GoldGradientText, AcademyButton, AcademyCard, GlassCard } = window.AreteDesignSystem_59bb36;
+function Demo(){ return (
+<div className="row" style={{alignItems:'flex-start',gap:20}}>
+  <div className="col" style={{width:330}}>
+    <Input placeholder="What should we call you?" />
+    <SearchBar />
+    <EditCard placeholder="Walk before checking the phone" />
+    <ProgressBar value={50} label="2 of 4 complete" />
+  </div>
+  <div className="col" style={{width:330}}>
+    <TaskRow title="Cold shower" done />
+    <TaskRow title="Ten minutes of stillness" done />
+    <TaskRow title="Read 20 pages of Meditations" note="Book II" />
+    <TaskRow title="Walk before the phone" />
+  </div>
+</div>); }
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script></body></html>

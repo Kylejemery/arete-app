@@ -1,0 +1,12 @@
+/* Arete webfonts. No binaries shipped with the source kit: the shipped previews
+   load these four families from Google Fonts, so the system does the same.
+   The mobile app uses the platform system font and loads no webfont. */
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap");
+
+:root {
+  --font-sans: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+  --font-ui: Inter, system-ui, -apple-system, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-serif-academy: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+}
