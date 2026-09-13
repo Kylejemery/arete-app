@@ -1,0 +1,50 @@
+/* Three sibling surface sets. Gold is identical in all of them.
+   :root is the mobile app. .web and .academy override the surface + text set. */
+:root {
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface-deep: #0d1526;
+  --surface-raised: #1f2a4a;
+  --border: #2a3a5c;
+  --border-dim: #333333;
+  --hairline: var(--gold-13);
+  --divider: rgba(255,255,255,0.05);
+
+  /* semantic aliases */
+  --surface-card: var(--surface);
+  --surface-input: var(--bg);
+  --surface-sheet: var(--surface);
+  --border-card: var(--gold-20);
+  --border-selected: var(--gold);
+  --accent-rule: var(--gold);
+}
+.web {
+  --bg: #0f1724;
+  --surface: rgba(255,255,255,0.04);
+  --surface-solid: #161f2e;
+  --border: rgba(255,255,255,0.08);
+  --border-card: rgba(255,255,255,0.08);
+  --text: #e6eef8;
+  --text-body: #e6eef8;
+  --muted: #9aa0a6;
+  --glass-blur: 12px;
+}
+.academy {
+  --bg: #0a1628;
+  --surface: #0f1e38;
+  --surface-card: #111d30;
+  --surface-row: #0d1a30;
+  --border: #1e3258;
+  --border-card: #1e3258;
+  --border-plan: #1e3050;
+  --text: #f5edd6;
+  --text-body: #e8d9b0;
+  --muted: #7a8fa6;
+  --muted-cool: #8a9bb0;
+  --faint: #4a5a70;
+}
+.library {
+  --text: #f4ead5;
+  --text-body: #e8e4d6;
+  --muted: #8a8b8e;
+}

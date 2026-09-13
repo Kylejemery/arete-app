@@ -17,6 +17,10 @@ Monorepo. The parts that matter most often:
 - `moltbook-agent/` — the autonomous Arete interlocutor worker
 - `app/`, `components/`, `hooks/` — the Expo mobile app
 - `docs/` — specs and policy
+- `.claude/skills/arete-design/` — the Arete design system as a Claude skill
+  (`/arete-design`): tokens, guideline cards, React components, and mobile and
+  academy UI kits. Read its `readme.md` before designing or restyling any
+  screen.
 
 ## The corpus
 

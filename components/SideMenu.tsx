@@ -17,7 +17,7 @@ const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
 /**
  * Right-slide drawer for the destinations beyond the core tabs: the Academy
- * (web) and the Library (in-app). Both are free to enter — the paid parts
+ * (web), the Library and the Agora (in-app). All are free to enter — the paid parts
  * (the full curriculum, the corpus writing in the margins, the larger
  * Symposium quota) are gated where they live. Rendered from the Home
  * screen's menu button.
@@ -47,9 +47,10 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
     });
   };
 
-  const open = (destination: 'academy' | 'library') => {
+  const open = (destination: 'academy' | 'library' | 'agora') => {
     close(() => {
-      router.push(destination === 'library' ? '/library' : '/academy' as any);
+      const route = destination === 'library' ? '/library' : destination === 'agora' ? '/agora' : '/academy';
+      router.push(route as any);
     });
   };
 
@@ -98,6 +99,21 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
               </View>
               <Text style={styles.itemSubtitle}>
                 Read the original texts your counselors draw from.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#555" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item} onPress={() => open('agora')} activeOpacity={0.8}>
+            <View style={styles.itemIcon}>
+              <Ionicons name="chatbubbles-outline" size={22} color="#c9a84c" />
+            </View>
+            <View style={styles.itemBody}>
+              <View style={styles.itemTitleRow}>
+                <Text style={styles.itemTitle}>The Agora</Text>
+              </View>
+              <Text style={styles.itemSubtitle}>
+                Essays by readers, open to argument.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#555" />

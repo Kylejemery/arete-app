@@ -1,0 +1,21 @@
+:root {
+  --s-xs: 4px;
+  --s-sm: 8px;
+  --s-10: 10px;
+  --s-md: 12px;
+  --s-14: 14px;
+  --s-lg: 16px;
+  --s-xl: 20px;
+  --s-screen: 25px;
+  --s-section: 28px;
+
+  --pad-screen: 25px;
+  --pad-screen-dense: 16px;
+  --pad-card: 16px;
+  --pad-card-lg: 20px;
+  --h-tabbar: 60px;
+  --well-sm: 38px;
+  --well-md: 40px;
+  --well-lg: 44px;
+  --well-xl: 48px;
+}

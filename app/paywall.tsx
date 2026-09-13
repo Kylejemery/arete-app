@@ -115,6 +115,14 @@ const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
     title: 'Let Them See Your Day',
     subtitle: "Your counselors read today's calendar and hold it\nbeside the things you said matter.",
   },
+  agora_comment: {
+    title: 'Write in the Agora',
+    subtitle: 'Reading the Agora is free. Commenting on an essay,\nand submitting your own, is for subscribers.',
+  },
+  agora_submit: {
+    title: 'Write for the Agora',
+    subtitle: 'Subscribers submit essays. An editor reads every one\nbefore it appears, open to argument.',
+  },
   whats_new_cabinet_sight: {
     title: 'The Cabinet Sees More',
     subtitle: 'Screen time, sleep, and your calendar —\ncounselors who speak to the day you actually lived.',

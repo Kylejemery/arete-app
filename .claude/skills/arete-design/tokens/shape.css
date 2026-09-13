@@ -1,0 +1,22 @@
+/* Cards are flat: borders, not shadows. */
+:root {
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-chip: 8px;
+  --r-btn: 10px;
+  --r-card: 12px;
+  --r-card-lg: 14px;
+  --r-panel: 16px;
+  --r-sheet: 18px;
+  --r-hero: 20px;
+  --r-pill: 999px;
+  --r-academy: 2px;   /* academy cards are near square */
+  --r-phone: 32px;
+
+  --bw-hairline: 1px;
+  --bw-selected: 2px;
+  --bw-accent-rule: 3px;
+
+  --shadow-none: none;
+  --blur-glass: blur(12px); /* @kind other */
+}

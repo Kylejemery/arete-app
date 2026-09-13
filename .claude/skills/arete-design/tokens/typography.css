@@ -1,0 +1,31 @@
+/* Hierarchy comes from weight, size and gold, not from a display face (mobile).
+   Web and academy add a serif for headings and reading text. */
+:root {
+  /* Mobile app scale */
+  --fs-display: 72px;   --lh-display: 72px;  --tr-display: 4px;   /* focus timer */
+  --fs-hero: 52px;      --lh-hero: 56px;                          /* streak count */
+  --fs-name: 32px;                                                /* greeting name */
+  --fs-screen-title: 26px;                                        /* screen titles, gold */
+  --fs-title: 20px;
+  --fs-card-title: 16px;
+  --fs-body: 15px;      --lh-body: 22px;
+  --lh-body-loose: 24px;                                          /* counselor replies */
+  --fs-quote: 14px;     --lh-quote: 22px;
+  --fs-caption: 12px;   --lh-caption: 17px;
+  --fs-meta: 11px;      --lh-meta: 16px;
+  --fs-kicker: 10px;    --tr-kicker: 1.2px;
+  --fs-eyebrow: 11px;   --tr-eyebrow: 3px;
+
+  --fw-regular: 400; /* @kind font */
+  --fw-medium: 500; /* @kind font */
+  --fw-semibold: 600; /* @kind font */
+  --fw-bold: 700; /* @kind font */
+  --fw-black: 800; /* @kind font */
+
+  /* Academy / web editorial scale */
+  --fs-academy-h1: 30px; --lh-academy-h1: 1.15; /* @kind font */
+  --fs-academy-h2: 18px;
+  --fs-web-h1: 32px;     --lh-web-h1: 1.1; /* @kind font */
+  --fs-web-serif-body: 17px; --lh-web-serif-body: 1.5; /* @kind font */
+  --tr-academy-button: 0.15em;
+}
