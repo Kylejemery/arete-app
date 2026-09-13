@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "ingest": "node ingest.js",
-    "chunk-test": "node chunker.js"
+    "chunk-test": "node chunker.js",
+    "reingest-meditations": "node reingest-meditations.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

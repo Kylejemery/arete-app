@@ -2,7 +2,7 @@
  * chunker.js — intelligent text chunking for Stoic philosophical texts
  *
  * Strategy per text:
- *   Marcus Aurelius Meditations  → one chunk per numbered entry (e.g. "Book IV.3")
+ *   Marcus Aurelius Meditations  → one chunk per numbered entry (locator "4.3")
  *   Epictetus Discourses         → one chunk per discourse section
  *   Epictetus Enchiridion        → one chunk per numbered chapter
  *   Seneca Letters               → one chunk per letter
@@ -156,9 +156,16 @@ function chunkMeditations(text, meta) {
   function flush() {
     const txt = buffer.join(' ').replace(/\s+/g, ' ').trim();
     if (txt && currentEntryRoman) {
+      // The canonical division, "4.3" for Book 4 entry 3. It is both the
+      // locator (docs/corpus/ACQUISITION_PLAN.md Part 5) and the section
+      // label: the library reader treats a work whose labels are all single
+      // locators as entry-chunked and formats it row by row. (Labels were
+      // "Book 4.3" before 2026-09-13; nothing live carried that form.)
+      const locator = `${currentBookNum}.${romanToInt(currentEntryRoman)}`;
       chunks.push({
         ...meta,
-        section_label: `Book ${currentBookNum}.${romanToInt(currentEntryRoman)}`,
+        section_label: locator,
+        locator,
         chunk_index: chunkIndex++,
         chunk_text: txt,
         word_count: countWords(txt),
