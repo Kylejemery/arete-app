@@ -1,5 +1,6 @@
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
+import { markNotificationNavigation } from '@/lib/launchIntent';
 import { setupDispatchNotifications } from '@/lib/pushNotifications';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
@@ -92,9 +93,12 @@ function NotificationTapHandler() {
     const route = (data: any) => {
       if (data?.type === 'daily_dispatch') {
         breadcrumb('notification tap: daily_dispatch');
+        // Tell the tab layout to stand down its routine redirect (lib/launchIntent).
+        markNotificationNavigation();
         router.push({ pathname: '/dispatch', params: { dispatch_id: String(data.dispatch_id || '') } } as any);
       } else if (data?.route === '/cabinet') {
         breadcrumb('notification tap: cabinet');
+        markNotificationNavigation();
         router.push('/cabinet' as any);
       }
     };
