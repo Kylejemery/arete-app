@@ -1,11 +1,11 @@
 // academy/corpus-ingestion/reingest-meditations.js
 //
-// Re-ingest the Meditations (George Long, Gutenberg #2680) one numbered
-// entry per row, so a passage is citable as Meditations 4.3 and the Reading
+// Re-ingest the Meditations (George Long, Gutenberg #15877) one numbered
+// section per row, so a passage is citable as Meditations 4.3 and the Reading
 // Room can open a book at the exact entry.
 //
 //   node reingest-meditations.js --dry-run            chunk, validate, print; touch nothing
-//   node reingest-meditations.js --dry-run --source ./source_texts/marcus-meditations.txt
+//   node reingest-meditations.js --dry-run --source ./source_texts/marcus-meditations-long.txt
 //   node reingest-meditations.js                      full run (asks before writing)
 //   node reingest-meditations.js --yes                full run, no prompt
 //
@@ -13,10 +13,12 @@
 // OPENAI_API_KEY. The dry run needs none of them.
 //
 // What it does, in order:
-//   1. Load the text: --source path, else source_texts/marcus-meditations.txt
+//   1. Load the text: --source path, else source_texts/marcus-meditations-long.txt
 //      if present, else download from Gutenberg and save it there.
-//   2. Chunk with the chunker's "meditations" strategy: one row per entry,
-//      section_label and locator both "4.3".
+//   2. Chunk with the chunker's "meditations-long" strategy: one row per
+//      section, section_label and locator both "4.3". Long's footnotes are
+//      dropped. The text must fingerprint as Long: Gutenberg #2680, also
+//      titled Meditations, is Casaubon's 1634 version with different numbering.
 //   3. Validate: twelve books, per-book entry counts against Long's edition,
 //      unique ascending locators, no empty entries. A dry run stops here.
 //   4. Embed every entry (text-embedding-3-small, same as every other row).
@@ -51,21 +53,21 @@ const META = {
   author: AUTHOR,
   work: WORK,
   translator: 'George Long',
-  source_url: 'https://www.gutenberg.org/ebooks/2680',
-  edition_year: 1862,          // Long's translation, first published 1862
+  source_url: 'https://www.gutenberg.org/ebooks/15877',
+  edition_year: 1862,          // Long's translation, first published 1862 (the Gutenberg text is a later printing of it)
   text_type: 'primary',
   language: 'english',
   program_id: 'stoicism-phd',  // matches the rows being superseded
   course_relevance: 'PHIL 701',
   difficulty: 'Primary Source',
 };
-const GUTENBERG_TXT = 'https://www.gutenberg.org/cache/epub/2680/pg2680.txt';
-const LOCAL_SOURCE = path.join(__dirname, 'source_texts', 'marcus-meditations.txt');
+const GUTENBERG_TXT = 'https://www.gutenberg.org/cache/epub/15877/pg15877.txt';
+const LOCAL_SOURCE = path.join(__dirname, 'source_texts', 'marcus-meditations-long.txt');
 const GENERATION_BLOCK = 1000;
 const UPSERT_BATCH = 25;
 const EMBED_CONCURRENCY = 4;
 
-// Entries per book in George Long's numbering. Used to validate the chunking,
+// Sections per book in George Long's numbering. Used to validate the chunking,
 // not to force it: a mismatch of a few entries is reported, a missing book or
 // a large drift aborts the run.
 const EXPECTED_ENTRIES = { 1: 17, 2: 17, 3: 16, 4: 51, 5: 37, 6: 59, 7: 75, 8: 61, 9: 42, 10: 38, 11: 39, 12: 36 };
@@ -105,8 +107,11 @@ async function loadText() {
 // --- 2 + 3. chunk and validate -------------------------------------------
 
 function chunkAndValidate(text) {
-  const chunks = chunkRaw(text, 'meditations', META);
-  if (chunks.length === 0) fail('The meditations strategy produced no entries. Is this the George Long Gutenberg text?');
+  if (!/Translator:\s*George Long/i.test(text) && !/breed quails/.test(text)) {
+    fail("This text does not fingerprint as George Long's translation. Gutenberg #2680 is Casaubon's; Long's is #15877.");
+  }
+  const chunks = chunkRaw(text, 'meditations-long', META);
+  if (chunks.length === 0) fail('The meditations-long strategy produced no sections. Is this the Gutenberg #15877 text?');
 
   const perBook = {};
   const seen = new Set();

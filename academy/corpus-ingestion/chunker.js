@@ -2,7 +2,8 @@
  * chunker.js — intelligent text chunking for Stoic philosophical texts
  *
  * Strategy per text:
- *   Marcus Aurelius Meditations  → one chunk per numbered entry (locator "4.3")
+ *   Marcus Aurelius Meditations  → one chunk per numbered section (locator "4.3");
+ *     'meditations-long' for Long (#15877), 'meditations-casaubon' for Casaubon (#2680)
  *   Epictetus Discourses         → one chunk per discourse section
  *   Epictetus Enchiridion        → one chunk per numbered chapter
  *   Seneca Letters               → one chunk per letter
@@ -17,13 +18,16 @@ const mammoth = require('mammoth');
 // Text metadata — matches what Gutenberg ships
 // ---------------------------------------------------------------------------
 const TEXT_METADATA = {
-  'marcus-meditations.txt': {
+  // Gutenberg #15877 is Long's translation. (#2680, "Meditations", is Meric
+  // Casaubon's 1634 version with different section numbering; it takes the
+  // 'meditations-casaubon' strategy below if it is ever ingested.)
+  'marcus-meditations-long.txt': {
     author: 'Marcus Aurelius',
     work: 'Meditations',
     translator: 'George Long',
-    source_url: 'https://www.gutenberg.org/ebooks/2680',
+    source_url: 'https://www.gutenberg.org/ebooks/15877',
     text_type: 'primary',
-    strategy: 'meditations',
+    strategy: 'meditations-long',
   },
   'epictetus-discourses.txt': {
     author: 'Epictetus',
@@ -115,10 +119,12 @@ async function extractDocxText(filepath) {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy: Marcus Aurelius Meditations (George Long / Gutenberg edition)
+// Strategy: Marcus Aurelius Meditations, Meric Casaubon's translation
+// (Gutenberg #2680). Not George Long: see chunkMeditationsLong below.
 //
 // Book headings:  "THE FIRST BOOK", "THE SECOND BOOK", ... (standalone line)
 // Entry headings: "I. Of my grandfather..." (Roman numeral + period inline)
+// The text ends with an APPENDIX and NOTES that must not be read as entries.
 // ---------------------------------------------------------------------------
 const ORDINAL_TO_NUM = {
   FIRST: 1, SECOND: 2, THIRD: 3, FOURTH: 4, FIFTH: 5,
@@ -137,9 +143,10 @@ function romanToInt(s) {
   return result;
 }
 
-function chunkMeditations(text, meta) {
+function chunkMeditationsCasaubon(text, meta) {
   const chunks = [];
   const lines = text.split('\n');
+  const endRe = /^(APPENDIX|NOTES|INDEX)\b/;
 
   // "THE FIRST BOOK" or "THE TWELFTH BOOK" as a standalone trimmed line
   const bookRe = /^(?:THE\s+)?(FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH|ELEVENTH|TWELFTH)\s+BOOK$/i;
@@ -177,6 +184,8 @@ function chunkMeditations(text, meta) {
   for (const line of lines) {
     const trimmed = line.trim();
 
+    if (inContent && endRe.test(trimmed)) break;
+
     const bookMatch = trimmed.match(bookRe);
     if (bookMatch) {
       flush();
@@ -201,6 +210,83 @@ function chunkMeditations(text, meta) {
     if (currentEntryRoman && trimmed) {
       buffer.push(trimmed);
     }
+  }
+  flush();
+  return chunks;
+}
+
+// ---------------------------------------------------------------------------
+// Strategy: Marcus Aurelius Meditations, George Long's translation
+// (Gutenberg #15877, "Thoughts of Marcus Aurelius Antoninus").
+//
+// The body runs from the last "THE THOUGHTS" heading to "INDEXES." Each book
+// opens with a bare roman numeral on its own line ("I." ... "XII."). The
+// first section of a book is unnumbered; every later one starts "2. ", "3. ",
+// at the left margin. Long's footnotes are indented blocks ("    [A] ...")
+// referenced by "[A]" markers in the text; the blocks are dropped and the
+// markers stripped. His own bracketed insertions ("[I learned]") stay.
+// ---------------------------------------------------------------------------
+// Sections whose number the Gutenberg transcription dropped. Keyed by the
+// locator the section should carry; the value is how its first line begins.
+const LONG_UNNUMBERED_SECTIONS = {
+  '5.37': /^When thou art calling out on the Rostra/,
+};
+
+function chunkMeditationsLong(text, meta) {
+  const lines = text.split('\n');
+  const lastHeading = lines.map(l => l.trim()).lastIndexOf('THE THOUGHTS');
+  if (lastHeading < 0) throw new Error("Long's Meditations: no 'THE THOUGHTS' heading found");
+
+  const bookRe = /^([IVX]+)\.$/;
+  const sectionRe = /^(\d+)\.\s+(.*)$/;
+  const endRe = /^(INDEXES?\.?|INDEX OF TERMS\.?)$/;
+  const chunks = [];
+  let book = 0;
+  let section = 0;
+  let buffer = [];
+  let chunkIndex = 0;
+
+  function flush() {
+    const txt = buffer.join(' ').replace(/\[[A-Z]\]/g, '').replace(/\s+/g, ' ').trim();
+    if (txt && book > 0 && section > 0) {
+      const locator = `${book}.${section}`;
+      chunks.push({ ...meta, section_label: locator, locator, chunk_index: chunkIndex++, chunk_text: txt, word_count: countWords(txt) });
+    }
+    buffer = [];
+  }
+
+  let atParagraphStart = true;
+  for (let i = lastHeading + 1; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (endRe.test(trimmed)) break;
+    if (!trimmed) { atParagraphStart = true; continue; }
+    if (/^\s/.test(raw)) continue; // indented: a footnote block
+    const paragraphStart = atParagraphStart;
+    atParagraphStart = false;
+
+    const bookMatch = trimmed.match(bookRe);
+    if (bookMatch) {
+      flush();
+      book = romanToInt(bookMatch[1]);
+      section = 1; // the first section carries no number
+      continue;
+    }
+    if (book === 0) continue; // "OF" / "MARCUS AURELIUS ANTONIUS." before Book I
+
+    const sectionMatch = trimmed.match(sectionRe);
+    if (sectionMatch) {
+      flush();
+      section = parseInt(sectionMatch[1], 10);
+      buffer.push(sectionMatch[2]);
+      continue;
+    }
+    const known = LONG_UNNUMBERED_SECTIONS[`${book}.${section + 1}`];
+    if (paragraphStart && known && known.test(trimmed)) {
+      flush();
+      section += 1;
+    }
+    buffer.push(trimmed);
   }
   flush();
   return chunks;
@@ -509,7 +595,9 @@ function chunkFile(filename, rawText) {
 
   let chunks;
   switch (meta.strategy) {
-    case 'meditations':    chunks = chunkMeditations(text, meta); break;
+    case 'meditations-long':     chunks = chunkMeditationsLong(text, meta); break;
+    case 'meditations':
+    case 'meditations-casaubon': chunks = chunkMeditationsCasaubon(text, meta); break;
     case 'discourses':     chunks = chunkDiscourses(text, meta); break;
     case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
@@ -528,7 +616,9 @@ function chunkRaw(rawText, strategy, baseMeta) {
 
   let chunks;
   switch (strategy) {
-    case 'meditations':    chunks = chunkMeditations(text, meta); break;
+    case 'meditations-long':     chunks = chunkMeditationsLong(text, meta); break;
+    case 'meditations':
+    case 'meditations-casaubon': chunks = chunkMeditationsCasaubon(text, meta); break;
     case 'discourses':     chunks = chunkDiscourses(text, meta); break;
     case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'letters':
