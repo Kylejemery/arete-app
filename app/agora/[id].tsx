@@ -14,10 +14,11 @@ import {
     View,
 } from 'react-native';
 import {
-    deleteComment, getAgoraViewer, getEssay, listComments, paragraphs, postComment, readingMinutes,
-    relativeTime, shortDate, type AgoraComment, type AgoraEssay, type AgoraViewer,
+    deleteComment, GateDeclinedError, getAgoraViewer, getEssay, inviteCounselor, listAnswerCounselors, listComments,
+    paragraphs, postComment, readingMinutes, relativeTime, removeCounselorAnswer, shortDate,
+    type AgoraComment, type AgoraEssay, type AgoraViewer, type AnswerCounselor,
 } from '@/lib/agora';
-import { Comment, CommentComposer, GOLD, Kicker, SubmissionNotice } from '../../components/agora/AgoraUI';
+import { Chip, Comment, CommentComposer, GOLD, GoldButton, Kicker, SubmissionNotice } from '../../components/agora/AgoraUI';
 
 /**
  * One essay in the Agora, with its comments. Reading is free; the composer
@@ -34,6 +35,11 @@ export default function EssayScreen() {
     const [error, setError] = useState<string | null>(null);
     const [draft, setDraft] = useState('');
     const [busy, setBusy] = useState(false);
+    const [roster, setRoster] = useState<AnswerCounselor[]>([]);
+    const [inviteSlug, setInviteSlug] = useState('');
+    const [showInvite, setShowInvite] = useState(false);
+    const [inviting, setInviting] = useState(false);
+    const [declined, setDeclined] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -43,6 +49,11 @@ export default function EssayScreen() {
                 if (cancelled) return;
                 if (!e) { setError('This essay is not in the Agora.'); return; }
                 setEssay(e); setComments(c); setViewer(v);
+                if (v?.isEditor) {
+                    listAnswerCounselors()
+                        .then(r => { if (!cancelled) { setRoster(r); setInviteSlug(x => x || r[0]?.slug || ''); } })
+                        .catch(() => {});
+                }
             } catch {
                 if (!cancelled) setError('The essay could not be loaded.');
             } finally {
@@ -82,6 +93,32 @@ export default function EssayScreen() {
     };
 
     const unlock = () => router.push({ pathname: '/paywall', params: { src: 'agora_comment' } } as any);
+
+    const invite = async (opts: { force?: boolean; override?: boolean } = {}) => {
+        if (!essay || !inviteSlug || inviting) return;
+        setInviting(true); setDeclined(null);
+        try {
+            const updated = await inviteCounselor(essay.id, inviteSlug, opts);
+            setEssay(updated); setShowInvite(false);
+        } catch (err) {
+            if (err instanceof GateDeclinedError) setDeclined(err.reason);
+            else Alert.alert('No answer', err instanceof Error ? err.message : 'The counselor could not be reached.');
+        } finally { setInviting(false); }
+    };
+
+    const removeAnswer = () => {
+        if (!essay) return;
+        Alert.alert(`Remove ${essay.counselor_name}'s answer?`, undefined, [
+            { text: 'Keep', style: 'cancel' },
+            {
+                text: 'Remove', style: 'destructive',
+                onPress: async () => {
+                    try { setEssay(await removeCounselorAnswer(essay.id)); }
+                    catch (err) { Alert.alert('Not removed', err instanceof Error ? err.message : undefined); }
+                },
+            },
+        ]);
+    };
 
     const own = !!essay && viewer?.userId === essay.author_id;
     const published = essay?.status === 'published';
@@ -136,6 +173,54 @@ export default function EssayScreen() {
                             <View style={styles.answer}>
                                 <Kicker>{essay.counselor_name} was invited to answer</Kicker>
                                 <Text style={styles.answerText}>{essay.counselor_answer}</Text>
+                                {essay.counselor_sources && essay.counselor_sources.length > 0 ? (
+                                    <Text style={styles.answerSources}>
+                                        Read with: {Array.from(new Set(essay.counselor_sources.map(src => `${src.author}, ${src.title}`))).join(' · ')}
+                                    </Text>
+                                ) : null}
+                            </View>
+                        ) : null}
+
+                        {viewer?.isEditor && published ? (
+                            <View style={styles.editorTools}>
+                                <TouchableOpacity onPress={() => { setShowInvite(v => !v); setDeclined(null); }} hitSlop={6}>
+                                    <Text style={styles.editorLink}>
+                                        {essay.counselor_answer ? `Ask ${essay.counselor_name} again` : 'Invite a counselor to answer'}
+                                    </Text>
+                                </TouchableOpacity>
+                                {essay.counselor_answer ? (
+                                    <TouchableOpacity onPress={removeAnswer} hitSlop={6}>
+                                        <Text style={[styles.editorLink, { color: '#888' }]}>Remove answer</Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                            </View>
+                        ) : null}
+
+                        {showInvite && viewer?.isEditor ? (
+                            <View style={styles.inviteBox}>
+                                <Kicker style={{ marginBottom: 8 }}>Invite a counselor</Kicker>
+                                <Text style={styles.inviteNote}>
+                                    The essay is screened, grounded in the Library, and answered in the counselor&apos;s voice.
+                                </Text>
+                                <View style={styles.inviteChips}>
+                                    {roster.map(c => (
+                                        <Chip key={c.slug} label={c.grounded ? `${c.name} ·` : c.name} active={c.slug === inviteSlug} onPress={() => setInviteSlug(c.slug)} />
+                                    ))}
+                                </View>
+                                {declined ? (
+                                    <>
+                                        <Text style={styles.declined}>The safety gate declined this essay: {declined}</Text>
+                                        <GoldButton label="Invite anyway" secondary disabled={inviting} onPress={() => invite({ force: true, override: true })} />
+                                    </>
+                                ) : (
+                                    <>
+                                        <GoldButton
+                                            label={inviting ? `${roster.find(c => c.slug === inviteSlug)?.name ?? 'The counselor'} is considering...` : 'Ask for an answer'}
+                                            disabled={inviting || !inviteSlug}
+                                            onPress={() => invite({ force: true })}
+                                        />
+                                    </>
+                                )}
                             </View>
                         ) : null}
 
@@ -196,6 +281,16 @@ const styles = StyleSheet.create({
         borderRadius: 12, padding: 18, marginBottom: 28,
     },
     answerText: { color: '#e8e0d0', fontSize: 14, lineHeight: 22, fontStyle: 'italic', marginTop: 8 },
+    answerSources: { color: '#888', fontSize: 11, lineHeight: 16, marginTop: 12 },
+    editorTools: { flexDirection: 'row', flexWrap: 'wrap', gap: 18, marginBottom: 20 },
+    editorLink: { color: GOLD, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' },
+    inviteBox: {
+        backgroundColor: '#16213e', borderWidth: 1, borderColor: '#c9a84c22', borderRadius: 12,
+        padding: 16, marginBottom: 24, gap: 10,
+    },
+    inviteNote: { color: '#888', fontSize: 12, lineHeight: 17 },
+    inviteChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 4 },
+    declined: { color: '#ccc', fontSize: 13, lineHeight: 20 },
     rule: { height: 1, backgroundColor: '#c9a84c22', marginBottom: 20 },
     empty: { color: '#888', fontSize: 14, fontStyle: 'italic' },
 });

@@ -20,11 +20,21 @@ export interface AgoraEssay {
   is_editorial: boolean;
   counselor_name: string | null;
   counselor_answer: string | null;
+  counselor_slug: string | null;
+  counselor_sources: AgoraSource[] | null;
+  counselor_model: string | null;
+  counselor_answered_at: string | null;
   comment_count: number;
   submitted_at: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface AgoraSource {
+  author: string;
+  work: string;
+  title: string;
 }
 
 export interface AgoraComment {
@@ -50,7 +60,7 @@ export const AGORA_TOPICS = ['Habit', 'Time', 'Anger', 'Family', 'Reading', 'Wor
 const ESSAY_LIST_COLUMNS =
   'id, author_id, author_name, title, excerpt, tags, status, is_editorial, counselor_name, comment_count, submitted_at, published_at, created_at, updated_at';
 
-export type AgoraEssaySummary = Omit<AgoraEssay, 'body' | 'editor_note' | 'counselor_answer'>;
+export type AgoraEssaySummary = Omit<AgoraEssay, 'body' | 'editor_note' | 'counselor_answer' | 'counselor_sources' | 'counselor_model' | 'counselor_answered_at'>;
 
 export function wordCount(text: string): number {
   const t = text.trim();
@@ -250,6 +260,75 @@ export async function postCounselorComment(essayId: string, counselorName: strin
 export async function deleteComment(id: string): Promise<void> {
   const { error } = await supabase.from('agora_comments').delete().eq('id', id);
   if (error) throw new Error(friendlyError(error.message));
+}
+
+// ---------------------------------------------------------------------------
+// Counselor answers: the pipeline lives on the Railway server
+// (server/routes/agora.js). The editor invites a counselor; the server
+// screens the essay, grounds the answer in the corpus, writes it in the
+// counselor's voice and stores it on the essay.
+// ---------------------------------------------------------------------------
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+
+export interface AnswerCounselor {
+  slug: string;
+  name: string;
+  category: string;
+  description: string | null;
+  /** The corpus holds this counselor's own texts; the answer is grounded in them. */
+  grounded: boolean;
+}
+
+/** Thrown when the safety gate declines an essay. The editor may override. */
+export class GateDeclinedError extends Error {
+  reason: string;
+  constructor(reason: string) {
+    super(`The safety gate declined this essay: ${reason}`);
+    this.name = 'GateDeclinedError';
+    this.reason = reason;
+  }
+}
+
+async function apiHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) throw new Error('Sign in first.');
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` };
+}
+
+export async function listAnswerCounselors(): Promise<AnswerCounselor[]> {
+  const res = await fetch(`${API_BASE_URL}/api/agora/counselors`, { headers: await apiHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || 'Could not load the roster.');
+  return (data?.counselors ?? []) as AnswerCounselor[];
+}
+
+/** Editor only: ask the server to have a counselor answer the essay. */
+export async function inviteCounselor(
+  essayId: string,
+  counselorSlug: string,
+  opts: { force?: boolean; override?: boolean } = {},
+): Promise<AgoraEssay> {
+  const res = await fetch(`${API_BASE_URL}/api/agora/essays/${essayId}/answer`, {
+    method: 'POST',
+    headers: await apiHeaders(),
+    body: JSON.stringify({ counselor: counselorSlug, force: opts.force === true, override: opts.override === true }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 422 && data?.error === 'declined') throw new GateDeclinedError(String(data.reason || 'no reason given'));
+  if (!res.ok) throw new Error(data?.message || 'The counselor could not be reached.');
+  return data.essay as AgoraEssay;
+}
+
+/** Editor only: take the counselor's answer off the essay. */
+export async function removeCounselorAnswer(essayId: string): Promise<AgoraEssay> {
+  const res = await fetch(`${API_BASE_URL}/api/agora/essays/${essayId}/answer`, {
+    method: 'DELETE',
+    headers: await apiHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || 'Could not remove the answer.');
+  return data.essay as AgoraEssay;
 }
 
 function friendlyError(message: string): string {

@@ -203,4 +203,7 @@ async function runStoicTriage(limit = 40) {
   return summary;
 }
 
-module.exports = { runStoicTriage };
+// safetyGate is shared with the Agora answer pipeline (routes/agora.js): a
+// reader's essay is screened the same way a public post is before a
+// counselor is asked to answer it. It takes { platform, body }.
+module.exports = { runStoicTriage, safetyGate };

@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import {
-  deleteComment, getAgoraViewer, getEssay, listComments, paragraphs, postComment, postCounselorComment,
-  readingMinutes, relativeTime, shortDate, unpublishEssay,
-  type AgoraComment, type AgoraEssay, type AgoraViewer,
+  deleteComment, GateDeclinedError, getAgoraViewer, getEssay, inviteCounselor, listAnswerCounselors, listComments,
+  paragraphs, postComment, postCounselorComment, readingMinutes, relativeTime, removeCounselorAnswer, shortDate,
+  unpublishEssay, type AgoraComment, type AgoraEssay, type AgoraViewer, type AnswerCounselor,
 } from '@/lib/agora';
 import {
   ag, AcademyButton, Comment, CommentComposer, EmptyNote, fieldStyle, GoldRule, Kicker, SubmissionNotice, TextLink,
@@ -25,6 +25,11 @@ export default function EssayPage() {
   const [counselorName, setCounselorName] = useState('');
   const [counselorText, setCounselorText] = useState('');
   const [showCounselor, setShowCounselor] = useState(false);
+  const [roster, setRoster] = useState<AnswerCounselor[]>([]);
+  const [inviteSlug, setInviteSlug] = useState('');
+  const [showInvite, setShowInvite] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [declined, setDeclined] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,9 +39,30 @@ export default function EssayPage() {
       const [e, c, v] = await Promise.all([getEssay(id), listComments(id), getAgoraViewer()]);
       if (cancelled) return;
       setEssay(e); setComments(c); setViewer(v); setLoading(false);
+      if (v?.isEditor) {
+        listAnswerCounselors().then(r => { if (!cancelled) { setRoster(r); setInviteSlug(s => s || r[0]?.slug || ''); } }).catch(() => {});
+      }
     })();
     return () => { cancelled = true; };
   }, [id, router]);
+
+  const invite = async (opts: { force?: boolean; override?: boolean } = {}) => {
+    if (!essay || !inviteSlug || inviting) return;
+    setInviting(true); setError(null); setDeclined(null);
+    try {
+      const updated = await inviteCounselor(essay.id, inviteSlug, opts);
+      setEssay(updated); setShowInvite(false);
+    } catch (err) {
+      if (err instanceof GateDeclinedError) setDeclined(err.reason);
+      else setError(err instanceof Error ? err.message : 'The counselor could not be reached.');
+    } finally { setInviting(false); }
+  };
+
+  const removeAnswer = async () => {
+    if (!essay || !confirm(`Remove ${essay.counselor_name}'s answer?`)) return;
+    try { setEssay(await removeCounselorAnswer(essay.id)); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Could not remove the answer.'); }
+  };
 
   const post = async () => {
     if (!draft.trim() || busy) return;
@@ -124,6 +150,11 @@ export default function EssayPage() {
           <div style={{ fontFamily: ag.serif, fontSize: 20, fontStyle: 'italic', lineHeight: 1.55, color: ag.text, marginTop: 10, whiteSpace: 'pre-wrap' }}>
             {essay.counselor_answer}
           </div>
+          {essay.counselor_sources && essay.counselor_sources.length > 0 && (
+            <div style={{ fontSize: 12, color: ag.muted, marginTop: 14, fontFamily: ag.ui, lineHeight: 1.6 }}>
+              Read with: {Array.from(new Set(essay.counselor_sources.map(src => `${src.author}, ${src.title}`))).join(' · ')}
+            </div>
+          )}
         </div>
       )}
 
@@ -134,10 +165,51 @@ export default function EssayPage() {
           )}
           {viewer?.isEditor && published && <TextLink onClick={unpublish}>Unpublish</TextLink>}
           {viewer?.isEditor && published && (
-            <TextLink onClick={() => setShowCounselor(s => !s)}>Answer as a counselor</TextLink>
+            <TextLink onClick={() => { setShowInvite(s => !s); setDeclined(null); }}>
+              {essay.counselor_answer ? `Ask ${essay.counselor_name} again` : 'Invite a counselor to answer'}
+            </TextLink>
+          )}
+          {viewer?.isEditor && published && essay.counselor_answer && (
+            <TextLink onClick={removeAnswer} style={{ color: ag.muted }}>Remove answer</TextLink>
+          )}
+          {viewer?.isEditor && published && (
+            <TextLink onClick={() => setShowCounselor(s => !s)} style={{ color: ag.muted }}>Comment as a counselor</TextLink>
           )}
         </div>
       )}
+
+      {showInvite && viewer?.isEditor && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20, maxWidth: 600, padding: 18, background: ag.card, border: `1px solid ${ag.border}`, borderRadius: 2 }}>
+          <Kicker>Invite a counselor</Kicker>
+          <p style={{ fontSize: 13, color: ag.muted, margin: 0, lineHeight: 1.6, fontFamily: ag.ui }}>
+            The essay is screened, grounded in the Library, and answered in the counselor&apos;s voice. Counselors the Library holds answer from their own works; the rest hear the tradition.
+          </p>
+          <select value={inviteSlug} onChange={e => setInviteSlug(e.target.value)} style={{ ...fieldStyle, cursor: 'pointer' }}>
+            {roster.map(c => (
+              <option key={c.slug} value={c.slug}>{c.name}{c.grounded ? ' · grounded' : ''}</option>
+            ))}
+          </select>
+          {declined ? (
+            <div style={{ fontSize: 13, color: ag.body, lineHeight: 1.6, fontFamily: ag.ui }}>
+              The safety gate declined this essay: {declined}
+              <div style={{ marginTop: 10 }}>
+                <AcademyButton variant="outline" disabled={inviting} onClick={() => invite({ force: true, override: true })}>Invite anyway</AcademyButton>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <AcademyButton disabled={inviting || !inviteSlug} onClick={() => invite({ force: true })}>
+                {inviting ? 'Considering' : 'Ask for an answer'}
+              </AcademyButton>
+              {inviting && <span style={{ fontSize: 13, fontStyle: 'italic', color: ag.muted, fontFamily: ag.serif }}>
+                {roster.find(c => c.slug === inviteSlug)?.name ?? 'The counselor'} is considering...
+              </span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {error && viewer?.isEditor && <p style={{ color: '#f87171', fontSize: 13, marginTop: 12, fontFamily: ag.ui }}>{error}</p>}
 
       {showCounselor && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20, maxWidth: 600 }}>
@@ -167,7 +239,7 @@ export default function EssayPage() {
               onUnlock={() => router.push('/upgrade')}
               value={draft} onChange={setDraft} onSubmit={post} busy={busy}
             />
-            {error && <p style={{ color: '#f87171', fontSize: 13, marginTop: 10, fontFamily: ag.ui }}>{error}</p>}
+            {error && !viewer?.isEditor && <p style={{ color: '#f87171', fontSize: 13, marginTop: 10, fontFamily: ag.ui }}>{error}</p>}
           </div>
         </>
       )}
