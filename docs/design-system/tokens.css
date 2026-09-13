@@ -1,0 +1,55 @@
+/* Arete design tokens. Mirrors tokens.json. Mobile-app values are the defaults;
+   .web and .academy scopes override the surface set. Gold is shared. */
+:root {
+  --gold: #c9a84c;
+  --gold-light: #e3c77a;
+  --gold-deep: #9a7a32;
+  --gold-05: rgba(201,168,76,0.05);
+  --gold-09: rgba(201,168,76,0.09);
+  --gold-13: rgba(201,168,76,0.13);
+  --gold-15: rgba(201,168,76,0.15);
+  --gold-20: rgba(201,168,76,0.2);
+  --gold-27: rgba(201,168,76,0.27);
+  --gold-33: rgba(201,168,76,0.33);
+  --gold-40: rgba(201,168,76,0.4);
+  --gold-53: rgba(201,168,76,0.53);
+
+  --bg: #1a1a2e;
+  --surface: #16213e;
+  --surface-deep: #0d1526;
+  --surface-raised: #1f2a4a;
+  --border: #2a3a5c;
+  --hairline: var(--gold-13);
+
+  --text: #ffffff;
+  --text-body: #e0e0e0;
+  --text-warm: #e0d5b5;
+  --text-quote: #e8e0d0;
+  --muted: #888888;
+  --faint: #555555;
+
+  --success: #4caf50;
+  --danger: #ff4444;
+  --danger-soft: #f87171;
+  --evening: #4a6fa5;
+  --insight: #b39ddb;
+
+  --font-sans: -apple-system, "SF Pro Text", Inter, system-ui, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-serif-academy: "Playfair Display", Georgia, serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+
+  --r-xs: 4px; --r-sm: 6px; --r-chip: 8px; --r-btn: 10px; --r-card: 12px;
+  --r-card-lg: 14px; --r-panel: 16px; --r-sheet: 18px; --r-hero: 20px; --r-pill: 999px;
+
+  --s-xs: 4px; --s-sm: 8px; --s-md: 12px; --s-lg: 16px; --s-xl: 20px; --s-screen: 25px; --s-section: 28px;
+}
+.web {
+  --bg: #0f1724; --surface: rgba(255,255,255,0.04); --surface-solid: #161f2e;
+  --border: rgba(255,255,255,0.08); --text: #e6eef8; --muted: #9aa0a6;
+}
+.academy {
+  --bg: #0a1628; --surface: #0f1e38; --surface-card: #111d30; --border: #1e3258;
+  --text: #f5edd6; --text-body: #e8d9b0; --muted: #7a8fa6;
+}
+.library { --text: #f4ead5; --text-body: #e8e4d6; --muted: #8a8b8e; }

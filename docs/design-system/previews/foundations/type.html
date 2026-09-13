@@ -1,0 +1,69 @@
+<!-- @dsCard name="Typography" group="Type" subtitle="System sans in the app, serif on the web" width="760" height="900" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arete DS: Typography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a84c;--gold-light:#e3c77a;--bg:#1a1a2e;--surface:#16213e;--deep:#0d1526;--raised:#1f2a4a;--border:#2a3a5c;
+--text:#fff;--body:#e0e0e0;--warm:#e0d5b5;--quote:#e8e0d0;--muted:#888;--faint:#555;--success:#4caf50;--danger:#ff4444;--evening:#4a6fa5;
+--sans:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--serif:"Cormorant Garamond",Georgia,serif;--mono:"JetBrains Mono","Courier New",monospace}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:24px}
+h1.ds{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700;margin:0 0 4px}
+p.ds{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:19px;max-width:640px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.lbl.dim{color:rgba(201,168,76,.53)}
+.eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.card{background:var(--surface);border:1px solid rgba(201,168,76,.2);border-radius:14px;padding:16px}
+.card.sel{border:2px solid var(--gold)}
+.card.hair{border-color:rgba(201,168,76,.13)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:14px;padding:16px 24px;background:var(--gold);color:var(--bg);font-weight:700;font-size:17px;letter-spacing:.2px;border:0;font-family:inherit;cursor:pointer}
+.btn.md{padding:11px 18px;font-size:14px;border-radius:10px}
+.btn.sm{padding:8px 18px;font-size:13px;border-radius:10px}
+.btn.pill{border-radius:999px;padding:7px 14px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase}
+.btn.secondary{background:rgba(201,168,76,.13);border:1px solid rgba(201,168,76,.53);color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--muted);font-weight:600}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.disabled{opacity:.5}
+.btn.outline-dashed{background:transparent;border:1px dashed rgba(201,168,76,.27);color:var(--gold);font-size:15px;font-weight:600;padding:16px;width:100%}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid rgba(201,168,76,.13);color:var(--muted);font-size:13px;font-weight:600}
+.chip.on{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold)}
+.seg{display:flex;background:var(--surface);border-radius:12px;padding:4px;gap:0}
+.seg>div{flex:1;text-align:center;padding:10px;border-radius:10px;color:var(--muted);font-size:14px;font-weight:600}
+.seg>div.on{background:var(--gold);color:var(--bg)}
+.utabs{display:flex;background:var(--surface);border-bottom:1px solid rgba(201,168,76,.13)}
+.utabs>div{flex:1;text-align:center;padding:12px;color:var(--muted);font-size:14px;font-weight:600;border-bottom:2px solid transparent}
+.utabs>div.on{color:var(--gold);border-bottom-color:var(--gold)}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;text-transform:capitalize}
+.input{background:var(--bg);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:12px 16px;color:#fff;font-size:16px;font-family:inherit;width:100%}
+.input::placeholder{color:#555}
+.swatch{width:120px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.swatch>div:first-child{height:64px}.swatch>div:last-child{padding:8px 10px;background:#0d1526}
+.swatch b{display:block;font-size:11px;color:#e0e0e0}.swatch span{font-size:10px;color:#888;font-family:var(--mono)}
+.phone{width:375px;min-height:640px;background:var(--bg);border-radius:32px;border:1px solid rgba(255,255,255,.1);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .screen{flex:1;padding:25px;padding-top:56px;overflow:hidden}
+.tabbar{height:60px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:5px}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:gray}
+.tabbar div.on{color:var(--gold)}
+.tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ico{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.well{width:44px;height:44px;border-radius:22px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.rule{width:100%;height:1px;background:rgba(201,168,76,.13)}
+</style></head><body>
+<h1 class="ds">Type</h1><p class="ds">The app uses the platform font and builds hierarchy from weight, size and gold. The web and academy add Cormorant Garamond or Playfair Display for reading and headings, Inter for UI, JetBrains Mono for code.</p>
+<div class="stack" style="gap:18px">
+<div><div class="lbl dim">Display 72 / 700 / tracking 4 (focus timer)</div><div style="font-size:72px;font-weight:700;color:var(--gold);letter-spacing:4px;line-height:1">25:00</div></div>
+<div><div class="lbl dim">Hero number 52 to 64 / 700 (streaks)</div><div style="font-size:52px;font-weight:700;color:var(--gold);line-height:56px">14</div></div>
+<div><div class="lbl dim">Name 32 / 700 white, greeting 20 muted</div><div style="font-size:20px;color:var(--muted)">Good evening,</div><div style="font-size:32px;font-weight:700">Kyle</div></div>
+<div><div class="lbl dim">Screen title 26 / 700 gold</div><div style="font-size:26px;font-weight:700;color:var(--gold)">The Cabinet</div></div>
+<div><div class="lbl dim">Section title 16 / 700 gold, card title 16 / 700 white</div><div style="font-size:16px;font-weight:700;color:var(--gold)">Reading list</div><div style="font-size:16px;font-weight:700">Marcus Aurelius</div></div>
+<div><div class="lbl dim">Eyebrow 11 / 700 / tracking 3 uppercase, kicker 10 / 700 / tracking 1.2</div><div class="eyebrow">Arete Premium</div><div class="lbl" style="margin-top:6px">Today's question</div></div>
+<div><div class="lbl dim">Body 15 / 22, counselor reply 15 / 24</div><div style="font-size:15px;line-height:22px;color:var(--body);max-width:520px">You have power over your mind, not outside events. Realize this, and you will find strength.</div></div>
+<div><div class="lbl dim">Quote 14 italic / 22 warm, attribution 12 / 600 gold</div><div style="font-size:14px;font-style:italic;line-height:22px;color:var(--quote);max-width:520px">Waste no more time arguing about what a good man should be. Be one.</div><div style="font-size:12px;font-weight:600;color:var(--gold);margin-top:6px">Marcus Aurelius</div></div>
+<div><div class="lbl dim">Caption 12 muted, meta 11 faint</div><div style="font-size:12px;color:var(--muted)">Tap to open the full dispatch</div><div style="font-size:11px;color:var(--faint)">Sep 13, 2026</div></div>
+<div class="rule"></div>
+<div><div class="lbl dim">Web and Library serif: Cormorant Garamond</div><div style="font-family:var(--serif);font-size:34px;color:#f4ead5;line-height:1.15">The Library of Arete</div><div style="font-family:var(--serif);font-size:19px;color:#e8e4d6;line-height:1.5;max-width:520px;margin-top:6px">A reading room where the texts answer back, and every note you leave is a claim someone else may test.</div></div>
+<div><div class="lbl dim">Academy serif: Playfair Display, with the gold text gradient</div><div style="font-family:'Playfair Display',Georgia,serif;font-size:30px;background:linear-gradient(135deg,#c9a84c,#e8c96a 50%,#c9a84c);-webkit-background-clip:text;background-clip:text;color:transparent">Pursue Arete</div></div>
+<div><div class="lbl dim">Mono: JetBrains Mono</div><div style="font-family:var(--mono);font-size:12px;color:var(--muted)">text_type = concordance · review_by 2027-01-01</div></div>
+</div>
+</body></html>

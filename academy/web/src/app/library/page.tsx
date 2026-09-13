@@ -70,6 +70,8 @@ type Reader = {
   totalPages: number;
   totalPassages: number;
   body: string;
+  firstChunk?: number;
+  chunkStarts?: number[] | null;
 };
 
 type Related = { id: string; author: string; work: string; title: string; reason: string };

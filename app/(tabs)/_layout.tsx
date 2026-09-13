@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import PendingInviteModal from '../../components/PendingInviteModal';
+import { wasLaunchedFromNotification } from '@/lib/launchIntent';
 
 function getRoutineTab(): string | null {
   const hour = new Date().getHours();
@@ -14,12 +15,26 @@ export default function TabsLayout() {
   const router = useRouter();
   const hasNavigated = useRef(false);
 
+  // Time-of-day routine redirect. It must not fire when the app was opened
+  // from a notification: the tap handler in app/_layout.tsx is routing to
+  // the Cabinet or the Dispatch reader, and this redirect used to win the
+  // race and dump the user on Morning or Evening instead.
   useEffect(() => {
     if (hasNavigated.current) return;
+    hasNavigated.current = true;
     const target = getRoutineTab();
     if (!target) return;
-    hasNavigated.current = true;
-    router.navigate(target as any);
+    let cancelled = false;
+    wasLaunchedFromNotification()
+      .then((fromNotification) => {
+        if (cancelled || fromNotification) return;
+        router.navigate(target as any);
+      })
+      .catch(() => {
+        if (!cancelled) router.navigate(target as any);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -1170,7 +1170,7 @@ app.post('/api/chat/counselor', async (req, res) => {
   }
 
   // --- Parallel Cabinet branch ---
-  const { mode, counselors: parallelCounselors } = selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
+  const { mode, counselors: parallelCounselors } = await selectCounselors(activeCounselorId, userId, effectiveCabinetMembers);
 
   if (mode === 'parallel') {
     const question = Array.isArray(messages) ? (messages[messages.length - 1]?.content || '') : '';
@@ -2927,10 +2927,10 @@ Do not mention that you are an AI. Do not break character.`,
   },
 ];
 
-const SINGLE_COUNSELOR_IDS = new Set(['marcus', 'epictetus', 'seneca', 'goggins', 'roosevelt', 'montaigne', 'future-self']);
-
 // Maps the slug conventions used across the app (counselors table slugs,
 // short thread ids, futureSelf) to the parallel-roster counselor ids above.
+// Counselors loaded from the `counselors` table are added to this map (and
+// to COUNSELOR_ALIASES) by getCabinetRoster() under their own slug.
 const SLUG_TO_COUNSELOR_ID = {
   'marcus': 'marcus', 'marcus-aurelius': 'marcus',
   'epictetus': 'epictetus',
@@ -2941,14 +2941,136 @@ const SLUG_TO_COUNSELOR_ID = {
   'future-self': 'future-self', 'futureSelf': 'future-self',
 };
 
+// ---------------------------------------------------------------------------
+// Dynamic Cabinet roster
+//
+// The hand-written personas above cover seven counselors. The `counselors`
+// table seeds twenty-two, and Premium users can put any of them in their
+// Cabinet. Before this loader existed, a selected counselor without a
+// hand-written persona was silently dropped from the group thread and a
+// 1:1 chat with them fell through to the group path, so they were "listed
+// but never appeared". Every table row now gets a persona generated from
+// its bio, philosophy, communication_style, challenge_level and quotes; the
+// hand-written prompt still wins for the seven that have one.
+// ---------------------------------------------------------------------------
+
+const CHALLENGE_LEVEL_LINES = {
+  direct: 'You are direct, even blunt. You do not soften hard truths and you do not pad your answers.',
+  firm: 'You are firm and warm at once: you hold this person to a high standard without cruelty, and you say the hard thing plainly.',
+  gentle: 'You are gentle and patient. You still tell the truth, but you lead with understanding and let the person arrive at it.',
+};
+
+function buildGeneratedPersona(row) {
+  const name = String(row.name || row.slug || 'Counselor').trim();
+  const dates = row.dates ? ` (${String(row.dates).trim()})` : '';
+  const description = row.description ? String(row.description).trim() : '';
+  const bio = row.bio ? String(row.bio).trim() : '';
+  const philosophy = row.philosophy ? String(row.philosophy).trim() : '';
+  const style = row.communication_style ? String(row.communication_style).trim() : '';
+  const challenge = CHALLENGE_LEVEL_LINES[row.challenge_level] || '';
+  const quotes = Array.isArray(row.quotes)
+    ? row.quotes.filter(q => typeof q === 'string' && q.trim()).slice(0, 6)
+    : [];
+
+  const parts = [
+    `You are ${name}${dates}. ${description} Speak in first person.`,
+    bio,
+    philosophy ? `Your philosophy: ${philosophy}` : '',
+    style ? `How you speak: ${style}` : '',
+    challenge,
+    quotes.length > 0
+      ? `Things you have actually said or written. Draw on them as memories, not as citations:\n${quotes.map(q => `- ${q.trim()}`).join('\n')}`
+      : '',
+    'Speak from your own life, works and deeds. Reference them naturally, as someone who lived them, and do not feign ignorance of the authors and ideas of your own tradition.',
+    `Keep responses to 3-5 paragraphs. Do not mention that you are an AI. Do not break character. You are ${name}.`,
+  ];
+  return parts.filter(Boolean).join('\n\n');
+}
+
+// Name patterns for direct invocation ("Socrates, what do you think?").
+// Full name always; each name word too when it is long enough to be
+// unambiguous on its own (so "Muhammad Ali" does not fire on "ali").
+function buildAliasRegex(name) {
+  const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const full = String(name || '').trim().toLowerCase();
+  if (!full) return null;
+  const words = full
+    .replace(/[^a-z\s'-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 0 && !['de', 'von', 'van', 'the'].includes(w));
+  const alts = new Set([esc(full)]);
+  if (words.length > 1) {
+    for (const w of words) {
+      if (w.length >= 4) alts.add(esc(w));
+    }
+  }
+  return new RegExp([...alts].map(a => `\\b${a}\\b`).join('|'), 'i');
+}
+
+const BUILTIN_COUNSELOR_IDS = new Set(CABINET_COUNSELORS.map(c => c.id));
+let cabinetRosterCache = { roster: CABINET_COUNSELORS, at: 0 };
+const CABINET_ROSTER_TTL_MS = 10 * 60 * 1000;
+
+/**
+ * The full parallel roster: hand-written personas plus one generated persona
+ * per `counselors` row that lacks a hand-written one. Cached for 10 minutes
+ * so a newly seeded counselor speaks without a redeploy. Falls back to the
+ * hand-written seven if the table cannot be read.
+ */
+async function getCabinetRoster() {
+  if (Date.now() - cabinetRosterCache.at < CABINET_ROSTER_TTL_MS) {
+    return cabinetRosterCache.roster;
+  }
+  try {
+    const { data, error } = await supabase
+      .from('counselors')
+      .select('slug, name, dates, description, bio, philosophy, communication_style, challenge_level, quotes, sort_order')
+      .order('sort_order', { ascending: true });
+    if (error) throw error;
+
+    const generated = [];
+    const aliasAdds = [];
+    for (const row of data || []) {
+      if (!row?.slug) continue;
+      const mapped = SLUG_TO_COUNSELOR_ID[row.slug];
+      if (mapped && BUILTIN_COUNSELOR_IDS.has(mapped)) continue; // hand-written persona wins
+      if (row.slug === 'futureSelf' || row.slug === 'future-self') continue;
+      SLUG_TO_COUNSELOR_ID[row.slug] = row.slug;
+      generated.push({ id: row.slug, name: row.name, systemPrompt: buildGeneratedPersona(row) });
+      const re = buildAliasRegex(row.name);
+      if (re) aliasAdds.push({ id: row.slug, re });
+    }
+
+    // Refresh the alias table: built-in patterns stay first, generated follow.
+    COUNSELOR_ALIASES.splice(
+      BUILTIN_COUNSELOR_ALIAS_COUNT,
+      COUNSELOR_ALIASES.length - BUILTIN_COUNSELOR_ALIAS_COUNT,
+      ...aliasAdds,
+    );
+
+    cabinetRosterCache = { roster: [...CABINET_COUNSELORS, ...generated], at: Date.now() };
+    console.log(`[Cabinet] Roster loaded: ${CABINET_COUNSELORS.length} hand-written + ${generated.length} generated personas`);
+  } catch (err) {
+    console.error('[Cabinet] Roster load failed, using hand-written personas only:', err.message || err);
+    cabinetRosterCache = { roster: CABINET_COUNSELORS, at: Date.now() };
+  }
+  return cabinetRosterCache.roster;
+}
+// Warm the cache at boot; never blocks startup.
+setTimeout(() => { getCabinetRoster().catch(() => {}); }, 0);
+
 /**
  * Restricts the parallel roster to the user's selected cabinet members.
- * Future Self is always present. Cabinet members without a group persona
- * (e.g. Socrates, Kobe) are skipped; if that leaves no one but Future Self,
- * the chair (Marcus) joins so the Cabinet always has a second voice.
+ * Future Self is always present. A member whose slug is unknown is skipped;
+ * if that leaves no one but Future Self, the chair (Marcus) joins so the
+ * Cabinet always has a second voice. With no selection at all (older app
+ * builds, or a user who never opened My Cabinet) the roster is the
+ * hand-written seven, which was the behaviour before generated personas.
  */
 function filterRosterToCabinet(roster, cabinetMembers) {
-  if (!Array.isArray(cabinetMembers) || cabinetMembers.length === 0) return roster;
+  if (!Array.isArray(cabinetMembers) || cabinetMembers.length === 0) {
+    return roster.filter(c => BUILTIN_COUNSELOR_IDS.has(c.id));
+  }
   const wanted = new Set(
     cabinetMembers.map(s => SLUG_TO_COUNSELOR_ID[s]).filter(Boolean)
   );
@@ -2965,8 +3087,15 @@ function filterRosterToCabinet(roster, cabinetMembers) {
  * Determines which counselors to fire.
  * Returns { mode: 'single'|'parallel', counselors: [...] }
  */
-function selectCounselors(activeCounselorId, userId, cabinetMembers) {
-  const isSingleMode = activeCounselorId && SINGLE_COUNSELOR_IDS.has(activeCounselorId);
+async function selectCounselors(activeCounselorId, userId, cabinetMembers) {
+  // Clients send activeCounselorId: 'cabinet' for the group thread and the
+  // counselor's slug for a 1:1 chat. Any explicit slug is single mode: the
+  // client supplies that counselor's own system prompt. (This used to be an
+  // allowlist of seven ids, so a 1:1 with any other counselor answered in
+  // the group's voices.)
+  const isSingleMode = typeof activeCounselorId === 'string'
+    && activeCounselorId.length > 0
+    && activeCounselorId !== 'cabinet';
 
   if (isSingleMode) {
     return { mode: 'single' };
@@ -2982,8 +3111,9 @@ function selectCounselors(activeCounselorId, userId, cabinetMembers) {
     return { mode: 'single' };
   }
 
-  const roster = filterRosterToCabinet(CABINET_COUNSELORS, cabinetMembers);
-  if (roster.length < CABINET_COUNSELORS.length) {
+  const fullRoster = await getCabinetRoster();
+  const roster = filterRosterToCabinet(fullRoster, cabinetMembers);
+  if (roster.length < fullRoster.length) {
     console.log(`[Cabinet] Roster limited to user cabinet: ${roster.map(c => c.id).join(', ')}`);
   }
   return { mode: 'parallel', counselors: roster };
@@ -3089,6 +3219,7 @@ const COUNSELOR_ALIASES = [
   { id: 'montaigne', re: /\bmontaigne\b/i },
   { id: 'future-self', re: /\bfuture (?:self|me|you)\b/i },
 ];
+const BUILTIN_COUNSELOR_ALIAS_COUNT = COUNSELOR_ALIASES.length;
 
 function detectInvokedCounselors(question, allCounselors) {
   if (typeof question !== 'string' || question.length === 0) return [];
@@ -4532,6 +4663,8 @@ app.get('/api/library/text', async (req, res) => {
       return res.status(400).json({ error: 'author and work are required' });
     }
 
+    // Superseded ingests stay in the table with deprecated = true (the corpus
+    // rule is deprecate, never delete); the reader must never show them.
     const { count, error: cErr } = await supabase
       .from('rag_corpus')
       .select('id', { count: 'exact', head: true })
@@ -4588,9 +4721,19 @@ app.get('/api/library/text', async (req, res) => {
       .maybeSingle();
     if (ov && ov.hidden) return res.status(404).json({ error: 'Text not found' });
 
-    const body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
-      libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
-    ));
+    // Entry-chunked works (one canonical section per row) are formatted row
+    // by row so the reader learns which paragraph each row starts at; the
+    // outline's `chunk` values index into that. Retrieval-chunked works keep
+    // the overlap-stitching path and carry no chunkStarts.
+    let body;
+    let chunkStarts = null;
+    if (libraryHelpers.isEntryChunked(data)) {
+      ({ body, chunkStarts } = libraryHelpers.formatEntries(data.map(c => c.chunk_text || '')));
+    } else {
+      body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
+        libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
+      ));
+    }
 
     return res.json({
       author,
@@ -4604,6 +4747,10 @@ app.get('/api/library/text', async (req, res) => {
       totalPages,
       totalPassages: total,
       body,
+      // Position of this folio's first row within the work, and the paragraph
+      // index each row on the folio begins at (null for stitched works).
+      firstChunk: from,
+      chunkStarts,
     });
   } catch (err) {
     console.error('[/api/library/text] error:', err.message);
@@ -4841,6 +4988,7 @@ app.post('/api/library/related', async (req, res) => {
       .select('chunk_text')
       .eq('author', author)
       .eq('work', work)
+      .eq('deprecated', false)
       .order('chunk_index', { ascending: true })
       .range(0, 60);
 

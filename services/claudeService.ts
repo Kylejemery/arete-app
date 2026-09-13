@@ -948,6 +948,48 @@ export async function sendCheckInToCabinet(
   }
 }
 
+// Hand-written profiles are keyed by the long slug the roster used before the
+// counselors table existed; 1:1 thread ids use the short slug from the table.
+const SHORT_TO_PROFILE_KEY: Record<string, string> = {
+  marcus: 'marcus-aurelius',
+  goggins: 'david-goggins',
+  roosevelt: 'theodore-roosevelt',
+};
+
+/**
+ * Name and profile block for a 1:1 counselor. Hand-written profiles first;
+ * every other counselor (Socrates, Frankl, Mandela, ...) is built from its
+ * counselors-table row, the same way the group Cabinet already does. Before
+ * this, any counselor outside the hand-written four was sent to the model as
+ * "(Unknown counselor)", so a Premium user's added counselor never spoke in
+ * their own voice.
+ */
+async function resolveCounselorPersona(counselorId: string): Promise<{ name: string; profile: string }> {
+  const profileKey = SHORT_TO_PROFILE_KEY[counselorId] ?? counselorId;
+  const handWritten = COUNSELOR_PROFILE_MAP[profileKey] ?? COUNSELOR_PROFILE_MAP[counselorId];
+  const handWrittenNames: Record<string, string> = {
+    'marcus-aurelius': 'Marcus Aurelius',
+    epictetus: 'Epictetus',
+    'david-goggins': 'David Goggins',
+    'theodore-roosevelt': 'Theodore Roosevelt',
+  };
+
+  // The table row carries more than the Counselor interface declares
+  // (description, philosophy, communication_style, quotes); the dynamic
+  // profile builder reads those optional fields when present.
+  type CounselorRow = Parameters<typeof buildDynamicCounselorProfile>[0];
+  let row: CounselorRow | null = null;
+  try {
+    const rows = await getCounselorsBySlugs([counselorId, profileKey]);
+    row = rows.length > 0 ? (rows[0] as unknown as CounselorRow) : null;
+  } catch { /* fall through to whatever we have */ }
+
+  const name = row?.name ?? handWrittenNames[profileKey] ?? counselorId;
+  if (handWritten) return { name, profile: handWritten };
+  if (row) return { name, profile: buildDynamicCounselorProfile(row) };
+  return { name, profile: `## ${name}\n\nA member of ${name}'s tradition, speaking in their own voice.` };
+}
+
 async function buildCounselorSystemPrompt(counselorId: string): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -977,14 +1019,9 @@ Future Self's role is unique. They do not advise from the outside — they advis
 
 Their communication style is warm, wise, and unhurried. They do not panic. They do not catastrophize. They see the long arc clearly. They are most likely to zoom out when ${userName} is lost in the weeds, and most likely to say quietly and with certainty: *"Trust the process. I know how this ends — if you do the work."*`;
   } else {
-    counselorProfile = COUNSELOR_PROFILE_MAP[counselorId] || '(Unknown counselor)';
-    const nameMap: Record<string, string> = {
-      marcus: 'Marcus Aurelius',
-      epictetus: 'Epictetus',
-      goggins: 'David Goggins',
-      roosevelt: 'Theodore Roosevelt',
-    };
-    counselorName = nameMap[counselorId] || counselorId;
+    const persona = await resolveCounselorPersona(counselorId);
+    counselorName = persona.name;
+    counselorProfile = persona.profile;
   }
 
   const memoryBlock = memory
@@ -1050,14 +1087,9 @@ export async function sendMessageToCounselor(
       if (messages.length >= 4) {
         const settings = await getUserSettings();
         const userName = settings?.user_name || 'the user';
-        const nameMap: Record<string, string> = {
-          'marcus-aurelius': 'Marcus Aurelius',
-          'epictetus': 'Epictetus',
-          'david-goggins': 'David Goggins',
-          'theodore-roosevelt': 'Theodore Roosevelt',
-          'futureSelf': 'Future Self',
-        };
-        const counselorName = nameMap[counselorId] || counselorId;
+        const counselorName = counselorId === 'futureSelf'
+          ? 'Future Self'
+          : (await resolveCounselorPersona(counselorId)).name;
         fetch(`${API_BASE_URL}/api/memory/summarize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },

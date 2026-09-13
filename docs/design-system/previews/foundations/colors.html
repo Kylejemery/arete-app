@@ -1,0 +1,64 @@
+<!-- @dsCard name="Palette" group="Colors" subtitle="Ink surfaces, one gold, semantic states" width="760" height="620" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arete DS: Palette</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a84c;--gold-light:#e3c77a;--bg:#1a1a2e;--surface:#16213e;--deep:#0d1526;--raised:#1f2a4a;--border:#2a3a5c;
+--text:#fff;--body:#e0e0e0;--warm:#e0d5b5;--quote:#e8e0d0;--muted:#888;--faint:#555;--success:#4caf50;--danger:#ff4444;--evening:#4a6fa5;
+--sans:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--serif:"Cormorant Garamond",Georgia,serif;--mono:"JetBrains Mono","Courier New",monospace}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:24px}
+h1.ds{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700;margin:0 0 4px}
+p.ds{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:19px;max-width:640px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.lbl.dim{color:rgba(201,168,76,.53)}
+.eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.card{background:var(--surface);border:1px solid rgba(201,168,76,.2);border-radius:14px;padding:16px}
+.card.sel{border:2px solid var(--gold)}
+.card.hair{border-color:rgba(201,168,76,.13)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:14px;padding:16px 24px;background:var(--gold);color:var(--bg);font-weight:700;font-size:17px;letter-spacing:.2px;border:0;font-family:inherit;cursor:pointer}
+.btn.md{padding:11px 18px;font-size:14px;border-radius:10px}
+.btn.sm{padding:8px 18px;font-size:13px;border-radius:10px}
+.btn.pill{border-radius:999px;padding:7px 14px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase}
+.btn.secondary{background:rgba(201,168,76,.13);border:1px solid rgba(201,168,76,.53);color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--muted);font-weight:600}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.disabled{opacity:.5}
+.btn.outline-dashed{background:transparent;border:1px dashed rgba(201,168,76,.27);color:var(--gold);font-size:15px;font-weight:600;padding:16px;width:100%}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid rgba(201,168,76,.13);color:var(--muted);font-size:13px;font-weight:600}
+.chip.on{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold)}
+.seg{display:flex;background:var(--surface);border-radius:12px;padding:4px;gap:0}
+.seg>div{flex:1;text-align:center;padding:10px;border-radius:10px;color:var(--muted);font-size:14px;font-weight:600}
+.seg>div.on{background:var(--gold);color:var(--bg)}
+.utabs{display:flex;background:var(--surface);border-bottom:1px solid rgba(201,168,76,.13)}
+.utabs>div{flex:1;text-align:center;padding:12px;color:var(--muted);font-size:14px;font-weight:600;border-bottom:2px solid transparent}
+.utabs>div.on{color:var(--gold);border-bottom-color:var(--gold)}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;text-transform:capitalize}
+.input{background:var(--bg);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:12px 16px;color:#fff;font-size:16px;font-family:inherit;width:100%}
+.input::placeholder{color:#555}
+.swatch{width:120px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.swatch>div:first-child{height:64px}.swatch>div:last-child{padding:8px 10px;background:#0d1526}
+.swatch b{display:block;font-size:11px;color:#e0e0e0}.swatch span{font-size:10px;color:#888;font-family:var(--mono)}
+.phone{width:375px;min-height:640px;background:var(--bg);border-radius:32px;border:1px solid rgba(255,255,255,.1);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .screen{flex:1;padding:25px;padding-top:56px;overflow:hidden}
+.tabbar{height:60px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:5px}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:gray}
+.tabbar div.on{color:var(--gold)}
+.tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ico{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.well{width:44px;height:44px;border-radius:22px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.rule{width:100%;height:1px;background:rgba(201,168,76,.13)}
+</style></head><body>
+<h1 class="ds">Colors</h1><p class="ds">Deep blue-black surfaces and a single antique gold. Gold does the work of every accent, usually at reduced opacity. Semantic hues appear only for state.</p>
+<div class="lbl" style="margin-bottom:8px">Brand gold</div>
+<div class="row" style="margin-bottom:20px"><div class="swatch"><div style="background:#c9a84c"></div><div><b>Gold</b><span>#c9a84c</span><span style="display:block;color:#666;font-family:var(--sans)">the only accent</span></div></div><div class="swatch"><div style="background:#e3c77a"></div><div><b>Gold light</b><span>#e3c77a</span><span style="display:block;color:#666;font-family:var(--sans)">library highlights</span></div></div><div class="swatch"><div style="background:#9a7a32"></div><div><b>Gold deep</b><span>#9a7a32</span><span style="display:block;color:#666;font-family:var(--sans)">academy dim</span></div></div></div>
+<div class="lbl" style="margin-bottom:8px">Mobile app surfaces</div>
+<div class="row" style="margin-bottom:20px"><div class="swatch"><div style="background:#1a1a2e"></div><div><b>Background</b><span>#1a1a2e</span><span style="display:block;color:#666;font-family:var(--sans)">screen</span></div></div><div class="swatch"><div style="background:#16213e"></div><div><b>Surface</b><span>#16213e</span><span style="display:block;color:#666;font-family:var(--sans)">cards, sheets, tab tracks</span></div></div><div class="swatch"><div style="background:#0d1526"></div><div><b>Deep</b><span>#0d1526</span><span style="display:block;color:#666;font-family:var(--sans)">progress track</span></div></div><div class="swatch"><div style="background:#1f2a4a"></div><div><b>Raised</b><span>#1f2a4a</span><span style="display:block;color:#666;font-family:var(--sans)">dispatch card</span></div></div><div class="swatch"><div style="background:#2a3a5c"></div><div><b>Border</b><span>#2a3a5c</span><span style="display:block;color:#666;font-family:var(--sans)">counselor cards</span></div></div></div>
+<div class="lbl" style="margin-bottom:8px">Web app v2 and Academy surfaces</div>
+<div class="row" style="margin-bottom:20px"><div class="swatch"><div style="background:#0f1724"></div><div><b>Web bg</b><span>#0f1724</span></div></div><div class="swatch"><div style="background:#161f2e"></div><div><b>Web surface solid</b><span>#161f2e</span></div></div><div class="swatch"><div style="background:#0a1628"></div><div><b>Academy navy</b><span>#0a1628</span></div></div><div class="swatch"><div style="background:#0f1e38"></div><div><b>Academy surface</b><span>#0f1e38</span></div></div><div class="swatch"><div style="background:#111d30"></div><div><b>Academy card</b><span>#111d30</span></div></div><div class="swatch"><div style="background:#1e3258"></div><div><b>Academy border</b><span>#1e3258</span></div></div></div>
+<div class="lbl" style="margin-bottom:8px">Text</div>
+<div class="row" style="margin-bottom:20px"><div class="swatch"><div style="background:#ffffff"></div><div><b>Primary</b><span>#ffffff</span></div></div><div class="swatch"><div style="background:#e0e0e0"></div><div><b>Body</b><span>#e0e0e0</span></div></div><div class="swatch"><div style="background:#e0d5b5"></div><div><b>Warm</b><span>#e0d5b5</span><span style="display:block;color:#666;font-family:var(--sans)">titles on cards</span></div></div><div class="swatch"><div style="background:#e8e0d0"></div><div><b>Quote</b><span>#e8e0d0</span></div></div><div class="swatch"><div style="background:#888888"></div><div><b>Muted</b><span>#888888</span></div></div><div class="swatch"><div style="background:#555555"></div><div><b>Faint</b><span>#555555</span><span style="display:block;color:#666;font-family:var(--sans)">dates, footers</span></div></div><div class="swatch"><div style="background:#f5edd6"></div><div><b>Cream</b><span>#f5edd6</span><span style="display:block;color:#666;font-family:var(--sans)">academy</span></div></div><div class="swatch"><div style="background:#f4ead5"></div><div><b>Ivory</b><span>#f4ead5</span><span style="display:block;color:#666;font-family:var(--sans)">library</span></div></div></div>
+<div class="lbl" style="margin-bottom:8px">Semantic</div>
+<div class="row"><div class="swatch"><div style="background:#4caf50"></div><div><b>Success</b><span>#4caf50</span><span style="display:block;color:#666;font-family:var(--sans)">done, under budget</span></div></div><div class="swatch"><div style="background:#ff4444"></div><div><b>Danger</b><span>#ff4444</span><span style="display:block;color:#666;font-family:var(--sans)">stop, over budget</span></div></div><div class="swatch"><div style="background:#4a6fa5"></div><div><b>Evening</b><span>#4a6fa5</span><span style="display:block;color:#666;font-family:var(--sans)">evening dots</span></div></div><div class="swatch"><div style="background:#b39ddb"></div><div><b>Insight</b><span>#b39ddb</span><span style="display:block;color:#666;font-family:var(--sans)">journal insight</span></div></div></div>
+</body></html>

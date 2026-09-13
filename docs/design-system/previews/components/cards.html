@@ -1,0 +1,71 @@
+<!-- @dsCard name="Cards" group="Components" subtitle="Quote, prompt, streak, stat, task, plan, dispatch, insight" width="760" height="900" -->
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Arete DS: Cards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Playfair+Display:wght@400;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a84c;--gold-light:#e3c77a;--bg:#1a1a2e;--surface:#16213e;--deep:#0d1526;--raised:#1f2a4a;--border:#2a3a5c;
+--text:#fff;--body:#e0e0e0;--warm:#e0d5b5;--quote:#e8e0d0;--muted:#888;--faint:#555;--success:#4caf50;--danger:#ff4444;--evening:#4a6fa5;
+--sans:-apple-system,"SF Pro Text",Inter,system-ui,sans-serif;--serif:"Cormorant Garamond",Georgia,serif;--mono:"JetBrains Mono","Courier New",monospace}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;padding:24px}
+h1.ds{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700;margin:0 0 4px}
+p.ds{font-size:13px;color:var(--muted);margin:0 0 20px;line-height:19px;max-width:640px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.col{display:flex;flex-direction:column;gap:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.lbl{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.lbl.dim{color:rgba(201,168,76,.53)}
+.eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.card{background:var(--surface);border:1px solid rgba(201,168,76,.2);border-radius:14px;padding:16px}
+.card.sel{border:2px solid var(--gold)}
+.card.hair{border-color:rgba(201,168,76,.13)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;border-radius:14px;padding:16px 24px;background:var(--gold);color:var(--bg);font-weight:700;font-size:17px;letter-spacing:.2px;border:0;font-family:inherit;cursor:pointer}
+.btn.md{padding:11px 18px;font-size:14px;border-radius:10px}
+.btn.sm{padding:8px 18px;font-size:13px;border-radius:10px}
+.btn.pill{border-radius:999px;padding:7px 14px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase}
+.btn.secondary{background:rgba(201,168,76,.13);border:1px solid rgba(201,168,76,.53);color:var(--gold)}
+.btn.ghost{background:transparent;color:var(--muted);font-weight:600}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.disabled{opacity:.5}
+.btn.outline-dashed{background:transparent;border:1px dashed rgba(201,168,76,.27);color:var(--gold);font-size:15px;font-weight:600;padding:16px;width:100%}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;background:var(--surface);border:1px solid rgba(201,168,76,.13);color:var(--muted);font-size:13px;font-weight:600}
+.chip.on{background:rgba(201,168,76,.2);border-color:var(--gold);color:var(--gold)}
+.seg{display:flex;background:var(--surface);border-radius:12px;padding:4px;gap:0}
+.seg>div{flex:1;text-align:center;padding:10px;border-radius:10px;color:var(--muted);font-size:14px;font-weight:600}
+.seg>div.on{background:var(--gold);color:var(--bg)}
+.utabs{display:flex;background:var(--surface);border-bottom:1px solid rgba(201,168,76,.13)}
+.utabs>div{flex:1;text-align:center;padding:12px;color:var(--muted);font-size:14px;font-weight:600;border-bottom:2px solid transparent}
+.utabs>div.on{color:var(--gold);border-bottom-color:var(--gold)}
+.badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;text-transform:capitalize}
+.input{background:var(--bg);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:12px 16px;color:#fff;font-size:16px;font-family:inherit;width:100%}
+.input::placeholder{color:#555}
+.swatch{width:120px;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.swatch>div:first-child{height:64px}.swatch>div:last-child{padding:8px 10px;background:#0d1526}
+.swatch b{display:block;font-size:11px;color:#e0e0e0}.swatch span{font-size:10px;color:#888;font-family:var(--mono)}
+.phone{width:375px;min-height:640px;background:var(--bg);border-radius:32px;border:1px solid rgba(255,255,255,.1);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.phone .screen{flex:1;padding:25px;padding-top:56px;overflow:hidden}
+.tabbar{height:60px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:5px}
+.tabbar div{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:gray}
+.tabbar div.on{color:var(--gold)}
+.tabbar svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.ico{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.well{width:44px;height:44px;border-radius:22px;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.3);display:flex;align-items:center;justify-content:center;color:var(--gold)}
+.rule{width:100%;height:1px;background:rgba(201,168,76,.13)}
+</style></head><body>
+<h1 class="ds">Cards</h1><p class="ds">Flat surfaces on <code style="font-family:var(--mono)">#16213e</code> with a gold hairline. Emphasis comes from a 3px gold left rule, a solid gold border, or a hero number. Done states invert to solid gold with ink text.</p>
+<div class="row" style="align-items:flex-start;gap:16px">
+<div class="stack" style="width:340px">
+<div class="card hair" style="border-left:3px solid var(--gold);display:flex;gap:12px;padding:20px"><div style="font-size:44px;line-height:44px;color:var(--gold);font-weight:700;margin-top:-4px">“</div><div><div style="font-size:14px;font-style:italic;line-height:22px;color:var(--quote)">The impediment to action advances action. What stands in the way becomes the way.</div><div style="font-size:12px;font-weight:600;color:var(--gold);margin-top:8px">Marcus Aurelius</div></div></div>
+<div class="card" style="border-left:3px solid var(--gold);display:flex;gap:12px;align-items:center;padding:20px"><div style="flex:1"><div class="lbl dim">Today's question</div><div style="font-size:15px;line-height:22px;margin-top:6px">What did you avoid today that you knew you should face?</div><div style="font-size:12px;font-weight:600;color:var(--gold);margin-top:4px">Seneca</div></div><svg class="ico" style="color:#888" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></div>
+<div class="card" style="display:flex;gap:16px;align-items:center;padding:24px"><div style="font-size:52px;font-weight:700;color:var(--gold);line-height:56px">14</div><div><div style="font-size:16px;font-weight:600">day streak</div><div style="font-size:12px;color:#666;font-style:italic;margin-top:3px">Keep the chain unbroken</div></div></div>
+<div class="row" style="gap:12px"><div class="card hair" style="flex:1;text-align:center;padding:14px"><div style="font-size:22px;font-weight:700;color:var(--gold)">32</div><div style="font-size:11px;color:var(--muted);line-height:16px">Reflections</div></div><div class="card hair" style="flex:1;text-align:center;padding:14px"><div style="font-size:22px;font-weight:700;color:var(--gold)">6</div><div style="font-size:11px;color:var(--muted);line-height:16px">Books read</div></div><div class="card hair" style="flex:1;text-align:center;padding:14px"><div style="font-size:22px;font-weight:700;color:var(--gold)">4h</div><div style="font-size:11px;color:var(--muted);line-height:16px">Focus this week</div></div></div>
+<div class="card" style="display:flex;gap:14px;align-items:center;padding:18px"><div style="width:22px;height:22px;border-radius:11px;border:2px solid rgba(201,168,76,.4)"></div><div><div style="font-size:16px">Read 20 pages of Meditations</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Book II</div></div></div>
+<div class="card" style="background:var(--gold);border-color:var(--gold);display:flex;gap:14px;align-items:center;padding:18px"><div style="width:22px;height:22px;border-radius:11px;background:var(--bg);color:var(--gold);display:flex;align-items:center;justify-content:center"><svg class="ico" style="width:14px;height:14px" viewBox="0 0 24 24"><path d="M5 12l4 4 10-10"/></svg></div><div style="font-size:16px;font-weight:700;color:var(--bg);text-decoration:line-through">Cold shower</div></div>
+</div>
+<div class="stack" style="width:340px">
+<div class="card" style="background:var(--raised);border-color:rgba(201,168,76,.33)"><div class="row" style="justify-content:space-between;margin-bottom:6px"><span style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--gold)">Dispatch from Epictetus</span><span style="font-size:11px;color:#555">Today</span></div><div style="font-size:16px;font-weight:700;line-height:22px;margin-bottom:4px">On the things not up to us</div><div style="font-size:14px;line-height:21px;color:#ccc">You wrote that the meeting went badly. Which part of that was yours to command?</div><div style="font-size:13px;font-weight:700;color:var(--gold);text-align:right;margin-top:10px">Read more</div></div>
+<div class="card" style="background:#241f3d;border-color:rgba(123,94,167,.33)"><div style="font-size:13px;font-weight:700;font-style:italic;color:#b39ddb;margin-bottom:6px">Pattern: avoidance</div><div style="font-size:14px;line-height:22px;color:#ccc">Three entries this week circle the same unsent message.</div></div>
+<div class="card hair" style="padding:16px"><div class="row" style="justify-content:space-between;margin-bottom:8px"><span style="font-size:12px;font-weight:700;color:var(--gold)">Reflection</span><span style="font-size:11px;color:#555">Sep 12</span></div><div style="font-size:13px;font-style:italic;color:var(--muted);line-height:20px;margin-bottom:6px">What would your future self thank you for?</div><div style="font-size:14px;line-height:22px;color:#ccc">Finishing the draft instead of rereading it. I keep polishing the first page as a way of not writing the last one.</div></div>
+<div style="background:#0f1e38;border:1px solid rgba(201,168,76,.33);border-radius:14px;padding:16px"><span style="display:inline-block;background:var(--gold);color:#0a1628;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:800;letter-spacing:1px;margin-bottom:10px">BEST VALUE</span><div class="row" style="justify-content:space-between"><div><div style="font-size:15px;font-weight:600;color:#e8edf5">Annual</div><div style="font-size:12px;color:#8a9bb0;line-height:17px">Two months free</div></div><div style="text-align:right"><div style="font-size:17px;font-weight:700;color:#e8edf5">$59.99</div><div style="font-size:11px;color:#8a9bb0">per year</div></div></div></div>
+<div class="card" style="border-color:rgba(201,168,76,.27);display:flex;gap:12px"><div class="well" style="width:38px;height:38px;border:0;background:rgba(201,168,76,.08)"><svg class="ico" viewBox="0 0 24 24"><path d="M4 5h13v14H6a2 2 0 0 1-2-2zM17 9h3v8a2 2 0 0 1-2 2M7 9h6M7 13h6"/></svg></div><div style="flex:1"><div style="font-size:15px;font-weight:700;color:var(--warm);margin-bottom:3px">Daily dispatches</div><div style="font-size:13px;line-height:19px;color:var(--muted)">Let your counselors write to you each morning.</div><div class="row" style="justify-content:flex-end;margin-top:12px;gap:10px"><button class="btn ghost sm">Later</button><button class="btn sm">Enable</button></div></div></div>
+</div>
+</div>
+</body></html>
