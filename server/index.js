@@ -4663,6 +4663,8 @@ app.get('/api/library/text', async (req, res) => {
       return res.status(400).json({ error: 'author and work are required' });
     }
 
+    // Superseded ingests stay in the table with deprecated = true (the corpus
+    // rule is deprecate, never delete); the reader must never show them.
     const { count, error: cErr } = await supabase
       .from('rag_corpus')
       .select('id', { count: 'exact', head: true })
@@ -4719,9 +4721,19 @@ app.get('/api/library/text', async (req, res) => {
       .maybeSingle();
     if (ov && ov.hidden) return res.status(404).json({ error: 'Text not found' });
 
-    const body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
-      libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
-    ));
+    // Entry-chunked works (one canonical section per row) are formatted row
+    // by row so the reader learns which paragraph each row starts at; the
+    // outline's `chunk` values index into that. Retrieval-chunked works keep
+    // the overlap-stitching path and carry no chunkStarts.
+    let body;
+    let chunkStarts = null;
+    if (libraryHelpers.isEntryChunked(data)) {
+      ({ body, chunkStarts } = libraryHelpers.formatEntries(data.map(c => c.chunk_text || '')));
+    } else {
+      body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
+        libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
+      ));
+    }
 
     return res.json({
       author,
@@ -4735,6 +4747,10 @@ app.get('/api/library/text', async (req, res) => {
       totalPages,
       totalPassages: total,
       body,
+      // Position of this folio's first row within the work, and the paragraph
+      // index each row on the folio begins at (null for stitched works).
+      firstChunk: from,
+      chunkStarts,
     });
   } catch (err) {
     console.error('[/api/library/text] error:', err.message);
@@ -4972,6 +4988,7 @@ app.post('/api/library/related', async (req, res) => {
       .select('chunk_text')
       .eq('author', author)
       .eq('work', work)
+      .eq('deprecated', false)
       .order('chunk_index', { ascending: true })
       .range(0, 60);
 
