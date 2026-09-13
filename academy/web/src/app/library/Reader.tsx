@@ -19,13 +19,16 @@ import {
 export type ReaderText = {
   author: string; work: string; title?: string; era: string; translator: string | null;
   sourceUrl: string | null; page: number; totalPages: number; totalPassages: number; body: string;
+  // Entry-chunked works (one section per row) report where each row of the
+  // folio begins, so an outline entry can land on its exact section.
+  firstChunk?: number; chunkStarts?: number[] | null;
 };
 export type ReaderRelated = { id: string; author: string; work: string; title: string; reason: string };
 export type ReaderTarget = { page: number; para?: number; comment?: string } | null;
 
-type OutlineEntry = { level?: number; label: string; page: number; key?: string; marker?: string };
+type OutlineEntry = { level?: number; label: string; page: number; key?: string; marker?: string; chunk?: number };
 type SearchHit = { page: number; snippet: string; section: string | null };
-type Jump = { page: number; para?: number; marker?: string; query?: string; snippet?: string; select?: boolean; comment?: string };
+type Jump = { page: number; para?: number; chunk?: number; marker?: string; query?: string; snippet?: string; select?: boolean; comment?: string };
 type View = 'scroll' | 'book';
 
 const isHeading = (p: string) =>
@@ -183,6 +186,13 @@ export default function Reader(props: {
   // Find the paragraph a jump means, on the folio now open.
   const resolvePara = useCallback((j: Jump): number | null => {
     if (typeof j.para === 'number') return j.para < paras.length ? j.para : null;
+    // An outline entry names the row it begins at; the folio reports the
+    // paragraph each row starts on. Exact, no text matching needed.
+    if (typeof j.chunk === 'number' && reader?.chunkStarts && typeof reader.firstChunk === 'number') {
+      const local = j.chunk - reader.firstChunk;
+      const start = reader.chunkStarts[local];
+      if (local >= 0 && typeof start === 'number' && start < paras.length) return start;
+    }
     if (j.marker) {
       const m = foldText(j.marker).replace(/\.$/, '');
       const i = paras.findIndex(p => { const f = foldText(p).replace(/\.$/, ''); return f === m || f.startsWith(m + ' ') || f.startsWith(m + '.'); });
@@ -205,7 +215,7 @@ export default function Reader(props: {
       return best;
     }
     return null;
-  }, [paras]);
+  }, [paras, reader]);
 
   const jumpTo = useCallback((j: Jump) => {
     if (reader && !readerLoading && reader.page === j.page) {
@@ -424,6 +434,13 @@ export default function Reader(props: {
           <span style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 14, color: GOLD, marginLeft: 8 }}>{active.author}</span>
         </div>
         <div className="lib-bar-right">
+          {reader && reader.totalPages > 1 && (
+            <div className="lib-bar-folio" role="group" aria-label="Turn folio">
+              <button disabled={prevDisabled} onClick={() => turnTo(page - 1)} aria-label="Previous folio" title="Previous folio">‹</button>
+              <span>{page + 1} / {reader.totalPages}</span>
+              <button disabled={nextDisabled} onClick={() => turnTo(page + 1)} aria-label="Next folio" title="Next folio">›</button>
+            </div>
+          )}
           <div className="lib-view-toggle" role="group" aria-label="Reading view">
             <button className={view === 'scroll' ? 'is-on' : ''} onClick={() => chooseView('scroll')}>Scroll</button>
             <button className={view === 'book' ? 'is-on' : ''} onClick={() => chooseView('book')}>Book</button>
@@ -493,7 +510,7 @@ export default function Reader(props: {
                   <button
                     key={e.key || i}
                     className={`lib-outline-item lvl${e.level || 1} ${i === currentOutlineIdx ? 'is-here' : ''} ${e.page === page ? 'on-page' : ''}`}
-                    onClick={() => { jumpTo({ page: e.page, marker: e.marker }); setLeftOpen(false); }}
+                    onClick={() => { jumpTo({ page: e.page, chunk: e.chunk, marker: e.marker }); setLeftOpen(false); }}
                     title={`Folio ${e.page + 1}`}
                   >
                     <span className="lib-outline-label">{e.label}</span>
@@ -528,6 +545,15 @@ export default function Reader(props: {
                 <button className="lib-inline-link" onClick={() => copyLink(null)}>copy link</button>
                 {reader?.sourceUrl && <a href={reader.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: 'underline' }}>source edition ↗</a>}
               </div>
+
+              {/* Previous / Next at the head of the folio as well as the foot */}
+              {reader && reader.totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 22 }}>
+                  <button disabled={prevDisabled} onClick={() => turnTo(page - 1)} className="lib-page-btn" style={pageBtn(prevDisabled)}>← Previous</button>
+                  <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED }}>Folio {page + 1} of {reader.totalPages}</span>
+                  <button disabled={nextDisabled} onClick={() => turnTo(page + 1)} className="lib-page-btn" style={pageBtn(nextDisabled)}>Next →</button>
+                </div>
+              )}
 
               <div className="lib-text" onMouseUp={onTextMouseUp} style={{ borderTop: '1px solid rgba(201,168,76,0.2)', paddingTop: 30 }}>
                 {readerLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 18, color: MUTED }}>Pulling the text from the shelf…</p>}
@@ -912,6 +938,10 @@ const READER_CSS = `
 .lib-view-toggle { display: inline-flex; border: 1px solid rgba(201,168,76,0.3); border-radius: 9px; overflow: hidden; }
 .lib-view-toggle button { cursor: pointer; font-family: ${MONO}; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: ${MUTED}; padding: 6px 12px; }
 .lib-view-toggle button.is-on { color: #0a1020; background: ${GOLD}; }
+.lib-bar-folio { display: flex; align-items: center; gap: 4px; margin-right: 10px; font-family: ${MONO}; font-size: 9.5px; letter-spacing: 0.12em; color: ${MUTED}; }
+.lib-bar-folio button { cursor: pointer; width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(201,168,76,0.3); background: transparent; color: ${GOLD}; font-size: 16px; line-height: 1; }
+.lib-bar-folio button:hover:not(:disabled) { background: rgba(201,168,76,0.12); }
+.lib-bar-folio button:disabled { opacity: 0.3; cursor: default; }
 .lib-only-narrow { display: none; }
 
 .lib-reader-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 264px minmax(0, 1fr) 312px; position: relative; }

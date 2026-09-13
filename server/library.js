@@ -215,6 +215,34 @@ function paragraphize(text) {
   return paras;
 }
 
+// A work chunked one canonical section per row (the Meditations: one row per
+// numbered entry, section_label "2.1") needs no overlap stitching, and the
+// reader gains something the stitched path cannot offer: it knows which
+// paragraph each row begins at. Format each row on its own, keeping any
+// heading the ingest set off with a blank line ("THE SECOND BOOK"), and
+// report the paragraph index every row starts at. The reader pairs those
+// starts with an outline entry's `chunk` to land on the exact section.
+function formatEntries(chunks) {
+  const paras = [];
+  const chunkStarts = [];
+  for (const raw of chunks) {
+    chunkStarts.push(paras.length);
+    const blocks = String(raw || '').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+    for (const b of blocks) {
+      const formatted = formatReadable(b);
+      if (formatted) paras.push(...formatted.split(/\n\n+/).filter(Boolean));
+    }
+  }
+  return { body: paras.join('\n\n'), chunkStarts };
+}
+
+// True when every row of a page carries a single canonical locator as its
+// label ("2.1", "3", "12.36"), which is how entry-chunked works are labelled.
+// Range labels ("4.6–4.14") mean retrieval-sized chunks that overlap.
+function isEntryChunked(rows) {
+  return rows.length > 0 && rows.every(r => /^\d+(\.\d+)*$/.test(String(r.section_label || '').trim()));
+}
+
 // Make one stitched, flat text readable: scrub transcription artifacts, open
 // paragraph breaks at the source's own section markers (CHAP. II., LETTER
 // XLIV., numbered aphorisms, bare roman numerals), then split what remains
@@ -362,12 +390,15 @@ function buildOutline(rows, work, pageChunks) {
       const top = parts[0];
       const sub = parts.length > 1 ? parts.slice(0, 2).join('.') : null;
       if (!/^\d+$/.test(top)) return;
+      // `chunk` is the row's position in the work: with the text endpoint's
+      // chunkStarts it lets the reader scroll to the exact section rather
+      // than only to the folio it is on.
       if (top !== lastTop) {
-        sections.push({ level: 1, label: `${outlineUnitName(work)} ${top}`, page: pageOf(i), key: `t${top}` });
+        sections.push({ level: 1, label: `${outlineUnitName(work)} ${top}`, page: pageOf(i), key: `t${top}`, chunk: i });
         lastTop = top; lastSub = null;
       }
       if (sub && sub !== lastSub) {
-        sections.push({ level: 2, label: sub, page: pageOf(i), key: `s${sub}` });
+        sections.push({ level: 2, label: sub, page: pageOf(i), key: `s${sub}`, chunk: i });
         lastSub = sub;
       }
     });
@@ -393,7 +424,7 @@ function buildOutline(rows, work, pageChunks) {
         const level = (h.kind === 'CHAPTER' && sawBook) ? 2 : 1;
         const unit = outlineUnitName(work, h.kind);
         const label = h.title ? `${unit} ${h.numeral} · ${titleCase(h.title)}` : `${unit} ${h.numeral}`;
-        const entry = { level, label, page: pageOf(i), key, marker: `${h.kind} ${h.numeral}`, titled: !!h.title };
+        const entry = { level, label, page: pageOf(i), key, marker: `${h.kind} ${h.numeral}`, chunk: i, titled: !!h.title };
         const prior = seen.get(key);
         if (prior) {
           // A front-matter list names the chapter bare ("CHAPTER I"); the real
@@ -421,5 +452,7 @@ module.exports = {
   stripGutenberg,
   stitchChunks,
   formatReadable,
+  formatEntries,
+  isEntryChunked,
   extractHeadings,
 };
