@@ -1,0 +1,27 @@
+# Builds a production iOS binary on Expo's servers from a git ref and
+# submits it to App Store Connect.
+#
+# Run it with:  eas workflow:run build-ios.yml --ref main
+#
+# The --ref flag matters: it makes EAS clone the commit from GitHub instead
+# of uploading the local checkout, so the build's fingerprint matches what
+# publish-update.yml computes for over the air updates.
+#
+# The build number comes from EAS (appVersionSource: remote, autoIncrement)
+# so each run gets the next number automatically.
+name: Build iOS for the store
+
+jobs:
+  build_ios:
+    name: Build iOS production
+    type: build
+    params:
+      platform: ios
+      profile: production
+  submit_ios:
+    name: Submit to App Store Connect
+    needs: [build_ios]
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: production
