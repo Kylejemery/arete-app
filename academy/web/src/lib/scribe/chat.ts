@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 
 // Scribe chat mode — a conversational editorial collaborator, distinct from
 // the pipeline (distill/draft/verify). One Opus call per turn with a corpus
@@ -170,6 +171,16 @@ async function searchCorpus(query: string): Promise<{ hits: RagHit[]; toolResult
     match_count: SEARCH_K,
   })
   if (error) throw new Error(`match_rag_corpus_cited: ${error.message}`)
+
+  // Every Scribe corpus search is logged (retrieval_log), floor included, so
+  // the paper summaries admitted for the research surfaces can be shown to
+  // earn their place — or not.
+  logRetrieval({
+    requestId: newRequestId(),
+    agent: 'scribe:chat',
+    queryText: query,
+    chunks: (data ?? []) as RagHit[],
+  })
 
   const hits = ((data ?? []) as RagHit[]).filter(h => h.similarity >= SIMILARITY_FLOOR)
   if (hits.length === 0) {

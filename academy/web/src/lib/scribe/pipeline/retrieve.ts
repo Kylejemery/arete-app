@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 
 // Stage B — Retrieve. For each key claim: embed, query BOTH corpora, and
 // assemble a retrieval bundle. Chunks get short handles (R1…/S1…) — the
@@ -90,6 +91,16 @@ export async function retrieveForClaims(claims: string[]): Promise<ClaimBundle[]
 
     if (ragRes.error) throw new Error(`match_rag_corpus_cited: ${ragRes.error.message}`)
     if (scribeRes.error) throw new Error(`match_scribe_source_chunks: ${scribeRes.error.message}`)
+
+    // Log the corpus side of every claim retrieval (retrieval_log), below the
+    // support threshold included: a summary that keeps surfacing just under
+    // it is a finding too.
+    logRetrieval({
+      requestId: newRequestId(),
+      agent: 'scribe:claims',
+      queryText: claim,
+      chunks: (ragRes.data ?? []) as RagHit[],
+    })
 
     const chunks: BundleChunk[] = []
 

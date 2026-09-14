@@ -87,23 +87,91 @@ Rules you never break:
 - Attribute every claim to the paper's author(s) by name — the summary enters a corpus of many voices and must never read as the corpus's own position or as a primary text.
 - Report the argument faithfully, including what the author concedes or leaves open. No embellishment, no verdicts of your own.
 - Quote at most two short phrases (under 15 words each) where the author's exact wording is load-bearing; otherwise paraphrase.
-- Where the paper touches thinkers or concepts the corpus holds (Stoics, Socratics, the wider classical tradition), name them explicitly — those names are how retrieval will find this summary.`;
+- Where the paper touches thinkers or concepts the corpus holds (Stoics, Socratics, the wider classical tradition), name them explicitly — those names are how retrieval will find this summary.
+- Register the paper against the corpus's question map: for each question it genuinely bears on, state the position the paper takes on that question in one line and the role its argument plays (states: sets out the position without defending it; defends: argues for it; attacks: argues against it; complicates: accepts it but shows a cost, tension, or limit). One to three registrations is typical. A paper that bears on no listed question gets an empty list — do not force a fit.`;
 
-function buildUserPrompt(sub, cfg) {
+// The question map (docs/corpus/ACQUISITION_PLAN.md Part 2) lives in
+// corpus_questions. The fallback covers a fresh database or a read failure so
+// the agent never runs without one.
+const FALLBACK_QUESTIONS = [
+  { id: 'Q01', question: 'Is the cosmos rational and providentially ordered?' },
+  { id: 'Q02', question: 'Is the soul corporeal?' },
+  { id: 'Q03', question: 'Can perception deliver certainty?' },
+  { id: 'Q04', question: 'Does virtue suffice for happiness?' },
+  { id: 'Q05', question: 'Are emotions mistaken judgments, to be extirpated?' },
+  { id: 'Q06', question: 'Can an ought be derived from nature?' },
+  { id: 'Q07', question: 'Is moral responsibility compatible with fate?' },
+  { id: 'Q08', question: 'What is the relation of an individual mind to the whole?' },
+  { id: 'Q09', question: 'Does the good life require fortune or external goods?' },
+  { id: 'Q10', question: 'Should the philosopher engage in politics?' },
+  { id: 'Q11', question: 'What, if anything, survives death?' },
+  { id: 'Q12', question: 'Is mind fundamental or derivative of arrangement?' },
+  { id: 'Q13', question: 'Is the sage possible, and has anyone been one?' },
+  { id: 'Q14', question: 'Is philosophy a body of doctrine or a way of life?' },
+  { id: 'Q15', question: 'Are all wrongdoers acting in ignorance?' },
+];
+
+async function loadQuestionMap() {
+  try {
+    const { data, error } = await supabase
+      .from('corpus_questions')
+      .select('id, question, stoic_position')
+      .order('sort_order');
+    if (error) throw new Error(error.message);
+    if (data && data.length > 0) return data;
+  } catch (err) {
+    console.warn('[paper-agent] question map read failed, using fallback:', err.message);
+  }
+  return FALLBACK_QUESTIONS;
+}
+
+const REGISTRATION_ROLES = new Set(['states', 'defends', 'attacks', 'complicates']);
+
+// Keep only well-formed registrations against known question ids, one per
+// question, at most six. Mirrors normalizeRegistrations in
+// academy/web/src/lib/papers/questions.ts, which validates the same shape
+// again at review and ingest.
+function cleanRegistrations(raw, questions) {
+  if (!Array.isArray(raw)) return [];
+  const known = new Set(questions.map(q => q.id));
+  const seen = new Set();
+  const out = [];
+  for (const r of raw) {
+    if (!r || typeof r !== 'object') continue;
+    const id = String(r.question_id || '').trim().toUpperCase();
+    const role = String(r.role || '').trim().toLowerCase();
+    const position = String(r.position || '').trim();
+    if (!known.has(id) || !REGISTRATION_ROLES.has(role) || !position || seen.has(id)) continue;
+    seen.add(id);
+    out.push({ question_id: id, position: position.slice(0, 500), role });
+    if (out.length >= 6) break;
+  }
+  return out;
+}
+
+function buildUserPrompt(sub, cfg, questions) {
+  const questionList = questions
+    .map(q => `  ${q.id}  ${q.question}${q.stoic_position ? ` (Stoic position: ${q.stoic_position})` : ''}`)
+    .join('\n');
   return `Read the attached scholarly paper and return ONLY a JSON object (no markdown fences) with these fields:
 
 {
   "detected_title": "the paper's actual title as printed",
   "detected_authors": "author name(s) as printed",
   "year": "publication year if visible, else null",
-  "summary": "the scholarly summary, ${cfg.summary_min_words}-${cfg.summary_max_words} words, structured as flowing prose paragraphs covering: the thesis; the structure of the argument and its key moves; how it engages the philosophical tradition (name the thinkers and concepts); and its significance or what it leaves open",
-  "key_concepts": ["3-6 short concept labels this paper works through, e.g. \\"dichotomy of control\\""]
+  "venue": "journal, volume title, or press as printed (e.g. \\"Oxford Studies in Ancient Philosophy\\", \\"Routledge Companion to Free Will\\"), else null",
+  "summary": "the scholarly summary, ${cfg.summary_min_words}-${cfg.summary_max_words} words, structured as flowing prose paragraphs separated by blank lines, covering: the thesis; the structure of the argument and its key moves; how it engages the philosophical tradition (name the thinkers and concepts); and its significance or what it leaves open",
+  "key_concepts": ["3-6 short concept labels this paper works through, e.g. \\"dichotomy of control\\""],
+  "question_registrations": [{ "question_id": "Q07", "position": "one line: the position the paper takes on this question", "role": "states | defends | attacks | complicates" }]
 }
+
+The question map:
+${questionList}
 
 The submitter recorded this paper as: ${sub.author} — "${sub.work}"${sub.year ? ` (${sub.year})` : ''}. If the PDF is clearly a different paper, still summarize what is actually in the PDF — the detected_* fields are how the mismatch gets caught in review.`;
 }
 
-async function summarizePdf(pdfBuffer, sub, cfg) {
+async function summarizePdf(pdfBuffer, sub, cfg, questions) {
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -113,7 +181,7 @@ async function summarizePdf(pdfBuffer, sub, cfg) {
     },
     body: JSON.stringify({
       model: cfg.model || DEFAULT_MODEL,
-      max_tokens: 3000,
+      max_tokens: 3500,
       system: SYSTEM_PROMPT,
       messages: [{
         role: 'user',
@@ -122,7 +190,7 @@ async function summarizePdf(pdfBuffer, sub, cfg) {
             type: 'document',
             source: { type: 'base64', media_type: 'application/pdf', data: pdfBuffer.toString('base64') },
           },
-          { type: 'text', text: buildUserPrompt(sub, cfg) },
+          { type: 'text', text: buildUserPrompt(sub, cfg, questions) },
         ],
       }],
     }),
@@ -148,6 +216,7 @@ async function processPaperSubmissions() {
     return { processed: 0, succeeded: 0, failed: 0 };
   }
   const maxBytes = (cfg.max_pdf_mb || 20) * 1048576;
+  const questions = await loadQuestionMap();
 
   const { data: queued, error } = await supabase
     .from('paper_submissions')
@@ -169,7 +238,7 @@ async function processPaperSubmissions() {
         ? await fetchPdfFromStorage(sub.storage_path, maxBytes)
         : await fetchPdfFromUrl(sub.source_url, maxBytes);
 
-      const out = await summarizePdf(pdf, sub, cfg);
+      const out = await summarizePdf(pdf, sub, cfg, questions);
       if (!out.summary || out.summary.trim().length < 400) {
         throw new Error('agent returned no usable summary');
       }
@@ -180,7 +249,9 @@ async function processPaperSubmissions() {
           detected_title: out.detected_title || null,
           detected_authors: out.detected_authors || null,
           year: sub.year || out.year || null,
+          venue: sub.venue || out.venue || null,
           key_concepts: Array.isArray(out.key_concepts) ? out.key_concepts.slice(0, 6) : null,
+          question_registrations: cleanRegistrations(out.question_registrations, questions),
           model_used: cfg.model || DEFAULT_MODEL,
           status: 'pending_review',
           updated_at: new Date().toISOString(),

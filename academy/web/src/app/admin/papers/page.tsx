@@ -3,6 +3,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import styles from '../admin.module.css'
+import { normalizeCitation } from '@/lib/papers/citation'
+import {
+  REGISTRATION_ROLES,
+  ROLE_HELP,
+  type CorpusQuestion,
+  type QuestionRegistration,
+  type RegistrationRole,
+} from '@/lib/papers/questions'
 
 type Paper = {
   id: string
@@ -16,6 +24,7 @@ type Paper = {
   detected_title: string | null
   detected_authors: string | null
   key_concepts: string[] | null
+  question_registrations: QuestionRegistration[] | null
   model_used: string | null
   status: 'queued' | 'summarizing' | 'pending_review' | 'ingested' | 'rejected' | 'failed'
   error_message: string | null
@@ -68,6 +77,8 @@ export default function PapersPage() {
   const [runMsg, setRunMsg] = useState('')
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [cite, setCite] = useState<Record<string, { author: string; work: string }>>({})
+  const [regs, setRegs] = useState<Record<string, QuestionRegistration[]>>({})
+  const [questions, setQuestions] = useState<CorpusQuestion[]>([])
 
   // Queue form
   const [fAuthor, setFAuthor] = useState('')
@@ -92,6 +103,7 @@ export default function PapersPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to load papers')
       setActive(json.active || [])
       setSettled(json.settled || [])
+      setQuestions(json.questions || [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     }
@@ -184,17 +196,22 @@ export default function PapersPage() {
   async function approveIngest(p: Paper) {
     setBusy(p.id)
     try {
-      // Persist any citation correction and notes first — ingestion reads them.
+      // Persist any citation correction, the question registrations, and
+      // notes first — ingestion reads them.
       const c = cite[p.id]
+      const r = regs[p.id]
       await patch(p.id, {
         review_notes: notes[p.id] ?? p.review_notes ?? '',
         ...(c ? { author: c.author, work: c.work } : {}),
+        ...(r ? { question_registrations: r } : {}),
       })
       const res = await fetch(`/api/admin/papers/${p.id}/ingest`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Ingestion failed')
       const planted = (json.conceptsPlanted || []).length
-      showToast(`Ingested — ${json.chunksCreated} chunk${json.chunksCreated === 1 ? '' : 's'} retrievable${planted ? ` · ${planted} concept${planted === 1 ? '' : 's'} planted in the Observatory` : ''}`)
+      const registered = (json.questionsRegistered || []) as string[]
+      const warn = json.registrationWarning ? ` · registration failed: ${json.registrationWarning}` : ''
+      showToast(`Ingested — ${json.chunksCreated} chunk${json.chunksCreated === 1 ? '' : 's'} retrievable${planted ? ` · ${planted} concept${planted === 1 ? '' : 's'} planted in the Observatory` : ''}${registered.length ? ` · registered on ${registered.join(', ')}` : ' · registered on no question'}${warn}`)
       await load()
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Failed to ingest')
@@ -252,6 +269,83 @@ export default function PapersPage() {
           <div style={{ marginTop: 12, fontSize: 12.5, color: '#8a6d1e' }}>
             Works through: {(p.key_concepts || []).join(' · ')} — approving plants these in the Observatory sky
           </div>
+        )}
+      </div>
+    )
+  }
+
+  // The question-map registration (ACQUISITION_PLAN Part 5, rule 4): the
+  // agent's proposal, editable here, written to corpus_question_registrations
+  // on approval. Every work is meant to hold at least one position; an empty
+  // list is allowed but flagged, because a work that bears on no question
+  // either belongs to a question the map is missing or does not belong.
+  function Registrations({ p }: { p: Paper }) {
+    const current = regs[p.id] ?? p.question_registrations ?? []
+    const set = (next: QuestionRegistration[]) => setRegs(prev => ({ ...prev, [p.id]: next }))
+    const update = (i: number, patchReg: Partial<QuestionRegistration>) =>
+      set(current.map((r, j) => (j === i ? { ...r, ...patchReg } : r)))
+    const remove = (i: number) => set(current.filter((_, j) => j !== i))
+    const taken = new Set(current.map(r => r.question_id))
+    const firstFree = questions.find(q => !taken.has(q.id))
+    const qText = (id: string) => questions.find(q => q.id === id)?.question ?? ''
+
+    return (
+      <div style={{ marginTop: 14 }}>
+        <div className={styles.sectionLabel}>Question map</div>
+        {current.length === 0 && (
+          <div style={{ background: '#FBF0EC', border: '1px solid #E0BFB0', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: '#7a3b25', marginBottom: 8 }}>
+            {p.question_registrations === null
+              ? 'The agent proposed no registration (summarised before the question map existed, or it found no fit). '
+              : 'Registered on no question. '}
+            A work that bears on none of the fifteen questions either belongs to a question the map is missing or does not
+            belong in the corpus. Add one below or ingest unregistered deliberately.
+          </div>
+        )}
+        {current.map((r, i) => (
+          <div key={`${p.id}-${i}`} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 2fr) minmax(120px, 1fr) minmax(240px, 3fr) auto', gap: 8, alignItems: 'start', marginBottom: 8, maxWidth: 960 }}>
+            <select
+              className={styles.summaryArea}
+              style={{ minHeight: 0, height: 36 }}
+              value={r.question_id}
+              onChange={e => update(i, { question_id: e.target.value })}
+              title={qText(r.question_id)}
+            >
+              {questions.map(q => (
+                <option key={q.id} value={q.id} disabled={q.id !== r.question_id && taken.has(q.id)}>
+                  {q.id} · {q.question}
+                </option>
+              ))}
+              {!questions.some(q => q.id === r.question_id) && <option value={r.question_id}>{r.question_id}</option>}
+            </select>
+            <select
+              className={styles.summaryArea}
+              style={{ minHeight: 0, height: 36 }}
+              value={r.role}
+              onChange={e => update(i, { role: e.target.value as RegistrationRole })}
+              title={ROLE_HELP[r.role] ?? ''}
+            >
+              {REGISTRATION_ROLES.map(role => (
+                <option key={role} value={role}>{role} — {ROLE_HELP[role]}</option>
+              ))}
+            </select>
+            <input
+              className={styles.summaryArea}
+              style={{ minHeight: 0, height: 36 }}
+              value={r.position}
+              placeholder="The position the paper takes on this question, one line"
+              onChange={e => update(i, { position: e.target.value })}
+            />
+            <button className={styles.ghostBtn} style={{ height: 36, padding: '0 10px' }} onClick={() => remove(i)} title="Remove this registration">✕</button>
+          </div>
+        ))}
+        {firstFree && current.length < 6 && (
+          <button
+            className={styles.ghostBtn}
+            style={{ height: 30, padding: '0 12px', fontSize: 12 }}
+            onClick={() => set([...current, { question_id: firstFree.id, position: '', role: 'states' }])}
+          >
+            ＋ Register on a question
+          </button>
         )}
       </div>
     )
@@ -385,18 +479,25 @@ export default function PapersPage() {
                     <input
                       className={styles.summaryArea}
                       style={{ minHeight: 0, height: 36 }}
-                      value={cite[p.id]?.author ?? p.author}
-                      onChange={e => setCite(prev => ({ ...prev, [p.id]: { author: e.target.value, work: prev[p.id]?.work ?? p.work } }))}
-                      title="Author as it will appear in the corpus"
+                      value={cite[p.id]?.author ?? normalizeCitation(p).author}
+                      onChange={e => setCite(prev => ({ ...prev, [p.id]: { author: e.target.value, work: prev[p.id]?.work ?? normalizeCitation(p).work } }))}
+                      title="Author as it will appear in the corpus (all-caps and broken-case names are normalised; edit freely)"
                     />
                     <input
                       className={styles.summaryArea}
                       style={{ minHeight: 0, height: 36 }}
-                      value={cite[p.id]?.work ?? p.work}
-                      onChange={e => setCite(prev => ({ ...prev, [p.id]: { author: prev[p.id]?.author ?? p.author, work: e.target.value } }))}
-                      title="Title as it will appear in the corpus"
+                      value={cite[p.id]?.work ?? normalizeCitation(p).work}
+                      onChange={e => setCite(prev => ({ ...prev, [p.id]: { author: prev[p.id]?.author ?? normalizeCitation(p).author, work: e.target.value } }))}
+                      title="Title as it will appear in the corpus (all-caps headers and footnote markers are normalised; edit freely)"
                     />
                   </div>
+                  {(normalizeCitation(p).author !== p.author || normalizeCitation(p).work !== p.work) && !cite[p.id] && (
+                    <p className={styles.muted} style={{ marginTop: 6 }}>
+                      Citation normalised from “{p.author} — {p.work}”. The corpus row and every counselor citation use the form above.
+                    </p>
+                  )}
+
+                  <Registrations p={p} />
 
                   <div className={styles.sectionLabel} style={{ marginTop: 12 }}>Review notes</div>
                   <textarea
@@ -452,6 +553,11 @@ export default function PapersPage() {
                 )}
               </div>
               {p.review_notes && <p className={styles.muted} style={{ marginTop: 6 }}>{p.review_notes}</p>}
+              {p.status === 'ingested' && (p.question_registrations ?? []).length > 0 && (
+                <p className={styles.muted} style={{ marginTop: 6 }}>
+                  {(p.question_registrations ?? []).map(r => `${r.question_id} ${r.role}`).join(' · ')}
+                </p>
+              )}
               {p.status === 'ingested' && (
                 <div className={styles.actions} style={{ justifyContent: 'flex-start', marginTop: 8 }}>
                   <button className={styles.ghostBtn} disabled={busy === p.id} onClick={() => deingest(p)} style={{ color: '#B23535' }}>

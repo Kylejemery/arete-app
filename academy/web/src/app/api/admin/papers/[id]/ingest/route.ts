@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { ingestPaperSummary } from '@/lib/papers/ingest'
+import { normalizeCitation } from '@/lib/papers/citation'
+import { normalizeRegistrations } from '@/lib/papers/questions'
 
 export const dynamic = 'force-dynamic'
 // Embedding a summary is a handful of chunks; give the route headroom anyway.
@@ -28,7 +30,7 @@ export async function POST(
 
     const { data: paper, error } = await admin
       .from('paper_submissions')
-      .select('id, author, work, year, venue, summary_text, source_url, status, key_concepts')
+      .select('id, author, work, year, venue, summary_text, source_url, storage_path, status, key_concepts, question_registrations')
       .eq('id', id)
       .maybeSingle()
     if (error) throw new Error(error.message)
@@ -43,7 +45,13 @@ export async function POST(
       return NextResponse.json({ error: 'Paper has no summary to ingest' }, { status: 400 })
     }
 
-    const { chunksCreated, chunkIds, chunks } = await ingestPaperSummary(paper)
+    // Citation hygiene at the write path: the author and work written here
+    // are the rag_corpus identity and the citation every counselor shows.
+    // The review card previews the same normalisation, so this only changes
+    // what the reviewer already saw.
+    const citation = normalizeCitation({ author: paper.author, work: paper.work })
+
+    const { chunksCreated, chunkIds, chunks } = await ingestPaperSummary({ ...paper, ...citation })
 
     // Approving a paper also plants its key concepts in concept_passage_map —
     // the curated layer the Observatory sky is built from — so the scholar
@@ -61,8 +69,8 @@ export async function POST(
       const rows = labels.map((concept: string) => ({
         concept,
         chunk_id: chunkIds[0],
-        author: paper.author,
-        work: paper.work,
+        author: citation.author,
+        work: citation.work,
         chunk_text: chunks[0],
         approved: true,
         approved_at: new Date().toISOString(),
@@ -73,9 +81,35 @@ export async function POST(
       if (cpmErr) conceptWarning = cpmErr.message
     }
 
+    // Register the work against the question map (ACQUISITION_PLAN Part 5,
+    // rule 4). The registrations are the agent's proposal as edited on the
+    // review card. Same posture as the concepts: human-gated, best-effort,
+    // removed on de-ingest. An unknown question id is rejected by the FK and
+    // reported rather than silently dropped.
+    let registrationWarning: string | undefined
+    const registrations = normalizeRegistrations(paper.question_registrations)
+    if (registrations.length > 0) {
+      const rows = registrations.map(r => ({
+        question_id: r.question_id,
+        author: citation.author,
+        work: citation.work,
+        position: r.position,
+        role: r.role,
+        note: r.note ?? null,
+        source: 'paper_agent',
+      }))
+      const { error: regErr } = await admin
+        .from('corpus_question_registrations')
+        .upsert(rows, { onConflict: 'question_id,author,work' })
+      if (regErr) registrationWarning = regErr.message
+    }
+
     const { error: updErr } = await admin
       .from('paper_submissions')
       .update({
+        author: citation.author,
+        work: citation.work,
+        question_registrations: registrations,
         status: 'ingested',
         reviewed_at: new Date().toISOString(),
         ingested_at: new Date().toISOString(),
@@ -89,8 +123,11 @@ export async function POST(
       success: true,
       chunksCreated,
       chunkIds,
+      citation,
       conceptsPlanted: labels,
+      questionsRegistered: registrations.map(r => r.question_id),
       ...(conceptWarning ? { conceptWarning } : {}),
+      ...(registrationWarning ? { registrationWarning } : {}),
     })
   } catch (e) {
     return NextResponse.json(

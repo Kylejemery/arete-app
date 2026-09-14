@@ -39,6 +39,8 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { randomUUID } = require('crypto');
+const { logRetrieval } = require('../lib/retrieval-log');
 const { traditionFor, getMondayOfCurrentWeek } = require('./inquiry-agent');
 
 const supabase = createClient(
@@ -155,7 +157,11 @@ async function retrieveOnConcept(concept, count) {
     query_embedding: embedding,
     match_count: Math.max(count * 5, 40),
   });
-  return (data || []).filter(c => c.author && c.author !== SYNTHESIS_AUTHOR && c.chunk_text);
+  const rows = (data || []).filter(c => c.author && c.author !== SYNTHESIS_AUTHOR && c.chunk_text);
+  // Research surfaces log their retrievals (server/lib/retrieval-log.js) so
+  // the summaries admitted for them can be shown to earn their place.
+  logRetrieval({ requestId: randomUUID(), agent: 'tension', queryText: concept, chunks: rows });
+  return rows;
 }
 
 function toPassage(c) {

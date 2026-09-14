@@ -11,7 +11,8 @@ const BACKEND_URL =
 
 // GET /api/admin/papers — every paper submission, newest first, split into
 // the review queue (queued/summarizing/pending_review/failed) and the ledger
-// (ingested/rejected). Admin-gated.
+// (ingested/rejected), plus the question map the review card registers
+// against. Admin-gated.
 export async function GET() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,15 +22,16 @@ export async function GET() {
 
   try {
     const admin = createAdminClient()
-    const { data, error } = await admin
-      .from('paper_submissions')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const [{ data, error }, { data: questions, error: qErr }] = await Promise.all([
+      admin.from('paper_submissions').select('*').order('created_at', { ascending: false }),
+      admin.from('corpus_questions').select('id, question, stoic_position, sort_order').order('sort_order'),
+    ])
     if (error) throw new Error(error.message)
+    if (qErr) throw new Error(qErr.message)
 
     const active = (data || []).filter(p => !['ingested', 'rejected'].includes(p.status))
     const settled = (data || []).filter(p => ['ingested', 'rejected'].includes(p.status))
-    return NextResponse.json({ active, settled })
+    return NextResponse.json({ active, settled, questions: questions || [] })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Failed to load papers' },

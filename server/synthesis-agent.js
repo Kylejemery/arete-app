@@ -21,6 +21,8 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { randomUUID } = require('crypto');
+const { logRetrieval } = require('./lib/retrieval-log');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -217,7 +219,7 @@ async function getSourcePassages(concept) {
     .limit(12);
 
   if (approved && approved.length >= 4) {
-    return approved.map(p => ({
+    const passages = approved.map(p => ({
       id: p.chunk_id,
       author: p.author,
       work: p.work,
@@ -225,6 +227,8 @@ async function getSourcePassages(concept) {
       similarity: p.similarity_score,
       source: 'approved',
     }));
+    logRetrieval({ requestId: randomUUID(), agent: 'synthesis', queryText: concept, chunks: passages, mode: 'concept_map' });
+    return passages;
   }
 
   // Fall back to semantic search. match_rag_corpus_ids(query_embedding,
@@ -248,7 +252,7 @@ async function getSourcePassages(concept) {
     if (byAuthor[chunk.author].length < 3) byAuthor[chunk.author].push(chunk);
   }
 
-  return Object.values(byAuthor).flat().slice(0, 12).map(c => ({
+  const passages = Object.values(byAuthor).flat().slice(0, 12).map(c => ({
     id: c.id,
     author: c.author,
     work: c.work,
@@ -256,6 +260,13 @@ async function getSourcePassages(concept) {
     similarity: c.similarity,
     source: 'semantic_search',
   }));
+
+  // Research surfaces log what they retrieve too (server/lib/retrieval-log.js):
+  // the paper summaries and modern layer are admitted for this agent, and
+  // without a log there is no way to tell whether they are ever drawn on.
+  logRetrieval({ requestId: randomUUID(), agent: 'synthesis', queryText: concept, chunks: passages });
+
+  return passages;
 }
 
 // --- 2d. Synthesis type ----------------------------------------------------

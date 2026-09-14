@@ -24,7 +24,7 @@ export async function POST(
 
     const { data: paper, error } = await admin
       .from('paper_submissions')
-      .select('id, status, rag_chunk_ids')
+      .select('id, status, rag_chunk_ids, author, work')
       .eq('id', id)
       .maybeSingle()
     if (error) throw new Error(error.message)
@@ -41,6 +41,17 @@ export async function POST(
       const { error: delErr } = await admin.from('rag_corpus').delete().in('id', ids)
       if (delErr) throw new Error(delErr.message)
     }
+
+    // The work's question-map registrations go with its chunks: a work that
+    // is no longer retrievable must not still count as holding a position.
+    // The proposal stays on the submission for re-review.
+    const { error: regErr } = await admin
+      .from('corpus_question_registrations')
+      .delete()
+      .eq('author', paper.author)
+      .eq('work', paper.work)
+      .eq('source', 'paper_agent')
+    if (regErr) throw new Error(regErr.message)
 
     const { error: updErr } = await admin
       .from('paper_submissions')
