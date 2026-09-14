@@ -7,6 +7,8 @@
  *   Epictetus Discourses         → one chunk per discourse section
  *   Epictetus Enchiridion        → one chunk per numbered chapter
  *   Seneca Letters               → one chunk per letter
+ *   'headed' (City of God, Lives) → BOOK / CHAPTER (or LIFE OF) headings give a
+ *     locator "book.section"; the section body is cut at paragraph boundaries
  *   Everything else              → paragraph-based, ~400 word target, 50 word overlap
  */
 
@@ -485,6 +487,259 @@ function chunkByParagraph(text, meta) {
 }
 
 // ---------------------------------------------------------------------------
+// Strategy: headed — any work Gutenberg ships with BOOK and CHAPTER (or
+// LIFE OF …) headings: Augustine's City of God (Dods), Diogenes Laertius'
+// Lives (Yonge), Boethius, Lucretius, most multi-book prose. One locator per
+// book and section ("14.9" for City of God XIV.9; "7.1" for the first life
+// in Lives Book 7), section_label carrying the heading's title, and the body
+// of a section cut at paragraph boundaries into ~400-word rows that share
+// the locator. Numbered paragraphs inside a section (Yonge's "I.", "II.")
+// ride along in the label as a range, the way the Hicks Book 7 rows are
+// labelled "7.10–7.13".
+//
+// Front matter is dropped by construction: nothing before the first book
+// heading is kept, and a contents list that repeats the book headings is
+// skipped by starting at the LAST occurrence of the first book heading
+// (the same rule body_start_marker uses in the nightly agent). Footnote
+// bodies ("[12] …" paragraphs, FOOTNOTES blocks) are dropped and inline
+// reference markers ("[12]") are removed from the text.
+//
+// planHeaded() returns the structure without the rows, for verify-queue.js
+// and a dry run: books, sections per book, and the first headings found.
+// ---------------------------------------------------------------------------
+const ORDINAL_WORDS = {
+  FIRST: 1, SECOND: 2, THIRD: 3, FOURTH: 4, FIFTH: 5, SIXTH: 6, SEVENTH: 7, EIGHTH: 8,
+  NINTH: 9, TENTH: 10, ELEVENTH: 11, TWELFTH: 12, THIRTEENTH: 13, FOURTEENTH: 14,
+  FIFTEENTH: 15, SIXTEENTH: 16, SEVENTEENTH: 17, EIGHTEENTH: 18, NINETEENTH: 19,
+  TWENTIETH: 20, 'TWENTY-FIRST': 21, 'TWENTY-SECOND': 22, 'TWENTY-THIRD': 23,
+  'TWENTY-FOURTH': 24,
+};
+const HEADED_TARGET_WORDS = 400;
+const HEADED_MAX_PARAGRAPH_WORDS = 700;
+
+function headingNumber(token) {
+  const t = token.toUpperCase().replace(/\.$/, '');
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  if (/^[IVXLC]+$/.test(t)) return romanToInt(t);
+  if (ORDINAL_WORDS[t]) return ORDINAL_WORDS[t];
+  return null;
+}
+
+// "BOOK I.", "BOOK XIV", "BOOK FIRST.", "THE FIRST BOOK", "BOOK 3: title"
+function matchBookHeading(line) {
+  let m = line.match(/^BOOK\s+([IVXLC]+|\d+|[A-Z-]+)\.?\s*[:.—–-]*\s*(.*)$/i);
+  if (m) {
+    const n = headingNumber(m[1]);
+    if (n != null) return { number: n, title: m[2].trim() };
+  }
+  m = line.match(/^(?:THE\s+)?([A-Z-]+)\s+BOOK\.?$/i);
+  if (m) {
+    const n = headingNumber(m[1]);
+    if (n != null) return { number: n, title: '' };
+  }
+  return null;
+}
+
+// "CHAPTER 1.--Title", "CHAPTER XIV.", "CHAP. I. Title", "LIFE OF ZENO.",
+// "ARGUMENT." (Dods prefaces each book with one; kept as section 0).
+function matchSectionHeading(line) {
+  let m = line.match(/^(?:CHAPTER|CHAP\.|SECTION|SECT\.)\s+([IVXLC]+|\d+)\s*[.:]?\s*[—–-]{0,2}\s*(.*)$/i);
+  if (m) {
+    const n = headingNumber(m[1]);
+    if (n != null) return { number: n, title: m[2].trim(), numbered: true };
+  }
+  m = line.match(/^(LIFE OF [A-Z][A-Z .,'’-]+?)\.?$/);
+  if (m) return { number: null, title: titleCaseHeading(m[1]), numbered: false };
+  if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', numbered: true };
+  return null;
+}
+
+function titleCaseHeading(s) {
+  const small = new Set(['of', 'the', 'and', 'or', 'to', 'in', 'on', 'at', 'by', 'for', 'a', 'an']);
+  return s.toLowerCase().split(/\s+/).map((w, i) =>
+    (i > 0 && small.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
+  ).join(' ');
+}
+
+// A heading title that wraps onto following lines continues until a blank
+// line. Returns the joined title and the index of the last title line.
+function collectHeadingTitle(lines, i, firstPart) {
+  let title = firstPart;
+  let j = i;
+  while (j + 1 < lines.length) {
+    const next = lines[j + 1].trim();
+    if (!next) break;
+    if (matchBookHeading(next) || matchSectionHeading(next)) break;
+    // A title continuation is short-lined heading text, not a body paragraph:
+    // Gutenberg wraps at ~70 characters and body paragraphs run several lines,
+    // so only continue while the title has not yet closed with a period.
+    if (/[.!?]$/.test(title)) break;
+    title = `${title} ${next}`.trim();
+    j++;
+  }
+  return { title: title.replace(/\s+/g, ' ').replace(/[.]+$/, '').trim(), last: j };
+}
+
+function parseHeaded(text) {
+  const lines = text.split('\n');
+  const trimmed = lines.map(l => l.trim());
+
+  // Body starts at the last occurrence of the first book heading (skips a
+  // contents list that repeats it).
+  const firstBookIdx = trimmed.findIndex(l => matchBookHeading(l));
+  if (firstBookIdx < 0) return null;
+  const firstBookLine = trimmed[firstBookIdx];
+  const start = trimmed.lastIndexOf(firstBookLine);
+
+  const books = []; // { number, sections: [{ number, title, paragraphs: [{ marker, text }] }] }
+  let book = null;
+  let section = null;
+  let lifeCounter = 0;
+  let inFootnotes = false;
+  let para = [];
+  let paraMarker = null;
+
+  function flushPara() {
+    const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
+    if (txt && section) section.paragraphs.push({ marker: paraMarker, text: txt });
+    para = [];
+    paraMarker = null;
+  }
+
+  for (let i = start; i < lines.length; i++) {
+    const line = trimmed[i];
+    if (!line) { flushPara(); continue; }
+
+    const b = matchBookHeading(line);
+    if (b) {
+      flushPara();
+      book = { number: b.number, sections: [] };
+      books.push(book);
+      section = null;
+      lifeCounter = 0;
+      inFootnotes = false;
+      continue;
+    }
+    if (!book) continue;
+
+    if (/^FOOTNOTES?:?$/i.test(line)) { flushPara(); inFootnotes = true; continue; }
+    if (/^(INDEX|INDEXES|THE END|END OF (VOL|BOOK|THE))/i.test(line) && !/^END OF (THE )?(CHAPTER)/i.test(line)) {
+      // Back matter after the text proper: an index or a volume close.
+      if (/^INDEX|^THE END/i.test(line)) { flushPara(); section = null; inFootnotes = true; continue; }
+    }
+
+    const s = matchSectionHeading(line);
+    if (s) {
+      flushPara();
+      inFootnotes = false;
+      const { title, last } = collectHeadingTitle(lines.map(l => l.trim()), i, s.title);
+      i = last;
+      const number = s.number != null ? s.number : ++lifeCounter;
+      if (s.number != null && s.number > lifeCounter) lifeCounter = s.number;
+      section = { number, title, paragraphs: [] };
+      book.sections.push(section);
+      continue;
+    }
+    if (inFootnotes) continue;
+    // Body text under a book before any section heading (a book with no
+    // chapter divisions, or headings in a form this parser does not know):
+    // keep it as section 0 of the book so the rows still locate to the book
+    // instead of vanishing. verify-queue.js shows it as "0: Book N".
+    if (!section) {
+      section = { number: 0, title: `Book ${book.number}`, paragraphs: [] };
+      book.sections.push(section);
+    }
+    // A footnote body starts with its own marker; drop it.
+    if (para.length === 0 && /^\[\d+\]\s/.test(line)) { inFootnotes = true; continue; }
+
+    // Numbered paragraph inside a section: "XII. Zeno was …" or "12. …"
+    if (para.length === 0) {
+      const pm = line.match(/^([IVXLC]+|\d{1,3})\.\s+(\S.*)$/);
+      if (pm && headingNumber(pm[1]) != null) {
+        paraMarker = pm[1];
+        para.push(pm[2]);
+        continue;
+      }
+    }
+    para.push(line);
+  }
+  flushPara();
+  return books;
+}
+
+function planHeaded(text) {
+  const books = parseHeaded(text);
+  if (!books) return null;
+  return {
+    books: books.map(b => ({
+      number: b.number,
+      sections: b.sections.length,
+      paragraphs: b.sections.reduce((n, s) => n + s.paragraphs.length, 0),
+      words: b.sections.reduce((n, s) => n + s.paragraphs.reduce((m, p) => m + countWords(p.text), 0), 0),
+      firstSections: b.sections.slice(0, 3).map(s => `${s.number}: ${s.title}`),
+    })),
+  };
+}
+
+function chunkHeaded(text, meta) {
+  const books = parseHeaded(text);
+  if (!books) return [];
+  const chunks = [];
+  let chunkIndex = 0;
+
+  for (const book of books) {
+    for (const section of book.sections) {
+      const locator = `${book.number}.${section.number}`;
+      // Split any single paragraph far beyond the target on sentence
+      // boundaries so one paragraph never becomes a 2,000-word row.
+      const units = [];
+      for (const p of section.paragraphs) {
+        if (countWords(p.text) <= HEADED_MAX_PARAGRAPH_WORDS) { units.push(p); continue; }
+        const pieces = splitOversizedChunk(p.text, HEADED_MAX_PARAGRAPH_WORDS * 6);
+        pieces.forEach((piece, k) => units.push({ marker: k === 0 ? p.marker : null, text: piece }));
+      }
+      // Group consecutive paragraphs up to the target; no overlap, because
+      // the locator already ties the rows of a section together.
+      const groups = [];
+      let cur = [];
+      let curWords = 0;
+      for (const u of units) {
+        const w = countWords(u.text);
+        if (cur.length && curWords + w > HEADED_TARGET_WORDS) { groups.push(cur); cur = []; curWords = 0; }
+        cur.push(u);
+        curWords += w;
+      }
+      if (cur.length) groups.push(cur);
+      // A trailing sliver joins the previous group rather than standing alone.
+      if (groups.length > 1) {
+        const lastWords = groups[groups.length - 1].reduce((n, u) => n + countWords(u.text), 0);
+        if (lastWords < 80) groups[groups.length - 2].push(...groups.pop());
+      }
+
+      groups.forEach((group, gi) => {
+        const markers = group.map(u => u.marker).filter(Boolean);
+        let label = section.title || `Section ${section.number}`;
+        if (markers.length) {
+          label = `${label}, ${markers[0]}${markers.length > 1 ? `–${markers[markers.length - 1]}` : ''}`;
+        } else if (groups.length > 1) {
+          label = `${label} (${gi + 1}/${groups.length})`;
+        }
+        const txt = group.map(u => u.text).join('\n\n');
+        chunks.push({
+          ...meta,
+          section_label: label,
+          locator,
+          chunk_index: chunkIndex++,
+          chunk_text: txt,
+          word_count: countWords(txt),
+        });
+      });
+    }
+  }
+  return chunks;
+}
+
+// ---------------------------------------------------------------------------
 // Oversize guard — splits any chunk whose text exceeds maxChars.
 // Splits on sentence boundaries (". ") first; falls back to hard char split.
 // Re-indexes all chunks sequentially after splitting.
@@ -601,6 +856,7 @@ function chunkFile(filename, rawText) {
     case 'discourses':     chunks = chunkDiscourses(text, meta); break;
     case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
+    case 'headed':         chunks = chunkHeaded(text, meta); break;
     default:               chunks = chunkByParagraph(text, meta);
   }
   return applyOversizeGuard(chunks);
@@ -623,6 +879,7 @@ function chunkRaw(rawText, strategy, baseMeta) {
     case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'letters':
     case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
+    case 'headed':         chunks = chunkHeaded(text, meta); break;
     case 'paragraphs':
     case 'paragraph':
     default:               chunks = chunkByParagraph(text, meta);
@@ -637,7 +894,10 @@ function chunkRaw(rawText, strategy, baseMeta) {
   return applyOversizeGuard(chunks);
 }
 
-module.exports = { chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, TEXT_METADATA };
+// Strategies a queue row may name (corpus_ingestion_queue.chunk_strategy).
+const QUEUE_STRATEGIES = ['paragraph', 'headed', 'meditations-long', 'discourses', 'enchiridion', 'seneca-letters'];
+
+module.exports = { chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA };
 
 // ---------------------------------------------------------------------------
 // CLI test: node chunker.js — prints first 3 chunks of Meditations

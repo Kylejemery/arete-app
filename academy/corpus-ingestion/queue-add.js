@@ -12,11 +12,15 @@
 //        --translator, --text-type (default primary),
 //        --source-type (public_domain|original_language|summary),
 //        --start-marker (body starts at the LAST occurrence of this string),
-//        --end-marker (body ends at the first occurrence after the start).
+//        --end-marker (body ends at the first occurrence after the start),
+//        --strategy (chunker strategy: paragraph [default], headed, …; see chunker.js),
+//        --edition-year (year of the translation; required by ACQUISITION_PLAN Part 5),
+//        --append (append after the work's live rows: the second volume of a work).
 //
 // Check a URL and its markers first: node verify-queue.js --url URL --start-marker "..."
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { QUEUE_STRATEGIES } = require('./chunker');
 
 const SOURCE_TYPES = ['public_domain', 'original_language', 'summary'];
 // rag_corpus_text_type_check locks this set; server/lib/corpus-fence.js keys on it.
@@ -59,6 +63,18 @@ async function main() {
     process.exit(1);
   }
 
+  const strategy = getArg('--strategy') ?? 'paragraph';
+  if (!QUEUE_STRATEGIES.includes(strategy)) {
+    console.error(`--strategy must be one of ${QUEUE_STRATEGIES.join(', ')}`);
+    process.exit(1);
+  }
+  const editionYearArg = getArg('--edition-year');
+  const editionYear = editionYearArg != null ? parseInt(editionYearArg, 10) : null;
+  if (editionYearArg != null && !(editionYear >= 1400 && editionYear <= 2100)) {
+    console.error('--edition-year must be a four-digit year');
+    process.exit(1);
+  }
+
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const priorityArg = getArg('--priority');
 
@@ -77,6 +93,9 @@ async function main() {
     text_type: textType,
     body_start_marker: getArg('--start-marker') ?? null,
     body_end_marker: getArg('--end-marker') ?? null,
+    chunk_strategy: strategy,
+    edition_year: editionYear,
+    append_to_existing: process.argv.includes('--append'),
   };
 
   const { error } = await supabase.from('corpus_ingestion_queue').insert(row);

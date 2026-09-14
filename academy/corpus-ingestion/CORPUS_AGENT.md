@@ -49,6 +49,26 @@ node queue-add.js --author "Plato" --work "Timaeus" --url https://www.gutenberg.
 front-matter headings that are the usual candidates for a marker, and the
 first and last 300 characters of what would be ingested.
 
+## Chunking strategy, edition year, and appending a volume
+
+Three more queue columns (2026-09):
+
+| Column | Meaning |
+| --- | --- |
+| `chunk_strategy` | A `chunker.js` strategy name. `paragraph` (default) is the 400-word window with no locator. `headed` cuts a work at its own BOOK and CHAPTER (or LIFE OF …) headings: every row gets a locator `book.section` ("14.9" for City of God XIV.9) and a section label carrying the heading, and long sections are cut at paragraph boundaries into ~400-word rows that share the locator. Nothing before the first book heading is kept, so a translator's preface and a contents list never enter. The per-work strategies (`meditations-long`, `discourses`, `enchiridion`, `seneca-letters`) are also accepted. |
+| `edition_year` | Year of the translation, written to every row (ACQUISITION_PLAN Part 5, rule 2). |
+| `append_to_existing` | The row is a further volume of a work already in the corpus: its rows start after the work's highest live `chunk_index` instead of overwriting from 0. |
+
+`verify-queue.js --strategy headed` (or a queue row carrying the strategy)
+prints the plan: books found, sections per book, first headings, and how many
+rows carry a locator. A `headed` row that finds no headings falls back to
+paragraph windows and records "NO LOCATORS" on the queue row's notes; deprecate
+and requeue with markers rather than keep it.
+
+The admin "Run ingestion now" twin (`server/corpus-agent.js`) leaves rows with
+a non-paragraph strategy pending for the nightly agent: `chunker.js` is not
+deployed with the API server.
+
 ## Running manually
 
 ```

@@ -171,6 +171,65 @@ async function ingestChunks(chunks, meta, { skipExisting = false } = {}) {
   return { ingested, skipped, errors };
 }
 
+// Row-aware twin of ingestChunks for the chunker strategies: each row carries
+// its own section_label and locator (chunker.js), and chunk_index starts at
+// startIndex so a second volume of the same work appends after the first
+// instead of overwriting it under the author/work/program_id/chunk_index key.
+// Rows that already carry a chunk_index (every chunker strategy sets one)
+// are re-based on startIndex; ordering is all the reader needs from it.
+async function ingestChunkRows(rows, meta, { startIndex = 0 } = {}) {
+  let ingested = 0;
+  let errors = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const embedding = await embedChunk(row.chunk_text);
+    const { error } = await supabase().from('rag_corpus').upsert({
+      chunk_text: row.chunk_text,
+      author: meta.author,
+      work: meta.work,
+      section_label: row.section_label ?? meta.section_label ?? '',
+      locator: row.locator ?? null,
+      language: meta.language,
+      program_id: meta.program_id,
+      course_relevance: meta.course_relevance,
+      difficulty: meta.difficulty,
+      text_type: meta.text_type,
+      translator: meta.translator ?? null,
+      source_url: meta.source_url ?? null,
+      edition_year: meta.edition_year ?? null,
+      chunk_index: startIndex + i,
+      word_count: row.word_count ?? row.chunk_text.split(/\s+/).filter(Boolean).length,
+      embedding,
+    }, {
+      onConflict: 'author,work,program_id,chunk_index',
+    });
+    if (error) {
+      console.error(`  [${startIndex + i}] ERROR:`, error.message);
+      errors++;
+    } else {
+      ingested++;
+      if (i % 10 === 0) process.stdout.write(`  chunks ingested: ${ingested}\r`);
+    }
+  }
+  return { ingested, errors };
+}
+
+// Highest chunk_index live for (author, work, program_id), or -1 when the
+// work is new. A queue row with append_to_existing starts after it.
+async function maxChunkIndex(author, work, programId) {
+  const { data, error } = await supabase()
+    .from('rag_corpus')
+    .select('chunk_index')
+    .eq('author', author)
+    .eq('work', work)
+    .eq('program_id', programId)
+    .order('chunk_index', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`max chunk_index lookup failed: ${error.message}`);
+  return data ? data.chunk_index : -1;
+}
+
 async function ingestFile(filepath, skipExisting) {
   const filename = path.basename(filepath);
   const meta = parseFilename(filename);
@@ -251,4 +310,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { chunkText, embedChunk, ingestChunks, parseFilename };
+module.exports = { chunkText, embedChunk, ingestChunks, ingestChunkRows, maxChunkIndex, parseFilename };

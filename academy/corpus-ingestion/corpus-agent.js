@@ -31,7 +31,8 @@
 //   Railway nightly cron service (see railway.corpus-agent.json)
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
-const { chunkText, ingestChunks } = require('./ingest-sources');
+const { chunkText, ingestChunks, ingestChunkRows, maxChunkIndex } = require('./ingest-sources');
+const { chunkRaw, planHeaded, QUEUE_STRATEGIES } = require('./chunker');
 const { syncConcordances, runProbes } = require('./ingest-concordance');
 
 // Created on first use so verify-queue.js can require the cleaning helpers
@@ -215,17 +216,6 @@ async function processSource(src) {
       .eq('id', src.id);
   }
 
-  const chunks = chunkText(cleaned);
-  if (chunks.length === 0) {
-    throw new Error('cleaning produced 0 chunks — check source format');
-  }
-  if (chunks.length > CHUNK_WARN_THRESHOLD) {
-    console.warn(
-      `  ⚠ COST WARNING: "${src.author} / ${src.work}" produced ${chunks.length} chunks ` +
-      `(> ${CHUNK_WARN_THRESHOLD}). Ingesting fully this run — watch the embedding bill.`
-    );
-  }
-
   const meta = {
     author: src.author,
     work: src.work,
@@ -237,9 +227,60 @@ async function processSource(src) {
     text_type: src.text_type || 'primary',
     translator: src.translator ?? null,
     source_url: src.source_url ?? null,
+    edition_year: src.edition_year ?? null,
   };
 
-  const { ingested, errors } = await ingestChunks(chunks, meta);
+  // Chunking: the queue row names a chunker.js strategy. 'paragraph' (the
+  // default and the only behaviour before 2026-09) is the 400-word window
+  // with no locator; 'headed' and the per-work strategies cut at the text's
+  // own divisions and set a locator on every row (ACQUISITION_PLAN Part 5,
+  // rule 3). A strategy that finds no structure falls back to paragraphs
+  // inside chunkRaw and the fallback is recorded on the queue row.
+  const strategy = src.chunk_strategy && src.chunk_strategy !== 'paragraph' ? src.chunk_strategy : null;
+  if (strategy && !QUEUE_STRATEGIES.includes(strategy)) {
+    throw new Error(`unknown chunk_strategy ${JSON.stringify(strategy)} (one of ${QUEUE_STRATEGIES.join(', ')})`);
+  }
+  let chunks;
+  let rows = null;
+  if (strategy) {
+    rows = chunkRaw(cleaned, strategy, { author: src.author, work: src.work });
+    chunks = rows.map(r => r.chunk_text);
+    const withLocator = rows.filter(r => r.locator).length;
+    const plan = strategy === 'headed' ? planHeaded(cleaned) : null;
+    const summary = plan
+      ? `books ${plan.books.map(b => `${b.number}(${b.sections})`).join(' ')}`
+      : `${withLocator}/${rows.length} rows carry a locator`;
+    console.log(`  strategy ${strategy}: ${rows.length} rows, ${summary}`);
+    const stamp = `[corpus-agent ${new Date().toISOString().slice(0, 10)}] strategy ${strategy}: ${rows.length} rows, ${summary}` +
+      (withLocator === 0 ? ' — NO LOCATORS: the strategy found no headings and fell back to paragraphs; deprecate and requeue with markers' : '');
+    await supabase()
+      .from('corpus_ingestion_queue')
+      .update({ notes: src.notes ? `${src.notes}\n${stamp}` : stamp })
+      .eq('id', src.id);
+    // Refresh so a later note appends to this one rather than clobbering it.
+    src.notes = src.notes ? `${src.notes}\n${stamp}` : stamp;
+  } else {
+    chunks = chunkText(cleaned);
+  }
+  if (chunks.length === 0) {
+    throw new Error('cleaning produced 0 chunks — check source format');
+  }
+  if (chunks.length > CHUNK_WARN_THRESHOLD) {
+    console.warn(
+      `  ⚠ COST WARNING: "${src.author} / ${src.work}" produced ${chunks.length} chunks ` +
+      `(> ${CHUNK_WARN_THRESHOLD}). Ingesting fully this run — watch the embedding bill.`
+    );
+  }
+
+  // A second volume of the same work appends after the rows already live
+  // (City of God ships as two Gutenberg files). Without the flag a re-run
+  // overwrites from index 0, as it always has.
+  const startIndex = src.append_to_existing ? (await maxChunkIndex(meta.author, meta.work, meta.program_id)) + 1 : 0;
+  if (startIndex > 0) console.log(`  appending after chunk_index ${startIndex - 1}`);
+
+  const { ingested, errors } = rows
+    ? await ingestChunkRows(rows, meta, { startIndex })
+    : await ingestChunks(chunks, meta);
   if (ingested === 0) {
     throw new Error(`no chunks ingested (${errors} upsert errors)`);
   }
