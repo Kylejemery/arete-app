@@ -7,8 +7,11 @@
  *   Epictetus Discourses         → one chunk per discourse section
  *   Epictetus Enchiridion        → one chunk per numbered chapter
  *   Seneca Letters               → one chunk per letter
- *   'headed' (City of God, Lives) → BOOK / CHAPTER (or LIFE OF) headings give a
- *     locator "book.section"; the section body is cut at paragraph boundaries
+ *   'headed' (City of God, Lives) → BOOK / PART / CHAPTER (or LIFE OF, SONG …)
+ *     headings give a locator "book.section"; the section body is cut at
+ *     paragraph boundaries
+ *   'numbered' (Nietzsche)        → one row per numbered paragraph, the number
+ *     (with the book) as locator
  *   Everything else              → paragraph-based, ~400 word target, 50 word overlap
  */
 
@@ -487,22 +490,30 @@ function chunkByParagraph(text, meta) {
 }
 
 // ---------------------------------------------------------------------------
-// Strategy: headed — any work Gutenberg ships with BOOK and CHAPTER (or
-// LIFE OF …) headings: Augustine's City of God (Dods), Diogenes Laertius'
-// Lives (Yonge), Boethius, Lucretius, most multi-book prose. One locator per
-// book and section ("14.9" for City of God XIV.9; "7.1" for the first life
-// in Lives Book 7), section_label carrying the heading's title, and the body
-// of a section cut at paragraph boundaries into ~400-word rows that share
-// the locator. Numbered paragraphs inside a section (Yonge's "I.", "II.")
-// ride along in the label as a range, the way the Hicks Book 7 rows are
-// labelled "7.10–7.13".
+// Strategies: headed and numbered — any work Gutenberg ships with its own
+// divisions: BOOK (or ESSAY / TREATISE) headings, an optional PART level
+// inside a book (Hume's Treatise), and sections headed CHAPTER, SECT.,
+// LIFE OF …, SONG / PROSE (Boethius), or, when a book has no headed
+// sections at all, short all-caps title lines (Leonard's Lucretius).
+//
+//   headed    one locator per book and section ("14.9" for City of God
+//             XIV.9, "1.3.14" for Treatise 1.3.14, "7.1" for the first life
+//             in Lives Book 7), section_label from the heading, the body of
+//             a section cut at paragraph boundaries into ~400-word rows that
+//             share the locator. Numbered paragraphs inside a section
+//             (Yonge's "I.", "II.") ride in the label as a range, the way the
+//             Hicks Book 7 rows are labelled "7.10–7.13".
+//   numbered  one row per numbered paragraph (Nietzsche's aphorisms): the
+//             number is the locator, prefixed by the book when the work has
+//             books ("1.13" for Genealogy I.13, "9" for Beyond Good and Evil
+//             §9); unnumbered paragraphs continue the entry before them.
 //
 // Front matter is dropped by construction: nothing before the first book
-// heading is kept, and a contents list that repeats the book headings is
-// skipped by starting at the LAST occurrence of the first book heading
-// (the same rule body_start_marker uses in the nightly agent). Footnote
-// bodies ("[12] …" paragraphs, FOOTNOTES blocks) are dropped and inline
-// reference markers ("[12]") are removed from the text.
+// heading (or, in a work without books, the first section heading) is kept,
+// and a contents list that repeats the heading is skipped by starting at
+// the LAST occurrence of that first heading (the same rule body_start_marker
+// uses in the nightly agent). Footnote bodies ("[12] …" paragraphs, FOOTNOTES
+// blocks) are dropped and inline reference markers ("[12]") removed.
 //
 // planHeaded() returns the structure without the rows, for verify-queue.js
 // and a dry run: books, sections per book, and the first headings found.
@@ -516,6 +527,8 @@ const ORDINAL_WORDS = {
 };
 const HEADED_TARGET_WORDS = 400;
 const HEADED_MAX_PARAGRAPH_WORDS = 700;
+const BOOK_WORDS = 'BOOK|ESSAY|TREATISE|DISSERTATION';
+const NOT_A_HEADING = /^(CONTENTS|INDEX|INDEXES|FOOTNOTES?|NOTES|THE END|FINIS|APPENDIX|PREFACE|INTRODUCTION|ARGUMENT|ERRATA)\b/i;
 
 function headingNumber(token) {
   const t = token.toUpperCase().replace(/\.$/, '');
@@ -525,51 +538,111 @@ function headingNumber(token) {
   return null;
 }
 
-// "BOOK I.", "BOOK XIV", "BOOK FIRST.", "THE FIRST BOOK", "BOOK 3: title"
+// "BOOK I.", "BOOK XIV", "BOOK FIRST.", "THE FIRST BOOK", "FIRST ESSAY.", "BOOK 3: title"
 function matchBookHeading(line) {
-  let m = line.match(/^BOOK\s+([IVXLC]+|\d+|[A-Z-]+)\.?\s*[:.—–-]*\s*(.*)$/i);
+  let m = line.match(new RegExp(`^(?:${BOOK_WORDS})\\s+([IVXLC]+|\\d+|[A-Z-]+)\\.?\\s*[:.—–-]*\\s*(.*)$`, 'i'));
   if (m) {
     const n = headingNumber(m[1]);
     if (n != null) return { number: n, title: m[2].trim() };
   }
-  m = line.match(/^(?:THE\s+)?([A-Z-]+)\s+BOOK\.?$/i);
+  m = line.match(new RegExp(`^(?:THE\\s+)?([A-Z-]+)\\s+(?:${BOOK_WORDS})\\.?\\s*[:.—–-]*\\s*(.*)$`, 'i'));
   if (m) {
     const n = headingNumber(m[1]);
-    if (n != null) return { number: n, title: '' };
+    if (n != null) return { number: n, title: m[2].trim() };
   }
   return null;
 }
 
-// "CHAPTER 1.--Title", "CHAPTER XIV.", "CHAP. I. Title", "LIFE OF ZENO.",
-// "ARGUMENT." (Dods prefaces each book with one; kept as section 0).
+// "PART I.", "PART II: title" — a level between book and section (Hume).
+// In a work with no BOOK headings a PART is treated as a book.
+function matchPartHeading(line) {
+  const m = line.match(/^PART\s+([IVXLC]+|\d+|[A-Z-]+)\.?\s*[:.—–-]*\s*(.*)$/i);
+  if (!m) return null;
+  const n = headingNumber(m[1]);
+  return n != null ? { number: n, title: m[2].trim() } : null;
+}
+
+// "CHAPTER 1.--Title", "CHAPTER XIV.", "CHAP. I. Title", "SECT. III.",
+// "LIFE OF ZENO.", "SONG I." / "PROSE II." (Boethius), "ARGUMENT." (Dods
+// prefaces each book with one; kept as section 0).
 function matchSectionHeading(line) {
   let m = line.match(/^(?:CHAPTER|CHAP\.|SECTION|SECT\.)\s+([IVXLC]+|\d+)\s*[.:]?\s*[—–-]{0,2}\s*(.*)$/i);
   if (m) {
     const n = headingNumber(m[1]);
-    if (n != null) return { number: n, title: m[2].trim(), numbered: true };
+    if (n != null) return { number: n, title: m[2].trim(), named: true };
   }
   m = line.match(/^(LIFE OF [A-Z][A-Z .,'’-]+?)\.?$/);
-  if (m) return { number: null, title: titleCaseHeading(m[1]), numbered: false };
-  if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', numbered: true };
+  if (m) return { number: null, title: titleCaseHeading(m[1]), named: true };
+  m = line.match(/^(SONG|METRE|METRUM|PROSE|PROSA|POEM)\s+([IVXLC]+|\d+)\.?$/i);
+  if (m) return { number: null, title: `${titleCaseHeading(m[1])} ${m[2].toUpperCase()}`, named: true };
+  if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', named: true };
   return null;
+}
+
+// A short all-caps title line standing alone between blank lines. Only
+// consulted for a book that has shown no named section heading, so Dods's
+// chapters and Yonge's lives are never confused by a capitalised line, while
+// Leonard's Lucretius ("PROEM", "SUBSTANCE IS ETERNAL") gets its divisions.
+function isCapsHeading(lines, i) {
+  const line = lines[i];
+  if (line.length < 3 || line.length > 60) return false;
+  if (!/^[A-Z][A-Z0-9 ,;:'’"“”().!?—–-]*$/.test(line) || !/[A-Z]{2}/.test(line)) return false;
+  if (NOT_A_HEADING.test(line)) return false;
+  if (i > 0 && lines[i - 1] !== '') return false;
+  if (i + 1 < lines.length && lines[i + 1] !== '') return false;
+  return true;
 }
 
 function titleCaseHeading(s) {
   const small = new Set(['of', 'the', 'and', 'or', 'to', 'in', 'on', 'at', 'by', 'for', 'a', 'an']);
-  return s.toLowerCase().split(/\s+/).map((w, i) =>
-    (i > 0 && small.has(w)) ? w : w.charAt(0).toUpperCase() + w.slice(1)
-  ).join(' ');
+  return s.toLowerCase().split(/\s+/).map((w, i) => {
+    const bare = w.replace(/[^a-z]/g, '');
+    if (i > 0 && small.has(bare)) return w;
+    return w.replace(/^([^a-z]*)([a-z])/, (_m, pre, ch) => pre + ch.toUpperCase());
+  }).join(' ');
+}
+
+function isAllCapsLine(line) {
+  return /[A-Z]{2}/.test(line) && line === line.toUpperCase();
 }
 
 // A heading title that wraps onto following lines continues until a blank
-// line. Returns the joined title and the index of the last title line.
-function collectHeadingTitle(lines, i, firstPart) {
+// line. A bare heading ("SECT. I.", "BOOK I.", "FIRST ESSAY.") takes as its
+// title the all-caps line that follows it after at most one blank line
+// ("OF THE ORIGIN OF OUR IDEAS."), which is how Hume, Nietzsche and Boethius
+// are set. Returns the title and the index of the last title line.
+function isStructureLine(line) {
+  return !!(matchBookHeading(line) || matchPartHeading(line) || matchSectionHeading(line) ||
+    /^([IVXLC]+|\d{1,4})\.$/.test(line));
+}
+
+// A book or part heading takes the caps line only when what follows that
+// line is more structure (a PART, a SECT., a bare section number), not body
+// text: "BOOK I. / OF THE UNDERSTANDING. / PART I." is a book title, while
+// "BOOK I / PROEM / Mother of Rome…" is the first section's heading and is
+// left for the section parser.
+function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = false } = {}) {
   let title = firstPart;
   let j = i;
+  if (!title) {
+    let k = i + 1;
+    if (k < lines.length && !lines[k]) k++;
+    const cand = lines[k];
+    if (cand && cand.length <= 90 && isAllCapsLine(cand) && !NOT_A_HEADING.test(cand) && !isStructureLine(cand)) {
+      let m = k + 1;
+      while (m < lines.length && !lines[m]) m++;
+      const after = lines[m] || '';
+      const structureAfter = !after || isStructureLine(after);
+      if (!requireStructureAfter || structureAfter) {
+        title = cand;
+        j = k;
+      }
+    }
+  }
   while (j + 1 < lines.length) {
-    const next = lines[j + 1].trim();
+    const next = lines[j + 1];
     if (!next) break;
-    if (matchBookHeading(next) || matchSectionHeading(next)) break;
+    if (isStructureLine(next)) break;
     // A title continuation is short-lined heading text, not a body paragraph:
     // Gutenberg wraps at ~70 characters and body paragraphs run several lines,
     // so only continue while the title has not yet closed with a period.
@@ -577,27 +650,37 @@ function collectHeadingTitle(lines, i, firstPart) {
     title = `${title} ${next}`.trim();
     j++;
   }
-  return { title: title.replace(/\s+/g, ' ').replace(/[.]+$/, '').trim(), last: j };
+  title = title.replace(/\s+/g, ' ').replace(/[.]+$/, '').trim();
+  if (isAllCapsLine(title)) title = titleCaseHeading(title);
+  return { title, last: j };
 }
 
+// Returns { books } or null when the text has neither a book nor a section
+// heading. A book: { number (null when implicit), parts: bool, sections }.
+// A section: { number, part, title, paragraphs: [{ marker, text }] }.
 function parseHeaded(text) {
-  const lines = text.split('\n');
-  const trimmed = lines.map(l => l.trim());
+  const lines = text.split('\n').map(l => l.trim());
 
   // Body starts at the last occurrence of the first book heading (skips a
-  // contents list that repeats it).
-  const firstBookIdx = trimmed.findIndex(l => matchBookHeading(l));
-  if (firstBookIdx < 0) return null;
-  const firstBookLine = trimmed[firstBookIdx];
-  const start = trimmed.lastIndexOf(firstBookLine);
+  // contents list that repeats it). A work with no book headings starts at
+  // the last occurrence of its first section heading instead.
+  let firstIdx = lines.findIndex(l => matchBookHeading(l) || matchPartHeading(l));
+  const implicitBook = firstIdx < 0;
+  if (implicitBook) firstIdx = lines.findIndex(l => matchSectionHeading(l));
+  if (firstIdx < 0) return null;
+  const start = lines.lastIndexOf(lines[firstIdx]);
 
-  const books = []; // { number, sections: [{ number, title, paragraphs: [{ marker, text }] }] }
-  let book = null;
+  const books = [];
+  let book = implicitBook ? { number: null, title: '', parts: false, sections: [] } : null;
+  if (book) books.push(book);
+  let part = null;
   let section = null;
-  let lifeCounter = 0;
+  let sectionCounter = 0;
   let inFootnotes = false;
+  let sawSongs = false; // Boethius: once SONG/METRE sections appear, a bare numeral opens a PROSE section
   let para = [];
   let paraMarker = null;
+  let pendingMarker = null;
 
   function flushPara() {
     const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
@@ -605,66 +688,109 @@ function parseHeaded(text) {
     para = [];
     paraMarker = null;
   }
+  function openSection(number, title) {
+    flushPara();
+    inFootnotes = false;
+    section = { number, part, title, paragraphs: [] };
+    book.sections.push(section);
+  }
+  function openBook(number, title) {
+    flushPara();
+    book = { number, title, parts: false, sections: [] };
+    books.push(book);
+    part = null;
+    section = null;
+    sectionCounter = 0;
+    inFootnotes = false;
+  }
 
   for (let i = start; i < lines.length; i++) {
-    const line = trimmed[i];
+    const line = lines[i];
     if (!line) { flushPara(); continue; }
 
     const b = matchBookHeading(line);
     if (b) {
+      const { title, last } = collectHeadingTitle(lines, i, b.title, { requireStructureAfter: true });
+      i = last;
+      openBook(b.number, title);
+      continue;
+    }
+    const pt = matchPartHeading(line);
+    if (pt) {
+      const { title, last } = collectHeadingTitle(lines, i, pt.title, { requireStructureAfter: true });
+      i = last;
+      if (!book || book.number == null) { openBook(pt.number, title); continue; } // PART as the top level
       flushPara();
-      book = { number: b.number, sections: [] };
-      books.push(book);
+      book.parts = true;
+      part = pt.number;
       section = null;
-      lifeCounter = 0;
+      sectionCounter = 0;
       inFootnotes = false;
       continue;
     }
     if (!book) continue;
 
     if (/^FOOTNOTES?:?$/i.test(line)) { flushPara(); inFootnotes = true; continue; }
-    if (/^(INDEX|INDEXES|THE END|END OF (VOL|BOOK|THE))/i.test(line) && !/^END OF (THE )?(CHAPTER)/i.test(line)) {
-      // Back matter after the text proper: an index or a volume close.
-      if (/^INDEX|^THE END/i.test(line)) { flushPara(); section = null; inFootnotes = true; continue; }
-    }
+    if (/^(INDEX|INDEXES|THE END|FINIS)\b/i.test(line)) { flushPara(); section = null; inFootnotes = true; continue; }
 
-    const s = matchSectionHeading(line);
+    let s = matchSectionHeading(line);
+    if (!s && !inFootnotes && !book.sections.some(x => x.named) && isCapsHeading(lines, i)) {
+      s = { number: null, title: titleCaseHeading(line), named: false };
+    }
     if (s) {
-      flushPara();
-      inFootnotes = false;
-      const { title, last } = collectHeadingTitle(lines.map(l => l.trim()), i, s.title);
+      const { title, last } = collectHeadingTitle(lines, i, s.title);
       i = last;
-      const number = s.number != null ? s.number : ++lifeCounter;
-      if (s.number != null && s.number > lifeCounter) lifeCounter = s.number;
-      section = { number, title, paragraphs: [] };
-      book.sections.push(section);
+      const number = s.number != null ? s.number : ++sectionCounter;
+      if (s.number != null && s.number > sectionCounter) sectionCounter = s.number;
+      if (/^(Song|Metre|Metrum|Poem) /.test(title)) sawSongs = true;
+      openSection(number, title);
+      section.named = s.named;
       continue;
     }
     if (inFootnotes) continue;
+    // A bare numeral line between Boethius's songs is a prose section.
+    if (sawSongs && para.length === 0) {
+      const bare = line.match(/^([IVXLC]+|\d{1,4})\.$/);
+      if (bare && headingNumber(bare[1]) != null) {
+        openSection(++sectionCounter, `Prose ${bare[1].toUpperCase()}`);
+        section.named = true;
+        continue;
+      }
+    }
     // Body text under a book before any section heading (a book with no
-    // chapter divisions, or headings in a form this parser does not know):
-    // keep it as section 0 of the book so the rows still locate to the book
-    // instead of vanishing. verify-queue.js shows it as "0: Book N".
+    // divisions, or headings in a form this parser does not know): keep it
+    // as section 0 so the rows still locate to the book.
     if (!section) {
-      section = { number: 0, title: `Book ${book.number}`, paragraphs: [] };
-      book.sections.push(section);
+      openSection(0, book.title || (book.number != null ? `Book ${book.number}` : 'Text'));
+      section.named = false;
     }
     // A footnote body starts with its own marker; drop it.
     if (para.length === 0 && /^\[\d+\]\s/.test(line)) { inFootnotes = true; continue; }
 
-    // Numbered paragraph inside a section: "XII. Zeno was …" or "12. …"
+    // Numbered paragraph inside a section: "XII. Zeno was …", "12. …", or a
+    // bare "XII." line that numbers the paragraph after it.
     if (para.length === 0) {
-      const pm = line.match(/^([IVXLC]+|\d{1,3})\.\s+(\S.*)$/);
+      const bare = line.match(/^([IVXLC]+|\d{1,4})\.$/);
+      if (bare && headingNumber(bare[1]) != null) { pendingMarker = bare[1]; continue; }
+      const pm = line.match(/^([IVXLC]+|\d{1,4})\.\s+(\S.*)$/);
       if (pm && headingNumber(pm[1]) != null) {
         paraMarker = pm[1];
         para.push(pm[2]);
+        pendingMarker = null;
         continue;
       }
+      if (pendingMarker) { paraMarker = pendingMarker; pendingMarker = null; }
     }
     para.push(line);
   }
   flushPara();
   return books;
+}
+
+function sectionLocator(book, section) {
+  const prefix = book.number != null ? `${book.number}.` : '';
+  const partBit = section.part != null ? `${section.part}.` : '';
+  return `${prefix}${partBit}${section.number}`;
 }
 
 function planHeaded(text) {
@@ -673,10 +799,12 @@ function planHeaded(text) {
   return {
     books: books.map(b => ({
       number: b.number,
+      parts: b.parts ? new Set(b.sections.map(s => s.part)).size : 0,
       sections: b.sections.length,
       paragraphs: b.sections.reduce((n, s) => n + s.paragraphs.length, 0),
+      numbered: b.sections.reduce((n, s) => n + s.paragraphs.filter(p => p.marker).length, 0),
       words: b.sections.reduce((n, s) => n + s.paragraphs.reduce((m, p) => m + countWords(p.text), 0), 0),
-      firstSections: b.sections.slice(0, 3).map(s => `${s.number}: ${s.title}`),
+      firstSections: b.sections.slice(0, 3).map(s => `${sectionLocator(b, s)}: ${s.title}`),
     })),
   };
 }
@@ -689,7 +817,7 @@ function chunkHeaded(text, meta) {
 
   for (const book of books) {
     for (const section of book.sections) {
-      const locator = `${book.number}.${section.number}`;
+      const locator = sectionLocator(book, section);
       // Split any single paragraph far beyond the target on sentence
       // boundaries so one paragraph never becomes a 2,000-word row.
       const units = [];
@@ -734,6 +862,43 @@ function chunkHeaded(text, meta) {
           word_count: countWords(txt),
         });
       });
+    }
+  }
+  return chunks;
+}
+
+// One row per numbered paragraph. Paragraphs before the first number in a
+// section form one unnumbered row labelled by the section; unnumbered
+// paragraphs after a number continue that entry.
+function chunkNumbered(text, meta) {
+  const books = parseHeaded(text);
+  if (!books) return [];
+  const chunks = [];
+  let chunkIndex = 0;
+  const prefixFor = (book) => (book.number != null ? `${book.number}.` : '');
+
+  for (const book of books) {
+    for (const section of book.sections) {
+      const entries = [];
+      for (const p of section.paragraphs) {
+        if (p.marker) entries.push({ marker: p.marker, texts: [p.text] });
+        else if (entries.length) entries[entries.length - 1].texts.push(p.text);
+        else entries.push({ marker: null, texts: [p.text] });
+      }
+      for (const e of entries) {
+        const n = e.marker ? headingNumber(e.marker) : null;
+        const locator = n != null ? `${prefixFor(book)}${n}` : sectionLocator(book, section);
+        const title = section.title || `Section ${section.number}`;
+        const txt = e.texts.join('\n\n');
+        chunks.push({
+          ...meta,
+          section_label: n != null ? `${title}, §${n}` : title,
+          locator,
+          chunk_index: chunkIndex++,
+          chunk_text: txt,
+          word_count: countWords(txt),
+        });
+      }
     }
   }
   return chunks;
@@ -857,6 +1022,7 @@ function chunkFile(filename, rawText) {
     case 'enchiridion':    chunks = chunkEnchiridion(text, meta); break;
     case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
     case 'headed':         chunks = chunkHeaded(text, meta); break;
+    case 'numbered':       chunks = chunkNumbered(text, meta); break;
     default:               chunks = chunkByParagraph(text, meta);
   }
   return applyOversizeGuard(chunks);
@@ -880,6 +1046,7 @@ function chunkRaw(rawText, strategy, baseMeta) {
     case 'letters':
     case 'seneca-letters': chunks = chunkSenecaLetters(text, meta); break;
     case 'headed':         chunks = chunkHeaded(text, meta); break;
+    case 'numbered':       chunks = chunkNumbered(text, meta); break;
     case 'paragraphs':
     case 'paragraph':
     default:               chunks = chunkByParagraph(text, meta);
@@ -895,7 +1062,7 @@ function chunkRaw(rawText, strategy, baseMeta) {
 }
 
 // Strategies a queue row may name (corpus_ingestion_queue.chunk_strategy).
-const QUEUE_STRATEGIES = ['paragraph', 'headed', 'meditations-long', 'discourses', 'enchiridion', 'seneca-letters'];
+const QUEUE_STRATEGIES = ['paragraph', 'headed', 'numbered', 'meditations-long', 'discourses', 'enchiridion', 'seneca-letters'];
 
 module.exports = { chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA };
 
