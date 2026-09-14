@@ -246,7 +246,7 @@ async function processSource(src) {
     rows = chunkRaw(cleaned, strategy, { author: src.author, work: src.work });
     chunks = rows.map(r => r.chunk_text);
     const withLocator = rows.filter(r => r.locator).length;
-    const plan = strategy === 'headed' ? planHeaded(cleaned) : null;
+    const plan = (strategy === 'headed' || strategy === 'numbered') ? planHeaded(cleaned) : null;
     const summary = plan
       ? `books ${plan.books.map(b => `${b.number}(${b.sections})`).join(' ')}`
       : `${withLocator}/${rows.length} rows carry a locator`;

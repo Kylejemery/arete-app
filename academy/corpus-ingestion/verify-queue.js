@@ -73,12 +73,12 @@ function reportStrategy(body, strategy, author, work) {
     console.log(`  ✗ unknown chunk_strategy ${JSON.stringify(strategy)} (one of ${QUEUE_STRATEGIES.join(', ')})`);
     return;
   }
-  if (strategy === 'headed') {
+  if (strategy === 'headed' || strategy === 'numbered') {
     const plan = planHeaded(body);
-    if (!plan) { console.log('  ✗ headed: no BOOK heading found; the agent would fall back to paragraph windows'); return; }
-    console.log(`  headed: ${plan.books.length} book(s)`);
+    if (!plan) { console.log(`  ✗ ${strategy}: no BOOK or section heading found; the agent would fall back to paragraph windows`); return; }
+    console.log(`  ${strategy}: ${plan.books.length} book(s)`);
     for (const b of plan.books) {
-      console.log(`    book ${b.number}: ${b.sections} section(s), ${b.paragraphs} paragraphs, ${b.words.toLocaleString()} words`);
+      console.log(`    book ${b.number ?? '(none)'}: ${b.parts ? `${b.parts} part(s), ` : ''}${b.sections} section(s), ${b.paragraphs} paragraphs (${b.numbered} numbered), ${b.words.toLocaleString()} words`);
       for (const h of b.firstSections) console.log(`      ${h}`);
     }
   }
