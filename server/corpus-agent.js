@@ -331,6 +331,14 @@ async function runCorpusIngestion() {
 
   for (const src of sources) {
     console.log(`[corpus-agent] --- ${src.author} / ${src.work} ---`);
+    // Rows that name a chunker strategy (headed, meditations-long, …) need
+    // academy/corpus-ingestion/chunker.js, which is not deployed with the API
+    // server. Leave them pending for the nightly agent rather than ingest
+    // them here as locator-less windows.
+    if (src.chunk_strategy && src.chunk_strategy !== 'paragraph') {
+      console.log(`[corpus-agent]   ↷ chunk_strategy ${src.chunk_strategy}: left for the nightly corpus agent`);
+      continue;
+    }
     try {
       const ingested = await processSource(src);
       succeeded++;

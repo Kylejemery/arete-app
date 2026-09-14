@@ -7,7 +7,7 @@
 // agent's Railway service has it, sandboxes usually do not.
 //
 // Usage:
-//   node verify-queue.js --url URL [--start-marker "..."] [--end-marker "..."]
+//   node verify-queue.js --url URL [--start-marker "..."] [--end-marker "..."] [--strategy headed]
 //   node verify-queue.js                 every pending queue row (needs SUPABASE env)
 //   node verify-queue.js --id QUEUE_ID   one queue row
 //   node verify-queue.js --pending --mark-failed
@@ -19,6 +19,7 @@ require('dotenv').config();
 const {
   fetchSourceText, stripGutenbergBoilerplate, applyBodyMarkers, chunkText,
 } = require('./corpus-agent');
+const { chunkRaw, planHeaded, QUEUE_STRATEGIES } = require('./chunker');
 
 function getArg(flag) {
   const i = process.argv.indexOf(flag);
@@ -61,7 +62,38 @@ function frontMatterHeadings(body, limit = 25) {
   return out;
 }
 
-async function checkSource({ url, author, work, language, body_start_marker, body_end_marker }) {
+// What a chunker strategy would make of the body: for 'headed', the books
+// found with their section counts and first headings (a contents list or a
+// preface that leaked shows up here as a wrong book count or a section 0
+// titled by front matter); for every strategy, the row count and how many
+// rows carry a locator, with the first and last rows' labels.
+function reportStrategy(body, strategy, author, work) {
+  if (!strategy || strategy === 'paragraph') return;
+  if (!QUEUE_STRATEGIES.includes(strategy)) {
+    console.log(`  ✗ unknown chunk_strategy ${JSON.stringify(strategy)} (one of ${QUEUE_STRATEGIES.join(', ')})`);
+    return;
+  }
+  if (strategy === 'headed') {
+    const plan = planHeaded(body);
+    if (!plan) { console.log('  ✗ headed: no BOOK heading found; the agent would fall back to paragraph windows'); return; }
+    console.log(`  headed: ${plan.books.length} book(s)`);
+    for (const b of plan.books) {
+      console.log(`    book ${b.number}: ${b.sections} section(s), ${b.paragraphs} paragraphs, ${b.words.toLocaleString()} words`);
+      for (const h of b.firstSections) console.log(`      ${h}`);
+    }
+  }
+  const rows = chunkRaw(body, strategy, { author: author || 'x', work: work || 'y' });
+  const withLocator = rows.filter(r => r.locator).length;
+  console.log(`  strategy ${strategy}: ${rows.length} rows, ${withLocator} with a locator`);
+  if (rows.length) {
+    const f = rows[0]; const l = rows[rows.length - 1];
+    console.log(`    first: ${f.locator ?? '—'} · ${f.section_label} · ${f.word_count} words`);
+    console.log(`    last:  ${l.locator ?? '—'} · ${l.section_label} · ${l.word_count} words`);
+  }
+  if (withLocator === 0) console.log('  ⚠ no row carries a locator; check the headings or use --start-marker');
+}
+
+async function checkSource({ url, author, work, language, body_start_marker, body_end_marker, chunk_strategy }) {
   const label = author && work ? `${author} / ${work}` : url;
   console.log(`\n--- ${label} ---\n  ${url}`);
   const raw = await fetchSourceText(url);
@@ -96,6 +128,7 @@ async function checkSource({ url, author, work, language, body_start_marker, bod
   console.log(`  body after markers: ${words.toLocaleString()} words → ${chunks} chunks (400 / 50 overlap)`);
   console.log(`  body opens: ${snippet(body, 0, 300)}`);
   console.log(`  body closes: ${snippet(body, Math.max(0, body.length - 300), 300)}`);
+  reportStrategy(body, chunk_strategy, author, work);
   return { words, chunks, notes };
 }
 
@@ -107,6 +140,7 @@ async function main() {
       language: getArg('--language') ?? 'en',
       body_start_marker: getArg('--start-marker') ?? null,
       body_end_marker: getArg('--end-marker') ?? null,
+      chunk_strategy: getArg('--strategy') ?? null,
     });
     return;
   }
