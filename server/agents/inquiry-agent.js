@@ -29,6 +29,8 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { randomUUID } = require('crypto');
+const { logRetrieval } = require('../lib/retrieval-log');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -354,13 +356,17 @@ async function retrievePursuitPassages(question, config) {
     if (byAuthor[chunk.author].length < 3) byAuthor[chunk.author].push(chunk);
   }
 
-  return Object.values(byAuthor).flat().slice(0, wantCount).map(c => ({
+  const passages = Object.values(byAuthor).flat().slice(0, wantCount).map(c => ({
     id: c.id,
     author: c.author,
     work: c.work,
     chunk_text: c.chunk_text,
     similarity: c.similarity,
   }));
+  // Research surfaces log their retrievals (server/lib/retrieval-log.js) so
+  // the summaries admitted for them can be shown to earn their place.
+  logRetrieval({ requestId: randomUUID(), agent: 'inquiry', queryText: question, chunks: passages });
+  return passages;
 }
 
 function buildPursuitUserMessage(question, passages, maxWords) {

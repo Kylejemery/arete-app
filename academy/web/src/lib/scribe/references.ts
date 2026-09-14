@@ -72,23 +72,31 @@ export async function buildReferences(
   if (ragIds.length) {
     const { data, error } = await admin
       .from('rag_corpus')
-      .select('id, author, work, translator, text_type, source_url, section_label')
+      .select('id, author, work, translator, text_type, source_url, section_label, edition_year')
       .in('id', ragIds)
     if (error) throw new Error(`References (rag_corpus): ${error.message}`)
     for (const r of data ?? []) {
       const key = `${r.author}|${r.work}`
       if (r.text_type === 'paper_summary' || r.text_type === 'modern_summary') {
         // section_label convention from lib/papers/ingest.ts:
-        // 'scholarly summary — VENUE — YEAR'
-        const bits = (r.section_label ?? '').split('—').map((s: string) => s.trim())
+        // 'scholarly summary — VENUE — YEAR', with either bit absent when
+        // the submission lacked it, so the bits are told apart by shape
+        // rather than by position. edition_year (written at ingest since
+        // 2026-09) is the authoritative year when present.
+        const bits = (r.section_label ?? '').split('—').map((s: string) => s.trim()).slice(1)
+        const yearBit = bits.find((b: string) => /^\d{4}[a-z]?$/.test(b)) ?? null
+        const venueBit = bits.find((b: string) => b && b !== yearBit) ?? null
+        // An uploaded PDF's provenance is a private storage path
+        // ('storage:papers/…'), not a link a reader can follow.
+        const url = r.source_url && /^https?:\/\//i.test(r.source_url) ? r.source_url : null
         modern.set(key, {
           authors: [],
           authorFallback: r.author,
-          year: bits[2] || null,
+          year: r.edition_year ? String(r.edition_year) : yearBit,
           title: r.work,
-          venue: bits[1] || null,
+          venue: venueBit,
           doi: null,
-          url: r.source_url,
+          url,
         })
       } else if (r.text_type === 'modern_primary') {
         // A verbatim public-domain modern work (Russell 1927, Eddington 1928,

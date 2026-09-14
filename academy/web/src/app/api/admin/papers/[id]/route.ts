@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { normalizeRegistrations } from '@/lib/papers/questions'
 
 export const dynamic = 'force-dynamic'
 
 // PATCH /api/admin/papers/:id
-// { status?: 'rejected' | 'queued', review_notes?, author?, work?, year?, venue? }
+// { status?: 'rejected' | 'queued', review_notes?, author?, work?, year?, venue?,
+//   question_registrations?: [{ question_id, position, role, note? }] }
 // Review-time controls: reject a summary, re-queue a failed (or rejected)
 // submission for another pass, correct citation metadata before ingestion
 // (the agent's detected_* fields surface mismatches), attach notes. Ingestion
@@ -23,7 +25,7 @@ export async function PATCH(
 
   try {
     const { id } = await params
-    const { status, review_notes, author, work, year, venue } = await req.json()
+    const { status, review_notes, author, work, year, venue, question_registrations } = await req.json()
 
     const admin = createAdminClient()
     const { data: paper, error: readErr } = await admin
@@ -54,6 +56,12 @@ export async function PATCH(
     if (typeof work === 'string' && work.trim()) updates.work = work.trim()
     if (typeof year === 'string') updates.year = year.trim() || null
     if (typeof venue === 'string') updates.venue = venue.trim() || null
+    // The question-map registrations as edited on the review card. An empty
+    // array is a deliberate "bears on nothing", kept distinct from null (the
+    // agent proposed nothing) so the review card can warn on both.
+    if (Array.isArray(question_registrations)) {
+      updates.question_registrations = normalizeRegistrations(question_registrations)
+    }
 
     const { data, error } = await admin
       .from('paper_submissions')
