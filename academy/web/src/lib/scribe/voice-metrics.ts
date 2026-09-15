@@ -85,6 +85,43 @@ const TELLS: string[] = [
   'rich tapestry',
 ]
 
+// Tells that are shapes rather than phrases, so they need a pattern. These are
+// the ones Kyle named from reading drafts: the negation-first frame ("This is
+// not X. It is Y."), the line that announces an idea's importance instead of
+// showing it, the over-the-top comparison, and the manufactured punchline.
+// Each label is what the meter reports; a hit paints the whole matched span.
+export const PATTERN_TELLS: { label: string; re: RegExp }[] = [
+  {
+    // "This does not produce sympathy. It produces something colder."
+    // "It's not about the money. It's about the time."
+    label: 'negation-first frame',
+    re: /\b(?:this|that|it)\s*(?:(?:is|was|does|did)\s+not|(?:isn|wasn|doesn|didn)['’]t|['’]s\s+not)\s+[^.!?\n]{2,90}[.!?]\s+(?:It|This|That)(?:['’]s|\s+(?:is|was|does|did|produces|means|becomes|turns))\b/gi,
+  },
+  {
+    // "not just a habit, but a practice"
+    label: 'not just X but Y',
+    re: /\bnot\s+(?:just|merely|simply|only)\s+[^.,;:\n]{1,60},?\s+but\b/gi,
+  },
+  {
+    label: 'announced importance',
+    re: /\b(?:the|this|that)\s+difference\s+matters\b|\bmatters\s+more\s+than\b|\bmore\s+than\s+(?:almost\s+)?anything\s+else\b|\bhere(?:['’]s|\s+is)\s+the\s+thing\b|\bthis\s+is\s+the\s+(?:crux|key|point|heart|part)\b|\b(?:that|this|which)\s+changes\s+everything\b|\bmake\s+no\s+mistake\b|\blet\s+that\s+sink\s+in\b|\bthe\s+(?:real|key|important|crucial)\s+(?:point|thing|question|insight)\s+(?:is|here)\b|\bwhat\s+matters\s+(?:most\s+)?(?:is|here)\b|\bthis\s+(?:matters|is\s+important)\s+because\b|\bthe\s+(?:distinction|difference)\s+is\s+(?:important|crucial|everything)\b|\bthis\s+is\s+(?:important|crucial|essential|the\s+whole\s+point)\b/gi,
+  },
+  {
+    label: 'hyperbole',
+    re: /\bnothing\s+less\s+than\b|\bnothing\s+short\s+of\b|\bthe\s+single\s+most\b|\bthe\s+(?:loudest|greatest|most\s+\w+)\s+\w+\s+in\s+the\s+(?:language|world|history\s+of)\b|\ba\s+quiet\s+revolution\b|\ba\s+kind\s+of\s+alchemy\b|\bmore\s+than\s+any\s+other\b|\bin\s+the\s+history\s+of\b|\bnothing\s+could\s+be\s+(?:further|more)\b/gi,
+  },
+  {
+    // "What does that mean? It means..." / "Why? Because..."
+    label: 'self-answered question',
+    re: /\?\s+(?:It|The\s+answer|Because|That|This)\s+(?:means|is|depends|was|matters|comes)?\b/g,
+  },
+  {
+    // "The answer: discipline." / "Simple." / "Full stop."
+    label: 'punchline',
+    re: /(?:^|[.!?]\s+)(?:Simple|Period|Full\s+stop|Exactly|Precisely|Always|Never|Nothing|Everything|Neither|Both)\.(?=\s|$)|:\s+[A-Za-z]+\.(?=\s|$)/gm,
+  },
+]
+
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -118,6 +155,15 @@ export function metricSpans(text: string, kind: MetricKind): Span[] {
     for (const phrase of TELLS) {
       for (const m of src.matchAll(new RegExp(escapeRe(phrase), 'gi'))) {
         spans.push({ start: m.index!, end: m.index! + m[0].length, label: phrase })
+      }
+    }
+    for (const { label, re } of PATTERN_TELLS) {
+      re.lastIndex = 0
+      for (const m of src.matchAll(re)) {
+        // A leading terminator is only the anchor for the punchline pattern;
+        // leave it out of the painted span.
+        const lead = m[0].match(/^[.!?]\s+/)?.[0].length ?? 0
+        spans.push({ start: m.index! + lead, end: m.index! + m[0].length, label })
       }
     }
   }

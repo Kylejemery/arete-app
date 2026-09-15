@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/scribe/admin-auth'
+import { requireAdmin, adminUserId } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { runScribeTurn, extractSnapshotIntent, TurnSource } from '@/lib/scribe/chat'
 import { reviewDraft } from '@/lib/scribe/review'
@@ -73,6 +73,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ? { exemplars: style.exemplar_refs ?? [], guidance: style.guidance ?? null }
           : null
 
+        // Kyle's Cabinet history (the mobile app's counselor threads) is
+        // searchable from the turn, keyed to his own user id.
+        const cabinetUserId = await adminUserId()
+
         const { text, sources } = await runScribeTurn(
           thread as { role: 'user' | 'scribe'; content: string }[],
           {
@@ -80,7 +84,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             onSearching: v => emit('searching', v),
             onSources: (v: TurnSource[]) => emit('sources', v),
           },
-          voice
+          voice,
+          cabinetUserId
         )
 
         const { data: saved, error: saveError } = await admin

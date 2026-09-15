@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAdmin } from '@/lib/scribe/admin-auth'
+import { requireAdmin, adminUserId } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { cabinetSearchQuery, formatCabinetHits, searchCabinetHistory } from '@/lib/cabinet-history'
 import { distill } from '@/lib/scribe/pipeline/distill'
 import { retrieveForClaims } from '@/lib/scribe/pipeline/retrieve'
 import { draft, type PriorDraft } from '@/lib/scribe/pipeline/draft'
@@ -91,8 +92,27 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       prior = { content: last.content, feedback: body.feedback.trim() }
     }
 
+    // The author's Cabinet exchanges that share the brief's vocabulary. His
+    // own lines only: the counselors' replies are not material for a draft
+    // that must trace every claim to a source. A failure here costs nothing
+    // but the block.
+    let cabinet: string | undefined
+    try {
+      const userId = await adminUserId()
+      if (userId) {
+        const query = cabinetSearchQuery(
+          [brief.thesis, ...brief.key_claims, ...notes.map(n => n.content)].join(' '),
+          20
+        )
+        const hits = await searchCabinetHistory(admin, userId, { query, limit: 8, who: 'me' })
+        if (hits.length) cabinet = formatCabinetHits(hits, 'The author')
+      }
+    } catch (e) {
+      console.warn('[scribe/draft] cabinet read failed:', e instanceof Error ? e.message : e)
+    }
+
     // Stage C — the draft.
-    const result = await draft(project.format, brief, notes, bundles, style, prior)
+    const result = await draft(project.format, brief, notes, bundles, style, prior, cabinet)
     usage.draft = result.usage
 
     // Stage E — deterministic reference list for the formats that carry one.

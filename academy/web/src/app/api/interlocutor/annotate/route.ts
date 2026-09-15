@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase-server'
+import { createAdminClient } from '@/lib/supabase-admin'
 import {
   INTERLOCUTOR_SYSTEM,
   ANNOTATION_APPENDIX,
@@ -10,10 +11,12 @@ import {
   isStage,
   buildStageAppendix,
   buildProfileBlock,
+  buildCabinetBlock,
   type WritingProfileRow,
   type AnnotationOut,
 } from '@/lib/interlocutor'
 import { locate } from '@/lib/annotations'
+import { cabinetSearchQuery, searchCabinetHistory, type CabinetHit } from '@/lib/cabinet-history'
 
 // POST /api/interlocutor/annotate — the marked-up pass. The Interlocutor reads a
 // draft and returns a summary plus annotations anchored to verbatim quotes; this
@@ -167,10 +170,30 @@ export async function POST(req: NextRequest) {
     console.warn('[interlocutor/annotate] profile read failed:', e)
   }
 
+  // ── Cabinet context (the student's own counselor threads) ────────────────────
+  // The exchanges that share the draft's vocabulary, the student's lines and
+  // the replies they drew. Needs the service role; absent or failing, the
+  // markup proceeds without it.
+  let cabinet: CabinetHit[] = []
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      cabinet = await searchCabinetHistory(createAdminClient(), user.id, {
+        query: cabinetSearchQuery(`${title ?? ''} ${trimmed.slice(0, 2500)}`, 20),
+        limit: 6,
+        who: 'all',
+      })
+    } catch (e) {
+      console.warn('[interlocutor/annotate] cabinet read failed:', e instanceof Error ? e.message : e)
+    }
+  }
+
   const system = [
     INTERLOCUTOR_SYSTEM + ANNOTATION_APPENDIX + buildStageAppendix(stage),
     buildProfileBlock(profile),
-  ].join('\n\n')
+    buildCabinetBlock(cabinet),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 
   const userContent = [
     title ? `PIECE: ${title}` : null,

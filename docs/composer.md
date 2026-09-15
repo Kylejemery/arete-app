@@ -18,7 +18,13 @@ Sentence boundaries come from `src/lib/sentences.ts`: line breaks always end a s
 
 `POST /api/composer/voice` returns three variants of one sentence, each with a one-line note, judged from the writer's own prose: the latest draft of each of their three most recent pieces (own rows under RLS), plus the Scribe voice card (`scribe_style_profiles`, via the admin client) when the writer is an admin who keeps one. Variants: plainest, most concrete, closest to the writer's cadence. No dashes, no thesaurus diction, no signposting, no added claims. Model `claude-opus-5`, adaptive thinking, effort medium, JSON schema output. Prompt in `src/lib/composer.ts` (`VOICE_SYSTEM`).
 
+The exemplar block also carries how the writer talks: their own lines from their Cabinet conversations in the mobile app (`cabinet_conversations`, read through `cabinet_history_search` and `src/lib/cabinet-history.ts`), the six that share the sentence's vocabulary, the writer's words only. They are labelled as conversation, not essay register: diction and what they name, not looseness. The prompt carries the machine-tells list (`docs/machine-tells.md`); a sentence that arrives with a negation-first frame or a line announcing its own importance comes back without it in every variant.
+
 Variants load into the box, never onto the page directly. The writer's keystrokes are still what changes the draft. Stage gating (thesis and outline withhold rewrites) does not apply here: the writer asked.
+
+## Markup and the Cabinet
+
+`POST /api/interlocutor/annotate` now reads the same Cabinet history (the six exchanges, writer and counselors both, that share the draft's vocabulary) and hands it to the Interlocutor as context: where a claim stays abstract and the student told a counselor the actual scene, it asks for the scene; where the draft hedges or reverses something the student said plainly, it quotes both and asks which they hold. Counselor replies are model-voiced and are never sources under Fidelity. The Interlocutor also marks machine tells under Economy, by name, and holds its own comments to the list.
 
 ## Ground in corpus
 

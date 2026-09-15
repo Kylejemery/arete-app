@@ -82,3 +82,35 @@ match_count, exclude_id)`. Scribe chat gets a `search_journal` tool alongside
 corpus is, and teasing out connections across entries over time is part of
 Scribe's job. Kyle's own words are always quotable (recorded in `sources_used`
 as mode `quote`, `text_type` `journal`). The log never feeds `rag_corpus`.
+
+## The Cabinet (added 2026-09-15, migration `cabinet_history_search`)
+
+Kyle's Cabinet conversations from the mobile app (the `cabinet_conversations`
+threads with Marcus, Epictetus, Roosevelt, Goggins, Montaigne and the rest) are
+a third search tool in chat mode, `search_cabinet`, beside `search_corpus` and
+`search_journal`. Much of his thinking happens there first, in his own words,
+before it reaches the journal.
+
+- `cabinet_history_search(p_user_id, p_query, p_limit, p_since)` flattens a
+  user's rows, dedupes each message on (thread, timestamp, role, content)
+  (the mobile client has saved many snapshot rows of the same thread, so one
+  message can sit in dozens of them), labels the speaker, full-text searches
+  the content (`websearch_to_tsquery`, English), and returns each hit with the
+  message before and after it. Service role only; it never writes. Around
+  150 ms for Kyle's history.
+- `academy/web/src/lib/cabinet-history.ts` wraps it: `cabinetSearchQuery`
+  turns a passage or a model's query into an OR query over its content words,
+  `searchCabinetHistory` over-fetches and re-ranks so Kyle's own lines come
+  first, app check-in prompts (`[Morning check-in] ...`) are dropped, and
+  `formatCabinetHits` renders exchanges for a prompt.
+- Kyle's own lines are spine material, quotable, recorded in `sources_used`
+  with `text_type` `cabinet` and mode `quote`. A counselor's reply is context
+  only (mode `paraphrase`, never anchored in the draft): the counselors are
+  model-voiced, so Scribe is told never to quote, cite, or attribute their
+  words to the historical person; if the Cabinet's Marcus said something worth
+  having, it finds the real Marcus in the corpus.
+- The pipeline's Stage C draft gets the same material without a tool: the
+  project draft route searches with the brief's thesis, claims, and notes and
+  passes Kyle's matching lines to `draft()` as a non-citable block.
+
+The prose rules in both modes now come from one list, `docs/machine-tells.md`.

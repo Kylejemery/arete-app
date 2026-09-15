@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { VOICE_SYSTEM, buildExemplarBlock, type VoiceExemplar, type VoiceVariant } from '@/lib/composer'
+import { cabinetSearchQuery, searchCabinetHistory } from '@/lib/cabinet-history'
 
 // POST /api/composer/voice — say one sentence the way the writer says things.
 //
@@ -133,7 +134,28 @@ export async function POST(req: NextRequest) {
     // No style profile reachable: the writer's drafts are enough.
   }
 
-  const system = [VOICE_SYSTEM, buildExemplarBlock(exemplars, guidance)].join('\n\n')
+  // How the writer talks: their own lines from their Cabinet conversations
+  // that share this sentence's vocabulary. Their words only, never the
+  // counselors'. Needs the service role; without it, or on any failure, the
+  // drafts are still enough.
+  let spoken: string[] = []
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      const hits = await searchCabinetHistory(createAdminClient(), user.id, {
+        query: cabinetSearchQuery(`${sentence} ${before} ${after}`),
+        limit: 6,
+        who: 'me',
+      })
+      spoken = hits
+        .map(h => h.content.replace(/\s+/g, ' ').trim())
+        .filter(t => t.length >= 40)
+        .map(t => t.slice(0, 600))
+    } catch (e) {
+      console.warn('[composer/voice] cabinet read failed:', e instanceof Error ? e.message : e)
+    }
+  }
+
+  const system = [VOICE_SYSTEM, buildExemplarBlock(exemplars, guidance, spoken)].join('\n\n')
 
   const userContent = [
     title ? `PIECE: ${title}` : null,
