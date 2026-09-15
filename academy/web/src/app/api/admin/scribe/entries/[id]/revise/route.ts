@@ -56,17 +56,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const collapsible = last?.role === 'user' && last.content.includes('<kyle-edit')
 
+  const draftText = draft_text.trim()
   const { data: saved, error } = collapsible
     ? await admin
         .from('scribe_messages')
-        .update({ content })
+        .update({ content, draft_text: draftText })
         .eq('id', last!.id)
-        .select('id, role, content, sources_used, created_at')
+        .select('id, role, content, sources_used, draft_text, created_at')
         .single()
     : await admin
         .from('scribe_messages')
-        .insert({ entry_id: id, role: 'user', content })
-        .select('id, role, content, sources_used, created_at')
+        .insert({ entry_id: id, role: 'user', content, draft_text: draftText })
+        .select('id, role, content, sources_used, draft_text, created_at')
         .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

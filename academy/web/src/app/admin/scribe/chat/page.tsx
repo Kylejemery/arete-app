@@ -13,7 +13,16 @@ import SourceList from './SourceList'
 import type { DiffBase, Draft, Entry, Message, Review, Source } from './types'
 import { withAttribution } from '@/lib/scribe/attribution'
 import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
+import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
 import type { Highlight } from '@/lib/scribe/prose'
+
+// Column widths, dragged and remembered. The draft column takes whatever is
+// left, which on a wide screen is most of it: the essay is the work.
+type Layout = { entries: number; convo: number; sources: number; entriesOpen: boolean; sourcesOpen: boolean }
+const LAYOUT_KEY = 'scribe-chat-layout-v1'
+const DEFAULT_LAYOUT: Layout = { entries: 220, convo: 400, sources: 340, entriesOpen: true, sourcesOpen: true }
+const LIMITS = { entries: [160, 360], convo: [300, 680], sources: [240, 600] } as const
+const RAIL = 40
 
 function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
@@ -31,10 +40,11 @@ function revisionSummary(content: string): string {
 
 // Chat-bubble text: commentary only — the draft lives in its own pane.
 function commentaryOf(text: string): string {
-  const out = text
-    .replace(/<snapshot stage="(?:middle|full|final)"\s*\/>/g, '')
-    .replace(/<draft>[\s\S]*?(<\/draft>|$)/, '')
-    .trim()
+  const out = stripEdits(
+    text
+      .replace(/<snapshot stage="(?:middle|full|final)"\s*\/>/g, '')
+      .replace(/<draft>[\s\S]*?(<\/draft>|$)/, '')
+  ).trim()
   return out || '(revised the working draft — see the draft pane)'
 }
 
@@ -69,6 +79,13 @@ export default function ScribeChatPage() {
   // The outside reader's findings from the just-finished final turn. Held until
   // the next turn starts; a viewed snapshot's own stored review takes priority.
   const [liveReview, setLiveReview] = useState<Review | null>(null)
+  // The draft the just-finished turn resolved to (its edits applied), shown
+  // until the reload brings the persisted thread.
+  const [liveDraft, setLiveDraft] = useState<string | null>(null)
+
+  const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT)
+  const [paneWide, setPaneWide] = useState(true)
+  const draftColRef = useRef<HTMLDivElement>(null)
 
   // Composer + draft workspace
   const [input, setInput] = useState('')
@@ -119,6 +136,47 @@ export default function ScribeChatPage() {
   }, [])
 
   useEffect(() => { loadEntries() }, [loadEntries])
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LAYOUT_KEY)
+      if (saved) setLayout({ ...DEFAULT_LAYOUT, ...(JSON.parse(saved) as Partial<Layout>) })
+    } catch { /* defaults */ }
+  }, [])
+  useEffect(() => {
+    try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)) } catch { /* ignore */ }
+  }, [layout])
+
+  // Essay typography once the draft column is wide enough to carry it.
+  useEffect(() => {
+    const el = draftColRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setPaneWide(e.contentRect.width >= 600)
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  // Drag a divider: the column on its left grows with the pointer, except the
+  // sources column, which grows the other way.
+  function startResize(col: 'entries' | 'convo' | 'sources', e: React.PointerEvent) {
+    e.preventDefault()
+    const startX = e.clientX
+    const startW = layout[col]
+    const [min, max] = LIMITS[col]
+    const onMove = (ev: PointerEvent) => {
+      const dx = ev.clientX - startX
+      const w = Math.min(max, Math.max(min, col === 'sources' ? startW - dx : startW + dx))
+      setLayout(l => ({ ...l, [col]: w }))
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }
   useEffect(() => { if (selectedId) loadEntry(selectedId) }, [selectedId, loadEntry])
 
   useEffect(() => {
@@ -150,6 +208,7 @@ export default function ScribeChatPage() {
     setSearchingQuery('')
     setLiveSources([])
     setLiveReview(null)
+    setLiveDraft(null)
     setError('')
     try {
       const res = await fetch(`/api/admin/scribe/entries/${entryId}/turn`, {
@@ -183,6 +242,10 @@ export default function ScribeChatPage() {
           } else if (ev.t === 'review') {
             setLiveReview(ev.v as Review)
             setRightTab('review') // surface the cold read as soon as it lands
+          } else if (ev.t === 'draft') {
+            const v = ev.v as { text: string | null; mode: string; applied: number; failed: number }
+            if (v.text) setLiveDraft(v.text)
+            if (v.failed) showToast(`${v.failed} of Scribe's edits could not be placed — see the note in the conversation`)
           } else if (ev.t === 'error') {
             throw new Error(ev.v as string)
           } else if (ev.t === 'done') {
@@ -202,6 +265,7 @@ export default function ScribeChatPage() {
       setStreaming(false)
       setStreamText('')
       setSearchingQuery('')
+      setLiveDraft(null)
     }
   }, [loadEntry, loadEntries])
 
@@ -251,7 +315,7 @@ export default function ScribeChatPage() {
   const draftTrail = useMemo(() => {
     const out: { key: string; role: 'user' | 'scribe'; text: string }[] = []
     for (const m of messages) {
-      const d = extractDraft(m.content)
+      const d = m.draft_text ?? extractDraft(m.content)
       if (d) out.push({ key: m.id, role: m.role, text: d })
     }
     return out
@@ -259,8 +323,9 @@ export default function ScribeChatPage() {
 
   const committedDraft = draftTrail.length ? draftTrail[draftTrail.length - 1].text : null
   const streamingDraft = streaming ? partialDraft(streamText) : null
+  const streamingEdits = streaming ? countEditBlocks(streamText) : 0
   const viewedSnapshot = viewedDraftId ? drafts.find(d => d.id === viewedDraftId) ?? null : null
-  const draftShown = viewedSnapshot?.draft_text ?? streamingDraft ?? committedDraft
+  const draftShown = viewedSnapshot?.draft_text ?? liveDraft ?? streamingDraft ?? committedDraft
 
   // What the shown draft gets compared against in the changes view. First entry
   // is the default: the state the draft was in immediately before this one.
@@ -375,6 +440,29 @@ export default function ScribeChatPage() {
     showToast('Draft copied — retype by hand before publishing')
   }
 
+  // A .docx of the draft, built on demand; the library loads on first use.
+  async function exportWord() {
+    if (!draftShown) return
+    try {
+      const [{ Packer }, { buildDraftDocument, docxFilename }] = await Promise.all([
+        import('docx'),
+        import('@/lib/scribe/docx-export'),
+      ])
+      const blob = await Packer.toBlob(buildDraftDocument(entry?.title ?? null, draftShown))
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = docxFilename(entry?.title ?? null)
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      showToast('Word document downloaded — retype by hand before publishing')
+    } catch (e) {
+      showToast(e instanceof Error ? `Word export failed: ${e.message}` : 'Word export failed')
+    }
+  }
+
   const canChat = !!selectedId && messages.length > 0
   const lastMessage = messages[messages.length - 1]
   const needsOpening =
@@ -436,10 +524,21 @@ export default function ScribeChatPage() {
     onSnapshot: snapshot,
     onFinalize: finalize,
     onExport: exportDraft,
+    onExportWord: exportWord,
     onSaveToLog: saveToLog,
     onApplyRevision: applyRevision,
     applying,
   }
+
+  const gridColumns = [
+    layout.entriesOpen ? `${layout.entries}px` : `${RAIL}px`,
+    '6px',
+    `${layout.convo}px`,
+    '6px',
+    'minmax(0, 1fr)',
+    '6px',
+    layout.sourcesOpen ? `${layout.sources}px` : `${RAIL}px`,
+  ].join(' ')
 
   return (
     <div className={styles.wrap}>
@@ -458,52 +557,66 @@ export default function ScribeChatPage() {
         <DraftWorkspace
           {...workspaceProps}
           fullscreen
+          pane={false}
           onToggleFullscreen={() => setFullscreen(false)}
         />
       )}
 
-      <div className={styles.grid}>
+      <div className={styles.grid} style={{ gridTemplateColumns: gridColumns }}>
         {/* ── Entries ── */}
-        <div className={`${styles.pane} ${styles.sidebar}`}>
-          <div className={styles.paneHead}>
-            Entries
-            <button className={admin.ghostBtn} onClick={() => setShowNew(s => !s)}>
-              {showNew ? 'Cancel' : 'New entry'}
-            </button>
-          </div>
-          {showNew && (
-            <div className={styles.newEntry}>
-              <input
-                className={styles.newEntryTitle}
-                placeholder="Title (optional)…"
-                value={newTitle}
-                onChange={e => setNewTitle(e.target.value)}
-              />
-              <textarea
-                className={styles.newEntryText}
-                placeholder="Paste the handwritten journal fragment, verbatim…"
-                value={newText}
-                onChange={e => setNewText(e.target.value)}
-              />
-              <button className={admin.primaryBtn} onClick={createEntry} disabled={creating || !newText.trim()}>
-                {creating ? 'Starting…' : 'Start the conversation'}
-              </button>
+        {layout.entriesOpen ? (
+          <div className={`${styles.pane} ${styles.sidebar}`}>
+            <div className={styles.paneHead}>
+              Entries
+              <span className={styles.headBtns}>
+                <button className={admin.ghostBtn} onClick={() => setShowNew(s => !s)}>
+                  {showNew ? 'Cancel' : 'New entry'}
+                </button>
+                <button className={styles.railBtn} onClick={() => setLayout(l => ({ ...l, entriesOpen: false }))} title="Hide the entries">‹</button>
+              </span>
             </div>
-          )}
-          <div className={styles.paneBody}>
-            {entries.length === 0 && <p className={styles.draftEmpty}>No entries yet.</p>}
-            {entries.map(e => (
-              <button
-                key={e.id}
-                className={`${styles.entryItem} ${e.id === selectedId ? styles.entryItemOn : ''}`}
-                onClick={() => setSelectedId(e.id)}
-              >
-                {e.title || e.raw_text.slice(0, 48) + (e.raw_text.length > 48 ? '…' : '')}
-                <span className={styles.entryDate}>{new Date(e.updated_at).toLocaleDateString()}</span>
-              </button>
-            ))}
+            {showNew && (
+              <div className={styles.newEntry}>
+                <input
+                  className={styles.newEntryTitle}
+                  placeholder="Title (optional)…"
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                />
+                <textarea
+                  className={styles.newEntryText}
+                  placeholder="Paste the handwritten journal fragment, verbatim…"
+                  value={newText}
+                  onChange={e => setNewText(e.target.value)}
+                />
+                <button className={admin.primaryBtn} onClick={createEntry} disabled={creating || !newText.trim()}>
+                  {creating ? 'Starting…' : 'Start the conversation'}
+                </button>
+              </div>
+            )}
+            <div className={styles.paneBody}>
+              {entries.length === 0 && <p className={styles.draftEmpty}>No entries yet.</p>}
+              {entries.map(e => (
+                <button
+                  key={e.id}
+                  className={`${styles.entryItem} ${e.id === selectedId ? styles.entryItemOn : ''}`}
+                  onClick={() => setSelectedId(e.id)}
+                >
+                  {e.title || e.raw_text.slice(0, 48) + (e.raw_text.length > 48 ? '…' : '')}
+                  <span className={styles.entryDate}>{new Date(e.updated_at).toLocaleDateString()}</span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : (
+          <button className={styles.rail} onClick={() => setLayout(l => ({ ...l, entriesOpen: true }))} title="Show the entries">
+            <span>Entries ({entries.length})</span>
+          </button>
+        )}
+        <div
+          className={`${styles.resizer} ${layout.entriesOpen ? '' : styles.resizerOff}`}
+          onPointerDown={e => layout.entriesOpen && startResize('entries', e)}
+        />
 
         {/* ── Conversation ── */}
         <div className={`${styles.pane} ${styles.convo}`}>
@@ -532,12 +645,17 @@ export default function ScribeChatPage() {
                 <div className={`${styles.msg} ${styles.msgScribe}`}>
                   <div className={styles.msgRole}>Scribe</div>
                   {streamText
-                    ? commentaryOf(streamText) + (partialDraft(streamText) !== null ? '\n\n⟨drafting — see the draft pane⟩' : '')
+                    ? commentaryOf(streamText) +
+                      (partialDraft(streamText) !== null
+                        ? '\n\n⟨drafting — see the draft pane⟩'
+                        : streamingEdits
+                          ? `\n\n⟨editing ${streamingEdits} passage${streamingEdits === 1 ? '' : 's'} — the draft updates when the turn lands⟩`
+                          : '')
                     : '…'}
                 </div>
               )}
               {searchingQuery && (
-                <div className={styles.searchNote}>searching the corpus: “{searchingQuery}”</div>
+                <div className={styles.searchNote}>searching: “{searchingQuery}”</div>
               )}
               {needsOpening && (
                 <button className={admin.ghostBtn} onClick={() => runTurn(selectedId!)}>
@@ -563,30 +681,46 @@ export default function ScribeChatPage() {
             </button>
           </div>
         </div>
+        <div className={styles.resizer} onPointerDown={e => startResize('convo', e)} />
 
-        {/* ── Draft + sources ── */}
-        <div className={styles.rightCol}>
+        {/* ── Draft ── */}
+        <div className={styles.draftCol} ref={draftColRef}>
           {!fullscreen && (
             <DraftWorkspace
               {...workspaceProps}
               fullscreen={false}
+              pane={paneWide}
               onToggleFullscreen={() => setFullscreen(true)}
             />
           )}
+        </div>
+        <div
+          className={`${styles.resizer} ${layout.sourcesOpen ? '' : styles.resizerOff}`}
+          onPointerDown={e => layout.sourcesOpen && startResize('sources', e)}
+        />
 
+        {/* ── Sources ── */}
+        {layout.sourcesOpen ? (
           <div className={`${styles.pane} ${styles.sourcePane}`}>
-            <div className={styles.paneHead}>Sources · this turn</div>
+            <div className={styles.paneHead}>
+              Sources · this turn
+              <button className={styles.railBtn} onClick={() => setLayout(l => ({ ...l, sourcesOpen: false }))} title="Hide the sources">›</button>
+            </div>
             <div className={styles.paneBody}>
               <SourceList
                 sources={latestSources}
                 draftText={draftShown}
                 highlight={highlight}
                 onHighlight={h => { setHighlight(h); if (h) setRightTab('draft') }}
-                emptyNote="Corpus passages Scribe retrieves each turn land here."
+                emptyNote="Corpus, log, and Cabinet passages Scribe retrieves each turn land here."
               />
             </div>
           </div>
-        </div>
+        ) : (
+          <button className={styles.rail} onClick={() => setLayout(l => ({ ...l, sourcesOpen: true }))} title="Show the sources">
+            <span>Sources ({latestSources.length})</span>
+          </button>
+        )}
       </div>
     </div>
   )

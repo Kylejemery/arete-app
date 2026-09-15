@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin, adminUserId } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { runScribeTurn, extractSnapshotIntent, TurnSource } from '@/lib/scribe/chat'
+import { runScribeTurn, extractSnapshotIntent, extractDraft, TurnSource } from '@/lib/scribe/chat'
 import { reviewDraft } from '@/lib/scribe/review'
+import { describeFailures, resolveTurnDraft } from '@/lib/scribe/edits'
 
 export const dynamic = 'force-dynamic'
 // Same budget as the pipeline's Opus draft stage — a turn can be a full-draft
@@ -44,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: thread, error: threadError } = await admin
     .from('scribe_messages')
-    .select('role, content')
+    .select('role, content, draft_text')
     .eq('entry_id', id)
     .order('created_at', { ascending: true })
   if (threadError) return NextResponse.json({ error: threadError.message }, { status: 500 })
@@ -53,6 +54,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       { error: 'Thread must end with a user message before Scribe can take a turn.' },
       { status: 400 }
     )
+  }
+
+  // The draft as it stands: the latest turn (Scribe's or Kyle's hand revision)
+  // that produced one. Newer rows store it in draft_text; older rows carry it
+  // inside the message.
+  let workingDraft: string | null = null
+  for (let i = thread.length - 1; i >= 0 && workingDraft === null; i--) {
+    const m = thread[i] as { content: string; draft_text?: string | null }
+    workingDraft = m.draft_text ?? extractDraft(m.content)
   }
 
   const encoder = new TextEncoder()
@@ -77,7 +87,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // searchable from the turn, keyed to his own user id.
         const cabinetUserId = await adminUserId()
 
-        const { text, sources } = await runScribeTurn(
+        const { text: raw, sources } = await runScribeTurn(
           thread as { role: 'user' | 'scribe'; content: string }[],
           {
             onText: v => emit('text', v),
@@ -85,8 +95,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             onSources: (v: TurnSource[]) => emit('sources', v),
           },
           voice,
-          cabinetUserId
+          cabinetUserId,
+          workingDraft
         )
+
+        // What the draft is now: the turn's complete <draft>, or its edits
+        // applied to the draft it started from. Edits that failed to land are
+        // reported in the stored turn, where Kyle reads it and Scribe sees it
+        // next turn.
+        const resolved = resolveTurnDraft(raw, workingDraft)
+        const changed = resolved.mode === 'full' || (resolved.mode === 'edits' && resolved.applied > 0)
+        const newDraft = changed ? resolved.draft : null
+        const text = raw + describeFailures(resolved.failed)
+        emit('draft', {
+          text: newDraft,
+          mode: resolved.mode,
+          applied: resolved.applied,
+          failed: resolved.failed.length,
+        })
 
         const { data: saved, error: saveError } = await admin
           .from('scribe_messages')
@@ -95,6 +121,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             role: 'scribe',
             content: text,
             sources_used: sources.length ? sources : null,
+            draft_text: newDraft,
           })
           .select('id')
           .single()
@@ -104,7 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         // Conversational save intent — snapshot as a side effect of the turn.
         let snapshot: { id: string; stage: string } | null = null
-        const intent = extractSnapshotIntent(text)
+        const intent = extractSnapshotIntent(raw, newDraft ?? workingDraft)
         if (intent) {
           // The final handoff triggers one cold outside read — a different model,
           // blind to this conversation, scoring the finished draft. It runs

@@ -26,6 +26,10 @@ export type Message = {
   role: 'user' | 'scribe'
   content: string
   sources_used: Source[] | null
+  // The working draft after this turn (a complete <draft>, or the result of
+  // its edits). Null when the turn changed nothing; absent on rows written
+  // before edits existed, which carry the draft inside content.
+  draft_text?: string | null
   created_at: string
 }
 

@@ -114,3 +114,50 @@ before it reaches the journal.
   passes Kyle's matching lines to `draft()` as a non-citable block.
 
 The prose rules in both modes now come from one list, `docs/machine-tells.md`.
+
+## Edits in place, the wide draft, and Word export (added 2026-09-15)
+
+**Edits instead of rewrites.** A turn no longer has to re-emit the whole
+essay. The current working draft rides at the end of Kyle's latest message
+inside `<working_draft>` tags (added at call time, never persisted), and
+Scribe answers with either a complete `<draft>` (the opening middle draft,
+the full draft, the final, or a restructure that touches most paragraphs) or
+one or more edit blocks:
+
+```
+<edit>
+<find>a passage copied verbatim from the working draft</find>
+<replace>the new text; empty to cut the passage</replace>
+</edit>
+```
+
+The turn route applies them (`src/lib/scribe/edits.ts`: exact match first,
+then tolerant of whitespace, curly quotes, and dashes, mapped back to the
+draft's own characters), stores the result in the new
+`scribe_messages.draft_text` column (migration `scribe_messages_draft_text`),
+and streams a `draft` event so the pane updates when the turn lands. An edit
+whose passage does not match is dropped and named in a note appended to the
+stored turn, which Kyle reads in the conversation and Scribe sees next turn.
+Scoped revisions are now one edit block by construction. The changes view
+diffs consecutive draft states, so an edits turn shows exactly what moved.
+Older rows carry the draft inside `content`; readers fall back to that.
+Checks: `npx tsx src/scripts/scribe-edits-smoke.ts`.
+
+**The wide draft.** The chat page takes the full viewport: entries | conversation
+| draft | sources, with draggable dividers, widths remembered in the browser,
+and the entries and sources panes collapsible to a rail. The draft column
+takes whatever is left and reads at essay size once it is wide enough.
+
+**Editing and formatting.** Each block still opens in place; *Edit draft*
+opens the whole essay in one editor. Both carry a formatting toolbar (bold,
+italic, three heading levels, block quote, bulleted and numbered lists, plain
+paragraph, section rule, a YOUR TURN gap; ⌘B and ⌘I) that writes markdown, so
+the formatting is structural: Scribe reads and edits the same text, the
+changes view diffs it, and the export renders it. `src/lib/scribe/format.ts`.
+
+**Word export.** *Word* in the draft pane downloads a `.docx` built from the
+same parsed blocks (`src/lib/scribe/docx-export.ts`, the `docx` package,
+loaded on demand): title, headings, paragraphs, italic block quotes, real
+bulleted and numbered lists, rules, highlighted YOUR TURN gaps, and the
+standing "Developed with Arete" note. *Copy* is the markdown clipboard export
+as before. Nothing publishes; the hand-retype gate stands.

@@ -8,6 +8,7 @@
 // workspace; `compact` only changes the type scale.
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react'
+import MarkdownEditor from './MarkdownEditor'
 import {
   blockSource,
   highlightSpans,
@@ -130,49 +131,18 @@ function BlockBody({
   }
 }
 
-function EditableBlock({
-  source,
-  onSave,
-  onCancel,
-}: {
-  source: string
-  onSave: (next: string) => void
-  onCancel: () => void
-}) {
-  const [buffer, setBuffer] = useState(source)
-  return (
-    <div className={styles.blockEditor}>
-      <textarea
-        className={styles.blockTextarea}
-        value={buffer}
-        autoFocus
-        rows={Math.min(20, Math.max(3, buffer.split('\n').length + 2))}
-        onChange={e => setBuffer(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Escape') { e.preventDefault(); onCancel() }
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onSave(buffer) }
-        }}
-      />
-      <div className={styles.blockEditorBtns}>
-        <button className={styles.hunkBtn} onClick={() => onSave(buffer)} disabled={buffer === source}>
-          Save
-        </button>
-        <button className={styles.hunkBtn} onClick={onCancel}>Cancel</button>
-        <span className={styles.blockEditorHint}>⌘↵ to save · Esc to cancel</span>
-      </div>
-    </div>
-  )
-}
-
 export default function ProseView({
   text,
   compact = false,
+  pane = false,
   highlight = null,
   scrollKey,
   onEditBlock,
 }: {
   text: string
   compact?: boolean
+  /** The wide draft column: essay measure and size, short of the full page. */
+  pane?: boolean
   highlight?: Highlight | null
   /** Changing this scrolls the first highlighted span into view. */
   scrollKey?: string | number
@@ -202,10 +172,10 @@ export default function ProseView({
   }
 
   return (
-    <div className={`${styles.prose} ${compact ? styles.proseCompact : ''}`}>
+    <div className={`${styles.prose} ${compact ? styles.proseCompact : ''} ${pane ? styles.prosePane : ''}`}>
       {blocks.map((b, i) =>
         editing === i && onEditBlock ? (
-          <EditableBlock
+          <MarkdownEditor
             key={i}
             source={blockSource(text, b)}
             onSave={next => { setEditing(null); onEditBlock(b, next) }}

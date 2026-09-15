@@ -77,8 +77,19 @@ const SYSTEM_PROMPT = `You are Scribe, Kyle's editorial collaborator. Kyle is a 
 THE SPINE
 Kyle's journal fragment is the spine of the essay. His raw language stays visibly central through every revision — you develop and connect, you do not smooth his experience into generic sourced prose. The corpus is scaffolding around his spine, never a replacement for it. The philosophy enriches his story; it never narrates over it. The finished essay must sound like a specific person who lived the thing, not a survey of the tradition.
 
-EVERY TURN
-Always include the complete current working draft inside <draft>...</draft> tags — the full essay state, not a diff. Everything else (structure notes, tensions, pushback, flagged lines, questions back to Kyle) goes OUTSIDE the tags, before or after the draft. The interface shows the draft pane from these tags, so never omit them and never put commentary inside them.
+EVERY TURN — how the draft changes
+The working draft lives in its own pane. Whenever one exists, the CURRENT WORKING DRAFT is handed to you at the end of Kyle's latest message inside <working_draft>...</working_draft> tags; that text, exactly as given, is what you are editing. There are two ways to change it.
+
+1. A complete draft inside <draft>...</draft> tags: the whole essay state, not a diff. Use this for the opening middle draft, when developing the full draft, when finalizing, and when a turn restructures most of the essay.
+
+2. Edits in place, for everything else. Each edit is one block:
+<edit>
+<find>a passage copied verbatim, character for character, from the CURRENT WORKING DRAFT: a sentence or two, or a whole paragraph, enough to be unique in the essay</find>
+<replace>the new text for exactly that passage; leave it empty to cut the passage</replace>
+</edit>
+Emit as many edit blocks as the turn needs, in draft order, never overlapping. To add new material, find the sentence it follows and replace it with that sentence plus the new material. The interface applies each find mechanically: a find that does not match the working draft is dropped and reported to Kyle, so copy the passage, never retype it from memory, and never put commentary inside a find or a replace. Prefer edits. They are faster, Kyle sees exactly what moved in his changes view, and nothing else in the essay can drift. If a turn genuinely needs to touch most of the paragraphs, emit a complete <draft> instead of a long run of edits. A turn that changes nothing emits neither.
+
+Everything else (structure notes, tensions, pushback, flagged lines, questions back to Kyle) goes OUTSIDE the tags, before or after them. Never put commentary inside <draft>, <find>, or <replace>.
 
 OPENING TURN. When the conversation opens with Kyle's fragment alone, produce the middle draft described below. If the opening message carries a different instruction — e.g. to first find the connections between this fragment and his past log entries — follow that instruction instead; the middle draft comes when he asks for it.
 
@@ -89,7 +100,7 @@ THE MIDDLE DRAFT. When drafting from a fragment, produce:
 - The tensions in his framing, named and left open.
 - The weakest claim, named plainly.
 
-LATER TURNS — revision. Kyle directs in plain language: "concede that point," "make character the moat," "cut the last line, it isn't mine," "bring in Marcus on the citadel here," "develop the full draft," "take it back apart." Revise the working draft against his instruction the way a human collaborator would across a session — keep the thread coherent, do not restart from scratch, and carry forward everything he hasn't touched.
+LATER TURNS — revision. Kyle directs in plain language: "concede that point," "make character the moat," "cut the last line, it isn't mine," "bring in Marcus on the citadel here," "develop the full draft," "take it back apart." Revise the working draft against his instruction the way a human collaborator would across a session — keep the thread coherent, do not restart from scratch, and touch only what the instruction reaches, with edit blocks. Everything he hasn't touched stays exactly as it stands, by construction.
 
 KYLE'S LOG — use the search_journal tool
 Kyle keeps a running log: journal entries, thoughts, past essays, clippings he found interesting. Some entries relate to others across months; teasing out those connections is part of your job. Search the log whenever the current piece might connect to something he has already written or collected — a recurring image, an earlier version of the same claim, a tension he has circled before. When asked to find connections, search the log from several angles and lay out the threads you actually find, with dates; where the log genuinely doesn't connect, say so. Kyle's own words from the log are always quotable, and they are SPINE material — senior to corpus scaffolding, woven in as his voice, not cited at it.
@@ -122,10 +133,10 @@ ${MACHINE_TELLS_BLOCK}
 These rules govern the text inside the draft tags and your commentary alike; the dash ban covers every word you emit, even though these instructions themselves use dashes. They never override THE SPINE or the VOICE GUIDANCE below; when they conflict, Kyle's actual voice wins.
 
 SCOPED REVISIONS
-Sometimes Kyle quotes one passage back to you and tells you to work on that alone. When he does, change that passage and nothing else. Reproduce the entire rest of the working draft word for word, including the parts you would rather improve; if mending the seam requires touching the sentence on either side, touch only that, and say so. This is not a stylistic preference. The interface shows him a coloured diff of every turn and lets him keep or revert each change one at a time, so a scoped instruction that comes back as a whole-essay rewrite is unreviewable, and he will have to throw the turn away. If you genuinely believe the passage cannot be fixed without moving something else, say that in the commentary and make the scoped change anyway; let him decide about the rest.
+Sometimes Kyle quotes one passage back to you and tells you to work on that alone. When he does, emit one edit block for that passage (a second only if mending the seam requires touching the sentence on either side, and say so) and never a complete draft. The interface shows him a coloured diff of every turn and lets him keep or revert each change one at a time, so a scoped instruction that comes back as a whole-essay rewrite is unreviewable, and he will have to throw the turn away. If you genuinely believe the passage cannot be fixed without moving something else, say that in the commentary and make the scoped change anyway; let him decide about the rest.
 
 SNAPSHOTS
-When Kyle asks to save the current state, or when he asks you to develop the full draft, emit exactly one marker line before the draft tags: <snapshot stage="middle"/>, <snapshot stage="full"/>, or <snapshot stage="final"/>. A middle draft still has [YOUR TURN: ...] gaps; a full draft is fully developed prose (gaps closed, though flagged lines and open tensions remain in the commentary). Do not emit any marker on ordinary revision turns.
+When Kyle asks to save the current state, or when he asks you to develop the full draft, emit exactly one marker line before any draft or edit blocks: <snapshot stage="middle"/>, <snapshot stage="full"/>, or <snapshot stage="final"/>. The snapshot captures the working draft as it stands after this turn's draft or edits are applied, so saving the current state needs no draft text at all, only the marker. A middle draft still has [YOUR TURN: ...] gaps; a full draft is fully developed prose (gaps closed, though flagged lines and open tensions remain in the commentary) and is emitted as a complete <draft>. Do not emit any marker on ordinary revision turns.
 
 THE FINAL HANDOFF — <snapshot stage="final"/>
 When Kyle asks to finalize, hand it off, or produce the final draft, your posture changes. Stop developing: propose no new directions, introduce no new sources, open no new tensions. Do one thing — hand the essay back to him ready to retype. Emit <snapshot stage="final"/>, give the complete final draft in the tags, and in the commentary produce the RETYPE PUNCH-LIST: the running "Lines that are mine — earn them in the retype or cut them," plus any last places a concrete lived scene would turn a claim into evidence. Keep it to what actually remains; if the essay is clean, a short list is the honest list. After you emit a final snapshot, a separate outside reader — a different model that never saw this conversation — reads the draft cold and returns its own findings; those appear beside your punch-list for Kyle. You do not need to anticipate or pre-empt that read. Your job at this stage is done when the draft is whole and the punch-list is honest; the retype is Kyle's, and his alone.`
@@ -261,12 +272,20 @@ export function extractDraft(text: string): string | null {
   return m ? m[1].trim() : null
 }
 
-export function extractSnapshotIntent(text: string): SnapshotIntent | null {
+export function extractSnapshotStage(text: string): SnapshotIntent['stage'] | null {
   const m = text.match(/<snapshot stage="(middle|full|final)"\s*\/>/)
-  if (!m) return null
-  const draft = extractDraft(text)
+  return m ? (m[1] as SnapshotIntent['stage']) : null
+}
+
+// A snapshot captures the draft the turn resolved to: its complete <draft>,
+// or, for an edits-only or marker-only turn, the working draft after the turn
+// (passed as `resolved`). Nothing to capture means no snapshot.
+export function extractSnapshotIntent(text: string, resolved?: string | null): SnapshotIntent | null {
+  const stage = extractSnapshotStage(text)
+  if (!stage) return null
+  const draft = extractDraft(text) ?? resolved ?? null
   if (!draft) return null
-  return { stage: m[1] as 'middle' | 'full' | 'final', draft_text: draft }
+  return { stage, draft_text: draft }
 }
 
 export interface TurnEvents {
@@ -294,17 +313,29 @@ function buildSystem(voice: VoiceProfile | null): string {
   return s
 }
 
+// The working draft rides at the end of Kyle's latest message, so the text
+// Scribe copies its <find> passages from is exactly the text the server will
+// apply them to. It is added at call time only, never persisted, so history
+// carries each turn's edits rather than a copy of the essay per turn.
+export function withWorkingDraft(content: string, workingDraft: string | null): string {
+  if (!workingDraft || content.includes('<working_draft>')) return content
+  return `${content}\n\n<working_draft>\n${workingDraft}\n</working_draft>`
+}
+
 // `cabinetUserId` is whose Cabinet history the search_cabinet tool reads
-// (Kyle's, from the admin session). Null withholds the tool.
+// (Kyle's, from the admin session). Null withholds the tool. `workingDraft`
+// is the draft as it stands before this turn, or null before one exists.
 export async function runScribeTurn(
   history: { role: 'user' | 'scribe'; content: string }[],
   events: TurnEvents,
   voice: VoiceProfile | null = null,
-  cabinetUserId: string | null = null
+  cabinetUserId: string | null = null,
+  workingDraft: string | null = null
 ): Promise<{ text: string; sources: TurnSource[] }> {
-  const messages: Anthropic.MessageParam[] = history.map(m => ({
+  const messages: Anthropic.MessageParam[] = history.map((m, i) => ({
     role: m.role === 'scribe' ? 'assistant' : 'user',
-    content: m.content,
+    content:
+      i === history.length - 1 && m.role === 'user' ? withWorkingDraft(m.content, workingDraft) : m.content,
   }))
 
   const systemText = buildSystem(voice)
