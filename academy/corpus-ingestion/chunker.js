@@ -674,7 +674,7 @@ function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = fals
     j++;
     extra++;
   }
-  title = title.replace(/\[\d+\]/g, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').replace(/[.]+$/, '').trim().slice(0, 240);
+  title = title.replace(/\[\d+\]/g, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').replace(/[\s.]+$/, '').trim().slice(0, 240);
   if (isAllCapsLine(title)) title = titleCaseHeading(title);
   return { title, last: j };
 }
@@ -767,7 +767,7 @@ function parseHeaded(text, options = {}) {
       if (italicTitle || shortTitle) {
         // A chapter heading printed as a numbered paragraph.
         const number = headingNumber(paraMarker);
-        section = { number, part, title: txt.replace(/[.]+$/, '').slice(0, 240), paragraphs: [], named: true, fromNumbered: true, explicit: true };
+        section = { number, part, title: txt.replace(/[\s.]+$/, '').slice(0, 240), paragraphs: [], named: true, fromNumbered: true, explicit: true };
         if (number > sectionCounter) sectionCounter = number;
         book.sections.push(section);
       } else {
