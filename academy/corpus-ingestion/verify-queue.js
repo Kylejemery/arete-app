@@ -76,7 +76,7 @@ function reportStrategy(body, strategy, author, work) {
   if (strategy === 'headed' || strategy === 'numbered') {
     // Every line the parser would take as a heading, so a misread shows up
     // here (a cross-reference opening a book, chapters not matched at all).
-    const { matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg } = require('./chunker');
+    const { matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg, findBodyStart } = require('./chunker');
     const lines = body.split('\n').map(l => unmarkGutenberg(l.trim()));
     const heads = [];
     lines.forEach((l, i) => {
@@ -90,8 +90,7 @@ function reportStrategy(body, strategy, author, work) {
     // The raw lines where the text proper begins, and the standalone
     // all-caps lines after it: the two things needed to see how this file
     // actually prints its headings when the matchers above miss them.
-    const firstBook = heads.find(h => h.kind === 'BOOK' || h.kind === 'PART');
-    const bodyStart = firstBook ? Math.max(...heads.filter(h => h.kind === firstBook.kind && h.l === firstBook.l).map(h => h.i)) : (heads[0] ? heads[0].i : 0);
+    const bodyStart = Math.max(0, findBodyStart(lines));
     console.log(`  text opens at line ${bodyStart}:`);
     lines.slice(bodyStart, bodyStart + 30).forEach((l, k) => console.log(`    ${String(bodyStart + k).padStart(6)}  ${l.slice(0, 90)}`));
     const caps = [];
@@ -101,7 +100,7 @@ function reportStrategy(body, strategy, author, work) {
     }
     console.log(`  standalone all-caps lines after the opening (first ${caps.length}):`);
     for (const c of caps) console.log(`    ${c}`);
-    const plan = planHeaded(body);
+    const plan = planHeaded(body, strategy);
     if (!plan) { console.log(`  ✗ ${strategy}: no BOOK or section heading found; the agent would fall back to paragraph windows`); return; }
     console.log(`  ${strategy}: ${plan.books.length} book(s)`);
     for (const b of plan.books) {

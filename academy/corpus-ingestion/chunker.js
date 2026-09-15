@@ -690,35 +690,47 @@ function unmarkGutenberg(line) {
     .trim();
 }
 
-function parseHeaded(text) {
-  const lines = text.split('\n').map(l => unmarkGutenberg(l.trim()));
-
-  // Body starts at the LAST heading that carries the volume's lowest book
-  // number: a contents list repeats "BOOK I." before the text does (in any
-  // spelling), and the text's own is the later one. A work with no book
-  // headings starts at the last occurrence of its first section heading.
+// Where the text proper begins: the LAST heading carrying the volume's
+// lowest book number (a contents list repeats "BOOK I." before the text
+// does, in any spelling), or, with no book headings, the last occurrence of
+// the first section heading. Returns -1 when the text has neither.
+function findBodyStart(lines) {
   let bookHeads = [];
   lines.forEach((l, idx) => {
     const h = matchBookHeading(l);
     if (h) bookHeads.push({ idx, number: h.number });
   });
   if (bookHeads.length === 0) {
-    // PART as the top level (no BOOK headings anywhere).
     lines.forEach((l, idx) => {
       const h = matchPartHeading(l);
       if (h) bookHeads.push({ idx, number: h.number });
     });
   }
-  const implicitBook = bookHeads.length === 0;
-  let start;
-  if (implicitBook) {
+  if (bookHeads.length === 0) {
     const firstIdx = lines.findIndex(l => matchSectionHeading(l));
-    if (firstIdx < 0) return null;
-    start = lines.lastIndexOf(lines[firstIdx]);
-  } else {
-    const lowest = Math.min(...bookHeads.map(h => h.number));
-    start = bookHeads.filter(h => h.number === lowest).pop().idx;
+    return firstIdx < 0 ? -1 : lines.lastIndexOf(lines[firstIdx]);
   }
+  const lowest = Math.min(...bookHeads.map(h => h.number));
+  return bookHeads.filter(h => h.number === lowest).pop().idx;
+}
+
+// options.chapterFromNumbered (the headed strategy): in a book that has no
+// chapter-style heading of its own, a short numbered paragraph followed by
+// unnumbered text is a chapter heading. Dods's City of God prints every
+// chapter that way: "1. _Of the adversaries of the name of Christ, …_" and
+// then the chapter's paragraphs. An italic-wrapped numbered paragraph is
+// taken as a heading whatever its length.
+function parseHeaded(text, options = {}) {
+  const rawLines = text.split('\n').map(l => l.trim());
+  const lines = rawLines.map(unmarkGutenberg);
+
+  // Body starts at the LAST heading that carries the volume's lowest book
+  // number: a contents list repeats "BOOK I." before the text does (in any
+  // spelling), and the text's own is the later one. A work with no book
+  // headings starts at the last occurrence of its first section heading.
+  const start = findBodyStart(lines);
+  if (start < 0) return null;
+  const implicitBook = !lines.some(l => matchBookHeading(l) || matchPartHeading(l));
 
   const books = [];
   let book = implicitBook ? { number: null, title: '', parts: false, sections: [] } : null;
@@ -732,12 +744,36 @@ function parseHeaded(text) {
   let paraMarker = null;
   let pendingMarker = null;
   const rejectedBooks = []; // book headings out of sequence, for structureWarnings
+  let paraItalic = false;   // the numbered paragraph opened with "_" (Dods's chapter titles)
+  let paraRawEnd = '';      // last raw line, to see whether the italics close
+
+  // Chapter-style headings of the book's own (CHAPTER, LIFE OF, SONG …), not
+  // the opening divisions and not chapters already read from numbered
+  // paragraphs, which must keep being read once the first one is.
+  function bookHasChapterHeadings() {
+    return book.sections.some(x => x.named && !x.fromNumbered && !/^(Argument|Introduction|Prologue|Proem|Epilogue|Conclusion)$/.test(x.title));
+  }
 
   function flushPara() {
     const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
-    if (txt && section) section.paragraphs.push({ marker: paraMarker, text: txt });
+    if (txt && section) {
+      const italicTitle = paraMarker && paraItalic && /_\.?$/.test(paraRawEnd);
+      const shortTitle = paraMarker && options.chapterFromNumbered && !bookHasChapterHeadings() &&
+        countWords(txt) <= 40 && /^\d+$/.test(paraMarker);
+      if (italicTitle || shortTitle) {
+        // A chapter heading printed as a numbered paragraph.
+        const number = headingNumber(paraMarker);
+        section = { number, part, title: txt.replace(/^_|_$/g, '').replace(/[.]+$/, '').slice(0, 160), paragraphs: [], named: true, fromNumbered: true };
+        if (number > sectionCounter) sectionCounter = number;
+        book.sections.push(section);
+      } else {
+        section.paragraphs.push({ marker: paraMarker, text: txt.replace(/^_|_$/g, '') });
+      }
+    }
     para = [];
     paraMarker = null;
+    paraItalic = false;
+    paraRawEnd = '';
   }
   function openSection(number, title) {
     flushPara();
@@ -832,13 +868,16 @@ function parseHeaded(text) {
       const pm = line.match(/^([IVXLC]+|\d{1,4})\.\s+(\S.*)$/);
       if (pm && headingNumber(pm[1]) != null) {
         paraMarker = pm[1];
+        paraItalic = /^([IVXLC]+|\d{1,4})\.\s+_/.test(rawLines[i]);
         para.push(pm[2]);
+        paraRawEnd = rawLines[i];
         pendingMarker = null;
         continue;
       }
       if (pendingMarker) { paraMarker = pendingMarker; pendingMarker = null; }
     }
     para.push(line);
+    paraRawEnd = rawLines[i];
   }
   flushPara();
   books.rejectedBooks = rejectedBooks;
@@ -874,8 +913,8 @@ function structureWarnings(books) {
   return warnings;
 }
 
-function planHeaded(text) {
-  const books = parseHeaded(text);
+function planHeaded(text, strategy = 'headed') {
+  const books = parseHeaded(text, { chapterFromNumbered: strategy === 'headed' });
   if (!books) return null;
   return {
     warnings: structureWarnings(books),
@@ -892,7 +931,7 @@ function planHeaded(text) {
 }
 
 function chunkHeaded(text, meta) {
-  const books = parseHeaded(text);
+  const books = parseHeaded(text, { chapterFromNumbered: true });
   if (!books) return [];
   const chunks = [];
   let chunkIndex = 0;
@@ -1148,7 +1187,7 @@ const QUEUE_STRATEGIES = ['paragraph', 'headed', 'numbered', 'meditations-long',
 
 module.exports = {
   chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA,
-  matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg,
+  matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg, findBodyStart,
 };
 
 // ---------------------------------------------------------------------------
