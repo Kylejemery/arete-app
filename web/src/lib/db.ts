@@ -298,13 +298,27 @@ export async function saveCabinetConversation(messages: ThreadMessage[]) {
   const userId = await getUserId();
   if (!userId) return null;
 
-  const today = new Date().toISOString().split('T')[0];
-  const { data: existing } = await supabase
+  // One solo Cabinet row per user, updated in place, found the same way
+  // getCabinetConversation reads it (the mobile app's contract since
+  // 2026-09-04). This used to look for a row created today and insert
+  // otherwise, so each day opened a fresh row carrying a copy of the whole
+  // history. The table now also refuses to fork a thread (trigger
+  // cabinet_conversations_one_row_per_thread), but the lookup is still what
+  // keeps the row id stable for a shared-session invite.
+  const { data: existing, error: lookupError } = await supabase
     .from('cabinet_conversations')
     .select('id')
     .eq('user_id', userId)
-    .gte('created_at', today)
+    .is('counselor_slugs', null)
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
+  // A lookup that failed is not a missing row: inserting here would fork
+  // the thread.
+  if (lookupError) {
+    console.error('saveCabinetConversation lookup error:', lookupError);
+    throw new Error(`saveCabinetConversation: ${lookupError.message}`);
+  }
 
   if (existing) {
     const { data, error } = await supabase
@@ -329,14 +343,22 @@ export async function saveCabinetConversation(messages: ThreadMessage[]) {
 export async function getCabinetConversation() {
   const userId = await getUserId();
   if (!userId) return null;
+  // The solo group thread only: a counselor thread or a structured
+  // conversation row must never be read (or then saved over) as the Cabinet.
   const { data, error } = await supabase
     .from('cabinet_conversations')
     .select('*')
     .eq('user_id', userId)
+    .is('counselor_slugs', null)
     .order('updated_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-  if (error) console.error('getCabinetConversation error:', error);
+  // A failed fetch throws rather than looking like an empty thread: every
+  // load-then-save path would otherwise overwrite the history with one line.
+  if (error) {
+    console.error('getCabinetConversation error:', error);
+    throw new Error(`getCabinetConversation: ${error.message}`);
+  }
   return data;
 }
 
@@ -580,12 +602,31 @@ export async function getConversation(id: string): Promise<CabinetConversation |
   return data as CabinetConversation;
 }
 
+// One row per (user, set of counselors), like the mobile app's one row per
+// counselor thread. This used to insert a fresh empty row on every open of the
+// conversation page, which is one of the ways the table filled with copies of
+// the same thread. Reuse the existing row for this exact set of slugs; insert
+// only when there is none.
 export async function createConversation(counselorSlugs: string[]): Promise<CabinetConversation> {
   const userId = await getUserId();
   if (!userId) throw new Error('Not authenticated');
+  const slugs = [...counselorSlugs].sort();
+
+  const { data: existing, error: lookupError } = await supabase
+    .from('cabinet_conversations')
+    .select('*')
+    .eq('user_id', userId)
+    .contains('counselor_slugs', slugs)
+    .containedBy('counselor_slugs', slugs)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (existing) return existing as CabinetConversation;
+
   const { data, error } = await supabase
     .from('cabinet_conversations')
-    .insert({ user_id: userId, counselor_slugs: counselorSlugs, messages: [] })
+    .insert({ user_id: userId, counselor_slugs: slugs, messages: [] })
     .select()
     .single();
   if (error) throw error;
