@@ -17,6 +17,7 @@ interface Book {
 
 interface ReadingSession {
   id: string;
+  bookId?: string; // set by the mobile app; web sessions match books by title
   bookTitle: string;
   startPage: number;
   endPage: number;
@@ -26,15 +27,59 @@ interface ReadingSession {
   dateFormatted: string;
 }
 
+// Focus (pomodoro) lengths in minutes. Same key and shape as the mobile
+// app's lib/focusDurations.ts, kept per browser in localStorage.
+const FOCUS_DURATIONS_KEY = 'arete:focus_durations';
+const MIN_FOCUS_MINUTES = 1;
+const MAX_FOCUS_MINUTES = 180;
+type FocusMode = 'work' | 'break';
+type FocusDurations = Record<FocusMode, number>;
+const DEFAULT_FOCUS_DURATIONS: FocusDurations = { work: 25, break: 5 };
+
+function parseFocusMinutes(raw: string | number | undefined): number | null {
+  const n = typeof raw === 'number' ? raw : parseInt(String(raw ?? '').trim(), 10);
+  if (!Number.isFinite(n)) return null;
+  const whole = Math.round(n);
+  if (whole < MIN_FOCUS_MINUTES || whole > MAX_FOCUS_MINUTES) return null;
+  return whole;
+}
+
+function loadFocusDurations(): FocusDurations {
+  try {
+    const raw = localStorage.getItem(FOCUS_DURATIONS_KEY);
+    if (!raw) return DEFAULT_FOCUS_DURATIONS;
+    const parsed = JSON.parse(raw);
+    return {
+      work: parseFocusMinutes(parsed?.work) ?? DEFAULT_FOCUS_DURATIONS.work,
+      break: parseFocusMinutes(parsed?.break) ?? DEFAULT_FOCUS_DURATIONS.break,
+    };
+  } catch {
+    return DEFAULT_FOCUS_DURATIONS;
+  }
+}
+
+function saveFocusDurations(d: FocusDurations) {
+  try { localStorage.setItem(FOCUS_DURATIONS_KEY, JSON.stringify(d)); } catch { /* ignore */ }
+}
+
+const sessionBelongsTo = (session: ReadingSession, book: Book) =>
+  session.bookId ? session.bookId === book.id : session.bookTitle === book.title;
+
 export default function FocusPage() {
   const router = useRouter();
 
   // Pomodoro timer
   const [mode, setMode] = useState<'work' | 'break'>('work');
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_FOCUS_DURATIONS.work * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Adjustable work/break lengths (minutes).
+  const [durations, setDurations] = useState<FocusDurations>(DEFAULT_FOCUS_DURATIONS);
+  const [showDurationEdit, setShowDurationEdit] = useState(false);
+  const [workMinutesInput, setWorkMinutesInput] = useState(String(DEFAULT_FOCUS_DURATIONS.work));
+  const [breakMinutesInput, setBreakMinutesInput] = useState(String(DEFAULT_FOCUS_DURATIONS.break));
+  const [durationError, setDurationError] = useState('');
 
   // Reading tracker
   const [currentBooks, setCurrentBooks] = useState<Book[]>([]);
@@ -51,7 +96,21 @@ export default function FocusPage() {
   const [startPageInput, setStartPageInput] = useState('');
   const [showEndPageInput, setShowEndPageInput] = useState(false);
   const [endPageInput, setEndPageInput] = useState('');
+  // The start page is shown again (editable) when the session ends, so a
+  // mistyped number can be corrected before it is saved.
+  const [endStartPageInput, setEndStartPageInput] = useState('');
+  // Editing a saved session in the Recent Sessions list.
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editStartPage, setEditStartPage] = useState('');
+  const [editEndPage, setEditEndPage] = useState('');
   const readingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Saved lengths, once on mount (the timer is never running at mount).
+  useEffect(() => {
+    const d = loadFocusDurations();
+    setDurations(d);
+    setTimeLeft(d.work * 60);
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -76,10 +135,10 @@ export default function FocusPage() {
             if (mode === 'work') {
               setSessions(s => s + 1);
               setMode('break');
-              return 5 * 60;
+              return durations.break * 60;
             } else {
               setMode('work');
-              return 25 * 60;
+              return durations.work * 60;
             }
           }
           return t - 1;
@@ -89,7 +148,7 @@ export default function FocusPage() {
       if (intervalRef.current) clearInterval(intervalRef.current);
     }
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [isRunning, mode]);
+  }, [isRunning, mode, durations]);
 
   // Reading timer logic
   useEffect(() => {
@@ -105,7 +164,30 @@ export default function FocusPage() {
 
   const resetTimer = () => {
     setIsRunning(false);
-    setTimeLeft(mode === 'work' ? 25 * 60 : 5 * 60);
+    setTimeLeft(durations[mode] * 60);
+  };
+
+  const openDurationEdit = () => {
+    setWorkMinutesInput(String(durations.work));
+    setBreakMinutesInput(String(durations.break));
+    setDurationError('');
+    setShowDurationEdit(true);
+  };
+
+  const saveDurations = () => {
+    const work = parseFocusMinutes(workMinutesInput);
+    const brk = parseFocusMinutes(breakMinutesInput);
+    if (work == null || brk == null) {
+      setDurationError(`Enter whole minutes between ${MIN_FOCUS_MINUTES} and ${MAX_FOCUS_MINUTES}.`);
+      return;
+    }
+    const next: FocusDurations = { work, break: brk };
+    setDurations(next);
+    saveFocusDurations(next);
+    setShowDurationEdit(false);
+    // An idle timer shows the new length right away; a running one finishes
+    // its current block and uses the new length from the next one.
+    if (!isRunning) setTimeLeft(next[mode] * 60);
   };
 
   const formatTime = (s: number) => {
@@ -160,17 +242,21 @@ export default function FocusPage() {
   const handleReadingStop = () => {
     setIsReadingRunning(false);
     setIsReadingPaused(false);
+    setEndStartPageInput(String(sessionStartPage));
     setShowEndPageInput(true);
   };
 
   const saveReadingSession = async () => {
     const endPage = parseInt(endPageInput);
-    if (!endPage || endPage <= 0 || !selectedBook) return;
-    const pagesRead = Math.max(0, endPage - sessionStartPage);
+    const startPage = parseInt(endStartPageInput);
+    if (!endPage || endPage <= 0 || !startPage || startPage <= 0 || !selectedBook) return;
+    setSessionStartPage(startPage);
+    const pagesRead = Math.max(0, endPage - startPage);
     const session: ReadingSession = {
       id: Date.now().toString(),
+      bookId: selectedBook.id,
       bookTitle: selectedBook.title,
-      startPage: sessionStartPage,
+      startPage,
       endPage,
       pagesRead,
       duration: readingSeconds,
@@ -189,10 +275,45 @@ export default function FocusPage() {
     await upsertReadingData({ reading_sessions: updatedSessions, current_books: updatedBooks });
     setReadingSeconds(0);
     setEndPageInput('');
+    setEndStartPageInput('');
     setShowEndPageInput(false);
   };
 
-  const pomodoroTotal = mode === 'work' ? 25 * 60 : 5 * 60;
+  const openSessionEdit = (s: ReadingSession) => {
+    setEditingSessionId(s.id);
+    setEditStartPage(String(s.startPage ?? ''));
+    setEditEndPage(String(s.endPage ?? ''));
+  };
+
+  const saveSessionEdit = async () => {
+    const target = readingSessions.find(s => s.id === editingSessionId);
+    if (!target) return;
+    const start = parseInt(editStartPage);
+    const end = parseInt(editEndPage);
+    if (!start || start <= 0 || !end || end <= 0) return;
+    const updatedSessions = readingSessions.map(s =>
+      s.id === target.id ? { ...s, startPage: start, endPage: end, pagesRead: Math.max(0, end - start) } : s
+    );
+    setReadingSessions(updatedSessions);
+
+    // If this is the book's latest session, its end page is the book's
+    // current page. Ids are Date.now() strings on both platforms, so the
+    // largest id is the most recent regardless of list order.
+    let updatedBooks = currentBooks;
+    const book = currentBooks.find(b => sessionBelongsTo(target, b));
+    if (book) {
+      const latestId = Math.max(...updatedSessions.filter(s => sessionBelongsTo(s, book)).map(s => Number(s.id) || 0));
+      if (String(latestId) === String(target.id)) {
+        updatedBooks = currentBooks.map(b => (b.id === book.id ? { ...b, currentPage: end } : b));
+        setCurrentBooks(updatedBooks);
+        if (selectedBook?.id === book.id) setSelectedBook({ ...selectedBook, currentPage: end });
+      }
+    }
+    setEditingSessionId(null);
+    await upsertReadingData({ reading_sessions: updatedSessions, current_books: updatedBooks });
+  };
+
+  const pomodoroTotal = durations[mode] * 60;
   const pomodoroElapsed = pomodoroTotal - timeLeft;
 
   return (
@@ -233,7 +354,7 @@ export default function FocusPage() {
               {(['work', 'break'] as const).map(m => (
                 <button
                   key={m}
-                  onClick={() => { setMode(m); setTimeLeft(m === 'work' ? 25 * 60 : 5 * 60); setIsRunning(false); }}
+                  onClick={() => { setMode(m); setTimeLeft(durations[m] * 60); setIsRunning(false); }}
                   className="flex-1 py-2 rounded-lg text-[11px] tracking-[1px] uppercase transition-all"
                   style={
                     mode === m
@@ -241,10 +362,77 @@ export default function FocusPage() {
                       : { color: '#9aa0a6', fontFamily: 'var(--font-mono, monospace)' }
                   }
                 >
-                  {m === 'work' ? '25 min Work' : '5 min Break'}
+                  {m === 'work' ? `${durations.work} min Work` : `${durations.break} min Break`}
                 </button>
               ))}
             </div>
+
+            {/* Adjustable lengths */}
+            {showDurationEdit ? (
+              <div className="flex flex-col gap-2 mb-4">
+                <div className="flex gap-2">
+                  {([['work', workMinutesInput, setWorkMinutesInput], ['break', breakMinutesInput, setBreakMinutesInput]] as const).map(([key, value, set]) => (
+                    <label key={key} className="flex-1 flex flex-col gap-1">
+                      <span
+                        className="text-[10px] tracking-[1.4px] uppercase"
+                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                      >
+                        {key === 'work' ? 'Work (min)' : 'Break (min)'}
+                      </span>
+                      <input
+                        className="px-3 py-2 rounded-xl text-[14px] outline-none"
+                        style={{
+                          background: 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(201,168,76,0.2)',
+                          color: '#e6eef8',
+                          fontFamily: 'var(--font-sans, system-ui)',
+                        }}
+                        type="number"
+                        min={MIN_FOCUS_MINUTES}
+                        max={MAX_FOCUS_MINUTES}
+                        value={value}
+                        onChange={e => set(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && saveDurations()}
+                      />
+                    </label>
+                  ))}
+                </div>
+                {durationError && (
+                  <p className="text-[11px]" style={{ color: '#f87171', fontFamily: 'var(--font-mono, monospace)' }}>{durationError}</p>
+                )}
+                {isRunning && (
+                  <p className="text-[11px] italic" style={{ color: '#9aa0a6', fontFamily: 'var(--font-serif, Georgia, serif)' }}>
+                    The running block finishes at its current length; the new one applies from the next start.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowDurationEdit(false)}
+                    className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                    style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveDurations}
+                    className="rounded-xl px-4 py-1.5 text-[11px] tracking-[1px] uppercase font-bold transition-opacity hover:opacity-90"
+                    style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-end mb-3 -mt-2">
+                <button
+                  onClick={openDurationEdit}
+                  className="text-[10px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                >
+                  Adjust length
+                </button>
+              </div>
+            )}
 
             {/* Orbit timer */}
             <div className="flex justify-center mb-3">
@@ -308,7 +496,9 @@ export default function FocusPage() {
                 style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
               >
                 {selectedBook
-                  ? `${selectedBook.title}${selectedBook.currentPage ? ` · p.${selectedBook.currentPage}` : ''}`
+                  ? `${selectedBook.title}${isReadingRunning
+                      ? ` · from p.${sessionStartPage}`
+                      : selectedBook.currentPage ? ` · p.${selectedBook.currentPage}` : ''}`
                   : 'Select a book below to start'}
               </p>
             </div>
@@ -360,6 +550,25 @@ export default function FocusPage() {
                   className="text-[13px] font-medium"
                   style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
                 >
+                  Started on page
+                </p>
+                <input
+                  className="px-4 py-3 rounded-xl text-[14px] outline-none"
+                  style={{
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(201,168,76,0.2)',
+                    color: '#e6eef8',
+                    fontFamily: 'var(--font-sans, system-ui)',
+                  }}
+                  type="number"
+                  placeholder="Starting page"
+                  value={endStartPageInput}
+                  onChange={e => setEndStartPageInput(e.target.value)}
+                />
+                <p
+                  className="text-[13px] font-medium"
+                  style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                >
                   What page did you stop on?
                 </p>
                 <input
@@ -379,7 +588,7 @@ export default function FocusPage() {
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={() => { setShowEndPageInput(false); setEndPageInput(''); }}
+                    onClick={() => { setShowEndPageInput(false); setEndPageInput(''); setEndStartPageInput(''); }}
                     className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
                     style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
                   >
@@ -560,6 +769,57 @@ export default function FocusPage() {
               </div>
               <div className="flex flex-col gap-3">
                 {readingSessions.slice(-5).reverse().map(s => (
+                  editingSessionId === s.id ? (
+                    <div key={s.id} className="flex flex-col gap-2">
+                      <p
+                        className="text-[14px] font-medium"
+                        style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+                      >
+                        {s.bookTitle} <span className="text-[10px]" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>· {s.dateFormatted}</span>
+                      </p>
+                      <div className="flex gap-2">
+                        {([['Started on page', editStartPage, setEditStartPage], ['Stopped on page', editEndPage, setEditEndPage]] as const).map(([label, value, set]) => (
+                          <label key={label} className="flex-1 flex flex-col gap-1">
+                            <span
+                              className="text-[10px] tracking-[1.4px] uppercase"
+                              style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                            >
+                              {label}
+                            </span>
+                            <input
+                              className="px-3 py-2 rounded-xl text-[14px] outline-none"
+                              style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(201,168,76,0.2)',
+                                color: '#e6eef8',
+                                fontFamily: 'var(--font-sans, system-ui)',
+                              }}
+                              type="number"
+                              value={value}
+                              onChange={e => set(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && saveSessionEdit()}
+                            />
+                          </label>
+                        ))}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setEditingSessionId(null)}
+                          className="text-[11px] tracking-[1px] uppercase transition-opacity hover:opacity-70"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={saveSessionEdit}
+                          className="rounded-xl px-4 py-1.5 text-[11px] tracking-[1px] uppercase font-bold transition-opacity hover:opacity-90"
+                          style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                   <div key={s.id} className="flex items-center justify-between">
                     <div>
                       <p
@@ -573,6 +833,15 @@ export default function FocusPage() {
                         style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}
                       >
                         {s.dateFormatted} · pp.{s.startPage}–{s.endPage}
+                        {' '}
+                        <button
+                          onClick={() => openSessionEdit(s)}
+                          className="underline underline-offset-2 transition-opacity hover:opacity-70"
+                          style={{ color: '#c9a84c' }}
+                          aria-label="Edit this session's page numbers"
+                        >
+                          edit
+                        </button>
                       </p>
                     </div>
                     <div className="text-right">
@@ -590,6 +859,7 @@ export default function FocusPage() {
                       </p>
                     </div>
                   </div>
+                  )
                 ))}
               </div>
             </div>

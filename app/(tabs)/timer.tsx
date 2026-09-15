@@ -18,6 +18,11 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getReadingData, upsertReadingData } from '@/lib/db';
 import { startFocusBlock, stopFocusBlock } from '@/lib/attend';
 import { getPomodoroCountToday, setPomodoroCountToday } from '@/lib/cabinetSignals';
+import {
+  DEFAULT_FOCUS_DURATIONS, MAX_FOCUS_MINUTES, MIN_FOCUS_MINUTES,
+  getFocusDurations, parseFocusMinutes, setFocusDurations,
+  type FocusDurations, type FocusMode,
+} from '@/lib/focusDurations';
 
 /** Returns today's date as a local YYYY-MM-DD string (not UTC). */
 function getLocalDateString(): string {
@@ -50,6 +55,13 @@ export default function TimerScreen() {
   const [showEndPageModal, setShowEndPageModal] = useState(false);
   const [endPage, setEndPage] = useState('');
   const [sessionStartPage, setSessionStartPage] = useState(0);
+  // The start page is shown again (editable) when the session ends, so a
+  // mistyped number can be corrected before it is saved.
+  const [endStartPage, setEndStartPage] = useState('');
+  // Editing a saved session from the History tab.
+  const [editingSession, setEditingSession] = useState<any>(null);
+  const [editStartPage, setEditStartPage] = useState('');
+  const [editEndPage, setEditEndPage] = useState('');
   const intervalRef = useRef<any>(null);
   const timerNotificationId = useRef<string | null>(null);
   // Only ever cancel the timer's own "Timer Complete" notification. This used
@@ -76,12 +88,20 @@ export default function TimerScreen() {
 
   // Pomodoro
   const [pomodoroMode, setPomodoroMode] = useState<'work' | 'break'>('work');
-  const [pomodoroTimeLeft, setPomodoroTimeLeft] = useState(25 * 60);
+  const [pomodoroTimeLeft, setPomodoroTimeLeft] = useState(DEFAULT_FOCUS_DURATIONS.work * 60);
   const [pomodoroRunning, setPomodoroRunning] = useState(false);
   const [pomodoroSessions, setPomodoroSessions] = useState(0);
   const pomodoroRef = useRef<any>(null);
   const pomodoroEndTimeRef = useRef<number>(0);
   const pomodoroModeRef = useRef<'work' | 'break'>('work');
+  // Adjustable work/break lengths (minutes). The ref mirrors state so the
+  // interval and AppState callbacks read the current value.
+  const [focusDurations, setFocusDurationsState] = useState<FocusDurations>(DEFAULT_FOCUS_DURATIONS);
+  const focusDurationsRef = useRef<FocusDurations>(DEFAULT_FOCUS_DURATIONS);
+  const [showDurationModal, setShowDurationModal] = useState(false);
+  const [workMinutesInput, setWorkMinutesInput] = useState(String(DEFAULT_FOCUS_DURATIONS.work));
+  const [breakMinutesInput, setBreakMinutesInput] = useState(String(DEFAULT_FOCUS_DURATIONS.break));
+  const secondsFor = (mode: FocusMode) => focusDurationsRef.current[mode] * 60;
 
   useFocusEffect(
     useCallback(() => {
@@ -93,6 +113,11 @@ export default function TimerScreen() {
     if (Platform.OS !== 'web') {
       Notifications.requestPermissionsAsync().catch(() => {});
     }
+    getFocusDurations().then(d => {
+      focusDurationsRef.current = d;
+      setFocusDurationsState(d);
+      setPomodoroTimeLeft(d[pomodoroModeRef.current] * 60);
+    });
     return () => {
       clearInterval(intervalRef.current);
       if (pomodoroRef.current) clearInterval(pomodoroRef.current);
@@ -125,10 +150,10 @@ export default function TimerScreen() {
               stopFocusBlock().catch(() => {});
               setPomodoroSessions(s => s + 1);
               setPomodoroMode('break');
-              setPomodoroTimeLeft(5 * 60);
+              setPomodoroTimeLeft(secondsFor('break'));
             } else {
               setPomodoroMode('work');
-              setPomodoroTimeLeft(25 * 60);
+              setPomodoroTimeLeft(secondsFor('work'));
             }
           }
         }
@@ -150,10 +175,10 @@ export default function TimerScreen() {
             stopFocusBlock().catch(() => {});
             setPomodoroSessions(s => s + 1);
             setPomodoroMode('break');
-            setPomodoroTimeLeft(5 * 60);
+            setPomodoroTimeLeft(secondsFor('break'));
           } else {
             setPomodoroMode('work');
-            setPomodoroTimeLeft(25 * 60);
+            setPomodoroTimeLeft(secondsFor('work'));
           }
         }
       }, 1000);
@@ -208,7 +233,7 @@ export default function TimerScreen() {
     setPomodoroRunning(false);
     cancelTimerNotification();
     stopFocusBlock().catch(() => {});
-    setPomodoroTimeLeft(pomodoroMode === 'work' ? 25 * 60 : 5 * 60);
+    setPomodoroTimeLeft(secondsFor(pomodoroMode));
   };
 
   const handlePomodoroManualDone = () => {
@@ -218,7 +243,30 @@ export default function TimerScreen() {
     stopFocusBlock().catch(() => {});
     setPomodoroSessions(s => s + 1);
     setPomodoroMode('break');
-    setPomodoroTimeLeft(5 * 60);
+    setPomodoroTimeLeft(secondsFor('break'));
+  };
+
+  const openDurationModal = () => {
+    setWorkMinutesInput(String(focusDurations.work));
+    setBreakMinutesInput(String(focusDurations.break));
+    setShowDurationModal(true);
+  };
+
+  const saveDurations = async () => {
+    const work = parseFocusMinutes(workMinutesInput);
+    const brk = parseFocusMinutes(breakMinutesInput);
+    if (work == null || brk == null) {
+      Alert.alert('Invalid', `Enter whole minutes between ${MIN_FOCUS_MINUTES} and ${MAX_FOCUS_MINUTES}.`);
+      return;
+    }
+    const next: FocusDurations = { work, break: brk };
+    focusDurationsRef.current = next;
+    setFocusDurationsState(next);
+    setShowDurationModal(false);
+    // A running countdown keeps its end time; the new length applies from
+    // the next start. An idle one shows the new length right away.
+    if (!pomodoroRunning) setPomodoroTimeLeft(next[pomodoroMode] * 60);
+    await setFocusDurations(next);
   };
 
   const handleStartPress = () => {
@@ -268,6 +316,7 @@ export default function TimerScreen() {
     setIsRunning(false);
     setIsPaused(false);
     stopFocusBlock().catch(() => {});
+    setEndStartPage(String(sessionStartPage));
     setShowEndPageModal(true);
   };
 
@@ -277,8 +326,14 @@ export default function TimerScreen() {
       Alert.alert('Invalid', 'Please enter a valid ending page.');
       return;
     }
+    const startPageNum = parseInt(endStartPage);
+    if (!endStartPage || startPageNum <= 0) {
+      Alert.alert('Invalid', 'Please enter a valid starting page.');
+      return;
+    }
+    setSessionStartPage(startPageNum);
 
-    const pagesRead = Math.max(0, endPageNum - sessionStartPage);
+    const pagesRead = Math.max(0, endPageNum - startPageNum);
     const duration = sessionSeconds;
     setShowEndPageModal(false);
 
@@ -288,7 +343,7 @@ export default function TimerScreen() {
       bookId: selectedBook.id,
       bookTitle: selectedBook.title,
       bookAuthor: selectedBook.author,
-      startPage: sessionStartPage,
+      startPage: startPageNum,
       endPage: endPageNum,
       pagesRead,
       duration,
@@ -322,6 +377,7 @@ export default function TimerScreen() {
 
     setSessionSeconds(0);
     setEndPage('');
+    setEndStartPage('');
     setStartPage('');
 
     // Check if book is finished
@@ -331,6 +387,51 @@ export default function TimerScreen() {
     } else {
       Alert.alert('Session Saved! 📖', `${pagesRead} pages • ${formatTimeReadable(duration)}`);
     }
+  };
+
+  const openSessionEdit = (session: any) => {
+    setEditingSession(session);
+    setEditStartPage(String(session.startPage ?? ''));
+    setEditEndPage(String(session.endPage ?? ''));
+  };
+
+  // Sessions written by the web app carry no bookId, only the title.
+  const sessionBelongsTo = (session: any, book: any) =>
+    session.bookId ? session.bookId === book.id : session.bookTitle === book.title;
+
+  const saveSessionEdit = async () => {
+    if (!editingSession) return;
+    const start = parseInt(editStartPage);
+    const end = parseInt(editEndPage);
+    if (!editStartPage || start <= 0 || !editEndPage || end <= 0) {
+      Alert.alert('Invalid', 'Please enter valid page numbers.');
+      return;
+    }
+    const updatedSessions = sessions.map(s =>
+      s.id === editingSession.id
+        ? { ...s, startPage: start, endPage: end, pagesRead: Math.max(0, end - start) }
+        : s
+    );
+    setSessions(updatedSessions);
+
+    // If this is the book's latest session, its end page is the book's
+    // current page. Session ids are Date.now() strings on both platforms,
+    // so the largest id is the most recent regardless of list order.
+    let updatedBooks = currentBooks;
+    const book = currentBooks.find(b => sessionBelongsTo(editingSession, b));
+    if (book) {
+      const latestId = Math.max(
+        ...updatedSessions.filter(s => sessionBelongsTo(s, book)).map(s => Number(s.id) || 0)
+      );
+      if (String(latestId) === String(editingSession.id)) {
+        updatedBooks = currentBooks.map(b => (b.id === book.id ? { ...b, currentPage: end } : b));
+        setCurrentBooks(updatedBooks);
+        if (selectedBook?.id === book.id) setSelectedBook({ ...selectedBook, currentPage: end });
+      }
+    }
+
+    setEditingSession(null);
+    await upsertReadingData({ reading_sessions: updatedSessions, current_books: updatedBooks });
   };
 
   const markBookFinished = async () => {
@@ -429,15 +530,23 @@ export default function TimerScreen() {
                     onPress={() => {
                       cancelTimerNotification();
                       setPomodoroMode(m);
-                      setPomodoroTimeLeft(m === 'work' ? 25 * 60 : 5 * 60);
+                      setPomodoroTimeLeft(secondsFor(m));
                       setPomodoroRunning(false);
                     }}
                   >
                     <Text style={[styles.pomodoroModeTxt, pomodoroMode === m && styles.pomodoroModeTxtActive]}>
-                      {m === 'work' ? '25 min Work' : '5 min Break'}
+                      {m === 'work' ? `${focusDurations.work} min Work` : `${focusDurations.break} min Break`}
                     </Text>
                   </TouchableOpacity>
                 ))}
+                <TouchableOpacity
+                  style={styles.pomodoroEditBtn}
+                  onPress={openDurationModal}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityLabel="Adjust focus and break length"
+                >
+                  <Ionicons name="create-outline" size={18} color="#c9a84c" />
+                </TouchableOpacity>
               </View>
 
               {/* Countdown */}
@@ -508,7 +617,9 @@ export default function TimerScreen() {
               {selectedBook && (
                 <Text style={styles.timerBookLabel}>
                   📖 {selectedBook.title}
-                  {selectedBook.currentPage ? ` • p.${selectedBook.currentPage}` : ''}
+                  {isRunning || isPaused
+                    ? ` • from p.${sessionStartPage}`
+                    : selectedBook.currentPage ? ` • p.${selectedBook.currentPage}` : ''}
                 </Text>
               )}
               {!selectedBook && (
@@ -604,7 +715,13 @@ export default function TimerScreen() {
               </View>
             ) : (
               sessions.map((session, i) => (
-                <View key={session.id} style={styles.sessionCard}>
+                <TouchableOpacity
+                  key={session.id ?? i}
+                  style={styles.sessionCard}
+                  onPress={() => openSessionEdit(session)}
+                  activeOpacity={0.7}
+                  accessibilityLabel="Edit this session's page numbers"
+                >
                   <View style={styles.sessionLeft}>
                     <Text style={styles.sessionBook}>{session.bookTitle}</Text>
                     {session.bookAuthor ? (
@@ -618,8 +735,9 @@ export default function TimerScreen() {
                   <View style={styles.sessionRight}>
                     <Ionicons name="time-outline" size={16} color="#c9a84c" />
                     <Text style={styles.sessionTime}>{formatTimeReadable(session.duration)}</Text>
+                    <Ionicons name="create-outline" size={14} color="#888" />
                   </View>
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>
@@ -668,6 +786,16 @@ export default function TimerScreen() {
             <Text style={styles.modalSubtitle}>
               {selectedBook?.title} • {formatTimeReadable(sessionSeconds)}
             </Text>
+            <Text style={styles.modalFieldLabel}>Started on page</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Starting page"
+              placeholderTextColor="#888"
+              keyboardType="number-pad"
+              value={endStartPage}
+              onChangeText={setEndStartPage}
+            />
+            <Text style={styles.modalFieldLabel}>Stopped on page</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="What page did you stop on?"
@@ -680,11 +808,96 @@ export default function TimerScreen() {
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.modalCancel}
-                onPress={() => { setShowEndPageModal(false); setEndPage(''); }}
+                onPress={() => { setShowEndPageModal(false); setEndPage(''); setEndStartPage(''); }}
               >
                 <Text style={styles.modalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={stopTimer}>
+                <Text style={styles.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Edit Session Modal */}
+      <Modal visible={editingSession != null} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>✏️ Edit Session</Text>
+            <Text style={styles.modalSubtitle}>
+              {editingSession?.bookTitle}{editingSession?.dateFormatted ? ` • ${editingSession.dateFormatted}` : ''}
+            </Text>
+            <Text style={styles.modalFieldLabel}>Started on page</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Starting page"
+              placeholderTextColor="#888"
+              keyboardType="number-pad"
+              value={editStartPage}
+              onChangeText={setEditStartPage}
+              autoFocus
+            />
+            <Text style={styles.modalFieldLabel}>Stopped on page</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Ending page"
+              placeholderTextColor="#888"
+              keyboardType="number-pad"
+              value={editEndPage}
+              onChangeText={setEditEndPage}
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setEditingSession(null)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSave} onPress={saveSessionEdit}>
+                <Text style={styles.modalSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Focus Length Modal */}
+      <Modal visible={showDurationModal} transparent animationType="slide">
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>⏱️ Focus Length</Text>
+            <Text style={styles.modalSubtitle}>
+              Set how long each work block and break runs. The alert fires when the block ends.
+            </Text>
+            <Text style={styles.modalFieldLabel}>Work (minutes)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder={String(DEFAULT_FOCUS_DURATIONS.work)}
+              placeholderTextColor="#888"
+              keyboardType="number-pad"
+              value={workMinutesInput}
+              onChangeText={setWorkMinutesInput}
+              autoFocus
+            />
+            <Text style={styles.modalFieldLabel}>Break (minutes)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder={String(DEFAULT_FOCUS_DURATIONS.break)}
+              placeholderTextColor="#888"
+              keyboardType="number-pad"
+              value={breakMinutesInput}
+              onChangeText={setBreakMinutesInput}
+            />
+            {pomodoroRunning && (
+              <Text style={styles.modalHint}>The running block keeps its end time; the new length applies from the next start.</Text>
+            )}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowDurationModal(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSave} onPress={saveDurations}>
                 <Text style={styles.modalSaveText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -995,7 +1208,7 @@ const styles = StyleSheet.create({
   },
   sessionRight: {
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
   },
   sessionTime: {
     color: '#c9a84c',
@@ -1026,6 +1239,19 @@ const styles = StyleSheet.create({
   modalSubtitle: {
     color: '#888',
     fontSize: 14,
+  },
+  modalFieldLabel: {
+    color: '#c9a84c',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: -8,
+  },
+  modalHint: {
+    color: '#888',
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   modalInput: {
     backgroundColor: '#1a1a2e',
@@ -1073,7 +1299,14 @@ const styles = StyleSheet.create({
   },
   pomodoroModes: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
+  },
+  pomodoroEditBtn: {
+    padding: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
   },
   pomodoroModeBtn: {
     paddingVertical: 6,

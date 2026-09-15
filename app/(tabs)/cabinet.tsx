@@ -37,6 +37,8 @@ import {
   normalizeCounselorId,
   saveThread,
 } from '../../services/threadService';
+import DayDivider from '../../components/DayDivider';
+import { clockTime, startsNewDay } from '../../lib/messageDates';
 
 function getTodayDateKey(): string {
   const d = new Date();
@@ -911,30 +913,41 @@ export default function CabinetScreen() {
                           {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} for &lsquo;{searchQuery}&rsquo;
                         </Text>
                       )}
-                      {filteredMessages.map((msg, index) =>
-                        msg.role === 'user' ? (
-                          <View key={index} style={styles.userMessageRow}>
-                            <View style={styles.userBubble}>
-                              <Text style={styles.userText} selectable>{msg.content}</Text>
-                            </View>
-                          </View>
-                        ) : (
-                          <View key={index} style={styles.cabinetMessageRow}>
-                            <View style={styles.cabinetBubble}>
-                              <View style={styles.cabinetLabelRow}>
-                                <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
-                                <TouchableOpacity
-                                  onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
-                                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                  <Ionicons name="share-outline" size={14} color="#888" />
-                                </TouchableOpacity>
+                      {filteredMessages.map((msg, index) => (
+                        <View key={index}>
+                          {startsNewDay(filteredMessages, index) && <DayDivider timestamp={msg.timestamp} />}
+                          {msg.role === 'user' ? (
+                            <View style={styles.userMessageRow}>
+                              <View style={styles.userBubble}>
+                                <Text style={styles.userText} selectable>{msg.content}</Text>
+                                {msg.timestamp ? (
+                                  <Text style={styles.userTimeText}>{clockTime(msg.timestamp)}</Text>
+                                ) : null}
                               </View>
-                              <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                             </View>
-                          </View>
-                        )
-                      )}
+                          ) : (
+                            <View style={styles.cabinetMessageRow}>
+                              <View style={styles.cabinetBubble}>
+                                <View style={styles.cabinetLabelRow}>
+                                  <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                                  <View style={styles.cabinetLabelMeta}>
+                                    {msg.timestamp ? (
+                                      <Text style={styles.cabinetTimeText}>{clockTime(msg.timestamp)}</Text>
+                                    ) : null}
+                                    <TouchableOpacity
+                                      onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
+                                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                    >
+                                      <Ionicons name="share-outline" size={14} color="#888" />
+                                    </TouchableOpacity>
+                                  </View>
+                                </View>
+                                <Text style={styles.cabinetText} selectable>{msg.content}</Text>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      ))}
                     </>
                   );
                 })()}
@@ -1074,37 +1087,48 @@ export default function CabinetScreen() {
                 </Text>
               </View>
             ) : (
-              sharedMessages.map((msg, index) =>
-                msg.role === 'system' ? (
-                  <View key={index} style={styles.systemNoticeRow}>
-                    <Text style={styles.systemNoticeText}>{msg.content}</Text>
-                  </View>
-                ) : msg.role === 'user' ? (
-                  <View key={index} style={styles.userMessageRow}>
-                    <View style={styles.userBubble}>
-                      {msg.senderName && (
-                        <Text style={styles.sharedSenderLabel}>{msg.senderName}</Text>
-                      )}
-                      <Text style={styles.userText} selectable>{msg.content}</Text>
+              sharedMessages.map((msg, index) => (
+                <View key={index}>
+                  {startsNewDay(sharedMessages, index) && <DayDivider timestamp={msg.timestamp} />}
+                  {msg.role === 'system' ? (
+                    <View style={styles.systemNoticeRow}>
+                      <Text style={styles.systemNoticeText}>{msg.content}</Text>
                     </View>
-                  </View>
-                ) : (
-                  <View key={index} style={styles.cabinetMessageRow}>
-                    <View style={styles.cabinetBubble}>
-                      <View style={styles.cabinetLabelRow}>
-                        <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
-                        <TouchableOpacity
-                          onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        >
-                          <Ionicons name="share-outline" size={14} color="#888" />
-                        </TouchableOpacity>
+                  ) : msg.role === 'user' ? (
+                    <View style={styles.userMessageRow}>
+                      <View style={styles.userBubble}>
+                        {msg.senderName && (
+                          <Text style={styles.sharedSenderLabel}>{msg.senderName}</Text>
+                        )}
+                        <Text style={styles.userText} selectable>{msg.content}</Text>
+                        {msg.timestamp ? (
+                          <Text style={styles.userTimeText}>{clockTime(msg.timestamp)}</Text>
+                        ) : null}
                       </View>
-                      <Text style={styles.cabinetText} selectable>{msg.content}</Text>
                     </View>
-                  </View>
-                )
-              )
+                  ) : (
+                    <View style={styles.cabinetMessageRow}>
+                      <View style={styles.cabinetBubble}>
+                        <View style={styles.cabinetLabelRow}>
+                          <Text style={styles.cabinetLabel}>{msg.counselorName || 'The Cabinet'}</Text>
+                          <View style={styles.cabinetLabelMeta}>
+                            {msg.timestamp ? (
+                              <Text style={styles.cabinetTimeText}>{clockTime(msg.timestamp)}</Text>
+                            ) : null}
+                            <TouchableOpacity
+                              onPress={() => setShareQuote({ text: msg.content, counselor: msg.counselorName || 'The Cabinet' })}
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <Ionicons name="share-outline" size={14} color="#888" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                        <Text style={styles.cabinetText} selectable>{msg.content}</Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))
             )}
 
             {sharedLoading && (
@@ -1424,6 +1448,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  cabinetLabelMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  cabinetTimeText: {
+    color: '#888',
+    fontSize: 11,
+  },
+  userTimeText: {
+    color: '#c9a84c',
+    opacity: 0.7,
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'right',
   },
   cabinetLabel: {
     color: '#c9a84c',
