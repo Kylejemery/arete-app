@@ -9,6 +9,9 @@
 // block that makes pattern naming possible. Without it the agent is a critic;
 // with it, a teacher.
 
+import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
+import { cabinetCaveat, formatCabinetHits, type CabinetHit } from '@/lib/cabinet-history'
+
 export const RUBRIC_DIMENSIONS = [
   'thesis',
   'validity',
@@ -148,9 +151,15 @@ No preamble. No summary of what the student wrote back to them. No closing encou
 
 Keep it proportional. A paragraph gets a short response. A full essay gets a full accounting.
 
+### Machine tells
+
+The student's prose must not read as a model's. The tells below are faults of **Economy**: each one is a sentence spending the reader's attention on the writer's posture instead of on the claim. Mark them when you see them, name the tell, and ask the question that locates the claim underneath. The two the student reads for first are the negation-first frame ("This is not X. It is Y.") and the line that announces an idea's importance instead of writing so the importance is felt ("and the difference matters more than almost anything else in this essay:"). Show it, do not say it.
+
+${MACHINE_TELLS_BLOCK}
+
 ### Style constraint
 
-Never use em dashes or en dashes in any output. Use commas, colons, semicolons, or parentheses.`
+Your own prose is held to the same list. Never use em dashes or en dashes in any output; use commas, colons, semicolons, or parentheses. Do not announce that a point matters; make it. Do not open a judgment by denying a reading nobody offered.`
 
 // The structural first pass. Cheaper model, narrower question: is there a
 // thesis, and does the argument hold together. Everything the full critique
@@ -304,6 +313,24 @@ The argument exists and the student is strengthening it. Weight Validity, Soundn
 The argument is settled and the student is sharpening the prose. Weight Economy and register: hedging, throat-clearing, restatement, adjectives doing an argument's work. This is where a concrete rewrite helps most, so offer suggestions freely wherever a tighter line is better shown than described. Do not reopen the thesis unless it has genuinely broken.`,
   }
   return `\n\n${blocks[s]}`
+}
+
+// The student's Cabinet conversations that bear on the draft: the mobile app's
+// counselor threads, where they often think a claim through in their own
+// words before they write it. For the teacher this is evidence of two things:
+// where the argument has lived material behind it that the draft has left
+// abstract, and where the draft hedges or contradicts something the student
+// said plainly to a counselor. The counselors' replies are model-voiced and
+// are never sources for the fidelity dimension.
+export function buildCabinetBlock(hits: CabinetHit[]): string {
+  if (!hits.length) return ''
+  return [
+    'WHAT THE STUDENT HAS BEEN WORKING THROUGH WITH THEIR CABINET',
+    '',
+    `${cabinetCaveat('The student')} Use these exchanges two ways. Where a claim in the draft stays abstract and the student told a counselor the actual scene, ask for the scene. Where the draft hedges or reverses something the student said plainly here, quote both and ask which they hold. Do not cite these exchanges as evidence for or against a premise, do not treat a counselor's reply as a source under Fidelity, and do not write the student's sentences from them.`,
+    '',
+    formatCabinetHits(hits, 'The student', 500),
+  ].join('\n')
 }
 
 export interface WritingProfileRow {

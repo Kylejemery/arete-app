@@ -13,10 +13,11 @@ import type { Source } from './types'
 
 // Names the draft would plausibly use for this source. Every name token counts,
 // not just the surname: essays call him Marcus far more often than Aurelius.
-// Kyle's own log entries are spine material woven in as his voice, never cited
-// by name, so there is nothing to anchor and we do not pretend otherwise.
+// Kyle's own log entries and Cabinet lines are spine material woven in as his
+// voice, never cited by name, so there is nothing to anchor and we do not
+// pretend otherwise. A counselor's Cabinet reply is context only, never cited.
 export function anchorPhrases(s: Source): string[] {
-  if (s.author === 'Kyle' || s.work.startsWith('Log —')) return []
+  if (s.author === 'Kyle' || s.work.startsWith('Log —') || s.work.startsWith('Cabinet —')) return []
   const work = s.work.split(/[:(]/)[0].trim()
   const out = [s.author, ...s.author.split(/\s+/), work]
   return [...new Set(out)].filter(p => p.length >= 4)

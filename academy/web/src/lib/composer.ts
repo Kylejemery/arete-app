@@ -8,6 +8,8 @@
 // corpus: what the sources actually say, quotable or only paraphrasable, and
 // whether the sentence is faithful to them.
 
+import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
+
 // ── Voice ─────────────────────────────────────────────────────────────────────
 
 export interface VoiceVariant {
@@ -34,27 +36,44 @@ Return three variants of the sentence, each a complete replacement for exactly t
 
 Rules that bind every variant:
 - Keep the claim and its logical role in the paragraph. Do not add a claim, a qualification, a source, or a fact the original did not have.
-- Never use an em dash or an en dash. Choose the punctuation the thought wants: a period, a colon, a semicolon, a comma, parentheses.
-- No thesaurus diction: no "delve", "tapestry", "testament", "navigate", "underscore", "landscape", "realm", "nuanced", "multifaceted", "crucial", "pivotal".
-- No signposting ("it is important to note", "in other words", "moreover", "furthermore"), no hedge stacks, no rule-of-three reflex.
-- Prefer a strong verb to an adverb. Prefer the specific noun to the general one.
 - If the writer has begun retyping the sentence themselves, their partial rewrite tells you the direction; honor it.
 - A variant that only reorders the original's words is not a variant. Each must make a real choice.
+- If the original sentence carries one of the machine tells below (a negation-first frame, a line announcing its own importance, a dash, hyperbole), every variant removes it and states the claim outright. The writer often asks for a voice pass on exactly such a sentence.
+- No variant may carry a machine tell of its own. The list:
+
+${MACHINE_TELLS_BLOCK}
 
 For each variant, a note of at most fifteen words saying what you changed and why. The note is what lets the writer decide instead of merely choosing.`
 
-// The exemplar block: the writer's own earlier prose, as the voice prompt sees it.
-export function buildExemplarBlock(exemplars: VoiceExemplar[], guidance: string | null): string {
+// The exemplar block: the writer's own earlier prose, as the voice prompt sees
+// it. `spoken` is the writer's own lines from their Cabinet conversations (the
+// mobile app's counselor threads), where they say things before they write
+// them: evidence for diction, for what they name, and for how much they hedge,
+// not for essay register.
+export function buildExemplarBlock(
+  exemplars: VoiceExemplar[],
+  guidance: string | null,
+  spoken: string[] = []
+): string {
   const lines: string[] = ['THE WRITER\'S OWN PROSE']
   if (exemplars.length === 0) {
     lines.push(
       '',
-      'No samples are available yet. Judge the voice from the draft itself: the sentences around the one you are rewriting are the writer\'s, and the draft as a whole is the only sample you have. Do not invent a style.'
+      spoken.length
+        ? 'No essay samples are available yet. Judge the voice from the draft itself and from how the writer talks, below. Do not invent a style.'
+        : 'No samples are available yet. Judge the voice from the draft itself: the sentences around the one you are rewriting are the writer\'s, and the draft as a whole is the only sample you have. Do not invent a style.'
     )
   } else {
     for (const ex of exemplars) {
       lines.push('', `--- ${ex.title || 'Untitled'} ---`, ex.text.trim())
     }
+  }
+  if (spoken.length) {
+    lines.push(
+      '',
+      'HOW THE WRITER TALKS (their own messages to their Cabinet counselors, in conversation, most relevant to this sentence first). Read these for diction, for the things they name, and for how little they hedge. They are conversation, not essay register; take the words, not the looseness.'
+    )
+    for (const s of spoken) lines.push('', `> ${s.trim()}`)
   }
   if (guidance?.trim()) {
     lines.push('', 'VOICE GUIDANCE (the writer\'s own notes on how they write)', guidance.trim())

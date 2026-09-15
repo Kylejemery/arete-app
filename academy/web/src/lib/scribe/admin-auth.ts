@@ -12,3 +12,11 @@ export async function requireAdmin(): Promise<NextResponse | null> {
   }
   return null
 }
+
+// The admin's own user id, for surfaces that read his data (the Cabinet
+// history behind Scribe). Null when the session is not the admin's.
+export async function adminUserId(): Promise<string | null> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return user && user.email === process.env.ADMIN_EMAIL ? user.id : null
+}

@@ -1,5 +1,7 @@
 import { runStage, extractJson, type StageUsage } from '../anthropic'
 import { getProfile } from '../formats'
+import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
+import { cabinetCaveat } from '@/lib/cabinet-history'
 import type { ClaimBundle, BundleChunk } from './retrieve'
 import type {
   ScribeBrief,
@@ -30,7 +32,9 @@ THE AUTHOR'S MATERIAL: the notes are the best material you have. Reuse the autho
 
 CANONICAL STYLE: name classical authors and works in scholarly form in the prose (Epictetus' Discourses, Marcus Aurelius' Meditations, Seneca's Letters). If you state a canonical passage number, put it in the citation map's "locator" field — passage numbers are rendered but flagged as unverified, so include them only when you are confident.
 
-NO DASHES IN THE DRAFT: the em dash (the long one), the en dash used as one, and the spaced hyphen used as one are the loudest machine tell in the language, and the author will not publish them. Where you reach for a dash, use the punctuation that actually fits: a period, a colon, a semicolon, a comma, or parentheses. If none of those work, rewrite the sentence. Hyphens inside compound words and in ranges are correct and stay; what is banned is a dash standing between clauses or fencing off an aside. These instructions use dashes freely, which is not permission: the ban is on the draft. Never use em dashes or en dashes in any output.
+HOW THE PROSE MUST READ: the author will not publish machine prose, and the two faults he reads for first are the dash and the line that announces an idea's importance instead of writing so the importance is felt. No dashes in the draft, ever; these instructions use them, which is not permission. Show it, do not say it. The full list follows and every item binds the draft.
+
+${MACHINE_TELLS_BLOCK}
 
 OUTPUT PROTOCOL — follow exactly:
 1. The complete draft in markdown.
@@ -128,13 +132,17 @@ export interface PriorDraft {
   feedback: string
 }
 
+// `cabinet` is the author's own Cabinet exchanges that bear on the brief,
+// already formatted (see lib/cabinet-history); his lines there are material,
+// the counselors' replies context only. Omitted when none match.
 export async function draft(
   format: ScribeFormat,
   brief: ScribeBrief,
   notes: ScribeNote[],
   bundles: ClaimBundle[],
   style: ScribeStyleProfile | null,
-  prior?: PriorDraft
+  prior?: PriorDraft,
+  cabinet?: string
 ): Promise<DraftResult> {
   const profile = getProfile(format)
 
@@ -155,6 +163,10 @@ export async function draft(
     ? `\n\nPRIOR DRAFT — the author reviewed this version and wants changes. Revise rather than restart: keep what works, apply the feedback throughout, and keep every citation rule in force.\n\nAUTHOR FEEDBACK: ${prior.feedback}\n\n--- prior draft ---\n${prior.content}\n--- end prior draft ---`
     : ''
 
+  const cabinetBlock = cabinet?.trim()
+    ? `\n\nTHE AUTHOR'S CABINET (his conversations with his counselors in the Arete app, where this thinking often happened first). ${cabinetCaveat('The author')} Use his lines the way you use the notes: for phrasing worth keeping and for the lived scene behind a claim. Nothing here is citable.\n\n${cabinet.trim()}`
+    : ''
+
   const user = `THE BRIEF (author-approved):
 Thesis: ${brief.thesis}
 Audience: ${brief.audience}
@@ -163,7 +175,7 @@ ${brief.key_claims.map((c, i) => `${i + 1}. ${c}`).join('\n')}
 Known gaps (write these in the author's voice, no citations): ${brief.gaps.join('; ') || 'none'}
 
 THE AUTHOR'S NOTES (verbatim — reuse strong phrasing):
-${notesBlock}
+${notesBlock}${cabinetBlock}
 
 RETRIEVAL BUNDLES (the ONLY citable material):
 ${bundleBlock(bundles)}${priorBlock}
