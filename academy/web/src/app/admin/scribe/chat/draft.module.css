@@ -519,3 +519,41 @@
 
 /* An undecided change: neutral until Kyle has actually looked at it. */
 .hunkOpen { border-left-color: #cfcfcf; }
+
+/* ── Formatting toolbar (block editor and whole-draft editor) ── */
+.formatBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px 4px 6px;
+  border-bottom: 0.5px solid #eee;
+  margin-bottom: 6px;
+}
+.formatBtn {
+  min-width: 30px;
+  height: 26px;
+  padding: 0 7px;
+  border: 0.5px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #444;
+  font-size: 12px;
+  font-family: var(--font-sans, system-ui, sans-serif);
+  cursor: pointer;
+}
+.formatBtn:hover { border-color: #afa9ec; color: #1a1a1a; background: #f7f6fd; }
+.formatBtn:disabled { opacity: 0.4; cursor: default; }
+.formatBold { font-weight: 700; }
+.formatItalic { font-style: italic; font-family: Georgia, serif; }
+
+.wholeEditor { margin: 0; }
+.wholeTextarea {
+  min-height: 60vh;
+  height: calc(100vh - 340px);
+  font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+  font-size: 15.5px;
+  line-height: 1.6;
+}
+
+/* The draft pane in the wide column reads at essay size, short of full page. */
+.prosePane { font-size: 16px; line-height: 1.68; max-width: 760px; margin: 0 auto; }

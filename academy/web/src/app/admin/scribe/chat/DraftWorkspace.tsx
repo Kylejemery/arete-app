@@ -16,6 +16,7 @@ import admin from '../../admin.module.css'
 import chat from './chat.module.css'
 import styles from './draft.module.css'
 import ProseView from './ProseView'
+import MarkdownEditor from './MarkdownEditor'
 import DiffView from './DiffView'
 import SelectionBar from './SelectionBar'
 import SourceList from './SourceList'
@@ -47,6 +48,8 @@ function reviewHasFindings(r: Review | null | undefined): boolean {
 export interface DraftWorkspaceProps {
   fullscreen: boolean
   onToggleFullscreen: () => void
+  /** The pane sits in a wide column: essay typography rather than the compact scale. */
+  pane: boolean
   tab: DraftTab
   onTabChange: (t: DraftTab) => void
   title: string | null
@@ -71,6 +74,7 @@ export interface DraftWorkspaceProps {
   onSnapshot: (stage: 'middle' | 'full') => void
   onFinalize: () => void
   onExport: () => void
+  onExportWord: () => void
   onSaveToLog: () => void
   onApplyRevision: (text: string, summary: string) => Promise<void>
   applying: boolean
@@ -78,18 +82,24 @@ export interface DraftWorkspaceProps {
 
 export default function DraftWorkspace(props: DraftWorkspaceProps) {
   const {
-    fullscreen, onToggleFullscreen, tab, onTabChange, title, draftText, bases,
+    fullscreen, onToggleFullscreen, pane, tab, onTabChange, title, draftText, bases,
     review, reviewIsSavedFallback, viewingSnapshotStage, drafts, viewedDraftId,
     onViewDraft, sources, highlight, onHighlight, onScopedTurn, onNotice,
     streaming, snapshotting, canSnapshot, onSnapshot, onFinalize,
-    onExport, onSaveToLog, onApplyRevision, applying,
+    onExport, onExportWord, onSaveToLog, onApplyRevision, applying,
   } = props
 
   const [baseId, setBaseId] = useState<string | null>(bases[0]?.id ?? null)
   const [decisions, setDecisions] = useState<Record<number, Decision>>({})
   const [dismissedFindings, setDismissedFindings] = useState<string[]>([])
   const [scrollNonce, setScrollNonce] = useState(0)
+  // The whole draft open in one editor, with the formatting toolbar, for the
+  // edits a block at a time is too small for.
+  const [editingWhole, setEditingWhole] = useState(false)
   const proseRef = useRef<HTMLDivElement>(null)
+
+  // A new turn or a snapshot view closes the whole-draft editor.
+  useEffect(() => { if (streaming || viewingSnapshotStage) setEditingWhole(false) }, [streaming, viewingSnapshotStage])
 
   // Keep the selection valid as the conversation moves under it.
   useEffect(() => {
@@ -204,10 +214,21 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     </span>
   )
 
+  const canEditWhole = !!shown && !streaming && !viewingSnapshotStage && effTab === 'draft'
+
   const actions = (
     <span className={styles.headActions}>
+      <button
+        className={admin.ghostBtn}
+        onClick={() => setEditingWhole(e => !e)}
+        disabled={!canEditWhole}
+        title="Open the whole draft in one editor, with formatting"
+      >
+        {editingWhole ? 'Reading view' : 'Edit draft'}
+      </button>
       <button className={admin.ghostBtn} onClick={onSaveToLog} disabled={!shown}>Save to log</button>
-      <button className={admin.ghostBtn} onClick={onExport} disabled={!shown}>Export</button>
+      <button className={admin.ghostBtn} onClick={onExport} disabled={!shown} title="Copy the draft as markdown">Copy</button>
+      <button className={admin.ghostBtn} onClick={onExportWord} disabled={!shown} title="Download the draft as a Word document">Word</button>
       <button className={admin.ghostBtn} onClick={onToggleFullscreen} title={fullscreen ? 'Back to the conversation' : 'Open the draft full page'}>
         {fullscreen ? 'Close' : 'Expand'}
       </button>
@@ -325,7 +346,20 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     </>
   )
 
-  const draftBody = shown ? (
+  const draftBody = shown && editingWhole ? (
+    <MarkdownEditor
+      whole
+      source={shown}
+      saveLabel="Save draft"
+      onSave={async next => {
+        setEditingWhole(false)
+        if (next === draftText) { setDecisions({}); return }
+        await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then edited the draft by hand` : 'edited the draft by hand')
+        setDecisions({})
+      }}
+      onCancel={() => setEditingWhole(false)}
+    />
+  ) : shown ? (
     <>
       {preview && (
         <div className={styles.previewBar}>
@@ -348,7 +382,8 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
       )}
       <ProseView
         text={shown}
-        compact={!fullscreen}
+        compact={!fullscreen && !pane}
+        pane={!fullscreen && pane}
         highlight={highlight}
         scrollKey={scrollNonce}
         onEditBlock={streaming || viewingSnapshotStage ? undefined : editBlock}

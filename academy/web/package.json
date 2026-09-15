@@ -13,12 +13,13 @@
     "@anthropic-ai/sdk": "^0.104.1",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.99.1",
-    "stripe": "^22.3.1",
+    "docx": "^9.7.1",
     "next": "^15.0.0",
     "nodemailer": "^7.0.13",
     "pdfjs-dist": "^6.1.200",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "stripe": "^22.3.1",
     "unpdf": "^1.6.2"
   },
   "devDependencies": {

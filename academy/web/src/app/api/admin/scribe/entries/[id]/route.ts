@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     admin.from('scribe_entries').select('*').eq('id', id).maybeSingle(),
     admin
       .from('scribe_messages')
-      .select('id, role, content, sources_used, created_at')
+      .select('id, role, content, sources_used, draft_text, created_at')
       .eq('entry_id', id)
       .order('created_at', { ascending: true }),
     admin
