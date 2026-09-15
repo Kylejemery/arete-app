@@ -528,7 +528,11 @@ const ORDINAL_WORDS = {
 const HEADED_TARGET_WORDS = 400;
 const HEADED_MAX_PARAGRAPH_WORDS = 700;
 const BOOK_WORDS = 'BOOK|ESSAY|TREATISE|DISSERTATION';
-const NOT_A_HEADING = /^(CONTENTS|INDEX|INDEXES|FOOTNOTES?|NOTES|THE END|FINIS|APPENDIX|PREFACE|ERRATA|TRANSCRIBER)\b/i;
+const NOT_A_HEADING = /^(CONTENTS|INDEX|INDEXES|FOOTNOTES?|NOTES|THE END|FINIS|APPENDIX|ERRATA|TRANSCRIBER)\b/i;
+// Opening or closing divisions of a book (Augustine prefaces Books V–VII
+// himself; Diogenes opens Book I with an Introduction). A PREFACE before the
+// first book heading is the translator's and never reaches the parser.
+const OPENING_DIVISION = /^(ARGUMENT|PREFACE|INTRODUCTION|PROLOGUE|PROEM|EPILOGUE|CONCLUSION)\.?$/;
 
 function headingNumber(token) {
   const t = token.toUpperCase().replace(/\.$/, '');
@@ -584,12 +588,12 @@ function matchSectionHeading(line) {
   if (m) return { number: null, title: titleCaseHeading(m[1]), named: true };
   m = line.match(/^(SONG|METRE|METRUM|PROSE|PROSA|POEM)\s+([IVXLC]+|\d+)\.?$/);
   if (m) return { number: null, title: `${titleCaseHeading(m[1])} ${m[2].toUpperCase()}`, named: true };
-  if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', named: true };
   // An opening or closing division of a book. Not "named" for the caps rule:
   // Leonard's Lucretius heads every book PROEM and then titles its sections
-  // in caps, and those must still be read as sections.
-  m = line.match(/^(INTRODUCTION|PROLOGUE|PROEM|EPILOGUE|CONCLUSION)\.?$/);
-  if (m) return { number: null, title: titleCaseHeading(m[1]), named: false };
+  // in caps, and those must still be read as sections. Numbered in the
+  // post-pass: 0 beside numbered chapters, in sequence otherwise.
+  m = line.match(OPENING_DIVISION);
+  if (m) return { number: null, title: titleCaseHeading(m[1]), named: false, opener: true };
   return null;
 }
 
@@ -670,7 +674,7 @@ function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = fals
     j++;
     extra++;
   }
-  title = title.replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').replace(/[.]+$/, '').trim().slice(0, 160);
+  title = title.replace(/\[\d+\]/g, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').replace(/[.]+$/, '').trim().slice(0, 240);
   if (isAllCapsLine(title)) title = titleCaseHeading(title);
   return { title, last: j };
 }
@@ -751,11 +755,11 @@ function parseHeaded(text, options = {}) {
   // the opening divisions and not chapters already read from numbered
   // paragraphs, which must keep being read once the first one is.
   function bookHasChapterHeadings() {
-    return book.sections.some(x => x.named && !x.fromNumbered && !/^(Argument|Introduction|Prologue|Proem|Epilogue|Conclusion)$/.test(x.title));
+    return book.sections.some(x => x.named && !x.fromNumbered && !x.opener);
   }
 
   function flushPara() {
-    const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
+    const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim();
     if (txt && section) {
       const italicTitle = paraMarker && paraItalic && /_\.?$/.test(paraRawEnd);
       const shortTitle = paraMarker && options.chapterFromNumbered && !bookHasChapterHeadings() &&
@@ -763,11 +767,11 @@ function parseHeaded(text, options = {}) {
       if (italicTitle || shortTitle) {
         // A chapter heading printed as a numbered paragraph.
         const number = headingNumber(paraMarker);
-        section = { number, part, title: txt.replace(/^_|_$/g, '').replace(/[.]+$/, '').slice(0, 160), paragraphs: [], named: true, fromNumbered: true };
+        section = { number, part, title: txt.replace(/[.]+$/, '').slice(0, 240), paragraphs: [], named: true, fromNumbered: true, explicit: true };
         if (number > sectionCounter) sectionCounter = number;
         book.sections.push(section);
       } else {
-        section.paragraphs.push({ marker: paraMarker, text: txt.replace(/^_|_$/g, '') });
+        section.paragraphs.push({ marker: paraMarker, text: txt });
       }
     }
     para = [];
@@ -838,6 +842,8 @@ function parseHeaded(text, options = {}) {
       if (/^(Song|Metre|Metrum|Poem) /.test(title)) sawSongs = true;
       openSection(number, title);
       section.named = s.named;
+      section.explicit = s.number != null;
+      section.opener = !!s.opener;
       continue;
     }
     if (inFootnotes) continue;
@@ -856,6 +862,7 @@ function parseHeaded(text, options = {}) {
     if (!section) {
       openSection(0, book.title || (book.number != null ? `Book ${book.number}` : 'Text'));
       section.named = false;
+      section.opener = true;
     }
     // A footnote body starts with its own marker; drop it.
     if (para.length === 0 && /^\[\d+\]\s/.test(line)) { inFootnotes = true; continue; }
@@ -880,6 +887,19 @@ function parseHeaded(text, options = {}) {
     paraRawEnd = rawLines[i];
   }
   flushPara();
+  // Section numbers per book: where the text numbers its own sections
+  // (CHAPTER 3, a numbered-paragraph chapter, SECT. IV) those numbers stand
+  // and the opening divisions (Argument, Preface, Introduction) sit at 0
+  // beside them; otherwise every section, openers included, is numbered in
+  // order of appearance (Lives Book 1: Introduction 1, Thales 2, …).
+  for (const b of books) {
+    const explicit = b.sections.some(x => x.explicit);
+    if (explicit) {
+      for (const x of b.sections) if (!x.explicit) x.number = x.opener || x.number === 0 ? 0 : x.number;
+    } else {
+      b.sections.forEach((x, k) => { x.number = k + 1; });
+    }
+  }
   books.rejectedBooks = rejectedBooks;
   return books;
 }
@@ -899,7 +919,9 @@ function structureWarnings(books) {
   let unheadedWords = 0;
   for (const b of books) {
     for (const s of b.sections) {
-      if (s.title && s.title.length > 120) warnings.push(`section ${b.number ?? ''}.${s.number} title is ${s.title.length} chars: a paragraph was read as a heading`);
+      // Chapters read from numbered paragraphs are bounded by the italic wrap
+      // or the 40-word rule; elsewhere a title this long is a paragraph.
+      if (s.title && s.title.length > 200 && !s.fromNumbered) warnings.push(`section ${b.number ?? ''}.${s.number} title is ${s.title.length} chars: a paragraph was read as a heading`);
       if (s.number === 0 && !s.named) unheadedWords += s.paragraphs.filter(p => !p.marker).reduce((k, p) => k + countWords(p.text), 0);
     }
     if (b.sections.length === 0) warnings.push(`book ${b.number} has no text`);
@@ -1013,7 +1035,7 @@ function chunkNumbered(text, meta) {
         const txt = e.texts.join('\n\n');
         chunks.push({
           ...meta,
-          section_label: (n != null ? `${title}, §${n}` : title).slice(0, 160),
+          section_label: (n != null ? `${title}, §${n}` : title).slice(0, 240),
           locator,
           chunk_index: chunkIndex++,
           chunk_text: txt,
