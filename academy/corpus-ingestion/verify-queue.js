@@ -138,6 +138,11 @@ async function checkSource({ url, author, work, language, body_start_marker, bod
       hits++;
       console.log(`  --- match ${hits} at raw line ${i}:`);
       for (let k = Math.max(0, i - 3); k <= Math.min(rawLines.length - 1, i + 3); k++) console.log(`    ${String(k).padStart(6)}  ${JSON.stringify(rawLines[k])}`);
+      // Every character that is not a printable ASCII letter, digit or
+      // punctuation, with its code: a no-break space or a soft hyphen looks
+      // like a space or nothing in a terminal.
+      const odd = [...l].map((c, k) => [c, k]).filter(([c]) => !/[ -~]/.test(c)).map(([c, k]) => `${k}:U+${c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
+      console.log(`    non-ASCII characters on the matching line: ${odd.length ? odd.join(' ') : 'none'}`);
     });
     if (hits === 0) console.log(`  --grep ${JSON.stringify(grep)}: no line contains it`);
     return { words: 0, chunks: 0, notes: [] };
