@@ -8,6 +8,7 @@
 //
 // Usage:
 //   node verify-queue.js --url URL [--start-marker "..."] [--end-marker "..."] [--strategy headed]
+//   node verify-queue.js --url URL --grep "sought a more"   raw lines matching, with context, exactly as fetched
 //   node verify-queue.js                 every pending queue row (needs SUPABASE env)
 //   node verify-queue.js --id QUEUE_ID   one queue row
 //   node verify-queue.js --pending --mark-failed
@@ -120,11 +121,27 @@ function reportStrategy(body, strategy, author, work) {
   if (withLocator === 0) console.log('  ⚠ no row carries a locator; check the headings or use --start-marker');
 }
 
-async function checkSource({ url, author, work, language, body_start_marker, body_end_marker, chunk_strategy }) {
+async function checkSource({ url, author, work, language, body_start_marker, body_end_marker, chunk_strategy, grep }) {
   const label = author && work ? `${author} / ${work}` : url;
   console.log(`\n--- ${label} ---\n  ${url}`);
   const raw = await fetchSourceText(url);
   console.log(`  fetched ${raw.length.toLocaleString()} bytes`);
+
+  // Raw lines around a phrase, untrimmed and unmarked, so a parser question
+  // ("how does this file break an italic title across lines?") is answered
+  // from the file itself.
+  if (grep) {
+    const rawLines = raw.replace(/\r\n?/g, '\n').split('\n');
+    let hits = 0;
+    rawLines.forEach((l, i) => {
+      if (!l.includes(grep) || hits >= 8) return;
+      hits++;
+      console.log(`  --- match ${hits} at raw line ${i}:`);
+      for (let k = Math.max(0, i - 3); k <= Math.min(rawLines.length - 1, i + 3); k++) console.log(`    ${String(k).padStart(6)}  ${JSON.stringify(rawLines[k])}`);
+    });
+    if (hits === 0) console.log(`  --grep ${JSON.stringify(grep)}: no line contains it`);
+    return { words: 0, chunks: 0, notes: [] };
+  }
 
   const looksXml = raw.trimStart().startsWith('<');
   if ((language === 'grc' || language === 'lat') && looksXml) {
@@ -168,6 +185,7 @@ async function main() {
       body_start_marker: getArg('--start-marker') ?? null,
       body_end_marker: getArg('--end-marker') ?? null,
       chunk_strategy: getArg('--strategy') ?? null,
+      grep: getArg('--grep') ?? null,
     });
     return;
   }
