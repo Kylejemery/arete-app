@@ -528,7 +528,7 @@ const ORDINAL_WORDS = {
 const HEADED_TARGET_WORDS = 400;
 const HEADED_MAX_PARAGRAPH_WORDS = 700;
 const BOOK_WORDS = 'BOOK|ESSAY|TREATISE|DISSERTATION';
-const NOT_A_HEADING = /^(CONTENTS|INDEX|INDEXES|FOOTNOTES?|NOTES|THE END|FINIS|APPENDIX|PREFACE|INTRODUCTION|ARGUMENT|ERRATA)\b/i;
+const NOT_A_HEADING = /^(CONTENTS|INDEX|INDEXES|FOOTNOTES?|NOTES|THE END|FINIS|APPENDIX|PREFACE|ERRATA|TRANSCRIBER)\b/i;
 
 function headingNumber(token) {
   const t = token.toUpperCase().replace(/\.$/, '');
@@ -585,6 +585,11 @@ function matchSectionHeading(line) {
   m = line.match(/^(SONG|METRE|METRUM|PROSE|PROSA|POEM)\s+([IVXLC]+|\d+)\.?$/);
   if (m) return { number: null, title: `${titleCaseHeading(m[1])} ${m[2].toUpperCase()}`, named: true };
   if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', named: true };
+  // An opening or closing division of a book. Not "named" for the caps rule:
+  // Leonard's Lucretius heads every book PROEM and then titles its sections
+  // in caps, and those must still be read as sections.
+  m = line.match(/^(INTRODUCTION|PROLOGUE|PROEM|EPILOGUE|CONCLUSION)\.?$/);
+  if (m) return { number: null, title: titleCaseHeading(m[1]), named: false };
   return null;
 }
 
@@ -673,8 +678,20 @@ function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = fals
 // Returns { books } or null when the text has neither a book nor a section
 // heading. A book: { number (null when implicit), parts: bool, sections }.
 // A section: { number, part, title, paragraphs: [{ marker, text }] }.
+// Gutenberg transcribers mark bold as =TEXT= and italics as _text_; Dods's
+// City of God (#45304) prints its headings that way, so every line is
+// unmarked before the matchers see it. Markup is removed from the text as
+// well: "_vitam_" reads better as vitam.
+function unmarkGutenberg(line) {
+  return line
+    .replace(/^=+\s*|\s*=+$/g, '')
+    .replace(/=([^=]+)=/g, '$1')
+    .replace(/(^|[\s(\["“])_([^_]+)_(?=[\s)\].,;:!?"”]|$)/g, '$1$2')
+    .trim();
+}
+
 function parseHeaded(text) {
-  const lines = text.split('\n').map(l => l.trim());
+  const lines = text.split('\n').map(l => unmarkGutenberg(l.trim()));
 
   // Body starts at the LAST heading that carries the volume's lowest book
   // number: a contents list repeats "BOOK I." before the text does (in any
@@ -1131,7 +1148,7 @@ const QUEUE_STRATEGIES = ['paragraph', 'headed', 'numbered', 'meditations-long',
 
 module.exports = {
   chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA,
-  matchBookHeading, matchPartHeading, matchSectionHeading,
+  matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg,
 };
 
 // ---------------------------------------------------------------------------

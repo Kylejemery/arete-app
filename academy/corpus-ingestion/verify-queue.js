@@ -76,8 +76,8 @@ function reportStrategy(body, strategy, author, work) {
   if (strategy === 'headed' || strategy === 'numbered') {
     // Every line the parser would take as a heading, so a misread shows up
     // here (a cross-reference opening a book, chapters not matched at all).
-    const { matchBookHeading, matchPartHeading, matchSectionHeading } = require('./chunker');
-    const lines = body.split('\n').map(l => l.trim());
+    const { matchBookHeading, matchPartHeading, matchSectionHeading, unmarkGutenberg } = require('./chunker');
+    const lines = body.split('\n').map(l => unmarkGutenberg(l.trim()));
     const heads = [];
     lines.forEach((l, i) => {
       const kind = matchBookHeading(l) ? 'BOOK' : matchPartHeading(l) ? 'PART' : matchSectionHeading(l) ? 'SECT' : null;
