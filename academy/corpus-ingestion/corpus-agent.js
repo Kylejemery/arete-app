@@ -251,6 +251,13 @@ async function processSource(src) {
       ? `books ${plan.books.map(b => `${b.number}(${b.sections})`).join(' ')}`
       : `${withLocator}/${rows.length} rows carry a locator`;
     console.log(`  strategy ${strategy}: ${rows.length} rows, ${summary}`);
+    // A misread structure is refused before a single embedding is bought:
+    // the row fails with the reason, and the fix is a parser change or a
+    // marker, never a bad ingest to deprecate later (2026-09-15).
+    if (plan && plan.warnings.length > 0) {
+      for (const w of plan.warnings) console.warn(`  ✗ ${w}`);
+      throw new Error(`structure check failed (${strategy}): ${plan.warnings.join('; ')}`);
+    }
     const stamp = `[corpus-agent ${new Date().toISOString().slice(0, 10)}] strategy ${strategy}: ${rows.length} rows, ${summary}` +
       (withLocator === 0 ? ' — NO LOCATORS: the strategy found no headings and fell back to paragraphs; deprecate and requeue with markers' : '');
     await supabase()

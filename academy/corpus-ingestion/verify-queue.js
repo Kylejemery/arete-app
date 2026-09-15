@@ -74,6 +74,33 @@ function reportStrategy(body, strategy, author, work) {
     return;
   }
   if (strategy === 'headed' || strategy === 'numbered') {
+    // Every line the parser would take as a heading, so a misread shows up
+    // here (a cross-reference opening a book, chapters not matched at all).
+    const { matchBookHeading, matchPartHeading, matchSectionHeading } = require('./chunker');
+    const lines = body.split('\n').map(l => l.trim());
+    const heads = [];
+    lines.forEach((l, i) => {
+      const kind = matchBookHeading(l) ? 'BOOK' : matchPartHeading(l) ? 'PART' : matchSectionHeading(l) ? 'SECT' : null;
+      if (kind) heads.push({ i, kind, l });
+    });
+    const counts = heads.reduce((c, h) => ({ ...c, [h.kind]: (c[h.kind] || 0) + 1 }), {});
+    console.log(`  heading lines matched: ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ') || 'none'}`);
+    for (const h of heads.slice(0, 40)) console.log(`    ${String(h.i).padStart(6)} ${h.kind}  ${h.l.slice(0, 80)}`);
+    if (heads.length > 40) console.log(`    … ${heads.length - 40} more`);
+    // The raw lines where the text proper begins, and the standalone
+    // all-caps lines after it: the two things needed to see how this file
+    // actually prints its headings when the matchers above miss them.
+    const firstBook = heads.find(h => h.kind === 'BOOK' || h.kind === 'PART');
+    const bodyStart = firstBook ? Math.max(...heads.filter(h => h.kind === firstBook.kind && h.l === firstBook.l).map(h => h.i)) : (heads[0] ? heads[0].i : 0);
+    console.log(`  text opens at line ${bodyStart}:`);
+    lines.slice(bodyStart, bodyStart + 30).forEach((l, k) => console.log(`    ${String(bodyStart + k).padStart(6)}  ${l.slice(0, 90)}`));
+    const caps = [];
+    for (let i = bodyStart; i < lines.length && caps.length < 30; i++) {
+      const l = lines[i];
+      if (l.length >= 3 && l.length <= 80 && /[A-Z]{2}/.test(l) && l === l.toUpperCase() && (i === 0 || !lines[i - 1]) && (i + 1 >= lines.length || !lines[i + 1])) caps.push(`${String(i).padStart(6)}  ${l}`);
+    }
+    console.log(`  standalone all-caps lines after the opening (first ${caps.length}):`);
+    for (const c of caps) console.log(`    ${c}`);
     const plan = planHeaded(body);
     if (!plan) { console.log(`  ✗ ${strategy}: no BOOK or section heading found; the agent would fall back to paragraph windows`); return; }
     console.log(`  ${strategy}: ${plan.books.length} book(s)`);
@@ -81,6 +108,7 @@ function reportStrategy(body, strategy, author, work) {
       console.log(`    book ${b.number ?? '(none)'}: ${b.parts ? `${b.parts} part(s), ` : ''}${b.sections} section(s), ${b.paragraphs} paragraphs (${b.numbered} numbered), ${b.words.toLocaleString()} words`);
       for (const h of b.firstSections) console.log(`      ${h}`);
     }
+    for (const w of plan.warnings) console.log(`  ✗ ${w} — the agent would refuse this row`);
   }
   const rows = chunkRaw(body, strategy, { author: author || 'x', work: work || 'y' });
   const withLocator = rows.filter(r => r.locator).length;

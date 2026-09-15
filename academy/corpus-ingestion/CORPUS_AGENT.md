@@ -60,10 +60,22 @@ Three more queue columns (2026-09):
 | `append_to_existing` | The row is a further volume of a work already in the corpus: its rows start after the work's highest live `chunk_index` instead of overwriting from 0. |
 
 `verify-queue.js --strategy headed` (or a queue row carrying the strategy)
-prints the plan: books found, sections per book, first headings, and how many
-rows carry a locator. A `headed` row that finds no headings falls back to
-paragraph windows and records "NO LOCATORS" on the queue row's notes; deprecate
-and requeue with markers rather than keep it.
+prints every line the parser would take as a heading, the raw lines where the
+text opens, the standalone all-caps lines after it (so a file's actual heading
+form can be read off when the matchers miss it), and the plan: books found,
+sections per book, first headings, and how many rows carry a locator.
+
+The agent refuses a `headed` or `numbered` row before buying a single
+embedding when the structure looks misread: a section title longer than 120
+characters (a paragraph taken as a heading), more than half the words in an
+unheaded section 0 (section headings not recognised), or a book heading out
+of sequence (a book heading before it not recognised). The row fails with the
+reason; the fix is a parser change or a body marker, never a bad ingest to
+deprecate later. Headings are matched only as Gutenberg prints them, upper
+case at the start of a short line, and books must run consecutively: the
+2026-09-15 ingest of the Lives opened books from cross-references like
+"Book viii. ch. 5" in running text. A row that finds no headings at all
+falls back to paragraph windows and records "NO LOCATORS" on its notes.
 
 The admin "Run ingestion now" twin (`server/corpus-agent.js`) leaves rows with
 a non-paragraph strategy pending for the nightly agent: `chunker.js` is not
