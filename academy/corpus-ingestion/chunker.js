@@ -831,8 +831,14 @@ function parseHeaded(text, options = {}) {
 
     let s = matchSectionHeading(line);
     if (!s && NOT_A_HEADING.test(line) && line.length <= 40 && isAllCapsLine(line) && para.length === 0) continue;
-    if (!s && !inFootnotes && !book.sections.some(x => x.named) && isCapsHeading(lines, i)) {
-      s = { number: null, title: titleCaseHeading(line), named: false };
+    // The all-caps rule: only in a book with no headed section of its own,
+    // never for the first paragraph of an opening division (Dods sets each
+    // book's Argument in capitals), and only when body text follows.
+    if (!s && !inFootnotes && !book.sections.some(x => x.named) && isCapsHeading(lines, i) &&
+        !(section && section.opener && section.paragraphs.length === 0 && para.length === 0)) {
+      let k = i + 1;
+      while (k < lines.length && !lines[k]) k++;
+      if (k < lines.length && !isAllCapsLine(lines[k])) s = { number: null, title: titleCaseHeading(line), named: false };
     }
     if (s) {
       const { title, last } = collectHeadingTitle(lines, i, s.title);
