@@ -101,8 +101,18 @@ check('paragraph rhythm: identical paragraphs read flat', computeVoiceMetrics(fl
 check('paragraph rhythm: varied paragraphs read good', computeVoiceMetrics(varied).paragraphLabel === 'good', computeVoiceMetrics(varied).paragraphVariation)
 check('paragraph rhythm: too few paragraphs is not judged', computeVoiceMetrics('One.\n\nTwo.').paragraphVariation === 0)
 
+check('sweeping claim: most people', has('Most people never ask this question.', 'sweeping claim'))
+check('sweeping claim: we all know', has('We all know the feeling.', 'sweeping claim'))
+check('sweeping claim: nobody talks about', has('Nobody talks about the cost.', 'sweeping claim'))
+check('sweeping claim: a counted crowd is left alone', !has('Three people at the table asked the same question.', 'sweeping claim'))
+check('stock adverb: quietly', has('The habit quietly runs the whole morning.', 'stock adverb'))
+check('stock adverb: profoundly', has('He was profoundly changed.', 'stock adverb'))
+check('stock adverb: an ordinary adverb is left alone', !has('He walked slowly to the gate.', 'stock adverb'))
+check('phrase tell: foundational', has('This is a foundational idea.', 'foundational'))
+
 // ── The prompt block itself keeps its own rules ──────────────────────────────
 check('tells block has no dashes', !/[—–]/.test(MACHINE_TELLS_BLOCK))
+check('tells block names the sweeping claim and stock adverbs', /sweeping claim about people/.test(MACHINE_TELLS_BLOCK) && /quietly/.test(MACHINE_TELLS_BLOCK) && /most people/i.test(MACHINE_TELLS_SUMMARY))
 check('tells block names the structural fingerprints', /STRUCTURAL FINGERPRINTS/.test(MACHINE_TELLS_BLOCK) && /controlling metaphor/.test(MACHINE_TELLS_BLOCK) && /bolted-on anecdote/i.test(MACHINE_TELLS_BLOCK))
 check('tells summary has no dashes', !/[—–]/.test(MACHINE_TELLS_SUMMARY))
 

@@ -108,6 +108,7 @@ const TELLS: string[] = [
   'stands as a',
   'plays a vital role',
   'rich tapestry',
+  'foundational',
 ]
 
 // Tells that are shapes rather than phrases, so they need a pattern. These are
@@ -149,6 +150,16 @@ export const PATTERN_TELLS: { label: string; re: RegExp }[] = [
     // "This essay moves from the small to the large." "In what follows."
     label: 'meta-narration',
     re: /\b(?:this|the)\s+(?:essay|piece|article|post|section|chapter|argument)\s+(?:moves|argues|will|begins|turns|shows|makes|proceeds|has|is\s+about|takes)\b|\bin\s+(?:this|the\s+following)\s+(?:essay|piece|section|paragraphs?)\b|\bin\s+what\s+follows\b|\bas\s+(?:we|I)\s+(?:will|shall)\s+see\b|\bthe\s+(?:argument|structure|logic)\s+(?:is|here\s+is|runs)\s+(?:consistent|simple|straightforward|the\s+same|as\s+follows)\b/gi,
+  },
+  {
+    // "Most people never ask this." "We all know the feeling."
+    label: 'sweeping claim',
+    re: /\b(?:most|many|so\s+many|all|few)\s+(?:people|of\s+us|men|women|writers|readers)\b|\bwe\s+all\s+(?:know|have|want|feel|do|carry|tell|think)\b|\bevery(?:one|body)\s+(?:knows|wants|has|feels|thinks|does|talks)\b|\bno(?:body|\s+one)\s+(?:talks|tells|wants|asks|mentions|says|admits)\b|\bthe\s+truth\s+(?:is|about)\b|\bin\s+today['’]s\s+(?:world|culture|society)\b/gi,
+  },
+  {
+    // "X quietly runs Y": mood in place of meaning.
+    label: 'stock adverb',
+    re: /\b(?:quietly|subtly|effortlessly|seamlessly|profoundly|deeply|truly|fundamentally|remarkably|undeniably|beautifully|elegantly|relentlessly)\b/gi,
   },
   {
     // Filler qualifiers: reflex, not precision.

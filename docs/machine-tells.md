@@ -22,11 +22,12 @@ rest are the tells screeners key on. The rule under all of them is his:
 | 7 | **Thesaurus diction.** | `delve`, `tapestry`, `testament to`, `navigate the complexities`, `underscore`, `landscape`, `realm`, `nuanced`, `crucial`, `pivotal`, `profound` | The plain, exact word. |
 | 8 | **The hedge stack.** | `While X is true, it is also worth noting that Y.` | Say the thing. |
 | 9 | **Uniform rhythm.** Every sentence the same length. | | A long winding sentence, then a three-word one. A fragment is allowed. |
-| 10 | **Abstract nouns where a thing belongs.** | `a reminder of loss` | The gutter he never fixed. Name the object, the person, the day. Strong verbs over adverbs. |
+| 10 | **Abstract nouns where a thing belongs, and atmosphere adverbs where a verb belongs.** | `a reminder of loss` / `X quietly runs Y` | The gutter he never fixed. Name the object, the person, the day. Strong verbs; cut quietly, subtly, effortlessly, profoundly, deeply, truly. |
 | 11 | **The rhetorical question that answers itself.** | `What does that mean? It means...` | Ask only if the question stays open. |
 | 12 | **The manufactured punchline.** | `The answer: discipline.` / `Simple.` / `Full stop.` | Emphasis from the idea, not the typography. |
 | 13 | **The summarizing ending.** | Restating the essay; a tidy moral. | Land somewhere the reader did not see coming but now finds inevitable. |
 | 14 | **Talking to the reader about the reader or the writing.** | `You already know this.` / `Stay with me here.` | The prose does its work instead of commenting on itself. |
+| 15 | **The sweeping claim about people.** | `Most people never ask this.` / `We all know the feeling.` / `Nobody talks about the cost.` | Say who, specifically, and what you saw them do; or make the claim about yourself, where it can be true. |
 
 ### Structural fingerprints
 
@@ -38,12 +39,12 @@ whose sections share one scaffold.
 
 | # | Fingerprint | Example | Instead |
 |---|-------------|---------|---------|
-| 15 | **One controlling metaphor mechanically reapplied.** | `their own picture` stamped on every section, from a traffic slight to an atrocity. | A governing image where it earns its place, dropped where it does not. A phrase in more than two sections is a habit. |
-| 16 | **The same section template at every scale.** | describe the wrong, "from their perspective", name the false belief, quote a Stoic, gloss, same conclusion, eight times. | The shape changes with the weight: one case a scene, one a sentence, one without a quotation, one left without a conclusion. |
-| 17 | **Meta-narration of the essay's own structure.** | `This essay moves from the small to the large.` / `In what follows.` | Cut the roadmap. Let the movement be something the reader notices happening. |
-| 18 | **Stock qualifiers as filler.** | `genuine`, `genuinely`, `in some sense`, `at least`, `to some extent`, `arguably` | Each one either names a real qualification or is cut. |
-| 19 | **Uniform paragraph shape.** | topic sentence, elaboration, quote with citation, takeaway, for 3,000 words. | Paragraphs breathe differently: building, telling, landing. Not every paragraph carries a quotation. |
-| 20 | **The bolted-on anecdote.** | One first-person aside in a different register, the only human paragraph in the piece. | The lived scene is the register of the whole essay, not an insert for warmth. |
+| 16 | **One controlling metaphor mechanically reapplied.** | `their own picture` stamped on every section, from a traffic slight to an atrocity. | A governing image where it earns its place, dropped where it does not. A phrase in more than two sections is a habit. |
+| 17 | **The same section template at every scale.** | describe the wrong, "from their perspective", name the false belief, quote a Stoic, gloss, same conclusion, eight times. | The shape changes with the weight: one case a scene, one a sentence, one without a quotation, one left without a conclusion. |
+| 18 | **Meta-narration of the essay's own structure.** | `This essay moves from the small to the large.` / `In what follows.` | Cut the roadmap. Let the movement be something the reader notices happening. |
+| 19 | **Stock qualifiers as filler.** | `genuine`, `genuinely`, `in some sense`, `at least`, `to some extent`, `arguably` | Each one either names a real qualification or is cut. |
+| 20 | **Uniform paragraph shape.** | topic sentence, elaboration, quote with citation, takeaway, for 3,000 words. | Paragraphs breathe differently: building, telling, landing. Not every paragraph carries a quotation. |
+| 21 | **The bolted-on anecdote.** | One first-person aside in a different register, the only human paragraph in the piece. | The lived scene is the register of the whole essay, not an insert for warmth. |
 
 ## Where it is enforced
 
@@ -58,7 +59,8 @@ whose sections share one scaffold.
   under Economy, names the tell, and holds its own comments to the list.
 - **Voice meter** (`lib/scribe/voice-metrics.ts`): the negation-first frame,
   announced importance, hyperbole, the self-answered question, the punchline,
-  meta-narration, and stock qualifiers are detected by pattern (`PATTERN_TELLS`)
+  meta-narration, stock qualifiers, the sweeping claim about people, and stock
+  adverbs are detected by pattern (`PATTERN_TELLS`)
   and painted in the draft alongside the phrase list. `echoes` finds any phrase
   of three or more words repeated three times (the controlling metaphor), and
   `paras` reports how much paragraph length varies (flat is the metronome).
