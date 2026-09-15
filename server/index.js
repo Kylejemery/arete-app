@@ -16,6 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
+const { aboveSimilarityFloor } = require('./lib/cabinet-retrieval');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
@@ -1191,7 +1192,9 @@ app.post('/api/chat/counselor', async (req, res) => {
           filter_language: 'english',
           ...counselorRetrievalParams(),
         });
-        if (!error) contextChunks = (data ?? []);
+        // Below the floor (server/lib/cabinet-retrieval.js) a row is noise
+        // from a turn with nothing to retrieve for; the counselors get none.
+        if (!error) contextChunks = aboveSimilarityFloor(data);
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
         contextChunks = (await expandCandidates(contextChunks, 7)).rows.filter(isCounselorVisible);
       } catch (err) {
@@ -1316,9 +1319,10 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
         filter_language: 'english',
         ...counselorRetrievalParams(),
       });
-      if (!error && Array.isArray(data) && data.length > 0) {
+      const aboveFloor = error ? [] : aboveSimilarityFloor(data);
+      if (aboveFloor.length > 0) {
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-        libraryChunks = (await expandCandidates(data, 5)).rows.filter(isCounselorVisible);
+        libraryChunks = (await expandCandidates(aboveFloor, 5)).rows.filter(isCounselorVisible);
         pulseFromChunks(libraryChunks, lastUserMessage);
         libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
           libraryChunks.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +

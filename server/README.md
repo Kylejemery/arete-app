@@ -88,7 +88,8 @@ The server will start on `http://localhost:3000`.
 question (same embedding, `match_rag_corpus` call and counselor fence as the
 parallel Cabinet branch of `POST /api/chat/counselor`) and prints the rows
 with section label, locator, text type and similarity, without generating a
-reply or writing to `retrieval_log`. With `--recent N` it replays the last N
+reply or writing to `retrieval_log`. Rows under the Cabinet's similarity
+floor (`lib/cabinet-retrieval.js`) are listed separately. With `--recent N` it replays the last N
 Cabinet turns from `retrieval_log` instead, including which rows the reply
 was judged to have used.
 

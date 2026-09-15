@@ -5,10 +5,13 @@
 // The live path (POST /api/chat/counselor, parallel Cabinet branch in
 // server/index.js) embeds the last user message with text-embedding-3-small,
 // calls match_rag_corpus with match_count 7, filter_language 'english' and
-// the counselor fence (server/lib/corpus-fence.js), then runs the graph-boost
-// expansion (a no-op unless GRAPH_BOOST=true) and the fence post-filter. This
-// script does exactly that and prints the rows with the fields the Cabinet
-// UI never shows: section label, locator, text type, similarity.
+// the counselor fence (server/lib/corpus-fence.js), drops rows below the
+// similarity floor (server/lib/cabinet-retrieval.js), then runs the
+// graph-boost expansion (a no-op unless GRAPH_BOOST=true) and the fence
+// post-filter. This script does exactly that and prints the rows with the
+// fields the Cabinet UI never shows: section label, locator, text type,
+// similarity. Rows the floor dropped are listed too, so the floor itself can
+// be judged; --min-sim 0 shows everything the RPC returned.
 //
 // It can also replay what the live Cabinet actually retrieved, from
 // retrieval_log, so a question typed into the app can be checked afterwards.
@@ -17,6 +20,7 @@
 //   node scripts/probe-retrieval.js "…" --k 10 --fence modern      another surface's fence
 //   node scripts/probe-retrieval.js "…" --author Seneca            one author, as the single-counselor path can
 //   node scripts/probe-retrieval.js "…" --full                     whole chunk text, not a snippet
+//   node scripts/probe-retrieval.js "…" --min-sim 0                no floor: everything the RPC returned
 //   node scripts/probe-retrieval.js --recent 5                     last five Cabinet turns from retrieval_log
 //   node scripts/probe-retrieval.js --recent 5 --agent oracle      another agent's log
 //
@@ -29,18 +33,20 @@ const {
   counselorRetrievalParams, modernFenceParams, isCounselorVisible, passesModernFence,
 } = require('../lib/corpus-fence');
 const { expandCandidates, graphBoostEnabled } = require('../lib/graph-boost');
+const { CABINET_MIN_SIMILARITY, aboveSimilarityFloor } = require('../lib/cabinet-retrieval');
 
 const CABINET_K = 7;
 const CABINET_AGENTS = ['cabinet', 'counselor:cabinet'];
 
 function parseArgs(argv) {
-  const args = { question: null, k: CABINET_K, fence: 'counselor', author: null, full: false, recent: null, agent: null };
+  const args = { question: null, k: CABINET_K, fence: 'counselor', author: null, full: false, recent: null, agent: null, minSim: CABINET_MIN_SIMILARITY };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--k') args.k = Number(argv[++i]);
     else if (a === '--fence') args.fence = argv[++i];
     else if (a === '--author') args.author = argv[++i];
     else if (a === '--full') args.full = true;
+    else if (a === '--min-sim') args.minSim = Number(argv[++i]);
     else if (a === '--recent') args.recent = Number(argv[++i]);
     else if (a === '--agent') args.agent = argv[++i];
     else if (a.startsWith('--')) throw new Error(`unknown option ${a}`);
@@ -48,6 +54,7 @@ function parseArgs(argv) {
   }
   if (!['counselor', 'modern', 'none'].includes(args.fence)) throw new Error(`--fence must be counselor, modern or none (got ${args.fence})`);
   if (!Number.isInteger(args.k) || args.k < 1) throw new Error('--k must be a positive integer');
+  if (!(args.minSim >= 0 && args.minSim <= 1)) throw new Error('--min-sim must be between 0 and 1');
   if (args.recent != null && (!Number.isInteger(args.recent) || args.recent < 1)) throw new Error('--recent must be a positive integer');
   if (args.recent == null && !args.question) {
     throw new Error('give a question in quotes, or --recent N to replay the log');
@@ -137,7 +144,7 @@ function printSummary(rows) {
 async function probe(supabase, args) {
   need('OPENAI_API_KEY');
   console.log(`Question: ${JSON.stringify(args.question)}`);
-  console.log(`match_rag_corpus: k=${args.k}, fence=${args.fence}, author=${args.author ?? 'any'}, language=english, graph boost ${graphBoostEnabled() ? 'on' : 'off'}\n`);
+  console.log(`match_rag_corpus: k=${args.k}, fence=${args.fence}, author=${args.author ?? 'any'}, language=english, floor=${args.minSim}, graph boost ${graphBoostEnabled() ? 'on' : 'off'}\n`);
   const embedding = await embedQuery(args.question);
   const { data, error } = await supabase.rpc('match_rag_corpus', {
     query_embedding: embedding,
@@ -147,11 +154,17 @@ async function probe(supabase, args) {
     ...fenceParams(args.fence),
   });
   if (error) throw new Error(`match_rag_corpus failed: ${error.message}`);
-  let rows = (await expandCandidates(data ?? [], args.k)).rows.filter(fencePostFilter(args.fence));
+  const kept = aboveSimilarityFloor(data, args.minSim);
+  const dropped = (data ?? []).filter(r => !kept.includes(r));
+  let rows = (await expandCandidates(kept, args.k)).rows.filter(fencePostFilter(args.fence));
   rows = await decorate(supabase, rows);
   printRows(rows, args);
   console.log();
   printSummary(rows);
+  if (dropped.length) {
+    console.log(`\n  ${dropped.length} row(s) below the ${args.minSim} floor, not given to the counselors:`);
+    printRows(await decorate(supabase, dropped), args);
+  }
   console.log('\n(not written to retrieval_log)');
 }
 
