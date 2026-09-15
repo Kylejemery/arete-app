@@ -100,6 +100,9 @@ export async function POST(req: Request) {
 
   // ── Resolve targets ───────────────────────────────────────────────────
   let targets: Target[]
+  // Addresses dropped because the member opted out; reported back so the
+  // tab can show that they were skipped rather than silently vanishing.
+  const skipped: string[] = []
   if (isTest) {
     const { data: me } = await admin.from('user_settings').select('user_name').eq('user_id', user.id).maybeSingle()
     targets = [{ id: user.id, email: user.email, name: me?.user_name?.trim() || null }]
@@ -112,7 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `At most ${MAX_PER_REQUEST} recipients per request` }, { status: 400 })
     }
     const [{ data: profiles, error: pErr }, { data: settings }] = await Promise.all([
-      admin.from('profiles').select('id, email').in('id', ids),
+      admin.from('profiles').select('id, email, email_opt_out').in('id', ids),
       admin.from('user_settings').select('user_id, user_name').in('user_id', ids),
     ])
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
@@ -125,10 +128,19 @@ export async function POST(req: Request) {
     for (const p of profiles ?? []) {
       const email = typeof p.email === 'string' ? p.email.trim().toLowerCase() : ''
       if (!email.includes('@') || seen.has(email)) continue
+      // The "do not email" flag is enforced here, not just in the tab, so a
+      // stale selection or a hand-built request can never reach them.
+      if (p.email_opt_out) { skipped.push(email); continue }
       seen.add(email)
       targets.push({ id: p.id, email, name: names.get(p.id) ?? null })
     }
-    if (targets.length === 0) return NextResponse.json({ error: 'None of the selected users has a valid email' }, { status: 400 })
+    if (targets.length === 0) {
+      return NextResponse.json({
+        error: skipped.length > 0
+          ? 'Every selected user has asked not to be emailed'
+          : 'None of the selected users has a valid email',
+      }, { status: 400 })
+    }
   }
 
   // ── Send ──────────────────────────────────────────────────────────────
@@ -200,6 +212,7 @@ export async function POST(req: Request) {
     sent: result.sent.length,
     failed: result.failures.length,
     failures: result.failures,
+    skipped,
     logError,
   })
 }

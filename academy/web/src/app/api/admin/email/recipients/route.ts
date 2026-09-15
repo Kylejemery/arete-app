@@ -28,6 +28,10 @@ export type Recipient = {
   // Which tier a temporary grant is for, so a revoked Pro trial reads as Pro
   // in the roster. Null for every other entitlement source.
   grantTier: TierKey | null
+  // Sticky "do not email": the member asked to be taken off the list. The
+  // tab can't select them and the send route refuses them regardless.
+  optOut: boolean
+  optOutAt: string | null
 }
 
 export async function GET() {
@@ -55,7 +59,7 @@ export async function GET() {
 
     const [{ data: profiles, error: pErr }, { data: settings }, { data: subs }] = await Promise.all([
       admin.from('profiles')
-        .select('id, email, tier, is_premium, is_admin, know_thyself_complete, created_at')
+        .select('id, email, tier, is_premium, is_admin, know_thyself_complete, created_at, email_opt_out, email_opt_out_at')
         .order('created_at', { ascending: false }),
       admin.from('user_settings').select('user_id, user_name'),
       admin.from('subscriptions').select('user_id, billing_source, tier, status, current_period_end'),
@@ -105,10 +109,18 @@ export async function GET() {
         premiumSource: source.get(p.id)?.src ?? null,
         grantExpiresAt: source.get(p.id)?.expiresAt ?? null,
         grantTier: source.get(p.id)?.tier ?? null,
+        optOut: !!p.email_opt_out,
+        optOutAt: p.email_opt_out ? (p.email_opt_out_at ?? null) : null,
       }))
 
+    // Tier counts are of people who can actually be mailed; the opted-out
+    // are counted separately so the tab's quick picks add up.
     const counts: Record<TierKey, number> = { free: 0, premium: 0, pro: 0 }
-    for (const r of recipients) counts[r.tier] += 1
+    let optedOut = 0
+    for (const r of recipients) {
+      if (r.optOut) optedOut += 1
+      else counts[r.tier] += 1
+    }
 
     // Campaign history is best-effort: the table comes from a migration that
     // may not have been applied yet, and its absence shouldn't block sending.
@@ -130,7 +142,7 @@ export async function GET() {
         replyTo: cfg.replyTo ?? null,
       },
       adminEmail: adminEmail ?? null,
-      counts: { ...counts, total: recipients.length },
+      counts: { ...counts, total: recipients.length - optedOut, optedOut },
       recipients,
       campaigns,
     })

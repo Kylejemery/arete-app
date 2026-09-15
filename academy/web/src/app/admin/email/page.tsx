@@ -21,6 +21,10 @@ type Recipient = {
   premiumSource: 'grant' | 'manual' | 'stripe' | 'apple' | null
   grantExpiresAt: string | null
   grantTier: TierKey | null
+  // Sticky "do not email" — set once when someone asks to be taken off the
+  // list. The row greys out, can't be selected, and the server refuses it.
+  optOut: boolean
+  optOutAt: string | null
 }
 
 type Campaign = {
@@ -38,7 +42,8 @@ type Roster = {
   generatedAt: string
   gmail: { configured: boolean; from: string | null; replyTo: string | null }
   adminEmail: string | null
-  counts: { free: number; premium: number; pro: number; total: number }
+  // Tier counts and total are of mailable users; optedOut is the rest.
+  counts: { free: number; premium: number; pro: number; total: number; optedOut: number }
   recipients: Recipient[]
   campaigns: Campaign[]
 }
@@ -51,6 +56,8 @@ type Progress = {
   sent: number
   failed: number
   failures: Failure[]
+  // Addresses the server refused because the member opted out.
+  skipped: string[]
   error: string
   test: boolean
 }
@@ -70,7 +77,7 @@ const TIER_PILL: Record<TierKey, string> = {
   pro: styles.pillOk,
 }
 
-const IDLE: Progress = { phase: 'idle', total: 0, done: 0, sent: 0, failed: 0, failures: [], error: '', test: false }
+const IDLE: Progress = { phase: 'idle', total: 0, done: 0, sent: 0, failed: 0, failures: [], skipped: [], error: '', test: false }
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = []
@@ -91,6 +98,7 @@ export default function EmailPage() {
   // Audience
   const [tierFilter, setTierFilter] = useState<Set<TierKey>>(new Set(TIERS))
   const [search, setSearch] = useState('')
+  const [showOptedOut, setShowOptedOut] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
 
   // Compose
@@ -104,6 +112,7 @@ export default function EmailPage() {
   const [progress, setProgress] = useState<Progress>(IDLE)
   const [toast, setToast] = useState('')
   const [grantBusy, setGrantBusy] = useState<string | null>(null)
+  const [optOutBusy, setOptOutBusy] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -113,6 +122,17 @@ export default function EmailPage() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load recipients')
       setData(json)
+      // Anyone marked "do not email" since the last load drops out of the
+      // selection, so a stale tick can't survive a refresh.
+      const optedOut = new Set<string>(
+        ((json as Roster).recipients ?? []).filter(r => r.optOut).map(r => r.id)
+      )
+      if (optedOut.size > 0) {
+        setSelected(prev => {
+          if (![...prev].some(id => optedOut.has(id))) return prev
+          return new Set([...prev].filter(id => !optedOut.has(id)))
+        })
+      }
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load')
     }
@@ -148,15 +168,21 @@ export default function EmailPage() {
 
   const recipients = useMemo(() => data?.recipients ?? [], [data])
   const byId = useMemo(() => new Map(recipients.map(r => [r.id, r])), [recipients])
+  // The people a broadcast can actually go to. Every bulk action below works
+  // from this list so an opted-out member is never picked up by accident.
+  const mailable = useMemo(() => recipients.filter(r => !r.optOut), [recipients])
+  const optedOutCount = recipients.length - mailable.length
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return recipients.filter(r => {
+      if (r.optOut && !showOptedOut) return false
       if (!tierFilter.has(r.tier)) return false
       if (!q) return true
       return r.email.toLowerCase().includes(q) || (r.name ?? '').toLowerCase().includes(q)
     })
-  }, [recipients, tierFilter, search])
+  }, [recipients, tierFilter, search, showOptedOut])
+  const filteredMailable = useMemo(() => filtered.filter(r => !r.optOut), [filtered])
 
   const selectedCounts = useMemo(() => {
     const c: Record<TierKey, number> = { free: 0, premium: 0, pro: 0 }
@@ -167,7 +193,7 @@ export default function EmailPage() {
     return c
   }, [selected, byId])
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every(r => selected.has(r.id))
+  const allFilteredSelected = filteredMailable.length > 0 && filteredMailable.every(r => selected.has(r.id))
 
   function toggleTier(t: TierKey) {
     setTierFilter(prev => {
@@ -179,6 +205,7 @@ export default function EmailPage() {
   }
 
   function toggleOne(id: string) {
+    if (byId.get(id)?.optOut) return
     setSelected(prev => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -190,7 +217,7 @@ export default function EmailPage() {
   function selectFiltered(on: boolean) {
     setSelected(prev => {
       const next = new Set(prev)
-      for (const r of filtered) {
+      for (const r of filteredMailable) {
         if (on) next.add(r.id)
         else next.delete(r.id)
       }
@@ -200,7 +227,7 @@ export default function EmailPage() {
 
   // One-click audiences: replace the selection with exactly this group.
   function selectGroup(group: 'all' | TierKey) {
-    const ids = recipients.filter(r => group === 'all' || r.tier === group).map(r => r.id)
+    const ids = mailable.filter(r => group === 'all' || r.tier === group).map(r => r.id)
     setSelected(new Set(ids))
     setTierFilter(group === 'all' ? new Set(TIERS) : new Set([group]))
     setSearch('')
@@ -209,10 +236,10 @@ export default function EmailPage() {
   const audienceLabel = useMemo(() => {
     const n = selected.size
     if (n === 0) return 'nobody'
-    if (n === recipients.length) return `all ${n} users`
+    if (n === mailable.length) return `all ${n} users`
     const parts = TIERS.filter(t => selectedCounts[t] > 0).map(t => `${selectedCounts[t]} ${TIER_LABEL[t].toLowerCase()}`)
     return `${n} users (${parts.join(', ')})`
-  }, [selected, recipients.length, selectedCounts])
+  }, [selected, mailable.length, selectedCounts])
 
   const canCompose = !!data?.gmail.configured && progress.phase !== 'sending'
   const composeValid = subject.trim().length > 0 && body.trim().length > 0
@@ -225,12 +252,14 @@ export default function EmailPage() {
     })
     const json = await res.json()
     if (!res.ok) throw new Error(json.error || `Send failed (${res.status})`)
-    return json as { campaignId: string | null; sent: number; failed: number; failures: Failure[]; logError: string | null }
+    return json as { campaignId: string | null; sent: number; failed: number; failures: Failure[]; skipped?: string[]; logError: string | null }
   }
 
   async function send(test: boolean) {
     if (!composeValid) return
-    const ids = test ? [] : [...selected]
+    // Belt and braces: the server refuses opted-out ids too, but never even
+    // ask it to mail someone who said no.
+    const ids = test ? [] : [...selected].filter(id => !byId.get(id)?.optOut)
     if (!test) {
       if (ids.length === 0) return
       const ok = window.confirm(
@@ -247,6 +276,7 @@ export default function EmailPage() {
     let sent = 0
     let failed = 0
     let failures: Failure[] = []
+    let skipped: string[] = []
     let done = 0
     const audience = {
       label: test ? 'test (admin only)' : audienceLabel,
@@ -271,15 +301,16 @@ export default function EmailPage() {
         sent += r.sent
         failed += r.failed
         failures = [...failures, ...r.failures]
+        skipped = [...skipped, ...(r.skipped ?? [])]
         done += test ? 1 : c.length
-        setProgress({ phase: 'sending', total, done, sent, failed, failures, error: '', test })
+        setProgress({ phase: 'sending', total, done, sent, failed, failures, skipped, error: '', test })
       }
-      setProgress({ phase: 'done', total, done, sent, failed, failures, error: '', test })
+      setProgress({ phase: 'done', total, done, sent, failed, failures, skipped, error: '', test })
       setToast(test ? 'Test email sent to you' : `Sent to ${sent} recipient${sent === 1 ? '' : 's'}`)
       load()
     } catch (e) {
       setProgress({
-        phase: 'error', total, done, sent, failed, failures,
+        phase: 'error', total, done, sent, failed, failures, skipped,
         error: e instanceof Error ? e.message : 'Send failed', test,
       })
     }
@@ -335,6 +366,35 @@ export default function EmailPage() {
     setGrantBusy(null)
   }
 
+  // Sticky "do not email". Marking someone also drops them from the current
+  // selection; clearing the mark just makes them selectable again.
+  async function setOptOut(r: Recipient, optOut: boolean) {
+    if (optOut && !window.confirm(`Stop emailing ${r.email}?\n\nThey'll be skipped by every send until you allow them again.`)) return
+    setOptOutBusy(r.id)
+    try {
+      const res = await fetch('/api/admin/email/opt-out', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: r.id, optOut }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Update failed')
+      if (optOut) {
+        setSelected(prev => {
+          if (!prev.has(r.id)) return prev
+          const next = new Set(prev)
+          next.delete(r.id)
+          return next
+        })
+      }
+      setToast(optOut ? `${r.email} won't be emailed again` : `${r.email} can be emailed again`)
+      await load()
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : 'Update failed')
+    }
+    setOptOutBusy(null)
+  }
+
   const previewHtml = useMemo(() => {
     if (!showPreview) return ''
     const vars = { name: 'Marcus', email: 'member@example.com' }
@@ -364,6 +424,7 @@ export default function EmailPage() {
               ? <>Sending as <strong>{data.gmail.from}</strong>{data.gmail.replyTo ? <> · replies to {data.gmail.replyTo}</> : null}</>
               : 'Gmail not configured'}
             {' · '}{data.counts.total} users: {data.counts.free} free, {data.counts.premium} premium, {data.counts.pro} pro
+            {data.counts.optedOut > 0 && <> · {data.counts.optedOut} asked not to be emailed</>}
           </p>
         )}
       </div>
@@ -517,6 +578,12 @@ export default function EmailPage() {
                   {progress.done > 0 && <> — {progress.sent} were already sent before the error.</>}
                 </div>
               )}
+              {progress.skipped.length > 0 && (
+                <div style={{ marginTop: 6, fontSize: 13 }}>
+                  Skipped {progress.skipped.length} who asked not to be emailed: {progress.skipped.slice(0, 5).join(', ')}
+                  {progress.skipped.length > 5 && <> and {progress.skipped.length - 5} more</>}
+                </div>
+              )}
               {progress.failures.length > 0 && (
                 <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 13 }}>
                   {progress.failures.slice(0, 20).map(f => (
@@ -573,6 +640,14 @@ export default function EmailPage() {
                   </button>
                 ))}
               </span>
+              <button
+                type="button"
+                className={`${styles.chip} ${showOptedOut ? styles.chipOn : ''}`}
+                onClick={() => setShowOptedOut(v => !v)}
+                title="Members who asked not to be emailed. They're never selectable; this only shows or hides their rows."
+              >
+                Show do-not-email ({optedOutCount})
+              </button>
               <input
                 className={styles.textInput}
                 style={{ flex: 1, minWidth: 200 }}
@@ -585,9 +660,9 @@ export default function EmailPage() {
                 className={styles.ghostBtn}
                 style={{ height: 36, fontSize: 13 }}
                 onClick={() => selectFiltered(!allFilteredSelected)}
-                disabled={filtered.length === 0}
+                disabled={filteredMailable.length === 0}
               >
-                {allFilteredSelected ? `Deselect ${filtered.length} shown` : `Select ${filtered.length} shown`}
+                {allFilteredSelected ? `Deselect ${filteredMailable.length} shown` : `Select ${filteredMailable.length} shown`}
               </button>
             </div>
 
@@ -600,18 +675,18 @@ export default function EmailPage() {
                         type="checkbox"
                         checked={allFilteredSelected}
                         onChange={e => selectFiltered(e.target.checked)}
-                        disabled={filtered.length === 0}
+                        disabled={filteredMailable.length === 0}
                         aria-label="Select all shown"
                       />
                     </th>
-                    {['Email', 'Name', 'Tier', 'Joined', 'Grant'].map(h => (
+                    {['Email', 'Name', 'Tier', 'Joined', 'Grant', 'Mail'].map(h => (
                       <th key={h} className={styles.sigTd} style={{ textAlign: 'left', color: '#999', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.length === 0 && (
-                    <tr><td className={styles.sigTd} colSpan={6}><span className={styles.muted}>No users match.</span></td></tr>
+                    <tr><td className={styles.sigTd} colSpan={7}><span className={styles.muted}>No users match.</span></td></tr>
                   )}
                   {filtered.map(r => {
                     const on = selected.has(r.id)
@@ -619,15 +694,35 @@ export default function EmailPage() {
                       <tr
                         key={r.id}
                         className={styles.sigTr}
-                        style={{ background: on ? '#F7F6FE' : undefined, cursor: 'pointer' }}
+                        style={{
+                          background: on ? '#F7F6FE' : undefined,
+                          cursor: r.optOut ? 'default' : 'pointer',
+                          opacity: r.optOut ? 0.55 : undefined,
+                        }}
                         onClick={() => toggleOne(r.id)}
                       >
                         <td className={styles.sigTd} onClick={e => e.stopPropagation()}>
-                          <input type="checkbox" checked={on} onChange={() => toggleOne(r.id)} aria-label={`Select ${r.email}`} />
+                          <input
+                            type="checkbox"
+                            checked={on}
+                            onChange={() => toggleOne(r.id)}
+                            disabled={r.optOut}
+                            aria-label={r.optOut ? `${r.email} asked not to be emailed` : `Select ${r.email}`}
+                            title={r.optOut ? 'Asked not to be emailed' : undefined}
+                          />
                         </td>
                         <td className={styles.sigTd} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12.5 }}>
                           {r.email}
                           {r.isAdmin && <span className={styles.guideTag} style={{ marginLeft: 6 }}>admin</span>}
+                          {r.optOut && (
+                            <span
+                              className={styles.pill}
+                              style={{ marginLeft: 6, background: '#FBEAEA', color: '#A33' }}
+                              title={r.optOutAt ? `Marked ${fmtDate(r.optOutAt)}` : undefined}
+                            >
+                              do not email
+                            </span>
+                          )}
                         </td>
                         <td className={styles.sigTd}>{r.name ?? <span className={styles.muted}>—</span>}</td>
                         <td className={styles.sigTd}>
@@ -678,6 +773,34 @@ export default function EmailPage() {
                             </span>
                           ) : (
                             <span className={styles.muted}>—</span>
+                          )}
+                        </td>
+                        <td className={styles.sigTd} style={{ whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          {r.optOut ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                              <span className={styles.muted}>Off since {fmtDate(r.optOutAt)}</span>
+                              <button
+                                type="button"
+                                className={styles.ghostBtn}
+                                style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+                                onClick={() => setOptOut(r, false)}
+                                disabled={optOutBusy === r.id}
+                                title={`Let ${r.email} receive email again`}
+                              >
+                                {optOutBusy === r.id ? '…' : 'Allow again'}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.ghostBtn}
+                              style={{ height: 26, padding: '0 10px', fontSize: 11 }}
+                              onClick={() => setOptOut(r, true)}
+                              disabled={optOutBusy === r.id}
+                              title={`Never email ${r.email} again (they asked to be taken off the list)`}
+                            >
+                              {optOutBusy === r.id ? '…' : 'Do not email'}
+                            </button>
                           )}
                         </td>
                       </tr>
