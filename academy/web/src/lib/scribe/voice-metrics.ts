@@ -13,7 +13,10 @@ export interface TellHit {
   count: number
 }
 
-export type MetricKind = 'dash' | 'adverb' | 'tobe' | 'tell'
+// 'echo' is a phrase of three or more words repeated across the draft: the
+// controlling metaphor mechanically reapplied ("their own picture" in every
+// section), which detectors read as one scaffold holding unlike material.
+export type MetricKind = 'dash' | 'adverb' | 'tobe' | 'tell' | 'echo'
 
 export interface Span {
   start: number
@@ -43,7 +46,29 @@ export interface VoiceMetrics {
   dashLabel: 'clean' | 'some' | 'heavy'
   tellHits: TellHit[]
   tellTotal: number
+  // Phrases of 3+ words that recur ECHO_MIN times or more. Each count is the
+  // number of occurrences; echoTotal is every painted occurrence.
+  echoes: TellHit[]
+  echoTotal: number
+  // Paragraph shape. Detectors and readers both notice when every paragraph
+  // is the same length and build (topic, elaboration, quote, takeaway).
+  // Coefficient of variation of words per paragraph; low means metronomic.
+  paragraphs: number
+  paragraphVariation: number
+  paragraphLabel: 'flat' | 'ok' | 'good'
 }
+
+const ECHO_MIN = 3
+const ECHO_MIN_WORDS = 3
+const ECHO_MAX_WORDS = 6
+
+// Words that cannot by themselves make a phrase an echo ("in the same way"
+// is grammar, not a metaphor).
+const ECHO_STOP = new Set(
+  'the a an and or but if then than that this those these there here is are was were be been being am do does did not no it its into onto of for from with without about over under to in on at by as so such very really just also too can could would should may might must will shall have has had having what which who whom whose when where why how all any some more most much many few less least own other another same each every both either neither only ever never always often i me my mine we us our you your he him his she her they them their one ones thing things way get got make made say said says think thought know knew see saw go went come came take took give gave keep kept put let want wanted need needed use used still even again back up down out off yet because while until since after before through during between among against'.split(
+    /\s+/
+  )
+)
 
 // High-signal AI/blog tells. Matched case-insensitively as whole phrases.
 const TELLS: string[] = [
@@ -120,7 +145,84 @@ export const PATTERN_TELLS: { label: string; re: RegExp }[] = [
     label: 'punchline',
     re: /(?:^|[.!?]\s+)(?:Simple|Period|Full\s+stop|Exactly|Precisely|Always|Never|Nothing|Everything|Neither|Both)\.(?=\s|$)|:\s+[A-Za-z]+\.(?=\s|$)/gm,
   },
+  {
+    // "This essay moves from the small to the large." "In what follows."
+    label: 'meta-narration',
+    re: /\b(?:this|the)\s+(?:essay|piece|article|post|section|chapter|argument)\s+(?:moves|argues|will|begins|turns|shows|makes|proceeds|has|is\s+about|takes)\b|\bin\s+(?:this|the\s+following)\s+(?:essay|piece|section|paragraphs?)\b|\bin\s+what\s+follows\b|\bas\s+(?:we|I)\s+(?:will|shall)\s+see\b|\bthe\s+(?:argument|structure|logic)\s+(?:is|here\s+is|runs)\s+(?:consistent|simple|straightforward|the\s+same|as\s+follows)\b/gi,
+  },
+  {
+    // Filler qualifiers: reflex, not precision.
+    label: 'stock qualifier',
+    re: /\bgenuinely?\b|\bin\s+(?:some|a)\s+(?:sense|way)\b|\bto\s+some\s+(?:extent|degree)\b|\bat\s+least\b|\barguably\b|\bin\s+many\s+ways\b|\bon\s+some\s+level\b/gi,
+  },
 ]
+
+// Words trimmed from the edges of a reported echo. Narrower than ECHO_STOP:
+// a possessive or "own" is part of the phrase ("their own picture"), a
+// preposition or auxiliary at the edge is not ("on their own picture of").
+const ECHO_TRIM = new Set(
+  'the a an and or but of for to in on at by with from as into onto over under than then that this these those is are was were be been being am do does did not it so such very just also too can could would should may might must will shall have has had having what which who whom whose when where why how all any some more most much many few less least each every both either neither only ever never always often i me we us you he him she her they them one there here yet because while until since after before through during between among against up down out off back'.split(
+    /\s+/
+  )
+)
+
+type WordTok = { w: string; start: number; end: number }
+
+function tokenize(src: string): WordTok[] {
+  const out: WordTok[] = []
+  for (const m of src.matchAll(/[A-Za-z][A-Za-z'’-]*/g)) {
+    out.push({ w: m[0].toLowerCase().replace(/[’']/g, "'"), start: m.index!, end: m.index! + m[0].length })
+  }
+  return out
+}
+
+// Repeated phrases. Every n-gram of ECHO_MIN_WORDS..ECHO_MAX_WORDS words is
+// counted; those seen ECHO_MIN times or more, with at least one word that is
+// not a function word, are echoes. A shorter phrase inside a longer echo with
+// the same count is dropped so "their own picture" is reported once, not as
+// "their own" and "own picture" too.
+export function echoSpans(text: string): Span[] {
+  const toks = tokenize(text || '')
+  if (toks.length < ECHO_MIN_WORDS * ECHO_MIN) return []
+  const counts = new Map<string, number[]>() // key -> start token indexes
+  for (let n = ECHO_MIN_WORDS; n <= ECHO_MAX_WORDS; n++) {
+    for (let i = 0; i + n <= toks.length; i++) {
+      const words = toks.slice(i, i + n).map(t => t.w)
+      if (!words.some(w => !ECHO_STOP.has(w))) continue
+      const key = words.join(' ')
+      const arr = counts.get(key)
+      if (arr) arr.push(i)
+      else counts.set(key, [i])
+    }
+  }
+  const kept = [...counts.entries()].filter(([, at]) => at.length >= ECHO_MIN)
+  // Drop a phrase contained in a longer kept phrase with the same count.
+  const survivors = kept.filter(
+    ([key, at]) =>
+      !kept.some(([other, oat]) => other !== key && oat.length === at.length && other.includes(key))
+  )
+  // Trim leading and trailing function words so the echo reported is the
+  // phrase itself ("their own picture", not "on their own picture of").
+  const spans: Span[] = []
+  for (const [key, at] of survivors) {
+    const words = key.split(' ')
+    let a = 0
+    let b = words.length
+    while (a < b && ECHO_TRIM.has(words[a])) a++
+    while (b > a && ECHO_TRIM.has(words[b - 1])) b--
+    if (b - a < ECHO_MIN_WORDS) continue
+    const label = words.slice(a, b).join(' ')
+    for (const i of at) spans.push({ start: toks[i + a].start, end: toks[i + b - 1].end, label })
+  }
+  spans.sort((a, b) => a.start - b.start || b.end - a.end)
+  const out: Span[] = []
+  for (const s of spans) {
+    const last = out[out.length - 1]
+    if (last && s.start < last.end) continue
+    out.push(s)
+  }
+  return out
+}
 
 function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -151,6 +253,8 @@ export function metricSpans(text: string, kind: MetricKind): Span[] {
     for (const m of src.matchAll(/\b(?:is|are|was|were|be|been|being|am)\b/gi)) {
       spans.push({ start: m.index!, end: m.index! + m[0].length, label: m[0].toLowerCase() })
     }
+  } else if (kind === 'echo') {
+    return echoSpans(src)
   } else {
     for (const phrase of TELLS) {
       for (const m of src.matchAll(new RegExp(escapeRe(phrase), 'gi'))) {
@@ -214,14 +318,33 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
   const dashLabel: VoiceMetrics['dashLabel'] =
     dashes === 0 ? 'clean' : dashRate <= 2 ? 'some' : 'heavy'
 
-  const byPhrase = new Map<string, number>()
-  for (const s of tellSpans) {
-    const key = s.label ?? ''
-    byPhrase.set(key, (byPhrase.get(key) ?? 0) + 1)
+  const tally = (spans: Span[]): TellHit[] => {
+    const byPhrase = new Map<string, number>()
+    for (const s of spans) {
+      const key = s.label ?? ''
+      byPhrase.set(key, (byPhrase.get(key) ?? 0) + 1)
+    }
+    return [...byPhrase.entries()]
+      .map(([phrase, count]) => ({ phrase, count }))
+      .sort((a, b) => b.count - a.count)
   }
-  const tellHits: TellHit[] = [...byPhrase.entries()]
-    .map(([phrase, count]) => ({ phrase, count }))
-    .sort((a, b) => b.count - a.count)
+  const tellHits = tally(tellSpans)
+  const echoSpansFound = metricSpans(clean, 'echo')
+  const echoes = tally(echoSpansFound)
+
+  // Paragraph shape: words per paragraph, as a coefficient of variation so
+  // the number means the same thing for a short piece and a long one. Only
+  // meaningful once there are a few paragraphs to compare.
+  const paraLens = clean
+    .split(/\n\s*\n/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .map(p => p.split(/\s+/).filter(Boolean).length)
+  const paragraphs = paraLens.length
+  const paraMean = paragraphs ? paraLens.reduce((a, b) => a + b, 0) / paragraphs : 0
+  const paragraphVariation = paragraphs >= 4 && paraMean ? Math.round((stdev(paraLens) / paraMean) * 100) / 100 : 0
+  const paragraphLabel: VoiceMetrics['paragraphLabel'] =
+    paragraphs < 4 || paragraphVariation >= 0.45 ? 'good' : paragraphVariation >= 0.25 ? 'ok' : 'flat'
 
   return {
     words: wordCount,
@@ -238,5 +361,10 @@ export function computeVoiceMetrics(text: string): VoiceMetrics {
     dashLabel,
     tellHits,
     tellTotal: tellSpans.length,
+    echoes,
+    echoTotal: echoSpansFound.length,
+    paragraphs,
+    paragraphVariation,
+    paragraphLabel,
   }
 }

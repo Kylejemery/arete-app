@@ -49,10 +49,19 @@ export function VoiceMeter({
         </span>
       </span>
       <span title="Average words per sentence.">avg {m.meanSentenceLen}w</span>
+      {m.paragraphs >= 4 && (
+        <span title="How much paragraph length varies (standard deviation over mean). Every paragraph the same size and build is a machine fingerprint.">
+          paras{' '}
+          <span style={{ color: m.paragraphLabel === 'good' ? GOOD : m.paragraphLabel === 'ok' ? OK : BAD }}>
+            {m.paragraphVariation}
+          </span>
+        </span>
+      )}
       {chip('adverb', 'adverbs', m.adverbRate, m.adverbRate > 4 ? OK : GOOD, '-ly adverbs per 100 words. Lower is usually tighter.')}
       {chip('tobe', 'to-be', m.toBeRate, m.toBeRate > 10 ? OK : GOOD, 'to-be verbs per 100 words. High means flatter prose.')}
       {chip('dash', 'dashes', m.dashes, m.dashes === 0 ? GOOD : m.dashLabel === 'some' ? OK : BAD, 'Dashes standing between clauses or around an aside.')}
       {chip('tell', 'tells', m.tellTotal, m.tellTotal === 0 ? GOOD : BAD, m.tellHits.map(h => `${h.phrase} x${h.count}`).join(', ') || 'No cliché tells found.')}
+      {chip('echo', 'echoes', m.echoTotal, m.echoTotal === 0 ? GOOD : m.echoes.length <= 1 ? OK : BAD, m.echoes.map(h => `"${h.phrase}" x${h.count}`).join(', ') || 'No phrase of three or more words repeats three times.')}
     </>
   );
 }

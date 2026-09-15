@@ -68,8 +68,42 @@ const m = computeVoiceMetrics(sample)
 check('tellTotal equals span count', m.tellTotal === metricSpans(sample, 'tell').length, m)
 check('tellHits carries pattern labels', m.tellHits.some(h => h.phrase === 'negation-first frame'), m.tellHits)
 
+// ── Structural fingerprints ─────────────────────────────────────────────────
+
+check('meta-narration: this essay moves from', has('This essay moves from the small to the large.', 'meta-narration'))
+check('meta-narration: in what follows', has('In what follows I take three cases.', 'meta-narration'))
+check('meta-narration: the argument is consistent', has('The argument is consistent, as is the demand it places on us.', 'meta-narration'))
+check('meta-narration: a plain sentence about an essay is left alone', !has('He wrote the essay on a train.', 'meta-narration'))
+
+check('stock qualifier: genuinely', has('He was genuinely surprised.', 'stock qualifier'))
+check('stock qualifier: in some sense', has('In some sense the thief is right.', 'stock qualifier'))
+check('stock qualifier: at least', has('At least he tried.', 'stock qualifier'))
+
+const echoed = [
+  'The driver who flipped him off was acting on their own picture of the road.',
+  'The colleague who wrote the email had their own picture, and it was wrong.',
+  'The killer, too, held their own picture of what he was owed.',
+  'A different sentence with nothing repeated in it at all.',
+].join(' ')
+const echoLabels = metricSpans(echoed, 'echo').map(s => s.label)
+check('echo: a phrase repeated three times is found', echoLabels.filter(l => l === 'their own picture').length === 3, echoLabels)
+check('echo: sub-phrases are not double counted', !echoLabels.includes('own picture') && !echoLabels.includes('their own'), echoLabels)
+const framed = 'He acted on their own picture of it. She acted on their own picture of it. They acted on their own picture of it.'
+check('echo: leading and trailing function words are trimmed', metricSpans(framed, 'echo').every(s => s.label === 'acted on their own picture'), metricSpans(framed, 'echo').map(s => s.label))
+check('echo: function-word runs are ignored', metricSpans('It was in the way. It was in the way. It was in the way.', 'echo').every(s => s.label !== 'was in the'), metricSpans('It was in the way. It was in the way. It was in the way.', 'echo').map(s => s.label))
+check('echo: two occurrences are not an echo', metricSpans('their own picture, and again their own picture', 'echo').length === 0)
+const em = computeVoiceMetrics(echoed)
+check('echoes tallied in the meter', em.echoes.length === 1 && em.echoes[0].phrase === 'their own picture' && em.echoes[0].count === 3, em.echoes)
+
+const flat = Array(6).fill('One claim here. Then the gloss of it. A quote follows, cited. The takeaway lands.').join('\n\n')
+const varied = ['One line.', 'A paragraph that runs on for a while, building the case sentence by sentence until it has said what it needs to say and stops.', 'Two lines. Then a turn.', 'Another long paragraph that tells the scene in full, the gutter and the ladder and the rain, before it lets the reader go.', 'Done.'].join('\n\n')
+check('paragraph rhythm: identical paragraphs read flat', computeVoiceMetrics(flat).paragraphLabel === 'flat', computeVoiceMetrics(flat).paragraphVariation)
+check('paragraph rhythm: varied paragraphs read good', computeVoiceMetrics(varied).paragraphLabel === 'good', computeVoiceMetrics(varied).paragraphVariation)
+check('paragraph rhythm: too few paragraphs is not judged', computeVoiceMetrics('One.\n\nTwo.').paragraphVariation === 0)
+
 // ── The prompt block itself keeps its own rules ──────────────────────────────
 check('tells block has no dashes', !/[—–]/.test(MACHINE_TELLS_BLOCK))
+check('tells block names the structural fingerprints', /STRUCTURAL FINGERPRINTS/.test(MACHINE_TELLS_BLOCK) && /controlling metaphor/.test(MACHINE_TELLS_BLOCK) && /bolted-on anecdote/i.test(MACHINE_TELLS_BLOCK))
 check('tells summary has no dashes', !/[—–]/.test(MACHINE_TELLS_SUMMARY))
 
 // ── Cabinet query builder ────────────────────────────────────────────────────
