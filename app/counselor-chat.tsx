@@ -18,6 +18,8 @@ import {
 } from 'react-native';
 import { sendMessageToCounselor, MessageLimitError } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
+import DayDivider from '../components/DayDivider';
+import { clockTime, startsNewDay } from '../lib/messageDates';
 import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
 import { useTierLimits } from '../hooks/useTierLimits';
 import ShareQuoteModal from '../components/ShareQuoteModal';
@@ -256,30 +258,41 @@ export default function CounselorChatScreen() {
               {counselorRole && <Text style={styles.emptyRole}>{counselorRole}</Text>}
             </View>
           ) : (
-            messages.map((msg, index) =>
-              msg.role === 'user' ? (
-                <View key={index} style={styles.userMessageRow}>
-                  <View style={styles.userBubble}>
-                    <Text style={styles.userText} selectable>{msg.content}</Text>
-                  </View>
-                </View>
-              ) : (
-                <View key={index} style={styles.counselorMessageRow}>
-                  <View style={styles.counselorBubble}>
-                    <View style={styles.counselorLabelRow}>
-                      <Text style={styles.counselorLabel}>{counselorName}</Text>
-                      <TouchableOpacity
-                        onPress={() => setShareQuote(msg.content)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="share-outline" size={14} color="#888" />
-                      </TouchableOpacity>
+            messages.map((msg, index) => (
+              <View key={index}>
+                {startsNewDay(messages, index) && <DayDivider timestamp={msg.timestamp} />}
+                {msg.role === 'user' ? (
+                  <View style={styles.userMessageRow}>
+                    <View style={styles.userBubble}>
+                      <Text style={styles.userText} selectable>{msg.content}</Text>
+                      {msg.timestamp ? (
+                        <Text style={styles.userTimeText}>{clockTime(msg.timestamp)}</Text>
+                      ) : null}
                     </View>
-                    <Text style={styles.counselorText} selectable>{msg.content}</Text>
                   </View>
-                </View>
-              )
-            )
+                ) : (
+                  <View style={styles.counselorMessageRow}>
+                    <View style={styles.counselorBubble}>
+                      <View style={styles.counselorLabelRow}>
+                        <Text style={styles.counselorLabel}>{counselorName}</Text>
+                        <View style={styles.counselorLabelMeta}>
+                          {msg.timestamp ? (
+                            <Text style={styles.counselorTimeText}>{clockTime(msg.timestamp)}</Text>
+                          ) : null}
+                          <TouchableOpacity
+                            onPress={() => setShareQuote(msg.content)}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <Ionicons name="share-outline" size={14} color="#888" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                      <Text style={styles.counselorText} selectable>{msg.content}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            ))
           )}
 
           {isLoading && (
@@ -484,6 +497,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+  },
+  counselorLabelMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  counselorTimeText: {
+    color: '#888',
+    fontSize: 11,
+  },
+  userTimeText: {
+    color: '#c9a84c',
+    opacity: 0.7,
+    fontSize: 11,
+    marginTop: 6,
+    textAlign: 'right',
   },
   counselorLabel: {
     color: '#c9a84c',

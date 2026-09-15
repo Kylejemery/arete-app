@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
@@ -10,6 +10,8 @@ import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import { useSubscription } from '@/lib/useSubscription';
 import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
+import { clockTime, startsNewDay } from '@/lib/messageDates';
+import { DayDivider, MessageTime } from '@/components/MessageDates';
 import GlassCard from '@/components/GlassCard';
 
 type Tab = 'cabinet' | 'shared' | 'counselors';
@@ -702,7 +704,9 @@ export default function CabinetPage() {
             )}
 
             {filteredMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <Fragment key={i}>
+              {startsNewDay(filteredMessages, i) && <DayDivider timestamp={msg.timestamp} />}
+              <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'user' ? (
                   <div
                     className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
@@ -715,6 +719,7 @@ export default function CabinetPage() {
                     }}
                   >
                     {msg.content}
+                    <MessageTime timestamp={msg.timestamp} align="right" />
                   </div>
                 ) : (
                   <div className="max-w-[90%] flex gap-3 items-start">
@@ -739,11 +744,18 @@ export default function CabinetPage() {
                         borderRadius: '18px 18px 18px 6px',
                       }}
                     >
-                      <div
-                        className="text-[10px] tracking-[1.2px] uppercase"
-                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-                      >
-                        {msg.counselorName || 'The Cabinet'}
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div
+                          className="text-[10px] tracking-[1.2px] uppercase"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                        >
+                          {msg.counselorName || 'The Cabinet'}
+                        </div>
+                        {msg.timestamp ? (
+                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>
+                            {clockTime(msg.timestamp)}
+                          </span>
+                        ) : null}
                       </div>
                       {parseBlocks(msg.content).map((block, bi) =>
                         block.type === 'quote' ? (
@@ -772,6 +784,7 @@ export default function CabinetPage() {
                   </div>
                 )}
               </div>
+              </Fragment>
             ))}
 
             {isLoading && (
@@ -930,7 +943,9 @@ export default function CabinetPage() {
             )}
 
             {sharedMessages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'system' ? 'justify-center' : msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <Fragment key={i}>
+              {startsNewDay(sharedMessages, i) && <DayDivider timestamp={msg.timestamp} />}
+              <div className={`flex ${msg.role === 'system' ? 'justify-center' : msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {msg.role === 'system' ? (
                   <span
                     className="px-3 py-1 rounded-full text-[12px] italic"
@@ -958,6 +973,7 @@ export default function CabinetPage() {
                       </div>
                     )}
                     {msg.content}
+                    <MessageTime timestamp={msg.timestamp} align="right" />
                   </div>
                 ) : (
                   <div className="max-w-[90%] flex gap-3 items-start">
@@ -982,11 +998,18 @@ export default function CabinetPage() {
                         borderRadius: '18px 18px 18px 6px',
                       }}
                     >
-                      <div
-                        className="text-[10px] tracking-[1.2px] uppercase"
-                        style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-                      >
-                        {msg.counselorName || 'The Cabinet'}
+                      <div className="flex items-baseline justify-between gap-3">
+                        <div
+                          className="text-[10px] tracking-[1.2px] uppercase"
+                          style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+                        >
+                          {msg.counselorName || 'The Cabinet'}
+                        </div>
+                        {msg.timestamp ? (
+                          <span className="text-[10px]" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>
+                            {clockTime(msg.timestamp)}
+                          </span>
+                        ) : null}
                       </div>
                       {parseBlocks(msg.content).map((block, bi) =>
                         block.type === 'quote' ? (
@@ -1015,6 +1038,7 @@ export default function CabinetPage() {
                   </div>
                 )}
               </div>
+              </Fragment>
             ))}
 
             {sharedLoading && (
@@ -1196,7 +1220,9 @@ export default function CabinetPage() {
                 )}
 
                 {counselorMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <Fragment key={i}>
+                  {startsNewDay(counselorMessages, i) && <DayDivider timestamp={msg.timestamp} />}
+                  <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {msg.role === 'user' ? (
                       <div
                         className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
@@ -1209,6 +1235,7 @@ export default function CabinetPage() {
                         }}
                       >
                         {msg.content}
+                        <MessageTime timestamp={msg.timestamp} align="right" />
                       </div>
                     ) : (
                       <div className="max-w-[90%] flex gap-3 items-start">
@@ -1260,6 +1287,7 @@ export default function CabinetPage() {
                       </div>
                     )}
                   </div>
+                  </Fragment>
                 ))}
 
                 {counselorLoading && (
