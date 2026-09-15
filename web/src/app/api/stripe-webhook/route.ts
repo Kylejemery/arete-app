@@ -62,7 +62,9 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object
-        if (session.mode === 'subscription' && session.subscription) {
+        if (session.mode === 'payment' && session.metadata?.enchiridion_request_id) {
+          await markEnchiridionPaid(session)
+        } else if (session.mode === 'subscription' && session.subscription) {
           // Fetch the live subscription state so a re-delivered event
           // converges on current truth instead of replaying stale data
           const subscription = await stripe.subscriptions.retrieve(
@@ -94,6 +96,40 @@ export async function POST(req: NextRequest) {
     // 500 → Stripe retries the delivery
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 })
   }
+}
+
+/**
+ * A printed Enchiridion was paid for. Mark the request paid and copy the
+ * shipping details Stripe collected onto it so the admin tab can fulfil the
+ * order. Idempotent: a re-delivered event writes the same values.
+ */
+async function markEnchiridionPaid(session: Stripe.Checkout.Session) {
+  const admin = createSupabaseAdminClient()
+  const requestId = session.metadata?.enchiridion_request_id
+  if (!requestId) return
+  // API 2025-03-31+ moved shipping onto collected_information; older
+  // payloads carry shipping_details. Read whichever is present.
+  const collected = (session as unknown as {
+    collected_information?: { shipping_details?: { name?: string | null; address?: Stripe.Address | null } | null } | null
+    shipping_details?: { name?: string | null; address?: Stripe.Address | null } | null
+  })
+  const shipping = collected.collected_information?.shipping_details ?? collected.shipping_details ?? null
+  const paymentIntent =
+    typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id ?? null
+  const { error } = await admin
+    .from('enchiridion_requests')
+    .update({
+      status: 'paid',
+      payment_provider: 'stripe',
+      payment_ref: paymentIntent ?? session.id,
+      shipping_name: shipping?.name ?? session.customer_details?.name ?? null,
+      shipping_address: shipping?.address ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    // Never regress an order an admin has already moved along.
+    .in('status', ['requested', 'generating', 'proofing', 'awaiting_payment', 'paid'])
+  if (error) throw error
 }
 
 /**
