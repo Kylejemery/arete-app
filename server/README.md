@@ -82,6 +82,21 @@ every Claude endpoint returns HTTP 500.
 
 The server will start on `http://localhost:3000`.
 
+### Checking what the Cabinet retrieves
+
+`scripts/probe-retrieval.js` runs the Cabinet's corpus retrieval for a
+question (same embedding, `match_rag_corpus` call and counselor fence as the
+parallel Cabinet branch of `POST /api/chat/counselor`) and prints the rows
+with section label, locator, text type and similarity, without generating a
+reply or writing to `retrieval_log`. With `--recent N` it replays the last N
+Cabinet turns from `retrieval_log` instead, including which rows the reply
+was judged to have used.
+
+```bash
+node scripts/probe-retrieval.js "Is fear of death rational?"
+node scripts/probe-retrieval.js --recent 5
+```
+
 ## Deploying to Railway
 
 1. Go to [railway.app](https://railway.app) and create a new project.
