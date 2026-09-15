@@ -538,17 +538,24 @@ function headingNumber(token) {
   return null;
 }
 
+// Headings are matched as Gutenberg prints them: upper case, at the start
+// of a short line. Case-insensitive matching let running text ("Book viii.
+// ch. 5, of Plutarch") open books in the 2026-09-15 Lives ingest.
+const MAX_BOOK_LINE = 60;
+const MAX_SECTION_LINE = 100;
+
 // "BOOK I.", "BOOK XIV", "BOOK FIRST.", "THE FIRST BOOK", "FIRST ESSAY.", "BOOK 3: title"
 function matchBookHeading(line) {
-  let m = line.match(new RegExp(`^(?:${BOOK_WORDS})\\s+([IVXLC]+|\\d+|[A-Z-]+)\\.?\\s*[:.—–-]*\\s*(.*)$`, 'i'));
+  if (line.length > MAX_BOOK_LINE) return null;
+  let m = line.match(new RegExp(`^(?:${BOOK_WORDS})\\s+([IVXLC]+|\\d+|[A-Z-]+)\\.?\\s*[:.—–-]*\\s*(.*)$`));
   if (m) {
     const n = headingNumber(m[1]);
-    if (n != null) return { number: n, title: m[2].trim() };
+    if (n != null && (!m[2] || isAllCapsLine(m[2]) || m[2].length <= 40)) return { number: n, title: m[2].trim() };
   }
-  m = line.match(new RegExp(`^(?:THE\\s+)?([A-Z-]+)\\s+(?:${BOOK_WORDS})\\.?\\s*[:.—–-]*\\s*(.*)$`, 'i'));
+  m = line.match(new RegExp(`^(?:THE\\s+)?([A-Z-]+)\\s+(?:${BOOK_WORDS})\\.?\\s*[:.—–-]*\\s*(.*)$`));
   if (m) {
     const n = headingNumber(m[1]);
-    if (n != null) return { number: n, title: m[2].trim() };
+    if (n != null && (!m[2] || m[2].length <= 40)) return { number: n, title: m[2].trim() };
   }
   return null;
 }
@@ -556,24 +563,26 @@ function matchBookHeading(line) {
 // "PART I.", "PART II: title" — a level between book and section (Hume).
 // In a work with no BOOK headings a PART is treated as a book.
 function matchPartHeading(line) {
-  const m = line.match(/^PART\s+([IVXLC]+|\d+|[A-Z-]+)\.?\s*[:.—–-]*\s*(.*)$/i);
+  if (line.length > MAX_BOOK_LINE) return null;
+  const m = line.match(/^PART\s+([IVXLC]+|\d+|[A-Z-]+)\.?\s*[:.—–-]*\s*(.*)$/);
   if (!m) return null;
   const n = headingNumber(m[1]);
-  return n != null ? { number: n, title: m[2].trim() } : null;
+  return n != null && (!m[2] || m[2].length <= 40) ? { number: n, title: m[2].trim() } : null;
 }
 
 // "CHAPTER 1.--Title", "CHAPTER XIV.", "CHAP. I. Title", "SECT. III.",
 // "LIFE OF ZENO.", "SONG I." / "PROSE II." (Boethius), "ARGUMENT." (Dods
 // prefaces each book with one; kept as section 0).
 function matchSectionHeading(line) {
-  let m = line.match(/^(?:CHAPTER|CHAP\.|SECTION|SECT\.)\s+([IVXLC]+|\d+)\s*[.:]?\s*[—–-]{0,2}\s*(.*)$/i);
+  if (line.length > MAX_SECTION_LINE) return null;
+  let m = line.match(/^(?:CHAPTER|CHAP\.|SECTION|SECT\.)\s+([IVXLC]+|\d+)\s*[.:]?\s*[—–-]{0,2}\s*(.*)$/);
   if (m) {
     const n = headingNumber(m[1]);
     if (n != null) return { number: n, title: m[2].trim(), named: true };
   }
   m = line.match(/^(LIFE OF [A-Z][A-Z .,'’-]+?)\.?$/);
   if (m) return { number: null, title: titleCaseHeading(m[1]), named: true };
-  m = line.match(/^(SONG|METRE|METRUM|PROSE|PROSA|POEM)\s+([IVXLC]+|\d+)\.?$/i);
+  m = line.match(/^(SONG|METRE|METRUM|PROSE|PROSA|POEM)\s+([IVXLC]+|\d+)\.?$/);
   if (m) return { number: null, title: `${titleCaseHeading(m[1])} ${m[2].toUpperCase()}`, named: true };
   if (/^ARGUMENT\.?$/.test(line)) return { number: 0, title: 'Argument', named: true };
   return null;
@@ -585,8 +594,9 @@ function matchSectionHeading(line) {
 // Leonard's Lucretius ("PROEM", "SUBSTANCE IS ETERNAL") gets its divisions.
 function isCapsHeading(lines, i) {
   const line = lines[i];
-  if (line.length < 3 || line.length > 60) return false;
-  if (!/^[A-Z][A-Z0-9 ,;:'’"“”().!?—–-]*$/.test(line) || !/[A-Z]{2}/.test(line)) return false;
+  if (line.length < 3 || line.length > 50) return false;
+  if (!/^[A-Z][A-Z0-9 ,;'’"“”().!?-]*$/.test(line) || !/[A-Z]{2}/.test(line)) return false;
+  if (/[,:;—–-]$/.test(line)) return false; // a line that runs on is text, not a title
   if (NOT_A_HEADING.test(line)) return false;
   if (i > 0 && lines[i - 1] !== '') return false;
   if (i + 1 < lines.length && lines[i + 1] !== '') return false;
@@ -639,18 +649,23 @@ function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = fals
       }
     }
   }
-  while (j + 1 < lines.length) {
+  let extra = 0;
+  while (j + 1 < lines.length && extra < 3) {
     const next = lines[j + 1];
     if (!next) break;
     if (isStructureLine(next)) break;
     // A title continuation is short-lined heading text, not a body paragraph:
     // Gutenberg wraps at ~70 characters and body paragraphs run several lines,
-    // so only continue while the title has not yet closed with a period.
+    // so only continue while the title has not yet closed with a period, and
+    // never onto a line that carries a footnote marker or runs past a
+    // heading's length.
     if (/[.!?]$/.test(title)) break;
+    if (/\[\d+\]/.test(next) || title.length + next.length > 220) break;
     title = `${title} ${next}`.trim();
     j++;
+    extra++;
   }
-  title = title.replace(/\s+/g, ' ').replace(/[.]+$/, '').trim();
+  title = title.replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').replace(/[.]+$/, '').trim().slice(0, 160);
   if (isAllCapsLine(title)) title = titleCaseHeading(title);
   return { title, last: j };
 }
@@ -661,14 +676,32 @@ function collectHeadingTitle(lines, i, firstPart, { requireStructureAfter = fals
 function parseHeaded(text) {
   const lines = text.split('\n').map(l => l.trim());
 
-  // Body starts at the last occurrence of the first book heading (skips a
-  // contents list that repeats it). A work with no book headings starts at
-  // the last occurrence of its first section heading instead.
-  let firstIdx = lines.findIndex(l => matchBookHeading(l) || matchPartHeading(l));
-  const implicitBook = firstIdx < 0;
-  if (implicitBook) firstIdx = lines.findIndex(l => matchSectionHeading(l));
-  if (firstIdx < 0) return null;
-  const start = lines.lastIndexOf(lines[firstIdx]);
+  // Body starts at the LAST heading that carries the volume's lowest book
+  // number: a contents list repeats "BOOK I." before the text does (in any
+  // spelling), and the text's own is the later one. A work with no book
+  // headings starts at the last occurrence of its first section heading.
+  let bookHeads = [];
+  lines.forEach((l, idx) => {
+    const h = matchBookHeading(l);
+    if (h) bookHeads.push({ idx, number: h.number });
+  });
+  if (bookHeads.length === 0) {
+    // PART as the top level (no BOOK headings anywhere).
+    lines.forEach((l, idx) => {
+      const h = matchPartHeading(l);
+      if (h) bookHeads.push({ idx, number: h.number });
+    });
+  }
+  const implicitBook = bookHeads.length === 0;
+  let start;
+  if (implicitBook) {
+    const firstIdx = lines.findIndex(l => matchSectionHeading(l));
+    if (firstIdx < 0) return null;
+    start = lines.lastIndexOf(lines[firstIdx]);
+  } else {
+    const lowest = Math.min(...bookHeads.map(h => h.number));
+    start = bookHeads.filter(h => h.number === lowest).pop().idx;
+  }
 
   const books = [];
   let book = implicitBook ? { number: null, title: '', parts: false, sections: [] } : null;
@@ -681,6 +714,7 @@ function parseHeaded(text) {
   let para = [];
   let paraMarker = null;
   let pendingMarker = null;
+  const rejectedBooks = []; // book headings out of sequence, for structureWarnings
 
   function flushPara() {
     const txt = para.join(' ').replace(/\[\d+\]/g, '').replace(/\s+/g, ' ').trim();
@@ -708,18 +742,23 @@ function parseHeaded(text) {
     const line = lines[i];
     if (!line) { flushPara(); continue; }
 
+    // Books must run consecutively: the first one opens the work, each later
+    // one must be the previous number plus one. Anything else that looks like
+    // a book heading (a cross-reference, an index entry) is text.
     const b = matchBookHeading(line);
-    if (b) {
+    if (b && book && book.number != null && b.number > book.number + 1) rejectedBooks.push(b.number);
+    if (b && (!book || book.number == null || b.number === book.number + 1)) {
       const { title, last } = collectHeadingTitle(lines, i, b.title, { requireStructureAfter: true });
       i = last;
       openBook(b.number, title);
       continue;
     }
-    const pt = matchPartHeading(line);
+    const pt = b ? null : matchPartHeading(line);
     if (pt) {
       const { title, last } = collectHeadingTitle(lines, i, pt.title, { requireStructureAfter: true });
       i = last;
       if (!book || book.number == null) { openBook(pt.number, title); continue; } // PART as the top level
+      if (part != null && pt.number !== part + 1 && pt.number !== 1) { para.push(line); continue; }
       flushPara();
       book.parts = true;
       part = pt.number;
@@ -734,6 +773,7 @@ function parseHeaded(text) {
     if (/^(INDEX|INDEXES|THE END|FINIS)\b/i.test(line)) { flushPara(); section = null; inFootnotes = true; continue; }
 
     let s = matchSectionHeading(line);
+    if (!s && NOT_A_HEADING.test(line) && line.length <= 40 && isAllCapsLine(line) && para.length === 0) continue;
     if (!s && !inFootnotes && !book.sections.some(x => x.named) && isCapsHeading(lines, i)) {
       s = { number: null, title: titleCaseHeading(line), named: false };
     }
@@ -784,6 +824,7 @@ function parseHeaded(text) {
     para.push(line);
   }
   flushPara();
+  books.rejectedBooks = rejectedBooks;
   return books;
 }
 
@@ -793,10 +834,34 @@ function sectionLocator(book, section) {
   return `${prefix}${partBit}${section.number}`;
 }
 
+// Signs that the parser misread a text, so a run can refuse instead of
+// embedding a broken structure: a label that is really a paragraph, most
+// of the words in unheaded section 0, or a book with no section at all.
+function structureWarnings(books) {
+  const warnings = [];
+  const totalWords = books.reduce((n, b) => n + b.sections.reduce((m, s) => m + s.paragraphs.reduce((k, p) => k + countWords(p.text), 0), 0), 0);
+  let unheadedWords = 0;
+  for (const b of books) {
+    for (const s of b.sections) {
+      if (s.title && s.title.length > 120) warnings.push(`section ${b.number ?? ''}.${s.number} title is ${s.title.length} chars: a paragraph was read as a heading`);
+      if (s.number === 0 && !s.named) unheadedWords += s.paragraphs.filter(p => !p.marker).reduce((k, p) => k + countWords(p.text), 0);
+    }
+    if (b.sections.length === 0) warnings.push(`book ${b.number} has no text`);
+  }
+  if (totalWords > 0 && unheadedWords / totalWords > 0.5) {
+    warnings.push(`${Math.round(100 * unheadedWords / totalWords)}% of the words sit in unheaded, unnumbered section 0: section headings were not recognised`);
+  }
+  if (books.rejectedBooks && books.rejectedBooks.length) {
+    warnings.push(`book heading(s) out of sequence ignored: ${[...new Set(books.rejectedBooks)].join(', ')} (a book heading before them was not recognised, or these are cross-references)`);
+  }
+  return warnings;
+}
+
 function planHeaded(text) {
   const books = parseHeaded(text);
   if (!books) return null;
   return {
+    warnings: structureWarnings(books),
     books: books.map(b => ({
       number: b.number,
       parts: b.parts ? new Set(b.sections.map(s => s.part)).size : 0,
@@ -892,7 +957,7 @@ function chunkNumbered(text, meta) {
         const txt = e.texts.join('\n\n');
         chunks.push({
           ...meta,
-          section_label: n != null ? `${title}, §${n}` : title,
+          section_label: (n != null ? `${title}, §${n}` : title).slice(0, 160),
           locator,
           chunk_index: chunkIndex++,
           chunk_text: txt,
@@ -1064,7 +1129,10 @@ function chunkRaw(rawText, strategy, baseMeta) {
 // Strategies a queue row may name (corpus_ingestion_queue.chunk_strategy).
 const QUEUE_STRATEGIES = ['paragraph', 'headed', 'numbered', 'meditations-long', 'discourses', 'enchiridion', 'seneca-letters'];
 
-module.exports = { chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA };
+module.exports = {
+  chunkFile, chunkRaw, chunkSummaryDocx, splitOversizedChunk, planHeaded, QUEUE_STRATEGIES, TEXT_METADATA,
+  matchBookHeading, matchPartHeading, matchSectionHeading,
+};
 
 // ---------------------------------------------------------------------------
 // CLI test: node chunker.js — prints first 3 chunks of Meditations

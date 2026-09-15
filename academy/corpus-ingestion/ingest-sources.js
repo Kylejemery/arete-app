@@ -197,6 +197,7 @@ async function ingestChunkRows(rows, meta, { startIndex = 0 } = {}) {
       translator: meta.translator ?? null,
       source_url: meta.source_url ?? null,
       edition_year: meta.edition_year ?? null,
+      deprecated: false, // a re-ingest over deprecated rows brings them back live
       chunk_index: startIndex + i,
       word_count: row.word_count ?? row.chunk_text.split(/\s+/).filter(Boolean).length,
       embedding,
