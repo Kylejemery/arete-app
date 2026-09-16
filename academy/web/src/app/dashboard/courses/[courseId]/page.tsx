@@ -11,6 +11,7 @@ import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import LessonParagraph from '@/components/LessonParagraph';
 import ZenosHand from '@/components/playground/ZenosHand';
+import { toRoman } from '@/lib/roman';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
@@ -235,9 +236,6 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
-function toRoman(n: number): string { return ROMANS[n - 1] ?? String(n); }
 
 function LockIcon() {
   return (
