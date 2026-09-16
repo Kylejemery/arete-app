@@ -23,6 +23,10 @@ function SubmitForm() {
   const router = useRouter();
   const params = useSearchParams();
   const editId = params.get('id');
+  // An exhibit in the Garden can send a writer here with its agora_prompt
+  // (see components/exhibits/ExhibitTemplate.tsx). The prompt seeds the
+  // title, which is the question the essay answers.
+  const prompt = params.get('prompt');
   const [viewer, setViewer] = useState<AgoraViewer | null>(null);
   const [existing, setExisting] = useState<AgoraEssay | null>(null);
   const [title, setTitle] = useState('');
@@ -51,11 +55,13 @@ function SubmitForm() {
           setExisting(e); setTitle(e.title); setBody(e.body); setTags(e.tags);
           setAuthorName(e.author_name); setIsEditorial(e.is_editorial); setState(e.status);
         }
+      } else if (prompt) {
+        setTitle(prompt);
       }
       setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [editId, router]);
+  }, [editId, prompt, router]);
 
   const words = wordCount(body);
   const ready = title.trim().length > 0 && words > 0;

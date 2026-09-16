@@ -27,8 +27,12 @@ import { Chip, GOLD, GoldButton, Kicker, SubmissionNotice, s as ui } from '../..
  */
 export default function ComposeEssayScreen() {
     const router = useRouter();
-    const params = useLocalSearchParams<{ id?: string }>();
+    const params = useLocalSearchParams<{ id?: string; prompt?: string }>();
     const editId = params.id ? String(params.id) : null;
+    // An exhibit in the Garden can send a writer here with its agora_prompt
+    // (see components/exhibits/ExhibitTemplate.tsx). The prompt seeds the
+    // title, which is the question the essay answers.
+    const prompt = params.prompt ? String(params.prompt) : null;
     const [viewer, setViewer] = useState<AgoraViewer | null>(null);
     const [existing, setExisting] = useState<AgoraEssay | null>(null);
     const [title, setTitle] = useState('');
@@ -58,13 +62,15 @@ export default function ComposeEssayScreen() {
                         setExisting(e); setTitle(e.title); setBody(e.body); setTags(e.tags);
                         setAuthorName(e.author_name); setIsEditorial(e.is_editorial); setState(e.status);
                     }
+                } else if (prompt) {
+                    setTitle(prompt);
                 }
             } finally {
                 if (!cancelled) setLoading(false);
             }
         })();
         return () => { cancelled = true; };
-    }, [editId, router]);
+    }, [editId, prompt, router]);
 
     const words = wordCount(body);
     const ready = title.trim().length > 0 && words > 0;
