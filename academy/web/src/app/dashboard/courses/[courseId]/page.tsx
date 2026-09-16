@@ -45,79 +45,40 @@ interface SessionItem {
   videoUrl?: string;
 }
 
+// The sidebar session list.
+//
+// Titles are derived from the course data files, so the sidebar can never
+// disagree with the lesson the student actually opens. data/curriculum.ts
+// takes the same approach for the advisor. Hand-copied titles drifted here
+// once already: the PHIL 701 list described a different course from session 3
+// onward, advertising a discipline-of-assent session at 5 that taught roles
+// and appropriate action.
+//
+// `locked` is only the initial value. The real lock is the completion gate
+// computed per render, which reads session_progress.
+//
+// PHIL 701 Session 1 is stated by hand because it has no entry in
+// PHIL_701_SESSIONS: its content is the landing card in COURSE_CONTENT below,
+// its readings live in seminars.ts, and it carries the one lecture video.
+const sidebarFromData = (
+  sessions: ReadonlyArray<{ id: number; title: string }>
+): SessionItem[] => sessions.map(s => ({ id: s.id, title: s.title, locked: s.id !== 1 }));
+
 const COURSE_SESSIONS: Record<string, SessionItem[]> = {
   'phil-701': [
-    { id: 1,  title: 'What is Philosophy For? — Hadot as Entry',            locked: false, videoUrl: 'https://www.youtube.com/embed/yF-C2DBB5Jg' },
-    { id: 2,  title: 'The Good and the Preferred — Virtue and Indifferents', locked: true },
-    { id: 3,  title: 'The Discipline of Desire — Wanting Rightly',           locked: true },
-    { id: 4,  title: 'The Discipline of Action — Acting with Reservation',   locked: true },
-    { id: 5,  title: 'The Discipline of Assent — The Inner Citadel',         locked: true },
-    { id: 6,  title: 'Marcus Aurelius as Practitioner',                      locked: true },
-    { id: 7,  title: 'Epictetus as Teacher',                                 locked: true },
-    { id: 8,  title: 'Seneca as Writer',                                     locked: true },
-    { id: 9,  title: 'Paper Workshop with the Writing Supervisor',           locked: true },
-    { id: 10, title: 'Final Seminar — Synthesis and Objections',             locked: true },
-    { id: 11, title: 'Qualifying Conversation with the Examiner',            locked: true },
+    {
+      id: 1,
+      title: 'What is Philosophy For? — Hadot as Entry',
+      locked: false,
+      videoUrl: 'https://www.youtube.com/embed/yF-C2DBB5Jg',
+    },
+    ...sidebarFromData(PHIL_701_SESSIONS),
   ],
-  'phil-702': [
-    { id: 1,  title: 'The Meditations as Spiritual Exercise — How to Read Marcus', locked: false },
-    { id: 2,  title: "The Three Disciplines — Marcus's Daily Framework",           locked: true },
-    { id: 3,  title: 'The Discipline of Desire — Wanting Nothing External',        locked: true },
-    { id: 4,  title: 'The Discipline of Action — Doing Your Duty Without Attachment', locked: true },
-    { id: 5,  title: 'The Discipline of Assent — Guarding the Ruling Faculty',     locked: true },
-    { id: 6,  title: 'The View from Above — Marcus and Cosmic Perspective',        locked: true },
-    { id: 7,  title: 'Memento Mori — Marcus and the Practice of Death',            locked: true },
-    { id: 8,  title: 'The Obstacle as the Way — Amor Fati in Practice',            locked: true },
-    { id: 9,  title: 'Living Among Others — Marcus on Anger and Community',        locked: true },
-    { id: 10, title: 'The Inner Citadel — What Cannot Be Taken',                   locked: true },
-    { id: 11, title: 'Qualifying Conversation — The Examined Emperor',             locked: true },
-  ],
-  'phil-703': [
-    { id: 1,  title: 'The Former Slave and His School — Introduction',      locked: false },
-    { id: 2,  title: 'The Socratic Inheritance — On Progress and Affection', locked: true },
-    { id: 3,  title: 'Logic in the Service of Life',                        locked: true },
-    { id: 4,  title: 'Freedom and the Good — Confidence and Caution',       locked: true },
-    { id: 5,  title: 'Character and Roles — Who Will You Be?',              locked: true },
-    { id: 6,  title: 'Living Among Others — Training for Society',          locked: true },
-    { id: 7,  title: 'God, Providence, and the Fields of Training',         locked: true },
-    { id: 8,  title: 'The Cynic Ideal and the Inviolable Self',             locked: true },
-    { id: 9,  title: 'On Freedom — The Longest Discourse',                  locked: true },
-    { id: 10, title: 'The Enchiridion as Distillation',                     locked: true },
-    { id: 11, title: 'Qualifying Conversation — The School Examined',       locked: true },
-  ],
-  'phil-704': [
-    { id: 1,  title: 'Claim Yourself — The Correspondence Begins',           locked: false },
-    { id: 2,  title: 'Transformation — Crowds, Friends, and Old Age',        locked: true },
-    { id: 3,  title: 'The God Within and the Slave at Your Table',           locked: true },
-    { id: 4,  title: 'The Open Door — On Dying Well',                        locked: true },
-    { id: 5,  title: 'What Wisdom Makes — Philosophy and Civilization',      locked: true },
-    { id: 6,  title: 'On the Shortness of Life',                             locked: true },
-    { id: 7,  title: 'On Tranquility of Mind',                               locked: true },
-    { id: 8,  title: 'On Providence — Why the Good Suffer',                  locked: true },
-    { id: 9,  title: "On the Happy Life — The Hypocrite's Defense",          locked: true },
-    { id: 10, title: 'On Mercy — Philosophy Advises Power',                  locked: true },
-    { id: 11, title: 'Qualifying Conversation — The Examined Correspondence', locked: true },
-  ],
-  'phil-706': [
-    { id: 1, title: 'No One Does Wrong Willingly — The Socratic Foundation',      locked: false },
-    { id: 2, title: 'The Thief and the Mistaken Judgment — Epictetus on Error',   locked: true },
-    { id: 3, title: 'Anger Anatomized — Seneca and the Two Movements',            locked: true },
-    { id: 4, title: 'Against Useful Anger — The Demolition of the Defenses',      locked: true },
-    { id: 5, title: 'The Synthesis — Why Anger Is Always False',                  locked: true },
-    { id: 6, title: 'The Practice — Living Without Anger',                        locked: true },
-    { id: 7, title: 'Capstone Dialogue — The Doctrine Under Fire',                locked: true },
-  ],
-  'phil-707': [
-    { id: 1, title: 'The Engineered Impression — The Attention Economy on Stoic Terms', locked: false },
-    { id: 2, title: 'Prosoche Under Siege — Phones, Shorts, and the Fragmented Guard',  locked: true },
-    { id: 3, title: 'The Opinion of Others, Industrialized — Metrics, Comparison, Outrage', locked: true },
-    { id: 4, title: 'Appetite by Design — Desire with an R&D Department',               locked: true },
-    { id: 5, title: 'Externals and the Market Self — Wealth, Hustle, and Fortuna',      locked: true },
-    { id: 6, title: 'Fear at Scale — News, Health Anxiety, and the Political Other',    locked: true },
-    { id: 7, title: 'Connection and Eros in the Digital Age — Friendship, Parasocial Bonds, and the AI Companion', locked: true },
-    { id: 8, title: 'The Digital Askēsis — Assembling the Rule of Life',                locked: true },
-    { id: 9, title: 'Capstone Dialogue — The Assayer Examined',                         locked: true },
-  ],
+  'phil-702': sidebarFromData(PHIL_702_SESSIONS),
+  'phil-703': sidebarFromData(PHIL_703_SESSIONS),
+  'phil-704': sidebarFromData(PHIL_704_SESSIONS),
+  'phil-706': sidebarFromData(PHIL_706_SESSIONS),
+  'phil-707': sidebarFromData(PHIL_707_SESSIONS),
 };
 
 interface SessionContent {
@@ -1017,9 +978,7 @@ function QuizCta({ count, onQuizClick }: { count: number; onQuizClick?: () => vo
 // impression, assent, grasp, knowledge — so it sits directly under that
 // lesson. Moving it is a one-line change here.
 //
-// NOTE: session ids here follow the session data in data/phil701.ts, which is
-// what the student actually reads. The sidebar titles in COURSE_SESSIONS below
-// are out of sync with that data from session 3 onward.
+// Session ids follow data/phil701.ts, the same source the sidebar reads.
 const PHIL_701_INTERACTIVES: Record<number, () => React.ReactElement> = {
   3: () => <ZenosHand embedded />,
 };
