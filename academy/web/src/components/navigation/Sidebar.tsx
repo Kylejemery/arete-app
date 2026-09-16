@@ -76,12 +76,12 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex flex-col w-60 min-h-screen bg-academy-surface border-r border-academy-border fixed left-0 top-0 z-40 transition-transform duration-300 ${
+        className={`hidden md:flex flex-col w-60 h-screen bg-academy-surface border-r border-academy-border fixed left-0 top-0 z-40 transition-transform duration-300 ${
           navOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header with collapse button */}
-        <div className="p-6 border-b border-academy-border flex items-start justify-between gap-2">
+        <div className="flex-shrink-0 p-6 border-b border-academy-border flex items-start justify-between gap-2">
           <div>
             <p className="text-academy-muted text-xs tracking-[0.3em] uppercase mb-1">Arete</p>
             <h1 className="font-serif text-academy-gold text-2xl tracking-wide">Academy</h1>
@@ -96,7 +96,7 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="flex-1 py-3 overflow-y-auto">
+        <nav className="flex-1 min-h-0 py-3 overflow-y-auto overscroll-contain">
           {navSections.map((section, i) => (
             <div key={section.heading ?? `section-${i}`} className={section.heading ? 'mt-4' : ''}>
               {section.heading && (
@@ -122,7 +122,7 @@ export default function Sidebar({ navOpen, onToggle }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="p-4 border-t border-academy-border space-y-2">
+        <div className="flex-shrink-0 p-4 border-t border-academy-border space-y-2">
           <a
             href="https://app.pursuearete.com"
             className="block text-academy-muted text-xs hover:text-academy-text transition-colors"
