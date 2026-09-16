@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { GARDEN_TITLE } from '@/lib/exhibits';
 
 interface NavItem {
   href: string;
@@ -20,6 +21,8 @@ const ACADEMY = 'https://academy.pursuearete.com';
 
 // The Explore group mirrors the phone's Explore drawer
 // (components/SideMenu.tsx): the destinations beyond the daily practice.
+// The Garden's own exhibits are generated from the exhibits table, so this
+// list carries the room and never an exhibit.
 // The web app carries no Academy or Library of its own, so those two and the
 // Scale of Happiness cross to the Academy site — the Scale stays one
 // implementation (academy/web HappinessScale) rather than a second copy here.
@@ -44,6 +47,7 @@ const navSections: { heading: string | null; items: NavItem[] }[] = [
       { href: `${ACADEMY}/dashboard`, label: 'The Academy', emoji: '🎓', external: true, short: 'Academy' },
       { href: `${ACADEMY}/library`,   label: 'The Library', emoji: '📚', external: true, short: 'Library' },
       { href: '/agora',               label: 'The Agora',   emoji: '🏛️' },
+      { href: '/garden',              label: GARDEN_TITLE,  emoji: '🌿', short: 'Garden' },
       {
         href: `${ACADEMY}/playground/happiness-scale`,
         label: 'The Scale of Happiness',
