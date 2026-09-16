@@ -19,6 +19,9 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { getTodayCheckin, getJournalEntries, getReadingData, upsertReadingData, checkAndResetStreakIfMissed, getLongitudinalPortrait, getUserCabinet } from '@/lib/db';
 import type { LongitudinalPortrait } from '@/lib/types';
 import { useSubscription } from '@/lib/useSubscription';
+import { supabase } from '@/lib/supabase';
+import { openWebSignedIn } from '@/lib/webHandoff';
+import { API_BASE_URL } from '../../services/claudeService';
 import {
   attendIsSupported,
   requestAttendAuthorization,
@@ -51,6 +54,42 @@ const MILESTONES = [
   { days: 365, label: '365 Day Streak', icon: '🏆' },
 ];
 
+// The Enchiridion offer, as the server quotes it: price per format, whether
+// this member has written enough for a book, and where any open request or
+// manuscript stands. Physical goods are bought on the web (Stripe), never
+// through the App Store, so the request button hands off to the web app the
+// same way the paywall does.
+type EnchiridionOffer = {
+  enabled: boolean;
+  currency: string;
+  price_cents: number;
+  formats: Record<string, { label: string; price_cents: number }>;
+  min_entries: number;
+  written: number;
+  eligible: boolean;
+  request: { id: string; format: string; price_cents: number; currency: string; status: string; created_at: string } | null;
+  document: { id: string; title: string; status: string; word_count: number } | null;
+  checkout_path: string | null;
+};
+
+const FORMAT_ORDER = ['hardcover', 'softcover', 'journal'];
+
+function formatPrice(cents: number, currency = 'usd'): string {
+  const whole = cents % 100 === 0;
+  return `${currency.toLowerCase() === 'usd' ? '$' : `${currency.toUpperCase()} `}${whole ? (cents / 100).toFixed(0) : (cents / 100).toFixed(2)}`;
+}
+
+const REQUEST_STATUS_COPY: Record<string, string> = {
+  requested: 'Your handbook is being compiled from what you have written.',
+  generating: 'Your handbook is being compiled from what you have written.',
+  proofing: 'Your manuscript is ready and being read over before it goes to print.',
+  awaiting_payment: 'Your manuscript is ready. Complete your order to send it to print.',
+  paid: 'Paid. Your book goes to print once the manuscript has been read over.',
+  printing: 'At the printer.',
+  shipped: 'On its way to you.',
+  delivered: 'Delivered.',
+};
+
 export default function ProgressScreen() {
   const router = useRouter();
   const swipeHandlers = useSwipeNavigation('/progress');
@@ -72,6 +111,62 @@ export default function ProgressScreen() {
   const [todayReadingSeconds, setTodayReadingSeconds] = useState(0);
   const [readingStreak, setReadingStreak] = useState(0);
   const [portrait, setPortrait] = useState<LongitudinalPortrait | null>(null);
+
+  // Enchiridion
+  const [offer, setOffer] = useState<EnchiridionOffer | null>(null);
+  const [bookFormat, setBookFormat] = useState<string>('hardcover');
+  const [requesting, setRequesting] = useState(false);
+
+  const loadOffer = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(`${API_BASE_URL}/api/enchiridion/offer`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) return;
+      const json = (await res.json()) as EnchiridionOffer;
+      setOffer(json);
+      if (json.request?.format) setBookFormat(json.request.format);
+    } catch {
+      // The offer is a nicety on this screen; leave the card hidden if the
+      // server is unreachable.
+    }
+  }, []);
+
+  useFocusEffect(useCallback(() => { loadOffer(); }, [loadOffer]));
+
+  const requestBook = async () => {
+    if (!offer || requesting) return;
+    setRequesting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) return;
+      const res = await fetch(`${API_BASE_URL}/api/enchiridion/request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ format: bookFormat }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        Alert.alert('Not yet', json.error || 'The request could not be placed.');
+        return;
+      }
+      // Payment and the shipping address are taken on the web, signed in.
+      if (json.checkout_path) await openWebSignedIn(json.checkout_path);
+      await loadOffer();
+    } catch {
+      Alert.alert('Not yet', 'The request could not be placed. Try again in a moment.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const continueOrder = async () => {
+    if (!offer?.checkout_path) return;
+    await openWebSignedIn(offer.checkout_path);
+    await loadOffer();
+  };
 
   // Screen time
   const [screenTimeGoal, setScreenTimeGoal] = useState(2);
@@ -666,6 +761,74 @@ export default function ProgressScreen() {
                 ))}
               </View>
             </View>
+
+            {/* Enchiridion. A printed handbook compiled from everything the
+                member has written here. The price is the server's; the
+                button only ever sends the chosen format. */}
+            {offer?.enabled && (
+              <View style={styles.enchiridionCard}>
+                <Text style={styles.enchiridionKicker}>Your Enchiridion</Text>
+                <Text style={styles.enchiridionTitle}>Your own handbook, in print</Text>
+                <Text style={styles.enchiridionBody}>
+                  Compiled from your journal, your Cabinet conversations, your goals and your scrolls, set beside the texts your writing keeps returning to. Bound and sent to you.
+                </Text>
+
+                {offer.request && !['cancelled', 'delivered'].includes(offer.request.status) ? (
+                  <>
+                    <View style={styles.enchiridionStatusRow}>
+                      <Text style={styles.enchiridionStatusLabel}>
+                        {offer.formats[offer.request.format]?.label ?? offer.request.format} · {formatPrice(offer.request.price_cents, offer.request.currency)}
+                      </Text>
+                      <Text style={styles.enchiridionStatusPill}>{offer.request.status.replace('_', ' ')}</Text>
+                    </View>
+                    <Text style={styles.enchiridionMeta}>
+                      {REQUEST_STATUS_COPY[offer.request.status] ?? ''}
+                    </Text>
+                    {['requested', 'generating', 'proofing', 'awaiting_payment'].includes(offer.request.status) && (
+                      <TouchableOpacity style={styles.enchiridionButton} onPress={continueOrder}>
+                        <Text style={styles.enchiridionButtonText}>Complete your order</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.enchiridionFormats}>
+                      {FORMAT_ORDER.filter(k => offer.formats[k]).map(key => {
+                        const f = offer.formats[key];
+                        const on = bookFormat === key;
+                        return (
+                          <TouchableOpacity
+                            key={key}
+                            style={[styles.enchiridionFormat, on && styles.enchiridionFormatOn]}
+                            onPress={() => setBookFormat(key)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={[styles.enchiridionFormatLabel, on && styles.enchiridionFormatLabelOn]}>{f.label}</Text>
+                            <Text style={[styles.enchiridionFormatPrice, on && styles.enchiridionFormatLabelOn]}>{formatPrice(f.price_cents, offer.currency)}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {offer.eligible ? (
+                      <TouchableOpacity
+                        style={[styles.enchiridionButton, requesting && { opacity: 0.5 }]}
+                        onPress={requestBook}
+                        disabled={requesting}
+                      >
+                        <Text style={styles.enchiridionButtonText}>
+                          {requesting ? 'Placing your request' : `Request your book · ${formatPrice(offer.formats[bookFormat]?.price_cents ?? offer.price_cents, offer.currency)}`}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={styles.enchiridionMeta}>
+                        Write a little more first: {offer.written} of {offer.min_entries} entries and conversations.
+                      </Text>
+                    )}
+                    <Text style={styles.enchiridionFootnote}>Billed on the web. Shipping is collected at checkout.</Text>
+                  </>
+                )}
+              </View>
+            )}
           </>
         )}
 
@@ -1020,6 +1183,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   weeklyReviewButtonText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
+  enchiridionCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c9a84c44',
+  },
+  enchiridionKicker: { color: '#c9a84c', fontSize: 11, fontWeight: '700', letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 6 },
+  enchiridionTitle: { color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  enchiridionBody: { color: '#e0d5b5', fontSize: 14, lineHeight: 21, marginBottom: 14 },
+  enchiridionFormats: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  enchiridionFormat: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#c9a84c33',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    backgroundColor: '#c9a84c0d',
+  },
+  enchiridionFormatOn: { borderColor: '#c9a84c', backgroundColor: '#c9a84c22' },
+  enchiridionFormatLabel: { color: '#888', fontSize: 12, fontWeight: '600', marginBottom: 2, textAlign: 'center' },
+  enchiridionFormatPrice: { color: '#888', fontSize: 15, fontWeight: '700' },
+  enchiridionFormatLabelOn: { color: '#c9a84c' },
+  enchiridionButton: { backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
+  enchiridionButtonText: { color: '#1a1a2e', fontWeight: 'bold', fontSize: 15 },
+  enchiridionMeta: { color: '#888', fontSize: 13, lineHeight: 18, marginBottom: 12 },
+  enchiridionFootnote: { color: '#555', fontSize: 11, marginTop: 10, textAlign: 'center' },
+  enchiridionStatusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  enchiridionStatusLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  enchiridionStatusPill: {
+    color: '#c9a84c',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    borderWidth: 1,
+    borderColor: '#c9a84c88',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    overflow: 'hidden',
+  },
   emptyText: { color: '#888', fontSize: 13, textAlign: 'center', paddingVertical: 10 },
   currentBookRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#c9a84c11' },
   currentBookIcon: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#c9a84c22', alignItems: 'center', justifyContent: 'center' },

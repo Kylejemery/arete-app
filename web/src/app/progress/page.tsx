@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getUserSettings, hasCheckInToday, getReadingData, getCalendarData, getJournalEntries, checkAndResetStreakIfMissed } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import PageHeader from '@/components/PageHeader';
+import EnchiridionCard from '@/components/EnchiridionCard';
 
 type Tab = 'overview' | 'reading';
 
@@ -232,6 +233,10 @@ export default function ProgressPage() {
               ))}
             </div>
           </div>
+
+          {/* The printed handbook, compiled from everything above it. Hidden
+              by the card itself when the server has the offer switched off. */}
+          <EnchiridionCard />
         </div>
       )}
 

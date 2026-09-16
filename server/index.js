@@ -36,6 +36,12 @@ const observatory = require('./routes/observatory');
 const corpusMcp = require('./routes/corpus-mcp');
 const agora = require('./routes/agora');
 
+// The Enchiridion: a member's own handbook, compiled from their writing and
+// printed on request. Member offer/request routes for the app and the admin
+// roster/generate/review routes for the admin tab; the manuscript is built in
+// enchiridion-agent.js. Wired with init() below, after the auth helpers.
+const enchiridion = require('./routes/enchiridion');
+
 // Canonical concept layer (Observatory repair Part 1) — every raw theme label
 // maps through concept_aliases to one canonical concept; the Observatory only
 // ever speaks canonical names. Unmapped labels resolve lazily and are never
@@ -594,6 +600,7 @@ app.use(express.json());
 app.use(observatory.router);
 app.use(corpusMcp.router);
 app.use(agora.router);
+app.use(enchiridion.router);
 
 // ---------------------------------------------------------------------------
 // Local datetime helper
@@ -5903,6 +5910,15 @@ agora.init({
   cabinetCounselors: CABINET_COUNSELORS,
   slugToCounselorId: SLUG_TO_COUNSELOR_ID,
   claudeApiKey: CLAUDE_API_KEY,
+});
+
+enchiridion.init({
+  getAuthenticatedUserId,
+  isAdmin,
+  resend,
+  fromEmail: INVITE_FROM_EMAIL,
+  adminEmail: CONTACT_TO_EMAIL,
+  webAppUrl: WEB_APP_URL,
 });
 
 app.listen(PORT, () => {
