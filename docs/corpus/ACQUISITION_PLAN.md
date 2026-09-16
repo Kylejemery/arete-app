@@ -136,6 +136,15 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
 
 ### Corrections to existing holdings
 
+- **Cicero, *De Finibus* / *Academica* / *Tusculan Disputations*.** The 613
+  chunks labelled *De Finibus* were the whole of Gutenberg #29247, Yonge's
+  1875 Bohn volume containing all three treatises plus editorial apparatus;
+  only 232 were *De Finibus*, and 38 of 63 logged retrievals under that label
+  returned the *Tusculans*. Split, provenanced and deprecated by
+  `20260916200000_cicero_volume_identity_split.sql`; full record in
+  `CICERO_IDENTITY_SPLIT_2026-09.md`. Outstanding: no `locator` values, so
+  citations resolve to a chunk rather than to `De Finibus III.22`. Parsing the
+  Yonge book/chapter headings into `locator` would fix that for all three.
 - **Epictetus, *Discourses*.** Verify the current 459 chunks are Long's complete four books and not the abridged *Selection* that circulates on Gutenberg as ebook 10661. Spot checks suggest it is complete, but this was not confirmed. The complete Long is at `archive.org/download/discoursesofepic033057mbp/discoursesofepic033057mbp_djvu.txt`.
 - **Aristotle.** The corpus holds *Nicomachean Ethics* only. *De Anima* is Tier A. *Physics* (Hardie & Gaye 1930, public domain by one year, in `archive.org/download/worksofaristotle0002wdro/worksofaristotle0002wdro_djvu.txt`) and *Metaphysics* (Ross 1908, Wikisource) are worth adding for Q12.
 - **Plato.** *Timaeus* is already queued. *Phaedo* and *Phaedrus* should follow for Q02 and Q11.
