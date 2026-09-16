@@ -222,7 +222,12 @@ other in the same product.
    Yonge's wording; the stored chunks are untouched. Re-ingesting *Academica*
    from a cleaner scan would be worth it, and `translator` is recorded but
    `edition_year` is null on it.
-5. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
+5. **The Hicks Diogenes Laertius row has no `edition_year`.** The Garden index
+   now quotes it (`FIELD_PASSAGE` in `lib/exhibits.ts`), so this is a passage
+   on a public surface whose edition is unrecorded. Hicks's Loeb translation is
+   1925, comfortably inside the pre-1930 public-domain rule, but the row should
+   carry the year. Part of the same split below.
+6. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
    `rag_corpus` under two identities: `Lives of Eminent Philosophers` (544
    chunks, tr. Yonge, `edition_year` 1853) and `Lives Book7` (87 chunks, tr.
    Hicks, `edition_year` null). That is the duplicate-identity failure

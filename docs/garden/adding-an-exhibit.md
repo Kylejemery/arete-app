@@ -116,11 +116,16 @@ The exhibit page draws these, in this order, and nothing else:
 The three branches are the Stoics' own division of philosophy, and the image
 they used for it is where the Garden gets its shape:
 
-> Also to a fertile field; in which logic is the fence which goes round it,
-> ethics are the fruit, and natural philosophy the soil, or the fruit-trees.
+> They liken Philosophy to a fertile field: Logic being the encircling fence,
+> Ethics the crop, Physics the soil or the trees.
 >
-> — Diogenes Laertius, *Lives of Eminent Philosophers*, Life of Zeno XXXIII
-> (tr. C.D. Yonge, 1853; in the Corpus)
+> — Diogenes Laertius, *Lives* 7.40, tr. R. D. Hicks
+
+This is the passage the Garden index shows, from `FIELD_PASSAGE` and
+`FIELD_CITATION` in `lib/exhibits.ts`. Both translations of it are in the
+Corpus and both are public domain; the index uses Hicks because he renders the
+third term "the crop", which is the word the branch glosses use, where Yonge
+has "ethics are the fruit" and would contradict them on the same page.
 
 - **Logic** is the fence: reasoning, argument, assent, what can be known.
 - **Physics** is the soil and the trees: nature, fate, cause, the whole.

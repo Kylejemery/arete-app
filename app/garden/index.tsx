@@ -11,7 +11,8 @@ import {
     View,
 } from 'react-native';
 import {
-    BRANCHES, BRANCH_GLOSS, BRANCH_LABEL, GARDEN_SUBTITLE, GARDEN_TITLE,
+    BRANCHES, BRANCH_GLOSS, BRANCH_LABEL, FIELD_CITATION, FIELD_PASSAGE,
+    GARDEN_SUBTITLE, GARDEN_TITLE,
     byBranch, listGalleryExhibits, thinkersOf, type Exhibit,
 } from '@/lib/exhibits';
 
@@ -78,11 +79,13 @@ export default function GardenScreen() {
             <ScrollView contentContainerStyle={s.scroll}>
                 <Text style={s.title}>{GARDEN_TITLE}</Text>
                 <Text style={s.subtitle}>{GARDEN_SUBTITLE}</Text>
-                <Text style={s.note}>
-                    The Stoics likened philosophy to a fertile field: logic the fence round it,
-                    physics the soil and the trees, ethics the crop. Every exhibit belongs to one
-                    of the three.
-                </Text>
+                {/* The room's own source, in the treatment an exhibit gives
+                    its own: gold rule, italic passage, gold citation. */}
+                <View style={s.source}>
+                    <Text style={s.passage}>{FIELD_PASSAGE}</Text>
+                    <Text style={s.citation}>{FIELD_CITATION}</Text>
+                </View>
+                <Text style={s.note}>Every exhibit belongs to one of the three.</Text>
 
                 {thinkers.length > 1 ? (
                     <View style={s.filter}>
@@ -166,7 +169,15 @@ const s = StyleSheet.create({
 
     title: { color: '#fff', fontSize: 28, fontWeight: '700' },
     subtitle: { color: '#e0e0e0', fontSize: 15, lineHeight: 23, marginTop: 8 },
-    note: { color: '#888', fontSize: 13, lineHeight: 20, marginTop: 14, fontStyle: 'italic' },
+    source: {
+        borderLeftWidth: 3,
+        borderLeftColor: GOLD,
+        paddingLeft: 14,
+        marginTop: 18,
+    },
+    passage: { color: '#e8e0d0', fontSize: 14, lineHeight: 22, fontStyle: 'italic' },
+    citation: { color: GOLD, fontSize: 12, fontWeight: '600', marginTop: 8 },
+    note: { color: '#888', fontSize: 13, lineHeight: 20, marginTop: 16, fontStyle: 'italic' },
 
     filter: { marginTop: 26 },
     kicker: {

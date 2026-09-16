@@ -56,6 +56,20 @@ export const BRANCH_GLOSS: Record<Branch, string> = {
   ethics: 'The crop',
 };
 
+// The passage the three branches come from, shown on the Garden index in the
+// same treatment an exhibit gives its own source. The room is sourced the way
+// its contents are.
+//
+// Hicks rather than Yonge, though both are in rag_corpus and both are public
+// domain: Hicks renders the third term "the crop", which is the word the
+// branch glosses above use, where Yonge has "the fruit" and would contradict
+// them on the same page. Verbatim but for the opening "Or, again," (it is the
+// third of four similes in the sentence) and the capital it leaves behind.
+export const FIELD_PASSAGE =
+  'They liken Philosophy to a fertile field: Logic being the encircling fence, Ethics the crop, Physics the soil or the trees.';
+
+export const FIELD_CITATION = 'Diogenes Laertius, Lives 7.40 · tr. R. D. Hicks';
+
 // ── the privacy fence ────────────────────────────────────────────────────
 //
 // Exhibits are a public surface, and no exhibit may display user-derived

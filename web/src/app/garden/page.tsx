@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ag, EmptyNote, GoldRule, Kicker, TopicChip } from '@/components/agora';
 import {
-  BRANCHES, BRANCH_GLOSS, BRANCH_LABEL, GARDEN_SUBTITLE, GARDEN_TITLE,
+  BRANCHES, BRANCH_GLOSS, BRANCH_LABEL, FIELD_CITATION, FIELD_PASSAGE,
+  GARDEN_SUBTITLE, GARDEN_TITLE,
   byBranch, listGalleryExhibits, thinkersOf, type Exhibit,
 } from '@/lib/exhibits';
 
@@ -66,9 +67,18 @@ function GardenIndex() {
           {GARDEN_SUBTITLE}
         </h1>
         <GoldRule />
-        <p style={{ fontFamily: ag.ui, fontSize: 16, lineHeight: 1.65, color: ag.body, margin: 0 }}>
-          The Stoics likened philosophy to a fertile field: logic the fence round it, physics the
-          soil and the trees, ethics the crop. Every exhibit belongs to one of the three.
+        {/* The room's own source, in the treatment an exhibit gives its
+            own: gold rule, italic serif passage, gold citation. */}
+        <blockquote style={{ borderLeft: `3px solid ${ag.gold}`, paddingLeft: 18, margin: 0 }}>
+          <p style={{ fontFamily: ag.serif, fontStyle: 'italic', fontSize: 18, lineHeight: 1.62, color: ag.quote, margin: 0 }}>
+            {FIELD_PASSAGE}
+          </p>
+          <p style={{ fontFamily: ag.ui, fontSize: 13, fontWeight: 600, color: ag.gold, margin: '10px 0 0' }}>
+            {FIELD_CITATION}
+          </p>
+        </blockquote>
+        <p style={{ fontFamily: ag.ui, fontSize: 16, lineHeight: 1.65, color: ag.body, margin: '22px 0 0' }}>
+          Every exhibit belongs to one of the three.
         </p>
       </div>
 
