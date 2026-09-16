@@ -15,14 +15,57 @@ import { withAttribution } from '@/lib/scribe/attribution'
 import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
 import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
 import type { Highlight } from '@/lib/scribe/prose'
+import type { DraftState } from '@/lib/scribe/provenance'
+import type { QuoteFinding } from './types'
 
 // Column widths, dragged and remembered. The draft column takes whatever is
 // left, which on a wide screen is most of it: the essay is the work.
-type Layout = { entries: number; convo: number; sources: number; entriesOpen: boolean; sourcesOpen: boolean }
+type Layout = {
+  entries: number
+  convo: number
+  sources: number
+  entriesOpen: boolean
+  sourcesOpen: boolean
+  // Which side pane the writer opened most recently. When the window cannot
+  // hold both, the other one gives way, so opening a rail always does
+  // something rather than silently losing to a fixed priority.
+  lastOpened: 'entries' | 'sources'
+}
 const LAYOUT_KEY = 'scribe-chat-layout-v1'
-const DEFAULT_LAYOUT: Layout = { entries: 220, convo: 400, sources: 340, entriesOpen: true, sourcesOpen: true }
+const DEFAULT_LAYOUT: Layout = {
+  entries: 220, convo: 400, sources: 340, entriesOpen: true, sourcesOpen: true, lastOpened: 'sources',
+}
 const LIMITS = { entries: [160, 360], convo: [300, 680], sources: [240, 600] } as const
 const RAIL = 40
+// The draft column never goes below this: it is the reason the page exists.
+const MIN_DRAFT = 460
+const MIN_CONVO = 280
+// Below this the columns stop being columns and the panes stack.
+const STACK_BELOW = 900
+
+// What actually fits. Preferences are honoured while there is room; when
+// there is not, the side pane the writer did not just open collapses to its
+// rail, and the conversation gives up width before the draft does.
+function fitLayout(l: Layout, viewportW: number) {
+  if (viewportW < STACK_BELOW) {
+    return { stacked: true as const, entriesOpen: false, sourcesOpen: false, convo: 0, squeezed: false }
+  }
+  const budget = viewportW - MIN_DRAFT - 3 * 6 - 32 // resizers and the page gutter
+  const width = (open: boolean, w: number) => (open ? w : RAIL)
+  let entriesOpen = l.entriesOpen
+  let sourcesOpen = l.sourcesOpen
+  const used = () => width(entriesOpen, l.entries) + width(sourcesOpen, l.sources) + MIN_CONVO
+  const giveWay: ('entries' | 'sources')[] =
+    l.lastOpened === 'entries' ? ['sources', 'entries'] : ['entries', 'sources']
+  for (const pane of giveWay) {
+    if (used() <= budget) break
+    if (pane === 'entries') entriesOpen = false
+    else sourcesOpen = false
+  }
+  const room = budget - width(entriesOpen, l.entries) - width(sourcesOpen, l.sources)
+  const convo = Math.max(MIN_CONVO, Math.min(l.convo, room))
+  return { stacked: false as const, entriesOpen, sourcesOpen, convo, squeezed: convo < l.convo }
+}
 
 function extractDraft(text: string): string | null {
   const m = text.match(/<draft>([\s\S]*?)<\/draft>/)
@@ -85,7 +128,14 @@ export default function ScribeChatPage() {
 
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT)
   const [paneWide, setPaneWide] = useState(true)
+  const [viewportW, setViewportW] = useState(1600)
   const draftColRef = useRef<HTMLDivElement>(null)
+
+  // The quotation check for the draft on screen.
+  const [quotes, setQuotes] = useState<QuoteFinding[] | null>(null)
+  const [quotesChecking, setQuotesChecking] = useState(false)
+  const [sendingToComposer, setSendingToComposer] = useState(false)
+  const [readingOutside, setReadingOutside] = useState(false)
 
   // Composer + draft workspace
   const [input, setInput] = useState('')
@@ -130,6 +180,9 @@ export default function ScribeChatPage() {
       setDrafts(json.drafts || [])
       setViewedDraftId(null)
       setRightTab('draft')
+      // Another entry's quotations are not this entry's; clear until the
+      // check runs again on the draft now on screen.
+      setQuotes(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load entry')
     }
@@ -146,6 +199,16 @@ export default function ScribeChatPage() {
   useEffect(() => {
     try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)) } catch { /* ignore */ }
   }, [layout])
+
+  // The viewport drives which side panes can be open at all: four columns do
+  // not fit on a laptop, and a draft squeezed to nothing is the thing this
+  // layout exists to prevent.
+  useEffect(() => {
+    const read = () => setViewportW(window.innerWidth)
+    read()
+    window.addEventListener('resize', read)
+    return () => window.removeEventListener('resize', read)
+  }, [])
 
   // Essay typography once the draft column is wide enough to carry it.
   useEffect(() => {
@@ -433,6 +496,94 @@ export default function ScribeChatPage() {
     setApplying(false)
   }
 
+  // ── The quotation check ─────────────────────────────────────────────────
+  // Runs against whatever draft is on screen, shortly after it settles. The
+  // pipeline has always machine-checked quotes; this is chat mode's.
+  useEffect(() => {
+    if (!selectedId || !draftShown || streaming) return
+    let cancelled = false
+    const t = setTimeout(async () => {
+      setQuotesChecking(true)
+      try {
+        const res = await fetch(`/api/admin/scribe/entries/${selectedId}/quotes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ draft_text: draftShown }),
+        })
+        const json = await res.json()
+        if (!cancelled && res.ok) setQuotes(json.findings ?? [])
+      } catch {
+        // A failed check is not a finding; leave the last result standing.
+      } finally {
+        if (!cancelled) setQuotesChecking(false)
+      }
+    }, 900)
+    return () => { cancelled = true; clearTimeout(t) }
+  }, [selectedId, draftShown, streaming])
+
+  // Hand the draft to the Composer, where it gets retyped into Kyle's voice.
+  async function sendToComposer() {
+    if (!selectedId || !draftShown) return
+    setSendingToComposer(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/entries/${selectedId}/to-composer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_text: draftShown, title: entry?.title ?? null }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Could not send the draft')
+      showToast('Opening the Composer on this draft')
+      window.open(`/dashboard/composer?piece=${json.pieceId}`, '_blank', 'noopener')
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not send the draft')
+    }
+    setSendingToComposer(false)
+  }
+
+  // Turn the gaps-only posture on or off for this entry.
+  async function toggleGapsMode() {
+    if (!selectedId || !entry) return
+    const next = !entry.gaps_mode
+    setEntry({ ...entry, gaps_mode: next })
+    try {
+      const res = await fetch(`/api/admin/scribe/entries/${selectedId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gaps_mode: next }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error || 'Could not change the mode')
+      showToast(
+        next
+          ? 'Gaps mode on — Scribe will leave the paragraphs to you from the next turn'
+          : 'Gaps mode off — Scribe will write prose again'
+      )
+    } catch (e) {
+      setEntry({ ...entry, gaps_mode: !next })
+      showToast(e instanceof Error ? e.message : 'Could not change the mode')
+    }
+  }
+
+  // One cold read of the draft as it stands. Not persisted: the draft moves.
+  async function outsideReadNow() {
+    if (!selectedId || !draftShown) return
+    setReadingOutside(true)
+    try {
+      const res = await fetch(`/api/admin/scribe/entries/${selectedId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft_text: draftShown }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'The outside read failed')
+      setLiveReview(json.review as Review)
+      setRightTab('review')
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'The outside read failed')
+    }
+    setReadingOutside(false)
+  }
+
   async function exportDraft() {
     if (!draftShown) return
     const title = entry?.title ? `# ${entry.title}\n\n` : ''
@@ -501,6 +652,10 @@ export default function ScribeChatPage() {
     runTurn(selectedId, prompt)
   }
 
+  // Every committed draft state in thread order: what provenance is computed
+  // from. The journal fragment rides separately as the writer's own.
+  const history: DraftState[] = draftTrail.map(d => ({ role: d.role, text: d.text }))
+
   const workspaceProps = {
     tab: rightTab,
     onTabChange: setRightTab,
@@ -526,19 +681,32 @@ export default function ScribeChatPage() {
     onExport: exportDraft,
     onExportWord: exportWord,
     onSaveToLog: saveToLog,
+    onSendToComposer: sendToComposer,
+    sendingToComposer,
+    quotes,
+    quotesChecking,
+    history,
+    rawText: entry?.raw_text ?? null,
+    gapsMode: entry?.gaps_mode === true,
+    onToggleGapsMode: toggleGapsMode,
+    onOutsideRead: outsideReadNow,
+    readingOutside,
     onApplyRevision: applyRevision,
     applying,
   }
 
-  const gridColumns = [
-    layout.entriesOpen ? `${layout.entries}px` : `${RAIL}px`,
-    '6px',
-    `${layout.convo}px`,
-    '6px',
-    'minmax(0, 1fr)',
-    '6px',
-    layout.sourcesOpen ? `${layout.sources}px` : `${RAIL}px`,
-  ].join(' ')
+  const fit = fitLayout(layout, viewportW)
+  const gridColumns = fit.stacked
+    ? 'minmax(0, 1fr)'
+    : [
+        fit.entriesOpen ? `${layout.entries}px` : `${RAIL}px`,
+        '6px',
+        `${fit.convo}px`,
+        '6px',
+        `minmax(${MIN_DRAFT}px, 1fr)`,
+        '6px',
+        fit.sourcesOpen ? `${layout.sources}px` : `${RAIL}px`,
+      ].join(' ')
 
   return (
     <div className={styles.wrap}>
@@ -562,9 +730,12 @@ export default function ScribeChatPage() {
         />
       )}
 
-      <div className={styles.grid} style={{ gridTemplateColumns: gridColumns }}>
+      <div
+        className={`${styles.grid} ${fit.stacked ? styles.gridStacked : ''}`}
+        style={{ gridTemplateColumns: gridColumns }}
+      >
         {/* ── Entries ── */}
-        {layout.entriesOpen ? (
+        {fit.entriesOpen ? (
           <div className={`${styles.pane} ${styles.sidebar}`}>
             <div className={styles.paneHead}>
               Entries
@@ -608,14 +779,19 @@ export default function ScribeChatPage() {
               ))}
             </div>
           </div>
-        ) : (
-          <button className={styles.rail} onClick={() => setLayout(l => ({ ...l, entriesOpen: true }))} title="Show the entries">
+        ) : fit.stacked ? null : (
+          <button
+            className={styles.rail}
+            onClick={() => setLayout(l => ({ ...l, entriesOpen: true, lastOpened: 'entries' }))}
+            title="Show the entries"
+          >
             <span>Entries ({entries.length})</span>
           </button>
         )}
         <div
-          className={`${styles.resizer} ${layout.entriesOpen ? '' : styles.resizerOff}`}
-          onPointerDown={e => layout.entriesOpen && startResize('entries', e)}
+          className={`${styles.resizer} ${fit.entriesOpen ? '' : styles.resizerOff}`}
+          onPointerDown={e => fit.entriesOpen && startResize('entries', e)}
+          hidden={fit.stacked}
         />
 
         {/* ── Conversation ── */}
@@ -681,7 +857,7 @@ export default function ScribeChatPage() {
             </button>
           </div>
         </div>
-        <div className={styles.resizer} onPointerDown={e => startResize('convo', e)} />
+        {!fit.stacked && <div className={styles.resizer} onPointerDown={e => startResize('convo', e)} />}
 
         {/* ── Draft ── */}
         <div className={styles.draftCol} ref={draftColRef}>
@@ -695,12 +871,13 @@ export default function ScribeChatPage() {
           )}
         </div>
         <div
-          className={`${styles.resizer} ${layout.sourcesOpen ? '' : styles.resizerOff}`}
-          onPointerDown={e => layout.sourcesOpen && startResize('sources', e)}
+          className={`${styles.resizer} ${fit.sourcesOpen ? '' : styles.resizerOff}`}
+          onPointerDown={e => fit.sourcesOpen && startResize('sources', e)}
+          hidden={fit.stacked}
         />
 
         {/* ── Sources ── */}
-        {layout.sourcesOpen ? (
+        {fit.sourcesOpen ? (
           <div className={`${styles.pane} ${styles.sourcePane}`}>
             <div className={styles.paneHead}>
               Sources · this turn
@@ -716,8 +893,12 @@ export default function ScribeChatPage() {
               />
             </div>
           </div>
-        ) : (
-          <button className={styles.rail} onClick={() => setLayout(l => ({ ...l, sourcesOpen: true }))} title="Show the sources">
+        ) : fit.stacked ? null : (
+          <button
+            className={styles.rail}
+            onClick={() => setLayout(l => ({ ...l, sourcesOpen: true, lastOpened: 'sources' }))}
+            title="Show the sources"
+          >
             <span>Sources ({latestSources.length})</span>
           </button>
         )}

@@ -3,9 +3,9 @@
 // The draft pane and the full-page draft workspace are the same component in
 // two skins. Compact rides in the right-hand column of the chat; fullscreen
 // takes over the viewport so the essay can be read at a real measure with real
-// typography. Four tabs: the typeset draft (editable in place, and selectable
-// into scoped instructions), this turn's changes, the cold outside read, and
-// the sources this turn retrieved.
+// typography. Five tabs: the typeset draft (editable in place, and selectable
+// into scoped instructions), this turn's changes, the cold outside read, the
+// sources this turn retrieved, and the check on every quotation in the draft.
 //
 // Everything that says "show me where" resolves to the same highlight range
 // vocabulary, so the voice meter, a reviewer's finding, and a retrieved source
@@ -37,9 +37,10 @@ import {
   tallyDecisions,
   type Decision,
 } from '@/lib/scribe/diff'
-import type { DiffBase, Draft, Review, ReviewFinding, Source } from './types'
+import { attributeDraft, originSpans, type DraftState } from '@/lib/scribe/provenance'
+import type { DiffBase, Draft, QuoteFinding, Review, ReviewFinding, Source } from './types'
 
-export type DraftTab = 'draft' | 'changes' | 'review' | 'sources'
+export type DraftTab = 'draft' | 'changes' | 'review' | 'sources' | 'quotes'
 
 function reviewHasFindings(r: Review | null | undefined): boolean {
   return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || (r.tells?.length ?? 0) > 0)
@@ -76,8 +77,20 @@ export interface DraftWorkspaceProps {
   onExport: () => void
   onExportWord: () => void
   onSaveToLog: () => void
+  onSendToComposer: () => void
+  sendingToComposer: boolean
   onApplyRevision: (text: string, summary: string) => Promise<void>
   applying: boolean
+  /** Quotation check for the draft on screen, null while it has not run. */
+  quotes: QuoteFinding[] | null
+  quotesChecking: boolean
+  /** Every committed draft state in thread order, for provenance. */
+  history: DraftState[]
+  rawText: string | null
+  gapsMode: boolean
+  onToggleGapsMode: () => void
+  onOutsideRead: () => void
+  readingOutside: boolean
 }
 
 export default function DraftWorkspace(props: DraftWorkspaceProps) {
@@ -86,7 +99,9 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     review, reviewIsSavedFallback, viewingSnapshotStage, drafts, viewedDraftId,
     onViewDraft, sources, highlight, onHighlight, onScopedTurn, onNotice,
     streaming, snapshotting, canSnapshot, onSnapshot, onFinalize,
-    onExport, onExportWord, onSaveToLog, onApplyRevision, applying,
+    onExport, onExportWord, onSaveToLog, onSendToComposer, sendingToComposer,
+    onApplyRevision, applying, quotes, quotesChecking, history, rawText,
+    gapsMode, onToggleGapsMode, onOutsideRead, readingOutside,
   } = props
 
   const [baseId, setBaseId] = useState<string | null>(bases[0]?.id ?? null)
@@ -131,6 +146,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     tab === 'review' && review ? 'review'
     : tab === 'changes' && hunkCount > 0 ? 'changes'
     : tab === 'sources' ? 'sources'
+    : tab === 'quotes' ? 'quotes'
     : 'draft'
 
   const voiceMetrics = shown ? computeVoiceMetrics(shown) : null
@@ -138,6 +154,13 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
   const reviewCount = review
     ? review.not_kyle.length + review.unearned.length + review.narrated_over.length + (review.tells?.length ?? 0)
     : 0
+
+  // Whose sentences these are, from the thread itself rather than from style.
+  const provenance = useMemo(
+    () => (shown ? attributeDraft(shown, history, rawText) : null),
+    [shown, history, rawText]
+  )
+  const unverifiedQuotes = (quotes ?? []).filter(q => q.status !== 'verified')
 
   const canApply =
     tally.total > 0 && !applying && !streaming && (!!preview || tally.unreviewed === 0)
@@ -167,6 +190,19 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
 
   function focusPhrase(line: string) {
     onHighlight({ kind: 'phrases', phrases: [line] })
+    onTabChange('draft')
+  }
+
+  // Paint the sentences that arrived from Scribe rather than from Kyle. The
+  // ranges are computed against this exact text, so they are passed through
+  // rather than searched for.
+  function toggleProvenance() {
+    if (!provenance) return
+    const on = highlight?.kind === 'ranges'
+    if (on) { onHighlight(null); return }
+    const ranges = originSpans(provenance, 'scribe').map(r => ({ ...r, label: 'scribe' }))
+    if (!ranges.length) { onNotice('Every sentence in this draft is yours.'); return }
+    onHighlight({ kind: 'ranges', ranges })
     onTabChange('draft')
   }
 
@@ -211,6 +247,15 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           Sources ({sources.length})
         </button>
       )}
+      {(quotes?.length ?? 0) > 0 && (
+        <button
+          className={`${styles.tab} ${effTab === 'quotes' ? styles.tabOn : ''} ${unverifiedQuotes.length ? styles.tabAlert : ''}`}
+          onClick={() => onTabChange('quotes')}
+          title="Every quotation in the draft, checked against the passages this session retrieved"
+        >
+          Quotes{unverifiedQuotes.length ? ` (${unverifiedQuotes.length}!)` : ' ✓'}
+        </button>
+      )}
     </span>
   )
 
@@ -227,6 +272,14 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         {editingWhole ? 'Reading view' : 'Edit draft'}
       </button>
       <button className={admin.ghostBtn} onClick={onSaveToLog} disabled={!shown}>Save to log</button>
+      <button
+        className={admin.ghostBtn}
+        onClick={onSendToComposer}
+        disabled={!shown || sendingToComposer}
+        title="Open this draft in the Composer, where you retype it sentence by sentence into your own voice"
+      >
+        {sendingToComposer ? 'Sending…' : 'To Composer'}
+      </button>
       <button className={admin.ghostBtn} onClick={onExport} disabled={!shown} title="Copy the draft as markdown">Copy</button>
       <button className={admin.ghostBtn} onClick={onExportWord} disabled={!shown} title="Download the draft as a Word document">Word</button>
       <button className={admin.ghostBtn} onClick={onToggleFullscreen} title={fullscreen ? 'Back to the conversation' : 'Open the draft full page'}>
@@ -304,6 +357,68 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           Show {dismissedFindings.length} dismissed
         </button>
       )}
+    </>
+  )
+
+  const quotesBody = (
+    <>
+      <div className={styles.reviewMeta}>
+        {quotesChecking
+          ? 'Checking every quotation against the passages this session retrieved…'
+          : `${quotes?.length ?? 0} quotation${(quotes?.length ?? 0) === 1 ? '' : 's'} in the draft, checked against the corpus, your log, and this entry's fragment.`}
+      </div>
+      {(quotes ?? []).length === 0 && !quotesChecking && (
+        <p className={chat.draftEmpty}>No quotations in the draft yet.</p>
+      )}
+      <ul className={styles.reviewList}>
+        {(quotes ?? []).map((q, i) => {
+          const stillThere = !shown || containsPhrase(shown, q.quote)
+          const label =
+            q.status === 'verified' ? 'verbatim'
+            : q.status === 'not-quotable' ? 'summary, not quotable'
+            : 'no source found'
+          return (
+            <li key={i} className={styles.finding}>
+              <span className={`${styles.quoteFlag} ${
+                q.status === 'verified' ? styles.quoteOk
+                : q.status === 'not-quotable' ? styles.quoteWarn
+                : styles.quoteBad
+              }`}>
+                {label}
+              </span>{' '}
+              <button
+                className={styles.findingQuote}
+                onClick={() => focusPhrase(q.quote)}
+                disabled={!stillThere}
+                title={stillThere ? 'Show this quotation in the draft' : 'This passage is no longer in the draft'}
+              >
+                “{q.quote.length > 220 ? `${q.quote.slice(0, 220)}…` : q.quote}”
+              </button>
+              <span className={styles.reviewWhy}>
+                {q.status === 'verified' && q.author
+                  ? ` — matches ${[q.author, q.work, q.section_label].filter(Boolean).join(', ')}`
+                  : q.status === 'not-quotable'
+                    ? ` — this is a summary of ${q.author ?? 'modern scholarship'}, whose original text the corpus never stored. Paraphrase it with attribution; do not quote it.`
+                    : ' — nothing this session retrieved contains these words. Either it comes from outside the corpus, or it is not verbatim. Check it before publishing.'}
+              </span>
+              {q.status !== 'verified' && stillThere && (
+                <span className={styles.findingBtns}>
+                  <button
+                    className={styles.hunkBtn}
+                    onClick={() => onScopedTurn(findingPrompt(q.quote, q.status === 'not-quotable'
+                      ? 'This is presented as a verbatim quotation, but it comes from a summary of modern scholarship whose original text was never stored. Paraphrase it with attribution instead.'
+                      : 'This is presented as a verbatim quotation, but no passage this session retrieved contains these words. Either ground it in a real retrieved passage or rewrite it as the author\'s own sentence with no quotation marks.'))}
+                    disabled={streaming}
+                    title="Send this to Scribe as a scoped fix"
+                  >
+                    Fix this
+                  </button>
+                </span>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </>
   )
 
@@ -396,6 +511,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
   const body =
     effTab === 'review' ? reviewBody
     : effTab === 'changes' ? changesBody
+    : effTab === 'quotes' ? quotesBody
     : effTab === 'sources' ? (
       <SourceList
         sources={sources}
@@ -436,6 +552,22 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
       {meterChip('tobe', 'to-be', voiceMetrics.toBeRate, styles.plain, 'to-be verbs (is/are/was…) per 100 words. High means flatter prose.')}
       {meterChip('dash', 'dashes', voiceMetrics.dashes, voiceMetrics.dashLabel === 'clean' ? styles.good : voiceMetrics.dashLabel === 'some' ? styles.ok : styles.bad, 'Dashes standing between clauses or around an aside. Banned in the draft.')}
       {meterChip('tell', 'AI tells', voiceMetrics.tellTotal, voiceMetrics.tellTotal === 0 ? styles.good : styles.bad, voiceMetrics.tellHits.map(h => `${h.phrase} ×${h.count}`).join(', ') || 'No cliché tells found.')}
+      {provenance && provenance.totalWords > 0 && (
+        <button
+          className={`${styles.meterChip} ${highlight?.kind === 'ranges' ? styles.meterChipOn : ''}`}
+          onClick={toggleProvenance}
+          title={`${provenance.yourWords} of ${provenance.totalWords} words came from your fragment or your own edits; ${provenance.scribeWords} arrived from Scribe. Click to paint Scribe's sentences in the draft.`}
+        >
+          yours{' '}
+          <strong className={
+            provenance.yourShare >= 60 ? styles.good
+            : provenance.yourShare >= 25 ? styles.ok
+            : styles.bad
+          }>
+            {provenance.yourShare}%
+          </strong>
+        </button>
+      )}
       {stats && <span className={styles.meterStats}>{stats.words} words · {stats.minutes} min read</span>}
     </div>
   )
@@ -455,6 +587,25 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         title="Stop developing; produce the final draft, the retype punch-list, and a cold outside read"
       >
         Finalize + outside read
+      </button>
+      <button
+        className={chat.snapshotChip}
+        onClick={onOutsideRead}
+        disabled={!shown || readingOutside || streaming}
+        title="One cold read of the draft as it stands, by a different model that has not seen this conversation. Nothing is saved."
+      >
+        {readingOutside ? 'Reading…' : 'Outside read now'}
+      </button>
+      <button
+        className={`${chat.snapshotChip} ${gapsMode ? chat.snapshotChipOn : ''}`}
+        onClick={onToggleGapsMode}
+        title={
+          gapsMode
+            ? 'Gaps mode is on: Scribe builds the structure, sources and questions, and leaves every paragraph for you to write. Click to let it write prose again.'
+            : 'Gaps mode: Scribe stops writing finished paragraphs and leaves every one as a gap with its material underneath, for you to write.'
+        }
+      >
+        {gapsMode ? '◆ Gaps mode on' : '◇ Gaps mode'}
       </button>
       {drafts.length > 0 && (
         <>

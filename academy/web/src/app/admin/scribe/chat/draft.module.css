@@ -557,3 +557,20 @@
 
 /* The draft pane in the wide column reads at essay size, short of full page. */
 .prosePane { font-size: 16px; line-height: 1.68; max-width: 760px; margin: 0 auto; }
+
+/* ── Quote check ── */
+.tabAlert { color: #b4453f; }
+.tabAlert.tabOn { background: #E06B6B; color: #fff; }
+.quoteFlag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: 1px;
+}
+.quoteOk { background: #e7f4ea; color: #2c7a3f; }
+.quoteWarn { background: #fdf1e3; color: #a8690f; }
+.quoteBad { background: #fbe9e9; color: #b4453f; }

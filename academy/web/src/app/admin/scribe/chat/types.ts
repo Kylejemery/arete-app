@@ -6,8 +6,22 @@ export type Entry = {
   id: string
   title: string | null
   raw_text: string
+  // Optional posture: Scribe builds everything around the prose and leaves
+  // every paragraph a gap for the writer. Absent on rows written before it.
+  gaps_mode?: boolean
   created_at: string
   updated_at: string
+}
+
+// One quotation in the draft, checked against the chunks this session
+// retrieved. See lib/scribe/quote-check.ts.
+export type QuoteFinding = {
+  quote: string
+  status: 'verified' | 'unverified' | 'not-quotable'
+  author?: string
+  work?: string
+  section_label?: string | null
+  chunk_id?: string
 }
 
 export type Source = {

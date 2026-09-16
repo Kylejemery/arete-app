@@ -299,3 +299,15 @@
   padding: 4px 12px;
 }
 .revisionNote::before { content: '✎ '; opacity: 0.7; }
+
+/* Narrow viewport: the columns stop being columns. The conversation and the
+   draft stack, each tall enough to work in, and the side panes drop out
+   rather than squeezing the essay to nothing. */
+.gridStacked {
+  height: auto;
+  grid-auto-rows: min-content;
+  gap: 1rem;
+}
+.gridStacked .convo { height: 60vh; }
+.gridStacked .draftCol { height: 85vh; }
+.gridStacked .sidebar { max-height: 40vh; }

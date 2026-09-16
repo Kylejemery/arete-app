@@ -1,5 +1,8 @@
 import { createAdminClient } from '@/lib/supabase-admin'
 import { runStage, extractJson, type StageUsage } from '../anthropic'
+// One source of truth for quote normalization and matching, shared with chat
+// mode's live check (lib/scribe/quote-check.ts).
+import { normalizeQuote, quoteMatchesChunk } from '../quote-check'
 import type {
   ScribeCitation,
   ScribeCitationVerification,
@@ -14,34 +17,6 @@ import type {
 //      lack passage metadata, so 'unverified' is the honest common case
 //      (decision recorded in docs/scribe-discovery.md §3).
 //   4. Paraphrase support for non-quote citations (haiku, one batched call).
-
-// Normalization: quotes must be verbatim up to typography — curly vs straight
-// quotes, dash styles, markdown emphasis, and whitespace collapse. Case is
-// preserved. (Markdown *emphasis* inside a quote is presentation, not
-// content — the smoke run caught exactly this on a Meditations quote.)
-export function normalizeQuote(s: string): string {
-  return s
-    .replace(/[‘’‚′]/g, "'")
-    .replace(/[“”„″]/g, '"')
-    .replace(/[–—]/g, '-')
-    .replace(/-{2,}/g, '-')
-    .replace(/…/g, '...')
-    .replace(/[*_]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-// A quote may elide with ellipses; every segment ≥ 8 chars must appear
-// verbatim in the chunk.
-export function quoteMatchesChunk(quoteText: string, chunkContent: string): boolean {
-  const chunk = normalizeQuote(chunkContent)
-  const segments = normalizeQuote(quoteText)
-    .split('...')
-    .map(s => s.replace(/^["'\s]+|["'\s]+$/g, ''))
-    .filter(s => s.length >= 8)
-  if (segments.length === 0) return false
-  return segments.every(seg => chunk.includes(seg))
-}
 
 // Passage labels from the enrichment pass (label-passages.ts) are numeric
 // dotted refs, possibly a range across a chunk boundary: "5", "1.24",
@@ -305,3 +280,5 @@ export function verificationPasses(v: ScribeDraftVerification): boolean {
     r => r.chunk_resolves && r.quote_match !== false && r.locator !== 'mismatch'
   )
 }
+
+export { normalizeQuote, quoteMatchesChunk }

@@ -27,6 +27,7 @@ const MAX_CONTEXT = 1500
 const MAX_DRAFT = 12000
 const EXEMPLAR_PIECES = 3
 const EXEMPLAR_CHARS = 2400
+const REWRITE_PAIRS = 12
 
 const VARIANT_SCHEMA = {
   type: 'object',
@@ -134,6 +135,26 @@ export async function POST(req: NextRequest) {
     // No style profile reachable: the writer's drafts are enough.
   }
 
+  // ── How the writer rewrites ────────────────────────────────────────────────
+  // The retype pairs: a sentence as it arrived and the sentence the writer
+  // typed over it. This is the most direct evidence of their voice in the
+  // system, because each pair is the same thought said twice, once by a
+  // model and once by them. Most recent first; RLS scopes it to their rows.
+  const rewrites: { from: string; to: string }[] = []
+  try {
+    const { data } = await supabase
+      .from('retype_pairs')
+      .select('original, retyped')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(REWRITE_PAIRS)
+    for (const row of (data as { original: string; retyped: string }[]) ?? []) {
+      rewrites.push({ from: row.original.slice(0, 600), to: row.retyped.slice(0, 600) })
+    }
+  } catch (e) {
+    console.warn('[composer/voice] retype pairs read failed:', e)
+  }
+
   // How the writer talks: their own lines from their Cabinet conversations
   // that share this sentence's vocabulary. Their words only, never the
   // counselors'. Needs the service role; without it, or on any failure, the
@@ -155,7 +176,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const system = [VOICE_SYSTEM, buildExemplarBlock(exemplars, guidance, spoken)].join('\n\n')
+  const system = [VOICE_SYSTEM, buildExemplarBlock(exemplars, guidance, spoken, rewrites)].join('\n\n')
 
   const userContent = [
     title ? `PIECE: ${title}` : null,

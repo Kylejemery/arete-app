@@ -299,9 +299,35 @@ export interface TurnEvents {
 // this turn (for scribe_messages.sources_used — the audit trail).
 // Append Kyle's voice reference to the base system prompt. Same framing the
 // pipeline draft stage uses, so the two paths sound like the same author.
-function buildSystem(voice: VoiceProfile | null): string {
-  if (!voice) return SYSTEM_PROMPT
+// An optional posture, off by default and set per entry. Scribe keeps doing
+// everything it does except write the finished sentences: the architecture,
+// the sources, the tensions, the questions, and then a gap where each
+// paragraph goes. It exists because prose that arrives from a model is prose
+// Kyle did not write, and this is the mode where the essay ends up in his own
+// hand rather than in his own hand's retype of someone else's.
+export const GAPS_APPENDIX = `
+
+GAPS MODE IS ON FOR THIS ENTRY. Kyle is writing the prose himself; you are building everything around it.
+
+You may write: the structure, the order of the argument, what each paragraph has to accomplish, the corpus passages with full provenance, the connections to his log and his Cabinet, the tensions, the weakest claim, the questions only he can answer.
+
+You may NOT write: the finished sentences of the essay. Not one paragraph of developed prose, not an example of how a paragraph might go, not a "rough version to react to," not the opening line, not the closing line. Not even when he asks for it inside this mode. If he wants prose, he turns gaps mode off; say so in one line and carry on.
+
+So the draft, in this mode, is a working document rather than an essay. Each paragraph is a gap of this shape:
+
+[YOUR TURN: what this paragraph has to do, in one sentence. The specific thing to name. The claim it has to land.]
+
+and under the gap, indented as a blockquote, goes the material for it: the retrieved passage with its provenance and its QUOTE or PARAPHRASE mode, the line from his log or his Cabinet that belongs here, the tension to hold open. Headings, section order, and structural notes are yours to write as normal prose; they are scaffolding, not the essay.
+
+His own words are the exception that proves the rule: a sentence copied verbatim from his fragment, his log, or his Cabinet may stand in the draft as his, marked as a quotation of himself, because he wrote it.
+
+Everything else in these instructions still governs: the spine, the corpus rules, the machine tells, the pushback. You are still the editor with a spine. You are simply not the writer.`
+
+function buildSystem(voice: VoiceProfile | null, gapsMode = false): string {
+  if (!voice && !gapsMode) return SYSTEM_PROMPT
   let s = SYSTEM_PROMPT
+  if (gapsMode) s += GAPS_APPENDIX
+  if (!voice) return s
   const exemplars = (voice.exemplars ?? [])
     .filter(e => e?.text?.trim())
     .map((e, i) => `--- exemplar ${i + 1}: ${e.title} ---\n${e.text}`)
@@ -330,7 +356,8 @@ export async function runScribeTurn(
   events: TurnEvents,
   voice: VoiceProfile | null = null,
   cabinetUserId: string | null = null,
-  workingDraft: string | null = null
+  workingDraft: string | null = null,
+  gapsMode = false
 ): Promise<{ text: string; sources: TurnSource[] }> {
   const messages: Anthropic.MessageParam[] = history.map((m, i) => ({
     role: m.role === 'scribe' ? 'assistant' : 'user',
@@ -338,7 +365,7 @@ export async function runScribeTurn(
       i === history.length - 1 && m.role === 'user' ? withWorkingDraft(m.content, workingDraft) : m.content,
   }))
 
-  const systemText = buildSystem(voice)
+  const systemText = buildSystem(voice, gapsMode)
   const tools = cabinetUserId ? [SEARCH_TOOL, JOURNAL_TOOL, CABINET_TOOL] : [SEARCH_TOOL, JOURNAL_TOOL]
   const turnSources: TurnSource[] = []
   const seenChunks = new Set<string>()
