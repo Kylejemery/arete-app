@@ -222,11 +222,16 @@ other in the same product.
    Yonge's wording; the stored chunks are untouched. Re-ingesting *Academica*
    from a cleaner scan would be worth it, and `translator` is recorded but
    `edition_year` is null on it.
-5. **The Hicks Diogenes Laertius row has no `edition_year`.** The Garden index
-   now quotes it (`FIELD_PASSAGE` in `lib/exhibits.ts`), so this is a passage
-   on a public surface whose edition is unrecorded. Hicks's Loeb translation is
-   1925, comfortably inside the pre-1930 public-domain rule, but the row should
-   carry the year. Part of the same split below.
+5. **~~The Hicks Diogenes Laertius row has no `edition_year`.~~ Fixed.** Set to
+   1925 for all 87 chunks in
+   `supabase/migrations/20260916190000_dl_hicks_edition_year.sql`. Hicks's Loeb
+   translation was first published in 1925 in two volumes, Book VII in volume
+   II; and the row's `source_url` is Wikisource, which can only host the
+   public-domain printing, so the year is the first edition rather than a later
+   revised reprint. That is also what puts the text inside the pre-1930
+   copyright rule it was already relying on. **Not verified against the source
+   URL:** `en.wikisource.org` is blocked by this environment's egress policy,
+   so the year rests on the bibliography rather than on a fetch.
 6. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
    `rag_corpus` under two identities: `Lives of Eminent Philosophers` (544
    chunks, tr. Yonge, `edition_year` 1853) and `Lives Book7` (87 chunks, tr.
