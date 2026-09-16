@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import LessonParagraph from '@/components/LessonParagraph';
+import ZenosHand from '@/components/playground/ZenosHand';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
@@ -44,79 +45,40 @@ interface SessionItem {
   videoUrl?: string;
 }
 
+// The sidebar session list.
+//
+// Titles are derived from the course data files, so the sidebar can never
+// disagree with the lesson the student actually opens. data/curriculum.ts
+// takes the same approach for the advisor. Hand-copied titles drifted here
+// once already: the PHIL 701 list described a different course from session 3
+// onward, advertising a discipline-of-assent session at 5 that taught roles
+// and appropriate action.
+//
+// `locked` is only the initial value. The real lock is the completion gate
+// computed per render, which reads session_progress.
+//
+// PHIL 701 Session 1 is stated by hand because it has no entry in
+// PHIL_701_SESSIONS: its content is the landing card in COURSE_CONTENT below,
+// its readings live in seminars.ts, and it carries the one lecture video.
+const sidebarFromData = (
+  sessions: ReadonlyArray<{ id: number; title: string }>
+): SessionItem[] => sessions.map(s => ({ id: s.id, title: s.title, locked: s.id !== 1 }));
+
 const COURSE_SESSIONS: Record<string, SessionItem[]> = {
   'phil-701': [
-    { id: 1,  title: 'What is Philosophy For? — Hadot as Entry',            locked: false, videoUrl: 'https://www.youtube.com/embed/yF-C2DBB5Jg' },
-    { id: 2,  title: 'The Good and the Preferred — Virtue and Indifferents', locked: true },
-    { id: 3,  title: 'The Discipline of Desire — Wanting Rightly',           locked: true },
-    { id: 4,  title: 'The Discipline of Action — Acting with Reservation',   locked: true },
-    { id: 5,  title: 'The Discipline of Assent — The Inner Citadel',         locked: true },
-    { id: 6,  title: 'Marcus Aurelius as Practitioner',                      locked: true },
-    { id: 7,  title: 'Epictetus as Teacher',                                 locked: true },
-    { id: 8,  title: 'Seneca as Writer',                                     locked: true },
-    { id: 9,  title: 'Paper Workshop with the Writing Supervisor',           locked: true },
-    { id: 10, title: 'Final Seminar — Synthesis and Objections',             locked: true },
-    { id: 11, title: 'Qualifying Conversation with the Examiner',            locked: true },
+    {
+      id: 1,
+      title: 'What is Philosophy For? — Hadot as Entry',
+      locked: false,
+      videoUrl: 'https://www.youtube.com/embed/yF-C2DBB5Jg',
+    },
+    ...sidebarFromData(PHIL_701_SESSIONS),
   ],
-  'phil-702': [
-    { id: 1,  title: 'The Meditations as Spiritual Exercise — How to Read Marcus', locked: false },
-    { id: 2,  title: "The Three Disciplines — Marcus's Daily Framework",           locked: true },
-    { id: 3,  title: 'The Discipline of Desire — Wanting Nothing External',        locked: true },
-    { id: 4,  title: 'The Discipline of Action — Doing Your Duty Without Attachment', locked: true },
-    { id: 5,  title: 'The Discipline of Assent — Guarding the Ruling Faculty',     locked: true },
-    { id: 6,  title: 'The View from Above — Marcus and Cosmic Perspective',        locked: true },
-    { id: 7,  title: 'Memento Mori — Marcus and the Practice of Death',            locked: true },
-    { id: 8,  title: 'The Obstacle as the Way — Amor Fati in Practice',            locked: true },
-    { id: 9,  title: 'Living Among Others — Marcus on Anger and Community',        locked: true },
-    { id: 10, title: 'The Inner Citadel — What Cannot Be Taken',                   locked: true },
-    { id: 11, title: 'Qualifying Conversation — The Examined Emperor',             locked: true },
-  ],
-  'phil-703': [
-    { id: 1,  title: 'The Former Slave and His School — Introduction',      locked: false },
-    { id: 2,  title: 'The Socratic Inheritance — On Progress and Affection', locked: true },
-    { id: 3,  title: 'Logic in the Service of Life',                        locked: true },
-    { id: 4,  title: 'Freedom and the Good — Confidence and Caution',       locked: true },
-    { id: 5,  title: 'Character and Roles — Who Will You Be?',              locked: true },
-    { id: 6,  title: 'Living Among Others — Training for Society',          locked: true },
-    { id: 7,  title: 'God, Providence, and the Fields of Training',         locked: true },
-    { id: 8,  title: 'The Cynic Ideal and the Inviolable Self',             locked: true },
-    { id: 9,  title: 'On Freedom — The Longest Discourse',                  locked: true },
-    { id: 10, title: 'The Enchiridion as Distillation',                     locked: true },
-    { id: 11, title: 'Qualifying Conversation — The School Examined',       locked: true },
-  ],
-  'phil-704': [
-    { id: 1,  title: 'Claim Yourself — The Correspondence Begins',           locked: false },
-    { id: 2,  title: 'Transformation — Crowds, Friends, and Old Age',        locked: true },
-    { id: 3,  title: 'The God Within and the Slave at Your Table',           locked: true },
-    { id: 4,  title: 'The Open Door — On Dying Well',                        locked: true },
-    { id: 5,  title: 'What Wisdom Makes — Philosophy and Civilization',      locked: true },
-    { id: 6,  title: 'On the Shortness of Life',                             locked: true },
-    { id: 7,  title: 'On Tranquility of Mind',                               locked: true },
-    { id: 8,  title: 'On Providence — Why the Good Suffer',                  locked: true },
-    { id: 9,  title: "On the Happy Life — The Hypocrite's Defense",          locked: true },
-    { id: 10, title: 'On Mercy — Philosophy Advises Power',                  locked: true },
-    { id: 11, title: 'Qualifying Conversation — The Examined Correspondence', locked: true },
-  ],
-  'phil-706': [
-    { id: 1, title: 'No One Does Wrong Willingly — The Socratic Foundation',      locked: false },
-    { id: 2, title: 'The Thief and the Mistaken Judgment — Epictetus on Error',   locked: true },
-    { id: 3, title: 'Anger Anatomized — Seneca and the Two Movements',            locked: true },
-    { id: 4, title: 'Against Useful Anger — The Demolition of the Defenses',      locked: true },
-    { id: 5, title: 'The Synthesis — Why Anger Is Always False',                  locked: true },
-    { id: 6, title: 'The Practice — Living Without Anger',                        locked: true },
-    { id: 7, title: 'Capstone Dialogue — The Doctrine Under Fire',                locked: true },
-  ],
-  'phil-707': [
-    { id: 1, title: 'The Engineered Impression — The Attention Economy on Stoic Terms', locked: false },
-    { id: 2, title: 'Prosoche Under Siege — Phones, Shorts, and the Fragmented Guard',  locked: true },
-    { id: 3, title: 'The Opinion of Others, Industrialized — Metrics, Comparison, Outrage', locked: true },
-    { id: 4, title: 'Appetite by Design — Desire with an R&D Department',               locked: true },
-    { id: 5, title: 'Externals and the Market Self — Wealth, Hustle, and Fortuna',      locked: true },
-    { id: 6, title: 'Fear at Scale — News, Health Anxiety, and the Political Other',    locked: true },
-    { id: 7, title: 'Connection and Eros in the Digital Age — Friendship, Parasocial Bonds, and the AI Companion', locked: true },
-    { id: 8, title: 'The Digital Askēsis — Assembling the Rule of Life',                locked: true },
-    { id: 9, title: 'Capstone Dialogue — The Assayer Examined',                         locked: true },
-  ],
+  'phil-702': sidebarFromData(PHIL_702_SESSIONS),
+  'phil-703': sidebarFromData(PHIL_703_SESSIONS),
+  'phil-704': sidebarFromData(PHIL_704_SESSIONS),
+  'phil-706': sidebarFromData(PHIL_706_SESSIONS),
+  'phil-707': sidebarFromData(PHIL_707_SESSIONS),
 };
 
 interface SessionContent {
@@ -346,6 +308,10 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
   }
   if (courseId === 'phil-704') {
     const s = PHIL_704_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
+  if (courseId === 'phil-705') {
+    const s = PHIL_705_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
   if (courseId === 'phil-706') {
@@ -643,10 +609,13 @@ function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
 // session_progress (best score kept; >= 70% marks the session 'passed').
 // Language tracks stay open-access — recording is for the advisor's
 // standing, not for gating.
-function QuizSection({ quiz, courseId, sessionId }: {
+function QuizSection({ quiz, courseId, sessionId, onRecorded }: {
   quiz: LanguageSession['quiz'];
   courseId?: string;
   sessionId?: number;
+  // Fires when a result is written to session_progress, so a host page whose
+  // sidebar gates on progress can refresh without a reload.
+  onRecorded?: () => void;
 }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -694,7 +663,7 @@ function QuizSection({ quiz, courseId, sessionId }: {
         },
         { onConflict: 'user_id,course_id,session_id' }
       );
-    if (!error) setBest({ score: pct, status });
+    if (!error) { setBest({ score: pct, status }); onRecorded?.(); }
   };
 
   return (
@@ -771,7 +740,7 @@ function QuizSection({ quiz, courseId, sessionId }: {
   );
 }
 
-function LanguageLessonContent({ session, mono = false, courseId }: { session: LessonSession; mono?: boolean; courseId?: string }) {
+function LanguageLessonContent({ session, mono = false, courseId, onQuizRecorded }: { session: LessonSession; mono?: boolean; courseId?: string; onQuizRecorded?: () => void }) {
   return (
     <article>
       <div className="flex items-center gap-2 mb-2">
@@ -847,7 +816,7 @@ function LanguageLessonContent({ session, mono = false, courseId }: { session: L
 
       {/* Quiz */}
       {session.quiz.length > 0 && (
-        <QuizSection quiz={session.quiz} courseId={courseId} sessionId={session.id} />
+        <QuizSection quiz={session.quiz} courseId={courseId} sessionId={session.id} onRecorded={onQuizRecorded} />
       )}
     </article>
   );
@@ -1004,19 +973,33 @@ function QuizCta({ count, onQuizClick }: { count: number; onQuizClick?: () => vo
   );
 }
 
-// PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
+// Interactive blocks belonging to a specific PHIL 701 session, keyed by
+// session id. Zeno's hand is the gesture for the chain Session 3 teaches —
+// impression, assent, grasp, knowledge — so it sits directly under that
+// lesson. Moving it is a one-line change here.
+//
+// Session ids follow data/phil701.ts, the same source the sidebar reads.
+const PHIL_701_INTERACTIVES: Record<number, () => React.ReactElement> = {
+  3: () => <ZenosHand embedded />,
+};
+
+// PHIL 701 sessions 2–14: the language renderer covers briefing-free lesson
 // content (parts + exercises). The quiz is not shown in the lesson — the CTA
-// switches to the Quiz tab where the Proctor grades the submission. Seminar
-// sessions additionally offer the Qualifying Examination (viva).
+// switches to the Quiz tab where the Proctor grades the submission. The
+// qualifying conversation (session 14, `isViva`) offers the Examination; the
+// seminars at 11 and 13 are milestones but do not, since the viva closes the
+// course and sits after the final seminar.
 function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Phil701Session; courseId?: string; onQuizClick?: () => void }) {
+  const interactive = PHIL_701_INTERACTIVES[session.id];
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
+      {interactive?.()}
       {session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
       {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
-      {session.isSeminar && <VivaCta courseId={courseId} />}
+      {session.isViva && <VivaCta courseId={courseId} />}
     </>
   );
 }
@@ -2342,10 +2325,27 @@ function Phil705CoursePage() {
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
+
+  // Reads session_progress for this course so the sidebar can gate on it.
+  const refreshProgress = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('session_progress')
+      .select('session_id, status')
+      .eq('user_id', user.id)
+      .eq('course_id', 'phil-705');
+    if (data) {
+      const map: Record<number, string> = {};
+      for (const row of data) map[row.session_id as number] = row.status as string;
+      setSessionProgress(map);
+    }
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -2353,10 +2353,11 @@ function Phil705CoursePage() {
       if (!user) { router.replace('/login'); return; }
       const profile = await getProfile();
       setIsAdmin(profile?.is_admin === true);
+      await refreshProgress();
       setInitializing(false);
     }
     init();
-  }, [router]);
+  }, [router, refreshProgress]);
 
   useEffect(() => {
     try {
@@ -2371,10 +2372,22 @@ function Phil705CoursePage() {
 
   const adminBypass = isAdmin;
   const activeSession = PHIL_705_SESSIONS.find(s => s.id === activeSessionId) ?? PHIL_705_SESSIONS[0];
-  // Admin bypasses all locks. Non-admins reach this course only via the
-  // dashboard, which gates it behind the prerequisite; here we keep a
-  // conservative sequential lock (only Session 1 open) for safety.
-  const isLocked = (s: Phil705Session) => (adminBypass ? false : s.id !== 1);
+  // Completion gate, the same contract the other PHIL courses use: session N
+  // opens once session N-1 is 'passed' (70% on its quiz). Sessions carrying no
+  // quiz — a stub awaiting its source document, or the final examination —
+  // count as passed so they can never become permanent blockers. Session 1 and
+  // admins bypass unconditionally.
+  //
+  // This replaces a stricter rule that opened session 1 only, on the
+  // assumption that the course catalog gated PHIL 705 behind a prerequisite.
+  // The catalog gates on tier alone, so that rule stranded every paying
+  // student after the first session.
+  const isLocked = (s: Phil705Session) => {
+    if (adminBypass || s.id === 1) return false;
+    const prevHasQuiz = hasQuizData('phil-705', s.id - 1);
+    const prevStatus = prevHasQuiz ? (sessionProgress[s.id - 1] ?? 'not_started') : 'passed';
+    return prevStatus !== 'passed';
+  };
 
   if (initializing) {
     return (
@@ -2507,7 +2520,11 @@ function Phil705CoursePage() {
             ) : activeSession.isFinalExam ? (
               <Phil705ExamContent session={activeSession} />
             ) : (
-              <LanguageLessonContent session={phil705ToLesson(activeSession)} courseId="phil-705" />
+              <LanguageLessonContent
+                session={phil705ToLesson(activeSession)}
+                courseId="phil-705"
+                onQuizRecorded={refreshProgress}
+              />
             )}
           </div>
         </div>

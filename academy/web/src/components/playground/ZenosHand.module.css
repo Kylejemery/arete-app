@@ -639,3 +639,73 @@
     border-top: 1px solid var(--tape-rule);
   }
 }
+
+/* ── embedded in an Academy course session ──────────────────────────────────
+ *
+ * The same gesture, re-tuned for the seminar column instead of a full page.
+ * The Playground's paper-and-pomegranate palette is swapped for the Academy
+ * set (navy card, single antique gold, Playfair for display, Inter for UI),
+ * because inside a course this has to read as the Academy, not as a visit to
+ * somewhere else. Gold is the only accent, per the design system.
+ */
+.page.embed {
+  --paper: #ffffff;
+  --tape: #111d30;
+  --tape-rule: rgba(201, 168, 76, 0.22);
+  --plate: #0a1628;
+  --bone: #e0e0e0;
+  --bone-dim: #888888;
+  --pom: #c9a84c;
+  --pom-lit: #c9a84c;
+  --display: var(--font-playfair), Georgia, serif;
+  --book: var(--font-inter), system-ui, sans-serif;
+  --util: var(--font-inter), system-ui, sans-serif;
+  --gap: 1.5rem;
+  --measure: 100%;
+
+  min-height: 0;
+  border: 1px solid rgba(201, 168, 76, 0.2);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin: 2.5rem 0;
+  font-size: 0.95rem;
+}
+
+/* The embedded header replaces the full-page hero. */
+.embedHead {
+  padding: 1.75rem var(--gap) 0;
+}
+.embedHead .title {
+  font-size: 1.75rem;
+  max-width: none;
+}
+.embedHead .lede {
+  font-size: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+/* Sections sit closer together in the narrower column. */
+.page.embed .section {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+.page.embed .h2 {
+  font-size: 1.3rem;
+}
+.page.embed .title,
+.page.embed .h2 {
+  color: var(--paper);
+}
+
+/* One column: the seminar centre panel is far narrower than the page. */
+.page.embed .gestureGrid,
+.page.embed .trialGrid {
+  grid-template-columns: 1fr;
+}
+
+/* The plate keeps its depth but in navy, and stops sticking: in one column
+ * there is nothing for it to stick alongside. */
+.page.embed .stagePlate {
+  position: static;
+  background: radial-gradient(ellipse at 50% 60%, #16213e 0%, var(--plate) 70%);
+}

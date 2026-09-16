@@ -1,6 +1,9 @@
 // PHIL 701 — Foundations of Stoic Ethics
 // Sessions 2–11, transcribed verbatim from PHIL_701_Sessions_2_11.docx.
 // Session 1 is the landing-card content in page.tsx (COURSE_CONTENT['phil-701']).
+// Sessions 12–14 (the paper workshop, the final seminar on synthesis and
+// objections, and the qualifying conversation) were written for the Academy
+// directly. They carry no quiz except 13; sessions without a quiz never gate.
 //
 // The session view reuses the language-course renderer (LanguageLessonContent);
 // `phil701ToLesson` adapts a Phil701Session into the shape that renderer consumes.
@@ -10,10 +13,11 @@ import type { LanguageSession } from '@/data/grek101';
 import type { QuizQuestion } from '@/components/StudentQuiz';
 
 export interface Phil701Session {
-  id: number;                        // 2–11
+  id: number;                        // 2–14
   title: string;
   subtitle: string;
-  isSeminar?: boolean;               // session 11
+  isSeminar?: boolean;               // sessions 11, 13, 14 — milestone; the Proctor uses the capstone rubric
+  isViva?: boolean;                  // session 14 — offers the Qualifying Examination (the viva)
   preSeminarBriefing: {
     problem: string;
     whyItMatters: string;
@@ -1557,9 +1561,9 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
   {
     "id": 11,
     "title": "Seminar — The Examined Life",
-    "subtitle": "Capstone seminar: bringing the course together in open Socratic dialogue",
+    "subtitle": "Seminar: bringing the course together in open Socratic dialogue",
     "preSeminarBriefing": {
-      "problem": "This final session is a seminar — no lecture, no new content. The Socratic Proctor will open with a question and follow your reasoning wherever it leads. The seminar ends when you are satisfied that you have worked through the central question. You are not being tested on whether you agree with Stoicism. You are being asked to think — carefully, honestly, with full engagement.",
+      "problem": "This session is a seminar — no lecture, no new content. The Socratic Proctor will open with a question and follow your reasoning wherever it leads. The seminar ends when you are satisfied that you have worked through the central question. You are not being tested on whether you agree with Stoicism. You are being asked to think — carefully, honestly, with full engagement.",
       "whyItMatters": "Socrates said 'the unexamined life is not worth living.' The Stoics took this literally — the examined life, the life governed by the three disciplines, the life of prosochē and virtue and amor fati, is the only life fully worth calling human. This course has given you the tools for that examination. The seminar is the first sustained exercise of them.",
       "whatToWatchFor": "The Proctor's questions will probe the consistency, depth, and honesty of your engagement with Stoicism. The questions are not traps; they are invitations to go deeper. When a question feels difficult, that is the moment of philosophical work.\n\nTHE CENTRAL QUESTIONS FOR THIS SEMINAR: Come prepared to engage with at least one of the following:\n\n(1) THE SUFFICIENCY QUESTION: Is virtue really sufficient for happiness? Could you be happy — genuinely, fully happy — in extreme poverty, serious illness, or social isolation? Does the Stoic answer feel true to you, or like a philosophical demand that exceeds human psychology?\n\n(2) THE ENGAGEMENT QUESTION: Does Stoicism's emphasis on the interior — on governing desire and assent — lead to withdrawal from the world, or does the discipline of action (kathēkon, roles, oikeiōsis) provide adequate grounds for full engagement? Can you be a committed parent, a driven professional, a loyal friend, and a Stoic simultaneously?\n\n(3) THE TRANSFORMATION QUESTION: Has anything in this course changed how you see a situation in your own life — even slightly? What would it take for Stoic philosophy to become not just something you know but something you practice?",
       "yourTask": "Choose one of these questions and prepare a 200-word opening statement. The Proctor will respond.",
@@ -1678,6 +1682,665 @@ export const PHIL_701_SESSIONS: Phil701Session[] = [
       "assignment": "Before the seminar: write the one idea from PHIL 701 that has actually changed something about how you live — not your thinking, your living. Bring it to the seminar as your stake in the ground. Philosophy that has not changed your behavior has not yet become yours.",
       "duration": "30 min reflection",
       "greekTerms": "mēketi dialegesthai, alla einai — no more talking about the good man: be one (Med. 10.16)"
+    }
+  },
+  {
+    "id": 12,
+    "title": "Paper Workshop — Thesis, Evidence, Objection",
+    "subtitle": "How to write a philosophical paper on the Stoics: one contestable claim, the passage that carries it, and the objection answered before it is raised",
+    "preSeminarBriefing": {
+      "problem": "Ten sessions of doctrine and one seminar have given you a working knowledge of the Stoic system. A working knowledge is not yet your own. Seneca's test is blunt: 'it is one thing to remember, another to know' (Ep. 33.9). Remembering is holding what Zeno said. Knowing is being able to say what you say, and to defend it. The paper is where that happens. This session is a workshop, not a lecture: it teaches the form of a philosophical argument and then makes you build one.",
+      "whyItMatters": "A paper is the discipline of assent applied to your own beliefs. To write a thesis you must first decide what you actually hold; to defend it you must test that judgment against the text and against the strongest person who disagrees. Writing that does not do this is transcription. Epictetus warns against the student whose whole achievement is that he can interpret Chrysippus (Ench. 49), and Seneca against the one who is forever a pupil and never an author (Ep. 33.7). The paper is where you stop quoting and start speaking.",
+      "whatToWatchFor": "Three parts, in order, and none may be skipped. A thesis: one sentence, specific enough to be wrong. Evidence: a primary passage, cited by book and section, read closely rather than paraphrased. An objection: the strongest case against your thesis, stated in its own terms, then answered or conceded. Most first papers fail at the first step. They describe a doctrine instead of claiming something about it.",
+      "yourTask": "Bring one sentence: a claim about any doctrine from Sessions 2 through 10 that a careful reader of the same texts could dispute. The Proctor will cross-examine it in the seminar panel before you write a word of the paper.",
+      "requiredReading": [
+        {
+          "source": "Seneca",
+          "passage": "Epistulae Morales 33 (complete)",
+          "note": "On quoting the masters and the moment to stop: 'Zeno said this. And what do you say?' Primary text — required reading."
+        },
+        {
+          "source": "Seneca",
+          "passage": "Epistulae Morales 84 (complete)",
+          "note": "On reading, digestion, and writing — the bees, and why what you produce must be a different thing from what you gathered. Primary text — required reading."
+        },
+        {
+          "source": "Epictetus",
+          "passage": "Encheiridion §49",
+          "note": "The interpreter of Chrysippus. Primary text — required reading."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
+    },
+    "parts": [
+      {
+        "title": "Part 1 — What a Philosophical Paper Is Not",
+        "content": [
+          "It is not a summary. 'The Stoics held that only virtue is good' is a true sentence and not a thesis: nobody who has read Diogenes Laertius VII.101 disputes it. A paper that reports doctrine has done the work of Session 2 again, more slowly, with footnotes.",
+          "It is not an appreciation. 'Marcus Aurelius offers timeless wisdom' is not a claim about Marcus. It is a claim about your mood while reading him, and no passage can be cited for or against it.",
+          "It is not a confession. Your own practice may enter as evidence, in one paragraph, when the thesis is a thesis about practice. It is not the paper. The Daily Examination is where the confession belongs.",
+          "Seneca's image for what a paper is comes in Ep. 84. The bees gather from many flowers and then make something that is not any of the flowers. 'We should so blend those several flavours into one delicious compound that, even though it betrays its origin, it is nevertheless clearly a different thing from that whence it came' (Ep. 84.5). Reading collects. Writing digests. The paper is the digestion: what you have read, passed through a judgment that is yours, and returned as a claim you would stand behind under questioning."
+        ],
+        "tables": [
+          [
+            [
+              "Seneca, Ep. 33.7: ''Zeno said this.' And what do you say? 'Cleanthes said this.' What do you say? How long will you march under another's orders? Take command, and say something that will be committed to memory.' — The whole workshop is the second sentence."
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Part 2 — The Thesis",
+        "content": [
+          "One sentence. Contestable. Specific. Bounded. The test is simple to state and hard to pass: could a competent reader of the same texts disagree with you? If not, you have written a report. Could the disagreement be settled by looking a word up in the Lexicon? Then you have written a definition. A thesis is a claim that survives both tests and can still be wrong.",
+          "The table below shows three reports and, beside each, the thesis hiding inside it. Notice that each thesis names a tension, takes a side, and could be refuted by a passage. That is the shape you want.",
+          "The scope rule: one doctrine, one or two authors, one objection. Ten pages on Stoicism is a syllabus. Four pages on whether the reserve clause changes what it means to want something is a paper. Narrow until it hurts, then narrow once more."
+        ],
+        "tables": [
+          [
+            [
+              "Report",
+              "The thesis inside it"
+            ],
+            [
+              "The Stoics distinguished preferred and dispreferred indifferents.",
+              "The category of preferred indifferents does the work Aristotle assigned to external goods, and Cicero was right (De Finibus IV) that the difference is largely verbal."
+            ],
+            [
+              "Epictetus taught three disciplines.",
+              "The discipline of assent is not a third discipline but the condition of the other two, which is why Epictetus calls it the most urgent (Disc. III.2.5) and still treats it last."
+            ],
+            [
+              "Marcus practised the view from above.",
+              "The view from above clarifies only if Stoic physics is true; strip out providence and it becomes the 'medley and dispersal' Marcus himself fears in Med. VI.10."
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Part 3 — Evidence",
+        "content": [
+          "Primary text first. The doxographers (Diogenes Laertius VII, Stobaeus, Cicero's De Finibus III) preserve the school's definitions; the Roman practitioners (Epictetus, Marcus, Seneca) show the doctrine at work under pressure. Say which you are using and why. A definition from DL VII.101 and an application from Ench. 1 are different kinds of evidence, and a thesis about practice cannot rest on a definition alone.",
+          "Cite by book and section, never by page: Disc. I.1.7, Med. V.20, Ep. 9.5. Anyone with any edition can check you, which is the point of a citation.",
+          "Quote short, then read. A quotation is not an argument; what you say about it is. The four-move reading: quote the passage, state what it claims, state what it presupposes, state what follows from it for your thesis. If the passage is doing less than your thesis needs, say so and find another. Do not stretch a text. The Examiner has read it too.",
+          "When a claim turns on a word, give the Greek and say what the English loses. 'What is up to us' is eph' hēmin; 'will' is {{prohairesis|prohairesis}}; 'duty' is kathēkon, which is not duty. Half the bad arguments about Stoicism are arguments about a translation.",
+          "Secondary sources frame; they do not settle. Hadot and Sellars will help you see what a passage is doing. 'Hadot says' is not evidence that Marcus did. When a modern scholar and a primary text disagree, the paper sides with the text and explains the scholar."
+        ],
+        "tables": [
+          [
+            [
+              "Epictetus, Ench. 49: 'When someone gives himself airs because he can understand and explain the books of Chrysippus, say to yourself: if Chrysippus had not written obscurely, this man would have nothing to give himself airs about. What is it I want? To understand nature and to follow her.' — The passage is evidence; the interpretation is the paper; neither is the point."
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Part 4 — The Objection",
+        "content": [
+          "Every Stoic doctrine was attacked in antiquity by people who had read the same texts more carefully than you have. Use them. The Peripatetic: external goods are needed for a good life (Aristotle, NE I.8–10). The Academic: no impression certifies itself (Cicero, Academica II.77–78). The Epicurean: nature's first object is pleasure, not self-preservation (De Finibus I.30 against III.16). Plutarch: the preferred indifferents are goods under another name (On Common Conceptions 1060B–1063). Cicero himself: Zeno changed the words and kept the Peripatetic substance (De Finibus IV.20–23). Session 13 takes each of these in full. The paper needs one.",
+          "State the objection in its own strength. If it can be answered in a sentence, you have not found the objection; you have found a strawman with a famous name attached. Write it as its author would, so that a partisan of the other school would accept your statement as fair.",
+          "Then answer, or concede. Both are respectable. 'The Stoic reply is X, and it succeeds because Y.' Or: 'The Stoic reply is X, and it fails, and what survives of my thesis is Z.' A paper that concedes honestly outranks one that wins by omission, and the Examiner reads for this above everything else. The one thing that is not respectable is to raise the objection and then change the subject."
+        ]
+      },
+      {
+        "title": "Part 5 — The Workshop",
+        "content": [
+          "This session is run in three passes, each with the Proctor in the seminar panel. First, the thesis pass: give the Proctor your one sentence. It will ask what you mean by every load-bearing word and whether a Stoic would accept the claim. Rewrite until the sentence survives. Second, the evidence pass: name your passage, write the four-move reading, and ask the Proctor what the passage does not support. Third, the objection pass: name your objector and argue their side for five minutes, as well as you can. Then answer.",
+          "The draft: 1,200 to 2,000 words. Thesis in the first paragraph, not the last. Evidence in the middle, read rather than quoted. Objection and answer before the close. No introduction about the Stoics in general; no conclusion that restates what the paper already said. Stop when the argument stops.",
+          "Where to write it. On Premium standing, the Composer marks the draft up with the Interlocutor, sentence by sentence, and Papers submits the finished piece for the Examiner's grade. On the free standing, write it where you write, and bring the thesis, the passage, and the objection to the Proctor here. That is the part of the workshop that cannot be skipped in either case.",
+          "The rubric the Examiner grades against is below. It has no line for length, style, or agreement with Stoicism."
+        ],
+        "tables": [
+          [
+            [
+              "Mark",
+              "What earns it",
+              "What loses it"
+            ],
+            [
+              "Thesis",
+              "One sentence a careful reader could dispute; scope narrow enough to defend in four pages",
+              "A report; a definition; a claim about your mood; three theses"
+            ],
+            [
+              "Evidence",
+              "Primary text cited by book and section; the four-move reading; the Greek where it matters",
+              "Paraphrase; page numbers; a scholar cited as if he were Epictetus; a passage stretched past what it says"
+            ],
+            [
+              "Objection",
+              "The strongest ancient or modern objection in its own terms; answered or conceded with the cost named",
+              "A strawman; an objection raised and abandoned; 'some might say'"
+            ],
+            [
+              "Voice",
+              "Your own judgment, stated and owned; concessions made plainly",
+              "Hedging; 'it could be argued'; a conclusion that restates; ornament"
+            ]
+          ]
+        ]
+      }
+    ],
+    "exercises": [
+      {
+        "title": "Exercise 12.1 — Thesis Triage",
+        "body": "Classify each sentence as a report, a definition, or a thesis. Rewrite every report as a thesis.\n1. Kathēkon means appropriate action.\n2. Epictetus believed that impressions are not up to us.\n3. Seneca's consolations contradict the Stoic doctrine of the passions.\n4. The Stoics were determinists.\n5. Amor fati is not acceptance, and Marcus knew it, which is why Med. X.21 says the earth loves the rain rather than endures it.",
+        "answer": "1. Definition. 2. Report; thesis: 'Epictetus's claim that impressions are not up to us is in tension with his instruction to test them (Ench. 1.5), and the tension is resolved only by distinguishing the arrival of an impression from its use.' 3. Thesis, and a good one. 4. Report, and an imprecise one; thesis: 'The cylinder argument (De Fato 42–43) saves responsibility only if one's own nature is not itself fated, which Chrysippus denies, so the argument relocates the problem rather than solving it.' 5. Thesis, already grounded in a passage. Notice that the theses are longer than the reports. Precision costs words."
+      },
+      {
+        "title": "Exercise 12.2 — The Four-Move Reading",
+        "body": "Take the opening of Ench. 1: 'Some things are up to us and some are not. Up to us are opinion, impulse, desire, aversion, and, in a word, whatever is our own doing. Not up to us are body, property, reputation, office, and, in a word, whatever is not our own doing.' Write the four moves: what it claims, what it presupposes, what follows, and what it does not support.",
+        "answer": "Claims: a two-way division of everything, by the criterion of whether it is 'our own doing'. Presupposes: that the operations of the ruling faculty are wholly ours and nothing else is, which is the psychology of Session 3, not argued for here. Follows: that any disturbance about body, property, reputation, or office is a disturbance about what is not ours. Does not support: that the things not up to us are worthless (the passage says nothing about value; that is Session 2), or that we should not act on them (that is Session 5). A paper that cites Ench. 1 for the indifference of externals has cited the wrong passage."
+      },
+      {
+        "title": "Exercise 12.3 — Steelman",
+        "body": "Write Plutarch's objection to the preferred indifferents (On Common Conceptions 1060B–1063) in four sentences, so fairly that a Stoic would accept your statement of it. Then write the Stoic reply in four sentences. Then say, in one, what the reply costs.",
+        "answer": "Objection: The Stoics say health is not good, yet the Sage selects it, pursues it, and is said to act rightly in doing so. If it is rational to pursue a thing, that thing has value for the one pursuing it. A value that governs choice and is called 'preferred' by nature is a good in everything but the name. The Stoics have therefore invented a word, not a category. Reply: selection (eklogē) is not desire (orexis); the Sage selects health as the archer selects the mark, but the end is to shoot well, not to hit (De Finibus III.22). What makes the action good is the selecting, not the thing selected. Health can be lost without the good being lost, which is not true of any good. The word 'preferred' marks exactly this: reason for selection without power over happiness. Cost: the reply requires you to say that hitting the mark adds nothing to the archer's end, which is the hardest thing in the system to believe and the easiest to state."
+      },
+      {
+        "title": "Exercise 12.4 — The Draft",
+        "body": "Write the paper. 1,200 to 2,000 words. Thesis in the first paragraph; one passage read in four moves; one objection stated fairly and answered or conceded. Before you submit it anywhere, read it against the rubric in Part 5 and mark, honestly, which line you would lose.",
+        "answer": "There is no reference answer for a paper. The check is the rubric. Most first drafts lose the Objection line, by raising the objection in a paragraph and then not answering it. Most second drafts lose the Voice line, by hedging the thesis back into a report once the objection has been felt. The draft that survives both is the one to submit."
+      }
+    ],
+    "quiz": [],
+    "practiceAssignment": {
+      "coreIdea": "Reading collects; writing digests (Seneca, Ep. 84). Until you have written, you have only read.",
+      "assignment": "Write the paper this week, in the form Part 5 gives. Take the thesis to the Proctor before you draft and the objection to the Proctor after. If you are on Premium standing, submit it through Papers; if not, keep it, because the Qualifying Conversation will ask you what you argued and why.",
+      "duration": "3 hours across the week",
+      "greekTerms": "aliud est meminisse, aliud scire — it is one thing to remember, another to know (Seneca, Ep. 33.9) / concoquere — to digest, of food and of reading (Ep. 84.7)"
+    }
+  },
+  {
+    "id": 13,
+    "title": "Final Seminar — Synthesis and Objections",
+    "subtitle": "The whole system as one argument, and the objections that have been raised against it since the third century BCE",
+    "preSeminarBriefing": {
+      "problem": "Session 11 examined your life against the Stoic standard. This seminar examines the standard. You will first be asked to state the system as a single argument, from the nature of the cosmos to the telos, showing where each session's doctrine sits and what it depends on. Then the Proctor changes sides. For the rest of the seminar it argues as the Peripatetic, the Academic, the Epicurean, Crantor, and the modern critic, in turn. Your task is to hold the position, or to say precisely where it gives.",
+      "whyItMatters": "A doctrine you have never seen attacked is a doctrine you do not yet hold; you have only been told it. The Stoics themselves thought so. Chrysippus wrote the arguments against his own school so thoroughly that Carneades, the school's greatest opponent, said that without Chrysippus there would have been no Carneades (DL IV.62). The objections in this session are not modern inventions. Every one was put to the school in its lifetime and answered, or not. You inherit the answers and the gaps together.",
+      "whatToWatchFor": "Two kinds of failure. The first is retreat: when pressed, moving the claim from the prokoptōn to the Sage, where it becomes unfalsifiable because no Sage has ever been produced for inspection. The second is surrender by vagueness: agreeing that the objection 'has a point' without saying which point and what holding the doctrine now costs. The Proctor will accept a concession. It will not accept a fog.",
+      "yourTask": "Before the seminar, write the system in ten sentences, one per joint of the argument, each beginning 'Therefore' except the first. Then choose the objection you find most persuasive and write its best form in four sentences. Bring both.",
+      "requiredReading": [
+        {
+          "source": "Cicero",
+          "passage": "De Finibus III.16–22 and 41–48; IV.20–23",
+          "note": "Cato's exposition of Stoic ethics, then Cicero's own charge that Zeno changed the words and kept the substance. Primary text — required reading."
+        },
+        {
+          "source": "Aristotle",
+          "passage": "Nicomachean Ethics I.8–10",
+          "note": "External goods and the case of Priam. The Peripatetic objection in its original form."
+        },
+        {
+          "source": "Cicero",
+          "passage": "De Fato 28–30, 40–43",
+          "note": "The lazy argument, co-fated events, and the cylinder. Primary text — required reading."
+        },
+        {
+          "source": "Plutarch",
+          "passage": "On Common Conceptions 1060B–1063 (selections)",
+          "note": "The preferred indifferents as goods under another name."
+        },
+        {
+          "source": "Nussbaum, The Therapy of Desire (1994)",
+          "passage": "Ch. 10, 'The Stoics on the Extirpation of the Passions'",
+          "note": "The modern objection from attachment, made by a reader who knows the texts."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
+    },
+    "parts": [
+      {
+        "title": "Seminar Background I — The System as One Argument",
+        "content": [
+          "The Stoics compared philosophy to an egg: logic the shell, ethics the white, physics the yolk. Or to a living animal: logic the bones and sinews, ethics the flesh, physics the soul. Or to a field: logic the fence, ethics the crop, physics the soil (DL VII.40). The images differ; the point is the same. The parts hold each other. Ethics is not detachable from physics, and a Stoicism that keeps the rules and drops the cosmos is not a leaner Stoicism but a different thing.",
+          "Stated as one argument, the system PHIL 701 has taught runs in ten joints. The cosmos is a single living body ordered by reason, {{logos|logos}}, which is also God, nature, and fate. Human beings alone share in that reason; our nature is rational. The good of a thing is the perfection of its nature, so the human good is perfected reason, which is virtue. Whatever neither perfects nor corrupts reason is neither good nor bad: indifferent, though some indifferents are preferred by nature. What is up to us is the use of impressions: assent, impulse, desire. Everything else is not. Disturbance is false assent: a {{pathos|passion}} is the judgment that an indifferent is good or bad. Therefore the practice of philosophy is the governance of desire, action, and assent: the three disciplines. Appropriate action follows from roles, and roles from {{oikeiosis|oikeiōsis}}, which reason extends to every rational being. Since fate is reason and reason is good, what happens is to be willed, not merely borne. And the one who has perfected all this is the {{sophos|Sage}}; the rest of us make progress; and the {{telos|end}} is to live in agreement with nature in its three senses.",
+          "Each objection below attacks a joint. Know which. An objection to the first joint that is granted takes the ninth and tenth with it. An objection to the fourth leaves the physics standing and takes the ethics. A defender who cannot say which premise is under attack cannot say what is at stake in losing it."
+        ],
+        "tables": [
+          [
+            [
+              "Joint",
+              "Doctrine",
+              "Depends on",
+              "Session"
+            ],
+            [
+              "1",
+              "The cosmos is ordered by logos, which is God, nature, fate",
+              "—",
+              "8"
+            ],
+            [
+              "2",
+              "Human nature is rational",
+              "1",
+              "3, 10"
+            ],
+            [
+              "3",
+              "The human good is virtue, perfected reason",
+              "2",
+              "2, 10"
+            ],
+            [
+              "4",
+              "Everything else is indifferent; some of it preferred",
+              "3",
+              "2"
+            ],
+            [
+              "5",
+              "What is up to us is the use of impressions",
+              "2",
+              "3"
+            ],
+            [
+              "6",
+              "Passions are false judgments about indifferents",
+              "4, 5",
+              "7"
+            ],
+            [
+              "7",
+              "Practice is the three disciplines",
+              "5, 6",
+              "4, 5, 6"
+            ],
+            [
+              "8",
+              "Appropriate action from roles, roles from oikeiōsis",
+              "2, 7",
+              "5"
+            ],
+            [
+              "9",
+              "What happens is to be willed: amor fati",
+              "1, 3",
+              "8"
+            ],
+            [
+              "10",
+              "The Sage, the prokoptōn, and the telos",
+              "all",
+              "9, 10"
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Seminar Background II — The Ancient Objections",
+        "content": [
+          "The Peripatetic objection: externals. Aristotle grants that virtue is the core of happiness and denies that it is the whole. A good life needs external goods as instruments and as adornment; the man who is 'very ugly, or ill-born, or solitary and childless' is not blessed, and Priam, virtuous and ruined, is not happy (NE I.8, 1099a31–b8; I.10, 1100a5–9). This attacks joints 3 and 4 directly. The Stoic reply, in Cato's mouth (De Finibus III.42–48): happiness does not admit of degrees; adding what is not good to a good life does not make it better; a man a hand's breadth beneath the water drowns as surely as one at the bottom. Its sharpest form is Plutarch's and Cicero's: if the Sage selects health and pursues it and acts rightly in doing so, then 'preferred' is 'good' with a new name (On Common Conceptions 1060B–1063; De Finibus IV.20–23). The reply is the archer of De Finibus III.22: the mark is to be selected, the end is to shoot well. What the reply costs: it must say that Priam, if virtuous, was happy on the day Troy fell. Decide whether you can say that. Seneca's Ep. 9, on whether the Sage needs friends, is the school's most honest attempt to say it, and it wavers: he can do without them, and would rather not.",
+          "The Academic objection: the criterion. Arcesilaus argued that for every cognitive impression the Stoics could produce, an indistinguishable false one could be produced beside it (Academica II.77–78; Sextus, M VII.402–410). If so, the Sage, who never assents to what is uncertain, will never assent at all; and then either he holds opinions, which the school denies, or he does nothing, the charge of apraxia. This attacks joint 5 through the epistemology of Session 3. Chrysippus's reply was that no two real things are qualitatively identical, so no real impression is truly indistinguishable from another; the Delian poulterers could tell which hen had laid which egg (Academica II.57, 85). Carneades' counter was more dangerous than the objection: action requires only the persuasive impression, the pithanon, not the cognitive one (Sextus, M VII.166–175). The cost of that counter is not the Stoic's but the defender's to notice. If Carneades is right, the discipline of assent works perfectly well without Stoic epistemology, which is more comfortable than a Stoic should find it.",
+          "The Epicurean objection: the cradle. Both schools appealed to the newborn to say what nature first pursues. Epicurus: pleasure (De Finibus I.30; DL X.137). The Stoics: its own constitution, self-preservation (De Finibus III.16; DL VII.85), with pleasure a by-product, an epigennēma, that arrives when the constitution is secured (DL VII.86). This attacks joint 8, and through it joint 3, since the whole extension of oikeiōsis from self to family to the cosmopolis begins in what the infant wants. The Stoic reply is empirical: the infant endures pain to preserve itself, which it would not do if pleasure came first. Ask, in the seminar, whether the cradle can settle anything, and what the Stoic loses if the answer is no.",
+          "The lazy argument and the objection from fate. The argos logos (De Fato 28–30; Origen, Contra Celsum II.20): if it is fated that you will recover, you will recover whether or not you call the doctor; so calling him is idle. This attacks joint 9 and, by implication, joint 5. Chrysippus's reply: some events are co-fated, confatalia; your calling the doctor is fated together with your recovery, not separately from it. Then the cylinder (De Fato 42–43; Gellius VII.2): the push is external and belongs to fate; the rolling belongs to the cylinder's own nature. The Academics asked whether one's own nature is itself fated, and Chrysippus said it was. What the reply costs is a definition. Say what 'up to us' means once the nature that makes the assent is also fated, and say it without the word 'compatibilism', which names the problem rather than solving it.",
+          "Crantor's objection: the price of apatheia. Cicero preserves Crantor's protest from On Grief: he does not agree with those who praise a certain insensibility, which neither can nor ought to exist; to feel nothing at the loss of a child is not strength but savagery (Tusculans III.12). This attacks joint 6. The Stoic reply has three parts. The {{eupatheia|eupatheiai}}: joy, caution, and wish are the Sage's rational affects, so the Sage is not feelingless (DL VII.116). The propatheiai: the first involuntary movements, the pallor, the tears, the start, are not passions and are not up to us (Seneca, De Ira II.2–4). And the Sage 'feels his troubles but overcomes them' (Ep. 9.3). What this costs is the prokoptōn. The eupatheiai are the Sage's. The rest of us have passions and are told they are false judgments. Ask whether telling a grieving friend that grief is a false judgment is philosophy or cruelty, and then read Seneca's consolation to Marcia, which is the school's own answer, and which does not read like the doctrine."
+        ]
+      },
+      {
+        "title": "Seminar Background III — The Modern Objections",
+        "content": [
+          "Moral luck. Williams ('Moral Luck', 1976) and Nagel ('Moral Luck', 1979) press a dilemma the ancients approached but did not state. Either Stoic invulnerability is false, because character itself is hostage to fortune: to upbringing, temperament, the accident that never came, the temptation never met. Or it is true, and purchased by withdrawing value from everything that can be lost, which is everything that makes a life a particular life rather than an exercise of reason in general. This attacks joints 3 and 4 from a new side. It does not say externals are needed for happiness. It says the invulnerable self is not a self worth being.",
+          "Attachment. Nussbaum's version (The Therapy of Desire, ch. 10–12) is Crantor's objection with the texts in hand. The extirpation of the passions extirpates the attachments that ground love and justice. Epictetus tells you to kiss your child and say to yourself 'tomorrow you will die' (Disc. III.24.84–88); Anaxagoras, hearing of his son's death, said 'I knew I had begotten a mortal' (Tusculans III.30), and the Stoics approved. Nussbaum's claim is that the man who can say this has not been healed but hollowed, and that the school's account of what he has lost is not honest. This attacks joint 6, and it is the objection the seminar will spend longest on, because it is the one most students privately hold.",
+          "The therapeutic reduction. Cognitive therapy acknowledges its debt to Epictetus; Ellis and Beck both cite Ench. 5. The objection is not that the debt is false but that repaying it in technique alone strips joints 1 and 9 and leaves a psychology with no reason to prefer virtue to comfort. Hadot's reply (The Inner Citadel, ch. 5–6; Philosophy as a Way of Life): the exercises presuppose the cosmos; the view from above is a physical exercise, an act of seeing the world as it is, and not a mood. The cost is a question the defender must answer, and Marcus asked it first: 'either providence or atoms' (Med. IX.28; cf. VI.10). His answer, that the practice survives either way, is either the school's deepest resource or its quiet abandonment of the first joint. Say which.",
+          "The political form of the quietism charge. Stoicism consoles the powerless and flatters the powerful; Seneca wrote On Mercy for Nero; the Roman Stoics were an aristocracy talking to itself. The reply is a list of names: Cato, Thrasea Paetus, Helvidius Priscus, the Stoic opposition that Tacitus records dying under Nero and Vespasian (Annals XVI); and Epictetus, who was a slave. The cost is that the list does not settle what a Stoic owes the city when the kathēkon of the citizen and the safety of the philosopher diverge. Session 5 answered with roles. Ask whether roles are enough, and what Cato's role required that Seneca's did not."
+        ]
+      },
+      {
+        "title": "Seminar Background IV — Holding a Position",
+        "content": [
+          "The rules of the elenchus, for the one defending. Define before you defend: 'virtue is sufficient' means nothing until 'sufficient' and 'happiness' are fixed, and {{eudaimonia|eudaimonia}} as the activity of a rational soul is a different claim from eudaimonia as a feeling. Locate the joint: say which premise the objection attacks; half of the objections you will meet attack a premise the Stoics do not hold. Concede what must be conceded, and name the cost: 'the Stoic cannot say that Priam was unhappy, and I accept that' is a position; 'it depends what you mean by happy' is not. Do not retreat to the Sage: if the claim is only true of a being who has never existed, say so, and then say what the claim does for the rest of us. And distinguish the claim from its psychology. That a doctrine is hard to live is not evidence that it is false. That it is consoling is not evidence that it is true.",
+          "The seminar ends when you have stated the system, met every objection with an answer or a concession, and said, in one sentence, which joint you now hold least securely. That sentence is the most useful thing you will take to the Qualifying Conversation."
+        ],
+        "tables": [
+          [
+            [
+              "Carneades, on the man he spent his life refuting: 'If there had been no Chrysippus, there would have been no me.' (DL IV.62) — The objection is a form of respect. Treat yours the same way."
+            ]
+          ]
+        ]
+      }
+    ],
+    "exercises": [
+      {
+        "title": "Exercise 13.1 — Locate the Joint",
+        "body": "For each objection, name the joint it attacks and what falls with that joint if the objection is granted.\n1. Priam was virtuous and not happy.\n2. Calling the doctor is idle if recovery is fated.\n3. The newborn seeks pleasure, not self-preservation.\n4. A father who says 'I knew I had begotten a mortal' has been hollowed, not healed.\n5. Without providence, the view from above is only vertigo.",
+        "answer": "1. Joints 3 and 4; with them, 6 (if externals can be bad, fear of them is not a false judgment) and 10 (the sufficiency of virtue). 2. Joint 9, and by implication 5 (if the assent is fated, 'up to us' needs redefining). 3. Joint 8, and through it 3 (if nature's first object is pleasure, the extension of oikeiōsis to reason and to others loses its starting point). 4. Joint 6; the eupatheiai and propatheiai are the reply, and the cost is that they belong to the Sage. 5. Joint 1; and with it 9 and the physical grounding of the exercises, leaving a technique."
+      },
+      {
+        "title": "Exercise 13.2 — The Peripatetic Case",
+        "body": "State Aristotle's objection from NE I.8–10 at its strongest, in four sentences. State the Stoic reply from De Finibus III.42–48 in four. Then say in one sentence what the reply costs, and in one more whether you will pay it.",
+        "answer": "Objection: Happiness is the activity of virtue over a complete life, and activity needs equipment; the generous man needs money, the just man a city, the friend a friend. The man who is ugly, ill-born, solitary, and childless is not blessed, whatever his character. Priam's virtue did not make his ruin a happy life. Anyone who says otherwise is defending a thesis, not describing a life. Reply: Happiness admits of no degrees, because virtue admits of none; a life is not made happier by adding what is not good. The man a hand's breadth beneath the water drowns as surely as the one at the bottom, and the man with every external and no virtue is as far from the good as the man with neither. Externals are preferred, selected with reason, and can be lost without loss of the good. Priam's ruin took nothing from him that was his. Cost: you must say that Priam was happy on the day Troy fell, if he was virtuous. Whether you will pay it is the question the seminar exists to ask; the honest answers are 'yes, and I find that I cannot feel it' and 'no, and then I am not a Stoic about joint 4'."
+      },
+      {
+        "title": "Exercise 13.3 — Providence or Atoms",
+        "body": "Marcus writes: 'Either providence or atoms' (Med. IX.28), and elsewhere that whichever is true, the same conduct follows. Argue both sides. First, that the practice survives the loss of joint 1. Then, that it does not, and that Marcus's disjunction is the school abandoning its own physics.",
+        "answer": "For survival: the disciplines govern assent, desire, and action, and none of these requires the cosmos to be providential; the false judgment that an indifferent is a good is false whether or not fate is reason. The view from above shows the scale of things under atoms as well as under providence. Against: joint 9 is gone, since there is no reason to will what happens if what happens is not reason; amor fati becomes resignation, which Session 8 distinguished it from. Joint 3 is weakened, since 'the perfection of our nature' has no cosmic warrant if nature is not rational. What is left is a psychology with a rule for calm and no argument for why calm should be preferred to anything else. Marcus's disjunction is then either the discovery that the practice was always self-standing, or the confession that a Roman emperor could no longer believe the yolk and kept the white. A defender may hold either reading. A defender may not hold both."
+      },
+      {
+        "title": "Exercise 13.4 — Your Concession",
+        "body": "Choose the objection from this session that you cannot answer. Write the concession in two sentences: which joint you give up, and what it costs. Then write, in two more, what of the system survives the concession, and whether you still call it Stoicism.",
+        "answer": "A model, not the answer: 'I concede joint 4 in Nussbaum's form: the attachments the discipline of desire would extirpate are constitutive of the life I want to have led, and I will not call their loss indifferent. It costs me the sufficiency of virtue and the Sage's equanimity at the death of a child. What survives is joints 5 through 7: the location of responsibility at assent, the analysis of disturbance as judgment, and the three disciplines as a practice of attention. I would call that a Stoic psychology without the Stoic ethics, and I would rather hold it honestly than hold the whole system by not looking.'"
+      }
+    ],
+    "quiz": [
+      {
+        "type": "mc",
+        "question": "1. In the Stoic comparison of philosophy to an egg (DL VII.40), which part is physics?",
+        "options": [
+          "The shell",
+          "The white",
+          "The yolk",
+          "The egg is logic; physics is the hen"
+        ],
+        "correct": 2,
+        "explanation": "Logic is the shell, ethics the white, physics the yolk. The image insists that the parts hold each other and that ethics without physics is a different thing, not a leaner one."
+      },
+      {
+        "question": "2. State the lazy argument, name the joint it attacks, and give Chrysippus's reply.",
+        "answer": "If your recovery is fated, you will recover whether or not you call the doctor, so calling him is idle (De Fato 28–30). It attacks joint 9 and, by implication, joint 5. Chrysippus replies that some events are co-fated (confatalia): your calling the doctor is fated together with the recovery, not separately from it."
+      },
+      {
+        "type": "mc",
+        "question": "3. Arcesilaus's objection to the cognitive impression concludes that the Stoic Sage will:",
+        "options": [
+          "Assent only to impressions from the senses",
+          "Never assent at all, and so either hold opinions or do nothing",
+          "Assent to the persuasive impression instead",
+          "Abandon the criterion and become a Sceptic"
+        ],
+        "correct": 1,
+        "explanation": "If for every cognitive impression an indistinguishable false one is possible, the Sage who assents only to the certain will assent to nothing; hence the charge of apraxia, or else of holding opinion, which the school denies."
+      },
+      {
+        "question": "4. What is Carneades' pithanon, and why should a Stoic find it uncomfortable rather than merely wrong?",
+        "answer": "The persuasive impression: enough for action without being certified as true. It is uncomfortable because, if Carneades is right, the discipline of assent works without Stoic epistemology at all; the practice survives the loss of the criterion, which is more than the school wanted to admit."
+      },
+      {
+        "type": "msq",
+        "question": "5. Which of the following are Stoic eupatheiai, the rational affects of the Sage (DL VII.116)?",
+        "options": [
+          "Joy (chara)",
+          "Fear (phobos)",
+          "Caution (eulabeia)",
+          "Distress (lupē)",
+          "Wish (boulēsis)"
+        ],
+        "correct": [
+          0,
+          2,
+          4
+        ],
+        "explanation": "Joy, caution, and wish are the good affects; fear and distress are passions. The list is the Stoic reply to Crantor: the Sage is not feelingless, but the affects he has are those of correct judgment."
+      },
+      {
+        "question": "6. State Cicero's charge in De Finibus IV, and the Stoic reply from De Finibus III.22.",
+        "answer": "Cicero charges that Zeno changed the words and kept the Peripatetic substance: 'preferred' is 'good' renamed, since the Sage pursues health and acts rightly in doing so. The reply is the archer: selection (eklogē) is not desire (orexis); the mark is to be selected, but the end is to shoot well, so the thing selected can be lost without loss of the end."
+      },
+      {
+        "type": "mc",
+        "question": "7. Crantor's protest, preserved at Tusculans III.12, is aimed at:",
+        "options": [
+          "The Stoic theory of fate",
+          "An insensibility that neither can nor ought to exist",
+          "The Epicurean account of pleasure",
+          "The Academic suspension of assent"
+        ],
+        "correct": 1,
+        "explanation": "Crantor's On Grief denies that feeling nothing at loss is a virtue. The Stoic reply is the eupatheiai and the propatheiai; the cost is that the first belong to the Sage and the second are not up to us."
+      },
+      {
+        "question": "8. State the moral-luck objection as a dilemma, and say which joints it attacks.",
+        "answer": "Either Stoic invulnerability is false, because character is itself hostage to fortune (upbringing, temperament, the temptation never met); or it is true, and bought by withdrawing value from everything that can be lost, which is everything that makes a life a particular life. It attacks joints 3 and 4, not by claiming externals are needed but by claiming the invulnerable self is not worth being."
+      },
+      {
+        "question": "9. What does Hadot claim about the relation between the spiritual exercises and Stoic physics, and what question does Marcus's 'providence or atoms' put to that claim?",
+        "answer": "Hadot holds that the exercises presuppose the cosmos: the view from above is an act of seeing the world as it is, not a mood, so the physics is not optional. Marcus's disjunction (Med. IX.28, VI.10), with his claim that the same conduct follows either way, asks whether the practice is self-standing after all, which is either the school's deepest resource or its quiet abandonment of the first joint."
+      },
+      {
+        "type": "mc",
+        "question": "10. Retreating to the Sage under objection is a failure of defence because:",
+        "options": [
+          "The Sage is a Platonic, not a Stoic, figure",
+          "It makes the claim unfalsifiable and silent about the prokoptōn",
+          "The Stoics denied that any Sage had ever lived",
+          "It concedes the objection without saying so"
+        ],
+        "correct": 1,
+        "explanation": "A claim true only of a being never produced for inspection cannot be tested, and says nothing about what the doctrine does for those making progress. The rule is: say so, and then say what the claim does for the rest of us."
+      }
+    ],
+    "isSeminar": true,
+    "practiceAssignment": {
+      "coreIdea": "A doctrine that has never been attacked in your hearing is not yet yours.",
+      "assignment": "Take the objection you found strongest into the week. Each evening, at the review, ask whether the day gave evidence for it or against it: a moment where an external mattered in a way the doctrine cannot absorb, or a moment where the doctrine held and the objection would have predicted it would not. Write one line per day. Bring the seven lines to the Qualifying Conversation.",
+      "duration": "10 min each evening",
+      "greekTerms": "elenchos — cross-examination, the testing of a position by questioning / argos logos — the lazy argument / confatalia — co-fated things (Chrysippus, in Cicero's Latin)"
+    }
+  },
+  {
+    "id": 14,
+    "title": "Qualifying Conversation with the Examiner",
+    "subtitle": "The assessed oral examination that closes PHIL 701: six questions, one at a time, across the whole course, and a verdict on your record",
+    "preSeminarBriefing": {
+      "problem": "The Qualifying Conversation is the one assessment in PHIL 701 that is neither a quiz nor a seminar. It is an oral examination with the Examiner, whose role is not to teach but to decide. Six questions. One at a time. No comment until the sixth is answered. Then the Examiner deliberates and returns a verdict, passed or failed, with a written assessment of strengths and weaknesses, recorded on your Academy record. A failed conversation may be retaken. Recitation does not pass it.",
+      "whyItMatters": "Every earlier assessment tested a session. This one tests whether the sessions became a single understanding. The Examiner will ask a question from Session 8 and follow it into Session 3 without warning, because that is how the doctrine is built and how life arrives. Musonius asked which is more effective, theory or practice, and answered with the doctor: you would not choose the one who could discourse on medicine but had never treated a patient (Lecture 5). The Examination asks for the second kind of knowledge, and it can tell the difference.",
+      "whatToWatchFor": "Four marks. Precision: a doctrine stated in its own terms, with the Greek where the English loses it. Transfer: the doctrine applied to a case you have not seen, not to the course's own examples. Honesty: the objection acknowledged where it bites, the concession made where it must be, with its cost named. Practice: at least one answer grounded in something you have actually done since Session 1, described without ornament. Four failures: the recitation, the hedge, the retreat to the Sage, and the anecdote with no doctrine in it.",
+      "yourTask": "Bring the stake in the ground from Session 11 and the seven evening lines from Session 13. Then run the mock examination in Exercise 14.4 against the Proctor in the seminar panel, aloud if you can, before you sit the real one.",
+      "requiredReading": [
+        {
+          "source": "Review: Encheiridion §§1–5, 8, 17, 53; Discourses I.1, I.4",
+          "passage": "see text",
+          "note": "The passages the Examiner is most likely to ask you to ground an answer in."
+        },
+        {
+          "source": "Musonius Rufus",
+          "passage": "Lecture 5, 'Which is more effective, theory or practice?'",
+          "note": "The standard the Examination applies, stated by a teacher of Epictetus."
+        },
+        {
+          "source": "Sellars, Stoicism (2006)",
+          "passage": "as assigned",
+          "note": "Best single-volume overview of the complete Stoic system — physics, logic, ethics. Clear, rigorous, current. PHIL 701 spine."
+        }
+      ]
+    },
+    "parts": [
+      {
+        "title": "Part 1 — How the Examination Runs",
+        "content": [
+          "The Examiner asks a question. You answer, at whatever length the question needs. The Examiner asks the next. There is no comment between questions, no 'good' and no 'but', because the Examiner has not yet decided and will not pretend to have. After the sixth answer it deliberates and returns the verdict with a written assessment: what held, what did not, and what to work before a retake if one is needed. The verdict is recorded against your PHIL 701 standing. An examination interrupted survives a closed tab; you resume where you stopped.",
+          "What it is not. It is not a conversation you can steer: the Examiner sets every question. It is not a seminar: the Proctor's help, the leading question, the second chance in the same breath, are absent by design. It is not a quiz: there are no reference answers, and two different answers to the same question can both pass if both are precise, grounded, applied, and honest.",
+          "On Premium standing the Examination is sat from the end of this session. On the free standing it is not available, and this session's preparation still closes the course: the Proctor will run the mock in Exercise 14.4 in full, and the mock is built from the same bank the Examiner draws on."
+        ]
+      },
+      {
+        "title": "Part 2 — The Examinable Doctrine",
+        "content": [
+          "Everything from Session 1 to Session 13 is examinable, but the Examiner does not ask trivia. It asks for the doctrines that carry weight, and it asks for them in the form below: the claim, the Greek where it matters, and the session that taught it. If you can state every row in one sentence of your own, ground it in one passage, and apply it to a case the course did not use, you are ready."
+        ],
+        "tables": [
+          [
+            [
+              "Area",
+              "The claim you must be able to state",
+              "The Greek",
+              "Session"
+            ],
+            [
+              "Value",
+              "Three categories; preferred indifferents; the benefit condition; the sufficiency of virtue",
+              "agathon, kakon, adiaphora, proēgmena",
+              "2"
+            ],
+            [
+              "Psychology",
+              "Impression, assent, impulse, action; the ruling faculty; what is up to us",
+              "phantasia, synkatathesis, hormē, hēgemonikon, eph' hēmin",
+              "3"
+            ],
+            [
+              "Desire",
+              "Redirect desire to what is up to us; the reserve clause",
+              "orexis, ekklisis, hupexhairesis",
+              "4"
+            ],
+            [
+              "Action",
+              "Appropriate action from roles; roles from oikeiōsis; perfect vs appropriate action",
+              "kathēkon, katorthōma, oikeiōsis",
+              "5"
+            ],
+            [
+              "Assent",
+              "Attention; the test of impressions; the Sage and the prokoptōn at the gate",
+              "prosochē, prokopē",
+              "6"
+            ],
+            [
+              "Passions",
+              "A passion is a false judgment; the first movements; the good affects",
+              "pathos, propatheia, eupatheia",
+              "7"
+            ],
+            [
+              "Fate",
+              "Logos, fate, providence are one; the cylinder; loving what happens",
+              "logos, heimarmenē, amor fati",
+              "8"
+            ],
+            [
+              "The Sage",
+              "The threshold of virtue and real progress; the spiritual exercises",
+              "sophos, prokoptōn, askēsis",
+              "9"
+            ],
+            [
+              "The end",
+              "Living according to nature, in three senses",
+              "telos, kata phusin",
+              "10"
+            ],
+            [
+              "Method",
+              "Philosophy as a way of life; the exercises as its practice",
+              "askēsis",
+              "1"
+            ],
+            [
+              "Objections",
+              "The five ancient and four modern objections, and what each costs",
+              "elenchos",
+              "13"
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Part 3 — The Shape of a Passing Answer",
+        "content": [
+          "Four moves, in order. State: the doctrine, precisely, once, in your own words. Ground: the passage it stands on, by book and section. Apply: to the case in the question, or to a case of your own if none was given, showing the doctrine doing work rather than being named. Concede: where the doctrine strains against the case, and what you hold anyway. An answer with all four moves passes even when the Examiner disagrees with the fourth. An answer with only the first is a recitation, and fails however accurate it is.",
+          "An example. The question: 'A colleague takes credit for your work in a meeting. What does the Stoic do, and why?' The failing answer: 'The Stoic remains calm, because externals are indifferent.' It is true, it is Stoic, and it is nothing. The passing answer walks the moves. State: the impression 'I have been wronged' arrives unbidden; the assent to it is mine (Ench. 1, 5). Ground: Ench. 5, 'people are disturbed not by things but by their judgments about things.' Apply: the credit is a preferred indifferent, selected with reservation, not a good; the kathēkon of the colleague and the professional includes honest correction, in the meeting or after it, done without anger, because the one who wronged me did so in error (Med. II.1); so the Stoic corrects the record and does not carry the wound. Concede: the first movement, the flush, the tightening, will come, and the prokoptōn will feel it; what I hold is that the judgment 'this harms me' is false, and I can decline to make it after the flush.",
+          "The table below sets the four failures beside the four moves. The Examiner's assessment will name which failure it found, in these words."
+        ],
+        "tables": [
+          [
+            [
+              "Move",
+              "The failing form",
+              "The passing form"
+            ],
+            [
+              "State",
+              "The recitation: the doctrine in the textbook's words, accurate and inert",
+              "The doctrine in your words, with the one Greek term that carries it"
+            ],
+            [
+              "Ground",
+              "'The Stoics said' with no passage; or a scholar cited as if he were Epictetus",
+              "One passage, by book and section, that actually says what you need"
+            ],
+            [
+              "Apply",
+              "The anecdote: something that happened to you, with no doctrine in it; or the course's own example returned",
+              "The doctrine at work in the case given, with the joint it turns on named"
+            ],
+            [
+              "Concede",
+              "The hedge ('it depends'); the retreat to the Sage ('the Sage would'); silence",
+              "Where it strains, what it costs, what you hold anyway"
+            ]
+          ]
+        ]
+      },
+      {
+        "title": "Part 4 — Socratic Prompts — Doctrine",
+        "content": [
+          "The bank the Examiner draws from is larger than this and is not published. These are the shapes of question it contains, so that nothing in the form surprises you.",
+          "A case, then a diagnosis: 'Your closest friend has stopped answering your messages and you do not know why. Which discipline is failing when you cannot sleep over it, and what is the correction?' The Examiner wants the discipline named, the false judgment identified, and the correction stated as something you could do tonight.",
+          "A doctrine, then its limit: 'The reserve clause: state it, ground it, and then tell me what it does not license.' The Examiner wants the difference between 'fate permitting' and 'if it is convenient', and the passage that draws it.",
+          "A pair, then the relation: 'Kathēkon and katorthōma. What is the difference, who performs each, and why does most of Stoic practical ethics concern the first?' The Examiner wants the Sage and the prokoptōn located, and the consequence for how you decide what to do on a Tuesday.",
+          "A joint, then its load: 'Suppose the cosmos is atoms, not providence. Which doctrines of this course still stand, and which fall?' The Examiner wants the table from Session 13 in your head and a position on Marcus's disjunction.",
+          "A term, then the loss: 'Prohairesis is usually translated \"will\" or \"choice\". What does that translation lose, and why does the loss matter for Discourses I.1?' The Examiner wants the Greek to do work, not to decorate."
+        ]
+      },
+      {
+        "title": "Part 5 — Socratic Prompts — Practice",
+        "content": [
+          "'Name one thing you do now that you did not do before Session 1, and the doctrine that made you do it.' The Examiner will follow the doctrine back to its passage and forward to the last time you failed to do the thing. Both directions are examined.",
+          "'You wrote a stake in the ground for Session 11. Read it to me. Has it held?' If it has not, say so and say why; the failed stake honestly reported outranks the held stake vaguely described.",
+          "'From your seven evening lines in Session 13: which day gave the strongest evidence for the objection you chose, and what do you make of that now?' The Examiner is testing whether the objection was lived or merely written.",
+          "'What has this course cost you?' Not what it gave. What it cost. Nothing that has changed a person's conduct has cost them nothing, and the Examiner knows that an answer of 'nothing' is either false or a confession that the course was study and not practice."
+        ]
+      },
+      {
+        "title": "Part 6 — After the Verdict",
+        "content": [
+          "Passed. PHIL 701 closes and its doctrine is presumed from here on: PHIL 702 begins with Marcus and does not restate what the three disciplines are. The written assessment names one thing worth deepening. Deepen it before you open the Meditations.",
+          "Failed. Read the assessment before you feel anything about it. It names the failure in the words of the table in Part 3, and it names the sessions to return to. Retake after working them, not before; the bank is large enough that the same questions will not come again, and the same weakness will.",
+          "In either case, the verdict is an external. It is recorded, it is preferred, and it is not the good. The preparation was the good, and it is already yours."
+        ]
+      }
+    ],
+    "exercises": [
+      {
+        "title": "Exercise 14.1 — State and Ground",
+        "body": "For each doctrine, write one sentence of your own stating it, and cite one passage by book and section that it stands on.\n1. The sufficiency of virtue.\n2. The reserve clause.\n3. The passion as false judgment.",
+        "answer": "Models, not the only answers. 1. 'Virtue alone completes the good, so that a virtuous life lacks nothing that could make it better, whatever it lacks otherwise.' DL VII.127; Cicero, De Finibus III.42. 2. 'Every intention toward an external is held as \"fate permitting\", so that the outcome's failure is not the intention's failure.' Ench. 2; Seneca, De Beneficiis IV.34. 3. 'A passion is not a feeling but an assent: the judgment that some indifferent is a good or a bad thing, present or coming.' DL VII.110–111; Ench. 5."
+      },
+      {
+        "title": "Exercise 14.2 — Transfer",
+        "body": "A case the course did not use. You are told, correctly, that you were passed over for a promotion because a senior person dislikes you personally, not for any failure of your work. Answer as the Examiner would require: state the doctrine, ground it, apply it, concede.",
+        "answer": "State: the promotion and the senior person's regard are preferred indifferents, not goods; the impression 'I have been cheated of what I deserve' is not up to me, the assent is. Ground: Ench. 1; Ench. 25, on the price of the things that are not up to us; Med. II.1, on the wrongdoer who errs. Apply: the kathēkon of the professional role includes stating my case where a case can be heard and doing the work regardless; the discipline of desire relocates what I want from the office to the acting well; the senior person's dislike is their error, not my harm. Concede: the first movement will come and will come again each time I see the person; the prokoptōn does not escape it; and if the office was the means to something that was itself a kathēkon, supporting a family, the loss is not nothing under the discipline of action even while it is nothing under the discipline of desire. What I hold: the judgment 'this makes my life worse' is false, and the judgment 'this changes what appropriate action now requires' is true, and they are different judgments."
+      },
+      {
+        "title": "Exercise 14.3 — Concession Under Pressure",
+        "body": "The Examiner says: 'So Priam, virtuous, watching his sons die and his city burn, was happy. Say it or give up the sufficiency of virtue.' Answer in no more than six sentences.",
+        "answer": "A model: 'I will say it in the school's sense and not in the word's. If eudaimonia is the activity of a rational soul in agreement with nature, Priam's soul on that day was not made less rational or less in agreement by what he saw; so in that sense, yes. If eudaimonia means what the word means to the person asking, the sense in which a life goes well, then no, and I will not pretend the Stoic sense is the ordinary one. What I hold is the first sense and the claim that it is the one worth wanting. What it costs me is that I cannot say Priam's day was not terrible, and I do not think a Stoic should try.'"
+      },
+      {
+        "title": "Exercise 14.4 — The Mock Examination",
+        "body": "Six questions. Answer each aloud, to the Proctor in the seminar panel, without notes. Do not ask the Proctor for help mid-answer; ask it, after all six, which move failed in each.\n1. State the chain impression, assent, impulse, action, and say where responsibility sits and why.\n2. A parent is told their adult child has chosen a life the parent thinks is a waste. Which discipline governs the parent's response, and what does it require?\n3. What is the difference between amor fati and resignation? Ground it.\n4. State the objection from moral luck and say what you concede to it.\n5. What is one exercise from Session 9 you have actually kept, and what has it changed?\n6. What has this course cost you?",
+        "answer": "What a pass looks like, question by question. 1. All four links named in Greek or English, responsibility located at assent with Ench. 1 or Disc. I.1 grounding it, and a case of your own. 2. The discipline of action, because the child's life is not up to the parent and the parent's role still generates kathēkonta: honesty, presence, no attempt to compel; grounded in Ench. 17 or Disc. II.10; a concession that the discipline of desire is also strained, and that this is what makes the case hard. 3. Amor fati wills what happens because what happens is reason; resignation endures it because it cannot be helped; grounded in Med. X.21 or Ench. 8; the concession that under atoms the distinction weakens. 4. The dilemma stated in both horns, the joint named, and a real concession, with its cost, rather than a reply. 5. One exercise, named, with a date you began it and a specific thing it changed, and the last time you skipped it. 6. Anything true. 'Nothing' fails."
+      }
+    ],
+    "quiz": [],
+    "isSeminar": true,
+    "isViva": true,
+    "practiceAssignment": {
+      "coreIdea": "The examination is an external. Preparing for it is not.",
+      "assignment": "The night before: no reading. Write the six doctrines you are least sure of, one line each, and the passage each stands on. Sleep. Sit the Examination in the morning, in the hour Marcus wrote.",
+      "duration": "20 min the night before",
+      "greekTerms": "dokimasia — the scrutiny of a candidate before taking office (Athens) / exetasis — examination, the testing of a life; ho anexetastos bios (Plato, Apology 38a), the unexamined life"
     }
   }
 ];
