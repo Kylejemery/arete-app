@@ -5,19 +5,61 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
-const navItems = [
-  { href: '/',         label: 'Home',        emoji: '🏠' },
-  { href: '/morning',  label: 'Morning',      emoji: '☀️' },
-  { href: '/evening',  label: 'Evening',      emoji: '🌙' },
-  { href: '/cabinet',  label: 'Cabinet',      emoji: '🎙️' },
-  { href: '/journal',  label: 'Journal',      emoji: '📖' },
-  { href: '/goals',    label: 'Goals',        emoji: '🎯' },
-  { href: '/scrolls',  label: 'Scrolls',      emoji: '📜' },
-  { href: '/agora',    label: 'The Agora',    emoji: '🏛️' },
-  { href: '/focus',    label: 'Focus',        emoji: '⏱️' },
-  { href: '/progress', label: 'Progress',     emoji: '🏆' },
-  { href: '/profile',  label: 'Know Thyself', emoji: '👤' },
-  { href: '/settings', label: 'Settings',     emoji: '⚙️' },
+interface NavItem {
+  href: string;
+  label: string;
+  emoji: string;
+  // Lives on academy.pursuearete.com, so a plain anchor rather than a
+  // client-side route, and never a candidate for the active highlight.
+  external?: boolean;
+  // Shorter label for the three-across tile grid in the More drawer.
+  short?: string;
+}
+
+const ACADEMY = 'https://academy.pursuearete.com';
+
+// The Explore group mirrors the phone's Explore drawer
+// (components/SideMenu.tsx): the destinations beyond the daily practice.
+// The web app carries no Academy or Library of its own, so those two and the
+// Scale of Happiness cross to the Academy site — the Scale stays one
+// implementation (academy/web HappinessScale) rather than a second copy here.
+const navSections: { heading: string | null; items: NavItem[] }[] = [
+  {
+    heading: null,
+    items: [
+      { href: '/',         label: 'Home',     emoji: '🏠' },
+      { href: '/morning',  label: 'Morning',  emoji: '☀️' },
+      { href: '/evening',  label: 'Evening',  emoji: '🌙' },
+      { href: '/cabinet',  label: 'Cabinet',  emoji: '🎙️' },
+      { href: '/journal',  label: 'Journal',  emoji: '📖' },
+      { href: '/goals',    label: 'Goals',    emoji: '🎯' },
+      { href: '/scrolls',  label: 'Scrolls',  emoji: '📜' },
+      { href: '/focus',    label: 'Focus',    emoji: '⏱️' },
+      { href: '/progress', label: 'Progress', emoji: '🏆' },
+    ],
+  },
+  {
+    heading: 'Explore',
+    items: [
+      { href: `${ACADEMY}/dashboard`, label: 'The Academy', emoji: '🎓', external: true, short: 'Academy' },
+      { href: `${ACADEMY}/library`,   label: 'The Library', emoji: '📚', external: true, short: 'Library' },
+      { href: '/agora',               label: 'The Agora',   emoji: '🏛️' },
+      {
+        href: `${ACADEMY}/playground/happiness-scale`,
+        label: 'The Scale of Happiness',
+        emoji: '📈',
+        external: true,
+        short: 'The Scale',
+      },
+    ],
+  },
+  {
+    heading: null,
+    items: [
+      { href: '/profile',  label: 'Know Thyself', emoji: '👤' },
+      { href: '/settings', label: 'Settings',     emoji: '⚙️' },
+    ],
+  },
 ];
 
 // 5 primary tabs shown in the mobile bottom pill
@@ -30,13 +72,15 @@ const BOTTOM_TABS = [
 ];
 
 // Items accessible via the More slide-up drawer
-const MORE_ITEMS = [
+const MORE_ITEMS: NavItem[] = [
   { href: '/evening',  label: 'Evening',      emoji: '🌙' },
   { href: '/goals',    label: 'Goals',        emoji: '🎯' },
   { href: '/scrolls',  label: 'Scrolls',      emoji: '📜' },
-  { href: '/agora',    label: 'The Agora',    emoji: '🏛️' },
   { href: '/progress', label: 'Progress',     emoji: '🏆' },
   { href: '/profile',  label: 'Know Thyself', emoji: '👤' },
+  // The Explore group entire, so the doors out are reachable at phone width
+  // too, and in the rail's order rather than split around the other items.
+  ...navSections.find(s => s.heading === 'Explore')!.items,
   { href: '/settings', label: 'Settings',     emoji: '⚙️' },
 ];
 
@@ -46,7 +90,9 @@ export default function Sidebar() {
   const [showMore, setShowMore] = useState(false);
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    !href.startsWith('/') ? false
+      : href === '/' ? pathname === '/'
+        : pathname.startsWith(href);
 
   // Highlight "More" tab when the current page lives in the drawer
   const moreIsActive = MORE_ITEMS.some(item => isActive(item.href));
@@ -60,7 +106,7 @@ export default function Sidebar() {
     <>
       {/* ── Desktop Sidebar (md and above) ─────────────────────────── */}
       <aside
-        className="hidden md:flex flex-col w-[220px] min-h-screen fixed left-0 top-0 z-30"
+        className="hidden md:flex flex-col w-[220px] h-screen fixed left-0 top-0 z-30"
         style={{
           background: 'linear-gradient(180deg, #0d1520 0%, #111827 60%, #0d1520 100%)',
           borderRight: '1px solid rgba(255,255,255,0.06)',
@@ -68,7 +114,7 @@ export default function Sidebar() {
       >
         {/* Wordmark */}
         <div
-          className="px-6 pt-7 pb-5"
+          className="flex-shrink-0 px-6 pt-7 pb-5"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
         >
           <h1
@@ -89,38 +135,68 @@ export default function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-3 overflow-y-auto">
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
+        <nav className="flex-1 min-h-0 py-3 overflow-y-auto overscroll-contain">
+          {navSections.map((section, i) => (
+            <div key={section.heading ?? `section-${i}`} className={section.heading ? 'mt-4' : ''}>
+              {section.heading && (
+                <p
+                  className="px-5 pb-1.5 text-[10px] uppercase tracking-[0.2em]"
+                  style={{
+                    color: 'rgba(154,160,166,0.6)',
+                    fontFamily: 'var(--font-mono, monospace)',
+                  }}
+                >
+                  {section.heading}
+                </p>
+              )}
+              {section.items.map((item) => {
+                const active = isActive(item.href);
+                const className = `
                   flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 relative
                   ${active
                     ? 'text-[#c9a84c] bg-[rgba(201,168,76,0.08)]'
                     : 'text-[#9aa0a6] hover:text-[#e6eef8] hover:bg-[rgba(255,255,255,0.04)]'
                   }
-                `}
-              >
-                {/* Gold left-edge indicator */}
-                {active && (
-                  <span
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm"
-                    style={{ background: '#c9a84c' }}
-                  />
-                )}
-                <span className="text-base leading-none">{item.emoji}</span>
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
+                `;
+                const body = (
+                  <>
+                    {/* Gold left-edge indicator */}
+                    {active && (
+                      <span
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-sm"
+                        style={{ background: '#c9a84c' }}
+                      />
+                    )}
+                    <span className="text-base leading-none">{item.emoji}</span>
+                    <span className="font-medium flex-1 min-w-0 leading-tight">{item.label}</span>
+                    {item.external && (
+                      <span
+                        className="text-[10px] leading-none opacity-50"
+                        aria-hidden="true"
+                      >
+                        ↗
+                      </span>
+                    )}
+                  </>
+                );
+
+                return item.external ? (
+                  <a key={item.href} href={item.href} className={className}>
+                    {body}
+                  </a>
+                ) : (
+                  <Link key={item.href} href={item.href} className={className}>
+                    {body}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
         <div
-          className="p-4 space-y-2"
+          className="flex-shrink-0 p-4 space-y-2"
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
         >
           <Link
@@ -248,29 +324,47 @@ export default function Sidebar() {
             <div className="grid grid-cols-3 gap-2 mb-4">
               {MORE_ITEMS.map(item => {
                 const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setShowMore(false)}
-                    className="flex flex-col items-center gap-1 py-3 rounded-xl text-xs transition-all"
-                    style={{
-                      color: active ? '#c9a84c' : '#9aa0a6',
-                      background: active
-                        ? 'rgba(201,168,76,0.10)'
-                        : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${active
-                        ? 'rgba(201,168,76,0.20)'
-                        : 'rgba(255,255,255,0.06)'}`,
-                    }}
-                  >
+                const className = 'flex flex-col items-center gap-1 py-3 rounded-xl text-xs transition-all';
+                const style = {
+                  color: active ? '#c9a84c' : '#9aa0a6',
+                  background: active
+                    ? 'rgba(201,168,76,0.10)'
+                    : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${active
+                    ? 'rgba(201,168,76,0.20)'
+                    : 'rgba(255,255,255,0.06)'}`,
+                };
+                const body = (
+                  <>
                     <span className="text-2xl">{item.emoji}</span>
                     <span
                       className="text-center leading-tight"
                       style={{ fontFamily: 'var(--font-mono, monospace)' }}
                     >
-                      {item.label}
+                      {item.short ?? item.label}
                     </span>
+                  </>
+                );
+
+                return item.external ? (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setShowMore(false)}
+                    className={className}
+                    style={style}
+                  >
+                    {body}
+                  </a>
+                ) : (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setShowMore(false)}
+                    className={className}
+                    style={style}
+                  >
+                    {body}
                   </Link>
                 );
               })}
