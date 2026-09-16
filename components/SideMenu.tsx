@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GARDEN_SUBTITLE, GARDEN_TITLE } from '@/lib/exhibits';
 
 const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.8);
 
@@ -19,15 +20,20 @@ const ROUTES = {
   academy: '/academy',
   library: '/library',
   agora: '/agora',
-  scale: '/happiness-scale',
+  garden: '/garden',
+  scale: '/garden/scale-of-happiness',
 } as const;
 
 type Destination = keyof typeof ROUTES;
 
 /**
  * Right-slide drawer for the destinations beyond the core tabs: the Academy
- * (web), the Library and the Agora (in-app), and the Scale of Happiness (the
- * Playground page on the Academy, in a WebView). All are free to enter — the
+ * (web), the Library, the Agora and the Garden (in-app), and the Scale of
+ * Happiness, which is now a Garden exhibit and opens in the exhibit
+ * template. The Garden's own exhibits are generated from the exhibits
+ * table, so nothing here needs to change when one is added; the Scale keeps
+ * its own entry only because it is still a workshop exhibit and so is not
+ * yet listed in the Garden index. All are free to enter — the
  * paid parts (the full curriculum, the corpus writing in the margins, the
  * larger Symposium quota) are gated where they live. Rendered from the Home
  * screen's menu button.
@@ -121,6 +127,21 @@ export default function SideMenu({ visible, onClose }: { visible: boolean; onClo
               </View>
               <Text style={styles.itemSubtitle}>
                 Essays by readers, open to argument.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#555" />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.item} onPress={() => open('garden')} activeOpacity={0.8}>
+            <View style={styles.itemIcon}>
+              <Ionicons name="leaf-outline" size={22} color="#c9a84c" />
+            </View>
+            <View style={styles.itemBody}>
+              <View style={styles.itemTitleRow}>
+                <Text style={styles.itemTitle}>{GARDEN_TITLE}</Text>
+              </View>
+              <Text style={styles.itemSubtitle}>
+                {GARDEN_SUBTITLE}.
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color="#555" />

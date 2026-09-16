@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { GARDEN_TITLE } from '@/lib/exhibits';
 
 interface NavItem {
   href: string;
@@ -20,9 +21,12 @@ const ACADEMY = 'https://academy.pursuearete.com';
 
 // The Explore group mirrors the phone's Explore drawer
 // (components/SideMenu.tsx): the destinations beyond the daily practice.
-// The web app carries no Academy or Library of its own, so those two and the
-// Scale of Happiness cross to the Academy site — the Scale stays one
-// implementation (academy/web HappinessScale) rather than a second copy here.
+// The Garden's own exhibits are generated from the exhibits table, so this
+// list carries the room and never an exhibit.
+// The web app carries no Academy or Library of its own, so those two cross
+// to the Academy site. The Scale of Happiness is now a Garden exhibit, and
+// still one implementation (academy/web HappinessScale): the exhibit
+// template frames that same page rather than copying it.
 const navSections: { heading: string | null; items: NavItem[] }[] = [
   {
     heading: null,
@@ -44,11 +48,15 @@ const navSections: { heading: string | null; items: NavItem[] }[] = [
       { href: `${ACADEMY}/dashboard`, label: 'The Academy', emoji: '🎓', external: true, short: 'Academy' },
       { href: `${ACADEMY}/library`,   label: 'The Library', emoji: '📚', external: true, short: 'Library' },
       { href: '/agora',               label: 'The Agora',   emoji: '🏛️' },
+      { href: '/garden',              label: GARDEN_TITLE,  emoji: '🌿', short: 'Garden' },
       {
-        href: `${ACADEMY}/playground/happiness-scale`,
+        // Now a Garden exhibit: the template loads the same Academy page in
+        // an iframe, so this is no longer an external hop. It keeps its own
+        // entry only while it is a workshop exhibit and so unlisted in the
+        // Garden index.
+        href: '/garden/scale-of-happiness',
         label: 'The Scale of Happiness',
         emoji: '📈',
-        external: true,
         short: 'The Scale',
       },
     ],
