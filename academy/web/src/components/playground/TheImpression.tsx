@@ -42,16 +42,23 @@ function legibility(indexFromNewest: number): number {
  * The three sigils, drawn at a common size about the same centre.
  *
  * The hand is one continuous outline rather than a palm with fingers laid on
- * top of it, because that is what a seal is: a single cut. Proportions are the
- * ones that make a hand read at this size, and they are the ones the stack of
- * rounded rectangles it replaces got wrong. The fingers differ in length
- * (middle longest, little shortest and set lower) and, more importantly, they
- * splay: each one leaves the palm on its own line, so the gaps open into
- * wedges going up. Parallel fingers with hairline gaps read as webbing, which
- * is what the first attempt at this looked like. The webs notch only a little
- * way in, so the palm keeps its share of the hand, and the wrist closes on a
- * shallow curve rather than a flat cut. The thumb comes off the side of the
- * palm on its own axis rather than sitting at the wrist.
+ * top of it, because that is what a seal is: a single cut.
+ *
+ * It is drawn to the proportions a hand actually has, which is what the two
+ * earlier attempts got wrong. The hand runs 122 units from wrist to middle
+ * fingertip, and of that the fingers take about 45 and the palm about 55. Get
+ * that backwards, as the first two did, and the fingers read as tentacles on a
+ * stump however well they are shaped. Across the knuckles it is 52 units, a
+ * little over 40 per cent of its length, which is four fingers of 13 each.
+ *
+ * Within that: the middle finger is longest, index and ring are close behind
+ * it, and the little finger is both shorter and set lower on the palm, so its
+ * tip lands around the top joint of the ring finger. Each finger tapers from
+ * base to tip and leaves the palm on its own line, so the gaps open into
+ * wedges going up; parallel fingers with hairline gaps read as webbing. The
+ * thumb is thicker than any finger, comes off the side of the palm on its own
+ * diagonal rather than sitting at the wrist, and the wrist closes on a shallow
+ * curve rather than a flat cut.
  */
 function SigilPath({ sigil, scale = 1 }: { sigil: Sigil; scale?: number }) {
   const t = `translate(${SLOT.cx} ${SLOT.cy}) scale(${scale}) translate(${-SLOT.cx} ${-SLOT.cy})`
@@ -64,12 +71,29 @@ function SigilPath({ sigil, scale = 1 }: { sigil: Sigil; scale?: number }) {
       ) : null}
       {sigil === 'hand' ? (
         <path
-          d="M 122 212 L 120 190 L 112 188 L 93 155 A 9 9 0 0 1 109 147 L 127 179
-             L 126 162 L 120 106 A 6 6 0 0 1 132 104 L 140 158 L 141 164 L 142 158
-             L 143 94 A 6 6 0 0 1 155 94 L 156 158 L 157 164 L 158 158 L 164 102
-             A 6 6 0 0 1 176 104 L 170 158 L 171 165 L 172 160 L 182 122
-             A 6 6 0 0 1 193 126 L 188 172 L 191 192 L 186 212 Q 154 219 122 212 Z"
+          d="M 128 214 L 122 188 L 116 186 L 89 159 A 8.5 8.5 0 0 1 101 147 L 128 174
+             L 123 147 L 118.5 97 A 5.5 5.5 0 0 1 129.5 97 L 135 147 L 135.5 153 L 136 147
+             L 135.5 92 A 5.5 5.5 0 0 1 146.5 92 L 148 147 L 148.5 153 L 149 147
+             L 153.5 96 A 5.5 5.5 0 0 1 164.5 96 L 161 147 L 161.5 156 L 162 155
+             L 171 115 A 5 5 0 0 1 181 115 L 177 160 L 179 186 L 168 214
+             Q 148 219 128 214 Z"
           strokeLinejoin="round"
+        />
+      ) : null}
+      {/* The interior cuts. A signet is an intaglio, not a stencil: the die
+          carries a few decisive lines inside the silhouette as well as the
+          outline, and without them a filled shape reads as clipart. Four
+          knuckle creases and the crease at the base of the thumb, and nothing
+          else, because a seal cannot hold shading. Three knuckles, not four:
+          the little finger sits lower on the palm, so its crease breaks the
+          scallop the other three make and reads as a stray scratch. */}
+      {sigil === 'hand' ? (
+        <path
+          d="M 124 152 Q 129 148 134 152 M 137 152 Q 142 148 147 152
+             M 150 152 Q 155 148 160 152
+             M 129 176 Q 134 188 133 201"
+          fill="none"
+          strokeLinecap="round"
         />
       ) : null}
     </g>
