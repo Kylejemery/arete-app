@@ -170,6 +170,7 @@ and Kyle was asked. His answers, and the state as of 2026-09-16:
 | Is Kosmopolis the garden? | **No.** Kosmopolis is the world simulation and nothing else. The garden remains unlocated, and may have to be rebuilt from scratch. |
 | Privacy rule vs. the discussion boards | **Comments stay.** `CorpusDiscussion` is fine. The template therefore carries a named `discussion` slot below the exhibit frame, and the no-user-content rule applies to the exhibit's own fields. |
 | Register the five gated pieces? | Still open. |
+| Chrysippus's cylinder | **Built and in the gallery**, under Ethics. Off the backlog. |
 | Register Zeno's Hand and the Scale? | **Yes, done.** Part 4 items 2 and 3 are built; item 1, the garden itself, still waits on the piece being found. |
 
 Parts 1, 2, 3 and 5 were then built, and Part 4 followed for the two pieces

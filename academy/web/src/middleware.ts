@@ -27,7 +27,7 @@ const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', 
 // reachable; every other /playground path — the index included — 404s, so an
 // unreleased piece cannot be reached by guessing a URL or by a stray link.
 // Releasing a piece is adding its slug to this list, and nothing else.
-const RELEASED_PLAYGROUND = ['happiness-scale', 'zenos-hand']
+const RELEASED_PLAYGROUND = ['happiness-scale', 'zenos-hand', 'chrysippus-cylinder']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl

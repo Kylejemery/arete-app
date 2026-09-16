@@ -203,6 +203,19 @@ set source_citation = '<the citation>', source_passage = '<the passage>', status
 where slug = 'scale-of-happiness';
 ```
 
+### A third, built from scratch
+
+**Chrysippus's Cylinder** (`chrysippus-cylinder`, Ethics) is the first exhibit
+built for the Garden rather than moved into it, and it is the worked example of
+the whole path in this document: piece built on the Academy, slug added to
+`RELEASED_PLAYGROUND`, row inserted as a `web_embed` pointed at it, straight
+into the gallery because it had its citation and passage from the start. See
+`supabase/migrations/20260916210000_exhibit_chrysippus_cylinder.sql`.
+
+It also shows the branch rule in use. The argument is about fate, which is
+physics, but Chrysippus deploys it to save responsibility, and a piece that
+sits across two branches belongs to the one it is taught from. So: ethics.
+
 ### Old links still work
 
 The Scale used to be its own mobile screen at `/happiness-scale`, a WebView over
