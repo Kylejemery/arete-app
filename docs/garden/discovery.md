@@ -160,45 +160,73 @@ one new item in `components/SideMenu.tsx` (mobile) and one new item in the
 
 ---
 
-## Stop condition
+## Stop condition, and what happened after it
 
-The spec's Part 0 stop condition has been met: **no garden was found.** Per the
-spec, the inventory is committed here and work stops before Part 1.
+The spec's Part 0 stop condition was met: **no garden was found.** Work stopped
+and Kyle was asked. His answers, and the state as of 2026-09-16:
 
-### Questions for Kyle
+| Question | Answer |
+|---|---|
+| Is Kosmopolis the garden? | **No.** Kosmopolis is the world simulation and nothing else. The garden remains unlocated, and may have to be rebuilt from scratch. |
+| Privacy rule vs. the discussion boards | **Comments stay.** `CorpusDiscussion` is fine. The template therefore carries a named `discussion` slot below the exhibit frame, and the no-user-content rule applies to the exhibit's own fields. |
+| Register the five gated pieces? | Not answered; not built. Part 4 was not commissioned. |
 
-1. **Where is the garden?** It is not in this repo, this database, or this
-   repo's git history. Is it (a) Kosmopolis under another name, (b) a separate
-   Vercel project outside this monorepo, (c) in another repository, (d) an
-   artifact or a local sketch that was never committed, or (e) still just an
-   idea? If it is on Vercel, the project name or URL is enough; the Vercel MCP
-   tools returned no teams from this session, so I could not enumerate projects.
-2. **The privacy rule vs. the discussion boards.** Should the exhibit template
-   (a) forbid `CorpusDiscussion` entirely and drop it from Zeno's Hand and the
-   Situations Game, (b) allow it as an explicitly exempted region below the
-   exhibit frame, or (c) keep the rule to the exhibit's own fields only, letting
-   a piece carry its own discussion internally? Same question for the Kosmopolis
-   ledger's `author_name` attribution.
-3. **Which of the five gated pieces should be registered?** The spec names only
-   the garden, Zeno's Hand and the Scale of Happiness. Kosmopolis, the Situations
-   Game, the View from Above, the Long Filter and the Passage are all built and
-   sitting behind the 404. Do they enter as `status = 'workshop'` rows, or stay
-   out of the table entirely for now?
+Parts 1, 2, 3 and 5 were then built (see `adding-an-exhibit.md`). **Part 4 was
+not**, so the `exhibits` table is empty and the Garden index renders its empty
+state until rows are inserted.
 
-### TODO fields to fill (Part 4)
+### On the name
 
-Branch, source citation and thinkers cannot be filled confidently for the pieces
-whose registration the spec requires. Filling them in would be guesswork, so
-they are listed here instead:
+Worth knowing before any rebuild: **the Garden (ὁ Κῆπος) was Epicurus's
+school**, not the Stoics'. The Stoics met in the Stoa Poikile, the Painted
+Porch, which is where their name comes from. The image this spec is reaching
+for is a *fertile field*, not a garden:
+
+> Also to a fertile field; in which logic is the fence which goes round it,
+> ethics are the fruit, and natural philosophy the soil, or the fruit-trees.
+>
+> — Diogenes Laertius, *Lives of Eminent Philosophers*, Life of Zeno XXXIII
+> (tr. C.D. Yonge, 1853)
+
+Both translations of that passage are already in the Corpus: Yonge 1853 (public
+domain, `edition_year` recorded) and Hicks, which renders it "Logic being the
+encircling fence, Ethics the crop, Physics the soil or the trees". The room
+name is Kyle's call — "the Garden" is a good word and the Epicurean echo may be
+a feature — but it is borrowed from the rival school, and the Happiness Scale
+already marks Epicurus with "Simple garden life", so the two will sit near each
+other in the same product.
+
+### Still open for Kyle
+
+1. **Where is the garden?** Still unlocated. Not in this repo, this database, or
+   git history. If it is to be rebuilt, the exhibit machinery is now in place
+   and it enters as one row.
+2. **Register the five gated pieces?** Kosmopolis, the Situations Game, the View
+   from Above, the Long Filter and the Passage are all built and sitting behind
+   the Academy's 404. They can enter as `workshop` rows whenever wanted.
+3. **Two migration directories.** `supabase/migrations/` (where `exhibits` went,
+   per `CLAUDE.md`) and `academy/supabase/migrations/` (where the playground
+   tables live), both applied to the same project. Worth collapsing one day.
+4. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
+   `rag_corpus` under two identities: `Lives of Eminent Philosophers` (544
+   chunks, tr. Yonge, `edition_year` 1853) and `Lives Book7` (87 chunks, tr.
+   Hicks, `edition_year` null). That is the duplicate-identity failure
+   `CLAUDE.md` warns about, and the Hicks rows are missing `edition_year`. Not
+   touched here; flagging it.
+
+### TODO fields to fill
+
+The two registerable pieces cannot be filled confidently on every field. Ready
+SQL for both is in `adding-an-exhibit.md`; these are the gaps in it.
 
 | Exhibit | Field | Note |
 |---|---|---|
-| The garden | everything | TODO — piece not located. |
-| Zeno's Hand | `branch` | TODO — Kyle to confirm. Reads as **logic** (it is the epistemology of assent and the criterion), but it is taught as the doctrine of the *kataleptic* impression, which some maps put under physics. |
-| Zeno's Hand | `source_citation` | **Not a TODO — already established in the codebase.** `academy/web/src/content/playground/zenos-hand.ts:4` states the gesture is reported by **Cicero, *Academica* 2.145** (the Lucullus). That file also carries a per-case `source` for all nine assent cases (Sextus, Diogenes Laertius, Lucretius, Cicero) and a `definition` block credited *"After Sextus Empiricus, Against the Logicians 1.151–152"*. |
-| Zeno's Hand | `source_passage` | TODO — Kyle to choose which passage the exhibit page shows. The content file's Cicero renderings are flagged as *close paraphrase, not quotation*, so they cannot be dropped in as a quoted passage without his say-so. |
-| Zeno's Hand | `thinkers` | TODO — Zeno of Citium certainly; whether Cicero and Arcesilaus are listed as well is Kyle's call. |
-| The Scale of Happiness | `branch` | TODO — reads as **ethics** (it is a map of the *telos*), but Kyle should confirm. |
-| The Scale of Happiness | `source_citation`, `source_passage` | TODO — the piece is a synthesis across schools (Epicurus, the Stoics, the Cyrenaics), not a gloss on one passage, so there is no obvious single citation. Kyle to supply one, or to decide that a synthesis exhibit may cite a cluster. |
-| The Scale of Happiness | `thinkers` | TODO — the scale names many philosophers on its markers; which of them are `thinkers` on the row rather than scenery is Kyle's call. |
-| All three | `academy_path`, `agora_prompt` | TODO — optional fields, and no Academy sessions are mapped to these pieces yet. |
+| The garden | everything | Piece not located. |
+| Zeno's Hand | `branch` | Proposed **logic** (it is the epistemology of assent and the criterion). Confirm. |
+| Zeno's Hand | `source_citation` | **Settled in the codebase**, not a guess: `academy/web/src/content/playground/zenos-hand.ts:4` states the gesture is reported by **Cicero, *Academica* 2.145** (the Lucullus). That file also carries a per-case `source` for all nine assent cases (Sextus, Diogenes Laertius, Lucretius, Cicero) and a `definition` credited *"After Sextus Empiricus, Against the Logicians 1.151–152"*. |
+| Zeno's Hand | `source_passage` | Which passage the page shows. The content file's Cicero renderings are flagged as *close paraphrase, not quotation*, so they cannot be dropped in as a quoted passage without Kyle's say-so. |
+| Zeno's Hand | `thinkers` | Zeno of Citium certainly; whether Cicero and Arcesilaus are listed too. |
+| The Scale of Happiness | `branch` | Proposed **ethics** (it is a map of the *telos*). Confirm. |
+| The Scale of Happiness | `source_citation`, `source_passage` | The piece is a synthesis across schools (Epicurus, the Stoics, the Cyrenaics), not a gloss on one passage, so there is no obvious single citation. Either supply one, or decide that a synthesis exhibit may cite a cluster. **Until this is settled the Scale cannot enter the gallery**, because the database refuses a gallery row with no source. |
+| The Scale of Happiness | `thinkers` | The scale names many philosophers on its markers; which are `thinkers` on the row rather than scenery. |
+| Both | `academy_path`, `agora_prompt` | Optional. No Academy sessions are mapped to these pieces yet. |
