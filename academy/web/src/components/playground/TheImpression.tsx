@@ -38,19 +38,40 @@ function legibility(indexFromNewest: number): number {
   return 0
 }
 
+/**
+ * The three sigils, drawn at a common size about the same centre.
+ *
+ * The hand is one continuous outline rather than a palm with fingers laid on
+ * top of it, because that is what a seal is: a single cut. Proportions are the
+ * ones that make a hand read at this size, and they are the ones the stack of
+ * rounded rectangles it replaces got wrong. The fingers differ in length
+ * (middle longest, little shortest and set lower) and, more importantly, they
+ * splay: each one leaves the palm on its own line, so the gaps open into
+ * wedges going up. Parallel fingers with hairline gaps read as webbing, which
+ * is what the first attempt at this looked like. The webs notch only a little
+ * way in, so the palm keeps its share of the hand, and the wrist closes on a
+ * shallow curve rather than a flat cut. The thumb comes off the side of the
+ * palm on its own axis rather than sitting at the wrist.
+ */
 function SigilPath({ sigil, scale = 1 }: { sigil: Sigil; scale?: number }) {
-  const r = 52 * scale
-  if (sigil === 'round') return <circle cx={SLOT.cx} cy={SLOT.cy} r={r} />
-  if (sigil === 'square')
-    return <rect x={SLOT.cx - r} y={SLOT.cy - r} width={r * 2} height={r * 2} rx={3} />
-  // The hand: a plain open palm mark, four fingers and a thumb.
+  const t = `translate(${SLOT.cx} ${SLOT.cy}) scale(${scale}) translate(${-SLOT.cx} ${-SLOT.cy})`
+  const r = 52
   return (
-    <g>
-      <rect x={SLOT.cx - 26} y={SLOT.cy - 6} width={52} height={46} rx={10} />
-      {[-19, -6, 7, 20].map((dx, i) => (
-        <rect key={i} x={SLOT.cx + dx - 5} y={SLOT.cy - 44 + Math.abs(i - 1.5) * 6} width={10} height={44} rx={5} />
-      ))}
-      <rect x={SLOT.cx - 44} y={SLOT.cy - 4} width={22} height={10} rx={5} transform={`rotate(-28 ${SLOT.cx - 33} ${SLOT.cy})`} />
+    <g transform={t}>
+      {sigil === 'round' ? <circle cx={SLOT.cx} cy={SLOT.cy} r={r} /> : null}
+      {sigil === 'square' ? (
+        <rect x={SLOT.cx - r} y={SLOT.cy - r} width={r * 2} height={r * 2} rx={3} />
+      ) : null}
+      {sigil === 'hand' ? (
+        <path
+          d="M 122 212 L 120 190 L 112 188 L 93 155 A 9 9 0 0 1 109 147 L 127 179
+             L 126 162 L 120 106 A 6 6 0 0 1 132 104 L 140 158 L 141 164 L 142 158
+             L 143 94 A 6 6 0 0 1 155 94 L 156 158 L 157 164 L 158 158 L 164 102
+             A 6 6 0 0 1 176 104 L 170 158 L 171 165 L 172 160 L 182 122
+             A 6 6 0 0 1 193 126 L 188 172 L 191 192 L 186 212 Q 154 219 122 212 Z"
+          strokeLinejoin="round"
+        />
+      ) : null}
     </g>
   )
 }
