@@ -9,33 +9,33 @@ const SCALE_URL = 'https://academy.pursuearete.com/playground/happiness-scale';
 /**
  * The Scale of Happiness, inside the app: a WebView over the Playground page
  * on the Academy. Unlike the Academy screen this needs no sign-in handoff —
- * the Playground is a public surface (see the middleware's PUBLIC_PREFIXES),
- * so the plain URL loads for signed-out users too and the scale stays a
- * single implementation on the web rather than a second copy here.
+ * the scale is one of the released Playground pieces (see the middleware's
+ * RELEASED_PLAYGROUND), so the plain URL loads for signed-out users too and
+ * the scale stays a single implementation on the web rather than a second
+ * copy here.
+ *
+ * This screen is the scale and nothing else. Any navigation away from it —
+ * the page's own "← Back to Arete" link included — closes the WebView and
+ * returns to the app, so there is no way to wander the web from inside it.
  */
 export default function HappinessScaleScreen() {
     const router = useRouter();
     const webRef = useRef<WebView>(null);
     const [loading, setLoading] = useState(true);
-    const [canGoBack, setCanGoBack] = useState(false);
 
     return (
         <SafeAreaView style={styles.container}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} hitSlop={8}>
-                    <Ionicons name="close" size={22} color="#c9a84c" />
+                    <Ionicons name="arrow-back" size={22} color="#c9a84c" />
                 </TouchableOpacity>
                 <View style={{ flex: 1, alignItems: 'center' }}>
                     <Text style={styles.headerTitle}>The Scale of Happiness</Text>
                 </View>
-                <TouchableOpacity
-                    onPress={() => webRef.current?.goBack()}
-                    style={[styles.headerButton, !canGoBack && { opacity: 0.3 }]}
-                    disabled={!canGoBack}
-                    hitSlop={8}
-                >
-                    <Ionicons name="arrow-back" size={20} color="#c9a84c" />
-                </TouchableOpacity>
+                {/* Balances the arrow so the title stays centred. */}
+                <View style={styles.headerButton}>
+                    <Ionicons name="arrow-back" size={22} color="transparent" />
+                </View>
             </View>
 
             <WebView
@@ -44,8 +44,13 @@ export default function HappinessScaleScreen() {
                 style={styles.web}
                 onLoadStart={() => setLoading(true)}
                 onLoadEnd={() => setLoading(false)}
-                onNavigationStateChange={nav => setCanGoBack(nav.canGoBack)}
-                allowsBackForwardNavigationGestures
+                onShouldStartLoadWithRequest={req => {
+                    if (req.url.startsWith(SCALE_URL)) return true;
+                    // Leaving the scale means the user is done with it. Go
+                    // back to the app rather than browsing the web in here.
+                    router.back();
+                    return false;
+                }}
                 startInLoadingState
                 renderLoading={() => (
                     <View style={styles.loadingOverlay}>

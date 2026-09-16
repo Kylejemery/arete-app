@@ -21,10 +21,27 @@ import type { NextRequest } from 'next/server'
 // /auth/confirm covers the token_hash variant, and /reset-password lets the
 // user set a new password (guarded by that session).
 const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
-const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/playground', '/api/playground/']
+const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/api/playground/']
+
+// The Playground opens one piece at a time. Only the slugs below are
+// reachable; every other /playground path — the index included — 404s, so an
+// unreleased piece cannot be reached by guessing a URL or by a stray link.
+// Releasing a piece is adding its slug to this list, and nothing else.
+const RELEASED_PLAYGROUND = ['happiness-scale', 'zenos-hand']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+
+  // Playground gating comes first: /playground is no longer a public prefix,
+  // and this decides both halves of it — a released piece is public, anything
+  // else is not found. '/playground' and '/playground/' both slice to '',
+  // which is never in the list, so the index is gated with the rest.
+  if (pathname === '/playground' || pathname.startsWith('/playground/')) {
+    if (RELEASED_PLAYGROUND.includes(pathname.slice('/playground/'.length))) {
+      return NextResponse.next()
+    }
+    return new NextResponse(null, { status: 404 })
+  }
 
   if (PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some(p => pathname.startsWith(p))) {
     return NextResponse.next()
