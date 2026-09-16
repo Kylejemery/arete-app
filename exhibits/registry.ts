@@ -15,9 +15,9 @@
 //
 // Most exhibits are not native. The established pattern in this codebase
 // is to build the piece once on the Academy and point a 'web_embed' row at
-// it (see app/happiness-scale.tsx), which keeps one implementation rather
-// than two. Reach for 'native' only when a piece genuinely needs to be
-// drawn in the app.
+// it, as Zeno's Hand and the Scale of Happiness both do, which keeps one
+// implementation rather than two. Reach for 'native' only when a piece
+// genuinely needs to be drawn in the app.
 import { createElement, type ComponentType, type ReactElement } from 'react';
 
 /** Every native exhibit component is handed the row's slug and nothing else. */

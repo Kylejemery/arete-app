@@ -169,11 +169,17 @@ and Kyle was asked. His answers, and the state as of 2026-09-16:
 |---|---|
 | Is Kosmopolis the garden? | **No.** Kosmopolis is the world simulation and nothing else. The garden remains unlocated, and may have to be rebuilt from scratch. |
 | Privacy rule vs. the discussion boards | **Comments stay.** `CorpusDiscussion` is fine. The template therefore carries a named `discussion` slot below the exhibit frame, and the no-user-content rule applies to the exhibit's own fields. |
-| Register the five gated pieces? | Not answered; not built. Part 4 was not commissioned. |
+| Register the five gated pieces? | Still open. |
+| Register Zeno's Hand and the Scale? | **Yes, done.** Part 4 items 2 and 3 are built; item 1, the garden itself, still waits on the piece being found. |
 
-Parts 1, 2, 3 and 5 were then built (see `adding-an-exhibit.md`). **Part 4 was
-not**, so the `exhibits` table is empty and the Garden index renders its empty
-state until rows are inserted.
+Parts 1, 2, 3 and 5 were then built, and Part 4 followed for the two pieces
+that exist (see `adding-an-exhibit.md`). **Zeno's Hand is live in the gallery**
+under Logic. **The Scale of Happiness is registered but held at `workshop`**,
+because the database refuses a gallery row with no source citation and none has
+been chosen for it — it is reachable at `/garden/scale-of-happiness` and absent
+from the index. Verified as an anonymous reader: the index sees one row, a full
+table scan as `anon` returns one row, and both slugs resolve through
+`exhibit_by_slug`.
 
 ### On the name
 
@@ -207,7 +213,16 @@ other in the same product.
 3. **Two migration directories.** `supabase/migrations/` (where `exhibits` went,
    per `CLAUDE.md`) and `academy/supabase/migrations/` (where the playground
    tables live), both applied to the same project. Worth collapsing one day.
-4. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
+4. **Cicero's *Academica* is OCR-damaged in the Corpus.** The chunk holding the
+   Zeno's Hand passage (`ch. 2.47`) reads "afiirm" for "affirm", renders
+   κατάληψις as `KaT(iX.r]^L<;`, and truncates mid-sentence at the fourth
+   position of the gesture, so the exhibit quotes only the first three. The
+   neighbouring chunk is worse ("compreliended", "probalnlity", "acutcness").
+   The exhibit's `source_passage` repairs the scanner damage without changing
+   Yonge's wording; the stored chunks are untouched. Re-ingesting *Academica*
+   from a cleaner scan would be worth it, and `translator` is recorded but
+   `edition_year` is null on it.
+5. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
    `rag_corpus` under two identities: `Lives of Eminent Philosophers` (544
    chunks, tr. Yonge, `edition_year` 1853) and `Lives Book7` (87 chunks, tr.
    Hicks, `edition_year` null). That is the duplicate-identity failure
@@ -216,17 +231,12 @@ other in the same product.
 
 ### TODO fields to fill
 
-The two registerable pieces cannot be filled confidently on every field. Ready
-SQL for both is in `adding-an-exhibit.md`; these are the gaps in it.
+Both registerable pieces are in. One field still blocks one of them.
 
 | Exhibit | Field | Note |
 |---|---|---|
 | The garden | everything | Piece not located. |
-| Zeno's Hand | `branch` | Proposed **logic** (it is the epistemology of assent and the criterion). Confirm. |
-| Zeno's Hand | `source_citation` | **Settled in the codebase**, not a guess: `academy/web/src/content/playground/zenos-hand.ts:4` states the gesture is reported by **Cicero, *Academica* 2.145** (the Lucullus). That file also carries a per-case `source` for all nine assent cases (Sextus, Diogenes Laertius, Lucretius, Cicero) and a `definition` credited *"After Sextus Empiricus, Against the Logicians 1.151–152"*. |
-| Zeno's Hand | `source_passage` | Which passage the page shows. The content file's Cicero renderings are flagged as *close paraphrase, not quotation*, so they cannot be dropped in as a quoted passage without Kyle's say-so. |
-| Zeno's Hand | `thinkers` | Zeno of Citium certainly; whether Cicero and Arcesilaus are listed too. |
-| The Scale of Happiness | `branch` | Proposed **ethics** (it is a map of the *telos*). Confirm. |
-| The Scale of Happiness | `source_citation`, `source_passage` | The piece is a synthesis across schools (Epicurus, the Stoics, the Cyrenaics), not a gloss on one passage, so there is no obvious single citation. Either supply one, or decide that a synthesis exhibit may cite a cluster. **Until this is settled the Scale cannot enter the gallery**, because the database refuses a gallery row with no source. |
-| The Scale of Happiness | `thinkers` | The scale names many philosophers on its markers; which are `thinkers` on the row rather than scenery. |
+| Zeno's Hand | *(all fields)* | **Filled and live.** Branch `logic`, thinkers Zeno of Citium and Cicero, citation *Cicero, Academica 2.145*, passage quoted from Yonge in the Corpus. Change any of it with an `update`. |
+| The Scale of Happiness | `branch`, `thinkers`, `concepts` | **Filled**: branch `ethics`; thinkers are the five the scale names on its markers (Epicurus, Epictetus, Seneca, Marcus Aurelius, Diogenes of Sinope); concepts are its own zone vocabulary (ataraxia, askesis, adiaphora, pleonexia, epithumia). Change with an `update`. |
+| The Scale of Happiness | `source_citation`, `source_passage` | **The one thing blocking the gallery.** The piece is a synthesis across schools, not a gloss on one passage. The strongest candidate in the Corpus is Epicurus's classification of desires — natural and necessary, natural but not necessary, neither — which is the scale's actual axis, and which survives in Cicero, *De Finibus* 1.45 and *Tusculan Disputations* 5.93. Both are in `rag_corpus`, though both carry `translator: null`, which Part 5 of the acquisition plan requires. |
 | Both | `academy_path`, `agora_prompt` | Optional. No Academy sessions are mapped to these pieces yet. |

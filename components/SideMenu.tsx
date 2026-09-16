@@ -21,7 +21,7 @@ const ROUTES = {
   library: '/library',
   agora: '/agora',
   garden: '/garden',
-  scale: '/happiness-scale',
+  scale: '/garden/scale-of-happiness',
 } as const;
 
 type Destination = keyof typeof ROUTES;
@@ -29,9 +29,11 @@ type Destination = keyof typeof ROUTES;
 /**
  * Right-slide drawer for the destinations beyond the core tabs: the Academy
  * (web), the Library, the Agora and the Garden (in-app), and the Scale of
- * Happiness (the Playground page on the Academy, in a WebView). The Garden's
- * own exhibits are generated from the exhibits table, so nothing here needs
- * to change when one is added. All are free to enter — the
+ * Happiness, which is now a Garden exhibit and opens in the exhibit
+ * template. The Garden's own exhibits are generated from the exhibits
+ * table, so nothing here needs to change when one is added; the Scale keeps
+ * its own entry only because it is still a workshop exhibit and so is not
+ * yet listed in the Garden index. All are free to enter — the
  * paid parts (the full curriculum, the corpus writing in the margins, the
  * larger Symposium quota) are gated where they live. Rendered from the Home
  * screen's menu button.

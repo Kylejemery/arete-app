@@ -176,39 +176,41 @@ no code change and no deploy.
 
 ## Worked example: the two pieces already built
 
-Neither of these is registered yet — see `discovery.md` for the fields still
-waiting on a decision. When they are, they go in like this, as `web_embed` rows
-pointed at the Academy pages that already exist and are already released:
+Both are registered, in
+`supabase/migrations/20260916170000_exhibits_seed_first_two.sql`. Neither had
+its internals rewritten: both are `web_embed` rows pointed at the Academy pages
+that already exist and are already in `RELEASED_PLAYGROUND`.
+
+They went in at **different statuses, and the difference is the source** — which
+is the gallery rule doing its job rather than a special case:
+
+| | `zenos-hand` | `scale-of-happiness` |
+|---|---|---|
+| Branch | `logic` | `ethics` |
+| Status | **gallery** — listed | **workshop** — unlisted, reachable at `/garden/scale-of-happiness` |
+| Why | Cicero reports the gesture at *Academica* 2.145, and Yonge's public-domain translation of it is in the Corpus, so the row has a real citation and a real quoted passage. | The piece is a synthesis across schools, not a gloss on one passage. No citation has been chosen, so the gallery check refuses it. |
+
+Flipping the Scale is one statement once a citation is settled:
 
 ```sql
-insert into public.exhibits (slug, title, summary, branch, thinkers, kind, embed_url, source_citation, status, sort_order)
-values
-  ('zenos-hand',
-   'Zeno''s Hand',
-   'Zeno taught the whole of Stoic epistemology with one gesture: open, curled, closed, gripped.',
-   'logic',
-   '{"Zeno of Citium","Cicero"}',
-   'web_embed',
-   'https://academy.pursuearete.com/playground/zenos-hand',
-   'Cicero, Academica 2.145',
-   'workshop', 10),
-
-  ('scale-of-happiness',
-   'The Scale of Happiness',
-   'Where the schools put the good life, from ataraxia to unchecked appetite, and where you sit on it.',
-   'ethics',
-   '{"Epicurus","Zeno of Citium"}',
-   'web_embed',
-   'https://academy.pursuearete.com/playground/happiness-scale',
-   NULL,
-   'workshop', 10);
+update public.exhibits
+set source_citation = '<the citation>', source_passage = '<the passage>', status = 'gallery'
+where slug = 'scale-of-happiness';
 ```
 
-Both go in as `workshop` deliberately: Zeno's Hand still needs its
-`source_passage` chosen, and the Scale has no single citation yet, so neither
-can pass the gallery check until those are settled.
+### Old links still work
 
----
+The Scale used to be its own mobile screen at `/happiness-scale`, a WebView over
+the Academy page. That route is now a redirect to `/garden/scale-of-happiness`,
+so deep links, notifications and any build already in the wild still land on the
+piece. The Explore entries on both apps point at the exhibit page instead of the
+Academy URL. Zeno's Hand had no in-app route before, so there was nothing to
+redirect; it is reached through the Garden.
+
+The Scale keeps its own Explore entry for now **only because it is a workshop
+exhibit** and therefore absent from the Garden index. When it is promoted, that
+entry is redundant and should come out: the nav carries the room, not the
+exhibits.
 
 ## Where things live
 
