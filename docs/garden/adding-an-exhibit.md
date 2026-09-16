@@ -216,6 +216,24 @@ It also shows the branch rule in use. The argument is about fate, which is
 physics, but Chrysippus deploys it to save responsibility, and a piece that
 sits across two branches belongs to the one it is taught from. So: ethics.
 
+### A fourth, and the branch call that was close
+
+**The Impression** (`the-impression`, Physics) is the case where the branch was
+not obvious, and the reasoning is worth copying. Its subject is the impression
+and the criterion, which for the Stoics sits in the *logical* division, and
+Zeno's Hand already holds exactly that ground. But it asks a different
+question, what happens to the soul when something appears to it, and answers
+with a doctrine about what a soul is made of: pneuma under tension, altered
+rather than dented. That is physics, and it is what the piece is taught from.
+
+The thing that keeps the two exhibits from overlapping is not the branch label
+but the handoff: The Impression ends where assent becomes possible and links to
+Zeno's Hand, which starts there. **When a new exhibit is adjacent to an
+existing one, say where one stops and the other starts, in the interface.**
+
+It is also the first exhibit whose thinker filter does real work: Chrysippus now
+returns two exhibits, in two different branches.
+
 ### Old links still work
 
 The Scale used to be its own mobile screen at `/happiness-scale`, a WebView over

@@ -1,0 +1,325 @@
+/* The Impression — a Playground experiment.
+ *
+ * Shares the Playground palette (tape / bone / pomegranate) and the four type
+ * families exposed by app/playground/layout.tsx, so it reads as a sibling of
+ * Zeno's Hand and Chrysippus's Cylinder. The wax panel is warm and the tension
+ * panel is cold: that is the only place the two models are allowed to differ
+ * in anything but behaviour.
+ */
+
+.page {
+  --paper: #e4e5dc;
+  --tape: #16140f;
+  --tape-rule: #332f26;
+  --plate: #100e0a;
+  --bone: #c9c4b6;
+  --bone-dim: #7c7565;
+  --slate: #1d2124;
+  --pom: #8a2b2b;
+  --pom-lit: #b8473f;
+  --gold: #c9a84c;
+  --moss: #6f8a5a;
+  --waxen: #2a2318;
+  --waxen-cut: #0d0b07;
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --util: var(--font-plex-sans), 'IBM Plex Sans', system-ui, sans-serif;
+
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tape);
+  color: var(--bone);
+  font-family: var(--book);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--pom-lit);
+  outline-offset: 3px;
+}
+
+.wrap {
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.1rem, 4vw, 2rem) 5rem;
+}
+
+.back {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-dim);
+  text-decoration: none;
+}
+.back:hover {
+  color: var(--gold);
+}
+
+.head {
+  margin: 2.5rem 0 3.5rem;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin: 0 0 0.9rem;
+}
+.head h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 1.5rem + 2.6vw, 3.4rem);
+  line-height: 1.08;
+  color: var(--paper);
+  margin: 0;
+}
+.standfirst {
+  margin: 1.2rem 0 0;
+  max-width: 40rem;
+}
+
+.movement {
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid var(--tape-rule);
+}
+.h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 1.1rem + 1.1vw, 2rem);
+  line-height: 1.16;
+  color: var(--paper);
+  margin: 0 0 0.9rem;
+}
+.lede {
+  margin: 1.2rem 0 1.6rem;
+  max-width: 40rem;
+}
+
+/* controls */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1.4rem;
+}
+.chip,
+.reset {
+  font-family: var(--util);
+  font-size: 0.86rem;
+  color: var(--bone);
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.chip:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.reset {
+  margin-left: auto;
+  color: var(--bone-dim);
+}
+.reset:hover:not(:disabled) {
+  border-color: var(--pom-lit);
+  color: var(--pom-lit);
+}
+.reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.scene {
+  margin: 0 0 1.6rem;
+  max-width: 40rem;
+  font-size: 1.1rem;
+  color: var(--paper);
+  border-left: 2px solid var(--pom);
+  padding-left: 1rem;
+}
+
+/* the two panels */
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 1.5rem;
+}
+.column {
+  display: flex;
+  flex-direction: column;
+}
+.modelName {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.3rem;
+  color: var(--paper);
+  margin: 0;
+}
+.attribution {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 0.3rem 0 0.7rem;
+}
+.claim {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+  min-height: 3.4rem;
+}
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+.plate {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+}
+.wax {
+  fill: var(--waxen);
+}
+.field {
+  fill: var(--plate);
+}
+/* A seal in wax is a cut: dark where the metal went in, with a lit edge. */
+.waxMark {
+  fill: var(--waxen-cut);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+}
+/* An alteration is not a cut. Nothing is removed; the tension is drawn. */
+.tensionMark {
+  fill: none;
+  stroke: var(--moss);
+  stroke-width: 1.75;
+}
+.blank {
+  fill: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 14px;
+  letter-spacing: 0.14em;
+}
+.count {
+  margin: 0.7rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--gold);
+}
+.reading {
+  margin: 0.8rem 0 0;
+  font-family: var(--util);
+  font-size: 0.85rem;
+  color: var(--bone-dim);
+}
+
+.note {
+  margin: 1.8rem 0 0;
+  max-width: 40rem;
+}
+.hint {
+  margin: 1.8rem 0 0;
+  font-family: var(--util);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--bone-dim);
+}
+
+/* quotations */
+
+.quote {
+  margin: 0;
+  border-left: 3px solid var(--gold);
+  padding-left: 1.2rem;
+}
+.quote blockquote {
+  margin: 0;
+  font-style: italic;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--paper);
+}
+.quoteMain {
+  margin-top: 1.8rem;
+}
+.quoteMain blockquote {
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.3rem);
+}
+.quote figcaption {
+  margin-top: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+.tr {
+  color: var(--bone-dim);
+}
+
+/* the glosses */
+
+.glosses {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.2rem;
+  margin-top: 1.8rem;
+}
+.glossCard {
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+  padding: 1.4rem;
+}
+.glossCard h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.2rem;
+  color: var(--paper);
+  margin: 0 0 0.7rem;
+}
+.glossCard p {
+  margin: 0;
+  font-size: 0.97rem;
+}
+.ourNote {
+  margin: 1.6rem 0 0;
+  max-width: 44rem;
+  font-family: var(--util);
+  font-size: 0.83rem;
+  line-height: 1.65;
+  color: var(--bone-dim);
+  border-left: 2px solid var(--tape-rule);
+  padding-left: 0.9rem;
+}
+
+.closing {
+  margin: 0;
+  max-width: 40rem;
+  font-size: 1.05rem;
+  color: var(--paper);
+}
+.onward {
+  font-family: var(--util);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--gold);
+  text-decoration: none;
+}
+.onward:hover {
+  color: var(--pom-lit);
+}
