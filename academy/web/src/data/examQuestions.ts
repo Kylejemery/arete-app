@@ -1,6 +1,7 @@
 // academy/web/src/data/examQuestions.ts
 // Daily Examination question sets for PHIL 701
-// 11 sessions × morning (3 questions) + evening (3 questions) + 3 memorization passages per session
+// 14 sessions × morning (3 questions) + evening (3 questions) + 3 memorization passages per session.
+// Sessions 12–14 are the paper workshop, the final seminar, and the qualifying conversation.
  
 export interface ExamQuestion {
   id: string
@@ -223,6 +224,63 @@ export const PHIL701_EXAM_QUESTIONS: Record<number, SessionExamData> = {
       { id: 's11e1', prompt: 'PHIL 701 is complete. What was the hardest idea to accept? What was the easiest to accept but hardest to practice?' },
       { id: 's11e2', prompt: 'Stoicism promises not happiness but the capacity to live well under any conditions. Do you believe this? Has anything in this course given you evidence for it?' },
       { id: 's11e3', prompt: 'Fine is not flourishing. Where are you fine right now? Where are you flourishing? Name one of each. What is the difference between them?' },
+    ],
+  },
+  12: {
+    sessionId: 12,
+    courseId: 'phil-701',
+    passages: [
+      { text: '\'Zeno said this.\' And what do you say? \'Cleanthes said this.\' What do you say? How long will you march under another\'s orders? Take command, and say something that will be committed to memory.', attribution: 'Seneca, Epistulae Morales 33.7' },
+      { text: 'We should imitate the bees, and keep in separate compartments whatever we have gathered from our reading; then, applying the care and skill of our own mind, blend those several flavours into one compound that, even though it betrays its origin, is clearly a different thing from that whence it came.', attribution: 'Seneca, Epistulae Morales 84.5' },
+      { text: 'When someone gives himself airs because he can understand and explain the books of Chrysippus, say to yourself: if Chrysippus had not written obscurely, this man would have nothing to give himself airs about. What is it I want? To understand nature and to follow her.', attribution: 'Epictetus, Enchiridion §49' },
+    ],
+    morning: [
+      { id: 's12m1', prompt: 'Before the day begins: state, in one sentence, the thesis of the paper you are writing. If you cannot, that is the day\'s first task. Write the sentence here.' },
+      { id: 's12m2', prompt: 'Name one belief you hold about the Stoics that you have never tested against a passage. Which passage would test it? Read it today.' },
+      { id: 's12m3', prompt: 'Seneca asks how long you will march under another\'s orders. Where, today, will you be quoting when you could be speaking?' },
+    ],
+    evening: [
+      { id: 's12e1', prompt: 'Review the day: did your thesis survive contact with the text, or did you quietly soften it back into a report? Be exact about what changed.' },
+      { id: 's12e2', prompt: 'Who is the strongest person who would disagree with what you are arguing? State their case in two sentences, as they would.' },
+      { id: 's12e3', prompt: 'Reading collects; writing digests. What did you read today that you have not yet digested into a judgment of your own?' },
+    ],
+  },
+  13: {
+    sessionId: 13,
+    courseId: 'phil-701',
+    passages: [
+      { text: 'Either a medley and a tangle and a dispersal, or unity and order and providence. If the former, why do I wish to linger in such a random confusion? But if the latter, I revere, I stand firm, I take heart in that which governs.', attribution: 'Marcus Aurelius, Meditations VI.10' },
+      { text: 'Take the case of one whose task it is to shoot a spear or arrow straight at some target. His ultimate end is to do all in his power to shoot straight; the mark is to be selected, not desired.', attribution: 'Cicero, De Finibus III.22' },
+      { text: 'If there had been no Chrysippus, there would have been no me.', attribution: 'Carneades, in Diogenes Laertius IV.62' },
+    ],
+    morning: [
+      { id: 's13m1', prompt: 'Before the day begins: which objection from the final seminar do you find strongest? Name it, and name the joint of the system it attacks.' },
+      { id: 's13m2', prompt: 'Today you will meet at least one external that matters to you. Decide now: is it preferred, or is it good? Say which, and say what the archer would say.' },
+      { id: 's13m3', prompt: 'Providence or atoms: for today only, suppose the second. Which of your practices would you keep, and why?' },
+    ],
+    evening: [
+      { id: 's13e1', prompt: 'Review the day for evidence. Did anything happen that the objection you chose would have predicted, and the doctrine could not absorb? Or the reverse? One line.' },
+      { id: 's13e2', prompt: 'Where today did you retreat to the Sage: excuse a failure of practice by saying the standard was never for someone like you?' },
+      { id: 's13e3', prompt: 'Name the joint of the system you hold least securely tonight. Has it changed since the morning?' },
+    ],
+  },
+  14: {
+    sessionId: 14,
+    courseId: 'phil-701',
+    passages: [
+      { text: 'Which is more effective: theory or practice? Suppose there are two physicians, one able to discourse very brilliantly on the art of medicine but having no experience in treating the sick, and the other quite incapable of speaking but experienced in treating patients according to correct medical theory. Which one would you choose?', attribution: 'Musonius Rufus, Lecture 5' },
+      { text: 'No longer talk at all about the kind of man a good man ought to be, but be such.', attribution: 'Marcus Aurelius, Meditations X.16' },
+      { text: 'The unexamined life is not worth living for a human being.', attribution: 'Plato, Apology 38a' },
+    ],
+    morning: [
+      { id: 's14m1', prompt: 'Before the day begins: the Examiner will ask what this course has cost you. Draft the answer now, in two sentences, and see whether the day confirms it.' },
+      { id: 's14m2', prompt: 'Choose one doctrine from the examinable table. Today, apply it once, deliberately, to a case as it arises. Which doctrine, and what case do you expect?' },
+      { id: 's14m3', prompt: 'Musonius\'s two physicians. Which are you, this morning, on the doctrine you know best?' },
+    ],
+    evening: [
+      { id: 's14e1', prompt: 'Review the day: state, ground, apply, concede. Take one moment from today and walk it through all four moves in writing.' },
+      { id: 's14e2', prompt: 'The verdict, whatever it is, is an external. Did you treat it as one today, or did you find yourself wanting it in the way the discipline of desire forbids?' },
+      { id: 's14e3', prompt: 'Marcus: no more talk about what a good man is. What did you do today that you would not need to talk about?' },
     ],
   },
 }

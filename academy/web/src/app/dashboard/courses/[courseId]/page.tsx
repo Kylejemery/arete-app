@@ -983,10 +983,12 @@ const PHIL_701_INTERACTIVES: Record<number, () => React.ReactElement> = {
   3: () => <ZenosHand embedded />,
 };
 
-// PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
+// PHIL 701 sessions 2–14: the language renderer covers briefing-free lesson
 // content (parts + exercises). The quiz is not shown in the lesson — the CTA
-// switches to the Quiz tab where the Proctor grades the submission. Seminar
-// sessions additionally offer the Qualifying Examination (viva).
+// switches to the Quiz tab where the Proctor grades the submission. The
+// qualifying conversation (session 14, `isViva`) offers the Examination; the
+// seminars at 11 and 13 are milestones but do not, since the viva closes the
+// course and sits after the final seminar.
 function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Phil701Session; courseId?: string; onQuizClick?: () => void }) {
   const interactive = PHIL_701_INTERACTIVES[session.id];
   return (
@@ -997,7 +999,7 @@ function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Ph
         <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
       {session.quiz.length > 0 && <QuizCta count={session.quiz.length} onQuizClick={onQuizClick} />}
-      {session.isSeminar && <VivaCta courseId={courseId} />}
+      {session.isViva && <VivaCta courseId={courseId} />}
     </>
   );
 }
