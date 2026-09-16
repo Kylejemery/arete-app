@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
@@ -10,6 +10,7 @@ import { AgentSelector } from '@/components/seminar/AgentSelector';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import PreSeminarBriefing from '@/components/PreSeminarBriefing';
 import LessonParagraph from '@/components/LessonParagraph';
+import ZenosHand from '@/components/playground/ZenosHand';
 import { SEMINARS } from '@/data/seminars';
 import { GREK_101_SESSIONS, type LanguageSession } from '@/data/grek101';
 import { LATN_101_SESSIONS } from '@/data/latn101';
@@ -348,6 +349,10 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_704_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-705') {
+    const s = PHIL_705_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   if (courseId === 'phil-706') {
     const s = PHIL_706_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
@@ -643,10 +648,13 @@ function ExerciseCard({ ex }: { ex: LanguageSession['exercises'][number] }) {
 // session_progress (best score kept; >= 70% marks the session 'passed').
 // Language tracks stay open-access — recording is for the advisor's
 // standing, not for gating.
-function QuizSection({ quiz, courseId, sessionId }: {
+function QuizSection({ quiz, courseId, sessionId, onRecorded }: {
   quiz: LanguageSession['quiz'];
   courseId?: string;
   sessionId?: number;
+  // Fires when a result is written to session_progress, so a host page whose
+  // sidebar gates on progress can refresh without a reload.
+  onRecorded?: () => void;
 }) {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
@@ -694,7 +702,7 @@ function QuizSection({ quiz, courseId, sessionId }: {
         },
         { onConflict: 'user_id,course_id,session_id' }
       );
-    if (!error) setBest({ score: pct, status });
+    if (!error) { setBest({ score: pct, status }); onRecorded?.(); }
   };
 
   return (
@@ -771,7 +779,7 @@ function QuizSection({ quiz, courseId, sessionId }: {
   );
 }
 
-function LanguageLessonContent({ session, mono = false, courseId }: { session: LessonSession; mono?: boolean; courseId?: string }) {
+function LanguageLessonContent({ session, mono = false, courseId, onQuizRecorded }: { session: LessonSession; mono?: boolean; courseId?: string; onQuizRecorded?: () => void }) {
   return (
     <article>
       <div className="flex items-center gap-2 mb-2">
@@ -847,7 +855,7 @@ function LanguageLessonContent({ session, mono = false, courseId }: { session: L
 
       {/* Quiz */}
       {session.quiz.length > 0 && (
-        <QuizSection quiz={session.quiz} courseId={courseId} sessionId={session.id} />
+        <QuizSection quiz={session.quiz} courseId={courseId} sessionId={session.id} onRecorded={onQuizRecorded} />
       )}
     </article>
   );
@@ -1004,14 +1012,28 @@ function QuizCta({ count, onQuizClick }: { count: number; onQuizClick?: () => vo
   );
 }
 
+// Interactive blocks belonging to a specific PHIL 701 session, keyed by
+// session id. Zeno's hand is the gesture for the chain Session 3 teaches —
+// impression, assent, grasp, knowledge — so it sits directly under that
+// lesson. Moving it is a one-line change here.
+//
+// NOTE: session ids here follow the session data in data/phil701.ts, which is
+// what the student actually reads. The sidebar titles in COURSE_SESSIONS below
+// are out of sync with that data from session 3 onward.
+const PHIL_701_INTERACTIVES: Record<number, () => React.ReactElement> = {
+  3: () => <ZenosHand embedded />,
+};
+
 // PHIL 701 sessions 2–11: the language renderer covers briefing-free lesson
 // content (parts + exercises). The quiz is not shown in the lesson — the CTA
 // switches to the Quiz tab where the Proctor grades the submission. Seminar
 // sessions additionally offer the Qualifying Examination (viva).
 function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Phil701Session; courseId?: string; onQuizClick?: () => void }) {
+  const interactive = PHIL_701_INTERACTIVES[session.id];
   return (
     <>
       <LanguageLessonContent session={phil701ToLesson(session)} />
+      {interactive?.()}
       {session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
@@ -2342,10 +2364,27 @@ function Phil705CoursePage() {
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [initializing, setInitializing] = useState(true);
+  const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
+
+  // Reads session_progress for this course so the sidebar can gate on it.
+  const refreshProgress = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('session_progress')
+      .select('session_id, status')
+      .eq('user_id', user.id)
+      .eq('course_id', 'phil-705');
+    if (data) {
+      const map: Record<number, string> = {};
+      for (const row of data) map[row.session_id as number] = row.status as string;
+      setSessionProgress(map);
+    }
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -2353,10 +2392,11 @@ function Phil705CoursePage() {
       if (!user) { router.replace('/login'); return; }
       const profile = await getProfile();
       setIsAdmin(profile?.is_admin === true);
+      await refreshProgress();
       setInitializing(false);
     }
     init();
-  }, [router]);
+  }, [router, refreshProgress]);
 
   useEffect(() => {
     try {
@@ -2371,10 +2411,22 @@ function Phil705CoursePage() {
 
   const adminBypass = isAdmin;
   const activeSession = PHIL_705_SESSIONS.find(s => s.id === activeSessionId) ?? PHIL_705_SESSIONS[0];
-  // Admin bypasses all locks. Non-admins reach this course only via the
-  // dashboard, which gates it behind the prerequisite; here we keep a
-  // conservative sequential lock (only Session 1 open) for safety.
-  const isLocked = (s: Phil705Session) => (adminBypass ? false : s.id !== 1);
+  // Completion gate, the same contract the other PHIL courses use: session N
+  // opens once session N-1 is 'passed' (70% on its quiz). Sessions carrying no
+  // quiz — a stub awaiting its source document, or the final examination —
+  // count as passed so they can never become permanent blockers. Session 1 and
+  // admins bypass unconditionally.
+  //
+  // This replaces a stricter rule that opened session 1 only, on the
+  // assumption that the course catalog gated PHIL 705 behind a prerequisite.
+  // The catalog gates on tier alone, so that rule stranded every paying
+  // student after the first session.
+  const isLocked = (s: Phil705Session) => {
+    if (adminBypass || s.id === 1) return false;
+    const prevHasQuiz = hasQuizData('phil-705', s.id - 1);
+    const prevStatus = prevHasQuiz ? (sessionProgress[s.id - 1] ?? 'not_started') : 'passed';
+    return prevStatus !== 'passed';
+  };
 
   if (initializing) {
     return (
@@ -2507,7 +2559,11 @@ function Phil705CoursePage() {
             ) : activeSession.isFinalExam ? (
               <Phil705ExamContent session={activeSession} />
             ) : (
-              <LanguageLessonContent session={phil705ToLesson(activeSession)} courseId="phil-705" />
+              <LanguageLessonContent
+                session={phil705ToLesson(activeSession)}
+                courseId="phil-705"
+                onQuizRecorded={refreshProgress}
+              />
             )}
           </div>
         </div>
