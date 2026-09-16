@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase-server'
 
 export const dynamic = 'force-dynamic'
 // Generation is fired in the background on Railway (202), so nothing here
-// waits on a model call; 60s covers a slow roster query.
-export const maxDuration = 60
+// waits on a model call. The ceiling is for the typesetter instead: the
+// interior and cover routes lay the whole book out on demand.
+export const maxDuration = 120
 
 const BACKEND_URL =
   process.env.RAILWAY_BACKEND_URL ||
@@ -40,6 +41,20 @@ async function forward(request: NextRequest, path: string[] | undefined, method:
     }
     if (method !== 'GET') init.body = await request.text()
     const upstream = await fetch(`${BACKEND_URL}/api/admin/enchiridion${suffix}${qs}`, init)
+
+    // The typeset interior and cover come back as PDFs, so those responses
+    // stream through untouched with the headers the browser needs to save
+    // the file and the print facts the tab reads off them.
+    const upstreamType = upstream.headers.get('content-type') || ''
+    if (upstreamType.includes('application/pdf')) {
+      const headers = new Headers({ 'Content-Type': 'application/pdf' })
+      for (const name of ['content-disposition', 'x-page-count', 'x-spine-inches', 'x-layout-stable']) {
+        const value = upstream.headers.get(name)
+        if (value) headers.set(name, value)
+      }
+      return new NextResponse(await upstream.arrayBuffer(), { status: upstream.status, headers })
+    }
+
     const body = await upstream.text()
     // Never pass an HTML error page through as JSON — wrap it readably.
     try {

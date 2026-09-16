@@ -15,6 +15,7 @@ const {
   getOffer,
   documentToMarkdown,
 } = require('../enchiridion-agent');
+const { buildInterior, buildCover } = require('../lib/enchiridion-typeset');
 
 const router = express.Router();
 router.use(express.json());
@@ -333,20 +334,122 @@ router.post('/api/admin/enchiridion/generate', async (req, res) => {
   }
 });
 
+// Loads a document and the name to print on its title page. The member's
+// own name is preferred over their email: it is their book.
+async function loadDocument(id) {
+  const { data: doc, error } = await supabase
+    .from('enchiridion_documents')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!doc) return null;
+  const [{ data: profile }, { data: settings }] = await Promise.all([
+    supabase.from('profiles').select('email, handle').eq('id', doc.user_id).maybeSingle(),
+    supabase.from('user_settings').select('user_name').eq('user_id', doc.user_id).maybeSingle(),
+  ]);
+  const memberName = (settings?.user_name || profile?.handle || '').trim();
+  return { doc, email: profile?.email || null, memberName };
+}
+
+function pdfFilename(doc, suffix) {
+  const stem = (doc.title || 'enchiridion').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
+  return `${stem || 'enchiridion'}${suffix}.pdf`;
+}
+
+// GET /api/admin/enchiridion/documents/:id/pdf — the typeset interior, ready
+// to send to a printer. Generated on demand rather than stored: it is
+// deterministic from the row, so a stored copy could only go stale.
+router.get('/api/admin/enchiridion/documents/:id/pdf', async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  try {
+    const found = await loadDocument(req.params.id);
+    if (!found) return res.status(404).json({ error: 'Not found' });
+    const config = await getAgentConfig();
+    const { buffer, pageCount, stable } = await buildInterior(found.doc, { config, memberName: found.memberName });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename(found.doc, '-interior')}"`);
+    res.setHeader('X-Page-Count', String(pageCount));
+    res.setHeader('X-Layout-Stable', stable ? '1' : '0');
+    return res.end(buffer);
+  } catch (err) {
+    console.error('[/api/admin/enchiridion/documents/:id/pdf] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to typeset the interior' });
+  }
+});
+
+// GET /api/admin/enchiridion/documents/:id/cover.pdf — the cover. `?full=0`
+// returns the front only, at trim plus bleed, which is what a hardcover
+// case or a thumbnail wants; the default is the paperback wrap, whose spine
+// is measured from the interior's page count.
+router.get('/api/admin/enchiridion/documents/:id/cover.pdf', async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  try {
+    const found = await loadDocument(req.params.id);
+    if (!found) return res.status(404).json({ error: 'Not found' });
+    const config = await getAgentConfig();
+    const full = req.query.full !== '0';
+    let pageCount = null;
+    if (full) {
+      // The spine cannot be drawn without the page count, and the page
+      // count comes from typesetting the interior.
+      ({ pageCount } = await buildInterior(found.doc, { config, memberName: found.memberName }));
+    }
+    const { buffer, spine_in } = await buildCover(found.doc, {
+      config, memberName: found.memberName, pageCount, full,
+    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${pdfFilename(found.doc, full ? '-cover-wrap' : '-cover-front')}"`);
+    if (pageCount) res.setHeader('X-Page-Count', String(pageCount));
+    res.setHeader('X-Spine-Inches', spine_in.toFixed(4));
+    return res.end(buffer);
+  } catch (err) {
+    console.error('[/api/admin/enchiridion/documents/:id/cover.pdf] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to draw the cover' });
+  }
+});
+
 // GET /api/admin/enchiridion/documents/:id — the whole manuscript, chapters
 // included, plus a flattened markdown for download.
 router.get('/api/admin/enchiridion/documents/:id', async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   try {
-    const { data: doc, error } = await supabase
-      .from('enchiridion_documents')
-      .select('*')
-      .eq('id', req.params.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!doc) return res.status(404).json({ error: 'Not found' });
-    const { data: profile } = await supabase.from('profiles').select('email').eq('id', doc.user_id).maybeSingle();
-    return res.json({ document: doc, email: profile?.email || null, markdown: documentToMarkdown(doc), generating: running.get(doc.user_id) === doc.id });
+    const found = await loadDocument(req.params.id);
+    if (!found) return res.status(404).json({ error: 'Not found' });
+    const { doc, email, memberName } = found;
+
+    // Typeset it to report the page count, spine width and trim before
+    // anyone downloads anything, because those are the numbers a printer
+    // asks for and a price depends on. A failure here is reported rather
+    // than allowed to break the manuscript view.
+    let print = null;
+    if (doc.status === 'ready') {
+      try {
+        const config = await getAgentConfig();
+        const { pageCount, print: settings, stable } = await buildInterior(doc, { config, memberName });
+        const cover = await buildCover(doc, { config, memberName, pageCount, full: true });
+        print = {
+          page_count: pageCount,
+          layout_stable: stable,
+          trim_in: [settings.trim_width_in, settings.trim_height_in],
+          spine_in: Number(cover.spine_in.toFixed(4)),
+          cover_in: [Number((cover.width / 72).toFixed(3)), Number((cover.height / 72).toFixed(3))],
+          paper_caliper_in: settings.paper_caliper_in,
+          color_interior: settings.color_interior,
+        };
+      } catch (e) {
+        print = { error: e.message };
+      }
+    }
+
+    return res.json({
+      document: doc,
+      email,
+      member_name: memberName || null,
+      markdown: documentToMarkdown(doc),
+      generating: running.get(doc.user_id) === doc.id,
+      print,
+    });
   } catch (err) {
     console.error('[/api/admin/enchiridion/documents/:id] error:', err.message);
     return res.status(500).json({ error: err.message || 'Failed to load the document' });
@@ -409,6 +512,29 @@ router.patch('/api/admin/enchiridion/config', async (req, res) => {
     }
     for (const key of ['min_journal_entries', 'max_journal_entries', 'max_cabinet_messages', 'max_scrolls', 'corpus_passages_per_chapter', 'target_words_per_chapter']) {
       if (Number.isInteger(b[key]) && b[key] >= 0) next[key] = b[key];
+    }
+    // Print settings. Only the keys the typesetter knows are accepted, and
+    // only in ranges a printer would take, so a typo cannot produce a
+    // manuscript no vendor will accept.
+    if (b.print && typeof b.print === 'object') {
+      const print = { ...(current.print || {}) };
+      const numeric = {
+        trim_width_in: [3, 9], trim_height_in: [5, 12],
+        margin_inside_in: [0.35, 2], margin_outside_in: [0.3, 2],
+        margin_top_in: [0.3, 2], margin_bottom_in: [0.3, 2],
+        body_size: [8, 16], body_leading: [9, 26],
+        quote_size: [7, 15], quote_leading: [8, 24],
+        heading_size: [6, 14], chapter_title_size: [12, 40],
+        running_head_size: [6, 12], folio_size: [6, 14],
+        bleed_in: [0, 0.5], paper_caliper_in: [0.0015, 0.008],
+      };
+      for (const [key, [lo, hi]] of Object.entries(numeric)) {
+        const v = Number(b.print[key]);
+        if (Number.isFinite(v) && v >= lo && v <= hi) print[key] = v;
+      }
+      if (typeof b.print.color_interior === 'boolean') print.color_interior = b.print.color_interior;
+      if ([2, 4].includes(Number(b.print.page_multiple))) print.page_multiple = Number(b.print.page_multiple);
+      next.print = print;
     }
     const { error } = await supabase
       .from('agent_config')

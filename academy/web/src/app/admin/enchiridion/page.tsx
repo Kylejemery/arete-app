@@ -46,6 +46,17 @@ type RequestRow = {
 }
 
 type Format = { label: string; price_cents: number }
+// The typesetter's own settings. Absent from the stored config until it is
+// saved once, in which case the server's defaults apply.
+type PrintConfig = {
+  trim_width_in?: number
+  trim_height_in?: number
+  body_size?: number
+  body_leading?: number
+  paper_caliper_in?: number
+  color_interior?: boolean
+  page_multiple?: number
+}
 type Config = {
   enabled: boolean
   model: string
@@ -58,9 +69,22 @@ type Config = {
   max_scrolls: number
   corpus_passages_per_chapter: number
   target_words_per_chapter: number
+  print?: PrintConfig
 }
 
 type Chapter = { key: string; title: string; body: string; sources: { kind: string; id: string; label?: string }[] }
+// What the typesetter reports about the physical book: the numbers a printer
+// asks for and a price depends on.
+type PrintFacts = {
+  page_count?: number
+  layout_stable?: boolean
+  trim_in?: [number, number]
+  spine_in?: number
+  cover_in?: [number, number]
+  paper_caliper_in?: number
+  color_interior?: boolean
+  error?: string
+}
 type Document = {
   id: string
   user_id: string
@@ -157,6 +181,7 @@ export default function EnchiridionPage() {
 
   const [doc, setDoc] = useState<Document | null>(null)
   const [docEmail, setDocEmail] = useState<string | null>(null)
+  const [printFacts, setPrintFacts] = useState<PrintFacts | null>(null)
   const [docLoading, setDocLoading] = useState(false)
   const [chapterIdx, setChapterIdx] = useState(0)
 
@@ -187,6 +212,7 @@ export default function EnchiridionPage() {
       if (!res.ok) throw new Error(json.error || 'Failed to load the document')
       setDoc(json.document)
       setDocEmail(json.email)
+      setPrintFacts(json.print ?? null)
       setChapterIdx(i => Math.min(i, Math.max(0, (json.document.chapters?.length ?? 1) - 1)))
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Failed to load the document')
@@ -290,6 +316,23 @@ export default function EnchiridionPage() {
 
   const chapter = doc?.chapters?.[chapterIdx] ?? null
 
+  // The stored config carries no print block until it is saved once, so the
+  // fields show the same defaults the typesetter would apply.
+  const printCfg: Required<PrintConfig> = {
+    trim_width_in: 5,
+    trim_height_in: 8,
+    body_size: 11,
+    body_leading: 15.5,
+    paper_caliper_in: 0.0032,
+    color_interior: false,
+    page_multiple: 4,
+    ...(cfg?.print ?? {}),
+  }
+  const setPrint = (patch: PrintConfig) => {
+    if (!cfg) return
+    setCfg({ ...cfg, print: { ...printCfg, ...patch } })
+  }
+
   return (
     <div className={styles.page} style={{ maxWidth: 1100 }}>
       <div className={styles.header}>
@@ -385,9 +428,37 @@ export default function EnchiridionPage() {
                       </div>
                       {doc.error && <div className={styles.errText} style={{ marginTop: 6 }}>{doc.error}</div>}
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className={styles.ghostBtn} style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={downloadMarkdown}>Download .md</button>
-                      <button className={styles.ghostBtn} style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => setDoc(null)}>Close</button>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                      {doc.status === 'ready' && (
+                        <>
+                          <a
+                            className={styles.primaryBtn}
+                            style={{ height: 30, padding: '0 12px', fontSize: 12, lineHeight: '30px', textDecoration: 'none', display: 'inline-block' }}
+                            href={`/api/admin/enchiridion/documents/${doc.id}/pdf`}
+                            title="The typeset interior, ready for a printer"
+                          >
+                            Interior PDF
+                          </a>
+                          <a
+                            className={styles.ghostBtn}
+                            style={{ height: 30, padding: '0 10px', fontSize: 12, lineHeight: '30px', textDecoration: 'none', display: 'inline-block' }}
+                            href={`/api/admin/enchiridion/documents/${doc.id}/cover.pdf`}
+                            title="Paperback wrap: back, spine and front, with the spine measured from the page count"
+                          >
+                            Cover wrap
+                          </a>
+                          <a
+                            className={styles.ghostBtn}
+                            style={{ height: 30, padding: '0 10px', fontSize: 12, lineHeight: '30px', textDecoration: 'none', display: 'inline-block' }}
+                            href={`/api/admin/enchiridion/documents/${doc.id}/cover.pdf?full=0`}
+                            title="Front cover only, at trim plus bleed"
+                          >
+                            Front only
+                          </a>
+                        </>
+                      )}
+                      <button className={styles.ghostBtn} style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={downloadMarkdown}>.md</button>
+                      <button className={styles.ghostBtn} style={{ height: 30, padding: '0 10px', fontSize: 12 }} onClick={() => { setDoc(null); setPrintFacts(null) }}>Close</button>
                     </div>
                   </div>
 
@@ -396,6 +467,29 @@ export default function EnchiridionPage() {
                       <span key={k} className={styles.count}><span className={styles.countNum}>{v}</span> {k}</span>
                     ))}
                   </div>
+
+                  {printFacts && (
+                    printFacts.error ? (
+                      <p className={styles.errText} style={{ marginBottom: 12 }}>
+                        This manuscript will not typeset: {printFacts.error}
+                      </p>
+                    ) : (
+                      <div className={styles.countRow} style={{ marginBottom: 14 }}>
+                        <span className={styles.count}><span className={styles.countNum}>{printFacts.page_count}</span> printed pages</span>
+                        <span className={styles.count}>
+                          <span className={styles.countNum}>{printFacts.trim_in?.[0]}&times;{printFacts.trim_in?.[1]}</span> in trim
+                        </span>
+                        <span className={styles.count}><span className={styles.countNum}>{printFacts.spine_in}</span> in spine</span>
+                        <span className={styles.count}>
+                          <span className={styles.countNum}>{printFacts.cover_in?.[0]}&times;{printFacts.cover_in?.[1]}</span> in cover wrap
+                        </span>
+                        <span className={styles.count}>{printFacts.color_interior ? 'colour interior' : 'black interior'}</span>
+                        {printFacts.layout_stable === false && (
+                          <span className={`${styles.pill} ${styles.pillFailed}`}>contents may be a page out</span>
+                        )}
+                      </div>
+                    )
+                  )}
 
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
                     {(doc.chapters ?? []).map((c, i) => (
@@ -539,6 +633,63 @@ export default function EnchiridionPage() {
                   <input className={styles.textInput} type="number" min={0} value={cfg.corpus_passages_per_chapter} onChange={e => setCfg({ ...cfg, corpus_passages_per_chapter: parseInt(e.target.value || '0', 10) })} />
                 </div>
               </div>
+
+              <div className={styles.sectionLabel} style={{ marginTop: 18 }}>The printed book</div>
+              <p className={styles.muted} style={{ marginTop: -4, marginBottom: 10 }}>
+                Trim is the finished page size. The caliper is inches of spine per page, which decides the cover width,
+                so check it against your printer before ordering one. A colour interior costs several times more per copy.
+              </p>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Trim width (in)</label>
+                  <input className={styles.textInput} type="number" step={0.25} min={3} max={9}
+                    value={printCfg.trim_width_in}
+                    onChange={e => setPrint({ trim_width_in: parseFloat(e.target.value || '0') })} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Trim height (in)</label>
+                  <input className={styles.textInput} type="number" step={0.25} min={5} max={12}
+                    value={printCfg.trim_height_in}
+                    onChange={e => setPrint({ trim_height_in: parseFloat(e.target.value || '0') })} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Body size (pt)</label>
+                  <input className={styles.textInput} type="number" step={0.5} min={8} max={16}
+                    value={printCfg.body_size}
+                    onChange={e => setPrint({ body_size: parseFloat(e.target.value || '0') })} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Leading (pt)</label>
+                  <input className={styles.textInput} type="number" step={0.5} min={9} max={26}
+                    value={printCfg.body_leading}
+                    onChange={e => setPrint({ body_leading: parseFloat(e.target.value || '0') })} />
+                </div>
+              </div>
+              <div className={styles.fieldRow}>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Paper caliper (in per page)</label>
+                  <input className={styles.textInput} type="number" step={0.0001} min={0.0015} max={0.008}
+                    value={printCfg.paper_caliper_in}
+                    onChange={e => setPrint({ paper_caliper_in: parseFloat(e.target.value || '0') })} />
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Pad page count to</label>
+                  <select className={styles.textInput} value={printCfg.page_multiple}
+                    onChange={e => setPrint({ page_multiple: parseInt(e.target.value, 10) })}>
+                    <option value={4}>a multiple of four</option>
+                    <option value={2}>a multiple of two</option>
+                  </select>
+                </div>
+                <div className={styles.field}>
+                  <label className={styles.fieldLabel}>Interior ink</label>
+                  <label className={styles.muted} style={{ display: 'flex', gap: 6, alignItems: 'center', height: 38 }}>
+                    <input type="checkbox" checked={!!printCfg.color_interior}
+                      onChange={e => setPrint({ color_interior: e.target.checked })} />
+                    gold rules and headings
+                  </label>
+                </div>
+              </div>
+
               <div className={styles.actions}>
                 <button className={styles.primaryBtn} disabled={cfgSaving} onClick={saveConfig}>{cfgSaving ? 'Saving…' : 'Save'}</button>
               </div>
