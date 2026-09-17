@@ -69,6 +69,14 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil701-s10-obj2', description: 'Contrast Stoic and Aristotelian eudaimonia on the sufficiency of virtue.' },
       { id: 'phil701-s10-obj3', description: 'Explain engagement without attachment using an example from their own life.' },
     ],
+    // 11, 13 and 14 are seminars and use the capstone rubric below. 12 is the
+    // paper workshop: the Proctor cross-examines the thesis, the passage, and
+    // the objection before the student drafts.
+    12: [
+      { id: 'phil701-s12-obj1', description: 'States a one-sentence thesis about a Stoic doctrine that a careful reader of the same texts could dispute, and distinguishes it from a report of the doctrine.' },
+      { id: 'phil701-s12-obj2', description: 'Grounds the thesis in a primary passage cited by book and section, and says what the passage claims, presupposes, and does not support.' },
+      { id: 'phil701-s12-obj3', description: 'States the strongest ancient objection to the thesis in its own terms and either answers it or concedes it, naming the cost.' },
+    ],
   },
   'phil-702': {
     1: [

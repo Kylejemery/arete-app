@@ -70,6 +70,23 @@ Two standing rules that predate this file and still hold:
   live in `server/lib/corpus-fence.js`; a new layer is a migration plus a
   fence entry, never an ad hoc value.
 
+## The nightly auditor
+
+`server/quality-audit-agent.js` checks whether what is already in the system is
+correct — the corpus against the standing rules, the library and the Garden
+against what they promise a reader, the repo against its own conventions, and a
+read sample of live chunks against what the metadata claims they are. It reads
+and reports; it changes nothing.
+
+Read `server/QUALITY_AUDIT_AGENT.md` before adding a probe. Two things matter
+most: a finding's fingerprint must be stable across runs (no counts, no dates)
+because the night-to-night diff and the mute list are keyed on it, and a probe
+whose prerequisites are missing must skip and say so rather than pass silently.
+
+It is also the place to put a rule you find yourself checking by hand. A
+convention nothing enforces drifts — the agent was written because five
+migrations had been applied to the project with no committed file beside them.
+
 ## Conventions
 
 - Migrations go in `supabase/migrations/` with a timestamp prefix, and are

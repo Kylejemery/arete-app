@@ -188,20 +188,34 @@ function Hand({ pose, title }: { pose: Pose; title: string }) {
 export default function ZenosHand({
   backHref = '/playground',
   backLabel = '← The Playground',
+  embedded = false,
 }: {
   backHref?: string
   backLabel?: string
+  /**
+   * Render inside a host page (an Academy course session) rather than as the
+   * standalone Playground page: no back link, no page hero, no discussion
+   * board, and the Academy palette in place of the Playground's. The gesture,
+   * the trial and the reflection are identical.
+   */
+  embedded?: boolean
 }) {
-  return (
-    <main className={styles.page}>
-      <div className={styles.topBar}>
-        <Link href={backHref} className={styles.backLink}>
-          {backLabel}
-        </Link>
-      </div>
+  const Root = embedded ? 'section' : 'main'
 
-      <header className={styles.hero}>
-        <p className={styles.eyebrow}>Arete Academy · The Playground</p>
+  return (
+    <Root className={embedded ? `${styles.page} ${styles.embed}` : styles.page}>
+      {!embedded && (
+        <div className={styles.topBar}>
+          <Link href={backHref} className={styles.backLink}>
+            {backLabel}
+          </Link>
+        </div>
+      )}
+
+      <header className={embedded ? styles.embedHead : styles.hero}>
+        <p className={styles.eyebrow}>
+          {embedded ? 'Interactive' : 'Arete Academy · The Playground'}
+        </p>
         <h1 className={styles.title}>Zeno’s Hand</h1>
         <p className={styles.lede}>
           Zeno of Citium taught the whole of Stoic epistemology with one hand.
@@ -214,6 +228,7 @@ export default function ZenosHand({
       <Trial />
       <Reflection />
 
+      {!embedded && (
       <section className={styles.discuss}>
         <CorpusDiscussion
           threadKey="zenos-hand"
@@ -231,7 +246,8 @@ export default function ZenosHand({
           placeholder="Push on the hand — is a grasp really enough to build on, or does the sceptic win?"
         />
       </section>
-    </main>
+      )}
+    </Root>
   )
 }
 

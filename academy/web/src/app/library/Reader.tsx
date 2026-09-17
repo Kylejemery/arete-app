@@ -153,6 +153,12 @@ export default function Reader(props: {
     gotoPage(n);
   }, [gotoPage]);
 
+  const showParaInBook = useCallback((box: HTMLElement, el: HTMLElement) => {
+    const n = spreadOf(box, el);
+    box.scrollLeft = n * spreadStep(box);
+    setSpread(n);
+  }, []);
+
   const scrollToPara = useCallback((i: number) => {
     // Instant, container-relative: scrollIntoView's smooth mode is unreliable
     // over long distances in some embedded browsers, and the book view's
@@ -160,18 +166,17 @@ export default function Reader(props: {
     const go = () => {
       const el = columnRef.current?.querySelector<HTMLElement>(`[data-para="${i}"]`);
       if (!el) return;
+      // The book pages sideways inside .lib-book-text. That box is
+      // overflow:hidden and moved only by script, so looking for a scrollable
+      // ancestor walks straight past it; name it directly instead.
+      const bookBox = el.closest<HTMLElement>('.lib-book-text');
+      if (bookBox) { showParaInBook(bookBox, el); return; }
+      // Scroll view: the nearest ancestor that actually scrolls, else the
+      // centre column itself.
       let box: HTMLElement | null = el.parentElement;
-      while (box && box !== columnRef.current && getComputedStyle(box).overflowY !== 'auto') box = box.parentElement;
+      while (box && box !== columnRef.current && getComputedStyle(box).overflowY === 'visible') box = box.parentElement;
       const scroller = box || columnRef.current;
       if (!scroller) return;
-      if (scroller.classList.contains('lib-book-text')) {
-        // the book pages sideways: land on the spread that holds the paragraph
-        const step = spreadStep(scroller);
-        const left = el.getBoundingClientRect().left - scroller.getBoundingClientRect().left + scroller.scrollLeft;
-        scroller.scrollLeft = Math.floor(left / step) * step;
-        setSpread(Math.floor(left / step));
-        return;
-      }
       const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       scroller.scrollTop = Math.max(0, elTop - scroller.clientHeight / 2 + el.offsetHeight / 2);
     };
@@ -181,6 +186,15 @@ export default function Reader(props: {
     setFlashPara(i);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashPara(null), 2400);
+  }, [showParaInBook]);
+
+  // The outline can name a section the open folio holds but the folio cannot
+  // place (a stitched work carries no chunkStarts). Landing on the head of
+  // the folio is the closest honest answer, and never a dead click.
+  const scrollToFolioTop = useCallback(() => {
+    const bookBox = columnRef.current?.querySelector<HTMLElement>('.lib-book-text');
+    if (bookBox) { bookBox.scrollLeft = 0; setSpread(0); return; }
+    if (columnRef.current) columnRef.current.scrollTop = 0;
   }, []);
 
   // Find the paragraph a jump means, on the folio now open.
@@ -222,11 +236,12 @@ export default function Reader(props: {
       const i = resolvePara(j);
       if (i !== null) { scrollToPara(i); if (j.select) { setSelectedPara(i); setRightOpen(true); } }
       else if (j.page !== page) turnTo(j.page);
+      else scrollToFolioTop();
       return;
     }
     setPendingJump(j);
     turnTo(j.page);
-  }, [reader, readerLoading, resolvePara, scrollToPara, turnTo, page]);
+  }, [reader, readerLoading, resolvePara, scrollToPara, scrollToFolioTop, turnTo, page]);
 
   useEffect(() => {
     if (!pendingJump || pendingJump.comment || !reader || readerLoading || reader.page !== pendingJump.page) return;
@@ -701,6 +716,20 @@ export default function Reader(props: {
       {toast && <div className="lib-toast">{toast}</div>}
     </main>
   );
+}
+
+// Which spread of the book holds `el`. The text box is scrolled in whole
+// steps, so the spread is the element's offset from the left edge of the
+// content divided by the step, clamped to the last spread there is.
+function spreadOf(box: HTMLElement, el: HTMLElement): number {
+  const cs = getComputedStyle(box);
+  const padLeft = parseFloat(cs.paddingLeft) || 0;
+  const padRight = parseFloat(cs.paddingRight) || 0;
+  const gap = parseFloat(cs.columnGap) || 0;
+  const step = spreadStep(box);
+  const x = el.getBoundingClientRect().left - box.getBoundingClientRect().left + box.scrollLeft - padLeft;
+  const last = Math.max(0, Math.round((box.scrollWidth - padLeft - padRight + gap) / step) - 1);
+  return Math.min(last, Math.max(0, Math.floor(x / step)));
 }
 
 // One spread of the book is the text box's width plus the column gap, so

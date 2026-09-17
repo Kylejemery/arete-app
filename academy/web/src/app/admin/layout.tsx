@@ -19,6 +19,7 @@ const TABS: { href: string; label: string }[] = [
   { href: '/admin/journal-agent', label: 'Journal Agent' },
   { href: '/admin/world', label: 'World' },
   { href: '/admin/longitudinal', label: 'Longitudinal' },
+  { href: '/admin/enchiridion', label: 'Enchiridion' },
   { href: '/admin/gap-agent', label: 'Gap Agent' },
   { href: '/admin/tensions', label: 'Tensions' },
   { href: '/admin/synthesis', label: 'Synthesis' },

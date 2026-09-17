@@ -12,9 +12,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { PHIL_CURRICULUM, PARALLEL_CURRICULUM, type CurriculumCourse, type ReadingItem } from '@/data/curriculum';
-
-const ROMANS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
-const toRoman = (n: number) => ROMANS[n - 1] ?? String(n);
+import { toRoman } from '@/lib/roman';
 
 // One line of standing counsel, rotating daily.
 const COUNSEL: Array<{ text: string; source: string }> = [

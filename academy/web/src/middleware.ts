@@ -27,7 +27,43 @@ const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', 
 // reachable; every other /playground path — the index included — 404s, so an
 // unreleased piece cannot be reached by guessing a URL or by a stray link.
 // Releasing a piece is adding its slug to this list, and nothing else.
-const RELEASED_PLAYGROUND = ['happiness-scale', 'zenos-hand', 'chrysippus-cylinder', 'the-impression', 'stoic-logic']
+//
+// The owner is the exception. Gating the index locked the author out of their
+// own workshop, which is not the point: what is gated is users reaching it,
+// not the Playground existing. ADMIN_EMAIL sees everything, as with /admin.
+const RELEASED_PLAYGROUND = [
+  'happiness-scale',
+  'zenos-hand',
+  'chrysippus-cylinder',
+  'the-impression',
+  'stoic-logic',
+]
+
+/**
+ * Is this request the owner's? Read only to answer that question: no refreshed
+ * cookies are propagated, because the only outcomes here are 404 or straight
+ * through. Any missing piece of configuration answers no, so a misconfigured
+ * deploy fails closed rather than opening the Playground to everyone.
+ */
+async function isOwner(request: NextRequest): Promise<boolean> {
+  const supabaseUrl     = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const adminEmail      = process.env.ADMIN_EMAIL
+  if (!supabaseUrl || !supabaseAnonKey || !adminEmail) return false
+
+  try {
+    const client = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll() {},
+      },
+    })
+    const { data: { user } } = await client.auth.getUser()
+    return !!user?.email && user.email === adminEmail
+  } catch {
+    return false
+  }
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
@@ -40,6 +76,9 @@ export async function middleware(request: NextRequest) {
     if (RELEASED_PLAYGROUND.includes(pathname.slice('/playground/'.length))) {
       return NextResponse.next()
     }
+    // The session is read only for gated paths, so a released piece stays
+    // public and costs no auth round-trip.
+    if (await isOwner(request)) return NextResponse.next()
     return new NextResponse(null, { status: 404 })
   }
 
