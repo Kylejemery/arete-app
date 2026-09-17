@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, MAX_TOKENS_BY_TIER } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
@@ -35,6 +35,60 @@ export class DailyLimitError extends Error {
     super('daily_limit_reached');
     this.name = 'DailyLimitError';
   }
+}
+
+/**
+ * The request never reached the Cabinet, or its answer never came back.
+ *
+ * This used to be returned as if it were a counselor's reply
+ * ("Backend server not reachable. Make sure the server is running."), so the
+ * caller appended it to the thread and saved it: a dropped connection became
+ * permanent conversation history that the user could not remove, and the
+ * question they asked was lost with it. Thrown now, so the send path can put
+ * the text back in the composer and offer a retry instead.
+ */
+export class CabinetUnavailableError extends Error {
+  constructor(message = 'The Cabinet could not be reached. Check your connection and try again.') {
+    super(message);
+    this.name = 'CabinetUnavailableError';
+  }
+}
+
+// A Cabinet turn is several sequential generations, so it is slow by design;
+// this only bounds a socket that has genuinely stopped answering.
+const CHAT_TIMEOUT_MS = 120_000;
+
+/**
+ * POST with a timeout, retried once when the request fails at the transport
+ * layer — no HTTP response at all.
+ *
+ * That is the shape of the failure this exists for: leaving the screen or
+ * backgrounding the app mid-request drops the in-flight connection, and the
+ * retry runs when JS resumes. An HTTP error IS a response and is never
+ * retried here; the caller reads the status. The retry can cost a second
+ * message against the daily limit in the case where the server did complete
+ * the turn and only the response was lost — one attempt, for that reason.
+ */
+async function postWithRetry(url: string, init: RequestInit, attempts = 2): Promise<Response> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...init, signal: controller.signal });
+    } catch (e) {
+      lastError = e;
+      console.warn(`[chat] transport failure (attempt ${attempt + 1}/${attempts}):`, (e as Error)?.message);
+      if (attempt < attempts - 1) await new Promise(r => setTimeout(r, 1200));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw new CabinetUnavailableError(
+    lastError instanceof Error && lastError.name === 'AbortError'
+      ? 'The Cabinet took too long to answer. Try again.'
+      : undefined
+  );
 }
 import { supabase } from '../lib/supabase';
 
@@ -798,7 +852,7 @@ export async function sendMessageToCabinet(
           )
         : undefined;
 
-    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
+    const response = await postWithRetry(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -836,7 +890,7 @@ export async function sendMessageToCabinet(
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Backend/Claude API error:', response.status, errorText);
-      return asSingleReply(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
+      throw new CabinetUnavailableError(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
 
     const data = await response.json();
@@ -849,19 +903,59 @@ export async function sendMessageToCabinet(
         }))
         .filter((r: CabinetReply) => r.text.length > 0);
       if (replies.length > 0) return replies;
-      return asSingleReply('The Cabinet did not respond. Please try again.');
+      throw new CabinetUnavailableError('The Cabinet did not respond. Please try again.');
     }
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       return asSingleReply(content);
     }
-    return asSingleReply('The Cabinet did not respond. Please try again.');
+    throw new CabinetUnavailableError('The Cabinet did not respond. Please try again.');
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
     if (error instanceof DailyLimitError) throw error;
+    if (error instanceof CabinetUnavailableError) throw error;
+    // Anything else that reaches here is still a failure, not a reply: throw,
+    // so the caller keeps the user's question instead of writing an error
+    // string into the thread as though a counselor had said it.
     console.error('Backend request failed:', error);
-    return asSingleReply('Backend server not reachable. Make sure the server is running.');
+    throw new CabinetUnavailableError();
   }
+}
+
+/**
+ * Work out who actually spoke in a check-in reply.
+ *
+ * A check-in goes to /api/chat, the group endpoint, which answers in the
+ * Cabinet's collective voice and names its own speaker inside the text
+ * ("**Marcus Aurelius:**", "*Marcus Aurelius speaks*"). Nothing carried that
+ * name back out, so every check-in reply was stored with no counselorName and
+ * the bubble read "The Cabinet" while the body underneath announced someone
+ * else. The parallel Cabinet path has no such gap: it returns a counselorName
+ * per voice.
+ *
+ * Only the name is stamped, not a counselorId: the id the Cabinet path
+ * stores is the server's short counselor id ('marcus'), while the roster row
+ * here carries the counselors-table id and slug ('marcus-aurelius'). The
+ * bubble label reads counselorName, so the name is what this is for.
+ *
+ * Only a name on this user's own roster is accepted, so a counselor merely
+ * quoted in passing is never mistaken for the speaker. Marcus chairs every
+ * session and is always present, so he is the fallback; if he is somehow not
+ * on the roster the reply stays unattributed and reads "The Cabinet", as
+ * before.
+ */
+function attributeCheckInSpeaker(
+  reply: string,
+  roster: { name: string }[]
+): { counselorName?: string } {
+  // The speaker is announced up front, before the counsel starts.
+  const opening = reply.slice(0, 240);
+  const named = roster
+    .map(c => ({ c, at: opening.indexOf(c.name) }))
+    .filter(x => x.at >= 0)
+    .sort((a, b) => a.at - b.at)[0];
+  const chosen = named?.c ?? roster.find(c => c.name === 'Marcus Aurelius');
+  return chosen ? { counselorName: chosen.name } : {};
 }
 
 export async function sendCheckInToCabinet(
@@ -935,9 +1029,11 @@ export async function sendCheckInToCabinet(
     const data = await response.json();
     const assistantReply = data?.content?.[0]?.text;
     if (typeof assistantReply === 'string' && assistantReply.length > 0) {
+      const roster = await getUserCabinet().catch(() => []);
+      const speaker = attributeCheckInSpeaker(assistantReply, roster);
       await appendMessages('cabinet', [
         { role: 'user', content: userMessage, timestamp: Date.now() },
-        { role: 'assistant', content: assistantReply, timestamp: Date.now() },
+        { role: 'assistant', content: assistantReply, timestamp: Date.now(), ...speaker },
       ]);
       return assistantReply;
     }
@@ -1053,7 +1149,7 @@ export async function sendMessageToCounselor(
     const counselorSettings = await getUserSettings();
     const assignedModel = modelForCounselor(counselorSettings?.counselor_models, counselorId);
 
-    const response = await fetch(`${API_BASE_URL}/api/chat/counselor`, {
+    const response = await postWithRetry(`${API_BASE_URL}/api/chat/counselor`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1110,11 +1206,12 @@ export async function sendMessageToCounselor(
       }
       return content;
     }
-    return 'No response received. Please try again.';
+    throw new CabinetUnavailableError('No response received. Please try again.');
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
+    if (error instanceof CabinetUnavailableError) throw error;
     console.error('Backend request failed:', error);
-    return 'Backend server not reachable. Make sure the server is running.';
+    throw new CabinetUnavailableError();
   }
 }
 

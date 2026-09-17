@@ -21,7 +21,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, API_BASE_URL } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL } from '../../services/claudeService';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
@@ -440,12 +440,20 @@ export default function CabinetScreen() {
             const updated = [...prev, userMessage];
             setIsLoading(true);
             appendMessages('cabinet', [userMessage]);
-            sendMessageToCabinet(updated).then(replies => {
-              const assistantMessages = repliesToMessages(replies);
-              setMessages(u => [...u, ...assistantMessages]);
-              setIsLoading(false);
-              appendMessages('cabinet', assistantMessages);
-            });
+            sendMessageToCabinet(updated)
+              .then(replies => {
+                const assistantMessages = repliesToMessages(replies);
+                setMessages(u => [...u, ...assistantMessages]);
+                appendMessages('cabinet', assistantMessages);
+              })
+              .catch(err => {
+                // This path persisted the user's message before sending, so
+                // it stays in the thread — it is genuinely theirs. Only the
+                // reply is missing, and nothing is written in its place.
+                Alert.alert('No answer', 'Your message was saved. The Cabinet could not be reached, so send again when you have a connection.');
+                console.warn('[Cabinet] escalation send failed:', err?.message);
+              })
+              .finally(() => setIsLoading(false));
             return updated;
           });
         }, 600);
@@ -455,9 +463,13 @@ export default function CabinetScreen() {
     }
   }, [params.cabinetContext, router]);
 
-  // Consume morningMessage param — renders the Cabinet's morning response as an assistant bubble
-  // without re-sending to the API. Waits for initialLoading to finish so it appends after
-  // existing history, not before.
+  // Consume morningMessage param — shows the Cabinet's morning response when
+  // arriving from the check-in screen. It is NOT appended here: the check-in
+  // itself already wrote the pair (prompt and reply) to the thread, so
+  // appending put a second, unattributed copy of the reply in storage every
+  // time the user tapped through. absorbNewLines folds the saved reply into
+  // the view instead. Waits for initialLoading so it lands after existing
+  // history, not before.
   useEffect(() => {
     if (initialLoading) return;
     const mm = params.morningMessage;
@@ -465,16 +477,11 @@ export default function CabinetScreen() {
       consumedMorningMessageRef.current = true;
       setActiveTab('cabinet');
       router.setParams({ morningMessage: undefined });
-      const assistantMessage: ThreadMessage = {
-        role: 'assistant',
-        content: String(mm),
-        timestamp: Date.now(),
-      };
-      setMessages(prev => [...prev, assistantMessage]);
-      appendMessages('cabinet', [assistantMessage]);
-      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      absorbNewLines().finally(() => {
+        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+      });
     }
-  }, [params.morningMessage, initialLoading, router]);
+  }, [params.morningMessage, initialLoading, router, absorbNewLines]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -515,11 +522,23 @@ export default function CabinetScreen() {
       await appendMessages('cabinet', [userMessage, ...assistantMessages]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      // Take the optimistic bubble back out and return the text to the
+      // composer. A failed turn used to lose the question outright: the error
+      // was saved into the thread as a counselor reply, and what the user had
+      // typed was already cleared.
       setMessages(prev => prev.slice(0, -1));
+      setInputText(text);
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
         router.push({ pathname: '/paywall', params: { src: 'cabinet_daily_limit' } } as any);
+      } else {
+        Alert.alert(
+          'Not sent',
+          (e instanceof CabinetUnavailableError && e.message)
+            ? `${e.message}\n\nYour words are still here.`
+            : 'The Cabinet could not be reached. Your words are still here, try again.'
+        );
       }
     } finally {
       setIsLoading(false);
@@ -567,10 +586,18 @@ export default function CabinetScreen() {
       setTimeout(() => sharedScrollRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
       setSharedMessages(prev => prev.slice(0, -1));
+      setSharedInput(text);
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
         router.push({ pathname: '/paywall', params: { src: 'shared_daily_limit' } } as any);
+      } else {
+        Alert.alert(
+          'Not sent',
+          (e instanceof CabinetUnavailableError && e.message)
+            ? `${e.message}\n\nYour words are still here.`
+            : 'The Cabinet could not be reached. Your words are still here, try again.'
+        );
       }
     } finally {
       setSharedLoading(false);

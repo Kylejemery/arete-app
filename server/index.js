@@ -303,7 +303,51 @@ async function callOpenAICompat(route, { model, system, messages, maxTokens }) {
     params.reasoning_effort = 'low';
   }
   const completion = await route.client.chat.completions.create(params);
-  return completion.choices?.[0]?.message?.content ?? '';
+  const choice = completion.choices?.[0];
+  // finish_reason 'length' is the OpenAI-compat spelling of Anthropic's
+  // stop_reason 'max_tokens'. Normalized here so callers check one value.
+  return {
+    text: choice?.message?.content ?? '',
+    stopReason: choice?.finish_reason === 'length' ? 'max_tokens' : (choice?.finish_reason ?? null),
+  };
+}
+
+// Floor for /api/chat, whose callers pass their own ceiling.
+const CHAT_MIN_MAX_TOKENS = 1500;
+
+/**
+ * A reply that stops because it hit its token ceiling ends mid-word, and the
+ * Cabinet persists whatever comes back — a guillotined sentence becomes
+ * permanent conversation history that no later turn can repair. Cut back to
+ * the last completed sentence so a severed reply at least reads as finished.
+ *
+ * Left unchanged when there is no sentence boundary to fall back to (one long
+ * unbroken sentence), because half a thought still beats none. Either way the
+ * warning is logged: a ceiling that is being hit regularly is the real bug,
+ * and this only keeps it from reaching the user as a broken sentence.
+ */
+function finishTruncatedReply(text, stopReason, label) {
+  if (stopReason !== 'max_tokens' || typeof text !== 'string' || !text.trim()) return text;
+  const trimmed = text.trimEnd();
+  // The last sentence end: closing punctuation, any closing quote or bracket,
+  // then whitespace or the end of the text. The lookahead is what keeps the
+  // cut off the decimal point in "3.5" and off "Dr." mid-sentence.
+  const kept = (trimmed.match(/^[\s\S]*[.!?]["'\u2019\u201d)\]]*(?=\s|$)/) || [''])[0];
+  console.warn(
+    `[Truncation] ${label} hit max_tokens at ${trimmed.length} chars: ` +
+    (kept ? `trimmed ${trimmed.length - kept.length} trailing chars` : 'no sentence boundary, left as is')
+  );
+  return kept || text;
+}
+
+/**
+ * Same repair as finishTruncatedReply, applied in place to an Anthropic
+ * response body on the paths that forward it to the client untouched.
+ */
+function repairTruncatedContent(data, label) {
+  if (data?.stop_reason !== 'max_tokens' || !Array.isArray(data.content)) return;
+  const last = [...data.content].reverse().find(b => b.type === 'text' && typeof b.text === 'string');
+  if (last) last.text = finishTruncatedReply(last.text, 'max_tokens', label);
 }
 
 /**
@@ -337,7 +381,10 @@ async function callCounselorModel({ model, system, messages, maxTokens }) {
     throw new Error(`Claude API ${res.status}: ${errText}`);
   }
   const data = await res.json();
-  return (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '';
+  return {
+    text: (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '',
+    stopReason: data.stop_reason ?? null,
+  };
 }
 
 // Sentinel used in agentRouter to identify Anthropic-backed agents.
@@ -1082,7 +1129,11 @@ app.post('/api/chat', async (req, res) => {
       },
       body: JSON.stringify({
         model: effectiveModel,
-        max_tokens: max_tokens || 1500,
+        // Floor, not a target: a ceiling only ever prevents a mid-sentence
+        // cutoff, since a reply ends when the model reaches end_turn. The
+        // check-in callers ask for 350, which a normal check-in reply runs
+        // past — so a client asking for less than the floor gets the floor.
+        max_tokens: Math.max(max_tokens || 1500, CHAT_MIN_MAX_TOKENS),
         system: systemBlocks,
         messages: truncatedMessages,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
@@ -1099,6 +1150,7 @@ app.post('/api/chat', async (req, res) => {
     if (data.content && Array.isArray(data.content)) {
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) data.content = textBlocks;
+      repairTruncatedContent(data, '/api/chat');
     }
     return res.json(data);
   } catch (error) {
@@ -1139,9 +1191,27 @@ app.post('/api/chat/counselor', async (req, res) => {
   // Epictetus, Future Self) in one generation (~1.5–2k tokens), so the old
   // 400/600/1000 caps guillotined it mid-word. Length is governed by the
   // system prompt's "3–5 paragraphs" guidance, not by these ceilings.
-  const TIER_MAX_TOKENS = { free: 1500, arete: 2500, arete_pro: 4000 };
-  const tier = req.headers['x-subscription-tier'];
+  // Keyed on the canonical vocabulary (free | premium | pro). This map used
+  // to be keyed on the legacy 'arete'/'arete_pro' spellings, which no client
+  // sends: every lookup but 'free' missed and fell through to the client's
+  // own max_tokens — the 400/600/1000 caps the comment above says were
+  // removed. Premium was being capped at 600, below free's 1500.
+  //
+  // The tier comes from req.areteTier (resolved from profiles by
+  // enforceMessageLimit), not the x-subscription-tier header: the header is
+  // unauthenticated client input and a stale build can send anything.
+  const TIER_MAX_TOKENS = { free: 1500, premium: 2500, pro: 4000 };
+  const tier = req.areteTier || normalizeTier(req.headers['x-subscription-tier']) || 'free';
   const serverMaxTokens = TIER_MAX_TOKENS[tier] || max_tokens || 2500;
+
+  // Per-voice ceiling for the parallel Cabinet, where each counselor is one
+  // generation of several. Also a ceiling, not a target — the length guard in
+  // fireParallelCounselors asks for 2-3 short paragraphs, and a reply ends at
+  // end_turn — so raising it costs nothing on a normal turn. The old value was
+  // hardcoded at 300, which cut counselors off mid-sentence whenever they
+  // answered a substantial question.
+  const TIER_VOICE_MAX_TOKENS = { free: 800, premium: 1000, pro: 1200 };
+  const voiceMaxTokens = TIER_VOICE_MAX_TOKENS[tier] || 800;
 
   if (!system || !messages) {
     return res.status(400).json({ error: 'Missing required fields: system and messages' });
@@ -1232,7 +1302,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free');
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens);
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
@@ -1421,12 +1491,13 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     if (route) {
       try {
         console.log(`[/api/chat/counselor] messages: ${messages.length} | model: ${compatModel} (${route.provider})`);
-        const text = await callOpenAICompat(route, {
+        const { text: rawText, stopReason } = await callOpenAICompat(route, {
           model: compatModel,
           system: enrichedSystem,
           messages,
           maxTokens: serverMaxTokens,
         });
+        const text = finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`);
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
@@ -1471,6 +1542,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     if (data.content && Array.isArray(data.content)) {
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) data.content = textBlocks;
+      repairTruncatedContent(data, '/api/chat/counselor');
     }
     const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     await writeSharedAssistant(assistantText);
@@ -3319,7 +3391,7 @@ function fallbackDialogue(roster) {
  * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '', tier = 'free') {
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '', tier = 'free', maxTokensPerVoice = 800) {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
@@ -3357,12 +3429,13 @@ async function fireParallelCounselors(question, counselors, history, contextChun
     const model = resolveModelForTier(tier, counselorModels[counselor.id]);
     const t0 = Date.now();
     try {
-      const responseText = await callCounselorModel({
+      const { text, stopReason } = await callCounselorModel({
         model,
         system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock,
         messages,
-        maxTokens: 300,
+        maxTokens: maxTokensPerVoice,
       });
+      const responseText = finishTruncatedReply(text, stopReason, `Cabinet/${counselor.id}`);
       timings[counselor.id] = `${Date.now() - t0}ms (${model})`;
       if (!responseText || !responseText.trim()) {
         console.warn(`[Cabinet] Empty response from ${counselor.id} (${model}) — provider returned no content`);

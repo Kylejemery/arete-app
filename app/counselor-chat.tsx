@@ -16,7 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor, MessageLimitError } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError, CabinetUnavailableError } from '../services/claudeService';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import DayDivider from '../components/DayDivider';
 import { clockTime, startsNewDay } from '../lib/messageDates';
@@ -157,9 +157,19 @@ export default function CounselorChatScreen() {
       await appendMessages(counselorId, [userMessage, assistantMessage]);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e) {
+      // Put the question back in the composer rather than dropping it: a
+      // failed send used to save the error text as the counselor's reply.
       setMessages(prev => prev.slice(0, -1));
+      setInputText(text);
       if (e instanceof MessageLimitError) {
         router.push({ pathname: '/paywall', params: { src: 'counselor_daily_limit' } } as any);
+      } else {
+        Alert.alert(
+          'Not sent',
+          (e instanceof CabinetUnavailableError && e.message)
+            ? `${e.message}\n\nYour words are still here.`
+            : `${counselorName} could not be reached. Your words are still here, try again.`
+        );
       }
     } finally {
       setIsLoading(false);

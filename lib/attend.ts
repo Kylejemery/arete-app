@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { epochToMillis } from './messageDates';
 
 // Attend (Phase 1) — Screen Time awareness via the iOS Family Controls /
 // DeviceActivity frameworks (react-native-device-activity).
@@ -77,8 +78,8 @@ function highestCrossed(
   let highest = 0;
   for (const m of ladder) {
     const key = `events_${activityName}_eventDidReachThreshold_${prefix}_${m}`;
-    const at = Number(mod.userDefaultsGet<number>(key) ?? 0);
-    if (Number.isFinite(at) && at >= sinceMs && m > highest) highest = m;
+    const at = epochToMillis(mod.userDefaultsGet<number>(key) ?? 0);
+    if (at > 0 && at >= sinceMs && m > highest) highest = m;
   }
   return highest;
 }
@@ -281,8 +282,11 @@ export async function getPendingAttendLines(fallbackCounselors: string[] = []): 
   for (const line of lines) {
     try {
       const key = `events_${ATTEND_ACTIVITY}_eventDidReachThreshold_${line.eventName}`;
-      const at = Number(mod.userDefaultsGet<number>(key) ?? 0);
-      if (!Number.isFinite(at) || at < start.getTime()) continue;
+      // The extension records timeIntervalSince1970 (seconds); read as
+      // milliseconds that is always below today's midnight, so every crossing
+      // was skipped and the recovery path silently did nothing.
+      const at = epochToMillis(mod.userDefaultsGet<number>(key) ?? 0);
+      if (at <= 0 || at < start.getTime()) continue;
       out.push({ id: `attend:${line.eventName}:${day}`, counselor: line.counselor, body: line.body, at });
     } catch { /* that event has never fired */ }
   }

@@ -84,6 +84,10 @@ export default function ConversationPage() {
         timestamp: new Date().toISOString(),
       }).catch(e => console.error('appendMessage (assistant) error:', e));
     } catch {
+      // The question is already stored above, so only the reply is missing.
+      // The notice is local to this view and is never persisted as a
+      // counselor's words; the text goes back so it can be sent again.
+      setInput(userMsg.content);
       setMessages(prev => [...prev, {
         role: 'assistant',
         content: 'The Cabinet is temporarily unavailable. Please try again.',
