@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-four probes across four domains. A probe is a named check that knows one
+Twenty-five probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -53,9 +53,10 @@ works displaying no era).
 `repo.migration_drift` (SQL applied to the project with no committed file, and
 files never applied — the convention nothing could previously enforce),
 `repo.cron_targets` (a Railway config naming a script that does not exist),
-`repo.checks` (lint and typecheck per workspace), `repo.secret_scan` (key-shaped
-strings in tracked files), `repo.doc_links` (committed docs linking to paths that
-moved).
+`repo.exhibit_release_gate` (a gallery exhibit whose Academy page this checkout
+neither ships nor releases), `repo.checks` (lint and typecheck per workspace),
+`repo.secret_scan` (key-shaped strings in tracked files), `repo.doc_links`
+(committed docs linking to paths that moved).
 
 `repo.checkout_stale` is a guard as much as a finding. Every repo probe compares
 the project against whatever branch is on disk, so a checkout behind its base
@@ -65,13 +66,24 @@ on `main` while the branch was being written, and committing the recovered
 copies added duplicate files for migrations the repo already had.
 
 So while the checkout is behind — or while the comparison could not be made at
-all — `repo.migration_drift` downgrades its applied-but-not-committed finding
-from critical to info and says why, because at that point it cannot tell "never
-committed" from "committed on the base, not here yet". It fetches the base
+all — `repo.migration_drift` and `repo.exhibit_release_gate` downgrade their
+critical findings to info and say why, because at that point neither can tell
+"never written" from "written on the base, not here yet". It fetches the base
 branch to decide (a remote-tracking update only: no working tree, no local
 branch, nothing to undo), and reports "unknown" rather than assuming current
 when the fetch fails, because in a report someone acts on, those two must not
 look alike.
+
+`repo.exhibit_release_gate` and `library.exhibit_reachable` ask one question in
+two places. The Garden lists every `gallery` row; whether the page behind it
+loads depends on a route existing and on the slug appearing in
+`RELEASED_PLAYGROUND` in `academy/web/src/middleware.ts`. The library probe asks
+the deployed site over the network, so it needs egress and answers only after a
+deploy. This one reads the checkout, so it answers before one, offline, and on
+the branch where the fix belongs. Where both can run they will usually agree —
+and where they disagree they are each right about their own half: a gate fixed
+on this branch but not yet deployed fails only the network probe, and a slug
+dropped on this branch while still live fails only this one.
 
 ### `material` — the part no query can see
 
@@ -239,7 +251,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-four probes in two languages would be two copies of the
+  TypeScript: twenty-five probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
