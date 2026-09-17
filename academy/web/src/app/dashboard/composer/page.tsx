@@ -299,7 +299,14 @@ export default function ComposerPage() {
       let pid: string | null = null;
       let local: LocalCopy | null = null;
       try {
-        pid = localStorage.getItem(PIECE_KEY);
+        // ?piece=<id> is the handoff from Scribe: open that piece, not the
+        // one this browser was last working on.
+        const linked = new URLSearchParams(window.location.search).get('piece');
+        pid = linked || localStorage.getItem(PIECE_KEY);
+        if (linked) {
+          localStorage.setItem(PIECE_KEY, linked);
+          window.history.replaceState(null, '', '/dashboard/composer');
+        }
         // The per-piece working copy, falling back to the single draft older
         // versions of the composer kept.
         local = readLocal(pid) ?? readLocal(null);
@@ -598,6 +605,27 @@ export default function ComposerPage() {
   };
 
   // ── Retyping ────────────────────────────────────────────────────────────────
+
+  // Store one retype pair. Best effort and fire-and-forget: a writer mid-flow
+  // must never wait on it, and losing one pair costs nothing. Pairs that are
+  // not a rewrite (unchanged, trivially short, or a near-identical tidy) teach
+  // the voice pass nothing and are not recorded.
+  const recordRetypePair = (original: string, retyped: string, source: 'draft' | 'suggestion') => {
+    const a = original.trim();
+    const b = retyped.trim();
+    if (!userId || !a || !b || a === b) return;
+    if (b.length < 25 || a.length < 25) return;
+    // A change of only a word or two is a typo fix, not a voice signal.
+    const norm = (t: string) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, '').replace(/\s+/g, ' ');
+    if (norm(a) === norm(b)) return;
+    void supabase
+      .from('retype_pairs')
+      .insert({ user_id: userId, piece_id: pieceId, original: a.slice(0, 4000), retyped: b.slice(0, 4000), source })
+      .then(({ error }) => {
+        if (error) console.warn('[composer] retype pair not stored:', error.message);
+      });
+  };
+
   // Open the box under a range. A caret (or a selection too short to mean
   // anything) opens the sentence around it; a real selection opens exactly
   // itself. A mark with a rewrite inside the range rides along as the
@@ -670,6 +698,11 @@ export default function ComposerPage() {
     if (!retype) return null;
     const r = retype;
     const end = r.start + r.value.length;
+    // The pair this retype just produced: the sentence that was there, and
+    // the one the writer typed over it. This is the only place in the app
+    // where model prose and the writer's own prose are recorded side by side
+    // for the same thought, which is what makes it worth keeping.
+    recordRetypePair(r.original, r.value, r.suggestion && r.value !== r.suggestion ? 'suggestion' : r.annId ? 'suggestion' : 'draft');
     if (r.annId && r.value !== r.original) {
       setMarks(prev =>
         prev

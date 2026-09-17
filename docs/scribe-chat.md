@@ -161,3 +161,62 @@ loaded on demand): title, headings, paragraphs, italic block quotes, real
 bulleted and numbered lists, rules, highlighted YOUR TURN gaps, and the
 standing "Developed with Arete" note. *Copy* is the markdown clipboard export
 as before. Nothing publishes; the hand-retype gate stands.
+
+## Quotes, provenance, gaps mode, and the Composer handoff (added 2026-09-16)
+
+**Every quotation is checked.** The pipeline has always machine-checked quotes
+against their source chunk; chat mode had only the prompt asking Scribe not to
+fabricate, which is not a check. `POST /api/admin/scribe/entries/[id]/quotes`
+gathers every chunk the session retrieved (from each turn's `sources_used`),
+fetches the text from `rag_corpus` and `scribe_log_items`, adds the entry's own
+fragment, and matches each quoted passage in the draft against them. The draft
+pane runs it a second after the draft settles and shows a **Quotes** tab:
+
+| verdict | meaning |
+|---|---|
+| verbatim | the words appear in a chunk that may be quoted |
+| summary, not quotable | the words appear in a Mode-2 summary of modern scholarship, whose original was never stored; paraphrase with attribution instead |
+| no source found | nothing retrieved contains these words; not proof of fabrication, but check it before publishing |
+
+Anything other than verbatim gets a **Fix this** button that sends a scoped
+turn. Matching logic is shared with the pipeline
+(`src/lib/scribe/quote-check.ts`; `verify.ts` imports it, so there is one
+normalization). The extractor pairs quotation marks by walking them rather
+than by regex, because a regex pairs greedily across a short quote and
+swallows the real quotation after it. Checks:
+`npx tsx src/scripts/scribe-quality-smoke.ts`.
+
+**Provenance: whose sentences are these.** Every draft state in the thread is
+attributable, so for any sentence there is a first state it appeared in and a
+role that produced it. `src/lib/scribe/provenance.ts` walks the trail and the
+journal fragment and reports the share of the draft the writer actually wrote.
+The **yours** chip in the voice meter shows the percentage and paints Scribe's
+sentences in the draft. No model call, no authorship guess.
+
+**Gaps mode, optional and per entry.** `scribe_entries.gaps_mode`, off by
+default, toggled from the draft pane footer. When on, Scribe writes the
+structure, the sources with provenance, the tensions, the weakest claim and
+the questions, and leaves every paragraph as a `[YOUR TURN: ...]` gap with its
+material underneath as a blockquote. It may not write finished prose, not even
+an example, not even when asked inside the mode. The writer's own sentences,
+copied verbatim from the fragment, the log or the Cabinet, are the exception.
+Prompt appendix: `GAPS_APPENDIX` in `src/lib/scribe/chat.ts`.
+
+**To Composer.** `POST /api/admin/scribe/entries/[id]/to-composer` creates a
+`writing_pieces` row at the polish stage with the draft as the working copy and
+as `piece_drafts` version one, written through the writer's own session so RLS
+owns it normally. The draft pane's **To Composer** button opens
+`/dashboard/composer?piece=<id>` in a new tab, where the retype callout turns
+the prose into theirs sentence by sentence. This is the half of the workflow
+that was missing: Scribe drafts, the Composer makes it the writer's.
+
+**Outside read on demand.** `POST /api/admin/scribe/entries/[id]/review` runs
+the same cold pass mid-draft, from the **Outside read now** button. Not
+persisted, because the draft moves; the read stored on a snapshot still comes
+from finalizing. The default reviewer model is now `gpt-5.1`, the model the
+counselor router already calls, and the request omits `temperature` for gpt-5.x.
+
+**Layout.** The four columns now fit the window. `fitLayout` keeps the draft at
+460px minimum, collapses the side pane the writer did not most recently open
+when there is no room, gives the conversation's width up before the draft's,
+and stacks the panes below 900px.

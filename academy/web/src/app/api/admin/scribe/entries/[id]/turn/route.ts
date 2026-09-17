@@ -30,7 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data: entry, error: entryError } = await admin
     .from('scribe_entries')
-    .select('id')
+    .select('id, gaps_mode')
     .eq('id', id)
     .maybeSingle()
   if (entryError) return NextResponse.json({ error: entryError.message }, { status: 500 })
@@ -96,7 +96,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           },
           voice,
           cabinetUserId,
-          workingDraft
+          workingDraft,
+          (entry as { gaps_mode?: boolean }).gaps_mode === true
         )
 
         // What the draft is now: the turn's complete <draft>, or its edits

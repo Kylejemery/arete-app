@@ -50,10 +50,16 @@ For each variant, a note of at most fifteen words saying what you changed and wh
 // mobile app's counselor threads), where they say things before they write
 // them: evidence for diction, for what they name, and for how much they hedge,
 // not for essay register.
+export interface RewritePair {
+  from: string
+  to: string
+}
+
 export function buildExemplarBlock(
   exemplars: VoiceExemplar[],
   guidance: string | null,
-  spoken: string[] = []
+  spoken: string[] = [],
+  rewrites: RewritePair[] = []
 ): string {
   const lines: string[] = ['THE WRITER\'S OWN PROSE']
   if (exemplars.length === 0) {
@@ -74,6 +80,15 @@ export function buildExemplarBlock(
       'HOW THE WRITER TALKS (their own messages to their Cabinet counselors, in conversation, most relevant to this sentence first). Read these for diction, for the things they name, and for how little they hedge. They are conversation, not essay register; take the words, not the looseness.'
     )
     for (const s of spoken) lines.push('', `> ${s.trim()}`)
+  }
+  if (rewrites.length) {
+    lines.push(
+      '',
+      'HOW THIS WRITER REWRITES. Each pair below is one thought said twice: a sentence as it arrived, and the sentence the writer typed over it. This is the most direct evidence of their voice you have, because the meaning is held constant and only the saying changes. Read the pairs for the moves they make every time: what they cut, what they make concrete, where they shorten, what they refuse to say. Then make those same moves.'
+    )
+    for (const r of rewrites) {
+      lines.push('', `arrived as: ${r.from.trim()}`, `they wrote:  ${r.to.trim()}`)
+    }
   }
   if (guidance?.trim()) {
     lines.push('', 'VOICE GUIDANCE (the writer\'s own notes on how they write)', guidance.trim())

@@ -39,6 +39,34 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   })
 }
 
+// PATCH /api/admin/scribe/entries/[id] — entry settings. Today that is
+// gaps_mode, the optional posture where Scribe builds everything around the
+// prose and the writer supplies the sentences.
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+
+  const { id } = await params
+  const body = await req.json().catch(() => ({}))
+  const patch: Record<string, unknown> = {}
+  if (typeof body.gaps_mode === 'boolean') patch.gaps_mode = body.gaps_mode
+  if (typeof body.title === 'string') patch.title = body.title.trim().slice(0, 200) || null
+  if (Object.keys(patch).length === 0) {
+    return NextResponse.json({ error: 'Nothing to update' }, { status: 400 })
+  }
+  patch.updated_at = new Date().toISOString()
+
+  const admin = createAdminClient()
+  const { data, error } = await admin
+    .from('scribe_entries')
+    .update(patch)
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ entry: data })
+}
+
 // DELETE /api/admin/scribe/entries/[id] — messages and drafts cascade.
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const denied = await requireAdmin()

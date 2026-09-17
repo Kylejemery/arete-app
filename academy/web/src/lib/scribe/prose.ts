@@ -162,6 +162,9 @@ export function parseInline(text: string): Inline[] {
 export type Highlight =
   | { kind: 'metric'; metric: MetricKind }
   | { kind: 'phrases'; phrases: string[] }
+  // Ranges computed against this exact text by something that already knows
+  // where they are (provenance, a quote check), rather than found by search.
+  | { kind: 'ranges'; ranges: Span[] }
 
 // Fold whitespace, case, curly quotes, and dashes so a finding quoted with
 // different typography still lands. `idx` maps each normalised position back
@@ -217,7 +220,15 @@ function phraseSpans(text: string, phrases: string[]): Span[] {
 
 export function highlightSpans(text: string, h: Highlight | null): Span[] {
   if (!h || !text) return []
-  return h.kind === 'metric' ? metricSpans(text, h.metric) : phraseSpans(text, h.phrases)
+  if (h.kind === 'metric') return metricSpans(text, h.metric)
+  if (h.kind === 'ranges') {
+    // Clamp to the text actually on screen: a preview or an edit can land
+    // between the moment the ranges were computed and the moment they paint.
+    return h.ranges
+      .map(r => ({ ...r, start: Math.max(0, r.start), end: Math.min(text.length, r.end) }))
+      .filter(r => r.end > r.start)
+  }
+  return phraseSpans(text, h.phrases)
 }
 
 // True when a quoted line can still be found in the draft. An outside-read

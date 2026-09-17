@@ -34,6 +34,23 @@ In the panel, *Quote opening line* appends the passage's first sentence as a quo
 
 Requires `OPENAI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY`; without them the route returns 503 and the panel shows the message.
 
+## Learning the voice from retypes
+
+Every kept retype records a pair in `retype_pairs` (migration
+`scribe_gaps_mode_and_retype_pairs`): the sentence as it arrived and the
+sentence the writer typed over it, with `source` marking whether the original
+was an Interlocutor suggestion or existing draft prose. Unchanged sentences,
+short ones, and pure typo fixes are not recorded, since they teach nothing.
+
+The voice pass reads the twelve most recent pairs and puts them in the prompt
+under "how this writer rewrites". This is the strongest voice signal the app
+has: each pair is one thought said twice, meaning held constant, only the
+saying changed, so the moves the writer makes every time are visible directly
+rather than inferred from finished prose. Own rows only, under RLS.
+
+A draft handed over from Scribe opens here through `?piece=<id>`, which wins
+over the piece this browser last had open.
+
 ## Autosave
 
 Migration `academy/supabase/migrations/012_composer_working_copy.sql` adds `working_copy` and `working_copy_saved_at` to `writing_pieces` (applied to project `zhaarabzemhantyxxckq` 2026-09-02). The composer writes the working copy 1.5 s after the last change. A scratch draft with no piece yet gets a row once it reaches 200 characters, so a long draft is in the database well before its first markup. The browser keeps a per-piece copy with a timestamp; on open, the newer of the two wins. The status bar shows `saved 3:12 PM`, `unsaved`, `saving…`, `not saved`, or `scratch`.

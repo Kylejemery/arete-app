@@ -1,7 +1,10 @@
-// The cold outside read. Fires exactly once, at the `final` handoff stage —
-// not another voice in the ongoing conversation, the thing that ENDS it. A
-// single pass over the finished draft is finite by construction, where the
-// in-thread editor's pushback never is (it can always find one more tension).
+// The cold outside read. It fires automatically at the `final` handoff stage,
+// where it is not another voice in the ongoing conversation but the thing that
+// ENDS it: a single pass over the finished draft is finite by construction,
+// where the in-thread editor's pushback never is (it can always find one more
+// tension). It can also be asked for mid-draft from the draft pane, which is a
+// reading of the moment and is not persisted; the read stored on a snapshot
+// still comes from finalizing.
 //
 // Deliberately a DIFFERENT model family from the Opus that wrote the draft.
 // Scribe's stated enemy is "generic AI-Stoicism," and Opus's own smoothness is
@@ -17,7 +20,15 @@
 
 import { MACHINE_TELLS_SUMMARY } from '@/lib/machine-tells'
 
-const DEFAULT_REVIEW_MODEL = 'gpt-4o'
+// A current model, and the same one the counselor router already calls, so
+// there is one OpenAI model string to keep up to date in this repo. gpt-5.x
+// takes max_completion_tokens rather than max_tokens and rejects an explicit
+// temperature, which callOpenAICompat in server/index.js handles the same way.
+const DEFAULT_REVIEW_MODEL = 'gpt-5.1'
+
+function isGpt5(model: string): boolean {
+  return /^gpt-5/.test(model)
+}
 
 // The three categories are not arbitrary — each is a failure mode Scribe's own
 // system prompt names (VOICE GUARD; "the weakest claim"; "the philosophy never
@@ -79,7 +90,8 @@ export async function reviewDraft(draft: string): Promise<ReviewFindings> {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model,
-        temperature: 0,
+        // Reasoning models take the default temperature only.
+        ...(isGpt5(model) ? {} : { temperature: 0 }),
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: REVIEWER_BRIEF },
