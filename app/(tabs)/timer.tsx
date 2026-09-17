@@ -549,8 +549,21 @@ export default function TimerScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Countdown */}
-              <Text style={styles.pomodoroDisplay}>{formatTime(pomodoroTimeLeft)}</Text>
+              {/* Countdown. Tapping it opens the length editor: the pencil
+                  beside the mode pills is a small target and gets pushed off
+                  the card once the labels grow (e.g. "120 min Work"), which
+                  left the length uneditable. */}
+              <TouchableOpacity
+                onPress={openDurationModal}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Adjust focus and break length"
+              >
+                <Text style={styles.pomodoroDisplay} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatTime(pomodoroTimeLeft)}
+                </Text>
+                <Text style={styles.pomodoroDisplayHint}>Tap to adjust length</Text>
+              </TouchableOpacity>
 
               {/* Buttons */}
               <View style={styles.pomodoroButtons}>
@@ -1300,6 +1313,8 @@ const styles = StyleSheet.create({
   pomodoroModes: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 10,
   },
   pomodoroEditBtn: {
@@ -1309,6 +1324,7 @@ const styles = StyleSheet.create({
     borderColor: '#c9a84c44',
   },
   pomodoroModeBtn: {
+    flexShrink: 1,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1333,6 +1349,12 @@ const styles = StyleSheet.create({
     color: '#c9a84c',
     letterSpacing: 4,
     fontVariant: ['tabular-nums'],
+  },
+  pomodoroDisplayHint: {
+    color: '#888',
+    fontSize: 11,
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   pomodoroButtons: {
     flexDirection: 'row',
