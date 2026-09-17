@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "verify:enchiridion": "node scripts/verify-enchiridion-pdf.js"
+    "verify:enchiridion": "node scripts/verify-enchiridion-pdf.js",
+    "audit": "node quality-audit-agent.js"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
