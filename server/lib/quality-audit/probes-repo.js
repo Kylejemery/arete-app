@@ -117,6 +117,87 @@ function fileTimestamp(filename) {
   return m ? m[1] : '';
 }
 
+// --- The Academy's Playground release gate ---------------------------------
+//
+// The Garden's gallery advertises an exhibit; the Academy's middleware decides
+// whether its page is reachable at all. Those two live in different places and
+// nothing made them agree, which is how three exhibits came to be listed in
+// the Garden while every one of them 404'd in the frame.
+//
+// library.exhibit_reachable asks the deployed site the same question over the
+// network. This one asks the checkout, so it answers before a deploy and
+// without egress. They overlap only where both a repo and a network are
+// present, and there the interesting case is disagreement: a gate fixed on
+// this branch but not yet deployed reads as reachable-fails/gate-passes, and a
+// slug dropped on this branch but still live reads the other way round.
+const GATE_FILE = path.join('academy', 'web', 'src', 'middleware.ts');
+const GATE_CONST = 'RELEASED_PLAYGROUND';
+const PLAYGROUND_PREFIX = '/playground/';
+
+// The released slugs as the middleware itself lists them. Returns null when the
+// constant cannot be found, which must be reported rather than read as "the
+// list is empty" — an unreadable gate would otherwise fail every exhibit.
+function releasedPlaygroundSlugs(repoRoot) {
+  let src;
+  try {
+    src = fs.readFileSync(path.join(repoRoot, GATE_FILE), 'utf8');
+  } catch (err) {
+    return { slugs: null, error: `${GATE_FILE} could not be read (${err.code || err.message})` };
+  }
+  const block = src.match(new RegExp(`const\\s+${GATE_CONST}\\s*=\\s*\\[([\\s\\S]*?)\\]`));
+  if (!block) {
+    return { slugs: null, error: `${GATE_CONST} was not found in ${GATE_FILE}` };
+  }
+  // A commented-out slug is not released. Reading one as released would be a
+  // false negative, which is the failure this probe exists to prevent.
+  const body = block[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const slugs = [...body.matchAll(/['"`]([^'"`]+)['"`]/g)].map(m => m[1]);
+  return { slugs, error: null };
+}
+
+// What the middleware will compare against its list, for an exhibit's URL:
+// everything after /playground/. Anything else is not a Playground page and is
+// not this probe's business. A trailing slash is dropped so one is not reported
+// as a gate miss on the strength of a normalisation nobody has tested.
+function playgroundSlug(embedUrl) {
+  let pathname;
+  try {
+    pathname = new URL(embedUrl).pathname;
+  } catch {
+    return null;
+  }
+  if (!pathname.startsWith(PLAYGROUND_PREFIX)) return null;
+  const slug = pathname.slice(PLAYGROUND_PREFIX.length).replace(/\/+$/, '');
+  return slug || null;
+}
+
+// Does this checkout hold a page for that Playground slug? A dynamic segment at
+// any level of the route can serve it, so its presence means the answer is yes
+// as far as this probe can tell — claiming a missing page where [slug]/page.tsx
+// would have answered is the kind of false positive that gets a probe ignored.
+function playgroundPageExists(repoRoot, slug) {
+  const appDir = path.join(repoRoot, 'academy', 'web', 'src', 'app', 'playground');
+  const segments = slug.split('/');
+  let dir = appDir;
+  for (const segment of segments) {
+    const literal = path.join(dir, segment);
+    if (fs.existsSync(literal)) {
+      dir = literal;
+      continue;
+    }
+    let siblings = [];
+    try {
+      siblings = fs.readdirSync(dir);
+    } catch {
+      return false;
+    }
+    const dynamic = siblings.find(name => name.startsWith('[') && name.endsWith(']'));
+    if (!dynamic) return false;
+    dir = path.join(dir, dynamic);
+  }
+  return ['page.tsx', 'page.ts', 'page.jsx', 'page.js'].some(f => fs.existsSync(path.join(dir, f)));
+}
+
 // Workspaces that have their own checks, in the order it is useful to run them.
 const WORKSPACES = [
   { name: 'academy/web', dir: 'academy/web', lint: 'npm run lint', typecheck: 'npm run typecheck' },
@@ -253,6 +334,143 @@ const probes = [
           count: recentUnapplied.length,
           evidence: recentUnapplied.map(m => m.file),
           action: 'Apply it through the Supabase migration tool so it is recorded, or delete the file if it is dead.',
+        }));
+      }
+
+      return out;
+    },
+  },
+
+  {
+    id: 'repo.exhibit_release_gate',
+    domain: DOMAIN,
+    title: 'Every gallery exhibit has a page this checkout ships and releases',
+    needs: ['db', 'repo'],
+    async run(ctx) {
+      const { data, error } = await ctx.supabase
+        .from('exhibits')
+        .select('slug, title, status, embed_url')
+        .not('embed_url', 'is', null);
+      if (error) throw new Error(`exhibits read failed: ${error.message}`);
+
+      const gate = releasedPlaygroundSlugs(ctx.repoRoot);
+      if (!gate.slugs) {
+        // Never read an unparseable gate as an empty one: that would report
+        // every exhibit as unreleased and bury the one real finding if there
+        // were one.
+        return [finding({
+          probe: 'repo.exhibit_release_gate',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: 'gate-unreadable',
+          title: 'Could not read the Playground release list, so no exhibit was checked',
+          detail:
+            `${gate.error}. This probe decides whether an exhibit's page is reachable by reading the ` +
+            `same list the middleware gates on, so a list it cannot find means the question went ` +
+            'unanswered rather than answered yes.',
+          action:
+            `Check that ${GATE_CONST} in ${GATE_FILE} is still a literal array of slugs. If the gate ` +
+            'has moved or changed shape, point this probe at its new home.',
+        })];
+      }
+
+      const released = new Set(gate.slugs);
+      const gallery = [];
+      const workshop = [];
+      for (const ex of data || []) {
+        const slug = playgroundSlug(ex.embed_url);
+        if (!slug) continue;                 // not an Academy Playground page
+        const row = {
+          ...ex,
+          playgroundSlug: slug,
+          released: released.has(slug),
+          hasPage: playgroundPageExists(ctx.repoRoot, slug),
+        };
+        (ex.status === 'gallery' ? gallery : workshop).push(row);
+      }
+
+      // An exhibit can fail both ways at once, and each failure is reported
+      // where its fix is — but an unreleased exhibit whose page is also absent
+      // says so, because releasing the slug alone would not make it load.
+      const unreleased = gallery.filter(ex => !ex.released);
+      const pageless = gallery.filter(ex => ex.released && !ex.hasPage);
+
+      const workshopGated = workshop.filter(ex => !ex.released);
+      if (!unreleased.length && !pageless.length && !workshopGated.length) return [];
+
+      // The same trap the migration drift probe fell into: a checkout behind
+      // its base reports the base's own work as missing. A slug released on
+      // main but not yet here is not a defect, so while the checkout is stale
+      // these are leads to verify rather than failures to act on. Asked for
+      // only once there is something to qualify, so a clean run costs no fetch.
+      const stale = checkoutStaleness(ctx);
+      const unreliable = !stale.known || stale.behind > 0;
+      const caveat = !stale.known
+        ? ' This checkout could not be compared against its base, so some of these may already be released there.'
+        : stale.behind > 0
+          ? ` This checkout is ${stale.behind} commit(s) behind ${stale.ref}, so some of these may already be released there.`
+          : '';
+
+      const out = [];
+
+      if (unreleased.length) {
+        out.push(finding({
+          probe: 'repo.exhibit_release_gate',
+          domain: DOMAIN,
+          severity: unreliable ? 'info' : 'critical',
+          key: 'unreleased',
+          title: `${unreleased.length} gallery exhibit(s) point at a Playground slug this checkout does not release`,
+          detail:
+            'The Garden index lists every gallery row, and the Academy 404s any Playground path whose ' +
+            `slug is absent from ${GATE_CONST}. A reader who opens one of these gets an empty frame. ` +
+            'Releasing a piece is adding its slug to that list and nothing else, so the fix is one line ' +
+            'per exhibit — or moving the row back to workshop until its page is ready.' + caveat,
+          count: unreleased.length,
+          evidence: unreleased.map(ex =>
+            `${ex.slug} → /playground/${ex.playgroundSlug} (not released${ex.hasPage ? '' : '; no page here either'})`),
+          action: unreliable
+            ? `Bring the checkout up to date with ${stale.ref || 'its base'} and re-run before acting on these.`
+            : `Add each slug to ${GATE_CONST} in ${GATE_FILE} — and ship the page first for any marked as ` +
+              'having none — or set the exhibit back to workshop.',
+        }));
+      }
+
+      if (pageless.length) {
+        out.push(finding({
+          probe: 'repo.exhibit_release_gate',
+          domain: DOMAIN,
+          severity: unreliable ? 'info' : 'critical',
+          key: 'page-missing',
+          title: `${pageless.length} gallery exhibit(s) are released but have no page in this checkout`,
+          detail:
+            'The slug is through the gate, and there is no route behind it — which 404s exactly as ' +
+            'being unlisted would, one layer further in. The usual cause is a row promoted to gallery ' +
+            'while its page was still on a branch.' + caveat,
+          count: pageless.length,
+          evidence: pageless.map(ex => `${ex.slug} → academy/web/src/app/playground/${ex.playgroundSlug}/page.tsx`),
+          action: unreliable
+            ? `Bring the checkout up to date with ${stale.ref || 'its base'} and re-run before acting on these.`
+            : 'Ship the page, or set the exhibit back to workshop until it exists.',
+        }));
+      }
+
+      // Workshop rows are unlisted by design, but the design also says they
+      // stay reachable at an exact link for testing. A gated one is not.
+      if (workshopGated.length) {
+        out.push(finding({
+          probe: 'repo.exhibit_release_gate',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'workshop-gated',
+          title: `${workshopGated.length} workshop exhibit(s) point at a Playground slug this checkout does not release`,
+          detail:
+            'A workshop exhibit is meant to be absent from the index and still reachable by exact link, ' +
+            'which is what makes it testable before promotion. Gated at the Academy it is reachable by ' +
+            'nobody, and promoting it to gallery would ship a 404. Not a defect today — a promotion ' +
+            'that will fail unless the slug is released first.' + caveat,
+          count: workshopGated.length,
+          evidence: workshopGated.map(ex => `${ex.slug} → /playground/${ex.playgroundSlug} (not released)`),
+          action: `Release the slug in ${GATE_FILE} when the piece is ready to be looked at, or leave it if it is not.`,
         }));
       }
 
