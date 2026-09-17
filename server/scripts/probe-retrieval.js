@@ -16,6 +16,7 @@
 //   node scripts/probe-retrieval.js "Is fear of death rational?"
 //   node scripts/probe-retrieval.js "…" --k 10 --fence modern      another surface's fence
 //   node scripts/probe-retrieval.js "…" --author Seneca            one author, as the single-counselor path can
+//   node scripts/probe-retrieval.js "…" --depth 3                  walk three hops, overriding GRAPH_BOOST_DEPTH
 //   node scripts/probe-retrieval.js "…" --full                     whole chunk text, not a snippet
 //   node scripts/probe-retrieval.js --recent 5                     last five Cabinet turns from retrieval_log
 //   node scripts/probe-retrieval.js --recent 5 --agent oracle      another agent's log
@@ -28,18 +29,19 @@ const { createClient } = require('@supabase/supabase-js');
 const {
   counselorRetrievalParams, modernFenceParams, isCounselorVisible, passesModernFence,
 } = require('../lib/corpus-fence');
-const { expandCandidates, graphBoostEnabled } = require('../lib/graph-boost');
+const { expandCandidates, graphBoostEnabled, graphBoostDepth, MAX_DEPTH } = require('../lib/graph-boost');
 
 const CABINET_K = 7;
 const CABINET_AGENTS = ['cabinet', 'counselor:cabinet'];
 
 function parseArgs(argv) {
-  const args = { question: null, k: CABINET_K, fence: 'counselor', author: null, full: false, recent: null, agent: null };
+  const args = { question: null, k: CABINET_K, fence: 'counselor', author: null, full: false, recent: null, agent: null, depth: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--k') args.k = Number(argv[++i]);
     else if (a === '--fence') args.fence = argv[++i];
     else if (a === '--author') args.author = argv[++i];
+    else if (a === '--depth') args.depth = Number(argv[++i]);
     else if (a === '--full') args.full = true;
     else if (a === '--recent') args.recent = Number(argv[++i]);
     else if (a === '--agent') args.agent = argv[++i];
@@ -48,6 +50,9 @@ function parseArgs(argv) {
   }
   if (!['counselor', 'modern', 'none'].includes(args.fence)) throw new Error(`--fence must be counselor, modern or none (got ${args.fence})`);
   if (!Number.isInteger(args.k) || args.k < 1) throw new Error('--k must be a positive integer');
+  if (args.depth != null && (!Number.isInteger(args.depth) || args.depth < 1 || args.depth > MAX_DEPTH)) {
+    throw new Error(`--depth must be an integer from 1 to ${MAX_DEPTH}`);
+  }
   if (args.recent != null && (!Number.isInteger(args.recent) || args.recent < 1)) throw new Error('--recent must be a positive integer');
   if (args.recent == null && !args.question) {
     throw new Error('give a question in quotes, or --recent N to replay the log');
@@ -137,7 +142,7 @@ function printSummary(rows) {
 async function probe(supabase, args) {
   need('OPENAI_API_KEY');
   console.log(`Question: ${JSON.stringify(args.question)}`);
-  console.log(`match_rag_corpus: k=${args.k}, fence=${args.fence}, author=${args.author ?? 'any'}, language=english, graph boost ${graphBoostEnabled() ? 'on' : 'off'}\n`);
+  console.log(`match_rag_corpus: k=${args.k}, fence=${args.fence}, author=${args.author ?? 'any'}, language=english, graph boost ${graphBoostEnabled() ? `on (depth ${args.depth ?? graphBoostDepth()})` : 'off'}\n`);
   const embedding = await embedQuery(args.question);
   const { data, error } = await supabase.rpc('match_rag_corpus', {
     query_embedding: embedding,
@@ -148,7 +153,7 @@ async function probe(supabase, args) {
   });
   if (error) throw new Error(`match_rag_corpus failed: ${error.message}`);
   const fence = fencePostFilter(args.fence);
-  let rows = (await expandCandidates(data ?? [], args.k, { fence })).rows.filter(fence);
+  let rows = (await expandCandidates(data ?? [], args.k, { fence, depth: args.depth })).rows.filter(fence);
   rows = await decorate(supabase, rows);
   printRows(rows, args);
   console.log();

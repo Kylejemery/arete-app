@@ -15,7 +15,7 @@ const { Resend } = require('resend');
 
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
-const { expandCandidates, graphBoostEnabled } = require('./lib/graph-boost');
+const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
@@ -1298,7 +1298,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       studentId: userId,
       queryText: question,
       chunks: contextChunks,
-      mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+      mode: retrievalMode(),
     });
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
@@ -1428,7 +1428,7 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
     studentId: userId,
     queryText: lastUserMessage,
     chunks: loggedChunks,
-    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    mode: retrievalMode(),
   });
 
   const dateTimeBlock = buildLocalDateTimeLine(tzOffsetMinutes);
@@ -2750,7 +2750,7 @@ app.post('/api/academy/seminar', async (req, res) => {
     courseId,
     queryText: lastUserMessage,
     chunks: ragChunks,
-    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    mode: retrievalMode(),
   });
 
   let ragContext = '';
@@ -3566,7 +3566,7 @@ This course covers formal Stoic logic — propositional calculus, the five indem
     courseId: course_id,
     queryText: lastUserMessage,
     chunks: retrievedChunks,
-    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    mode: retrievalMode(),
   });
 
   try {
@@ -3813,7 +3813,7 @@ app.post('/api/examine/proctor', async (req, res) => {
     courseId: 'phil-701',
     queryText: examQuery,
     chunks,
-    mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+    mode: retrievalMode(),
   });
 
   const systemPrompt = `You are the Socratic Proctor of Arete Academy.
@@ -4152,7 +4152,7 @@ app.post('/oracle', async (req, res) => {
       studentId: null,
       queryText: question.trim(),
       chunks,
-      mode: graphBoostEnabled() ? 'graph_boost' : 'vector',
+      mode: retrievalMode(),
     });
 
     // 5. BUILD CONTEXT BLOCK — section_label carries the fuller citation
