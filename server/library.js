@@ -63,7 +63,7 @@ const WORK_TITLES = {
   'Definibus': 'On the Ends of Good and Evil',
   'De Finibus': 'On the Ends of Good and Evil',
   'Tusculan Disputations': 'Tusculan Disputations',
-  'Lives Book7': 'Lives of the Eminent Philosophers · Book VII',
+  'Lives of Eminent Philosophers, Book VII': 'Lives of the Eminent Philosophers · Book VII',
   'Shortness': 'On the Shortness of Life',
   'Morals': 'Minor Dialogues & Moral Essays',
   'Clemency': 'On Clemency',
@@ -107,7 +107,7 @@ const ERAS = {
   'Cicero|De Finibus': 'Rome · 45 BC',
   'Plato|Timaeus': 'Athens · c. 360 BC',
   'Cicero|Tusculan Disputations': 'Rome · 45 BC',
-  'Diogenes Laërtius|Lives Book7': 'c. 3rd century AD',
+  'Diogenes Laërtius|Lives of Eminent Philosophers, Book VII': 'c. 3rd century AD',
 };
 function era(author, work) {
   return ERAS[`${author}|${work}`] || '';
