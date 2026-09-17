@@ -208,6 +208,87 @@ const probes = [
     },
   },
 
+  // --- Editorial apparatus, found by shape -----------------------------------
+  {
+    id: 'corpus.apparatus',
+    domain: DOMAIN,
+    title: 'The verbatim layers hold only the author\'s text',
+    needs: ['db'],
+    async run(ctx) {
+      const { data, error } = await ctx.supabase.rpc('quality_audit_apparatus_candidates');
+      if (error) throw new Error(`quality_audit_apparatus_candidates failed: ${error.message}`);
+
+      const rows = data || [];
+      if (!rows.length) return [];
+
+      const label = {
+        gutenberg: 'Project Gutenberg or proofreading boilerplate',
+        producer_note: "a producer's or transcriber's note",
+        yaml_front_matter: 'a YAML front-matter block',
+        table_of_contents: 'a table of contents',
+        footnote_run: "a run of the editor's numbered citations",
+        footnote_candidate: 'possible citation runs',
+      };
+
+      const high = rows.filter(r => r.confidence === 'high');
+      const candidates = rows.filter(r => r.confidence === 'candidate');
+      const out = [];
+
+      if (high.length) {
+        const bySignal = {};
+        for (const r of high) (bySignal[r.signal] = bySignal[r.signal] || []).push(r);
+        const breakdown = Object.entries(bySignal)
+          .map(([sig, rs]) => `${rs.length} × ${label[sig] || sig}`)
+          .join(', ');
+
+        out.push(finding({
+          probe: 'corpus.apparatus',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'confirmed',
+          title: `${high.length} chunk(s) in the verbatim layers are not the author's text`,
+          detail:
+            `Found by shape, not by reading: ${breakdown}. These sit under the philosopher's own name ` +
+            'in a layer that claims to hold their words, so retrieval can hand a Gutenberg header or a ' +
+            "translator's footnote run to a counselor and it will be attributed as the philosopher " +
+            'speaking. This is the same class the read pass rates critical when it happens to sample ' +
+            'one; the difference is that a query finds all of them every night rather than the few a ' +
+            '40-chunk sample lands on.',
+          count: high.length,
+          evidence: high.slice(0, 10).map(r =>
+            `${r.author} / ${r.work} #${r.chunk_index} (${r.signal}) — ${r.opening.slice(0, 90)}… [${r.id}]`),
+          action:
+            'Deprecate them — never delete — in one migration, then fix the intake that admitted them: ' +
+            'body_start_marker / body_end_marker on the queue row cut front matter at ingest, and a ' +
+            'chunk that is nothing but citations means the source needs its notes stripped before chunking.',
+        }));
+      }
+
+      if (candidates.length) {
+        out.push(finding({
+          probe: 'corpus.apparatus',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'candidates',
+          title: `${candidates.length} chunk(s) may be citation runs rather than text`,
+          detail:
+            'These carry citation markers densely and early, but not densely enough to be certain — ' +
+            'heavily annotated prose looks similar, and Zeller\'s scholarship in particular cites as ' +
+            'thickly in running argument as Plutarch\'s endnote pages do. Listed for a human eye ' +
+            'rather than asserted.',
+          count: candidates.length,
+          evidence: candidates.slice(0, 10).map(r =>
+            `${r.author} / ${r.work} #${r.chunk_index} — ${r.opening.slice(0, 90)}… [${r.id}]`),
+          action:
+            'Read a few. If they are citation runs, fold them into the same deprecation migration; if ' +
+            'they are annotated body text, mute this fingerprint with that as the reason.',
+        }));
+      }
+
+      return out;
+    },
+  },
+
   // --- The fence vocabulary -------------------------------------------------
   {
     id: 'corpus.text_type_fence',

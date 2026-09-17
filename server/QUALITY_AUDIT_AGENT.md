@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-five probes across four domains. A probe is a named check that knows one
+Twenty-six probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -21,6 +21,7 @@ thing, returns findings, and never writes.
 | Probe | What it catches |
 | --- | --- |
 | `corpus.metadata_required` | Post-standard ingests missing `translator`, `source_url` or `edition_year` (Part 5 of the acquisition plan), with the offending works named. |
+| `corpus.apparatus` | Editorial apparatus in the verbatim layers, found by shape rather than by reading: Gutenberg headers, producer and transcriber notes, YAML front matter, tables of contents, and runs of the editor's numbered citations. The read pass finds this class only in the chunks it happens to sample; this finds all of it every night. |
 | `corpus.copyright_fence` | A verbatim layer carrying an `edition_year` after 1930 — the failure the standing copyright rule exists to prevent. |
 | `corpus.mode2_length` | A long Mode 2 work that does **not** name its own author through the text — what a verbatim ingest wearing the summary label looks like. Length alone is only reported as info: a genuine rewrite talks *about* its author ("Holiday argues", "Mates notes"), so voice is the copyright signal and length is a note about how much retrieval mass one modern work carries. |
 | `corpus.text_type_fence` | A `text_type` in `rag_corpus` that `server/lib/corpus-fence.js` does not list — a layer whose visibility nobody has decided, and which every surface is therefore free to retrieve. |
