@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-six probes across four domains. A probe is a named check that knows one
+Twenty-seven probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -30,6 +30,7 @@ thing, returns findings, and never writes.
 | `corpus.embedding_missing` | Live chunks with no embedding: in the corpus, invisible to every search. |
 | `corpus.sequence_gaps` | A `chunk_index` inside a work's range with **no row at any deprecation state** — an ingest that stopped short. Deliberately deprecated apparatus is excluded, which is the difference between a useful finding and 635 false ones. |
 | `corpus.duplicate_text` | Identical chunk text: a wasted embedding, and one passage that can return twice in a single retrieval and read as two witnesses. |
+| `corpus.locator_quality` | A locator that cannot cite the passage it labels (Part 5 rule 3): a scheme pitched at the wrong level, or a post-standard ingest with no locator at all. The median chunks per locator is the signal and the worst locator is not — `Discourses 4.1` really is that long, and Augustine's 636 locators over 1006 chunks are a correct parse. Yonge's Diogenes Laertius put all 71 chunks of Book 10 under `10.1`. |
 | `corpus.question_map` | Works ingested since the standard with no `corpus_question_registrations` row (Part 5 rule 4). |
 | `corpus.queue_health` | Failed queue rows nothing retries, and pending rows older than the batch cadence. |
 | `corpus.retrieval_fences` | **End to end**: embeds real queries, calls `match_rag_corpus` with `counselorRetrievalParams()`, and asserts that nothing deprecated and nothing on the exclusion list comes back. Needs `OPENAI_API_KEY`. |
@@ -212,6 +213,8 @@ the agent:
 | `material_sample_size` | `40` | Chunks read per night. `0` disables the paid pass. |
 | `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. Above it, a Mode 2 work is examined rather than flagged. |
 | `mode2_min_attribution` | `0.5` | Fraction of a work's chunks that must name its author. Below it, a long Mode 2 work is a copyright finding; above it, a note about weighting. |
+| `locator_coarse_median` | `2` | Median chunks per locator at or above which a work's locator scheme is reported as too coarse to cite. Eleven of the twelve located works sit at 1. |
+| `locator_min_chunks` | `30` | Below this many chunks a work is too short for that median to mean anything. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
 | `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads. |
 | `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
@@ -252,7 +255,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-five probes in two languages would be two copies of the
+  TypeScript: twenty-seven probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is

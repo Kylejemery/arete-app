@@ -19,7 +19,7 @@ const CHUNK_SIZE = 400
 const STRIDE = 350
 const PROGRAM_ID = 'stoicism-phd'
 const AUTHOR = 'Diogenes Laërtius'
-const WORK = 'Lives Book7'
+const WORK = 'Lives of Eminent Philosophers, Book VII'
 const TRANSLATOR = 'R.D. Hicks'
 const SOURCE_URL = 'https://en.wikisource.org/wiki/Lives_of_the_Eminent_Philosophers/Book_VII'
 

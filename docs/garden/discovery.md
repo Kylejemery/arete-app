@@ -235,12 +235,18 @@ other in the same product.
    copyright rule it was already relying on. **Not verified against the source
    URL:** `en.wikisource.org` is blocked by this environment's egress policy,
    so the year rests on the bibliography rather than on a fetch.
-6. **A corpus identity split, noticed in passing.** Diogenes Laertius is in
-   `rag_corpus` under two identities: `Lives of Eminent Philosophers` (544
-   chunks, tr. Yonge, `edition_year` 1853) and `Lives Book7` (87 chunks, tr.
-   Hicks, `edition_year` null). That is the duplicate-identity failure
-   `CLAUDE.md` warns about, and the Hicks rows are missing `edition_year`. Not
-   touched here; flagging it.
+6. **~~A corpus identity split, noticed in passing.~~ Fixed, and it was worse
+   than it looked.** Diogenes Laertius was in `rag_corpus` under two
+   identities: `Lives of Eminent Philosophers` (544 chunks, tr. Yonge) and
+   `Lives Book7` (87 chunks, tr. Hicks) — the filename fragment being the
+   duplicate-identity failure `CLAUDE.md` warns about. Underneath it, Book VII
+   was in the corpus twice, and Yonge's Book VII locators were false rather
+   than absent: `book.life` ordinals, so all 77 chunks of Zeno's life cited as
+   `DL 7.1`. Hicks renamed to `Lives of Eminent Philosophers, Book VII`,
+   Yonge's Book VII deprecated, question map repaired, by
+   `supabase/migrations/20260917175536_dl_book7_identity_split.sql`; record in
+   `docs/corpus/DL_BOOK7_IDENTITY_SPLIT_2026-09.md`. Still open: the same
+   false locators run through Yonge's other nine books, Book 10 worst of all.
 
 ### TODO fields to fill
 

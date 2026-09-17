@@ -92,7 +92,7 @@ These are ordered by how much they change what the corpus can do, not by importa
 
 Notes on Tier A:
 
-The Diogenes Laertius file is the highest value per ingest on the whole list. One file gives Book 6 (the Cynics, which you have a personal interest in and the corpus has nothing on), Book 10 (Epicurus, including the Letter to Menoeceus and the Principal Doctrines, which is the entire Epicurean position in compressed form), and Books 1 through 5. Note that it is Yonge's translation and you already hold Hicks for Book 7, so decide deliberately whether to hold both renderings of Book 7 or to exclude Yonge's Book 7 at ingest. Holding both is defensible and arguably useful, since translator divergence on technical terms is itself philosophically informative, but it must be a decision rather than an accident.
+The Diogenes Laertius file is the highest value per ingest on the whole list. One file gives Book 6 (the Cynics, which you have a personal interest in and the corpus has nothing on), Book 10 (Epicurus, including the Letter to Menoeceus and the Principal Doctrines, which is the entire Epicurean position in compressed form), and Books 1 through 5. Note that it is Yonge's translation and you already hold Hicks for Book 7, so decide deliberately whether to hold both renderings of Book 7 or to exclude Yonge's Book 7 at ingest. Holding both is defensible and arguably useful, since translator divergence on technical terms is itself philosophically informative, but it must be a decision rather than an accident. **This was not decided at ingest and Yonge's Book 7 went in; it has since been deprecated in favour of Hicks — see "Corrections to existing holdings" below.**
 
 The Cicero archive.org volume contains *De Legibus*, which is the natural law text and therefore the most direct ancient statement of the inference Q06 asks about. It is the pro-side text that Hume and Nietzsche need to be arguing against.
 
@@ -145,6 +145,20 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
   `CICERO_IDENTITY_SPLIT_2026-09.md`. Outstanding: no `locator` values, so
   citations resolve to a chunk rather than to `De Finibus III.22`. Parsing the
   Yonge book/chapter headings into `locator` would fix that for all three.
+- **Diogenes Laertius, *Lives*.** Book VII was in the corpus twice. The Hicks
+  1925 ingest existed to replace Yonge's Book VII for its canonical section
+  numbering; the September ingest of the complete Yonge brought Book VII back,
+  undoing that silently — the accident this plan's Tier A note warned against.
+  Yonge's Book VII locators were also false rather than absent: `book.life`
+  ordinals, so all 77 chunks of Zeno's life cited as `DL 7.1`. Hicks renamed
+  from the filename fragment `Lives Book7` to `Lives of Eminent Philosophers,
+  Book VII`, Yonge's Book VII deprecated, question map repaired, by
+  `20260917175536_dl_book7_identity_split.sql`; full record in
+  `DL_BOOK7_IDENTITY_SPLIT_2026-09.md`. Outstanding: the same `book.life`
+  locators run through Yonge's other nine books, and Book 10 is the worst case
+  in the corpus — 71 chunks, the Letter to Menoeceus and Principal Doctrines
+  among them, all citing as `DL 10.1`. There is no second translation to prefer
+  there, so it wants a parser over Yonge's divisions, not a deprecation.
 - **Epictetus, *Discourses*.** Verify the current 459 chunks are Long's complete four books and not the abridged *Selection* that circulates on Gutenberg as ebook 10661. Spot checks suggest it is complete, but this was not confirmed. The complete Long is at `archive.org/download/discoursesofepic033057mbp/discoursesofepic033057mbp_djvu.txt`.
 - **Aristotle.** The corpus holds *Nicomachean Ethics* only. *De Anima* is Tier A. *Physics* (Hardie & Gaye 1930, public domain by one year, in `archive.org/download/worksofaristotle0002wdro/worksofaristotle0002wdro_djvu.txt`) and *Metaphysics* (Ross 1908, Wikisource) are worth adding for Q12.
 - **Plato.** *Timaeus* is already queued. *Phaedo* and *Phaedrus* should follow for Q02 and Q11.

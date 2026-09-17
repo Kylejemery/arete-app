@@ -31,6 +31,7 @@ type Report = {
   probes_run: number
   probes_skipped: number
   probes_errored: number
+  skipped: { id: string; reason: string }[] | null
   counts: Partial<Record<Severity | State, number>>
   findings: Finding[] | null
   resolved: Resolved[] | null
@@ -311,7 +312,11 @@ export default function QualityPage() {
                 {(current.domains || []).join(', ')}
               </div>
               {(current.brief || '').split(/\n{2,}/).filter(Boolean).map((para, i) => (
-                <p key={i} style={{ fontSize: 14, lineHeight: 1.75, margin: '0 0 12px' }}>{para}</p>
+                // whiteSpace: pre-line keeps single newlines as line breaks. The
+                // model-written brief uses blank lines between paragraphs; the
+                // plain fallback uses single newlines between findings, and
+                // without this the fallback renders as one wall of text.
+                <p key={i} style={{ fontSize: 14, lineHeight: 1.75, margin: '0 0 12px', whiteSpace: 'pre-line' }}>{para}</p>
               ))}
               {!current.brief && <p className={styles.muted}>No brief was written for this run.</p>}
 
@@ -335,12 +340,43 @@ export default function QualityPage() {
 
               <div className={styles.card} style={{ marginBottom: 0 }}>
                 <div className={styles.cardTitle}>Coverage</div>
-                {(current.domains || []).map(d => (
-                  <div key={d} className={styles.rowItem}>
-                    <span style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.06em' }}>{d}</span>
-                    <span className={styles.muted} style={{ flex: 1, textAlign: 'right' }}>{DOMAIN_BLURB[d] ?? ''}</span>
+                {(current.domains || []).map(d => {
+                  // A domain in `domains` was requested, not necessarily
+                  // checked. Every probe in it may have skipped for want of a
+                  // prerequisite, and saying "repo — migrations, crons, lint"
+                  // over a run where all seven skipped is the overclaim this
+                  // agent exists to catch.
+                  const skippedHere = (current.skipped || []).filter(sk => sk.id.startsWith(`${d}.`))
+                  const allSkipped = skippedHere.length > 0 && !(current.findings || []).some(f => f.domain === d)
+                  return (
+                    <div key={d} className={styles.rowItem}>
+                      <span style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.06em' }}>{d}</span>
+                      <span className={styles.muted} style={{ flex: 1, textAlign: 'right' }}>
+                        {skippedHere.length > 0 ? (
+                          <span style={{ color: '#92600A' }}>
+                            {allSkipped ? 'not checked' : 'partly checked'} — {skippedHere.length} probe
+                            {skippedHere.length === 1 ? '' : 's'} skipped ({skippedHere[0].reason})
+                          </span>
+                        ) : (DOMAIN_BLURB[d] ?? '')}
+                      </span>
+                    </div>
+                  )
+                })}
+                {(current.skipped || []).length === 0 && current.probes_skipped > 0 && (
+                  // Runs from before the `skipped` column existed know only the
+                  // count. Say that, rather than letting the rows above imply
+                  // every domain was checked.
+                  <div className={styles.gapMeta} style={{ marginTop: 8, color: '#92600A' }}>
+                    {current.probes_skipped} probe{current.probes_skipped === 1 ? '' : 's'} skipped, but this run
+                    predates the record of which — so a domain above may not have been checked at all.
                   </div>
-                ))}
+                )}
+                {current.probes_errored > 0 && (
+                  <div className={styles.gapMeta} style={{ marginTop: 8, color: '#B23535' }}>
+                    {current.probes_errored} probe{current.probes_errored === 1 ? '' : 's'} errored — whatever they
+                    check went unchecked. Each one is listed in the findings below.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -438,7 +474,7 @@ export default function QualityPage() {
                             <div style={{ padding: '8px 0' }}>
                               {r.error && <p className={styles.errText}>{r.error}</p>}
                               {(r.brief || '').split(/\n{2,}/).filter(Boolean).map((para, i) => (
-                                <p key={i} style={{ fontSize: 14, lineHeight: 1.75, margin: '0 0 12px' }}>{para}</p>
+                                <p key={i} style={{ fontSize: 14, lineHeight: 1.75, margin: '0 0 12px', whiteSpace: 'pre-line' }}>{para}</p>
                               ))}
                               {(r.findings || []).map(f => (
                                 <div key={f.fingerprint} className={styles.rowItem}>
