@@ -47,7 +47,10 @@ works displaying no era).
 ### `repo` — the code
 
 `repo.migration_drift` (SQL applied to the project with no committed file, and
-files never applied — the convention nothing could previously enforce),
+files never applied — the convention nothing could previously enforce; **run it
+against a current checkout**, because the probe compares the project against
+whatever branch is on disk, and a branch behind its base reports the base's own
+migrations as drift),
 `repo.cron_targets` (a Railway config naming a script that does not exist),
 `repo.checks` (lint and typecheck per workspace), `repo.secret_scan` (key-shaped
 strings in tracked files), `repo.doc_links` (committed docs linking to paths that
