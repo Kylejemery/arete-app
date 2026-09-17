@@ -36,8 +36,36 @@ function graphBoostEnabled() {
  * graph-sourced rows made the cut (0 means the output equals pure vector
  * search). Added rows carry _graphBoosted: true and their boosted score as
  * `similarity` so downstream mapping and logging treat them uniformly.
+ *
+ * Neighbours come straight from rag_corpus rather than through
+ * match_rag_corpus, so the two guarantees that RPC carries have to be
+ * restated here:
+ *
+ *   deprecated  filtered in the neighbour query. Without it a superseded
+ *               ingest re-enters retrieval through an edge to its own
+ *               replacement — the near-duplicate text that makes a strong
+ *               edge is exactly what deprecation is meant to retire.
+ *   fence       opts.fence is the caller's text_type fence
+ *               (server/lib/corpus-fence.js), applied BEFORE truncation.
+ *               Filtering after the slice lets a fenced neighbour hold a
+ *               top-k slot and then vanish, so the caller gets fewer than k
+ *               rows and loses the eligible row it displaced. Concordance
+ *               chunks are retrieval bridges and so are the likeliest thing
+ *               an edge walk surfaces, which makes this worst on the
+ *               counselor fence that excludes them.
+ *
+ * Callers keep their own post-filter. It is what fences the untouched rows
+ * the early returns below hand back whenever boosting is off or the walk
+ * finds nothing, and it keeps the fence visible at the call site.
+ *
+ * @param {Array} rows candidate rows from vector search
+ * @param {number} k max rows to return
+ * @param {object} [opts]
+ * @param {(row: object) => boolean} [opts.fence] row predicate. Defaults to
+ *   allowing everything, which is only correct for an unfenced research
+ *   caller — every fenced surface passes its own.
  */
-async function expandCandidates(rows, k) {
+async function expandCandidates(rows, k, opts = {}) {
   if (!graphBoostEnabled()) return { rows, boosted: 0 };
   try {
     const supabase = getSupabase();
@@ -75,6 +103,7 @@ async function expandCandidates(rows, k) {
     const { data: chunkRows, error: cErr } = await supabase
       .from('rag_corpus')
       .select('id, chunk_text, author, work, language, section_label, text_type, source_url')
+      .eq('deprecated', false)
       .in('id', [...candidates.keys()]);
     if (cErr || !chunkRows) return { rows, boosted: 0 };
 
@@ -82,8 +111,10 @@ async function expandCandidates(rows, k) {
       ...rows,
       ...chunkRows.map(c => ({ ...c, similarity: candidates.get(c.id), _graphBoosted: true })),
     ];
-    merged.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
-    const out = merged.slice(0, k);
+    const fence = typeof opts.fence === 'function' ? opts.fence : () => true;
+    const eligible = merged.filter(fence);
+    eligible.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
+    const out = eligible.slice(0, k);
     return { rows: out, boosted: out.filter(r => r._graphBoosted).length };
   } catch (err) {
     console.warn('[graph-boost] expansion failed, serving pure vector results:', err?.message);

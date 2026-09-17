@@ -86,7 +86,8 @@ async function getRelevantChunks(query, k = 5, filters = {}) {
     }
 
     // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-    results = (await expandCandidates(results, k)).rows.filter(passesModernFence);
+    results = (await expandCandidates(results, k, { fence: passesModernFence }))
+      .rows.filter(passesModernFence);
 
     return results.slice(0, k).map(r => ({
       id: r.id,

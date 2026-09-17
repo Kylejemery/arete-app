@@ -1208,7 +1208,8 @@ app.post('/api/chat/counselor', async (req, res) => {
         });
         if (!error) contextChunks = (data ?? []);
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-        contextChunks = (await expandCandidates(contextChunks, 7)).rows.filter(isCounselorVisible);
+        contextChunks = (await expandCandidates(contextChunks, 7, { fence: isCounselorVisible }))
+          .rows.filter(isCounselorVisible);
       } catch (err) {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
@@ -1333,7 +1334,8 @@ Future self vision: ${userProfile.future_self_description || '(not provided)'}
       });
       if (!error && Array.isArray(data) && data.length > 0) {
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-        libraryChunks = (await expandCandidates(data, 5)).rows.filter(isCounselorVisible);
+        libraryChunks = (await expandCandidates(data, 5, { fence: isCounselorVisible }))
+          .rows.filter(isCounselorVisible);
         pulseFromChunks(libraryChunks, lastUserMessage);
         libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
           libraryChunks.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
@@ -2608,7 +2610,8 @@ async function retrieveAcademyChunks(userMessage, courseId, k = 3) {
       rows.sort((a, b) => (b.similarity ?? 0) - (a.similarity ?? 0));
       // Phase B: expand through the Hebbian graph before truncation (no-op
       // unless GRAPH_BOOST=true).
-      rows = (await expandCandidates(rows, Math.max(k, 4) * 2)).rows.filter(passesModernFence);
+      rows = (await expandCandidates(rows, Math.max(k, 4) * 2, { fence: passesModernFence }))
+        .rows.filter(passesModernFence);
       const seen = new Set();
       const top = [];
       for (const r of rows) {
@@ -2822,7 +2825,7 @@ async function retrieveCorpusChunks(userMessage, _courseId, k = 3) {
     }
     observatory.recordRetrieval(data ?? [], 'academy'); // fire-and-forget log
     // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
-    const { rows: expandedRaw } = await expandCandidates(data ?? [], k);
+    const { rows: expandedRaw } = await expandCandidates(data ?? [], k, { fence: passesModernFence });
     const expanded = expandedRaw.filter(passesModernFence);
     // Normalise to the shape expected by the academy agent template:
     // { source_author, source_title, content }
@@ -3828,7 +3831,8 @@ async function getStoicContext(query, topK = 5, authorFilter = null) {
   observatory.recordRetrieval(chunks || [], 'oracle'); // fire-and-forget log
   // Phase B: Hebbian expansion for every getStoicContext caller (no-op
   // unless GRAPH_BOOST=true).
-  return (await expandCandidates(chunks || [], topK)).rows.filter(isCounselorVisible);
+  return (await expandCandidates(chunks || [], topK, { fence: isCounselorVisible }))
+    .rows.filter(isCounselorVisible);
 }
 
 function buildStoicSystemPrompt(chunks) {
