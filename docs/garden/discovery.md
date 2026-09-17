@@ -172,6 +172,7 @@ and Kyle was asked. His answers, and the state as of 2026-09-16:
 | Register the five gated pieces? | Still open. |
 | Chrysippus's cylinder | **Built and in the gallery**, under Ethics. Off the backlog. |
 | The Impression | **Built and in the gallery**, under Physics. All three branches are now planted. |
+| The Five Indemonstrables | **Built and in the gallery**, under Logic, beside Zeno's Hand. Stoic propositional logic, quoted verbatim from Diogenes Laertius 7.66 to 7.81 in Hicks. |
 | Register Zeno's Hand and the Scale? | **Yes, done.** Part 4 items 2 and 3 are built; item 1, the garden itself, still waits on the piece being found. |
 
 Parts 1, 2, 3 and 5 were then built, and Part 4 followed for the two pieces
