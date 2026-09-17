@@ -134,36 +134,77 @@ const probes = [
   {
     id: 'corpus.mode2_length',
     domain: DOMAIN,
-    title: 'Mode 2 summaries are summaries',
+    title: 'Mode 2 summaries are summaries, not the original',
     needs: ['db'],
     async run(ctx) {
       const maxWords = ctx.config.mode2_max_words ?? 1800;
+      const minAttribution = ctx.config.mode2_min_attribution ?? 0.5;
+
       const { data, error } = await ctx.supabase.rpc('quality_audit_mode2_lengths');
       if (error) throw new Error(`quality_audit_mode2_lengths failed: ${error.message}`);
 
       const oversized = (data || []).filter(w => Number(w.total_words) > maxWords);
       if (!oversized.length) return [];
 
-      return [finding({
-        probe: 'corpus.mode2_length',
-        domain: DOMAIN,
-        severity: 'critical',
-        title: `${oversized.length} Mode 2 summary work(s) are far longer than a summary`,
-        detail:
-          'Modern copyrighted material enters only as a Mode 2 summary — the agent reads and rewrites ' +
-          'in its own words, and the original is never stored. The Paper Agent writes 500 to 900 ' +
-          `words. A work carrying more than ${maxWords} words under paper_summary or modern_summary ` +
-          'is either a verbatim ingest wearing the summary label, which is the copyright failure the ' +
-          'rule exists to prevent, or a summariser that stopped summarising. No check constraint can ' +
-          'tell those apart, and neither can the text_type field.',
-        count: oversized.length,
-        evidence: oversized.map(w =>
-          `${w.author} / ${w.work} (${w.text_type}) — ${w.total_words} words in ${w.chunks} chunks, first ingested ${w.first_ingest}`),
-        action:
-          'Read a chunk from each. If it is the author\'s own prose rather than a rewrite, deprecate ' +
-          'the work and re-enter it as a real Mode 2 summary through the admin corpus page. Then find ' +
-          'the path that admitted it, because the layer label was not what stopped it.',
-      })];
+      // Length alone says nothing about copyright. A Mode 2 summary talks about
+      // its author in the third person — "Holiday argues", "Mates notes" —
+      // because the agent wrote it; verbatim text by that author almost never
+      // names them. So voice is the copyright signal and length is only an
+      // observation about how much of the corpus one modern work occupies.
+      const unattributed = oversized.filter(w => Number(w.attribution_rate) < minAttribution);
+      const longForm = oversized.filter(w => Number(w.attribution_rate) >= minAttribution);
+      const out = [];
+
+      if (unattributed.length) {
+        out.push(finding({
+          probe: 'corpus.mode2_length',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'unattributed',
+          title: `${unattributed.length} long Mode 2 work(s) do not read as rewrites`,
+          detail:
+            'Modern copyrighted material enters only as a Mode 2 summary — the agent reads and ' +
+            'rewrites in its own words, and the original is never stored. These works are long AND ' +
+            'rarely name their own author in the text, which is what a verbatim ingest wearing the ' +
+            'summary label looks like. No check constraint can catch that, because text_type is ' +
+            'whatever the ingest path set it to.',
+          count: unattributed.length,
+          evidence: unattributed.map(w =>
+            `${w.author} / ${w.work} (${w.text_type}) — ${w.total_words} words, ` +
+            `only ${Math.round(Number(w.attribution_rate) * 100)}% of chunks name the author, first ingested ${w.first_ingest}`),
+          action:
+            'Read a chunk. If it is the author\'s own prose rather than a rewrite, deprecate the work ' +
+            'and re-enter it as a real Mode 2 summary through the admin corpus page — then find the ' +
+            'path that admitted it, because the layer label was not what stopped it.',
+        }));
+      }
+
+      if (longForm.length) {
+        const words = longForm.reduce((n, w) => n + Number(w.total_words), 0);
+        out.push(finding({
+          probe: 'corpus.mode2_length',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'long-form',
+          title: `${longForm.length} Mode 2 work(s) run to book length (${words.toLocaleString()} words)`,
+          detail:
+            'These read as genuine rewrites — they name their author throughout — so this is not a ' +
+            'copyright finding. It is a weighting one. A twenty-thousand-word summary of one modern ' +
+            'book carries roughly the retrieval mass of a primary text, while a paper summary carries ' +
+            'three chunks, so the modern layer can outweigh the ancient one on any theme it covers ' +
+            'without anyone deciding that it should.',
+          count: longForm.length,
+          evidence: longForm.map(w =>
+            `${w.author} / ${w.work} — ${w.total_words} words in ${w.chunks} chunks ` +
+            `(${Math.round(Number(w.attribution_rate) * 100)}% attributed)`),
+          action:
+            'Worth a decision rather than a fix: either this is the intended depth for book-length ' +
+            'Mode 2 work, in which case mute this, or the summaries want condensing toward the Paper ' +
+            'Agent\'s budget.',
+        }));
+      }
+
+      return out;
     },
   },
 

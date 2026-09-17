@@ -22,7 +22,7 @@ thing, returns findings, and never writes.
 | --- | --- |
 | `corpus.metadata_required` | Post-standard ingests missing `translator`, `source_url` or `edition_year` (Part 5 of the acquisition plan), with the offending works named. |
 | `corpus.copyright_fence` | A verbatim layer carrying an `edition_year` after 1930 — the failure the standing copyright rule exists to prevent. |
-| `corpus.mode2_length` | A `paper_summary` or `modern_summary` far longer than a summary can be. Either a verbatim ingest wearing the summary label, or a summariser that stopped summarising. No check constraint can tell those apart. |
+| `corpus.mode2_length` | A long Mode 2 work that does **not** name its own author through the text — what a verbatim ingest wearing the summary label looks like. Length alone is only reported as info: a genuine rewrite talks *about* its author ("Holiday argues", "Mates notes"), so voice is the copyright signal and length is a note about how much retrieval mass one modern work carries. |
 | `corpus.text_type_fence` | A `text_type` in `rag_corpus` that `server/lib/corpus-fence.js` does not list — a layer whose visibility nobody has decided, and which every surface is therefore free to retrieve. |
 | `corpus.identity_collisions` | One work living under two author strings. The filename parser has produced this before. |
 | `corpus.write_target_drift` | `source_text_chunks` carrying newer rows than `rag_corpus`. This once cost months of ingests. |
@@ -159,7 +159,8 @@ the agent:
 | `migration_drift_since` | `20260901` | Migrations older than this predate the convention. |
 | `domains` | all four | Default coverage. |
 | `material_sample_size` | `40` | Chunks read per night. `0` disables the paid pass. |
-| `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. |
+| `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. Above it, a Mode 2 work is examined rather than flagged. |
+| `mode2_min_attribution` | `0.5` | Fraction of a work's chunks that must name its author. Below it, a long Mode 2 work is a copyright finding; above it, a note about weighting. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
 | `brief_max_words` | `400` | Length of the prose brief. |
 
