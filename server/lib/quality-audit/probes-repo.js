@@ -703,6 +703,128 @@ const probes = [
       })];
     },
   },
+  {
+    id: 'repo.retrieval_guarantees',
+    domain: DOMAIN,
+    title: 'Retrieval paths that bypass match_rag_corpus restate its guarantees',
+    needs: ['repo'],
+    async run(ctx) {
+      // match_rag_corpus carries two guarantees in SQL: deprecated = false, and
+      // the caller's exclude_text_types fence. Graph-boost expansion reaches
+      // rag_corpus directly instead, so it has to restate both in JavaScript —
+      // and both have been missing there before, serving a deprecated chunk
+      // through an edge to its own replacement and letting a fenced row hold a
+      // top-k slot. Nothing but this probe notices if either goes again: the
+      // expansion is behind GRAPH_BOOST, so a regression is silent until the
+      // flag is on, and by then it is serving text to a reader.
+      const hits = [];
+      const boostPath = path.join(ctx.repoRoot, 'server/lib/graph-boost.js');
+      let boost = null;
+      try {
+        boost = fs.readFileSync(boostPath, 'utf8');
+      } catch {
+        return [finding({
+          probe: 'repo.retrieval_guarantees',
+          domain: DOMAIN,
+          severity: 'warning',
+          title: 'Could not read server/lib/graph-boost.js',
+          detail:
+            'The probe checks that the graph-boost expansion restates what match_rag_corpus ' +
+            'guarantees. It could not read the file, so it is reporting that rather than passing.',
+          action: 'Check whether the module moved. If it did, re-point this probe.',
+          key: 'unreadable',
+        })];
+      }
+
+      // 1. The direct rag_corpus read must filter deprecated itself.
+      const directRead = boost.includes(".from('rag_corpus')");
+      if (directRead && !/\.eq\(\s*['"]deprecated['"]\s*,\s*false\s*\)/.test(boost)) {
+        hits.push({
+          key: 'deprecated_filter',
+          title: 'Graph-boost reads rag_corpus without filtering deprecated',
+          detail:
+            "server/lib/graph-boost.js selects from rag_corpus directly, bypassing match_rag_corpus " +
+            "and its deprecated = false. Without the filter a superseded ingest re-enters retrieval " +
+            "through an edge to the live row that replaced it — and near-duplicate text is exactly " +
+            "what makes a strong edge, so the deprecated copy of a remediated work is the likeliest " +
+            "neighbour of its own replacement. Deprecation is silent by design, so nothing else " +
+            "would show it.",
+          action: "Add .eq('deprecated', false) to the neighbour query in expandCandidates.",
+        });
+      }
+
+      // 2. Every caller must pass its fence. The parameter is optional and
+      //    defaults to allowing everything, so a call site that omits it gets
+      //    no fence rather than an error.
+      const callSites = [];
+      const res = run("git grep -n 'expandCandidates(' -- '*.js'", ctx.repoRoot, 60000);
+      for (const line of (res.stdout || '').split('\n').filter(l => l.trim())) {
+        const idx = line.indexOf(':');
+        const rel = line.slice(0, idx);
+        const lineNo = line.slice(idx + 1).split(':')[0];
+        // The module defines and exports it; this probe names it in its own
+        // source; tests may legitimately call it unfenced to exercise the
+        // default. None of the three is a retrieval path.
+        if (rel.endsWith('lib/graph-boost.js')) continue;
+        if (rel.includes('lib/quality-audit/')) continue;
+        if (rel.includes('/tests/') || rel.includes('.test.js')) continue;
+        callSites.push({ rel, lineNo: Number(lineNo) });
+      }
+
+      const unfenced = [];
+      for (const site of callSites) {
+        let body;
+        try {
+          body = fs.readFileSync(path.join(ctx.repoRoot, site.rel), 'utf8');
+        } catch {
+          continue;
+        }
+        const lines = body.split('\n');
+        const start = body.split('\n').slice(0, site.lineNo - 1).join('\n').length + (site.lineNo > 1 ? 1 : 0);
+        const from = body.indexOf('expandCandidates(', start);
+        if (from === -1) continue;
+        // Walk to the matching close paren so a call split over lines is read
+        // whole — checking only the matched line would miss a wrapped argument.
+        let depth = 0, end = -1;
+        for (let i = body.indexOf('(', from); i < body.length; i++) {
+          if (body[i] === '(') depth++;
+          else if (body[i] === ')') { depth--; if (depth === 0) { end = i; break; } }
+        }
+        const args = end === -1 ? lines[site.lineNo - 1] ?? '' : body.slice(from, end + 1);
+        if (!/\bfence\b/.test(args)) unfenced.push(`${site.rel}:${site.lineNo}`);
+      }
+
+      if (unfenced.length) {
+        hits.push({
+          key: 'fence_arguments',
+          title: `${unfenced.length} expandCandidates call site(s) pass no fence`,
+          detail:
+            'opts.fence is optional and defaults to allowing everything, so a call site that omits ' +
+            'it is not an error — it is an unfenced retrieval path. The fence has to reach the ' +
+            'expansion because a fenced row that survives a hop seeds the next one, and because ' +
+            'filtering only after truncation lets it hold a top-k slot and then vanish. ' +
+            'server/lib/corpus-fence.js says which fence each surface takes.',
+          action:
+            'Pass the surface’s own fence: { fence: isCounselorVisible } or ' +
+            '{ fence: passesModernFence }. A genuinely unfenced research caller should pass one ' +
+            'that allows everything, explicitly, so the choice is visible.',
+          evidence: unfenced,
+        });
+      }
+
+      return hits.map(h => finding({
+        probe: 'repo.retrieval_guarantees',
+        domain: DOMAIN,
+        severity: 'critical',
+        title: h.title,
+        detail: h.detail,
+        action: h.action,
+        count: h.evidence ? h.evidence.length : null,
+        evidence: h.evidence ?? [],
+        key: h.key,
+      }));
+    },
+  },
 ];
 
 module.exports = { probes, findRepoRoot };
