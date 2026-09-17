@@ -59,19 +59,28 @@ function spine(author) {
 }
 
 // Cleaner display titles for terse / Latinate work names in the corpus.
+// A work keeps the title it is known by. Where that title is Latin or Greek,
+// an English gloss follows it after a middot, so the shelf reads to someone
+// who has not read the language and still names the work a scholar would look
+// for. Dashes are not used in interface copy; the middot is the separator.
 const WORK_TITLES = {
-  'Definibus': 'On the Ends of Good and Evil',
-  'De Finibus': 'On the Ends of Good and Evil',
+  'Definibus': 'De Finibus · On the Ends of Good and Evil',
+  'De Finibus': 'De Finibus · On the Ends of Good and Evil',
+  'De Officiis': 'De Officiis · On Duties',
+  'De Natura Deorum': 'De Natura Deorum · On the Nature of the Gods',
+  'De Fato': 'De Fato · On Fate',
+  'Academica': 'Academica · On Academic Scepticism',
+  'Paradoxa Stoicorum': 'Paradoxa Stoicorum · Stoic Paradoxes',
   'Tusculan Disputations': 'Tusculan Disputations',
   'Lives of Eminent Philosophers, Book VII': 'Lives of the Eminent Philosophers · Book VII',
   'Shortness': 'On the Shortness of Life',
   'Morals': 'Minor Dialogues & Moral Essays',
   'Clemency': 'On Clemency',
   'On Benefits': 'On Benefits',
-  'Apocolocyntosis': 'Apocolocyntosis',
+  'Apocolocyntosis': 'Apocolocyntosis · The Pumpkinification of Claudius',
   'Letters': 'Letters to Lucilius',
   'Discourses': 'Discourses',
-  'Enchiridion': 'Enchiridion',
+  'Enchiridion': 'Enchiridion · The Handbook',
   'Golden Sayings': 'The Golden Sayings',
   'Hymn To Zeus': 'Hymn to Zeus',
   'Meditations': 'Meditations',

@@ -18,7 +18,8 @@ import {
 
 export type ReaderText = {
   author: string; work: string; title?: string; era: string; translator: string | null;
-  sourceUrl: string | null; page: number; totalPages: number; totalPassages: number; body: string;
+  sourceUrl: string | null; editionYear?: number | string | null;
+  page: number; totalPages: number; totalPassages: number; body: string;
   // Entry-chunked works (one section per row) report where each row of the
   // folio begins, so an outline entry can land on its exact section.
   firstChunk?: number; chunkStarts?: (number | null)[] | null;
@@ -446,6 +447,10 @@ export default function Reader(props: {
           const hit = Array.from(el.getClientRects()).some(r => r.right > br.left + 1 && r.left < br.right - 1);
           if (hit) { first = Number(el.dataset.para); break; }
         }
+        // At one column the title page is the whole first leaf and no
+        // paragraph is on show. The reader is at the front of the work, so
+        // that is the opening paragraph, not whatever was last measured.
+        if (first === null && bookBox.scrollLeft <= 1) first = Number(nodes[0].dataset.para);
       } else {
         // The reading line is the middle of the column, which is where a jump
         // lands a paragraph: clicking an entry then marks that same entry.
@@ -514,6 +519,7 @@ export default function Reader(props: {
   }, [currentOutlineIdx, outlineLoading]);
 
   const isBook = view === 'book';
+  const isFirstFolio = page === 0;
 
   return (
     <main className={`lib-reader ${isBook ? 'is-book' : ''}`} style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -633,16 +639,21 @@ export default function Reader(props: {
         <div className="lib-reader-centre" ref={columnRef}>
           {!isBook && (
             <div className="lib-scroll-page">
-              <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.2em', textTransform: 'uppercase', color: GOLD, marginBottom: 12 }}>
-                {reader?.era || active.author}
-              </div>
-              <h1 style={{ fontFamily: SERIF, fontWeight: 500, fontSize: 'clamp(30px,4vw,46px)', lineHeight: 1.04, color: IVORY, margin: '0 0 8px' }}>{title}</h1>
-              <div style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 20, color: GOLD, marginBottom: 6 }}>{active.author}</div>
-              {reader?.translator && <div style={{ fontFamily: MONO, fontSize: 9, color: MUTED, marginBottom: 8, letterSpacing: '0.06em' }}>trans. {reader.translator}</div>}
+              {/* The work opens on its title page; later folios carry a
+                  running head instead, so the title is stated once. */}
+              {isFirstFolio ? (
+                <TitlePage title={title} author={active.author} era={reader?.era || ''}
+                  translator={reader?.translator ?? null} editionYear={reader?.editionYear ?? null}
+                  sourceUrl={reader?.sourceUrl ?? null} />
+              ) : (
+                <div className="lib-running-head">
+                  <span>{active.author}</span>
+                  <span className="lib-running-head-title">{title}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 14, alignItems: 'center', fontFamily: MONO, fontSize: 9, letterSpacing: '0.1em', color: MUTED, textTransform: 'uppercase', marginBottom: 26 }}>
                 {reader && <span>Folio {page + 1} of {reader.totalPages}</span>}
                 <button className="lib-inline-link" onClick={() => copyLink(null)}>copy link</button>
-                {reader?.sourceUrl && <a href={reader.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ color: MUTED, textDecoration: 'underline' }}>source edition ↗</a>}
               </div>
 
               {/* Previous / Next at the head of the folio as well as the foot */}
@@ -684,6 +695,11 @@ export default function Reader(props: {
                 <div className="lib-book-text lib-text" ref={bookRef} onMouseUp={onTextMouseUp}
                   onWheel={onBookWheel} onTouchStart={onBookTouchStart} onTouchEnd={onBookTouchEnd}>
                   {readerLoading && <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17 }}>Turning the page…</p>}
+                  {!readerLoading && reader && isFirstFolio && (
+                    <TitlePage book title={title} author={active.author} era={reader.era || ''}
+                      translator={reader.translator} editionYear={reader.editionYear ?? null}
+                      sourceUrl={reader.sourceUrl} />
+                  )}
                   {!readerLoading && reader && paras.map((p, i) => (
                     <Paragraph key={i} i={i} text={p} q={foldedQuery} count={countsByPara.get(i) || 0} book drop={dropCap(paras, i, page)}
                       selected={selectedPara === i} flash={flashPara === i} onNote={() => openThread(i)} onLink={() => copyLink(i)} />
@@ -848,6 +864,40 @@ function highlightText(text: string, q: string): ReactNode {
   }
   if (at < text.length) out.push(text.slice(at));
   return out;
+}
+
+// The title page: the leaf a work opens on, before its first folio of text.
+// It states what the reader is holding and which edition it is read from —
+// the same facts the corpus is required to record. Lines it has no answer for
+// are left out rather than shown empty, because a title page that says
+// "translator: unknown" is worse than one that does not raise the question.
+// One component, two colourways: ink for the scrolling view, the book's own
+// cream for the folio.
+function TitlePage(props: {
+  title: string; author: string; era: string;
+  translator: string | null; editionYear: number | string | null; sourceUrl: string | null;
+  book?: boolean;
+}) {
+  const { title, author, era, translator, editionYear, sourceUrl, book } = props;
+  return (
+    <div className={`lib-titlepage ${book ? 'is-book' : ''}`}>
+      <div className="lib-titlepage-inner">
+        {era && <div className="lib-titlepage-era">{era}</div>}
+        <h1 className="lib-titlepage-title">{title}</h1>
+        <div className="lib-titlepage-author">{author}</div>
+        <div className="lib-titlepage-rule" />
+        <div className="lib-titlepage-imprint">
+          {translator && <div>Translated by {translator}</div>}
+          {editionYear && <div>Edition of {editionYear}</div>}
+          {sourceUrl && (
+            book
+              ? <div>From the public domain text</div>
+              : <div><a href={sourceUrl} target="_blank" rel="noopener noreferrer">Source edition ↗</a></div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Paragraph(props: {
@@ -1094,6 +1144,35 @@ const READER_CSS = `
 
 .lib-reader-centre { min-width: 0; min-height: 0; overflow-y: auto; position: relative; }
 .lib-scroll-page { max-width: 760px; margin: 0 auto; padding: 30px 56px 70px; }
+
+/* --- the title page ---------------------------------------------------- */
+/* Ink in the scrolling view, the book's own cream on the folio. Flat, no
+   shadow, a single gold hairline: the house rule is that emphasis is a rule
+   or a border, never a raised surface. */
+.lib-titlepage { display: flex; align-items: center; justify-content: center; text-align: center; }
+.lib-titlepage-inner { max-width: 30em; padding: 8px 0 4px; }
+.lib-titlepage-era { font-family: ${MONO}; font-size: 9.5px; letter-spacing: 0.24em; text-transform: uppercase; color: ${GOLD}; margin-bottom: 20px; }
+.lib-titlepage-title { font-family: ${SERIF}; font-weight: 500; font-size: clamp(30px, 4vw, 46px); line-height: 1.06; color: ${IVORY}; margin: 0 0 14px; }
+.lib-titlepage-author { font-family: ${SERIF}; font-style: italic; font-size: 21px; color: ${GOLD}; }
+.lib-titlepage-rule { width: 64px; height: 1px; background: rgba(201,168,76,0.5); margin: 26px auto; }
+.lib-titlepage-imprint { font-family: ${MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${MUTED}; line-height: 2.1; }
+.lib-titlepage-imprint a { color: ${MUTED}; text-decoration: underline; }
+.lib-titlepage-imprint a:hover { color: ${IVORY}; }
+/* the scrolling view gives it the height of a leaf, then the text begins */
+.lib-reader:not(.is-book) .lib-titlepage { min-height: 52vh; border-bottom: 1px solid rgba(201,168,76,0.2); margin-bottom: 34px; }
+
+/* In the book it is the first column: a full leaf, with the text opening on
+   the page beside it. break-after ends the column wherever the leaf ends. */
+.lib-book .lib-titlepage { height: 100%; break-after: column; }
+.lib-book .lib-titlepage-title { color: #2b2416; }
+.lib-book .lib-titlepage-era { color: #6b4e14; }
+.lib-book .lib-titlepage-author { color: #6b4e14; }
+.lib-book .lib-titlepage-rule { background: rgba(107,78,20,0.45); }
+.lib-book .lib-titlepage-imprint { color: rgba(70,55,25,0.75); }
+
+/* Later folios name the work once, quietly, instead of repeating its head. */
+.lib-running-head { display: flex; gap: 10px; align-items: baseline; font-family: ${MONO}; font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: ${MUTED}; padding-bottom: 10px; margin-bottom: 18px; border-bottom: 1px solid rgba(201,168,76,0.16); }
+.lib-running-head-title { color: ${GOLD}; }
 
 /* paragraphs: gutter with number + note mark; hover reveals */
 .lib-para { position: relative; margin: 0 0 20px; scroll-margin-top: 24px; border-radius: 6px; transition: background .5s; }

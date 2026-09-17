@@ -4828,7 +4828,7 @@ app.get('/api/library/text', async (req, res) => {
     const fetchFrom = page > 0 ? from - 1 : from;
     const { data: rows, error } = await supabase
       .from('rag_corpus')
-      .select('chunk_index, chunk_text, section_label, translator, source_url, text_type')
+      .select('chunk_index, chunk_text, section_label, translator, source_url, edition_year, text_type')
       .eq('author', author)
       .eq('work', work)
       .eq('deprecated', false)
@@ -4893,6 +4893,10 @@ app.get('/api/library/text', async (req, res) => {
       tradition: (ov && ov.tradition) || libraryHelpers.tradition(author, data[0].text_type),
       translator: data[0].translator || null,
       sourceUrl: data[0].source_url || null,
+      // The title page states the edition it is reading from. Only some rows
+      // carry a year, so take the first the folio has rather than the first
+      // row's, and let the page leave the line out when there is none.
+      editionYear: (data.find(c => c.edition_year) || {}).edition_year || null,
       page,
       totalPages,
       totalPassages: total,
