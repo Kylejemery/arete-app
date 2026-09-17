@@ -84,8 +84,16 @@ because the night-to-night diff and the mute list are keyed on it, and a probe
 whose prerequisites are missing must skip and say so rather than pass silently.
 
 It is also the place to put a rule you find yourself checking by hand. A
-convention nothing enforces drifts — the agent was written because five
+convention nothing enforces drifts — the agent was written because three
 migrations had been applied to the project with no committed file beside them.
+
+Run the repo probes against a current checkout. They compare what the project
+has to what the branch has, so a branch that is behind reports the base's work
+as drift: the first run of the drift probe claimed five, and three of those were
+migrations that had landed on main while the branch was being written. Acting on
+that reading put duplicate migration files on main. `repo.checkout_stale` now
+enforces this — while the checkout is behind, the drift probe will not call
+anything critical — but the habit is still worth having.
 
 ## Conventions
 

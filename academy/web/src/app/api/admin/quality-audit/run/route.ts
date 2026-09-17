@@ -16,7 +16,7 @@ const BACKEND_URL =
 //
 // Proxied rather than reimplemented. The Gap Agent's run route mirrors its
 // agent's logic in TypeScript, which works for two gap types and would not for
-// twenty-one probes — a second copy of the rules would drift from the first,
+// twenty-three probes — a second copy of the rules would drift from the first,
 // and the probes are the rules.
 //
 // The repo domain is not offered: its probes need a checkout that the Railway
