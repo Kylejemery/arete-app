@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import { useSubscription } from '@/lib/useSubscription';
 import type { ThreadMessage } from '@/lib/threadService';
@@ -47,6 +47,8 @@ export default function CabinetPage() {
   const [cabinetMessages, setCabinetMessages] = useState<ThreadMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // A send that failed: shown above the composer, never in the thread.
+  const [sendError, setSendError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
@@ -253,6 +255,10 @@ export default function CabinetPage() {
     };
   }, [sessionType, currentSessionId, currentUserId, senderNameFor]);
 
+  // One banner state serves all three composers, so a failure on one tab must
+  // not follow the reader to the next.
+  useEffect(() => { setSendError(null); }, [tab]);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cabinetMessages]);
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
   useEffect(() => { sharedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sharedMessages]);
@@ -264,6 +270,7 @@ export default function CabinetPage() {
     setCabinetMessages(newMessages);
     setInput('');
     setIsLoading(true);
+    setSendError(null);
     try {
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
@@ -278,8 +285,14 @@ export default function CabinetPage() {
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
-    } catch {
-      setCabinetMessages(prev => [...prev, { role: 'assistant', content: 'The Cabinet is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
+    } catch (e) {
+      // Not a counselor's words, so it does not go in the thread: take the
+      // optimistic bubble back out, return the text to the box, and say what
+      // happened in a banner. An error bubble appended here used to be
+      // carried into the next successful save and become permanent history.
+      setCabinetMessages(prev => prev.slice(0, -1));
+      setInput(userMsg.content);
+      setSendError(e instanceof CabinetUnavailableError ? e.message : 'The Cabinet is temporarily unavailable. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -305,6 +318,7 @@ export default function CabinetPage() {
     setSharedMessages(newShared);
     setSharedInput('');
     setSharedLoading(true);
+    setSendError(null);
     try {
       // System notices (joined/left) stay out of the model's context.
       const replies: CabinetReply[] = await sendMessageToCabinet(newShared.filter(m => m.role !== 'system') as ThreadMessage[], {
@@ -320,8 +334,10 @@ export default function CabinetPage() {
         counselorName: r.counselorName ?? undefined,
       }));
       setSharedMessages(prev => [...prev, ...assistantMsgs]);
-    } catch {
+    } catch (e) {
       setSharedMessages(prev => prev.slice(0, -1));
+      setSharedInput(userMsg.content);
+      setSendError(e instanceof CabinetUnavailableError ? e.message : 'The Cabinet is temporarily unavailable. Please try again.');
     } finally {
       setSharedLoading(false);
     }
@@ -439,14 +455,17 @@ export default function CabinetPage() {
     setCounselorMessages(newMessages);
     setCounselorInput('');
     setCounselorLoading(true);
+    setSendError(null);
     try {
       const response = await sendMessageToCounselor(selectedCounselor, newMessages);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
       await saveThread({ id: selectedCounselor, messages: finalMessages, lastUpdated: Date.now() });
-    } catch {
-      setCounselorMessages(prev => [...prev, { role: 'assistant', content: 'Your counselor is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
+    } catch (e) {
+      setCounselorMessages(prev => prev.slice(0, -1));
+      setCounselorInput(userMsg.content);
+      setSendError(e instanceof CabinetUnavailableError ? e.message : 'Your counselor is temporarily unavailable. Please try again.');
     } finally {
       setCounselorLoading(false);
     }
@@ -821,6 +840,19 @@ export default function CabinetPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {sendError && (
+            <div
+              className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
+              style={{
+                background: 'rgba(255,68,68,0.10)',
+                border: '1px solid rgba(255,68,68,0.35)',
+                borderRadius: 10,
+                color: '#e0e0e0',
+              }}
+            >
+              {sendError}
+            </div>
+          )}
           {/* Composer */}
           <div
             className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
@@ -1060,6 +1092,19 @@ export default function CabinetPage() {
             <div ref={sharedEndRef} />
           </div>
 
+          {sendError && (
+            <div
+              className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
+              style={{
+                background: 'rgba(255,68,68,0.10)',
+                border: '1px solid rgba(255,68,68,0.35)',
+                borderRadius: 10,
+                color: '#e0e0e0',
+              }}
+            >
+              {sendError}
+            </div>
+          )}
           {/* Composer */}
           <div
             className="px-4 py-3 flex gap-2 items-end flex-shrink-0"
@@ -1324,6 +1369,19 @@ export default function CabinetPage() {
                 <div ref={counselorEndRef} />
               </div>
 
+              {sendError && (
+                <div
+                  className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
+                  style={{
+                    background: 'rgba(255,68,68,0.10)',
+                    border: '1px solid rgba(255,68,68,0.35)',
+                    borderRadius: 10,
+                    color: '#e0e0e0',
+                  }}
+                >
+                  {sendError}
+                </div>
+              )}
               {/* Composer */}
               <div
                 className="px-4 py-3 flex gap-2 items-end flex-shrink-0"

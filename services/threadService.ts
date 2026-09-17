@@ -1,4 +1,5 @@
 import { getThread, upsertThread } from '../lib/db';
+import { epochToMillis } from '../lib/messageDates';
 
 /**
  * Maps long DB counselor slugs → the canonical short thread IDs used throughout the app.
@@ -90,8 +91,11 @@ export async function appendMessages(
   return updated;
 }
 
+// epochToMillis, because lines already in the thread may carry a seconds
+// timestamp from before the seeding path normalized: two copies of one nudge
+// must still compare as the same day so dedupeCounselorLines can collapse them.
 const dayOf = (ms: number) => {
-  const d = new Date(ms);
+  const d = new Date(epochToMillis(ms));
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 };
 

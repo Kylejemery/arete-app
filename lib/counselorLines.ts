@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { DeviceEventEmitter, Platform } from 'react-native';
 import { loadThreadStrict, sameCounselorLine, saveThread } from '../services/threadService';
+import { epochToMillis } from './messageDates';
 import { getPendingAttendLines } from './attend';
 import { acknowledgeBroadcasts, fetchPendingBroadcasts } from './broadcasts';
 import { getUserCabinet } from './db';
@@ -75,7 +76,11 @@ export function seedCounselorLine(id: string, counselorName: string, body: strin
   return serialized(async () => {
     try {
       if (await alreadySeeded(id)) return false;
-      const line = { role: 'assistant' as const, content: body, timestamp, counselorName };
+      // Every caller here reads its own clock — the notification's date, the
+      // extension's UserDefaults, a broadcast's `at` — and some of those are
+      // in seconds. Normalizing once, at the only door into the thread, is
+      // what keeps the same-day dedupe below able to see a duplicate.
+      const line = { role: 'assistant' as const, content: body, timestamp: epochToMillis(timestamp) || Date.now(), counselorName };
       // Strict: a fetch that failed must not read as an empty thread, or the
       // save below would replace the history with this one line.
       const thread = await loadThreadStrict('cabinet');
@@ -100,7 +105,7 @@ export function seedCounselorLine(id: string, counselorName: string, body: strin
 // request identifier plus the day. Attend nudges carry their own ids.
 function deliveryId(n: Notifications.Notification): string {
   const data: any = n.request?.content?.data;
-  const when = Number((n as any)?.date) || Date.now();
+  const when = epochToMillis((n as any)?.date) || Date.now();
   const day = dayKey(new Date(when));
   // Broadcasts: one message to the whole membership, so dedupe on its id —
   // the same key the server-owed sweep uses. A member who taps the push and a
@@ -115,7 +120,7 @@ function deliveryId(n: Notifications.Notification): string {
 export async function seedFromNotification(n: Notifications.Notification | null | undefined): Promise<boolean> {
   const data: any = n?.request?.content?.data;
   if (!n || !data?.seedMessage || !data?.counselorName) return false;
-  const when = Number((n as any)?.date) || Date.now();
+  const when = epochToMillis((n as any)?.date) || Date.now();
   const seeded = await seedCounselorLine(deliveryId(n), String(data.counselorName), String(data.seedMessage), when);
   // Acknowledge even when the line was already there: an unacknowledged
   // broadcast is served again by the pending sweep, and this is what ends it.
