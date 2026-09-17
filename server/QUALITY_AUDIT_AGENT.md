@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-one probes across four domains. A probe is a named check that knows one
+Twenty-three probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -46,12 +46,29 @@ works displaying no era).
 
 ### `repo` — the code
 
+`repo.checkout_stale` (is this checkout current with its base?),
 `repo.migration_drift` (SQL applied to the project with no committed file, and
 files never applied — the convention nothing could previously enforce),
 `repo.cron_targets` (a Railway config naming a script that does not exist),
 `repo.checks` (lint and typecheck per workspace), `repo.secret_scan` (key-shaped
 strings in tracked files), `repo.doc_links` (committed docs linking to paths that
 moved).
+
+`repo.checkout_stale` is a guard as much as a finding. Every repo probe compares
+the project against whatever branch is on disk, so a checkout behind its base
+reports the base's own work as missing. That is not hypothetical: the drift
+probe's first run claimed five uncommitted migrations, three of which had landed
+on `main` while the branch was being written, and committing the recovered
+copies added duplicate files for migrations the repo already had.
+
+So while the checkout is behind — or while the comparison could not be made at
+all — `repo.migration_drift` downgrades its applied-but-not-committed finding
+from critical to info and says why, because at that point it cannot tell "never
+committed" from "committed on the base, not here yet". It fetches the base
+branch to decide (a remote-tracking update only: no working tree, no local
+branch, nothing to undo), and reports "unknown" rather than assuming current
+when the fetch fails, because in a report someone acts on, those two must not
+look alike.
 
 ### `material` — the part no query can see
 
@@ -162,6 +179,8 @@ the agent:
 | `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. Above it, a Mode 2 work is examined rather than flagged. |
 | `mode2_min_attribution` | `0.5` | Fraction of a work's chunks that must name its author. Below it, a long Mode 2 work is a copyright finding; above it, a note about weighting. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
+| `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
+| `fetch_before_drift_check` | `true` | Whether to fetch the base before comparing. `false` where there is no network; the comparison then uses the local remote-tracking ref, which may itself be stale. |
 | `brief_max_words` | `400` | Length of the prose brief. |
 
 ## Reading the report
@@ -198,7 +217,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-one probes in two languages would be two copies of the
+  TypeScript: twenty-three probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is

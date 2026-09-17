@@ -10,6 +10,14 @@
 // enforces: migrations applied without a committed file beside them, a cron
 // service pointed at a script that has since been renamed, a doc linking to a
 // path that moved, a key that made it into a tracked file.
+//
+// Everything here compares the project against whatever branch is on disk, so
+// a checkout behind its base reports the base's own work as missing. That is
+// not hypothetical: the drift probe's first run claimed five uncommitted
+// migrations, three of which had landed on main while the branch was being
+// written, and the recovered copies would have been committed as duplicates.
+// checkoutStaleness() is therefore a guard and not merely another finding —
+// while the checkout is behind, the drift probe cannot call anything critical.
 
 const { execSync } = require('child_process');
 const fs = require('fs');
@@ -59,6 +67,45 @@ function run(cmd, cwd, timeoutMs = 300000) {
   }
 }
 
+// --- Is this checkout current? ---------------------------------------------
+//
+// Fetches the base branch (a remote-tracking update only: no working tree, no
+// local branch, nothing to undo) and counts how far behind HEAD is. Cached on
+// ctx so the probes that depend on it agree and only one fetch happens.
+//
+// A fetch that fails is not an error. It means the answer is unknown, which is
+// itself worth reporting, because "unknown" and "current" must not look alike.
+function checkoutStaleness(ctx) {
+  if (ctx._staleness) return ctx._staleness;
+  ctx._staleness = computeStaleness(ctx);
+  return ctx._staleness;
+}
+
+function computeStaleness(ctx) {
+  const base = ctx.config.base_branch || 'main';
+  const ref = `origin/${base}`;
+
+  let fetched = false;
+  let fetchError = null;
+  if (ctx.config.fetch_before_drift_check !== false) {
+    const res = run(`git fetch origin ${base} --quiet`, ctx.repoRoot, 60000);
+    fetched = res.ok;
+    if (!res.ok) fetchError = (res.stderr || '').trim().split('\n').slice(-1)[0] || 'fetch failed';
+  }
+
+  const counted = run(`git rev-list --count HEAD..${ref}`, ctx.repoRoot, 30000);
+  if (!counted.ok) {
+    return { known: false, fetched, behind: null, base, ref, error: fetchError || 'could not compare against the base branch' };
+  }
+
+  const behind = parseInt((counted.stdout || '').trim(), 10);
+  if (!Number.isFinite(behind)) {
+    return { known: false, fetched, behind: null, base, ref, error: 'unreadable commit count' };
+  }
+
+  return { known: true, fetched, behind, base, ref, error: fetchError };
+}
+
 // A migration filename normalised to the name the Supabase migration tool
 // records: timestamp prefix and extension removed.
 function migrationName(filename) {
@@ -77,6 +124,53 @@ const WORKSPACES = [
 ];
 
 const probes = [
+  {
+    id: 'repo.checkout_stale',
+    domain: DOMAIN,
+    title: 'The checkout is current with its base',
+    needs: ['repo'],
+    async run(ctx) {
+      const s = checkoutStaleness(ctx);
+
+      if (!s.known) {
+        return [finding({
+          probe: 'repo.checkout_stale',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'unknown',
+          title: 'Could not tell whether this checkout is current',
+          detail:
+            `Comparing HEAD against ${s.ref} failed (${s.error}). Every repo finding below is ` +
+            'measured against this checkout, so if it is behind, the base\'s own work reads as ' +
+            'missing. Unknown is reported rather than assumed current, because the two must not ' +
+            'look alike in a report someone acts on.',
+          action:
+            'Run the repo probes somewhere the base branch is reachable, or set ' +
+            '`fetch_before_drift_check: false` in agent_config if this environment has no network ' +
+            'and you are fetching by hand.',
+        })];
+      }
+
+      if (s.behind === 0) return [];
+
+      return [finding({
+        probe: 'repo.checkout_stale',
+        domain: DOMAIN,
+        severity: 'warning',
+        key: 'behind',
+        title: `This checkout is ${s.behind} commit(s) behind ${s.ref}`,
+        detail:
+          'The repo probes compare the project against whatever branch is on disk. Behind its ' +
+          'base, a checkout reports the base\'s own work as missing — which is how the drift ' +
+          'probe once claimed five uncommitted migrations when three had simply landed on the ' +
+          'base while this branch was being written. Acting on that reading committed duplicates. ' +
+          'The drift probe below has downgraded itself accordingly.',
+        count: s.behind,
+        action: `Merge or rebase onto ${s.ref} and run the audit again before acting on any repo finding.`,
+      })];
+    },
+  },
+
   {
     id: 'repo.migration_drift',
     domain: DOMAIN,
@@ -107,23 +201,40 @@ const probes = [
 
       const recentUncommitted = appliedNotCommitted.filter(m => m.version >= driftSince);
       if (recentUncommitted.length) {
+        // A checkout behind its base cannot distinguish "never committed" from
+        // "committed on the base, not yet here". Reporting that as critical is
+        // what produced duplicate migration files once already, so while the
+        // checkout is stale this is a lead to verify, not a defect to act on.
+        const stale = checkoutStaleness(ctx);
+        const unreliable = !stale.known || stale.behind > 0;
+        const caveat = !stale.known
+          ? ' This checkout could not be compared against its base, so some of these may already be committed there.'
+          : stale.behind > 0
+            ? ` This checkout is ${stale.behind} commit(s) behind ${stale.ref}, so some of these are likely already committed there under a different timestamp prefix — check before committing a recovered copy, or you will add a duplicate.`
+            : '';
+
         out.push(finding({
           probe: 'repo.migration_drift',
           domain: DOMAIN,
-          severity: 'critical',
+          severity: unreliable ? 'info' : 'critical',
           key: 'applied-not-committed',
-          title: `${recentUncommitted.length} migration(s) applied since ${driftSince} have no committed file`,
+          title: unreliable
+            ? `${recentUncommitted.length} migration(s) applied since ${driftSince} have no committed file in this checkout`
+            : `${recentUncommitted.length} migration(s) applied since ${driftSince} have no committed file`,
           detail:
             'The convention is that the file and the applied SQL are identical, and that SQL which is ' +
             'not committed is never applied. A migration that exists only in the database cannot be ' +
             'reviewed, cannot be replayed onto a new environment, and is invisible to anyone reading ' +
             'the repo to learn what the schema is. ' +
-            `(${appliedNotCommitted.length} in total, most of them predating the convention.)`,
+            `(${appliedNotCommitted.length} in total, most of them predating the convention.)` +
+            caveat,
           count: recentUncommitted.length,
           evidence: recentUncommitted.map(m => `${m.version} ${m.name}`),
-          action:
-            'For each, dump the applied SQL and commit it under supabase/migrations/ with its ' +
-            'timestamp prefix, so the file and the database agree.',
+          action: unreliable
+            ? `Bring the checkout up to date with ${stale.ref || 'its base'} and re-run before recovering any of these. ` +
+              'Match by name with the timestamp prefix stripped: the base may carry the same migration under a different prefix.'
+            : 'For each, dump the applied SQL and commit it under supabase/migrations/ with its ' +
+              'timestamp prefix, so the file and the database agree.',
         }));
       }
 
