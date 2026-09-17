@@ -19,6 +19,14 @@ const {
 
 const DOMAIN = 'corpus';
 
+// Locator granularity thresholds, calibrated against the live corpus rather
+// than guessed. Twelve works carry locators and eleven have a median of one
+// chunk per locator; the twelfth, Yonge's Diogenes Laertius, has three and is
+// the only genuine defect. A work under this many located chunks is too short
+// for the median to mean anything.
+const DEFAULT_LOCATOR_COARSE_MEDIAN = 2;
+const DEFAULT_LOCATOR_MIN_CHUNKS = 30;
+
 // Every text_type the fence file knows about. A value in rag_corpus that is not
 // here is a layer nobody has decided the visibility of.
 const KNOWN_TEXT_TYPES = [
@@ -201,6 +209,97 @@ const probes = [
             'Worth a decision rather than a fix: either this is the intended depth for book-length ' +
             'Mode 2 work, in which case mute this, or the summaries want condensing toward the Paper ' +
             'Agent\'s budget.',
+        }));
+      }
+
+      return out;
+    },
+  },
+
+  // --- Can a retrieved passage be cited? -------------------------------------
+  {
+    id: 'corpus.locator_quality',
+    domain: DOMAIN,
+    title: 'Locators identify the passage they label',
+    needs: ['db'],
+    async run(ctx) {
+      const { data, error } = await ctx.supabase.rpc('quality_audit_locator_quality');
+      if (error) throw new Error(`quality_audit_locator_quality failed: ${error.message}`);
+
+      const coarseMedian = ctx.config.locator_coarse_median || DEFAULT_LOCATOR_COARSE_MEDIAN;
+      const minChunks = ctx.config.locator_min_chunks || DEFAULT_LOCATOR_MIN_CHUNKS;
+      // The agent always supplies this; duplicating the date here would be a
+      // second place for it to drift. Absent, the probe throws rather than
+      // treating every work as pre-standard, which would pass silently.
+      const since = ctx.config.standards_since;
+      if (!since) throw new Error('standards_since is not configured');
+
+      const rows = data || [];
+      const out = [];
+
+      // A scheme pitched at the wrong level. The median matters and the worst
+      // locator does not: `Discourses 4.1` really is the longest chapter in the
+      // Discourses, and Augustine's 636 locators over 1006 chunks are a correct
+      // parse with one long chapter in it. A median above one means that for
+      // most of the work a citation cannot say which passage it means.
+      const coarse = rows.filter(r =>
+        r.located >= minChunks && r.median_chunks_per_locator >= coarseMedian);
+
+      if (coarse.length) {
+        out.push(finding({
+          probe: 'corpus.locator_quality',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: 'coarse',
+          title: `${coarse.length} work(s) carry locators too coarse to cite a passage`,
+          detail:
+            'Part 5 rule 3 asks for a locator that lets a retrieved passage be cited without going ' +
+            'back to the source. In these works the typical locator covers several chunks, so it ' +
+            'names a region rather than a passage. That is worse than an absent locator rather than ' +
+            'better: an absent one makes a passage uncitable, a coarse one makes it falsely citable, ' +
+            'and nothing downstream can tell the difference. Yonge\'s Diogenes Laertius is the case ' +
+            'that prompted this check — its `book.life` ordinals put the whole of Book 10, the Letter ' +
+            'to Menoeceus and the Principal Doctrines included, under `10.1`.',
+          count: coarse.length,
+          evidence: coarse.map(r =>
+            `${r.author} / ${r.work} — median ${r.median_chunks_per_locator} chunks per locator, ` +
+            `${r.distinct_locators} locators over ${r.located} chunks; worst is ` +
+            `"${r.worst_locator}" covering ${r.worst_locator_chunks}`),
+          action:
+            'Parse the text\'s own divisions into `locator`. Where a second translation carrying the ' +
+            'canonical numbering is already held, prefer it and deprecate the coarse one; where it is ' +
+            'the only holding, it wants a parser rather than a deprecation, because deprecating it ' +
+            'removes the position from the corpus.',
+        }));
+      }
+
+      // Ingested under the standard with no locator at all. Older works are the
+      // backfill the acquisition plan puts out of scope, counted in the detail
+      // rather than re-litigated every night.
+      const absent = rows.filter(r => r.located === 0 && r.chunks >= minChunks &&
+                                      r.first_ingest && r.first_ingest >= since);
+      const legacyAbsent = rows.filter(r => r.located === 0 &&
+                                            !(r.first_ingest && r.first_ingest >= since));
+
+      if (absent.length) {
+        out.push(finding({
+          probe: 'corpus.locator_quality',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: 'absent',
+          title: `${absent.length} work(s) ingested since ${since} carry no locator at all`,
+          detail:
+            'Part 5 rule 3 applies to every ingest from the standard onward, and these carry nothing ' +
+            'in `locator`, so every passage in them retrieves as a chunk rather than as a citation. ' +
+            `(${legacyAbsent.length} older works are also unlocated; those are the backfill the plan ` +
+            'puts out of scope and are not counted here.)',
+          count: absent.length,
+          evidence: absent.map(r =>
+            `${r.author} / ${r.work} — ${r.chunks} chunks, ingested ${r.first_ingest}`),
+          action:
+            'Parse the divisions the text itself provides into `locator` — Stephanus numbers for ' +
+            'Plato, book and chapter elsewhere. Where a text genuinely has no canonical divisions, ' +
+            '`locator` is null by design and `section_label` carries the heading; mute this for that work.',
         }));
       }
 
