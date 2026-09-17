@@ -59,19 +59,28 @@ function spine(author) {
 }
 
 // Cleaner display titles for terse / Latinate work names in the corpus.
+// A work keeps the title it is known by. Where that title is Latin or Greek,
+// an English gloss follows it after a middot, so the shelf reads to someone
+// who has not read the language and still names the work a scholar would look
+// for. Dashes are not used in interface copy; the middot is the separator.
 const WORK_TITLES = {
-  'Definibus': 'On the Ends of Good and Evil',
-  'De Finibus': 'On the Ends of Good and Evil',
+  'Definibus': 'De Finibus · On the Ends of Good and Evil',
+  'De Finibus': 'De Finibus · On the Ends of Good and Evil',
+  'De Officiis': 'De Officiis · On Duties',
+  'De Natura Deorum': 'De Natura Deorum · On the Nature of the Gods',
+  'De Fato': 'De Fato · On Fate',
+  'Academica': 'Academica · On Academic Scepticism',
+  'Paradoxa Stoicorum': 'Paradoxa Stoicorum · Stoic Paradoxes',
   'Tusculan Disputations': 'Tusculan Disputations',
   'Lives of Eminent Philosophers, Book VII': 'Lives of the Eminent Philosophers · Book VII',
   'Shortness': 'On the Shortness of Life',
   'Morals': 'Minor Dialogues & Moral Essays',
   'Clemency': 'On Clemency',
   'On Benefits': 'On Benefits',
-  'Apocolocyntosis': 'Apocolocyntosis',
+  'Apocolocyntosis': 'Apocolocyntosis · The Pumpkinification of Claudius',
   'Letters': 'Letters to Lucilius',
   'Discourses': 'Discourses',
-  'Enchiridion': 'Enchiridion',
+  'Enchiridion': 'Enchiridion · The Handbook',
   'Golden Sayings': 'The Golden Sayings',
   'Hymn To Zeus': 'Hymn to Zeus',
   'Meditations': 'Meditations',
@@ -153,18 +162,28 @@ function dedupeOverlap(prev, next) {
 // duplicated overlap against the chunk before it. `context` is the chunk just
 // before the first one shown (the previous page's last chunk): it is used to
 // trim the first chunk's leading overlap but is not itself included.
-function stitchChunks(chunks, context = null) {
+// Returns the text and, for each chunk, the offset in it where that chunk's
+// kept content begins — null for a chunk the overlap swallowed whole. The
+// outline needs to know where a chunk starts; stitching is the only place
+// that still knows.
+function stitch(chunks, context = null) {
   let out = '';
   let prev = (context || '').trim();
+  const starts = [];
   for (const raw of chunks) {
     const t = (raw || '').trim();
-    if (!t) continue;
+    if (!t) { starts.push(null); continue; }
     const add = dedupeOverlap(prev, t).trim();
     prev = t;
-    if (!add) continue;
+    if (!add) { starts.push(null); continue; }
+    starts.push(out ? out.length + 1 : 0);   // +1 for the joining space
     out = out ? `${out} ${add}` : add;
   }
-  return out;
+  return { text: out, starts };
+}
+
+function stitchChunks(chunks, context = null) {
+  return stitch(chunks, context).text;
 }
 
 // Common abbreviations that end with a period mid-sentence; never treat them
@@ -247,17 +266,20 @@ function isEntryChunked(rows) {
 // paragraph breaks at the source's own section markers (CHAP. II., LETTER
 // XLIV., numbered aphorisms, bare roman numerals), then split what remains
 // into paragraph-sized groups of sentences.
-function formatReadable(text) {
+function scrubArtifacts(text) {
   let t = text || '';
-
-  // transcription artifacts
   t = t.replace(/\[Sidenote:[^\]]*\]/gi, ' ');
   t = t.replace(/\[Illustration[^\]]*\]/gi, ' ');
   t = t.replace(/\[\d+\]/g, '');
   t = t.replace(/\{\d+\}/g, '');
   t = t.replace(/_([^_]{1,240}?)_/g, '$1'); // _emphasis_ → plain
   t = t.replace(/_/g, '');                  // stray unpaired underscores
-  t = t.replace(/\s+/g, ' ').replace(/ ([,.;:!?])/g, '$1').trim();
+  return t.replace(/\s+/g, ' ').replace(/ ([,.;:!?])/g, '$1').trim();
+}
+
+function formatReadable(text) {
+  // transcription artifacts
+  let t = scrubArtifacts(text);
 
   // section markers → paragraph breaks. All require a sentence end just
   // before, so numbers and numerals inside running prose are left alone.
@@ -313,6 +335,64 @@ function trimTitle(raw) {
   while (words.length > 1 && /^[A-Z][.!?]?$/.test(words[words.length - 1])) words.pop();
   if (words.length === 1 && words[0].replace(/[.!?]/g, '').length < 3) return '';
   return words.join(' ');
+}
+
+// Where each chunk begins in the formatted folio, as a paragraph index.
+//
+// Stitching knows the offset of every chunk in the joined text, but the
+// formatter rewrites that text — it scrubs transcription artifacts, opens
+// paragraph breaks at section markers and re-groups sentences — so an offset
+// cannot be carried through it. The words survive, though, so each chunk is
+// found by probing the formatted paragraphs for the words it opens with.
+//
+// Folding to letters and digits makes the probe immune to the punctuation the
+// formatter moves. The search runs forward only: a chunk is never looked for
+// before the chunk ahead of it landed, which keeps repeated phrases from
+// pulling a later chunk backwards. A chunk whose opening did not survive
+// (front matter cut by stripGutenberg, an overlap that swallowed it) reports
+// null rather than a guess.
+const PROBE_LONG = 48;
+const PROBE_SHORT = 20;
+function foldForProbe(s) {
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+function locateChunks(stitched, starts, paras) {
+  const folded = paras.map(foldForProbe);
+  // A chunk that opens on a section marker straddles a break the formatter
+  // put in ("CHAPTER I." leaves the prose behind it), so a probe is allowed
+  // to run into the paragraph after the one it matches. The chunk still
+  // begins at the first of the two. Single paragraphs are tried first, at
+  // every probe length, so the looser match is only ever a fallback.
+  const findWithin = probe => {
+    for (let i = from; i < folded.length; i++) if (folded[i].includes(probe)) return i;
+    return null;
+  };
+  const findSpanning = probe => {
+    for (let i = from; i < folded.length; i++) {
+      const at = (folded[i] + ' ' + (folded[i + 1] || '')).indexOf(probe);
+      // the match has to BEGIN in this paragraph; one lying wholly in the
+      // next belongs to the next, and reporting this one would be off by one
+      if (at >= 0 && at < folded[i].length) return i;
+    }
+    return null;
+  };
+  const out = [];
+  let from = 0;
+  for (const at of starts) {
+    if (typeof at !== 'number') { out.push(null); continue; }
+    const source = foldForProbe(scrubArtifacts(stitched.slice(at, at + PROBE_LONG * 6)));
+    let hit = null;
+    for (let len = PROBE_LONG; len >= PROBE_SHORT && hit === null; len -= 14) {
+      const probe = source.slice(0, len);
+      if (probe.length < PROBE_SHORT) break;
+      hit = findWithin(probe);
+      if (hit === null) hit = findSpanning(probe);
+    }
+    if (hit !== null) from = hit;
+    out.push(hit);
+  }
+  return out;
 }
 
 // --- Outline extraction --------------------------------------------------------
@@ -445,6 +525,9 @@ function buildOutline(rows, work, pageChunks) {
 module.exports = {
   STOIC_AUTHORS,
   buildOutline,
+  stitch,
+  locateChunks,
+  scrubArtifacts,
   tradition,
   spine,
   workTitle,
