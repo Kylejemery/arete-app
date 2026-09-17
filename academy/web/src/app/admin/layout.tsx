@@ -50,6 +50,7 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
     label: 'Members',
     tabs: [
       { href: '/admin/journal-agent', label: 'Journal Agent' },
+      { href: '/admin/distress', label: 'Distress' },
       { href: '/admin/longitudinal', label: 'Longitudinal' },
       { href: '/admin/enchiridion', label: 'Enchiridion' },
     ],
