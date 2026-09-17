@@ -138,17 +138,35 @@ matches.
 ### Railway scheduling (its own cron service)
 
 A **separate** cron service, matching the corpus, journal and gap agents rather
-than bolting onto the API process. Config lives in
-`server/railway.quality-audit-agent.json`.
+than bolting onto the API process.
+
+> **The dashboard is authoritative, not the JSON file.** Railway's Config as
+> Code (`railway.json` / `railway.toml`) is deprecated: **new services cannot
+> opt into it at all**, and existing files stop being read on **2026-12-01**.
+> So `server/railway.quality-audit-agent.json` is a record of intent that
+> nothing enforces — the settings below are what actually run the service, and
+> the file and the dashboard can silently disagree. The replacement is
+> Infrastructure as Code (`.railway/railway.ts`, via `railway config migrate`).
+> The other fifteen `server/railway.*.json` files are on the same clock.
+>
+> Two further traps if you do wire a legacy service to a config file: the path
+> is absolute from the repo root and does **not** follow the Root Directory
+> (`/server/railway.quality-audit-agent.json`, not the bare filename), and a
+> config file that is read overrides the dashboard values for that service.
 
 1. In the Railway project, **New → GitHub Repo** pointing at this repo.
 2. Set the service's **Root Directory** to `server`.
-3. Configure the service (Settings):
+3. Configure the service (Settings) — these are the settings that run it:
    - **Start command**: `node quality-audit-agent.js`
    - **Cron schedule**: `0 9 * * *` → 09:00 UTC, after the nightly Corpus Agent
      (08:00 UTC) so it measures the freshest corpus.
    - **Restart policy**: `NEVER` (cron jobs run once and exit).
 4. Add the environment variables below.
+
+Verified against a `server/`-only install with no parent repo, which is what
+the service sees: the agent loads, all probes register, `findRepoRoot` returns
+nothing so the repo probes skip rather than crash, and a missing or unreachable
+Supabase exits non-zero rather than reporting a clean night.
 
 A cron service sleeps between runs, so the standing cost is one model call for
 the brief plus the sampled read pass — four Sonnet calls a night at the default
