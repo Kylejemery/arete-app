@@ -186,9 +186,30 @@ where r.id = (select id from quality_audit_reports
 order by case f->>'severity' when 'critical' then 0 when 'warning' then 1 else 2 end;
 ```
 
-There is no admin tab yet. That is the obvious next step: a **Quality** tab beside
-the Gap Agent tab, listing tonight's findings with a Mute button that writes the
-fingerprint and a reason.
+### The Quality tab
+
+`academy.pursuearete.com/admin` → **Quality**, beside Self-Reflection. It shows
+the latest completed run's brief, the counts, every finding with its evidence and
+its action, what cleared since the last run, the live mute list, and a history
+strip of the last 14 runs (including failed ones — a night the agent died is
+something the tab should show, not hide).
+
+- **Run now** starts an audit on the Railway server rather than waiting for
+  09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
+  which fires the run and returns 202. It does **not** reimplement the probes in
+  TypeScript: twenty-one probes in two languages would be two copies of the
+  rules, and the probes are the rules.
+- **Mute…** on a finding writes its fingerprint and a reason to
+  `quality_audit_mutes`. The reason is required — an unexplained mute is
+  indistinguishable from a bug being hidden. The mute takes effect from the next
+  run, so the finding stays visible (dimmed) in the report that produced it.
+- **Lift mute** removes it; the finding returns on the next run, marked new.
+
+A run started from the tab covers `corpus`, `library` and `material` only. The
+backend drops `repo` whatever the caller asks for, because those probes need a
+checkout the Railway service does not have, and a run that claimed `repo`
+coverage while skipping every repo probe would poison the night-to-night diff —
+which is keyed on domain coverage.
 
 ## Adding a probe
 
