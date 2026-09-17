@@ -22,7 +22,19 @@
 // ---------------------------------------------------------------------------
 const { createClient } = require('@supabase/supabase-js');
 
-const EDGE_THRESHOLD = 0.3;
+// An edge qualifies once it has been co-retrieved enough times to be more
+// than coincidence. apply_hebbian_edge EMAs weight toward the response's
+// outcome score, so weight_n = score * (1 - (1 - learning_rate)^n) and the
+// score is the ceiling, not a waypoint. At the observed mean outcome score
+// (0.42) and learning_rate 0.1 that puts the old 0.3 about twelve repeat
+// co-retrievals of the same pair away — no edge had come close after a month
+// of firing, and a pair whose responses average below 0.3 could never have
+// qualified at all. 0.1 is ~3 repeats, which is the bar
+// decay_concept_edges already uses (min_co_retrievals) to call an edge
+// established rather than prune it, so the read gate and the prune gate now
+// agree. Lower would admit single co-retrievals, which is the noise that bar
+// exists to exclude.
+const EDGE_THRESHOLD = 0.1;
 const EDGES_PER_SOURCE = 3;
 // Each hop costs an edge query plus a chunk query. Past a few hops the walk
 // has left the neighbourhood of the question anyway: scores decay
