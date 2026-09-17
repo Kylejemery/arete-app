@@ -82,6 +82,23 @@ every Claude endpoint returns HTTP 500.
 
 The server will start on `http://localhost:3000`.
 
+### Tests
+
+```bash
+npm test          # node --test, no install and no database needed
+```
+
+`tests/` holds unit tests on Node's built-in runner. They stub
+`@supabase/supabase-js` at module load and answer from fixtures, so they run
+on a bare checkout.
+
+`tests/graph-boost.test.js` covers the graph-boost expansion, which is the
+one retrieval path that reaches `rag_corpus` without `match_rag_corpus`: the
+guarantees that RPC makes in SQL — `deprecated = false`, and the caller's
+`text_type` fence — exist there only as JavaScript, and both have gone
+missing before. `repo.retrieval_guarantees` in the nightly audit checks the
+same two invariants from the other side, by reading the source.
+
 ### Checking what the Cabinet retrieves
 
 `scripts/probe-retrieval.js` runs the Cabinet's corpus retrieval for a
@@ -95,6 +112,7 @@ was judged to have used.
 ```bash
 node scripts/probe-retrieval.js "Is fear of death rational?"
 node scripts/probe-retrieval.js --recent 5
+node scripts/probe-retrieval.js "…" --depth 3   # hops to walk, with GRAPH_BOOST on
 ```
 
 ## Deploying to Railway
