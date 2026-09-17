@@ -23,7 +23,7 @@ const DEFAULT_SPINE = spine('__arete_quality_audit_no_such_author__');
 function exhibitProblems(ex) {
   const missing = [];
   if (ex.kind === 'web_embed' && !ex.embed_url) missing.push('embed_url');
-  if (ex.kind === 'component' && !ex.component_key) missing.push('component_key');
+  if (ex.kind === 'native' && !ex.component_key) missing.push('component_key');
   if (!ex.title) missing.push('title');
   if (ex.status === 'gallery') {
     if (!ex.source_passage) missing.push('source_passage');
@@ -43,6 +43,38 @@ async function liveWorks(ctx) {
     ctx._liveWorks = data || [];
   }
   return ctx._liveWorks;
+}
+
+// A gallery exhibit promises a reader a working piece, and every kind but
+// 'native' keeps that piece behind a URL. Two things can break the promise
+// without breaking anything a query can see: the page was never shipped, or the
+// Academy's RELEASED_PLAYGROUND gate does not list its slug and 404s it on the
+// way in. Either way the Garden index advertises an exhibit whose frame is
+// empty, which is how this probe came to be written.
+const REACHABLE_KINDS = ['web_embed', 'external'];
+const DEFAULT_REACH_TIMEOUT_MS = 8000;
+
+// HEAD is enough to tell shipped from missing and costs the host nothing, but
+// plenty of stacks answer it with 405 or 501, so fall back to GET once.
+async function probeUrl(url, timeoutMs) {
+  const attempt = async method => {
+    const res = await fetch(url, {
+      method,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'user-agent': 'arete-quality-audit' },
+    });
+    return res.status;
+  };
+  try {
+    let status = await attempt('HEAD');
+    if (status === 405 || status === 501) status = await attempt('GET');
+    return { status };
+  } catch (err) {
+    // A DNS failure, a refused connection, a timeout: this says something about
+    // where the probe is running, not about the exhibit.
+    return { unreachable: err.name === 'TimeoutError' ? 'timed out' : (err.cause?.code || err.message) };
+  }
 }
 
 const probes = [
@@ -215,6 +247,109 @@ const probes = [
           count: noEra.length,
           evidence: noEra.slice(0, 10).map(w => `${w.author} / ${w.work}`),
           action: 'Extend the ERAS map in server/library.js. edition_year on the chunks is the source for translations.',
+        }));
+      }
+
+      return out;
+    },
+  },
+  {
+    id: 'library.exhibit_reachable',
+    domain: DOMAIN,
+    title: 'Gallery exhibits actually load',
+    needs: ['db'],
+    async run(ctx) {
+      const timeoutMs = ctx.config?.exhibit_reach_timeout_ms || DEFAULT_REACH_TIMEOUT_MS;
+
+      const { data, error } = await ctx.supabase
+        .from('exhibits')
+        .select('slug, title, kind, status, embed_url')
+        .eq('status', 'gallery')
+        .in('kind', REACHABLE_KINDS);
+      if (error) throw new Error(`exhibits read failed: ${error.message}`);
+
+      // A row with no embed_url is exhibit_integrity's finding, not this one.
+      const targets = (data || []).filter(ex => ex.embed_url);
+      if (!targets.length) return [];
+
+      const results = [];
+      for (const ex of targets) {
+        results.push({ ex, ...(await probeUrl(ex.embed_url, timeoutMs)) });
+      }
+
+      // If nothing could be reached at all, this environment has no egress and
+      // the probe has proved nothing. Say so rather than reporting every
+      // exhibit as broken, which is the shape of a probe that cries wolf.
+      const unreachable = results.filter(r => r.unreachable);
+      if (unreachable.length === results.length) {
+        return [finding({
+          probe: 'library.exhibit_reachable',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'no_egress',
+          title: 'Could not reach any exhibit URL, so none were checked',
+          detail:
+            'Every request failed at the network layer rather than returning a status. That is a fact ' +
+            'about where this run happened, not about the exhibits, so nothing is being claimed about them.',
+          count: results.length,
+          evidence: results.slice(0, 10).map(r => `${r.ex.slug} — ${r.unreachable}`),
+          action: 'Run the audit somewhere with outbound HTTPS, or ignore this probe for this environment.',
+        })];
+      }
+
+      const out = [];
+
+      // Gone is the reader-facing failure: the Garden lists it, the frame 404s.
+      for (const r of results.filter(r => r.status === 404 || r.status === 410)) {
+        out.push(finding({
+          probe: 'library.exhibit_reachable',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: r.ex.slug,
+          title: `Gallery exhibit "${r.ex.slug}" returns ${r.status}`,
+          detail:
+            'The Garden index lists this exhibit, and the page it frames is not there. A reader who opens ' +
+            'it gets an empty box. The usual cause is a row promoted to gallery before its page shipped, ' +
+            'or an Academy slug missing from RELEASED_PLAYGROUND in academy/web/src/middleware.ts, which ' +
+            '404s anything it does not list.',
+          evidence: [`${r.ex.title} — ${r.ex.embed_url} → ${r.status}`],
+          action:
+            'Ship the page and release its slug, or move the exhibit back to workshop until it is reachable. ' +
+            'A workshop exhibit stays reachable by direct link and is absent from the index.',
+        }));
+      }
+
+      // Anything else that answered badly: real, but not necessarily gone.
+      for (const r of results.filter(r => r.status >= 400 && r.status !== 404 && r.status !== 410)) {
+        out.push(finding({
+          probe: 'library.exhibit_reachable',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: r.ex.slug,
+          title: `Gallery exhibit "${r.ex.slug}" answered ${r.status}`,
+          detail:
+            'The page responded, but not with something a reader can use. A 5xx may be transient; a 401 or ' +
+            '403 means the exhibit is behind a gate the Garden does not know about.',
+          evidence: [`${r.ex.title} — ${r.ex.embed_url} → ${r.status}`],
+          action: 'Open the URL. If it is a gate, the exhibit is not public and should not be in the gallery.',
+        }));
+      }
+
+      // Some reached, some did not: the ones that did not are worth naming, but
+      // only as a note, since the others prove the network itself was fine.
+      if (unreachable.length) {
+        out.push(finding({
+          probe: 'library.exhibit_reachable',
+          domain: DOMAIN,
+          severity: 'info',
+          key: 'partial_unreachable',
+          title: `${unreachable.length} exhibit URL(s) could not be reached`,
+          detail:
+            'Other exhibits answered on the same run, so the network was working. These may be a slow host, ' +
+            'a bad hostname, or a domain that no longer resolves.',
+          count: unreachable.length,
+          evidence: unreachable.slice(0, 10).map(r => `${r.ex.slug} — ${r.ex.embed_url} — ${r.unreachable}`),
+          action: 'Open each URL by hand. A hostname that does not resolve is a dead exhibit wearing a live row.',
         }));
       }
 

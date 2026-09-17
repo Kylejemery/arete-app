@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-three probes across four domains. A probe is a named check that knows one
+Twenty-four probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -36,7 +36,10 @@ thing, returns findings, and never writes.
 ### `library` — the reading rooms and the Garden
 
 `library.exhibit_integrity` (a gallery exhibit missing the passage, citation or
-Agora prompt its status promises), `library.exhibit_thinkers` (an exhibit citing
+Agora prompt its status promises), `library.exhibit_reachable` (a gallery
+exhibit whose page does not load — the row was promoted before the page
+shipped, or the Academy's `RELEASED_PLAYGROUND` gate does not list its slug and
+404s it), `library.exhibit_thinkers` (an exhibit citing
 a thinker the corpus cannot show a passage for), `library.shelf_orphans` (a
 `library_overrides` row pointing at a work that was deprecated or re-labelled out
 from under it — including a *hidden* override that no longer matches, which
@@ -179,6 +182,7 @@ the agent:
 | `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. Above it, a Mode 2 work is examined rather than flagged. |
 | `mode2_min_attribution` | `0.5` | Fraction of a work's chunks that must name its author. Below it, a long Mode 2 work is a copyright finding; above it, a note about weighting. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
+| `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads. |
 | `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
 | `fetch_before_drift_check` | `true` | Whether to fetch the base before comparing. `false` where there is no network; the comparison then uses the local remote-tracking ref, which may itself be stale. |
 | `brief_max_words` | `400` | Length of the prose brief. |
@@ -217,7 +221,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-three probes in two languages would be two copies of the
+  TypeScript: twenty-four probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
@@ -238,7 +242,12 @@ which is keyed on domain coverage.
 2. Give every finding a `key` if the probe can emit more than one, and keep the
    key free of counts and dates.
 3. Declare `needs` honestly — `db`, `repo`, `claude`, `openai`. A probe that
-   cannot run should skip and say so, never pass.
+   cannot run should skip and say so, never pass. Outbound HTTP is not one of
+   the four, so a probe that makes requests has to detect its own missing
+   egress: `library.exhibit_reachable` reports one `info` finding when *every*
+   request failed at the network layer, rather than one `critical` per exhibit,
+   because a probe that cries wolf where it happens to be running costs more
+   than the check is worth.
 4. Heavy `rag_corpus` aggregates belong in SQL, not in a client `select()`.
    PostgREST caps a response at 1000 rows, which is how the Coverage Gap Agent
    once produced phantom "absent" works. Extend
