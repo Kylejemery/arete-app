@@ -18,11 +18,17 @@
  * What is ours: the wax and the tension are drawn, and drawing them means
  * choosing how they fail and hold. The failure shown is the one Chrysippus
  * names and no other.
+ *
+ * The three sigils are seal-marks for what each impression presents, not
+ * pictures of the things themselves: round, square, and clear. The third is a
+ * radiance rather than a hand because what makes it Zeno's model case is not
+ * the hand but the conditions, and because three marks of one family read as
+ * three impressions where two marks and a portrait read as an odd set.
  */
 
 // ── the impressions ──────────────────────────────────────────────────────────
 
-export type Sigil = 'round' | 'square' | 'hand'
+export type Sigil = 'round' | 'square' | 'radiant'
 
 export type Impression = {
   id: string
@@ -59,10 +65,10 @@ export const impressions: Impression[] = [
   },
   {
     id: 'hand',
-    short: 'your own hand',
+    short: 'your hand, in good light',
     scene: 'Your hand, held up in good light, close, with nothing wrong with the conditions.',
-    sigil: 'hand',
-    note: 'The Stoic model case: from what is, exactly as it is, under conditions with nothing wrong in them.',
+    sigil: 'radiant',
+    note: 'The Stoic model case: from what is, exactly as it is, under conditions with nothing wrong in them. Its mark is the light rather than the hand, because the light is what makes it the model case.',
   },
 ]
 

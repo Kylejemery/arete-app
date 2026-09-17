@@ -41,24 +41,19 @@ function legibility(indexFromNewest: number): number {
 /**
  * The three sigils, drawn at a common size about the same centre.
  *
- * The hand is one continuous outline rather than a palm with fingers laid on
- * top of it, because that is what a seal is: a single cut.
+ * They are marks for what each impression presents, not pictures of the
+ * things: round, square, and clear. The third is an eight-pointed radiance
+ * because what makes that impression Zeno's model case is the conditions
+ * rather than the hand, and because it has to stay legible in two places at
+ * once. In the wax panel a sigil is a filled cut; in the tension panel it is a
+ * transparent outline superimposed on the others, which is the whole visual
+ * argument there. That rules out anything built from overlapping opaque parts,
+ * a hand among them: every sigil has to be one closed path that reads through
+ * the two behind it. Straight radial spikes do that against a smooth circle
+ * and a square; a silhouette with interior detail does not.
  *
- * It is drawn to the proportions a hand actually has, which is what the two
- * earlier attempts got wrong. The hand runs 122 units from wrist to middle
- * fingertip, and of that the fingers take about 45 and the palm about 55. Get
- * that backwards, as the first two did, and the fingers read as tentacles on a
- * stump however well they are shaped. Across the knuckles it is 52 units, a
- * little over 40 per cent of its length, which is four fingers of 13 each.
- *
- * Within that: the middle finger is longest, index and ring are close behind
- * it, and the little finger is both shorter and set lower on the palm, so its
- * tip lands around the top joint of the ring finger. Each finger tapers from
- * base to tip and leaves the palm on its own line, so the gaps open into
- * wedges going up; parallel fingers with hairline gaps read as webbing. The
- * thumb is thicker than any finger, comes off the side of the palm on its own
- * diagonal rather than sitting at the wrist, and the wrist closes on a shallow
- * curve rather than a flat cut.
+ * The star is sixteen points alternating between radius 52, the circle's own,
+ * and radius 24.
  */
 function SigilPath({ sigil, scale = 1 }: { sigil: Sigil; scale?: number }) {
   const t = `translate(${SLOT.cx} ${SLOT.cy}) scale(${scale}) translate(${-SLOT.cx} ${-SLOT.cy})`
@@ -69,31 +64,13 @@ function SigilPath({ sigil, scale = 1 }: { sigil: Sigil; scale?: number }) {
       {sigil === 'square' ? (
         <rect x={SLOT.cx - r} y={SLOT.cy - r} width={r * 2} height={r * 2} rx={3} />
       ) : null}
-      {sigil === 'hand' ? (
+      {sigil === 'radiant' ? (
         <path
-          d="M 128 214 L 122 188 L 116 186 L 89 159 A 8.5 8.5 0 0 1 101 147 L 128 174
-             L 123 147 L 118.5 97 A 5.5 5.5 0 0 1 129.5 97 L 135 147 L 135.5 153 L 136 147
-             L 135.5 92 A 5.5 5.5 0 0 1 146.5 92 L 148 147 L 148.5 153 L 149 147
-             L 153.5 96 A 5.5 5.5 0 0 1 164.5 96 L 161 147 L 161.5 156 L 162 155
-             L 171 115 A 5 5 0 0 1 181 115 L 177 160 L 179 186 L 168 214
-             Q 148 219 128 214 Z"
+          d="M 150 98 L 159.2 127.8 L 186.8 113.2 L 172.2 140.8 L 202 150
+             L 172.2 159.2 L 186.8 186.8 L 159.2 172.2 L 150 202 L 140.8 172.2
+             L 113.2 186.8 L 127.8 159.2 L 98 150 L 127.8 140.8 L 113.2 113.2
+             L 140.8 127.8 Z"
           strokeLinejoin="round"
-        />
-      ) : null}
-      {/* The interior cuts. A signet is an intaglio, not a stencil: the die
-          carries a few decisive lines inside the silhouette as well as the
-          outline, and without them a filled shape reads as clipart. Four
-          knuckle creases and the crease at the base of the thumb, and nothing
-          else, because a seal cannot hold shading. Three knuckles, not four:
-          the little finger sits lower on the palm, so its crease breaks the
-          scallop the other three make and reads as a stray scratch. */}
-      {sigil === 'hand' ? (
-        <path
-          d="M 124 152 Q 129 148 134 152 M 137 152 Q 142 148 147 152
-             M 150 152 Q 155 148 160 152
-             M 129 176 Q 134 188 133 201"
-          fill="none"
-          strokeLinecap="round"
         />
       ) : null}
     </g>
