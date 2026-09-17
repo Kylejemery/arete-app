@@ -122,11 +122,21 @@ export default function EveningScreen() {
   };
 
   const loadTasks = async () => {
-    // Step 1: paint from cache immediately
+    // Step 1: paint from cache only if it's from today. The cache used to be
+    // a bare array with no date on it, so after midnight the evening list came
+    // back still crossed off — and stayed that way whenever the fresh fetch
+    // failed. Same shape and rule as the morning tab.
     try {
       const cached = await AsyncStorage.getItem('arete:evening_tasks');
-      if (cached) setTasks(JSON.parse(cached));
-      setCacheLoaded(true);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (!Array.isArray(parsed) && parsed.date === localToday()) {
+          setTasks(parsed.tasks);
+          setCacheLoaded(true);
+        }
+        // Old array format or a different day: skip — the skeleton stays up
+        // until Step 2 returns today's list.
+      }
     } catch {}
 
     // Step 2: fresh fetch
@@ -154,9 +164,9 @@ export default function EveningScreen() {
       setTasks(freshTasks);
       setCacheLoaded(true);
 
-      // Step 3: write cache
+      // Step 3: write date-stamped cache
       try {
-        await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify(freshTasks));
+        await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify({ date: localToday(), tasks: freshTasks }));
       } catch {}
     } catch (e) {
       console.error(e);
@@ -167,7 +177,7 @@ export default function EveningScreen() {
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
-    try { await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify(updatedTasks)); } catch {}
+    try { await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
     if (allDone) await incrementStreak();
   };
 
