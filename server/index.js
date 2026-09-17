@@ -73,6 +73,14 @@ const { runSynthesisAgent } = require('./synthesis-agent');
 // service manually; this require also backs the on-demand admin trigger below.
 const { runWeeklySelfReflection } = require('./weekly-self-reflection-agent');
 
+// Nightly Quality Audit Agent
+// Railway cron: 0 9 * * * (09:00 UTC, after the 08:00 corpus ingest)
+// Audits what is already in the system rather than growing it. The repo probes
+// skip in this process — a Railway service rooted at server/ has no checkout —
+// so the on-demand trigger below covers corpus, library and material only.
+// See server/QUALITY_AUDIT_AGENT.md.
+const { runQualityAudit } = require('./quality-audit-agent');
+
 // RAG Corpus Agent (on-demand twin)
 // The nightly ingestion runs as its own Railway cron service rooted at
 // academy/corpus-ingestion (08:00 UTC). Railway cron services don't execute on
@@ -4305,6 +4313,56 @@ app.post('/api/admin/reflection/generate', async (req, res) => {
     reflectionRunning = false;
     console.error('[/api/admin/reflection/generate] error:', err.message);
     return res.status(500).json({ error: err.message || 'Failed to start reflection' });
+  }
+});
+
+// POST /api/admin/quality-audit/run — run the nightly Quality Audit on demand
+// (admin only). Same fire-and-return shape as the reflection trigger: the audit
+// reads a sample of the corpus through Claude and can take a minute, longer
+// than the Vercel proxy in front of this endpoint will wait, so start it,
+// return 202, and let the Quality tab reload once the report row lands.
+//
+// The repo domain is dropped here whatever the caller asks for. Its probes need
+// a checkout, this service is rooted at server/, and a probe that skips is
+// recorded as skipped — so including it would write a report whose domain
+// coverage claims more than it checked, and the night-to-night diff is keyed on
+// that coverage.
+let qualityAuditRunning = false;
+app.post('/api/admin/quality-audit/run', async (req, res) => {
+  try {
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+    if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: 'Server not configured for the quality audit' });
+    }
+    if (qualityAuditRunning) {
+      return res.status(409).json({ error: 'A quality audit run is already in progress' });
+    }
+
+    const requested = Array.isArray(req.body?.domains) ? req.body.domains : ['corpus', 'library', 'material'];
+    const domains = requested.filter(d => d !== 'repo');
+    if (!domains.length) {
+      return res.status(400).json({ error: 'No runnable domains — repo probes need a checkout this service does not have.' });
+    }
+
+    qualityAuditRunning = true;
+    runQualityAudit(['--domains', domains.join(',')])
+      .then(result => {
+        console.log('[/api/admin/quality-audit/run] finished:', JSON.stringify(result.counts || {}));
+      })
+      .catch(err => {
+        console.error('[/api/admin/quality-audit/run] run failed:', err.message);
+      })
+      .finally(() => {
+        qualityAuditRunning = false;
+      });
+
+    return res.status(202).json({ ok: true, started: true, domains });
+  } catch (err) {
+    qualityAuditRunning = false;
+    console.error('[/api/admin/quality-audit/run] error:', err.message);
+    return res.status(500).json({ error: err.message || 'Failed to start the quality audit' });
   }
 });
 

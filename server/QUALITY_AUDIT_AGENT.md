@@ -22,7 +22,7 @@ thing, returns findings, and never writes.
 | --- | --- |
 | `corpus.metadata_required` | Post-standard ingests missing `translator`, `source_url` or `edition_year` (Part 5 of the acquisition plan), with the offending works named. |
 | `corpus.copyright_fence` | A verbatim layer carrying an `edition_year` after 1930 — the failure the standing copyright rule exists to prevent. |
-| `corpus.mode2_length` | A `paper_summary` or `modern_summary` far longer than a summary can be. Either a verbatim ingest wearing the summary label, or a summariser that stopped summarising. No check constraint can tell those apart. |
+| `corpus.mode2_length` | A long Mode 2 work that does **not** name its own author through the text — what a verbatim ingest wearing the summary label looks like. Length alone is only reported as info: a genuine rewrite talks *about* its author ("Holiday argues", "Mates notes"), so voice is the copyright signal and length is a note about how much retrieval mass one modern work carries. |
 | `corpus.text_type_fence` | A `text_type` in `rag_corpus` that `server/lib/corpus-fence.js` does not list — a layer whose visibility nobody has decided, and which every surface is therefore free to retrieve. |
 | `corpus.identity_collisions` | One work living under two author strings. The filename parser has produced this before. |
 | `corpus.write_target_drift` | `source_text_chunks` carrying newer rows than `rag_corpus`. This once cost months of ingests. |
@@ -159,7 +159,8 @@ the agent:
 | `migration_drift_since` | `20260901` | Migrations older than this predate the convention. |
 | `domains` | all four | Default coverage. |
 | `material_sample_size` | `40` | Chunks read per night. `0` disables the paid pass. |
-| `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. |
+| `mode2_max_words` | `1800` | Twice the Paper Agent's 900-word ceiling. Above it, a Mode 2 work is examined rather than flagged. |
+| `mode2_min_attribution` | `0.5` | Fraction of a work's chunks that must name its author. Below it, a long Mode 2 work is a copyright finding; above it, a note about weighting. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
 | `brief_max_words` | `400` | Length of the prose brief. |
 
@@ -186,9 +187,30 @@ where r.id = (select id from quality_audit_reports
 order by case f->>'severity' when 'critical' then 0 when 'warning' then 1 else 2 end;
 ```
 
-There is no admin tab yet. That is the obvious next step: a **Quality** tab beside
-the Gap Agent tab, listing tonight's findings with a Mute button that writes the
-fingerprint and a reason.
+### The Quality tab
+
+`academy.pursuearete.com/admin` → **Quality**, beside Self-Reflection. It shows
+the latest completed run's brief, the counts, every finding with its evidence and
+its action, what cleared since the last run, the live mute list, and a history
+strip of the last 14 runs (including failed ones — a night the agent died is
+something the tab should show, not hide).
+
+- **Run now** starts an audit on the Railway server rather than waiting for
+  09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
+  which fires the run and returns 202. It does **not** reimplement the probes in
+  TypeScript: twenty-one probes in two languages would be two copies of the
+  rules, and the probes are the rules.
+- **Mute…** on a finding writes its fingerprint and a reason to
+  `quality_audit_mutes`. The reason is required — an unexplained mute is
+  indistinguishable from a bug being hidden. The mute takes effect from the next
+  run, so the finding stays visible (dimmed) in the report that produced it.
+- **Lift mute** removes it; the finding returns on the next run, marked new.
+
+A run started from the tab covers `corpus`, `library` and `material` only. The
+backend drops `repo` whatever the caller asks for, because those probes need a
+checkout the Railway service does not have, and a run that claimed `repo`
+coverage while skipping every repo probe would poison the night-to-night diff —
+which is keyed on domain coverage.
 
 ## Adding a probe
 

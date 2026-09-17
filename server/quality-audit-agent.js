@@ -59,6 +59,7 @@ const DEFAULT_CONFIG = {
   domains: DOMAINS,
   material_sample_size: 40,
   mode2_max_words: 1800,          // twice the Paper Agent's 900-word summary ceiling
+  mode2_min_attribution: 0.5,     // below this, a long Mode 2 work does not read as a rewrite
   queue_stale_days: 7,
   brief_max_words: 400,
 };
