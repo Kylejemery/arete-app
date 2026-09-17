@@ -147,7 +147,8 @@ async function probe(supabase, args) {
     ...fenceParams(args.fence),
   });
   if (error) throw new Error(`match_rag_corpus failed: ${error.message}`);
-  let rows = (await expandCandidates(data ?? [], args.k)).rows.filter(fencePostFilter(args.fence));
+  const fence = fencePostFilter(args.fence);
+  let rows = (await expandCandidates(data ?? [], args.k, { fence })).rows.filter(fence);
   rows = await decorate(supabase, rows);
   printRows(rows, args);
   console.log();
