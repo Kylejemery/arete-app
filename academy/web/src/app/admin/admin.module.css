@@ -349,9 +349,8 @@
   margin: 0 auto;
   padding: 1.5rem 1.5rem 0;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .fleetTitle {
@@ -359,6 +358,29 @@
   font-weight: 500;
   color: #888;
 }
+
+/* One row per group: a fixed label column so every group's chips start on the
+   same left edge, and the chips wrap within their own row. */
+.fleetGroups {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 14px;
+  row-gap: 7px;
+  align-items: start;
+}
+
+.fleetGroupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #aaa;
+  white-space: nowrap;
+  /* optically centers the label against the first row of chips */
+  padding-top: 8px;
+}
+
+.fleetGroupLabelOn { color: #534AB7; }
 
 .fleetTabs {
   display: flex;
@@ -370,14 +392,24 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 8px;
   border: 0.5px solid #e5e5e5;
   background: transparent;
-  font-size: 13px;
+  font-size: 12.5px;
   color: #666;
   cursor: pointer;
   transition: all 0.15s;
+}
+
+/* Narrow: the label column can't hold, so each label stacks above its own
+   chips and the padding does the work of separating one group from the next. */
+@media (max-width: 640px) {
+  .fleetGroups {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+  }
+  .fleetGroupLabel { padding-top: 12px; }
 }
 
 .fleetTab:hover { background: #f8f8f8; }
@@ -517,6 +549,8 @@
   .primaryBtn { background: #534AB7; }
   .primaryBtn:hover { background: #6B62C9; }
 
+  .fleetGroupLabel { color: #777; }
+  .fleetGroupLabelOn { color: #AFA9EC; }
   .fleetTab { border-color: #2a2a2a; color: #aaa; }
   .fleetTab:hover { background: #1a1a1a; }
   .fleetTabOn { background: #2A2660; border-color: #534AB7; color: #CFCBF5; }
