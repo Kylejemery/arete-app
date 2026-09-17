@@ -108,20 +108,24 @@ export default function GardenScreen() {
                     <ActivityIndicator size="large" color={GOLD} style={{ marginTop: 40 }} />
                 ) : error ? (
                     <Text style={s.empty}>{error}</Text>
-                ) : !shown.length ? (
-                    <Text style={s.empty}>
-                        {thinker
-                            ? `Nothing in the Garden from ${thinker} yet.`
-                            : 'Nothing is planted yet.'}
-                    </Text>
                 ) : (
+                    /* All three branches, always, whether or not anything is
+                       planted in them. The field is the organizing idea of the
+                       room, and a barren section says where the Garden has yet
+                       to grow rather than hiding that there is ground there. */
                     BRANCHES.map(branch => {
                         const rows = byBranch(shown, branch);
-                        if (!rows.length) return null;
                         return (
                             <View key={branch} style={s.branchSection}>
                                 <Text style={s.branchTitle}>{BRANCH_LABEL[branch]}</Text>
                                 <Text style={s.branchGloss}>{BRANCH_GLOSS[branch]}</Text>
+                                {!rows.length ? (
+                                    <Text style={s.branchEmpty}>
+                                        {thinker
+                                            ? `Nothing from ${thinker} here yet.`
+                                            : 'Nothing planted here yet.'}
+                                    </Text>
+                                ) : null}
                                 {rows.map(e => (
                                     <TouchableOpacity
                                         key={e.id}
@@ -210,6 +214,7 @@ const s = StyleSheet.create({
         textTransform: 'uppercase',
     },
     branchGloss: { color: '#555', fontSize: 12, fontStyle: 'italic', marginTop: 4, marginBottom: 14 },
+    branchEmpty: { color: '#555', fontSize: 13, fontStyle: 'italic', lineHeight: 20, paddingVertical: 4 },
 
     card: {
         padding: 16,

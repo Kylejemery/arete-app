@@ -103,20 +103,24 @@ function GardenIndex() {
         <EmptyNote>Loading</EmptyNote>
       ) : error ? (
         <EmptyNote>{error}</EmptyNote>
-      ) : !shown.length ? (
-        <EmptyNote>
-          {thinker ? `Nothing in the Garden from ${thinker} yet.` : 'Nothing is planted yet.'}
-        </EmptyNote>
       ) : (
+        /* All three branches, always, whether or not anything is planted in
+           them. The field is the organizing idea of the room, and a barren
+           section says where the Garden has yet to grow rather than hiding
+           that there is ground there. */
         BRANCHES.map(branch => {
           const rows = byBranch(shown, branch);
-          if (!rows.length) return null;
           return (
             <section key={branch} style={{ marginBottom: 48 }}>
               <Kicker>{BRANCH_LABEL[branch]}</Kicker>
               <p style={{ fontFamily: ag.ui, fontSize: 13, fontStyle: 'italic', color: ag.faint, margin: '4px 0 18px' }}>
                 {BRANCH_GLOSS[branch]}
               </p>
+              {!rows.length ? (
+                <p style={{ fontFamily: ag.ui, fontSize: 14, fontStyle: 'italic', color: ag.faint, margin: 0 }}>
+                  {thinker ? `Nothing from ${thinker} here yet.` : 'Nothing planted here yet.'}
+                </p>
+              ) : null}
               <div
                 style={{
                   display: 'grid',

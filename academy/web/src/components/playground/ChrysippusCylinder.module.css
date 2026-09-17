@@ -1,0 +1,338 @@
+/* Chrysippus's Cylinder — a Playground experiment.
+ *
+ * Shares the Playground palette (tape / bone / pomegranate) and the four type
+ * families exposed by app/playground/layout.tsx, so it reads as a sibling of
+ * Zeno's Hand. Three movements: the floor (one push, three natures), the two
+ * causes, and the transfer into a mind.
+ */
+
+.page {
+  --paper: #e4e5dc;
+  --tape: #16140f;
+  --tape-rule: #332f26;
+  --plate: #100e0a;
+  --bone: #c9c4b6;
+  --bone-dim: #7c7565;
+  --slate: #1d2124;
+  --pom: #8a2b2b;
+  --pom-lit: #b8473f;
+  --gold: #c9a84c;
+  --moss: #6f8a5a;
+  --display: var(--font-fraunces), 'Fraunces', Georgia, serif;
+  --book: var(--font-newsreader), 'Newsreader', Georgia, serif;
+  --mono: var(--font-plex-mono), 'IBM Plex Mono', ui-monospace, monospace;
+  --util: var(--font-plex-sans), 'IBM Plex Sans', system-ui, sans-serif;
+
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tape);
+  color: var(--bone);
+  font-family: var(--book);
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+  line-height: 1.62;
+  -webkit-font-smoothing: antialiased;
+}
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+.page :focus-visible {
+  outline: 2px solid var(--pom-lit);
+  outline-offset: 3px;
+}
+
+.wrap {
+  max-width: 58rem;
+  margin: 0 auto;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.1rem, 4vw, 2rem) 5rem;
+}
+
+.back {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-dim);
+  text-decoration: none;
+}
+.back:hover {
+  color: var(--gold);
+}
+
+.head {
+  margin: 2.5rem 0 3.5rem;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin: 0 0 0.9rem;
+}
+.head h1 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(2.1rem, 1.5rem + 2.6vw, 3.4rem);
+  line-height: 1.08;
+  color: var(--paper);
+  margin: 0;
+}
+.standfirst {
+  margin: 1.2rem 0 0;
+  max-width: 40rem;
+  color: var(--bone);
+}
+
+.movement {
+  margin-top: clamp(3rem, 7vw, 5rem);
+  padding-top: clamp(2rem, 5vw, 3rem);
+  border-top: 1px solid var(--tape-rule);
+}
+.h2 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 1.1rem + 1.1vw, 2rem);
+  line-height: 1.16;
+  color: var(--paper);
+  margin: 0 0 0.9rem;
+}
+.lede {
+  margin: 0 0 1.6rem;
+  max-width: 40rem;
+  color: var(--bone);
+}
+
+/* controls */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 1.4rem;
+}
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--util);
+  font-size: 0.86rem;
+  color: var(--bone);
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.chip:hover {
+  border-color: var(--bone-dim);
+}
+.chipOn {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.chipNote {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--bone-dim);
+}
+.chipOn .chipNote {
+  color: var(--gold);
+  opacity: 0.75;
+}
+
+/* the floor */
+
+.floor {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+}
+.grid {
+  color: var(--bone);
+}
+.startDot {
+  fill: none;
+  stroke: var(--bone-dim);
+  stroke-width: 1.5;
+}
+.pushArrow {
+  stroke: var(--pom-lit);
+  stroke-width: 2.5;
+}
+.pushHead {
+  fill: var(--pom-lit);
+}
+.floorLabel {
+  fill: var(--bone-dim);
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+}
+.trail {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+.body {
+  fill: var(--slate);
+  stroke: var(--paper);
+  stroke-width: 2;
+}
+
+.afterFloor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+  margin: 1.2rem 0 1.4rem;
+}
+.push {
+  font-family: var(--util);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--paper);
+  background: var(--pom);
+  border: 1px solid var(--pom-lit);
+  border-radius: 2px;
+  padding: 0.66rem 1.6rem;
+  cursor: pointer;
+}
+.push:hover {
+  background: var(--pom-lit);
+}
+.reading {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--gold);
+}
+.gloss {
+  margin: 0;
+  max-width: 40rem;
+}
+.ourNote {
+  margin: 1.4rem 0 0;
+  max-width: 40rem;
+  font-family: var(--util);
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+  border-left: 2px solid var(--tape-rule);
+  padding-left: 0.9rem;
+}
+
+/* the two causes */
+
+.causes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 1.2rem;
+  margin-bottom: 2rem;
+}
+.cause {
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+  padding: 1.4rem;
+}
+.cause h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  font-size: 1.25rem;
+  color: var(--paper);
+  margin: 0;
+}
+.latin {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  margin: 0.35rem 0 0.9rem;
+}
+.cause p {
+  margin: 0 0 0.9rem;
+  font-size: 0.97rem;
+}
+.inScene {
+  margin: 0;
+  font-family: var(--util);
+  font-size: 0.82rem;
+  color: var(--bone-dim);
+}
+
+/* quotations */
+
+.quote {
+  margin: 0;
+  border-left: 3px solid var(--gold);
+  padding-left: 1.2rem;
+}
+.quote blockquote {
+  margin: 0;
+  font-family: var(--book);
+  font-style: italic;
+  font-size: 1.08rem;
+  line-height: 1.6;
+  color: var(--paper);
+}
+.quoteMain blockquote {
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
+}
+.quote figcaption {
+  margin-top: 0.7rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  color: var(--gold);
+}
+.tr {
+  color: var(--bone-dim);
+}
+
+/* the transfer */
+
+.scene {
+  margin: 0 0 1.5rem;
+  max-width: 40rem;
+  font-family: var(--book);
+  font-size: 1.1rem;
+  color: var(--paper);
+  border-left: 2px solid var(--pom);
+  padding-left: 1rem;
+}
+.assent {
+  background: var(--plate);
+  border: 1px solid var(--tape-rule);
+  border-radius: 2px;
+  padding: 1.4rem;
+}
+.characterGloss {
+  margin: 0 0 1rem;
+  font-family: var(--util);
+  font-size: 0.85rem;
+  color: var(--bone-dim);
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--tape-rule);
+}
+.assentBody {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.closing {
+  margin: 1.8rem 0 0;
+  max-width: 40rem;
+  font-family: var(--book);
+  font-size: 1.05rem;
+  color: var(--paper);
+}

@@ -31,7 +31,13 @@ const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', 
 // The owner is the exception. Gating the index locked the author out of their
 // own workshop, which is not the point: what is gated is users reaching it,
 // not the Playground existing. ADMIN_EMAIL sees everything, as with /admin.
-const RELEASED_PLAYGROUND = ['happiness-scale', 'zenos-hand']
+const RELEASED_PLAYGROUND = [
+  'happiness-scale',
+  'zenos-hand',
+  'chrysippus-cylinder',
+  'the-impression',
+  'stoic-logic',
+]
 
 /**
  * Is this request the owner's? Read only to answer that question: no refreshed
