@@ -421,12 +421,84 @@ export default function Reader(props: {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+  // ---- where in the work the reader actually is ----
+  // The outline is finer than the folio: a folio of the Meditations carries
+  // thirty numbered entries, so marking the folio would mark thirty rows at
+  // once. Follow the paragraph in view instead.
+  const [topPara, setTopPara] = useState(0);
+  const measureRaf = useRef<number | null>(null);
+  const measureTopPara = useCallback(() => {
+    if (measureRaf.current !== null) return;   // one measure a frame, not one a scroll event
+    measureRaf.current = requestAnimationFrame(() => {
+      measureRaf.current = null;
+      const centre = columnRef.current;
+      if (!centre) return;
+      const nodes = Array.from(centre.querySelectorAll<HTMLElement>('[data-para]'));
+      if (!nodes.length) return;
+      const bookBox = centre.querySelector<HTMLElement>('.lib-book-text');
+      let first: number | null = null;
+      if (bookBox) {
+        // the spread on show is a horizontal band of the column flow; take the
+        // first paragraph any part of which falls inside it, so a paragraph
+        // carried over from the previous spread still counts as the one here
+        const br = bookBox.getBoundingClientRect();
+        for (const el of nodes) {
+          const hit = Array.from(el.getClientRects()).some(r => r.right > br.left + 1 && r.left < br.right - 1);
+          if (hit) { first = Number(el.dataset.para); break; }
+        }
+      } else {
+        // The reading line is the middle of the column, which is where a jump
+        // lands a paragraph: clicking an entry then marks that same entry.
+        // The last paragraph beginning at or above the line is the one in it,
+        // and at either end of the folio it is the first or last paragraph.
+        const cr = centre.getBoundingClientRect();
+        const line = cr.top + cr.height / 2;
+        first = Number(nodes[0].dataset.para);
+        for (const el of nodes) {
+          if (el.getBoundingClientRect().top > line) break;
+          first = Number(el.dataset.para);
+        }
+        // The column cannot scroll past either end, so the opening and closing
+        // paragraphs never reach the line. At the ends, the end is the answer.
+        const room = centre.scrollHeight - centre.clientHeight;
+        if (centre.scrollTop <= 1) first = Number(nodes[0].dataset.para);
+        else if (centre.scrollTop >= room - 1) first = Number(nodes[nodes.length - 1].dataset.para);
+      }
+      if (first !== null) setTopPara(first);
+    });
+  }, []);
+  useEffect(() => {
+    const centre = columnRef.current;
+    measureTopPara();
+    if (!centre) return;
+    centre.addEventListener('scroll', measureTopPara, { passive: true });
+    return () => centre.removeEventListener('scroll', measureTopPara);
+  }, [measureTopPara, reader, readerLoading, view]);
+  // the book does not scroll: it pages, so the spread is the signal
+  useEffect(() => { measureTopPara(); }, [measureTopPara, spread]);
+  useEffect(() => () => { if (measureRaf.current !== null) cancelAnimationFrame(measureRaf.current); }, []);
+
   const currentOutlineIdx = useMemo(() => {
-    // the last entry whose page is at or before this folio
+    if (!outline.length) return -1;
+    // An entry-chunked folio reports the paragraph each row begins at, so the
+    // paragraph in view names its row and the row names its outline entry.
+    const starts = reader?.chunkStarts;
+    if (starts && typeof reader?.firstChunk === 'number') {
+      let local = -1;
+      for (let k = 0; k < starts.length && starts[k] <= topPara; k++) local = k;
+      if (local >= 0) {
+        const chunk = reader.firstChunk + local;
+        let idx = -1;
+        outline.forEach((e, i) => { if (typeof e.chunk === 'number' && e.chunk <= chunk) idx = i; });
+        if (idx >= 0) return idx;
+      }
+    }
+    // A stitched folio cannot place a section inside itself; the folio is all
+    // it can say, so fall back to the last entry at or before this one.
     let idx = -1;
     outline.forEach((e, i) => { if (e.page <= page) idx = i; });
     return idx;
-  }, [outline, page]);
+  }, [outline, page, reader, topPara]);
 
   const outlineRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -521,17 +593,22 @@ export default function Reader(props: {
                     This text carries no section markers. Move by folio below.
                   </div>
                 )}
-                {outline.map((e, i) => (
-                  <button
-                    key={e.key || i}
-                    className={`lib-outline-item lvl${e.level || 1} ${i === currentOutlineIdx ? 'is-here' : ''} ${e.page === page ? 'on-page' : ''}`}
-                    onClick={() => { jumpTo({ page: e.page, chunk: e.chunk, marker: e.marker }); setLeftOpen(false); }}
-                    title={`Folio ${e.page + 1}`}
-                  >
-                    <span className="lib-outline-label">{e.label}</span>
-                    <span className="lib-outline-page">{e.page + 1}</span>
-                  </button>
-                ))}
+                {outline.map((e, i) => {
+                  // A folio is a coarser unit than an entry, so name it where
+                  // it changes rather than repeating it down thirty rows.
+                  const opensFolio = i === 0 || outline[i - 1].page !== e.page;
+                  return (
+                    <button
+                      key={e.key || i}
+                      className={`lib-outline-item lvl${e.level || 1} ${i === currentOutlineIdx ? 'is-here' : ''} ${e.page === page ? 'on-page' : ''}`}
+                      onClick={() => { jumpTo({ page: e.page, chunk: e.chunk, marker: e.marker }); setLeftOpen(false); }}
+                      title={`Folio ${e.page + 1}`}
+                    >
+                      <span className="lib-outline-label">{e.label}</span>
+                      {opensFolio && <span className="lib-outline-page">Folio {e.page + 1}</span>}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -1003,7 +1080,7 @@ const READER_CSS = `
 .lib-outline-item.on-page { color: ${IVORY}; }
 .lib-outline-item.is-here { border-left-color: ${GOLD}; color: ${GOLD}; background: rgba(201,168,76,0.06); }
 .lib-outline-label { flex: 1; min-width: 0; }
-.lib-outline-page { flex-shrink: 0; font-family: ${MONO}; font-size: 8.5px; letter-spacing: 0.08em; color: ${MUTED}; }
+.lib-outline-page { flex-shrink: 0; font-family: ${MONO}; font-size: 8.5px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: ${MUTED}; }
 .lib-folio-nav { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 1px solid rgba(201,168,76,0.14); font-family: ${MONO}; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: ${MUTED}; }
 .lib-folio-nav button { cursor: pointer; color: ${GOLD}; font-size: 14px; padding: 2px 10px; border: 1px solid rgba(201,168,76,0.3); border-radius: 8px; }
 .lib-folio-nav button:disabled { opacity: 0.3; cursor: default; }
