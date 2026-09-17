@@ -23,7 +23,7 @@ export async function GET() {
     const [{ data: runs, error }, { data: mutes }] = await Promise.all([
       admin
         .from('quality_audit_reports')
-        .select('id, run_date, started_at, finished_at, status, domains, probes_run, probes_skipped, probes_errored, counts, findings, resolved, brief, error')
+        .select('id, run_date, started_at, finished_at, status, domains, probes_run, probes_skipped, probes_errored, skipped, counts, findings, resolved, brief, error')
         .order('started_at', { ascending: false })
         .limit(14),
       admin

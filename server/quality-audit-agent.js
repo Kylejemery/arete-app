@@ -310,6 +310,9 @@ async function runQualityAudit(argv = process.argv.slice(2)) {
         probes_run: ran,
         probes_skipped: skipped.length,
         probes_errored: errored.length,
+        // The list, not just the count: a reader has to be able to tell a
+        // domain that came back clean from one that was never looked at.
+        skipped,
         counts,
         findings: marked,
         resolved,
