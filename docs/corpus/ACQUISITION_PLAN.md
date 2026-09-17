@@ -141,7 +141,7 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
   1875 Bohn volume containing all three treatises plus editorial apparatus;
   only 232 were *De Finibus*, and 38 of 63 logged retrievals under that label
   returned the *Tusculans*. Split, provenanced and deprecated by
-  `20260916200000_cicero_volume_identity_split.sql`; full record in
+  `20260917010451_cicero_volume_identity_split.sql`; full record in
   `CICERO_IDENTITY_SPLIT_2026-09.md`. Outstanding: no `locator` values, so
   citations resolve to a chunk rather than to `De Finibus III.22`. Parsing the
   Yonge book/chapter headings into `locator` would fix that for all three.
