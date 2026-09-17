@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-seven probes across four domains. A probe is a named check that knows one
+Twenty-eight probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -58,7 +58,15 @@ files never applied — the convention nothing could previously enforce),
 `repo.exhibit_release_gate` (a gallery exhibit whose Academy page this checkout
 neither ships nor releases), `repo.checks` (lint and typecheck per workspace),
 `repo.secret_scan` (key-shaped strings in tracked files), `repo.doc_links`
-(committed docs linking to paths that moved).
+(committed docs linking to paths that moved), and
+`repo.retrieval_guarantees` (a retrieval path that reaches `rag_corpus`
+without restating what `match_rag_corpus` guarantees in SQL — the graph-boost
+expansion reading without `deprecated = false`, or an `expandCandidates` call
+site passing no fence). Both have been missing there before. The expansion is
+behind `GRAPH_BOOST`, so a regression is silent until the flag is on and by
+then it is serving text to a reader; and because `opts.fence` is optional and
+defaults to allowing everything, a call site that omits it is not an error but
+an unfenced path.
 
 `repo.checkout_stale` is a guard as much as a finding. Every repo probe compares
 the project against whatever branch is on disk, so a checkout behind its base
@@ -255,7 +263,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-seven probes in two languages would be two copies of the
+  TypeScript: twenty-eight probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
