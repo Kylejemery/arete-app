@@ -4864,17 +4864,25 @@ app.get('/api/library/text', async (req, res) => {
     if (ov && ov.hidden) return res.status(404).json({ error: 'Text not found' });
 
     // Entry-chunked works (one canonical section per row) are formatted row
-    // by row so the reader learns which paragraph each row starts at; the
-    // outline's `chunk` values index into that. Retrieval-chunked works keep
-    // the overlap-stitching path and carry no chunkStarts.
+    // by row, which gives the paragraph each row starts at exactly. Stitched
+    // works keep the overlap-stitching path and have theirs found by probe.
+    // Either way the folio reports chunkStarts, and the outline's `chunk`
+    // values index into it.
     let body;
     let chunkStarts = null;
     if (libraryHelpers.isEntryChunked(data)) {
       ({ body, chunkStarts } = libraryHelpers.formatEntries(data.map(c => c.chunk_text || '')));
     } else {
-      body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(
-        libraryHelpers.stitchChunks(data.map(c => c.chunk_text || ''), context)
-      ));
+      // A stitched folio can say where each row begins too: stitching records
+      // the offsets, and the rows are then located in the formatted text by
+      // the words they open with. That is what lets the outline land on a
+      // section, and the Contents panel follow the reader, for every work
+      // rather than only the entry-chunked ones.
+      const stitched = libraryHelpers.stitch(data.map(c => c.chunk_text || ''), context);
+      body = libraryHelpers.formatReadable(libraryHelpers.stripGutenberg(stitched.text));
+      chunkStarts = libraryHelpers.locateChunks(
+        stitched.text, stitched.starts, body.split(/\n\n+/).filter(Boolean)
+      );
     }
 
     return res.json({

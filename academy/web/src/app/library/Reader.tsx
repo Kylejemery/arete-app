@@ -21,7 +21,7 @@ export type ReaderText = {
   sourceUrl: string | null; page: number; totalPages: number; totalPassages: number; body: string;
   // Entry-chunked works (one section per row) report where each row of the
   // folio begins, so an outline entry can land on its exact section.
-  firstChunk?: number; chunkStarts?: number[] | null;
+  firstChunk?: number; chunkStarts?: (number | null)[] | null;
 };
 export type ReaderRelated = { id: string; author: string; work: string; title: string; reason: string };
 export type ReaderTarget = { page: number; para?: number; comment?: string } | null;
@@ -484,8 +484,15 @@ export default function Reader(props: {
     // paragraph in view names its row and the row names its outline entry.
     const starts = reader?.chunkStarts;
     if (starts && typeof reader?.firstChunk === 'number') {
+      // Sparse: a row the formatter swallowed reports null, which is not a
+      // position and must not be read as one.
       let local = -1;
-      for (let k = 0; k < starts.length && starts[k] <= topPara; k++) local = k;
+      for (let k = 0; k < starts.length; k++) {
+        const at = starts[k];
+        if (typeof at !== 'number') continue;
+        if (at > topPara) break;
+        local = k;
+      }
       if (local >= 0) {
         const chunk = reader.firstChunk + local;
         let idx = -1;
