@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-eight probes across four domains. A probe is a named check that knows one
+Twenty-nine probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -33,6 +33,7 @@ thing, returns findings, and never writes.
 | `corpus.locator_quality` | A locator that cannot cite the passage it labels (Part 5 rule 3): a scheme pitched at the wrong level, or a post-standard ingest with no locator at all. The median chunks per locator is the signal and the worst locator is not — `Discourses 4.1` really is that long, and Augustine's 636 locators over 1006 chunks are a correct parse. Yonge's Diogenes Laertius put all 71 chunks of Book 10 under `10.1`. |
 | `corpus.question_map` | Works ingested since the standard with no `corpus_question_registrations` row (Part 5 rule 4). |
 | `corpus.queue_health` | Failed queue rows nothing retries, and pending rows older than the batch cadence. |
+| `corpus.retrieval_latency` | Times `match_rag_corpus` on five fixed out-of-corpus queries through the real PostgREST path. Today the function is an exact scan (its `SET` blocks inlining) — correct, 187ms warm at 13.7k chunks, but linear in the corpus and cancelled by PostgREST at 8s. Warns when the warm median passes `retrieval_warn_ms` or any call passes `retrieval_critical_ms`; critical on a failed call. The action names the measured HNSW migration, so the index decision is made on a number. |
 | `corpus.retrieval_fences` | **End to end**: embeds real queries, calls `match_rag_corpus` with `counselorRetrievalParams()`, and asserts that nothing deprecated and nothing on the exclusion list comes back. Needs `OPENAI_API_KEY`. |
 
 ### `library` — the reading rooms and the Garden
@@ -227,6 +228,9 @@ the agent:
 | `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads. |
 | `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
 | `fetch_before_drift_check` | `true` | Whether to fetch the base before comparing. `false` where there is no network; the comparison then uses the local remote-tracking ref, which may itself be stale. |
+| `retrieval_warn_ms` | `500` | Warm median of `match_rag_corpus` above this is a warning. Was 187ms at 13.7k chunks when the line was drawn. |
+| `retrieval_critical_ms` | `4000` | Any single call above this is a warning; PostgREST cancels at 8s. |
+| `retrieval_latency_samples` | `5` | Fixed canonical-concept embeddings used as query vectors, so nights are comparable. |
 | `brief_max_words` | `400` | Length of the prose brief. |
 
 ## Reading the report

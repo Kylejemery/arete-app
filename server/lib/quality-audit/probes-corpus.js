@@ -715,6 +715,133 @@ const probes = [
       return out;
     },
   },
+  // --- Retrieval latency ----------------------------------------------------
+  //
+  // match_rag_corpus is the one function every counselor depends on, and today
+  // it is an exact scan: the SET on the function blocks inlining, so Postgres
+  // reads every vector on every call (~101k buffers). That is correct and it
+  // is cheap enough at 14k chunks — 187ms warm — but it scales linearly with
+  // the corpus, and PostgREST kills any statement at 8s. The decision to move
+  // to an approximate index (HNSW measured at 99.7% recall, ~1% of the cost)
+  // should be made on a number, not a feeling, so this times the real path
+  // nightly and says when the number has moved.
+  //
+  // Query vectors are the canonical concept embeddings in a fixed order:
+  // out-of-corpus, so they behave like a user's question rather than a chunk
+  // finding itself, and deterministic, so one night is comparable to the next.
+  // The call goes through the same PostgREST hop the API server uses, so the
+  // timing includes what a user would actually wait for.
+  {
+    id: 'corpus.retrieval_latency',
+    domain: DOMAIN,
+    title: 'match_rag_corpus answers in time',
+    needs: ['db'],
+    async run(ctx) {
+      const warnMs = ctx.config.retrieval_warn_ms ?? 500;
+      const criticalMs = ctx.config.retrieval_critical_ms ?? 4000;
+      const samples = ctx.config.retrieval_latency_samples ?? 5;
+
+      const { data: concepts, error } = await ctx.supabase
+        .from('canonical_concepts')
+        .select('id, name, embedding')
+        .not('embedding', 'is', null)
+        .order('id')
+        .limit(samples);
+      if (error) throw new Error(`canonical_concepts read failed: ${error.message}`);
+      if (!concepts || !concepts.length) return [];
+
+      const timings = [];
+      for (const c of concepts) {
+        // PostgREST returns a vector as its text form, "[0.1,0.2,...]", which
+        // is valid JSON; the fence probe passes a plain array and that path is
+        // proven, so normalise to it.
+        const vec = typeof c.embedding === 'string' ? JSON.parse(c.embedding) : c.embedding;
+        const t0 = Date.now();
+        const { error: rpcErr } = await ctx.supabase.rpc('match_rag_corpus', {
+          query_embedding: vec,
+          match_count: 20,
+          filter_author: null,
+          filter_language: 'english',
+          ...counselorRetrievalParams(),
+        });
+        timings.push({ name: c.name, ms: Date.now() - t0, error: rpcErr ? rpcErr.message : null });
+      }
+
+      const s = await stats(ctx);
+      const live = s.live_chunks;
+      const summary = timings.map(t => `${t.name} — ${t.error ? `FAILED: ${t.error}` : `${t.ms}ms`}`);
+      ctx.log(`    retrieval latency at ${live} live chunks: ${timings.map(t => t.error ? 'ERR' : t.ms + 'ms').join(', ')}`);
+
+      const failed = timings.filter(t => t.error);
+      const ok = timings.filter(t => !t.error).map(t => t.ms);
+      // The first call is the cold sample; the rest are what a warm server sees.
+      const warm = ok.slice(1).length ? ok.slice(1) : ok;
+      const median = [...warm].sort((a, b) => a - b)[Math.floor((warm.length - 1) / 2)];
+      const worst = Math.max(...ok, 0);
+      const out = [];
+
+      const hnswAction =
+        'The measured fix is an HNSW index in place of the ivfflat one, with the SET removed from ' +
+        'match_rag_corpus so it can inline and hnsw.ef_search = 100 set on the role: 99.7% recall ' +
+        'against the exact scan on out-of-corpus queries, ~1% of the buffer cost. Run scripts/eval ' +
+        'once before and once after for a before/after on real queries, then ship it.';
+
+      if (failed.length) {
+        out.push(finding({
+          probe: 'corpus.retrieval_latency',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'timeout',
+          title: `${failed.length} of ${timings.length} retrieval call(s) failed`,
+          detail:
+            `match_rag_corpus did not return for ${failed.length} of ${timings.length} sampled ` +
+            `queries at ${live} live chunks. PostgREST cancels any statement past 8 seconds, and ` +
+            'the exact scan grows with the corpus, so a failure here is what a user hits as a ' +
+            'counselor that says nothing.',
+          count: failed.length,
+          evidence: summary,
+          action: hnswAction,
+        }));
+      }
+
+      if (ok.length && median > warnMs) {
+        out.push(finding({
+          probe: 'corpus.retrieval_latency',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: 'warm',
+          title: `Warm retrieval is ${median}ms at ${live} live chunks`,
+          detail:
+            `The median of ${warm.length} warm call(s) to match_rag_corpus is ${median}ms, over the ` +
+            `${warnMs}ms line. This is the exact scan scaling with the corpus, as expected — the ` +
+            'number was 187ms at 13.7k chunks when the line was drawn. It has moved enough that ' +
+            'the approximate index is now worth its small recall cost.',
+          count: median,
+          evidence: summary,
+          action: hnswAction,
+        }));
+      }
+
+      if (ok.length && worst > criticalMs) {
+        out.push(finding({
+          probe: 'corpus.retrieval_latency',
+          domain: DOMAIN,
+          severity: 'warning',
+          key: 'cold',
+          title: `Slowest retrieval was ${worst}ms at ${live} live chunks`,
+          detail:
+            `One call to match_rag_corpus took ${worst}ms, over the ${criticalMs}ms line and within ` +
+            'sight of the 8-second cancel. Cold-cache calls are the first to cross it; a user whose ' +
+            'question lands after a quiet hour is the one who pays.',
+          count: worst,
+          evidence: summary,
+          action: hnswAction,
+        }));
+      }
+
+      return out;
+    },
+  },
 ];
 
 module.exports = { probes, KNOWN_TEXT_TYPES };
