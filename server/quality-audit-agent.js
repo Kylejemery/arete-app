@@ -61,6 +61,9 @@ const DEFAULT_CONFIG = {
   mode2_max_words: 1800,          // twice the Paper Agent's 900-word summary ceiling
   mode2_min_attribution: 0.5,     // below this, a long Mode 2 work does not read as a rewrite
   queue_stale_days: 7,
+  retrieval_warn_ms: 500,         // warm median of match_rag_corpus; 187ms at 13.7k chunks when set
+  retrieval_critical_ms: 4000,    // any single call; PostgREST cancels at 8s
+  retrieval_latency_samples: 5,
   brief_max_words: 400,
 };
 
