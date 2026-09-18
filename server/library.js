@@ -359,20 +359,23 @@ function foldForProbe(s) {
 }
 function locateChunks(stitched, starts, paras) {
   const folded = paras.map(foldForProbe);
-  // A chunk that opens on a section marker straddles a break the formatter
-  // put in ("CHAPTER I." leaves the prose behind it), so a probe is allowed
-  // to run into the paragraph after the one it matches. The chunk still
-  // begins at the first of the two. Single paragraphs are tried first, at
-  // every probe length, so the looser match is only ever a fallback.
+  // A chunk that opens on a section marker straddles breaks the formatter put
+  // in: a title block becomes several paragraphs of its own ("LETTER 1." /
+  // "ON SAVING TIME" / "Greetings from Seneca…") before the prose resumes. A
+  // probe may therefore run on into the paragraphs after the one it matches.
+  // The chunk still begins at the first of them. Single paragraphs are tried
+  // first, at every probe length, so the looser match is only a fallback.
+  const SPAN = 3;
   const findWithin = probe => {
     for (let i = from; i < folded.length; i++) if (folded[i].includes(probe)) return i;
     return null;
   };
   const findSpanning = probe => {
     for (let i = from; i < folded.length; i++) {
-      const at = (folded[i] + ' ' + (folded[i + 1] || '')).indexOf(probe);
-      // the match has to BEGIN in this paragraph; one lying wholly in the
-      // next belongs to the next, and reporting this one would be off by one
+      const window = folded.slice(i, i + SPAN).join(' ');
+      const at = window.indexOf(probe);
+      // the match has to BEGIN in this paragraph; one lying wholly in a later
+      // one belongs to that one, and reporting this would be off by a section
       if (at >= 0 && at < folded[i].length) return i;
     }
     return null;
@@ -471,10 +474,18 @@ function buildOutline(rows, work, pageChunks) {
       const sub = parts.length > 1 ? parts.slice(0, 2).join('.') : null;
       if (!/^\d+$/.test(top)) return;
       // `chunk` is the row's position in the work: with the text endpoint's
-      // chunkStarts it lets the reader scroll to the exact section rather
-      // than only to the folio it is on.
+      // chunkStarts it lets the reader scroll into the folio rather than only
+      // to its head. It is an approximation, though. A label is a range, and
+      // the row whose range STARTS at a unit is the row that carries on into
+      // it — the unit itself opened in the row before, the one whose range
+      // ends at it. `marker` is the exact answer where the body prints a
+      // heading: the reader matches it against the text and lands on the
+      // heading itself, and falls back to the chunk when it finds none.
       if (top !== lastTop) {
-        sections.push({ level: 1, label: `${outlineUnitName(work)} ${top}`, page: pageOf(i), key: `t${top}`, chunk: i });
+        sections.push({
+          level: 1, label: `${outlineUnitName(work)} ${top}`, page: pageOf(i), key: `t${top}`,
+          chunk: i, marker: `${outlineUnitName(work)} ${top}`,
+        });
         lastTop = top; lastSub = null;
       }
       if (sub && sub !== lastSub) {
