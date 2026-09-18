@@ -151,20 +151,51 @@ export default function Reader(props: {
   const turnTo = useCallback((n: number) => {
     setSelectedPara(null);
     setSelection(null);
+    pin.current = null;   // the pin names a paragraph of the folio being left
     gotoPage(n);
   }, [gotoPage]);
+
+  // A jump pins the Contents marker to the section it was asked for. Position
+  // alone cannot name that section at the head or foot of a folio: the column
+  // has no room left to bring the paragraph to the reading line, so several
+  // sections share one scroll position and the marker can only guess. The jump
+  // knows which was meant, so it says so, and the pin is released the moment
+  // the reader moves the text themselves — any scroll or page that does not
+  // leave it where the jump put it.
+  const pin = useRef<{ para: number; top: number; left: number } | null>(null);
+  const repin = useCallback((para: number) => {
+    const centre = columnRef.current;
+    const bookBox = centre?.querySelector<HTMLElement>('.lib-book-text');
+    pin.current = { para, top: centre?.scrollTop ?? 0, left: bookBox?.scrollLeft ?? 0 };
+  }, []);
+  // The paragraph the pin still names, or null once the reader has moved.
+  const heldPin = useCallback(() => {
+    const held = pin.current;
+    const centre = columnRef.current;
+    if (!held || !centre) return null;
+    const bookBox = centre.querySelector<HTMLElement>('.lib-book-text');
+    // a pixel or two of rounding is the browser's, not the reader's
+    const moved = bookBox
+      ? Math.abs(bookBox.scrollLeft - held.left) > 2
+      : Math.abs(centre.scrollTop - held.top) > 2;
+    if (moved) { pin.current = null; return null; }
+    return held.para;
+  }, []);
 
   const showParaInBook = useCallback((box: HTMLElement, el: HTMLElement) => {
     const n = spreadOf(box, el);
     box.scrollLeft = n * spreadStep(box);
     setSpread(n);
-  }, []);
+    if (pin.current) repin(pin.current.para);
+  }, [repin]);
 
   const scrollToPara = useCallback((i: number) => {
     // Instant, container-relative: scrollIntoView's smooth mode is unreliable
     // over long distances in some embedded browsers, and the book view's
     // columns need the inner text box scrolled, not the stage.
     const go = () => {
+      // The reader scrolled away, or another jump took over: leave them be.
+      if (pin.current === null || pin.current.para !== i) return;
       const el = columnRef.current?.querySelector<HTMLElement>(`[data-para="${i}"]`);
       if (!el) return;
       // The book pages sideways inside .lib-book-text. That box is
@@ -180,19 +211,25 @@ export default function Reader(props: {
       if (!scroller) return;
       const elTop = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       scroller.scrollTop = Math.max(0, elTop - scroller.clientHeight / 2 + el.offsetHeight / 2);
+      repin(i);
     };
+    pin.current = { para: i, top: 0, left: 0 };   // go() fills in where it lands
+    setTopPara(i);
     go();
-    // fonts and images can still be settling on a fresh folio; land twice
+    // fonts and images can still be settling on a fresh folio; land twice —
+    // but not over a reader who has started scrolling in the meantime, which
+    // is what go()'s own guard checks.
     setTimeout(go, 350);
     setFlashPara(i);
     if (flashTimer.current) clearTimeout(flashTimer.current);
     flashTimer.current = setTimeout(() => setFlashPara(null), 2400);
-  }, [showParaInBook]);
+  }, [showParaInBook, repin]);
 
   // The outline can name a section the open folio holds but the folio cannot
   // place (a stitched work carries no chunkStarts). Landing on the head of
   // the folio is the closest honest answer, and never a dead click.
   const scrollToFolioTop = useCallback(() => {
+    pin.current = null;
     const bookBox = columnRef.current?.querySelector<HTMLElement>('.lib-book-text');
     if (bookBox) { bookBox.scrollLeft = 0; setSpread(0); return; }
     if (columnRef.current) columnRef.current.scrollTop = 0;
@@ -382,7 +419,7 @@ export default function Reader(props: {
 
   // In the book, the arrows move a spread at a time and turn the folio at
   // either edge; a fresh folio opens on its first spread.
-  useEffect(() => { setSpread(0); if (bookRef.current) bookRef.current.scrollLeft = 0; }, [page, view, active.author, active.work]);
+  useEffect(() => { pin.current = null; setSpread(0); if (bookRef.current) bookRef.current.scrollLeft = 0; }, [page, view, active.author, active.work]);
   const bookPrev = () => { if (spread > 0) showSpread(spread - 1); else if (!prevDisabled) turnTo(page - 1); };
   const bookNext = () => { if (spread < spreadCount - 1) showSpread(spread + 1); else if (!nextDisabled) turnTo(page + 1); };
   const bookPrevDisabled = spread <= 0 && prevDisabled;
@@ -434,6 +471,8 @@ export default function Reader(props: {
       measureRaf.current = null;
       const centre = columnRef.current;
       if (!centre) return;
+      const held = heldPin();
+      if (held !== null) { setTopPara(held); return; }
       const nodes = Array.from(centre.querySelectorAll<HTMLElement>('[data-para]'));
       if (!nodes.length) return;
       const bookBox = centre.querySelector<HTMLElement>('.lib-book-text');
@@ -471,7 +510,7 @@ export default function Reader(props: {
       }
       if (first !== null) setTopPara(first);
     });
-  }, []);
+  }, [heldPin]);
   useEffect(() => {
     const centre = columnRef.current;
     measureTopPara();
