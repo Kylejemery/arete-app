@@ -18,8 +18,18 @@
 // consecutive requests by the same student to the same counselor surface
 // within 45 minutes are read as engagement signals: an immediate rephrase of
 // nearly the same question is a negative outcome (the answer didn't land);
-// any other continuation is neutral. Insert-only — a real Evaluator verdict
-// always wins, and heuristic rows are never overwritten onto anything.
+// any other continuation is graded by how far the conversation then ran
+// without a rewording. Insert-only — a real Evaluator verdict always wins,
+// and heuristic rows are never overwritten onto anything.
+//
+// The grading exists because this heuristic is, in practice, the only signal
+// the whole learning system has: the Evaluator covers socratic-proctor alone,
+// and that surface has almost no traffic. Flat-scoring every non-rewording at
+// 0.5 made 0.5 the best outcome obtainable anywhere, and since an edge EMAs
+// toward the score, no pairing could ever grow past it. One follow-up still
+// scores 0.5 — it only says the reader did not push back. A run of them is
+// someone staying with the thread, and climbs (DEPTH_SCORES). Nothing new is
+// collected for this; the run length was always there in retrieval_log.
 //
 // Pass 2 — Synthesis. Connected clusters of strong edges (weight >= 0.5,
 // spanning at least two source works) are handed to Opus: "these passages
@@ -124,6 +134,21 @@ const REPHRASE_JACCARD = 0.45;       // word overlap above this = "asked the sam
                                      // (a genuine rephrase swaps a verb or two; topical
                                      // follow-ups land far lower — see agent audit stats)
 
+// How a turn that was NOT reworded scores, by how far the conversation then
+// kept going without a rewording. One follow-up is the weakest evidence there
+// is — it says only that the reader did not immediately push back — so it
+// stays where it was. A run of them is someone staying with the thread, which
+// is the closest thing to approval this system can observe.
+//
+// The ladder stops at 0.8 deliberately. Edge weight is an EMA toward the
+// score, so the top of this ladder is the ceiling a pairing can reach on
+// engagement alone, and engagement is a proxy: the reader kept talking, not
+// "that was right". A real affirmation — someone choosing to keep a passage —
+// should be able to outrank any amount of inferred interest, so 1.0 is left
+// unclaimed for it.
+const DEPTH_SCORES = [0.5, 0.6, 0.7, 0.8];  // index = depth - 1, last value repeats
+const ENGAGED_MIN_DEPTH = 2;                // at or above this, call it positive
+
 function jaccard(a, b) {
   const words = s => new Set(String(s ?? '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3));
   const wa = words(a), wb = words(b);
@@ -133,8 +158,58 @@ function jaccard(a, b) {
   return inter / (wa.size + wb.size - inter);
 }
 
+/**
+ * The run of consecutive exchanges starting at turn i that stayed in the same
+ * conversation and were never a rewording. Returns how long that run is and
+ * whether it has definitively finished.
+ *
+ * `ended` matters because the heuristic writes each request once and never
+ * revises it (insert-only, below). A run that is merely the end of what we can
+ * see so far may still be growing, and labelling it tonight would freeze an
+ * undercount; the 48-hour window means tomorrow's pass sees it again.
+ */
+function sustainedRun(convo, i, settled) {
+  let depth = 0;
+  for (let j = i; j < convo.length - 1; j++) {
+    const gapMin = (new Date(convo[j + 1].created_at) - new Date(convo[j].created_at)) / 60000;
+    if (gapMin > HEURISTIC_FOLLOWUP_MINUTES) return { depth, ended: true };   // conversation closed
+    if (jaccard(convo[j].query_text, convo[j + 1].query_text) > REPHRASE_JACCARD) {
+      return { depth, ended: true };                                          // reader reworded
+    }
+    depth++;
+  }
+  // Ran to the end of what we have: final only once the last turn has settled.
+  return { depth, ended: convo[convo.length - 1].created_at <= settled };
+}
+
+/**
+ * Judge one turn. Returns { outcome, score } or null when this turn is not
+ * evidence either way — the conversation had already moved on, it is still
+ * live, or it is the last thing the reader said and silence proves nothing.
+ *
+ * Exported for the tests: this is the whole decision, and it is pure.
+ */
+function gradeTurn(convo, i, settled) {
+  const cur = convo[i], next = convo[i + 1];
+  if (!next) return null;                               // nothing followed
+  if (cur.created_at > settled) return null;            // may still be live
+  const gapMin = (new Date(next.created_at) - new Date(cur.created_at)) / 60000;
+  if (gapMin > HEURISTIC_FOLLOWUP_MINUTES) return null; // a different conversation
+
+  if (jaccard(cur.query_text, next.query_text) > REPHRASE_JACCARD) {
+    return { outcome: 'student_negative', score: 0.2 }; // asked again: the answer missed
+  }
+
+  const run = sustainedRun(convo, i, settled);
+  if (!run.ended) return null;                          // still growing; judge it tomorrow
+  const score = DEPTH_SCORES[Math.min(run.depth, DEPTH_SCORES.length) - 1];
+  return run.depth >= ENGAGED_MIN_DEPTH
+    ? { outcome: 'student_positive', score }
+    : { outcome: 'student_neutral', score };
+}
+
 async function runHeuristicsPass() {
-  const stats = { requests_seen: 0, labeled: 0, negative: 0, neutral: 0 };
+  const stats = { requests_seen: 0, labeled: 0, negative: 0, neutral: 0, positive: 0 };
   const windowStart = new Date(Date.now() - HEURISTIC_WINDOW_HOURS * 3600 * 1000).toISOString();
   const settled = new Date(Date.now() - HEURISTIC_SETTLE_MINUTES * 60 * 1000).toISOString();
 
@@ -166,20 +241,20 @@ async function runHeuristicsPass() {
   const outcomes = [];
   for (const convo of byConvo.values()) {
     for (let i = 0; i < convo.length - 1; i++) {
-      const cur = convo[i], next = convo[i + 1];
-      if (cur.created_at > settled) continue; // conversation may still be live
-      const gapMin = (new Date(next.created_at) - new Date(cur.created_at)) / 60000;
-      if (gapMin > HEURISTIC_FOLLOWUP_MINUTES) continue;
-      const rephrased = jaccard(cur.query_text, next.query_text) > REPHRASE_JACCARD;
+      const graded = gradeTurn(convo, i, settled);
+      if (!graded) continue;
+      const cur = convo[i];
       outcomes.push({
         request_id: cur.request_id,
         agent: cur.agent,
         student_id: cur.student_id,
-        outcome: rephrased ? 'student_negative' : 'student_neutral',
+        outcome: graded.outcome,
         outcome_source: 'heuristic',
-        score: rephrased ? 0.2 : 0.5,
+        score: graded.score,
       });
-      if (rephrased) stats.negative++; else stats.neutral++;
+      if (graded.outcome === 'student_negative') stats.negative++;
+      else if (graded.outcome === 'student_positive') stats.positive++;
+      else stats.neutral++;
     }
   }
   if (outcomes.length === 0) return stats;
@@ -570,7 +645,7 @@ async function runConsolidationAgent() {
 
   const heuristics = await runHeuristicsPass();
   await audit('heuristics', heuristics);
-  console.log(`[consolidation-agent] heuristics: ${heuristics.labeled} counselor requests labeled (${heuristics.negative} negative, ${heuristics.neutral} neutral)`);
+  console.log(`[consolidation-agent] heuristics: ${heuristics.labeled} counselor requests labeled (${heuristics.negative} negative, ${heuristics.neutral} neutral, ${heuristics.positive} positive)`);
 
   const hebbian = await runHebbianPass(config);
   await audit('hebbian', hebbian);
@@ -603,6 +678,8 @@ async function runConsolidationAgent() {
 
 module.exports = {
   getAgentConfig,
+  gradeTurn,
+  sustainedRun,
   runHeuristicsPass,
   runHebbianPass,
   runSynthesisPass,
