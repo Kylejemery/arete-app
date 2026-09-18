@@ -167,10 +167,30 @@ All 71 chunks of Book 10 — the Letter to Menoeceus and the Principal
 Doctrines among them — cite as `DL 10.1`. That is the same defect as Book
 VII's and it is not fixed here, because the remedy is different: there is no
 second translation to prefer, and Yonge is the corpus's only holding for
-those books. It wants a parser over Yonge's own divisions, the same
-outstanding work the Cicero record notes for the Bohn volume. Fixing it by
-deprecation would remove the Epicurean position from the corpus entirely,
-which is the opposite of what the acquisition plan is for.
+those books. Fixing it by deprecation would remove the Epicurean position
+from the corpus entirely, which is the opposite of what the acquisition plan
+is for.
+
+**Update, 2026-09-18.** Book 10 has since been repaired as far as the text
+allows, by `20260918144015_dl_book10_locators.sql`. Each chunk now carries
+the canonical section range of the document it sits in — `10.35–10.83` for
+the Letter to Herodotus, `10.122–10.135` for the Letter to Menoeceus,
+`10.139–10.154` for the Principal Doctrines, and so on across a contiguous
+`10.1`–`10.154`. That replaces a false locator with a true one; it does not
+make a passage citable, and `corpus.locator_quality` still reports the work.
+
+Per-section precision is not available from this text. Yonge's translation
+carries no section numbers — the same fact that sent Book VII to Hicks — and
+it was re-checked rather than assumed: the Principal Doctrines run as
+consecutive quoted paragraphs with no numerals, so even the Arabic ranges
+already sitting in `section_label` are a derived paragraph count, and they
+run past 43 where the canonical Doctrines stop at 40. The real remedy is the
+Book VII one, a numbered Hicks Book X, which needs a source fetch the
+sandbox's egress policy refuses for gutenberg.org, en.wikisource.org,
+archive.org and perseus.tufts.edu alike.
+
+Books 1–6 and 8–9 still carry the `book.life` scheme. The corpus's worst
+locator is now `3.1`: Plato's entire life, 31 chunks.
 
 **Yonge's Book VII rendering is still available where it is curated.** The
 Impression exhibit quotes it deliberately as a second voice on the definition

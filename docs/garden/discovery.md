@@ -246,7 +246,9 @@ other in the same product.
    Yonge's Book VII deprecated, question map repaired, by
    `supabase/migrations/20260917175536_dl_book7_identity_split.sql`; record in
    `docs/corpus/DL_BOOK7_IDENTITY_SPLIT_2026-09.md`. Still open: the same
-   false locators run through Yonge's other nine books, Book 10 worst of all.
+   false locators run through Yonge's other nine books. Book 10, the worst of
+   them, is repaired to document-level ranges by
+   `20260918144015_dl_book10_locators.sql`; Books 1–6 and 8–9 remain.
 
 ### TODO fields to fill
 

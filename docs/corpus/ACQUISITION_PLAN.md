@@ -155,10 +155,15 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
   Book VII`, Yonge's Book VII deprecated, question map repaired, by
   `20260917175536_dl_book7_identity_split.sql`; full record in
   `DL_BOOK7_IDENTITY_SPLIT_2026-09.md`. Outstanding: the same `book.life`
-  locators run through Yonge's other nine books, and Book 10 is the worst case
-  in the corpus — 71 chunks, the Letter to Menoeceus and Principal Doctrines
-  among them, all citing as `DL 10.1`. There is no second translation to prefer
-  there, so it wants a parser over Yonge's divisions, not a deprecation.
+  locators run through Yonge's other nine books. Book 10 was the worst case in
+  the corpus — 71 chunks, the Letter to Menoeceus and Principal Doctrines among
+  them, all citing as `DL 10.1` — and is repaired to document-level canonical
+  ranges by `20260918144015_dl_book10_locators.sql`: true now, though still
+  coarser than a passage. Books 1–6 and 8–9 still carry the scheme, and
+  `corpus.locator_quality` reports the work accordingly; its worst locator is
+  now `3.1`, Plato's whole life in 31 chunks. Per-section precision for any of
+  them needs a numbered edition — the Book VII remedy — since Yonge's text has
+  no section numbers of its own.
 - **Epictetus, *Discourses*.** Verify the current 459 chunks are Long's complete four books and not the abridged *Selection* that circulates on Gutenberg as ebook 10661. Spot checks suggest it is complete, but this was not confirmed. The complete Long is at `archive.org/download/discoursesofepic033057mbp/discoursesofepic033057mbp_djvu.txt`.
 - **Aristotle.** The corpus holds *Nicomachean Ethics* only. *De Anima* is Tier A. *Physics* (Hardie & Gaye 1930, public domain by one year, in `archive.org/download/worksofaristotle0002wdro/worksofaristotle0002wdro_djvu.txt`) and *Metaphysics* (Ross 1908, Wikisource) are worth adding for Q12.
 - **Plato.** *Timaeus* is already queued. *Phaedo* and *Phaedrus* should follow for Q02 and Q11.
