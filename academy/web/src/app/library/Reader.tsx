@@ -238,17 +238,24 @@ export default function Reader(props: {
   // Find the paragraph a jump means, on the folio now open.
   const resolvePara = useCallback((j: Jump): number | null => {
     if (typeof j.para === 'number') return j.para < paras.length ? j.para : null;
-    // An outline entry names the row it begins at; the folio reports the
-    // paragraph each row starts on. Exact, no text matching needed.
+    // The heading first, where the body prints one: it is the section's own
+    // opening, so it is exact. The chunk is only the row the section was
+    // labelled against, and a label is a range — the row a range starts at
+    // carries on into that section rather than opening it — so the chunk can
+    // land a few paragraphs in. Heading, then chunk, then the search terms.
+    if (j.marker) {
+      for (const form of markerForms(j.marker)) {
+        const m = foldText(form).replace(/\.$/, '');
+        const i = paras.findIndex(p => { const f = foldText(p).replace(/\.$/, ''); return f === m || f.startsWith(m + ' ') || f.startsWith(m + '.'); });
+        if (i >= 0) return i;
+      }
+    }
+    // The folio reports the paragraph each row starts on. Exact for a work
+    // chunked one section to a row, approximate for a stitched one.
     if (typeof j.chunk === 'number' && reader?.chunkStarts && typeof reader.firstChunk === 'number') {
       const local = j.chunk - reader.firstChunk;
       const start = reader.chunkStarts[local];
       if (local >= 0 && typeof start === 'number' && start < paras.length) return start;
-    }
-    if (j.marker) {
-      const m = foldText(j.marker).replace(/\.$/, '');
-      const i = paras.findIndex(p => { const f = foldText(p).replace(/\.$/, ''); return f === m || f.startsWith(m + ' ') || f.startsWith(m + '.'); });
-      if (i >= 0) return i;
     }
     if (j.query) {
       const q = foldText(j.query);
@@ -522,34 +529,40 @@ export default function Reader(props: {
   useEffect(() => { measureTopPara(); }, [measureTopPara, spread]);
   useEffect(() => () => { if (measureRaf.current !== null) cancelAnimationFrame(measureRaf.current); }, []);
 
+  // Where each entry of this folio begins, resolved once. The click and the
+  // marker both read it, because a panel that lands you in one section while
+  // marking another is worse than one that does neither.
+  const entryParas = useMemo(() => {
+    const at = new Map<number, number>();
+    if (!reader || readerLoading || !paras.length) return at;
+    outline.forEach((e, i) => {
+      if (e.page !== page) return;
+      const p = resolvePara({ page, chunk: e.chunk, marker: e.marker });
+      if (p !== null) at.set(i, p);
+    });
+    return at;
+  }, [outline, page, reader, readerLoading, paras, resolvePara]);
+
   const currentOutlineIdx = useMemo(() => {
     if (!outline.length) return -1;
-    // An entry-chunked folio reports the paragraph each row begins at, so the
-    // paragraph in view names its row and the row names its outline entry.
-    const starts = reader?.chunkStarts;
-    if (starts && typeof reader?.firstChunk === 'number') {
-      // Sparse: a row the formatter swallowed reports null, which is not a
-      // position and must not be read as one.
-      let local = -1;
-      for (let k = 0; k < starts.length; k++) {
-        const at = starts[k];
-        if (typeof at !== 'number') continue;
-        if (at > topPara) break;
-        local = k;
-      }
-      if (local >= 0) {
-        const chunk = reader.firstChunk + local;
-        let idx = -1;
-        outline.forEach((e, i) => { if (typeof e.chunk === 'number' && e.chunk <= chunk) idx = i; });
-        if (idx >= 0) return idx;
-      }
-    }
-    // A stitched folio cannot place a section inside itself; the folio is all
-    // it can say, so fall back to the last entry at or before this one.
+    // The last entry that begins at or before the paragraph in view.
     let idx = -1;
-    outline.forEach((e, i) => { if (e.page <= page) idx = i; });
-    return idx;
-  }, [outline, page, reader, topPara]);
+    outline.forEach((e, i) => {
+      const at = entryParas.get(i);
+      if (at !== undefined && at <= topPara) idx = i;
+    });
+    if (idx >= 0) return idx;
+    // Before the first section this folio can place. What is being read then
+    // is whatever ran over from the folio before; when the folio can place
+    // nothing at all, the best it can say is the first section it names.
+    let earlier = -1, firstHere = -1;
+    outline.forEach((e, i) => {
+      if (e.page < page) earlier = i;
+      if (e.page === page && firstHere < 0) firstHere = i;
+    });
+    if (entryParas.size === 0) return firstHere >= 0 ? firstHere : earlier;
+    return earlier >= 0 ? earlier : firstHere;
+  }, [outline, page, entryParas, topPara]);
 
   const outlineRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
@@ -880,6 +893,23 @@ function spreadStep(box: HTMLElement): number {
   // columns are laid across the content box; each spread is one content
   // width plus one gap, whatever the column count
   return Math.max(1, box.clientWidth - pad + gap);
+}
+
+// The corpus writes the same unit both ways — "LETTER 2." in Gummere's Seneca,
+// "BOOK II." in Yonge's Cicero — and an outline entry carries only one of
+// them. A marker is therefore matched in both numberings.
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII',
+  'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV'];
+const ARABIC: Record<string, number> = {};
+ROMAN.forEach((r, n) => { if (r) ARABIC[r] = n; });
+function markerForms(marker: string): string[] {
+  const m = marker.trim().match(/^(.+?)[\s.]+([0-9]{1,3}|[IVXLCDM]{1,6})\.?$/i);
+  if (!m) return [marker];
+  const head = m[1];
+  const tail = m[2];
+  const n = /^\d+$/.test(tail) ? Number(tail) : ARABIC[tail.toUpperCase()];
+  if (!n || n >= ROMAN.length) return [marker];
+  return [`${head} ${n}`, `${head} ${ROMAN[n]}`];
 }
 
 function pageBtn(disabled: boolean): CSSProperties {
