@@ -640,81 +640,6 @@ const probes = [
     },
   },
 
-  // --- The fences, end to end ----------------------------------------------
-  {
-    id: 'corpus.retrieval_fences',
-    domain: DOMAIN,
-    title: 'Deprecation and the counselor fence hold in live retrieval',
-    needs: ['db', 'openai'],
-    async run(ctx) {
-      const leaked = { deprecated: [], fenced: [] };
-
-      for (const query of FENCE_PROBE_QUERIES) {
-        const embedding = await embed(ctx, query);
-        const { data, error } = await ctx.supabase.rpc('match_rag_corpus', {
-          query_embedding: embedding,
-          match_count: 20,
-          filter_author: null,
-          filter_language: 'english',
-          ...counselorRetrievalParams(),
-        });
-        if (error) throw new Error(`match_rag_corpus failed: ${error.message}`);
-
-        for (const row of data || []) {
-          if (row.text_type && COUNSELOR_EXCLUDED_TEXT_TYPES.includes(row.text_type)) {
-            leaked.fenced.push(`"${query}" returned ${row.author} / ${row.work} (${row.text_type})`);
-          }
-        }
-
-        // Deprecation is filtered inside the RPC, so confirm it by reading the
-        // flag back off the rows it actually returned.
-        const ids = (data || []).map(r => r.id).filter(Boolean);
-        if (ids.length) {
-          const { data: rows, error: rowErr } = await ctx.supabase
-            .from('rag_corpus').select('id, author, work, deprecated').in('id', ids).eq('deprecated', true);
-          if (rowErr) throw new Error(`deprecation read-back failed: ${rowErr.message}`);
-          for (const row of rows || []) {
-            leaked.deprecated.push(`"${query}" returned deprecated ${row.author} / ${row.work}`);
-          }
-        }
-      }
-
-      const out = [];
-      if (leaked.deprecated.length) {
-        out.push(finding({
-          probe: 'corpus.retrieval_fences',
-          domain: DOMAIN,
-          severity: 'critical',
-          key: 'deprecated',
-          title: 'Retrieval returned deprecated chunks',
-          detail:
-            'Deprecate-never-delete only works if retrieval filters on the flag. A deprecated chunk ' +
-            'coming back means every superseded ingest is still live in answers.',
-          count: leaked.deprecated.length,
-          evidence: leaked.deprecated,
-          action: 'Restore the `deprecated = false` predicate in match_rag_corpus and its siblings.',
-        }));
-      }
-      if (leaked.fenced.length) {
-        out.push(finding({
-          probe: 'corpus.retrieval_fences',
-          domain: DOMAIN,
-          severity: 'critical',
-          key: 'counselor',
-          title: 'The counselor fence let an excluded layer through',
-          detail:
-            `A call carrying counselorRetrievalParams() returned a text_type on the exclusion list ` +
-            `(${COUNSELOR_EXCLUDED_TEXT_TYPES.join(', ')}). The Cabinet and Oracle speak as the ` +
-            'tradition, and editorial apparatus or the modern layer in their mouths is a ' +
-            'misattribution, not a ranking problem.',
-          count: leaked.fenced.length,
-          evidence: leaked.fenced,
-          action: 'Check exclude_text_types is still honoured in match_rag_corpus and at the call sites.',
-        }));
-      }
-      return out;
-    },
-  },
   // --- Retrieval latency ----------------------------------------------------
   //
   // match_rag_corpus is the one function every counselor depends on, and today
@@ -725,6 +650,12 @@ const probes = [
   // to an approximate index (HNSW measured at 99.7% recall, ~1% of the cost)
   // should be made on a number, not a feeling, so this times the real path
   // nightly and says when the number has moved.
+  //
+  // It runs before the fences probe on purpose. The first call to
+  // match_rag_corpus in a run is the cold one, and on 2026-09-18 that call hit
+  // the 8s cancel while the fences probe was making it: the fences probe
+  // errored and this probe measured a half-warmed cache. Whichever probe
+  // calls first takes the cold read, and the cold read is the number.
   //
   // Query vectors are the canonical concept embeddings in a fixed order:
   // out-of-corpus, so they behave like a user's question rather than a chunk
@@ -839,6 +770,81 @@ const probes = [
         }));
       }
 
+      return out;
+    },
+  },
+  // --- The fences, end to end ----------------------------------------------
+  {
+    id: 'corpus.retrieval_fences',
+    domain: DOMAIN,
+    title: 'Deprecation and the counselor fence hold in live retrieval',
+    needs: ['db', 'openai'],
+    async run(ctx) {
+      const leaked = { deprecated: [], fenced: [] };
+
+      for (const query of FENCE_PROBE_QUERIES) {
+        const embedding = await embed(ctx, query);
+        const { data, error } = await ctx.supabase.rpc('match_rag_corpus', {
+          query_embedding: embedding,
+          match_count: 20,
+          filter_author: null,
+          filter_language: 'english',
+          ...counselorRetrievalParams(),
+        });
+        if (error) throw new Error(`match_rag_corpus failed: ${error.message}`);
+
+        for (const row of data || []) {
+          if (row.text_type && COUNSELOR_EXCLUDED_TEXT_TYPES.includes(row.text_type)) {
+            leaked.fenced.push(`"${query}" returned ${row.author} / ${row.work} (${row.text_type})`);
+          }
+        }
+
+        // Deprecation is filtered inside the RPC, so confirm it by reading the
+        // flag back off the rows it actually returned.
+        const ids = (data || []).map(r => r.id).filter(Boolean);
+        if (ids.length) {
+          const { data: rows, error: rowErr } = await ctx.supabase
+            .from('rag_corpus').select('id, author, work, deprecated').in('id', ids).eq('deprecated', true);
+          if (rowErr) throw new Error(`deprecation read-back failed: ${rowErr.message}`);
+          for (const row of rows || []) {
+            leaked.deprecated.push(`"${query}" returned deprecated ${row.author} / ${row.work}`);
+          }
+        }
+      }
+
+      const out = [];
+      if (leaked.deprecated.length) {
+        out.push(finding({
+          probe: 'corpus.retrieval_fences',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'deprecated',
+          title: 'Retrieval returned deprecated chunks',
+          detail:
+            'Deprecate-never-delete only works if retrieval filters on the flag. A deprecated chunk ' +
+            'coming back means every superseded ingest is still live in answers.',
+          count: leaked.deprecated.length,
+          evidence: leaked.deprecated,
+          action: 'Restore the `deprecated = false` predicate in match_rag_corpus and its siblings.',
+        }));
+      }
+      if (leaked.fenced.length) {
+        out.push(finding({
+          probe: 'corpus.retrieval_fences',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'counselor',
+          title: 'The counselor fence let an excluded layer through',
+          detail:
+            `A call carrying counselorRetrievalParams() returned a text_type on the exclusion list ` +
+            `(${COUNSELOR_EXCLUDED_TEXT_TYPES.join(', ')}). The Cabinet and Oracle speak as the ` +
+            'tradition, and editorial apparatus or the modern layer in their mouths is a ' +
+            'misattribution, not a ranking problem.',
+          count: leaked.fenced.length,
+          evidence: leaked.fenced,
+          action: 'Check exclude_text_types is still honoured in match_rag_corpus and at the call sites.',
+        }));
+      }
       return out;
     },
   },
