@@ -215,7 +215,45 @@ function printReport(findings, resolved, counts, brief) {
 
 // --- Main -------------------------------------------------------------------
 
-async function runQualityAudit(argv = process.argv.slice(2)) {
+// Railway replaces the running container on every deploy of the service, and
+// on this project every merge to main deploys every service. A run that is up
+// when a merge lands gets SIGTERM and a few seconds. Without a handler the row
+// the run claimed stays 'running' forever and the Quality tab shows a night
+// that never ends (2026-09-18: killed 31s in by the deploy for PR #245).
+const TERMINATION_SIGNALS = ['SIGTERM', 'SIGINT'];
+const TERMINATION_GRACE_MS = 4000;
+
+async function markTerminated(supabase, reportId, signal) {
+  const { error } = await supabase.from('quality_audit_reports').update({
+    status: 'failed',
+    finished_at: new Date().toISOString(),
+    error:
+      `Terminated by ${signal} before the run finished. On Railway this is a deploy ` +
+      'replacing the container mid-run (every merge to main redeploys the service); ' +
+      'the run has to be started again.',
+  }).eq('id', reportId);
+  if (error) throw new Error(error.message);
+}
+
+// Bounded: the platform that sent the signal kills the process regardless, so a
+// write that hangs must not hold the exit past the grace it gives us.
+async function terminate(supabase, reportId, signal) {
+  console.error(`\n${signal} received; marking quality_audit_reports/${reportId} failed.`);
+  let timer;
+  const timeout = new Promise(resolve => { timer = setTimeout(resolve, TERMINATION_GRACE_MS, 'timeout'); });
+  try {
+    const outcome = await Promise.race([markTerminated(supabase, reportId, signal), timeout]);
+    if (outcome === 'timeout') console.error('  report write did not return in time.');
+  } catch (err) {
+    console.error(`  report write failed: ${err.message}`);
+  }
+  clearTimeout(timer);
+  process.exit(1);
+}
+
+// handleSignals: only the CLI installs the termination handler. The API server
+// calls this in-process for Run now and owns its own shutdown.
+async function runQualityAudit(argv = process.argv.slice(2), { handleSignals = false } = {}) {
   const args = parseArgs(argv);
   if (args.help) {
     console.log(HELP);
@@ -267,6 +305,9 @@ async function runQualityAudit(argv = process.argv.slice(2)) {
     if (error) throw new Error(`could not open report row: ${error.message}`);
     reportId = data.id;
   }
+
+  const onSignal = handleSignals && reportId ? signal => terminate(supabase, reportId, signal) : null;
+  if (onSignal) for (const s of TERMINATION_SIGNALS) process.once(s, onSignal);
 
   try {
     const { findings: raw, ran, skipped, errored } = await runProbes(probes, ctx);
@@ -334,13 +375,15 @@ async function runQualityAudit(argv = process.argv.slice(2)) {
       }).eq('id', reportId);
     }
     throw err;
+  } finally {
+    if (onSignal) for (const s of TERMINATION_SIGNALS) process.removeListener(s, onSignal);
   }
 }
 
 if (require.main === module) {
-  runQualityAudit()
+  runQualityAudit(undefined, { handleSignals: true })
     .then(() => { if (!process.exitCode) process.exit(0); else process.exit(process.exitCode); })
     .catch(err => { console.error('\nQuality audit failed:', err.message); process.exit(1); });
 }
 
-module.exports = { runQualityAudit, DEFAULT_CONFIG };
+module.exports = { runQualityAudit, markTerminated, DEFAULT_CONFIG };

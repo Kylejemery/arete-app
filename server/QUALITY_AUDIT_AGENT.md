@@ -33,7 +33,7 @@ thing, returns findings, and never writes.
 | `corpus.locator_quality` | A locator that cannot cite the passage it labels (Part 5 rule 3): a scheme pitched at the wrong level, or a post-standard ingest with no locator at all. The median chunks per locator is the signal and the worst locator is not — `Discourses 4.1` really is that long, and Augustine's 636 locators over 1006 chunks are a correct parse. Yonge's Diogenes Laertius put all 71 chunks of Book 10 under `10.1`. |
 | `corpus.question_map` | Works ingested since the standard with no `corpus_question_registrations` row (Part 5 rule 4). |
 | `corpus.queue_health` | Failed queue rows nothing retries, and pending rows older than the batch cadence. |
-| `corpus.retrieval_latency` | Times `match_rag_corpus` on five fixed out-of-corpus queries through the real PostgREST path. Today the function is an exact scan (its `SET` blocks inlining) — correct, 187ms warm at 13.7k chunks, but linear in the corpus and cancelled by PostgREST at 8s. Warns when the warm median passes `retrieval_warn_ms` or any call passes `retrieval_critical_ms`; critical on a failed call. The action names the measured HNSW migration, so the index decision is made on a number. |
+| `corpus.retrieval_latency` | Times `match_rag_corpus` on five fixed out-of-corpus queries through the real PostgREST path. Today the function is an exact scan (its `SET` blocks inlining) — correct, 187ms warm at 13.7k chunks, but linear in the corpus and cancelled by PostgREST at 8s. Warns when the warm median passes `retrieval_warn_ms` or any call passes `retrieval_critical_ms`; critical on a failed call. Runs **before** the fences probe so it takes the cold call — on 2026-09-18 the cold call hit the 8s cancel inside the fences probe and this probe measured a half-warmed cache. The action names the measured HNSW migration, so the index decision is made on a number. |
 | `corpus.retrieval_fences` | **End to end**: embeds real queries, calls `match_rag_corpus` with `counselorRetrievalParams()`, and asserts that nothing deprecated and nothing on the exclusion list comes back. Needs `OPENAI_API_KEY`. |
 
 ### `library` — the reading rooms and the Garden
@@ -198,6 +198,29 @@ A cron service sleeps between runs, so the standing cost is one model call for
 the brief plus the sampled read pass — four Sonnet calls a night at the default
 sample of 40.
 
+#### Running it by hand, and what a merge does to a run
+
+Learned on 2026-09-18, the day the first on-demand runs were attempted:
+
+- **A redeploy does not run a cron service.** It builds and then waits for the
+  schedule; a redeploy left alone sat idle for an hour. What runs it now is the
+  dashboard's run action on the service, or a **restart of the current
+  deployment** (the Railway connector's `restart-service`), which starts the
+  container and executes the start command. The Quality tab's **Run now** is a
+  third route and runs inside the API service instead.
+- **Every merge to main redeploys every service**, this one included, and the
+  new deployment replaces the old container whether or not a run is in flight.
+  The 19:11 run that day was killed 31 seconds in by the deploy for the next
+  merged PR. The 09:00 UTC nightly is rarely exposed; an afternoon run during
+  active merging often is. The API service has the same exposure for **Run
+  now**.
+- The agent handles `SIGTERM` (and `SIGINT`): the open report row is marked
+  `failed` with the reason written to `error`, bounded to four seconds so the
+  write cannot hold the exit, and the process exits 1. Before this the row
+  stayed `running` forever. Only the CLI installs the handler; the in-process
+  path the API server uses must not touch the server's own shutdown. A run
+  killed this way is not resumed — start it again.
+
 ## Environment variables
 
 | Var | Required | Notes |
@@ -267,7 +290,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-eight probes in two languages would be two copies of the
+  TypeScript: twenty-nine probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
