@@ -378,11 +378,27 @@ async function runCorpusIngestion() {
     })
     .eq('id', runRow.id);
 
+  // Rebuild the Library shelf's excerpt cache for whatever this run changed.
+  // The shelf is correct without this — a work whose passage count moved
+  // misses the cache and recomputes its own excerpt — but every such work
+  // pays the old per-request cost until the cache catches up, so the run
+  // that moved the counts is the right place to settle them. Never fatal:
+  // the shelf degrades to slow, not wrong.
+  let excerptsRefreshed = null;
+  try {
+    const { data, error } = await supabase.rpc('refresh_library_excerpts');
+    if (error) throw new Error(error.message);
+    excerptsRefreshed = typeof data === 'number' ? data : null;
+    console.log(`[corpus-agent] library excerpt cache refreshed — ${excerptsRefreshed ?? '?'} rewritten`);
+  } catch (err) {
+    console.error(`[corpus-agent] library excerpt refresh failed: ${err.message}`);
+  }
+
   console.log(
     `[corpus-agent] run complete — processed ${sources.length} | ` +
     `succeeded ${succeeded} | failed ${failed} | chunks added ${totalChunks}`
   );
-  return { processed: sources.length, succeeded, failed, totalChunks, failures };
+  return { processed: sources.length, succeeded, failed, totalChunks, failures, excerptsRefreshed };
 }
 
 // Concordance sync (academy/corpus-ingestion/ingest-concordance.js) runs only
