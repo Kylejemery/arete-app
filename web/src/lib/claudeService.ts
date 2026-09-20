@@ -1,4 +1,4 @@
-import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet } from './db';
+import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 import { supabase } from '@/lib/supabase';
@@ -130,6 +130,25 @@ function formatReadingTime(seconds: number): string {
   return mins > 0 ? `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes` : `${hours} hour${hours > 1 ? 's' : ''}`;
 }
 
+// A routine block the Cabinet can reason about on any day, including one the
+// user has not checked in on. See the twin of this in the mobile app's
+// services/claudeService.ts — same rule, same reasoning.
+//
+// "Not done" and "not recorded" are deliberately different: an unticked box
+// on a day with a check-in means the item is outstanding, while a day with no
+// check-in at all means nobody knows, and asserting either way is wrong.
+function routineLines(label: string, tasks: { title: string; done: boolean }[], templates: { title: string; emoji?: string | null }[]): string[] {
+  if (tasks.length > 0) {
+    return [`${label}:`, ...tasks.map(t => `- ${t.title}: ${t.done ? 'Done' : 'Not done'}`)];
+  }
+  if (templates.length === 0) return [];
+  const titles = templates.map(t => (t.emoji ? `${t.emoji} ${t.title}` : t.title));
+  return [
+    `${label} (no check-in recorded today — status unknown, do not assume either way):`,
+    ...titles.map(title => `- ${title}: not recorded`),
+  ];
+}
+
 export async function gatherAppContext(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -138,12 +157,15 @@ export async function gatherAppContext(): Promise<string> {
     day: 'numeric',
   });
 
-  const [morningCheckIn, eveningCheckIn, readingData, journalEntries, settings] = await Promise.all([
+  const [morningCheckIn, eveningCheckIn, readingData, journalEntries, settings, todayCheckin, morningTemplates, eveningTemplates] = await Promise.all([
     getLatestCheckIn('morning'),
     getLatestCheckIn('evening'),
     getReadingData(),
     getJournalEntries(),
     getUserSettings(),
+    getTodayCheckin().catch(() => null),
+    getRoutineTemplates('morning').catch(() => []),
+    getRoutineTemplates('evening').catch(() => []),
   ]);
 
   const userName = settings?.user_name || 'the user';
@@ -151,26 +173,22 @@ export async function gatherAppContext(): Promise<string> {
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S CURRENT APP DATA (as of ${today}) ===`);
 
-  // Morning routine (from localStorage when available)
+  // Morning routine. This read localStorage keys ('arete_morning_tasks',
+  // 'arete_evening_tasks') that nothing in web/src writes any more, so both
+  // blocks were always empty and always omitted — the web Cabinet has never
+  // seen routine data. Read today's check-in instead, the same row the mobile
+  // app writes, and fall back to the user's templates when there is no row.
   try {
-    const storedMorningTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_morning_tasks') : null;
-    const morningTasks = storedMorningTasks ? JSON.parse(storedMorningTasks) : [];
-    if (morningTasks.length > 0) {
-      lines.push('');
-      lines.push('MORNING ROUTINE:');
-      morningTasks.forEach((t: { title: string; done: boolean }) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-    }
+    const tasks = (todayCheckin?.morning_tasks as { title: string; done: boolean }[] | null) ?? [];
+    const block = routineLines('MORNING ROUTINE', tasks, morningTemplates);
+    if (block.length > 0) { lines.push(''); lines.push(...block); }
   } catch { /* skip */ }
 
-  // Evening tasks (from localStorage when available)
+  // Evening tasks
   try {
-    const storedEveningTasks = typeof window !== 'undefined' ? localStorage.getItem('arete_evening_tasks') : null;
-    const eveningTasks = storedEveningTasks ? JSON.parse(storedEveningTasks) : [];
-    if (eveningTasks.length > 0) {
-      lines.push('');
-      lines.push('EVENING TASKS:');
-      eveningTasks.forEach((t: { title: string; done: boolean }) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-    }
+    const tasks = (todayCheckin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
+    const block = routineLines('EVENING TASKS', tasks, eveningTemplates);
+    if (block.length > 0) { lines.push(''); lines.push(...block); }
   } catch { /* skip */ }
 
   // Evening reflection (from localStorage)
