@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -53,9 +54,14 @@ export default function OnboardingPage() {
         ? [{ role: 'user', content: 'Hello.' }]
         : msgs.map(m => ({ role: m.role, content: m.content }));
 
+      // The backend requires a signed-in user; the proxy forwards this header.
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch('/api/onboard', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           messages: apiMessages,
           futureYears,

@@ -753,6 +753,45 @@ async function resolveUserTier(req) {
   return { userId, tier: normalizeTier(profile.tier, profile.is_premium) };
 }
 
+// Strict variant: the caller must present a valid Supabase JWT. No body
+// fallback. Returns the verified user id, or null (after sending 401).
+async function requireVerifiedUser(req, res) {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) {
+    res.status(401).json({ error: 'unauthorized', reason: 'missing_bearer_token' });
+    return null;
+  }
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
+    res.status(401).json({ error: 'unauthorized', reason: 'invalid_token' });
+    return null;
+  }
+  return user.id;
+}
+
+// Per-user daily cap for endpoints that are not Cabinet messages but still
+// cost a model call (the conversational Know Thyself onboarding). Counted in
+// memory, keyed by user and UTC day; resets on restart, which is acceptable
+// for a 40/day ceiling whose purpose is abuse control, not billing.
+const dailyUserHits = new Map(); // `${userId}:${YYYY-MM-DD}` → count
+function consumeDailyUserCap(userId, limit, res, errorCode) {
+  const d = new Date();
+  const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+  const key = `${userId}:${day}`;
+  const used = dailyUserHits.get(key) || 0;
+  if (used >= limit) {
+    res.status(429).json({ error: errorCode, limit, resets: 'midnight_utc' });
+    return false;
+  }
+  dailyUserHits.set(key, used + 1);
+  if (dailyUserHits.size > 10000) {
+    // Drop entries from previous days so the map cannot grow without bound.
+    for (const k of dailyUserHits.keys()) if (!k.endsWith(day)) dailyUserHits.delete(k);
+  }
+  return true;
+}
+
 async function enforceMessageLimit(req, res) {
   const { userId, tier } = await resolveUserTier(req);
   // Stash for the model ladder — one lookup per request.
@@ -2275,10 +2314,18 @@ app.post('/api/onboard', async (req, res) => {
 
 // ─── Future Self Onboarding (web) ─────────────────────────────────────────────
 
+const ONBOARDING_TURNS_PER_DAY = 40;
+
 app.post('/api/onboard-web', async (req, res) => {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
+
+  // Signed-in users only: every turn is a Sonnet call, and the endpoint used
+  // to be open to anyone who knew the URL.
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  if (!consumeDailyUserCap(userId, ONBOARDING_TURNS_PER_DAY, res, 'onboarding_limit_reached')) return;
 
   const { messages, futureYears } = req.body;
 

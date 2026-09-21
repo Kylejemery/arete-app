@@ -5,9 +5,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    // Forward the caller's Supabase JWT; the backend rejects anonymous turns.
+    const authorization = req.headers.get('authorization');
     const response = await fetch(`${API_BASE_URL}/api/onboard-web`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authorization ? { Authorization: authorization } : {}),
+      },
       body: JSON.stringify(body),
     });
 
