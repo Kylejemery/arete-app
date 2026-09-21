@@ -19,6 +19,7 @@ import {
     type AgoraComment, type AgoraEssay, type AgoraViewer, type AnswerCounselor,
 } from '@/lib/agora';
 import { Chip, Comment, CommentComposer, GOLD, GoldButton, Kicker, SubmissionNotice } from '../../components/agora/AgoraUI';
+import { paywallRoute } from '@/lib/paywall';
 
 /**
  * One essay in the Agora, with its comments. Reading is free; the composer
@@ -92,7 +93,7 @@ export default function EssayScreen() {
         ]);
     };
 
-    const unlock = () => router.push({ pathname: '/paywall', params: { src: 'agora_comment' } } as any);
+    const unlock = () => router.push(paywallRoute('agora_comment'));
 
     const invite = async (opts: { force?: boolean; override?: boolean } = {}) => {
         if (!essay || !inviteSlug || inviting) return;

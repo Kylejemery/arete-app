@@ -4,6 +4,7 @@ import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import ConstellationBg from '@/components/ConstellationBg';
 import PendingInviteToast from '@/components/PendingInviteToast';
+import AppOpenedLogger from '@/components/AppOpenedLogger';
 
 const serif = Cormorant_Garamond({
   subsets: ['latin'],
@@ -49,6 +50,7 @@ export default function RootLayout({
         <ConstellationBg />
         <Sidebar />
         <PendingInviteToast />
+        <AppOpenedLogger />
         {/* Desktop: offset for 220px sidebar. Mobile: pb-24 clears the floating pill nav.
             h-full + overflow-y-auto is the scroll container; chat pages rely on this
             bounded height to make flex-1 work correctly. */}

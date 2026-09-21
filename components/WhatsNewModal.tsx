@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSubscription } from '@/lib/useSubscription';
+import { paywallRoute } from '@/lib/paywall';
 
 // One-time "What's New" announcement, shown on the first launch of a version
 // that has something worth announcing. Self-contained: mount it anywhere on
@@ -82,7 +83,7 @@ export default function WhatsNewModal() {
             onPress={() =>
               dismiss(() => {
                 if (tier === 'free') {
-                  router.push({ pathname: '/paywall', params: { src: 'whats_new_cabinet_sight' } } as any);
+                  router.push(paywallRoute('whats_new_cabinet_sight'));
                 } else {
                   router.push('/settings' as any);
                 }

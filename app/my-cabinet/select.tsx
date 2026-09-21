@@ -17,6 +17,7 @@ import CounselorCard from '@/components/CounselorCard';
 import { FUTURE_SELF_SLUG, FREE_COUNSELOR_SLUGS, STARTER_CABINET_SLUGS, getCounselors, getSubscriptionTier, getUserCabinet, saveCabinetSelection } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor, SubscriptionTier } from '@/lib/types';
+import { paywallRoute } from '@/lib/paywall';
 
 const CATEGORIES = [
   { label: 'All', value: 'all' },
@@ -239,7 +240,7 @@ export default function CabinetSelectScreen() {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => { setShowLockedUpgrade(false); router.push({ pathname: '/paywall', params: { src: 'cabinet_select_locked' } } as any); }}
+              onPress={() => { setShowLockedUpgrade(false); router.push(paywallRoute('cabinet_select_locked')); }}
               activeOpacity={0.8}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Arete — $9.99/mo</Text>

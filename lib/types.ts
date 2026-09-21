@@ -51,6 +51,10 @@ export interface UserSettings {
   counselor_models?: Record<string, string> | null;
   morning_tasks: Task[];
   evening_tasks: Task[];
+  // Stamped by the server on authenticated requests (retention plan R0).
+  last_active_at?: string | null;
+  // Set by markKnowThyselfComplete (retention plan R0/R3).
+  kt_completed_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

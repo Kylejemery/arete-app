@@ -8,6 +8,7 @@ import {
   type AgoraEssaySummary, type AgoraViewer,
 } from '@/lib/agora';
 import { ag, AcademyButton, EmptyNote, EssayIndexCard, GoldRule, Kicker, TextLink } from '@/components/agora';
+import { upgradeHref } from '@/lib/paywall';
 
 export default function AgoraPage() {
   return (
@@ -44,7 +45,7 @@ function AgoraIndex() {
     return () => { cancelled = true; };
   }, [router, topic]);
 
-  const submit = () => router.push(viewer?.canWrite ? '/agora/submit' : '/upgrade');
+  const submit = () => router.push(viewer?.canWrite ? '/agora/submit' : upgradeHref('agora_submit'));
 
   return (
     <div style={{ padding: '48px 24px 64px', maxWidth: 1040, margin: '0 auto' }}>

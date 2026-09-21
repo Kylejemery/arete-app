@@ -11,6 +11,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
 import { getLocales } from 'expo-localization';
 import { supabase } from '@/lib/supabase';
+import { getSubscriptionTier } from '@/lib/db';
+import { logEvent } from '@/lib/events';
+import { isPaywallSource } from '@/lib/paywall';
 import { refreshTier } from '@/lib/useSubscription';
 import { openWebSignedIn } from '@/lib/webHandoff';
 
@@ -146,10 +149,14 @@ export default function PaywallScreen() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
+        const source = isPaywallSource(params.src) ? params.src : 'unknown';
+        const tierAtView = await getSubscriptionTier().catch(() => 'free' as const);
         await supabase.from('paywall_events').insert({
           user_id: user.id,
-          source: params.src ? String(params.src) : 'unknown',
+          source,
+          tier_at_view: tierAtView,
         });
+        logEvent('paywall_viewed', { source, tier_at_view: tierAtView });
       } catch { /* telemetry is best-effort */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps

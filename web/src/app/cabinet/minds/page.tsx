@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getUserSettings, getUserCabinet, getIsPremium, upsertUserSettings } from '@/lib/db';
 import { COUNSELOR_MODEL_OPTIONS, DEFAULT_COUNSELOR_MODEL, counselorModelKey } from '@/lib/llmModels';
 import type { Counselor } from '@/lib/types';
+import { upgradeHref } from '@/lib/paywall';
 
 export default function CabinetMindsPage() {
   const router = useRouter();
@@ -91,7 +92,7 @@ export default function CabinetMindsPage() {
               Upgrade to Arete Premium to choose which AI model powers each counselor.
             </p>
             <button
-              onClick={() => router.push('/upgrade')}
+              onClick={() => router.push(upgradeHref('cabinet_minds'))}
               className="w-full font-semibold px-6 py-3 rounded-lg hover:opacity-90 mb-3"
               style={{ background: '#c9a84c', color: '#0f1724' }}
             >

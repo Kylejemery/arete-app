@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import { countFilled, logEvent } from '@/lib/events';
 
 const TOTAL_STEPS = 11;
 const OPTIONAL_STEPS = [3, 4, 6, 7, 8];
@@ -123,6 +124,11 @@ export default function SetupScreen() {
     }
   };
 
+  const startedAt = useRef(Date.now());
+  useEffect(() => {
+    logEvent('kt_started', { path: 'wizard' });
+  }, []);
+
   const handleCommit = async () => {
     await upsertUserSettings({
       user_name: name.trim(),
@@ -143,6 +149,12 @@ export default function SetupScreen() {
     // this user as unprofiled. Previously only the conversational agent set
     // the flag, and wizard completers were nagged to "Meet Your Future Self".
     await markKnowThyselfComplete();
+    logEvent('kt_completed', {
+      path: 'wizard',
+      fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+      duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+      cabinet_size: activeMembers.length,
+    });
     router.replace('/');
   };
 

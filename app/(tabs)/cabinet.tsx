@@ -39,6 +39,7 @@ import {
 } from '../../services/threadService';
 import DayDivider from '../../components/DayDivider';
 import { clockTime, startsNewDay } from '../../lib/messageDates';
+import { paywallRoute } from '@/lib/paywall';
 
 function getTodayDateKey(): string {
   const d = new Date();
@@ -493,7 +494,7 @@ export default function CabinetScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push({ pathname: '/paywall', params: { src: 'cabinet_daily_limit' } } as any);
+      router.push(paywallRoute('cabinet_daily_limit'));
       return;
     }
 
@@ -531,7 +532,7 @@ export default function CabinetScreen() {
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push({ pathname: '/paywall', params: { src: 'cabinet_daily_limit' } } as any);
+        router.push(paywallRoute('cabinet_daily_limit'));
       } else {
         Alert.alert(
           'Not sent',
@@ -555,7 +556,7 @@ export default function CabinetScreen() {
     const stored = await AsyncStorage.getItem(dateKey);
     const count = stored !== null ? parseInt(stored, 10) : 0;
     if (maxMessages !== null && count >= maxMessages) {
-      router.push({ pathname: '/paywall', params: { src: 'shared_daily_limit' } } as any);
+      router.push(paywallRoute('shared_daily_limit'));
       return;
     }
 
@@ -590,7 +591,7 @@ export default function CabinetScreen() {
       if (e instanceof DailyLimitError) {
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push({ pathname: '/paywall', params: { src: 'shared_daily_limit' } } as any);
+        router.push(paywallRoute('shared_daily_limit'));
       } else {
         Alert.alert(
           'Not sent',
@@ -780,7 +781,7 @@ export default function CabinetScreen() {
                 onPress={() => {
                   // Shared sessions are Premium: free tier routes to the paywall.
                   if (tier === 'free') {
-                    router.push({ pathname: '/paywall', params: { src: 'shared_invite_gate' } } as any);
+                    router.push(paywallRoute('shared_invite_gate'));
                   } else {
                     setShowInviteModal(true);
                   }
@@ -1006,7 +1007,7 @@ export default function CabinetScreen() {
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => router.push({ pathname: '/paywall', params: { src: 'cabinet_limit_card' } } as any)}
+                onPress={() => router.push(paywallRoute('cabinet_limit_card'))}
                 activeOpacity={0.8}
               >
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Upgrade to Premium →</Text>
@@ -1089,7 +1090,7 @@ export default function CabinetScreen() {
           {tier === 'free' && (
             <TouchableOpacity
               style={styles.sharedBanner}
-              onPress={() => router.push({ pathname: '/paywall', params: { src: 'shared_guest_banner' } } as any)}
+              onPress={() => router.push(paywallRoute('shared_guest_banner'))}
               activeOpacity={0.8}
             >
               <Ionicons name="sparkles-outline" size={16} color="#c9a84c" />

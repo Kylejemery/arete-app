@@ -13,7 +13,8 @@ import {
   createJournalEntry,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendCheckInToCabinet } from '@/lib/claudeService';
+import { CABINET_FALLBACK_REPLY, sendCheckInToCabinet } from '@/lib/claudeService';
+import { logEvent } from '@/lib/events';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
 
@@ -179,8 +180,14 @@ export default function EveningPage() {
       await incrementStreak();
       setCheckInResponse(response);
       setCheckInDone(true);
+      // Until R2 returns a typed result, the fallback string is the only
+      // signal that the Cabinet did not actually answer.
+      const replied = !!response && response !== CABINET_FALLBACK_REPLY;
+      logEvent('checkin_completed', { kind: 'evening', cabinet_replied: replied });
+      if (!replied) logEvent('checkin_cabinet_failed', { kind: 'evening', reason: 'fallback' });
     } catch {
       setCheckInResponse('The Cabinet will speak when you return.');
+      logEvent('checkin_cabinet_failed', { kind: 'evening', reason: 'exception' });
     } finally {
       setIsLoading(false);
     }

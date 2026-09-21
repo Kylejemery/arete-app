@@ -16,6 +16,7 @@ import {
     type AgoraEssaySummary, type AgoraViewer, type EssayStatus,
 } from '@/lib/agora';
 import { Chip, EssayRow, GOLD, Kicker } from '../../components/agora/AgoraUI';
+import { paywallRoute } from '@/lib/paywall';
 
 type Filter = 'All' | 'Answered' | 'Editor' | 'Yours';
 
@@ -80,7 +81,7 @@ export default function AgoraScreen() {
 
     const write = () => {
         if (viewer?.canWrite) router.push('/agora/compose' as any);
-        else router.push({ pathname: '/paywall', params: { src: 'agora_submit' } } as any);
+        else router.push(paywallRoute('agora_submit'));
     };
 
     const open = (e: AgoraEssaySummary) => {

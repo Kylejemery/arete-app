@@ -16,6 +16,7 @@ import { getUserCabinet, getIsPremium, getUserSettings, upsertUserSettings } fro
 import { COUNSELOR_MODEL_OPTIONS, DEFAULT_COUNSELOR_MODEL } from '@/lib/llmModels';
 import { normalizeCounselorId } from '../../services/threadService';
 import type { Counselor } from '@/lib/types';
+import { paywallRoute } from '@/lib/paywall';
 
 // Server counselor id for a cabinet slug ('marcus-aurelius' → 'marcus',
 // 'futureSelf' → 'future-self').
@@ -160,7 +161,7 @@ export default function CabinetIndexScreen() {
             </Text>
             <TouchableOpacity
               style={styles.upgradeButton}
-              onPress={() => { setShowPaywall(false); router.push({ pathname: '/paywall', params: { src: 'custom_cabinet' } } as any); }}
+              onPress={() => { setShowPaywall(false); router.push(paywallRoute('custom_cabinet')); }}
               activeOpacity={0.8}
             >
               <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getIsPremium } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 import CounselorLibrary from '@/components/CounselorLibrary';
+import { upgradeHref } from '@/lib/paywall';
 
 const SAVE_SUCCESS_REDIRECT_DELAY_MS = 2000;
 
@@ -87,7 +88,7 @@ export default function CabinetSelectPage() {
               Upgrade to Arete Premium to build a custom cabinet from the full counselor library.
             </p>
             <button
-              onClick={() => router.push('/upgrade')}
+              onClick={() => router.push(upgradeHref('custom_cabinet'))}
               className="w-full bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90 mb-3"
             >
               Upgrade

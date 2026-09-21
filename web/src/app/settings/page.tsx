@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
 import PageHeader from '@/components/PageHeader';
+import { upgradeHref } from '@/lib/paywall';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -104,7 +105,7 @@ export default function SettingsPage() {
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-text font-semibold mb-3">Subscription</p>
           <Link
-            href="/upgrade"
+            href={upgradeHref('settings_upgrade')}
             className="block w-full text-center bg-arete-bg border border-arete-border text-arete-text rounded-lg px-4 py-2 text-sm hover:border-arete-gold transition-colors"
           >
             Manage Subscription

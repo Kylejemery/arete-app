@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getUserSettings, saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { countFilled, logEvent } from '@/lib/events';
 import { triggerScrollGeneration } from '@/lib/scrolls';
 import { supabase } from '@/lib/supabase';
 
@@ -48,10 +49,12 @@ export default function OnboardingScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const scrollRef = useRef<ScrollView>(null);
+  const startedAt = useRef(Date.now());
 
   // Kick off with the initial greeting from Future Self
   useEffect(() => {
     sendToApi([]);
+    logEvent('kt_started', { path: 'conversation' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -118,6 +121,17 @@ export default function OnboardingScreen() {
     try {
       await saveOnboardingProfile(profile);
       setSaved(true);
+      logEvent('kt_completed', {
+        path: 'conversation',
+        fields_filled: countFilled({
+          identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
+          work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
+          daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
+          dependents: profile.dependents,
+        }),
+        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+        turns: messages.filter(m => m.role === 'user').length,
+      });
 
       // Post-onboarding payoff: kick off the user's first Scroll from their
       // stated goals. Fire-and-forget — navigation never waits on this.

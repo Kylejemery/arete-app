@@ -10,6 +10,7 @@ import {
 import {
   ag, AcademyButton, fieldStyle, GoldRule, Kicker, PageTitle, SubmissionNotice, TextLink, TopicChip,
 } from '@/components/agora';
+import { upgradeHref } from '@/lib/paywall';
 
 export default function SubmitPage() {
   return (
@@ -47,7 +48,7 @@ function SubmitForm() {
       const v = await getAgoraViewer();
       if (cancelled) return;
       setViewer(v);
-      if (!v?.canWrite) { router.replace('/upgrade'); return; }
+      if (!v?.canWrite) { router.replace(upgradeHref('agora_submit')); return; }
       if (editId) {
         const e = await getEssay(editId);
         if (cancelled) return;

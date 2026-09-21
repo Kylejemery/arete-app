@@ -1048,4 +1048,14 @@ export async function markKnowThyselfComplete(): Promise<void> {
   } catch (e) {
     console.error('markKnowThyselfComplete exception:', e)
   }
+  // First completion only: stamp when it happened (retention plan R0). Kept
+  // apart from the flag so a failure here can never block it.
+  try {
+    const { error } = await supabase
+      .from('user_settings')
+      .update({ kt_completed_at: new Date().toISOString() })
+      .eq('user_id', userId)
+      .is('kt_completed_at', null)
+    if (error) console.warn('markKnowThyselfComplete kt_completed_at:', error.message)
+  } catch { /* best effort */ }
 }

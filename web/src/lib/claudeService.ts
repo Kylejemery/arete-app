@@ -3,6 +3,11 @@ import { ThreadMessage, appendMessages, getContextWindow } from './threadService
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 import { supabase } from '@/lib/supabase';
 
+// What sendCheckInToCabinet returns when the Cabinet could not answer. Exported
+// so callers and the event log can tell a real reply from the fallback until
+// the check-in call returns a typed result (retention plan R2).
+export const CABINET_FALLBACK_REPLY = 'The Cabinet will speak when you return.';
+
 export interface Message {
   role: 'user' | 'assistant';
   content: string;
@@ -636,7 +641,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
     });
 
     if (!response.ok) {
-      return 'The Cabinet will speak when you return.';
+      return CABINET_FALLBACK_REPLY;
     }
 
     const data = await response.json();
@@ -650,10 +655,10 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
       ]);
       return assistantReply;
     }
-    return 'The Cabinet will speak when you return.';
+    return CABINET_FALLBACK_REPLY;
   } catch (error) {
     console.error('Cabinet check-in failed:', error);
-    return 'The Cabinet will speak when you return.';
+    return CABINET_FALLBACK_REPLY;
   }
 }
 

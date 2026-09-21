@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
+import { countFilled, logEvent } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [simulatingFree, setSimulatingFree] = useState(false);
+  const startedAt = useRef(Date.now());
 
   useEffect(() => {
     async function load() {
@@ -31,6 +33,7 @@ export default function ProfilePage() {
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
+      logEvent('kt_started', { path: 'form' });
 
       setBackground(settings.kt_background || '');
       setIdentity(settings.kt_identity || '');
@@ -63,6 +66,11 @@ export default function ProfilePage() {
     // Saving the form is completing Know Thyself: clear the home banner and
     // the Scrolls empty state, which key on profiles.know_thyself_complete.
     await markKnowThyselfComplete();
+    logEvent('kt_completed', {
+      path: 'form',
+      fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+      duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+    });
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
