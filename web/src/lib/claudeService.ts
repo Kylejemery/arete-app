@@ -55,6 +55,44 @@ export class CabinetUnavailableError extends Error {
   }
 }
 
+// The server refused the message with 403 daily_limit_reached. A subclass so
+// every existing `instanceof CabinetUnavailableError` rethrow keeps working;
+// callers that can explain the cap (the Cabinet page's limit card) check for
+// this first. The message is only a fallback for callers that cannot.
+export class DailyLimitReachedError extends CabinetUnavailableError {
+  readonly tier: string;
+  readonly limit: number | null;
+  constructor(tier: string, limit: number | null) {
+    super(
+      limit
+        ? `You have used today's ${limit} messages. They reset at midnight.`
+        : `You have used today's messages. They reset at midnight.`
+    );
+    this.name = 'DailyLimitReachedError';
+    this.tier = tier;
+    this.limit = limit;
+  }
+}
+
+// Throws DailyLimitReachedError when a failed response is the daily cap;
+// otherwise returns the body text so the caller can log it and fall through
+// to its generic error.
+async function readChatFailure(response: Response): Promise<string> {
+  const text = await response.text();
+  if (response.status === 403) {
+    try {
+      const body = JSON.parse(text) as { error?: string; tier?: string; limit?: number };
+      if (body?.error === 'daily_limit_reached') {
+        throw new DailyLimitReachedError(body.tier ?? 'free', typeof body.limit === 'number' ? body.limit : null);
+      }
+    } catch (e) {
+      if (e instanceof DailyLimitReachedError) throw e;
+      // Not JSON: an ordinary failure.
+    }
+  }
+  return text;
+}
+
 // A Cabinet turn is several sequential generations, so it is slow by design;
 // this only bounds a socket that has genuinely stopped answering.
 const CHAT_TIMEOUT_MS = 120_000;
@@ -517,7 +555,7 @@ export async function sendMessageToCabinet(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await readChatFailure(response); // throws on the daily cap
       console.error('Backend/Claude API error:', response.status, errorText);
       throw new CabinetUnavailableError(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
@@ -690,7 +728,7 @@ export async function sendMessageToCounselor(
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await readChatFailure(response); // throws on the daily cap
       console.error('Backend/Claude API error:', response.status, errorText);
       throw new CabinetUnavailableError(`Your counselor is temporarily unavailable. (Error ${response.status})`);
     }

@@ -66,6 +66,7 @@ function UpgradeContent() {
     viewLoggedRef.current = true;
     logEvent('paywall_viewed', {
       source: isPaywallSource(srcParam) ? srcParam : 'unknown',
+      surface: 'upgrade_page', // the in-thread limit card logs surface: 'limit_card'
       tier_at_view: tier ?? 'free',
     });
   }, [loading, status, srcParam, tier]);
