@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
+import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
+import DailyLimitCard from '@/components/DailyLimitCard';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
 import { useSubscription } from '@/lib/useSubscription';
 import type { ThreadMessage } from '@/lib/threadService';
@@ -50,6 +52,35 @@ export default function CabinetPage() {
   const [isLoading, setIsLoading] = useState(false);
   // A send that failed: shown above the composer, never in the thread.
   const [sendError, setSendError] = useState<string | null>(null);
+  // Free tier daily cap. `remaining` is read from the same profile columns the
+  // server counts in (null until known, or when it cannot be read); `limitHit`
+  // is set the moment the server refuses a message, so the card appears even
+  // if the count read is stale or failed.
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const [limitHit, setLimitHit] = useState(false);
+  const refreshRemaining = useCallback(async () => {
+    const n = await getFreeMessagesRemaining();
+    setRemaining(n);
+    if (n !== null && n > 0) setLimitHit(false); // a new day, or an upgrade
+  }, []);
+  useEffect(() => { refreshRemaining(); }, [refreshRemaining]);
+  const isFreeTier = !subLoading && !isPremium;
+  const showLimitCard = isFreeTier && (limitHit || remaining === 0);
+
+  // One place for all three send paths to report a failed send.
+  const reportSendFailure = (e: unknown, fallback: string) => {
+    if (e instanceof DailyLimitReachedError) {
+      if (e.tier === 'free') {
+        // The limit card explains it; no red banner on top of that.
+        setLimitHit(true);
+        setRemaining(0);
+        return;
+      }
+      setSendError(e.message); // a paid tier's own cap: plain words, no upsell
+      return;
+    }
+    setSendError(e instanceof CabinetUnavailableError ? e.message : fallback);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
@@ -286,6 +317,7 @@ export default function CabinetPage() {
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
+      refreshRemaining();
     } catch (e) {
       // Not a counselor's words, so it does not go in the thread: take the
       // optimistic bubble back out, return the text to the box, and say what
@@ -293,7 +325,7 @@ export default function CabinetPage() {
       // carried into the next successful save and become permanent history.
       setCabinetMessages(prev => prev.slice(0, -1));
       setInput(userMsg.content);
-      setSendError(e instanceof CabinetUnavailableError ? e.message : 'The Cabinet is temporarily unavailable. Please try again.');
+      reportSendFailure(e, 'The Cabinet is temporarily unavailable. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -335,10 +367,11 @@ export default function CabinetPage() {
         counselorName: r.counselorName ?? undefined,
       }));
       setSharedMessages(prev => [...prev, ...assistantMsgs]);
+      refreshRemaining();
     } catch (e) {
       setSharedMessages(prev => prev.slice(0, -1));
       setSharedInput(userMsg.content);
-      setSendError(e instanceof CabinetUnavailableError ? e.message : 'The Cabinet is temporarily unavailable. Please try again.');
+      reportSendFailure(e, 'The Cabinet is temporarily unavailable. Please try again.');
     } finally {
       setSharedLoading(false);
     }
@@ -463,10 +496,11 @@ export default function CabinetPage() {
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
       await saveThread({ id: selectedCounselor, messages: finalMessages, lastUpdated: Date.now() });
+      refreshRemaining();
     } catch (e) {
       setCounselorMessages(prev => prev.slice(0, -1));
       setCounselorInput(userMsg.content);
-      setSendError(e instanceof CabinetUnavailableError ? e.message : 'Your counselor is temporarily unavailable. Please try again.');
+      reportSendFailure(e, 'Your counselor is temporarily unavailable. Please try again.');
     } finally {
       setCounselorLoading(false);
     }
@@ -841,6 +875,7 @@ export default function CabinetPage() {
             <div ref={messagesEndRef} />
           </div>
 
+          {showLimitCard && <DailyLimitCard source="cabinet_daily_limit" limit={FREE_DAILY_MESSAGES} />}
           {sendError && (
             <div
               className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
@@ -882,13 +917,18 @@ export default function CabinetPage() {
             />
             <button
               onClick={handleSendCabinet}
-              disabled={isLoading || !input.trim()}
+              disabled={isLoading || !input.trim() || showLimitCard}
               className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
             >
               →
             </button>
           </div>
+          {isFreeTier && remaining !== null && (
+            <p className="px-5 pb-2 text-[11px] flex-shrink-0" style={{ color: '#6b7280', background: 'rgba(10,14,28,0.5)' }}>
+              {remaining} {remaining === 1 ? 'message' : 'messages'} remaining today
+            </p>
+          )}
         </div>
       )}
 
@@ -1093,6 +1133,7 @@ export default function CabinetPage() {
             <div ref={sharedEndRef} />
           </div>
 
+          {showLimitCard && <DailyLimitCard source="shared_daily_limit" limit={FREE_DAILY_MESSAGES} />}
           {sendError && (
             <div
               className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
@@ -1134,13 +1175,18 @@ export default function CabinetPage() {
             />
             <button
               onClick={handleSendShared}
-              disabled={sharedLoading || !sharedInput.trim()}
+              disabled={sharedLoading || !sharedInput.trim() || showLimitCard}
               className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
             >
               →
             </button>
           </div>
+          {isFreeTier && remaining !== null && (
+            <p className="px-5 pb-2 text-[11px] flex-shrink-0" style={{ color: '#6b7280', background: 'rgba(10,14,28,0.5)' }}>
+              {remaining} {remaining === 1 ? 'message' : 'messages'} remaining today
+            </p>
+          )}
         </div>
       )}
 
@@ -1370,6 +1416,7 @@ export default function CabinetPage() {
                 <div ref={counselorEndRef} />
               </div>
 
+              {showLimitCard && <DailyLimitCard source="counselor_daily_limit" limit={FREE_DAILY_MESSAGES} />}
               {sendError && (
                 <div
                   className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
@@ -1411,13 +1458,18 @@ export default function CabinetPage() {
                 />
                 <button
                   onClick={handleSendCounselor}
-                  disabled={counselorLoading || !counselorInput.trim()}
+                  disabled={counselorLoading || !counselorInput.trim() || showLimitCard}
                   className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
                 >
                   →
                 </button>
               </div>
+              {isFreeTier && remaining !== null && (
+                <p className="px-5 pb-2 text-[11px] flex-shrink-0" style={{ color: '#6b7280', background: 'rgba(10,14,28,0.5)' }}>
+                  {remaining} {remaining === 1 ? 'message' : 'messages'} remaining today
+                </p>
+              )}
             </>
           )}
         </div>
