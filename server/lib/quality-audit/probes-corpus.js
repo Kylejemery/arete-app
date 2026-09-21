@@ -642,14 +642,16 @@ const probes = [
 
   // --- Retrieval latency ----------------------------------------------------
   //
-  // match_rag_corpus is the one function every counselor depends on, and today
-  // it is an exact scan: the SET on the function blocks inlining, so Postgres
-  // reads every vector on every call (~101k buffers). That is correct and it
-  // is cheap enough at 14k chunks — 187ms warm — but it scales linearly with
-  // the corpus, and PostgREST kills any statement at 8s. The decision to move
-  // to an approximate index (HNSW measured at 99.7% recall, ~1% of the cost)
-  // should be made on a number, not a feeling, so this times the real path
-  // nightly and says when the number has moved.
+  // match_rag_corpus is the one function every counselor depends on. Until
+  // 2026-09-20 it was an exact scan — every live vector on every call, 183k
+  // buffers, 7.7s cold against PostgREST's 8s cancel — and this probe is what
+  // measured that and forced the decision. Since 20260920153919 it runs on an
+  // HNSW index (ef_search 200, relaxed order, 99.7% recall on this query set,
+  // ~2.6k buffers) and routes author-scoped calls by author size
+  // (20260921 rag_corpus_retrieval_routing). The probe stays because the
+  // planner can abandon the index: it did at ef_search 250 in testing, and a
+  // corpus that outgrows the cost model or a settings change on the roles
+  // would show up here first, as the same seconds-long cold call.
   //
   // It runs before the fences probe on purpose. The first call to
   // match_rag_corpus in a run is the cold one, and on 2026-09-18 that call hit
@@ -712,10 +714,14 @@ const probes = [
       const out = [];
 
       const hnswAction =
-        'The measured fix is an HNSW index in place of the ivfflat one, with the SET removed from ' +
-        'match_rag_corpus so it can inline and hnsw.ef_search = 100 set on the role: 99.7% recall ' +
-        'against the exact scan on out-of-corpus queries, ~1% of the buffer cost. Run scripts/eval ' +
-        'once before and once after for a before/after on real queries, then ship it.';
+        'Retrieval runs on rag_corpus_embedding_hnsw_idx since 2026-09-20. First check the index ' +
+        'is still the plan: EXPLAIN (ANALYZE, BUFFERS) on match_rag_corpus with no author should ' +
+        'read ~2.6k buffers, not ~180k; and hnsw.ef_search should read 200 on authenticator, anon, ' +
+        'authenticated and service_role (ALTER ROLE ... SET) — PostgREST applies those per ' +
+        'transaction. If the plan has flipped to the exact scan, the planner\'s cost model has ' +
+        'moved (it abandoned the index at ef_search 250 when this was tuned): re-measure and lower ' +
+        'ef_search, or re-check that the ivfflat index has not been recreated beside it. See ' +
+        'supabase/migrations/20260920153919_rag_corpus_hnsw.sql and the routing migration after it.';
 
       if (failed.length) {
         out.push(finding({
@@ -744,9 +750,9 @@ const probes = [
           title: `Warm retrieval is ${median}ms at ${live} live chunks`,
           detail:
             `The median of ${warm.length} warm call(s) to match_rag_corpus is ${median}ms, over the ` +
-            `${warnMs}ms line. This is the exact scan scaling with the corpus, as expected — the ` +
-            'number was 187ms at 13.7k chunks when the line was drawn. It has moved enough that ' +
-            'the approximate index is now worth its small recall cost.',
+            `${warnMs}ms line. On the HNSW index a warm call is single-digit milliseconds at 13.7k ` +
+            'chunks (2.6ms median when tuned), so a median over the line means the index is no ' +
+            'longer the plan, or the roles have lost their hnsw.ef_search setting.',
           count: median,
           evidence: summary,
           action: hnswAction,
