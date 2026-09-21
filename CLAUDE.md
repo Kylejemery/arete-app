@@ -64,6 +64,16 @@ Two standing rules that predate this file and still hold:
   translations render it in English. See the concordances in
   `academy/corpus-ingestion/concordance/` (one numbered entry, one chunk;
   synced into `rag_corpus` by the nightly agent; format in the README there).
+- Retrieval runs on an HNSW index (`rag_corpus_embedding_hnsw_idx`, since
+  2026-09-20) with `hnsw.ef_search = 200` and relaxed order set on the database
+  and on the PostgREST roles, never on the function. `match_rag_corpus` routes
+  by author size: no author goes to the index, an author with up to 1,200 rows
+  is read through the author btree and sorted exactly (the index crawls for a
+  rare author), a more common author is left to the planner. The planner
+  abandoned the index at `ef_search` 250 in testing, so any change to the
+  setting or the index is measured with `EXPLAIN (ANALYZE, BUFFERS)` on
+  `match_rag_corpus` first, and the nightly `corpus.retrieval_latency` probe
+  is the guard. The two migrations of 2026-09-20/21 carry the numbers.
 - `text_type` is the layer field and the only fence: primary, scholarship,
   paper_summary, synthesis, concordance, modern_primary, modern_summary
   (locked by a check constraint). The counselor, modern, and research fences
