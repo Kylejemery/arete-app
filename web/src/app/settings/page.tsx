@@ -11,11 +11,24 @@ export default function SettingsPage() {
   const router = useRouter();
   const [simulatingFree, setSimulatingFree] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
+  // Dev Tools (tier simulation) is for admins and local development only.
+  // Hidden until the profile check resolves so it never flashes for members.
+  const [devToolsVisible, setDevToolsVisible] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
+      if (process.env.NODE_ENV !== 'production') {
+        setDevToolsVisible(true);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+      setDevToolsVisible(profile?.is_admin === true);
     }
     load();
 
@@ -128,7 +141,8 @@ export default function SettingsPage() {
           </Link>
         </div>
 
-        {/* Dev Tools */}
+        {/* Dev Tools: admins and non-production builds only */}
+        {devToolsVisible && (
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-text font-semibold mb-1">Dev Tools</p>
           <p className="text-arete-muted text-xs mb-3">These options reset on page reload and do not affect your account.</p>
@@ -151,6 +165,7 @@ export default function SettingsPage() {
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );
