@@ -1,0 +1,49 @@
+-- ============================================================
+-- rag_corpus: drop the duplicated unique constraint — 2026-09-21
+--
+-- The table carried the same uniqueness rule twice:
+--
+--     rag_corpus_author_work_program_chunk_key
+--       UNIQUE (author, work, program_id, chunk_index)   2160 kB
+--     rag_corpus_upsert_key
+--       UNIQUE (author, work, program_id, chunk_index)   2168 kB
+--
+-- Identical column lists, identical btrees, both valid. Postgres was using
+-- both: an upsert on those columns planned as
+--
+--     Conflict Arbiter Indexes: rag_corpus_author_work_program_chunk_key,
+--                               rag_corpus_upsert_key
+--
+-- so every ingest write maintained two trees to enforce one rule, and reads
+-- were split arbitrarily between them (21,196 scans against 15,414).
+--
+-- How it happened, for the record, because it is the drift CLAUDE.md warns
+-- about. The committed file 20260603000002_rag_corpus_chunk_index_constraint
+-- added the first constraint but is absent from the project's migration
+-- history, so it was applied outside the tool. Two days later, remote
+-- migration 20260605143917 add_rag_corpus_unique_constraint added the second
+-- with no committed file beside it. Neither half of the pair knew about the
+-- other, and ADD CONSTRAINT does not deduplicate.
+--
+-- Which one stays: rag_corpus_author_work_program_chunk_key, on two grounds.
+-- It is the one with a committed file. And its name states its columns,
+-- whereas "rag_corpus_upsert_key" sits one prefix away from
+-- idx_rag_corpus_upsert_key, which is a DIFFERENT unique index on
+-- (author, work, program_id, source_chunk_index) — a live arbiter for
+-- academy/corpus-ingestion/uploader.js and not a duplicate of anything.
+-- Retiring the confusable name is worth as much here as the 2 MB.
+--
+-- Safe because no write path names a constraint. All eleven upserts against
+-- rag_corpus infer their arbiter from columns — ten on chunk_index, one on
+-- source_chunk_index — and nothing in the schema or the codebase says
+-- ON CONFLICT ON CONSTRAINT. The surviving index satisfies the same
+-- inference, so inference cannot fail, and uniqueness is never relaxed for
+-- an instant: the rule is enforced throughout by the constraint that stays.
+--
+-- Reversible with the statement that created it:
+--     ALTER TABLE rag_corpus ADD CONSTRAINT rag_corpus_upsert_key
+--       UNIQUE (author, work, program_id, chunk_index);
+-- ============================================================
+
+ALTER TABLE public.rag_corpus
+  DROP CONSTRAINT IF EXISTS rag_corpus_upsert_key;
