@@ -1254,7 +1254,39 @@ export async function sendMessageToCounselor(
  * Supabase so the counselor-chat screen can serve it instantly without an API call.
  * Fire-and-forget — never throws.
  */
+// Home re-runs loadData() on every focus (useFocusEffect in
+// app/(tabs)/index.tsx), and each run ends by calling this. The cache that is
+// meant to guard it is only written once the model has answered — several
+// seconds on Opus — so two focuses inside that window both read an empty cache
+// and both fired.
+//
+// That put duplicate identical requests into retrieval_log seconds apart: 67
+// of them across 31 days, 387 wasted log rows, and 18 spurious
+// student_negative outcomes, because the learning system reads the same
+// question asked twice as the reader rewording it and scores the answer as a
+// miss. A quarter of every negative the system had learned from was this race.
+//
+// So: one in-flight prefetch per counselor per day, and later callers join it
+// rather than starting their own. The entry clears when the request settles —
+// by then the row is written and the cache check below catches the next
+// focus, and a failed prefetch stays retryable. A relaunch mid-flight still
+// loses the guard, but the window is a few seconds and the cache closes it.
+let dailyQuestionInFlight: { key: string; promise: Promise<void> } | null = null;
+
 export async function prefetchDailyQuestion(counselorId: string, question: string): Promise<void> {
+  // getDailyPrompt() is seeded on the day of the year, so counselor + date
+  // identifies the one question this day should ever ask.
+  const key = `${counselorId}|${new Date().toDateString()}`;
+  if (dailyQuestionInFlight?.key === key) return dailyQuestionInFlight.promise;
+
+  const promise = runDailyQuestionPrefetch(counselorId, question).finally(() => {
+    if (dailyQuestionInFlight?.key === key) dailyQuestionInFlight = null;
+  });
+  dailyQuestionInFlight = { key, promise };
+  return promise;
+}
+
+async function runDailyQuestionPrefetch(counselorId: string, question: string): Promise<void> {
   try {
     // Already cached for this counselor today? Nothing to do.
     const existing = await getDailyQuestionCache();
