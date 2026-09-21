@@ -24,8 +24,8 @@ Ten findings that shape the first three days, in rough order of impact:
 
 1. **Day two has almost nothing to come back to.** The mobile Home renders the same layout every day: a global 14-item question rotation drawn from four fixed counselors, a quote from the user's cabinet, a streak that stays at 0 unless both routines were done, and pills that reset. Nothing from day one's answers is shown back. The Morning tab on day two is a deliberately blank copy of day one.
 2. **The only automatic return trigger is the Daily Dispatch push, and it cannot reach users east of the Atlantic.** Generation runs at 10:00 UTC; delivery fires only at local 07:00. Any user whose 07:00 is earlier than 10:00 UTC never gets it. Local reminders exist with defaults "on" but are scheduled only after the user opens Settings and saves. There is no lifecycle email of any kind.
-3. **Know Thyself is a hidden input.** Its only consumer is the counselor system prompt, which is instructed never to reveal it. No agent reads it: the Portrait, the Weekly Insight and the Dispatch are built without it. The three completion paths disagree about "complete": only the conversational agent sets the flag, so wizard and form completers keep seeing "Meet Your Future Self" and "Complete your Know Thyself profile to receive your first scroll".
-4. **The 11-step sign-up wizard wrote every `kt_*` column but never set `know_thyself_complete`** (fixed in this PR via `markKnowThyselfComplete()`), so every LLM prompt carried "This user has not completed their Know Thyself profile yet" for those users. The manual form in `app/know-thyself.tsx` and `web/src/app/profile/page.tsx` still has the same gap.
+3. **Know Thyself is a hidden input.** Its only consumer is the counselor system prompt, which is instructed never to reveal it. No agent reads it: the Portrait, the Weekly Insight and the Dispatch are built without it. Before this PR the three completion paths disagreed about "complete": only the conversational agent set the flag, so wizard and form completers kept seeing "Meet Your Future Self" and "Complete your Know Thyself profile to receive your first scroll". All three paths now set it.
+4. **The 11-step sign-up wizard wrote every `kt_*` column but never set `know_thyself_complete`** (fixed in this PR via `markKnowThyselfComplete()`), so every LLM prompt carried "This user has not completed their Know Thyself profile yet" for those users. The manual form in `app/know-thyself.tsx` and `web/src/app/profile/page.tsx` had the same gap and is fixed in the same PR.
 5. **Fourteen of the twenty-five gates fire before the user has tried the feature, and five of them show no lock until the paywall appears** (shared-session invite, watchlists, focus blocking, Agora submit, ask-the-corpus).
 6. **The paywall the user reaches on a daily-limit hit uses the generic header** ("Unlock Your Cabinet / More counselors. More conversations."). Thirteen of twenty-two sources fall through to it. The tailored headers exist for nine attend, health, calendar and Agora sources. The web `/upgrade` page every purchase lands on has no feature table, says "every premium feature", and loses the mobile source.
 7. **Reasoning depth, reply length, and model choice are never teased and never explained.** Free replies come from Haiku at 1500 tokens; the mobile Mind picker renders and saves a choice for every tier that the server ignores for free and premium.
@@ -191,14 +191,15 @@ name, and they disagree about what "complete" means.
 |---|---|---|---|
 | Mobile sign-up wizard, `app/(onboarding)/setup.tsx` | 11 steps; "Skip for now →" on steps 3, 4, 6, 7, 8 | Only on the sign-up branch. Hard-requires name, goals, Future Self description, and a cabinet with at least one optional member. A sign-in user never sees it; web sign-up has no equivalent. | **Yes, as of this PR** (was no) |
 | Home banner → conversational agent, `app/onboarding.tsx` and `web/src/app/onboarding/page.tsx` | "Personalise Your App / Meet Your Future Self / Begin"; inside: "Know Thyself", "Speak freely…", "Save to Know Thyself" | Dismissible per session; the ✕ inside exits at any time. Turn count is model-driven (12 areas, tool fires at ≥ 9). | **Yes**, the only path (`lib/db.ts:743-746`, `web/src/lib/db.ts:1032-1035`). Also the only path that triggers the first Scroll (`app/onboarding.tsx:117-130`). |
-| Manual form, `app/know-thyself.tsx` and `web/src/app/profile/page.tsx` | "Your profile gives the Cabinet deep context about who you are. Update it any time — changes take effect on your next session." Nine fields. Web headline: "Your Cabinet reads this." | Optional; reached from Settings, the Cabinet tab nudges ("📖 Your counselors don't know you yet…" / "💡 Tip: Complete your Know Thyself profile…"), the web sidebar, and the web Home nudge. | **No** |
+| Manual form, `app/know-thyself.tsx` and `web/src/app/profile/page.tsx` | "Your profile gives the Cabinet deep context about who you are. Update it any time — changes take effect on your next session." Nine fields. Web headline: "Your Cabinet reads this." | Optional; reached from Settings, the Cabinet tab nudges ("📖 Your counselors don't know you yet…" / "💡 Tip: Complete your Know Thyself profile…"), the web sidebar, and the web Home nudge. | **Yes, as of this PR** (was no) |
 
 Two different signals decide the nudges. The Home banner and the Scrolls
 empty state key on `profiles.know_thyself_complete`; the Cabinet-tab and
-web-Home nudges key on `user_settings.kt_goals`. So a user who fills the
-wizard or the form sees the Cabinet nudges clear while the Home banner and the
-Scrolls empty state keep telling them to do the thing they just did. The
-mobile Side Menu has no Know Thyself entry.
+web-Home nudges key on `user_settings.kt_goals`. Before this PR a user who
+filled the wizard or the form saw the Cabinet nudges clear while the Home
+banner and the Scrolls empty state kept telling them to do the thing they just
+did; all three paths now set the flag, so the surfaces agree. The mobile Side
+Menu has no Know Thyself entry.
 
 ### 3.2 Every downstream read of `kt_*`
 
@@ -253,18 +254,18 @@ bites depends on `PARALLEL_CABINET_ENABLED` and `PARALLEL_CABINET_ALLOWLIST`
 Barely, and inconsistently. Concretely, completing Know Thyself changes:
 
 - Four nudge banners disappear (the two on the Cabinet tab and the two on web), and only if the completion path wrote `kt_goals`.
-- If, and only if, they completed it through the conversational agent, the Home banner and the Scrolls empty state also clear and a first Scroll is generated.
+- The Home banner and the Scrolls empty state clear (before this PR, only for the conversational agent). A first Scroll is still generated only by the agent path.
 - The default topic of a manually requested scroll on web.
 - The contents of a system prompt they never see, in Cabinet chat (single-counselor path), check-in replies, 1:1 chat, Today's Question, and the weekly review. The prompt forbids the visible tell ("Do not recite this profile back to them"), and both forms tell the user "changes take effect on your next session", deferring the payoff to a conversation they must start.
 
 It changes no screen layout, no card, no copy on Home or Morning, no
 notification, nothing about the Dispatch, the streak, the daily question, or
-the quote, and nothing in the Weekly Insight. A wizard or form completer keeps
-seeing "Meet Your Future Self / Begin" on Home and "Complete your Know
-Thyself profile to receive your first scroll" on Scrolls, while the counselor
-prompt carries both their profile and the note "This user has not completed
-their Know Thyself profile yet" (`services/claudeService.ts:427-430`, keyed on
-the profiles flag).
+the quote, and nothing in the Weekly Insight. Before this PR a wizard or form
+completer kept seeing "Meet Your Future Self / Begin" on Home and "Complete
+your Know Thyself profile to receive your first scroll" on Scrolls, while the
+counselor prompt carried both their profile and the note "This user has not
+completed their Know Thyself profile yet" (`services/claudeService.ts:427-430`,
+keyed on the profiles flag). That contradiction is fixed here; the rest stands.
 
 ---
 
@@ -490,7 +491,7 @@ dismissals.
 | Question | Measurable? | Why |
 |---|---|---|
 | Sign-up → onboarding step N completion | **No** | The wizard holds `step` in React state and writes once on commit (`app/(onboarding)/setup.tsx:70,125-140`); the agent path writes once on save. Partial fills never occur, so per-step drop-off is invisible. |
-| Know Thyself started vs abandoned vs completed | Completed only, and only via the agent | No screen-view event; no `kt_completed_at`; the wizard and the form never set the flag, so their completers count as not onboarded. Abandoned is indistinguishable from never started. |
+| Know Thyself started vs abandoned vs completed | Completed only | No screen-view event; no `kt_completed_at`. Before this PR the wizard and the form never set the flag, so their completers counted as not onboarded. Abandoned is indistinguishable from never started. |
 | Push permission granted / denied | Granted only | Token presence. `registerForPushNotifications` logs a denial to console and returns null (`lib/pushNotifications.ts:35-38`); the nudge discards the boolean (`DispatchNudge.tsx:39-47`). Prompt-shown is unrecorded, so prompt → grant rate cannot be computed. |
 | Notification delivered vs opened | Neither | "Sent" is Expo ticket acceptance; receipts are never fetched. Opened is an anonymous breadcrumb with no user or notification id. |
 | Dispatch delivered vs opened | No | See the `read` defect above. |

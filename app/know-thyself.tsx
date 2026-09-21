@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getUserSettings, upsertUserSettings } from '@/lib/db';
+import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 
 export default function KnowThyselfScreen() {
   const router = useRouter();
@@ -59,6 +59,9 @@ export default function KnowThyselfScreen() {
         future_self_description: futureSelfDescription.trim(),
         ...(futureSelfYears.trim() ? { future_self_years: parseInt(futureSelfYears.trim()) } : {}),
       });
+      // Saving the form is completing Know Thyself: clear the Home banner,
+      // the Scrolls empty state, and the "unprofiled" note in the prompt.
+      await markKnowThyselfComplete();
       Alert.alert('✅ Profile Saved', 'Your Know Thyself profile has been updated. Changes take effect on your next session.');
     } catch (e) {
       console.error(e);

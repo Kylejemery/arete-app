@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, upsertUserSettings } from '@/lib/db';
+import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
@@ -60,6 +60,9 @@ export default function ProfilePage() {
       future_self_years: futureSelfYears,
       future_self_description: futureSelfDescription.trim(),
     });
+    // Saving the form is completing Know Thyself: clear the home banner and
+    // the Scrolls empty state, which key on profiles.know_thyself_complete.
+    await markKnowThyselfComplete();
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
