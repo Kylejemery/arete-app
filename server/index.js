@@ -4105,7 +4105,16 @@ app.post('/api/crash', (req, res) => {
   res.json({ ok: true });
 });
 
+// Admin only. Crash reports carry stack traces and launch ids; the POST stays
+// open for clients, the read side does not.
 app.get('/api/crash', async (req, res) => {
+  const authHeader = req.headers['authorization'] || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'unauthorized' });
+  const { data: { user }, error: authErr } = await supabase.auth.getUser(token);
+  if (authErr || !user) return res.status(401).json({ error: 'unauthorized' });
+  if (!(await isAdmin(user.id))) return res.status(403).json({ error: 'forbidden' });
+
   try {
     const { data, error } = await supabase
       .from('crash_reports')
