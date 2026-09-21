@@ -327,10 +327,12 @@ const probes = [
         table_of_contents: 'a table of contents',
         footnote_run: "a run of the editor's numbered citations",
         footnote_candidate: 'possible citation runs',
+        source_site_furniture: "the source site's running page furniture",
       };
 
       const high = rows.filter(r => r.confidence === 'high');
       const candidates = rows.filter(r => r.confidence === 'candidate');
+      const furniture = rows.filter(r => r.confidence === 'furniture');
       const out = [];
 
       if (high.length) {
@@ -381,6 +383,41 @@ const probes = [
           action:
             'Read a few. If they are citation runs, fold them into the same deprecation migration; if ' +
             'they are annotated body text, mute this fingerprint with that as the reason.',
+        }));
+      }
+
+      if (furniture.length) {
+        const byWork = {};
+        for (const r of furniture) {
+          const k = `${r.author} / ${r.work}`;
+          byWork[k] = (byWork[k] || 0) + 1;
+        }
+        const worst = Object.entries(byWork).sort((a, b) => b[1] - a[1]);
+
+        out.push(finding({
+          probe: 'corpus.apparatus',
+          domain: DOMAIN,
+          severity: 'critical',
+          key: 'source_site_furniture',
+          title: `${furniture.length} chunk(s) carry the source site's page furniture in the reading text`,
+          detail:
+            'A web address inside a verbatim layer. Ancient texts do not cite URLs, so a domain here is ' +
+            "the digital edition talking over the author — typically a running footer (site name, page " +
+            'number, address) that was never cut before chunking, and so sits mid-sentence in the text a ' +
+            'reader sees and a counselor is handed. Affected: ' +
+            worst.map(([w, n]) => `${w} (${n})`).join(', ') + '.',
+          count: furniture.length,
+          evidence: furniture.slice(0, 10).map(r =>
+            `${r.author} / ${r.work} #${r.chunk_index} — ${r.opening.slice(0, 90)}… [${r.id}]`),
+          action:
+            'Strip it, do not deprecate: unlike the confirmed findings above, these chunks are the ' +
+            "author's own text with someone else's footer threaded through it, so deprecating throws the " +
+            'passage away. Write one migration per work that regexp_replaces the footer out of chunk_text, ' +
+            'and match a fragment at either chunk edge as well as a whole footer in the middle — the ' +
+            'overlap window splits them (see 20260921142402_on_anger_provenance_and_furniture.sql). ' +
+            'Embeddings were computed over the text WITH the furniture, so re-embed the work afterwards. ' +
+            'Then fix the intake: body_start_marker / body_end_marker on the queue row cut front and back ' +
+            'matter, but a footer repeating through the body has to be stripped by the chunker.',
         }));
       }
 
