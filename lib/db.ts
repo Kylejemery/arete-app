@@ -797,6 +797,8 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 // fallback). 3 counselors, matching the paywall table and TIER_LIMITS.free —
 // epictetus moved behind the paywall 2026-08-28; Marcus carries the free
 // Stoic voice.
+// The server enforces the same set in server/lib/free-counselors.js (a
+// deliberate copy, since Railway ships only server/). Change both together.
 export const FREE_COUNSELOR_SLUGS = ['marcus', 'goggins', 'roosevelt'] as const;
 
 export const MESSAGE_LIMITS: Record<SubscriptionTier, number | null> = {
