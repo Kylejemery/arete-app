@@ -408,7 +408,9 @@ function logGateHit(req, userId, source, reason, extra = {}) {
   eventLog.logEvent(
     userId,
     'gate_hit',
-    { source, reason, route: req.path, blocked: true, ...extra },
+    // origin tells these rows from the client's own gate_hit, logged when the
+    // user actually sees the limit card (web DailyLimitCard).
+    { source, reason, route: req.path, blocked: true, origin: 'server', ...extra },
     { platform: eventLog.platformFromRequest(req) }
   );
 }
