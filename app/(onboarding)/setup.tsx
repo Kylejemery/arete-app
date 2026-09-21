@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { upsertUserSettings } from '@/lib/db';
+import { markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 
 const TOTAL_STEPS = 11;
 const OPTIONAL_STEPS = [3, 4, 6, 7, 8];
@@ -138,6 +138,11 @@ export default function SetupScreen() {
       future_self_description: futureSelfDescription.trim(),
       cabinet_members: activeMembers,
     });
+    // The wizard has now collected every Know Thyself field, so the Home
+    // banner, Scrolls empty state, and counselor prompt must stop treating
+    // this user as unprofiled. Previously only the conversational agent set
+    // the flag, and wizard completers were nagged to "Meet Your Future Self".
+    await markKnowThyselfComplete();
     router.replace('/');
   };
 

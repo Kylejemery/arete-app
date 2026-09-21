@@ -1027,14 +1027,25 @@ export async function saveOnboardingProfile(profile: OnboardingProfile): Promise
     console.error('saveOnboardingProfile user_settings exception:', e)
   }
 
-  // Mark complete on profiles
+  await markKnowThyselfComplete()
+}
+
+/**
+ * Marks profiles.know_thyself_complete = true. Every path that collects the
+ * Know Thyself answers must call this: the home "Meet Your Future Self"
+ * banner and the Scrolls empty state key on this flag, not on the kt_*
+ * columns. Mirrors lib/db.ts in the mobile app.
+ */
+export async function markKnowThyselfComplete(): Promise<void> {
+  const userId = await getUserId()
+  if (!userId) return
   try {
     const { error } = await supabase
       .from('profiles')
       .update({ know_thyself_complete: true, updated_at: new Date().toISOString() })
       .eq('id', userId)
-    if (error) console.error('saveOnboardingProfile profiles error:', error)
+    if (error) console.error('markKnowThyselfComplete error:', error)
   } catch (e) {
-    console.error('saveOnboardingProfile profiles exception:', e)
+    console.error('markKnowThyselfComplete exception:', e)
   }
 }
