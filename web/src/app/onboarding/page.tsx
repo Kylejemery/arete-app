@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { countFilled, logEvent } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
 
 interface Message {
@@ -32,6 +33,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const startedAt = useRef(Date.now());
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function OnboardingPage() {
   // Kick off with initial greeting from Future Self
   useEffect(() => {
     sendToApi([]);
+    logEvent('kt_started', { path: 'conversation' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -110,6 +113,17 @@ export default function OnboardingPage() {
     try {
       await saveOnboardingProfile(profile);
       setSaved(true);
+      logEvent('kt_completed', {
+        path: 'conversation',
+        fields_filled: countFilled({
+          identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
+          work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
+          daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
+          dependents: profile.dependents,
+        }),
+        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+        turns: messages.filter(m => m.role === 'user').length,
+      });
       setTimeout(() => router.replace('/'), 2000);
     } catch (err) {
       console.error('[onboarding] save error:', err);

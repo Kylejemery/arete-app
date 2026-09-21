@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getAgoraViewer, listMyEssays, shortDate, type AgoraEssaySummary, type AgoraViewer, type EssayStatus } from '@/lib/agora';
 import { ag, AcademyButton, EmptyNote, EssayIndexCard, GoldRule, Kicker, PageTitle, TextLink } from '@/components/agora';
+import { upgradeHref } from '@/lib/paywall';
 
 const STATUS_LABEL: Record<EssayStatus, string> = {
   draft: 'Draft',
@@ -41,7 +42,7 @@ export default function MyEssaysPage() {
       <PageTitle>Your essays</PageTitle>
       <GoldRule />
       <div style={{ marginBottom: 32 }}>
-        <AcademyButton variant="outline" onClick={() => router.push(viewer?.canWrite ? '/agora/submit' : '/upgrade')}>
+        <AcademyButton variant="outline" onClick={() => router.push(viewer?.canWrite ? '/agora/submit' : upgradeHref('agora_submit'))}>
           Write a new essay
         </AcademyButton>
       </div>

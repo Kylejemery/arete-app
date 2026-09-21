@@ -61,6 +61,7 @@ import {
   getShareCalendarWithCabinet,
   setShareCalendarWithCabinet,
 } from '@/lib/calendar';
+import { paywallRoute } from '@/lib/paywall';
 
 // Native FamilyActivityPicker sheet — only in builds with the module.
 let AttendSelectionSheet: any = null;
@@ -232,7 +233,7 @@ export default function SettingsScreen() {
 
   const promptAddWatchlist = async () => {
     if (tier === 'free') {
-      router.push({ pathname: '/paywall', params: { src: 'attend_watchlists' } } as any);
+      router.push(paywallRoute('attend_watchlists'));
       return;
     }
     if (watchlists.length >= MAX_WATCHLISTS) {
@@ -759,7 +760,7 @@ export default function SettingsScreen() {
               value={tier === 'free' ? false : shareScreen}
               onValueChange={(val) => {
                 if (tier === 'free') {
-                  router.push({ pathname: '/paywall', params: { src: 'attend_cabinet_sight' } } as any);
+                  router.push(paywallRoute('attend_cabinet_sight'));
                   return;
                 }
                 setShareScreen(val); setShareScreenWithCabinet(val);
@@ -791,7 +792,7 @@ export default function SettingsScreen() {
               value={focusBlockEnabled}
               onValueChange={async (val) => {
                 if (val && tier === 'free') {
-                  router.push({ pathname: '/paywall', params: { src: 'attend_focus_block' } } as any);
+                  router.push(paywallRoute('attend_focus_block'));
                   return;
                 }
                 setFocusBlockEnabledState(val);
@@ -840,7 +841,7 @@ export default function SettingsScreen() {
             style={styles.attendBlocklistButton}
             onPress={() => {
               if (tier === 'free') {
-                router.push({ pathname: '/paywall', params: { src: 'attend_focus_block' } } as any);
+                router.push(paywallRoute('attend_focus_block'));
                 return;
               }
               Alert.prompt(
@@ -926,7 +927,7 @@ export default function SettingsScreen() {
                   value={tier === 'free' ? false : shareHealth}
                   onValueChange={(val) => {
                     if (tier === 'free') {
-                      router.push({ pathname: '/paywall', params: { src: 'health_cabinet_sight' } } as any);
+                      router.push(paywallRoute('health_cabinet_sight'));
                       return;
                     }
                     setShareHealth(val); setShareHealthWithCabinet(val);
@@ -995,7 +996,7 @@ export default function SettingsScreen() {
                   value={tier === 'free' ? false : shareCalendar}
                   onValueChange={(val) => {
                     if (tier === 'free') {
-                      router.push({ pathname: '/paywall', params: { src: 'calendar_cabinet_sight' } } as any);
+                      router.push(paywallRoute('calendar_cabinet_sight'));
                       return;
                     }
                     setShareCalendar(val); setShareCalendarWithCabinet(val);
@@ -1034,7 +1035,7 @@ export default function SettingsScreen() {
       <TouchableOpacity
         onPress={() => {
           if (tier === 'free') {
-            router.push({ pathname: '/paywall', params: { src: 'settings_upgrade' } } as any);
+            router.push(paywallRoute('settings_upgrade'));
           } else {
             openWebSignedIn('/upgrade').finally(() => { refreshTier(); });
           }

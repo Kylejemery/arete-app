@@ -22,6 +22,7 @@ import {
     ANCHOR_CHARS, CorpusGateError, HANDLE_RE, type LibComment, type Viewer,
     askCorpus, deleteComment, foldText, getViewer, loadComments, postComment, relativeTime, saveHandle, threadsFor,
 } from '../../lib/libraryComments';
+import { paywallRoute } from '@/lib/paywall';
 
 interface ReaderPage {
     author: string;
@@ -551,7 +552,7 @@ export default function LibraryReaderScreen() {
                                 await reloadComments();
                                 return !!r.existing;
                             }}
-                            onUpgrade={() => { setSelectedPara(null); router.push({ pathname: '/paywall', params: { src: 'library_margin_note' } } as any); }}
+                            onUpgrade={() => { setSelectedPara(null); router.push(paywallRoute('library_margin_note')); }}
                         />
                     )}
                 </KeyboardAvoidingView>

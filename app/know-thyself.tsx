@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,9 +13,11 @@ import {
   View,
 } from 'react-native';
 import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import { countFilled, logEvent } from '@/lib/events';
 
 export default function KnowThyselfScreen() {
   const router = useRouter();
+  const startedAt = useRef(Date.now());
 
   const [background, setBackground] = useState('');
   const [identity, setIdentity] = useState('');
@@ -29,6 +31,7 @@ export default function KnowThyselfScreen() {
 
   useEffect(() => {
     loadProfile();
+    logEvent('kt_started', { path: 'form' });
   }, []);
 
   const loadProfile = async () => {
@@ -62,6 +65,11 @@ export default function KnowThyselfScreen() {
       // Saving the form is completing Know Thyself: clear the Home banner,
       // the Scrolls empty state, and the "unprofiled" note in the prompt.
       await markKnowThyselfComplete();
+      logEvent('kt_completed', {
+        path: 'form',
+        fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+      });
       Alert.alert('✅ Profile Saved', 'Your Know Thyself profile has been updated. Changes take effect on your next session.');
     } catch (e) {
       console.error(e);

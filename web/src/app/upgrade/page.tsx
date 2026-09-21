@@ -4,7 +4,9 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubscription } from '@/lib/useSubscription';
 import { supabase } from '@/lib/supabase';
-import { useEffect } from 'react';
+import { logEvent } from '@/lib/events';
+import { isPaywallSource } from '@/lib/paywall';
+import { useEffect, useRef } from 'react';
 
 type PlanKey = 'monthly' | 'yearly' | 'pro';
 
@@ -50,9 +52,23 @@ function UpgradeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
+  const srcParam = searchParams.get('src');
   const { tier, isPremium, loading } = useSubscription();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Funnel telemetry: one paywall_viewed per visit, labeled with the gate
+  // that sent the user here (upgradeHref) and the tier they held at the time.
+  // Returns from Stripe (status=success|cancelled) are not paywall views.
+  const viewLoggedRef = useRef(false);
+  useEffect(() => {
+    if (loading || viewLoggedRef.current || status) return;
+    viewLoggedRef.current = true;
+    logEvent('paywall_viewed', {
+      source: isPaywallSource(srcParam) ? srcParam : 'unknown',
+      tier_at_view: tier ?? 'free',
+    });
+  }, [loading, status, srcParam, tier]);
   // How the current plan is billed. Only a plan bought through Stripe has a
   // customer for the billing portal; plans granted by Arete (admin roster,
   // grandfathered accounts) have nothing to manage here.

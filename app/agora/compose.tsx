@@ -20,6 +20,7 @@ import {
     type AgoraEssay, type AgoraViewer, type EssayStatus,
 } from '@/lib/agora';
 import { Chip, GOLD, GoldButton, Kicker, SubmissionNotice, s as ui } from '../../components/agora/AgoraUI';
+import { paywallRoute } from '@/lib/paywall';
 
 /**
  * Write an essay for the Agora, or return to one. Readers save drafts and
@@ -52,7 +53,7 @@ export default function ComposeEssayScreen() {
                 if (cancelled) return;
                 setViewer(v);
                 if (!v?.canWrite) {
-                    router.replace({ pathname: '/paywall', params: { src: 'agora_submit' } } as any);
+                    router.replace(paywallRoute('agora_submit'));
                     return;
                 }
                 if (editId) {

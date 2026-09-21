@@ -18,6 +18,7 @@ const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { FREE_COUNSELOR_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
+const { createEventLog } = require('./lib/events');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -397,6 +398,21 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Product event log (retention plan R0): product_events writes, and the
+// hourly last_active_at stamp. Nothing in it can throw into a request.
+const eventLog = createEventLog(supabase);
+
+// One gate_hit row per request the server refuses for tier or quota reasons,
+// on every platform, so gate reach can be measured without trusting clients.
+function logGateHit(req, userId, source, reason, extra = {}) {
+  eventLog.logEvent(
+    userId,
+    'gate_hit',
+    { source, reason, route: req.path, blocked: true, ...extra },
+    { platform: eventLog.platformFromRequest(req) }
+  );
+}
+
 // Resend — transactional email (shared-session invites). Null when the key is
 // absent so invite creation still succeeds locally; email send is skipped.
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -697,6 +713,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Any request carrying a Bearer JWT counts as activity: stamps
+// user_settings.last_active_at at most once an hour per user.
+app.use(eventLog.lastActiveMiddleware);
+
 // /health is defined later as an async corpus-stats endpoint
 
 function truncateMessages(messages, maxMessages = 12) {
@@ -744,6 +764,9 @@ async function resolveUserTier(req) {
   }
   if (!userId) userId = req.body?.user_id || req.body?.userId || null;
   if (!userId) return { userId: null, tier: 'free' };
+  // Older app builds send no Authorization header, so the middleware never
+  // sees them; their message traffic still counts as activity.
+  eventLog.touchLastActive(userId);
 
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -821,6 +844,16 @@ async function enforceMessageLimit(req, res) {
   }
 
   if (!allowed) {
+    // Name the gate the way the clients' paywall sources do, so server rows
+    // join to paywall_viewed rows without a lookup table.
+    const active = req.body?.activeCounselorId;
+    let source = 'other_daily_limit';
+    if (req.path === '/api/chat/counselor') {
+      if (req.body?.sessionType === 'shared') source = 'shared_daily_limit';
+      else if (typeof active === 'string' && active && active !== 'cabinet') source = 'counselor_daily_limit';
+      else source = 'cabinet_daily_limit';
+    }
+    logGateHit(req, userId, source, 'daily_limit_reached', { tier, limit });
     res.status(403).json({ error: 'daily_limit_reached', tier, limit });
     return true;
   }
@@ -1718,6 +1751,7 @@ app.post('/api/sessions/invite', async (req, res) => {
   // free is the growth loop.
   const { tier } = await resolveUserTier(req);
   if (tier === 'free') {
+    logGateHit(req, authenticatedUserId, 'shared_invite_gate', 'premium_required', { tier });
     return res.status(403).json({
       error: 'Shared sessions are an Arete Premium feature. Upgrade to invite a partner.',
       code: 'premium_required',
@@ -5226,6 +5260,8 @@ async function consumeSymposiumQuota(req, res) {
     return { allowed: true, tier, limit, remaining: null, userId };
   }
   if (count > limit) {
+    // Anonymous (IP keyed) callers have no user id; logGateHit drops those.
+    logGateHit(req, userId, 'symposium_daily_limit', 'daily_limit', { tier, limit });
     res.status(429).json({
       error: 'Daily limit reached',
       code: 'daily_limit',
@@ -5420,6 +5456,7 @@ app.post('/api/library/annotate', async (req, res) => {
     const { userId, tier: callerTier } = await resolveVerifiedTier(req);
     if (!userId) return res.status(401).json({ error: 'sign_in', message: 'Sign in to ask the corpus.' });
     if (callerTier === 'free') {
+      logGateHit(req, userId, 'library_margin_note', 'premium_required', { tier: callerTier });
       return res.status(403).json({
         error: 'premium_required',
         message: 'Asking the corpus to write in the margin is an Arete Premium feature. Reading and commenting are always free.',

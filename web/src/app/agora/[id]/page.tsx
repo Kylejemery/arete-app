@@ -11,6 +11,7 @@ import {
 import {
   ag, AcademyButton, Comment, CommentComposer, EmptyNote, fieldStyle, GoldRule, Kicker, SubmissionNotice, TextLink,
 } from '@/components/agora';
+import { upgradeHref } from '@/lib/paywall';
 
 export default function EssayPage() {
   const router = useRouter();
@@ -236,7 +237,7 @@ export default function EssayPage() {
           <div style={{ maxWidth: 600 }}>
             <CommentComposer
               locked={!viewer?.canWrite}
-              onUnlock={() => router.push('/upgrade')}
+              onUnlock={() => router.push(upgradeHref('agora_comment'))}
               value={draft} onChange={setDraft} onSubmit={post} busy={busy}
             />
             {error && !viewer?.isEditor && <p style={{ color: '#f87171', fontSize: 13, marginTop: 10, fontFamily: ag.ui }}>{error}</p>}

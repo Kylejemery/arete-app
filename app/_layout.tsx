@@ -11,6 +11,7 @@ import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { AppState, Platform, View } from 'react-native';
 import { seedFromNotification, seedMissedCounselorLines } from '@/lib/counselorLines';
+import { logEvent } from '@/lib/events';
 import { fetchUpdateInBackground } from '@/lib/otaUpdates';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -125,12 +126,17 @@ function NotificationTapHandler() {
     // app comes to the foreground.
     Notifications.setBadgeCountAsync(0).catch(() => {});
     fetchUpdateInBackground();
+    let previousAppState = AppState.currentState;
     const appStateSub = AppState.addEventListener('change', (s) => {
       if (s === 'active') {
         recover();
         Notifications.setBadgeCountAsync(0).catch(() => {});
         fetchUpdateInBackground();
+        // A return from the background is an "open" for retention purposes;
+        // the inactive → active flicker (Control Center, a call) is not.
+        if (previousAppState === 'background') logEvent('app_opened', { via: 'foreground' });
       }
+      previousAppState = s;
     });
 
     return () => {
@@ -173,6 +179,7 @@ export default function RootLayout() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       clearTimeout(timeout);
       setSession(session);
+      if (session) logEvent('app_opened', { via: 'launch' });
     }).catch(() => {
       clearTimeout(timeout);
       setSession(null);

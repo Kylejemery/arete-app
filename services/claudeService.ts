@@ -7,6 +7,11 @@ import { buildFocusContext, buildMetaSignalsContext, takeCabinetWhatsNewNote } f
 import { buildHealthContext } from '../lib/health';
 import { buildCalendarContext } from '../lib/calendar';
 
+// What sendCheckInToCabinet returns when the Cabinet could not answer. Exported
+// so callers and the event log can tell a real reply from the fallback until
+// the check-in call returns a typed result (retention plan R2).
+export const CABINET_FALLBACK_REPLY = 'The Cabinet will speak when you return.';
+
 
 // Attach the Supabase JWT so the server can verify identity for tier
 // resolution and message limits, instead of trusting the body user id.
@@ -1057,7 +1062,7 @@ export async function sendCheckInToCabinet(
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Cabinet check-in error:', response.status, errorText);
-      return 'The Cabinet will speak when you return.';
+      return CABINET_FALLBACK_REPLY;
     }
 
     const data = await response.json();
@@ -1071,10 +1076,10 @@ export async function sendCheckInToCabinet(
       ]);
       return assistantReply;
     }
-    return 'The Cabinet will speak when you return.';
+    return CABINET_FALLBACK_REPLY;
   } catch (error) {
     console.error('Cabinet check-in failed:', error);
-    return 'The Cabinet will speak when you return.';
+    return CABINET_FALLBACK_REPLY;
   }
 }
 

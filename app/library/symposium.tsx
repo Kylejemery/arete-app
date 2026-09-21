@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { API_BASE_URL } from '../../services/claudeService';
 import { supabase } from '@/lib/supabase';
+import { paywallRoute } from '@/lib/paywall';
 
 /**
  * The Symposium — sit with a master and converse with the corpus. The mobile
@@ -156,7 +157,7 @@ export default function SymposiumScreen() {
             {quotaUpgrade && (
                 <TouchableOpacity
                     style={styles.upgradeRow}
-                    onPress={() => router.push({ pathname: '/paywall', params: { src: 'symposium_daily_limit' } } as any)}
+                    onPress={() => router.push(paywallRoute('symposium_daily_limit'))}
                     activeOpacity={0.85}
                 >
                     <Text style={styles.upgradeText}>

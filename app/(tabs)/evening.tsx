@@ -21,6 +21,7 @@ import {
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
+import { logEvent } from '@/lib/events';
 import {
   getTodayCheckin,
   upsertTodayCheckin,
@@ -178,7 +179,13 @@ export default function EveningScreen() {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
     await upsertTodayCheckin({ evening_tasks: updatedTasks, evening_done: allDone });
     try { await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
-    if (allDone) await incrementStreak();
+    if (allDone) {
+      await incrementStreak();
+      // The mobile evening routine does not call the Cabinet on completion
+      // (the reply arrives through counselor lines), so cabinet_replied is
+      // false here by construction. R8 changes what happens at this moment.
+      logEvent('checkin_completed', { kind: 'evening', cabinet_replied: false });
+    }
   };
 
   const applyToggle = async (id: string) => {

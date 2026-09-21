@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
+import { logEventNow } from '@/lib/events';
 
 type Mode = 'signin' | 'signup';
 
@@ -82,7 +83,11 @@ export default function LoginScreen() {
       });
       if (authError) {
         setError(authError.message);
-      } else if (inviteToken) {
+        return;
+      }
+      // Awaited (it never throws) so the insert is not racing the navigation.
+      await logEventNow('signup_completed', { method: 'email', invited: !!inviteToken });
+      if (inviteToken) {
         // Joining the shared session comes first; onboarding is offered via
         // the home-tab banner later, never forced.
         router.replace({ pathname: '/join-session', params: { token: inviteToken } } as any);

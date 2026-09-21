@@ -37,6 +37,7 @@ import {
   type AttendTodayStatus,
   type ManualScreenMark,
 } from '@/lib/attend';
+import { paywallRoute } from '@/lib/paywall';
 
 // Native FamilyActivityPicker sheet — present only in builds that include the
 // device-activity module; older builds fall back to manual logging.
@@ -606,7 +607,7 @@ export default function ProgressScreen() {
               )}
               {attendStatus?.connected && tier === 'free' && (
                 <TouchableOpacity
-                  onPress={() => router.push({ pathname: '/paywall', params: { src: 'attend_context_tease' } } as any)}
+                  onPress={() => router.push(paywallRoute('attend_context_tease'))}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.attendTease}>

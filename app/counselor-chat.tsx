@@ -23,6 +23,7 @@ import { clockTime, startsNewDay } from '../lib/messageDates';
 import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/lib/db';
 import { useTierLimits } from '../hooks/useTierLimits';
 import ShareQuoteModal from '../components/ShareQuoteModal';
+import { paywallRoute } from '@/lib/paywall';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -124,7 +125,7 @@ export default function CounselorChatScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push({ pathname: '/paywall', params: { src: 'counselor_daily_limit' } } as any);
+      router.push(paywallRoute('counselor_daily_limit'));
       return;
     }
 
@@ -162,7 +163,7 @@ export default function CounselorChatScreen() {
       setMessages(prev => prev.slice(0, -1));
       setInputText(text);
       if (e instanceof MessageLimitError) {
-        router.push({ pathname: '/paywall', params: { src: 'counselor_daily_limit' } } as any);
+        router.push(paywallRoute('counselor_daily_limit'));
       } else {
         Alert.alert(
           'Not sent',
@@ -382,7 +383,7 @@ export default function CounselorChatScreen() {
             </Text>
             <TouchableOpacity
               style={styles.accessUpgradeButton}
-              onPress={() => router.push({ pathname: '/paywall', params: { src: 'locked_counselor' } } as any)}
+              onPress={() => router.push(paywallRoute('locked_counselor'))}
               activeOpacity={0.8}
             >
               <Text style={styles.accessUpgradeButtonText}>Upgrade to Arete</Text>

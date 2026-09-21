@@ -31,6 +31,17 @@ function getPriceTierMap(): Record<string, string> {
   }
 }
 
+// The checkout plan key (monthly | yearly | pro) for a price id, for the
+// subscription_events history. Tolerant of missing env: returns null rather
+// than failing the webhook over a label.
+function planKeyForPrice(priceId: string | null): string | null {
+  if (!priceId) return null
+  if (priceId === process.env.STRIPE_PRICE_MONTHLY) return 'monthly'
+  if (priceId === process.env.STRIPE_PRICE_YEARLY) return 'yearly'
+  if (priceId === process.env.STRIPE_PRICE_PRO) return 'pro'
+  return null
+}
+
 // Statuses that grant premium. past_due is deliberately in neither list:
 // it records on the subscription row but leaves the profile untouched
 // (grace period) until Stripe resolves it to active or canceled.
@@ -74,7 +85,8 @@ export async function POST(req: NextRequest) {
           )
           await syncStripeSubscription(
             subscription,
-            session.client_reference_id ?? session.metadata?.supabase_user_id ?? null
+            session.client_reference_id ?? session.metadata?.supabase_user_id ?? null,
+            event.id
           )
         }
         break
@@ -84,7 +96,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted':
       case 'customer.subscription.paused':
       case 'customer.subscription.resumed': {
-        await syncStripeSubscription(event.data.object, null)
+        await syncStripeSubscription(event.data.object, null, event.id)
         break
       }
       default:
@@ -140,7 +152,8 @@ async function markEnchiridionPaid(session: Stripe.Checkout.Session) {
  */
 async function syncStripeSubscription(
   subscription: Stripe.Subscription,
-  fallbackUserId: string | null
+  fallbackUserId: string | null,
+  stripeEventId: string
 ) {
   const admin = createSupabaseAdminClient()
   const customerId =
@@ -199,7 +212,7 @@ async function syncStripeSubscription(
   }
   const { data: existing, error: lookupError } = await admin
     .from('subscriptions')
-    .select('id')
+    .select('id, status')
     .eq('user_id', userId)
     .eq('billing_source', 'stripe')
     .maybeSingle()
@@ -213,6 +226,29 @@ async function syncStripeSubscription(
       .from('subscriptions')
       .insert({ ...row, user_id: userId, billing_source: 'stripe' })
     if (error) throw error
+  }
+
+  // Append-only status history (retention plan R0): one row per status change,
+  // labeled with the paywall source stamped into checkout metadata (R11 adds
+  // the stamp; null until then). The unique stripe_event_id makes a replayed
+  // delivery a no-op. Telemetry only: a failure here is logged, never thrown,
+  // so it cannot make Stripe retry an event whose entitlement already synced.
+  const statusFrom: string | null = existing?.status ?? null
+  if (statusFrom !== status) {
+    const { error: historyError } = await admin.from('subscription_events').upsert(
+      {
+        user_id: userId,
+        stripe_event_id: stripeEventId,
+        status_from: statusFrom,
+        status_to: status,
+        plan: planKeyForPrice(priceId) ?? tier,
+        source: subscription.metadata?.source ?? null,
+      },
+      { onConflict: 'stripe_event_id', ignoreDuplicates: true }
+    )
+    if (historyError) {
+      console.error('[stripe-webhook] subscription_events insert failed:', historyError.message)
+    }
   }
 
   if (GRANT_STATUSES.includes(status) && tier) {

@@ -3,6 +3,7 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { logEventNow } from '@/lib/events'
 
 type Mode = 'signin' | 'signup' | 'forgot'
 
@@ -81,7 +82,9 @@ function LoginForm() {
       } else if (data.session) {
         // Auto-confirm is on, so the account is live immediately. Honoring
         // redirectTo here lets shared-session invitees land on /join?token=...
-        // right after creating their account.
+        // right after creating their account. The event is awaited because
+        // the full page navigation below would cancel a pending insert.
+        await logEventNow('signup_completed', { method: 'email', invited: isInvite })
         window.location.href = safeRedirectTo()
       } else {
         setMessage('Account created! Check your email to confirm your account, then sign in.')

@@ -13,6 +13,7 @@ import { COUNSELOR_LIST } from '@/lib/counselors';
 import { clockTime, startsNewDay } from '@/lib/messageDates';
 import { DayDivider, MessageTime } from '@/components/MessageDates';
 import GlassCard from '@/components/GlassCard';
+import { upgradeHref } from '@/lib/paywall';
 
 type Tab = 'cabinet' | 'shared' | 'counselors';
 
@@ -557,7 +558,7 @@ export default function CabinetPage() {
                 // While the subscription is still loading, open the modal and
                 // let the server-side gate be the backstop.
                 if (!subLoading && !isPremium) {
-                  router.push('/upgrade');
+                  router.push(upgradeHref('shared_invite_gate'));
                   return;
                 }
                 setShowInviteModal(true); setInviteError(null); setInviteShare(null);
@@ -943,7 +944,7 @@ export default function CabinetPage() {
           {!subLoading && !isPremium && (
             <div className="mx-4 mb-1 flex-shrink-0">
               <button
-                onClick={() => router.push('/upgrade')}
+                onClick={() => router.push(upgradeHref('shared_guest_banner'))}
                 className="w-full text-left px-3 py-2 rounded-xl transition-opacity hover:opacity-80"
                 style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.3)' }}
               >

@@ -23,6 +23,7 @@ import { getJournalEntries, createJournalEntry, updateJournalEntry, deleteJourna
 import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../../services/claudeService';
 import type { Goal, Book } from '@/lib/types';
+import { paywallRoute } from '@/lib/paywall';
 
 interface TodayDispatch {
     id: string;
@@ -751,7 +752,7 @@ export default function JournalScreen() {
                                 // Free tier sees the 3-line preview; the full
                                 // insight is the premium moment.
                                 if (tier === 'free') {
-                                    router.push({ pathname: '/paywall', params: { src: 'insight_tease' } } as any);
+                                    router.push(paywallRoute('insight_tease'));
                                 } else {
                                     setInsightExpanded(prev => !prev);
                                 }

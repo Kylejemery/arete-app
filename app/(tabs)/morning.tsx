@@ -18,7 +18,8 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { sendCheckInToCabinet } from '../../services/claudeService';
+import { CABINET_FALLBACK_REPLY, sendCheckInToCabinet } from '../../services/claudeService';
+import { logEvent } from '@/lib/events';
 import {
   getTodayCheckin,
   upsertTodayCheckin,
@@ -172,6 +173,13 @@ export default function MorningScreen() {
         if (reply) {
           await upsertTodayCheckin({ cabinet_morning_response: reply });
         }
+        // Until R2 returns a typed result, the fallback string is the only
+        // signal that the Cabinet did not actually answer.
+        const replied = !!reply && reply !== CABINET_FALLBACK_REPLY;
+        logEvent('checkin_completed', { kind: 'morning', cabinet_replied: replied });
+        if (!replied) logEvent('checkin_cabinet_failed', { kind: 'morning', reason: 'fallback' });
+      } else {
+        logEvent('checkin_completed', { kind: 'morning', cabinet_replied: true, repeat: true });
       }
     }
   };
