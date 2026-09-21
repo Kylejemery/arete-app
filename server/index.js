@@ -17,6 +17,7 @@ const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
+const { FREE_COUNSELOR_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -1203,6 +1204,23 @@ app.post('/api/chat/counselor', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
+  // Tier gate on the requested counselor. The clients hide locked counselors,
+  // but the endpoint accepted any slug from a free account. Checked before the
+  // message limit so a rejected request does not consume one of the day's
+  // messages. A 1:1 chat names its counselor in activeCounselorId (or the
+  // older counselorSlug); 'cabinet' is the group thread.
+  {
+    const requested = (typeof req.body?.activeCounselorId === 'string' && req.body.activeCounselorId !== 'cabinet')
+      ? req.body.activeCounselorId
+      : (typeof req.body?.counselorSlug === 'string' ? req.body.counselorSlug : null);
+    if (requested && !isFreeCounselorSlug(requested)) {
+      const { tier } = await resolveUserTier(req);
+      if (tier === 'free') {
+        return res.status(403).json({ error: 'counselor_locked', counselor: requested, tier });
+      }
+    }
+  }
+
   if (await enforceMessageLimit(req, res)) return;
 
   const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers, sessionType, sessionId, participantIds } = req.body;
@@ -1222,6 +1240,17 @@ app.post('/api/chat/counselor', async (req, res) => {
         effectiveCabinetMembers = data.cabinet_members;
       }
     } catch { /* no restriction if lookup fails */ }
+  }
+  // Free tier: the group thread only fires the free counselors (plus Future
+  // Self, which filterRosterToCabinet always adds). Mirrors getUserCabinet in
+  // lib/db.ts so a stale or hand-crafted cabinet_members list cannot pull a
+  // paid counselor into a free Cabinet.
+  if (req.areteTier === 'free') {
+    const source = Array.isArray(effectiveCabinetMembers) && effectiveCabinetMembers.length > 0
+      ? effectiveCabinetMembers
+      : [];
+    const allowed = source.filter(isFreeCounselorSlug);
+    effectiveCabinetMembers = allowed.some(s => FREE_COUNSELOR_SLUGS.includes(s)) ? allowed : [...FREE_COUNSELOR_SLUGS];
   }
 
   // Ceilings, not targets: a reply ends when the model is done (end_turn), so
