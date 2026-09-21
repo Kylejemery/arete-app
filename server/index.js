@@ -818,6 +818,53 @@ function consumeDailyUserCap(userId, limit, res, errorCode) {
   return true;
 }
 
+// Morning and evening check-ins do not count against the daily message cap
+// (retention plan R2, decision D2): the routines are the habit the product
+// exists to build, and a chatty day must not cost someone their evening
+// reflection. A request opts in with body.kind = 'morning' | 'evening'. Two
+// exempt calls per user per UTC day, so the flag cannot be used to chat for
+// free; a third is counted like any other message. A call that fails gives its
+// exemption back, so a retry after an outage is still free. Counted in memory:
+// a restart forgets the day's count, which errs on the generous side.
+const CHECKIN_EXEMPT_PER_DAY = 2;
+const checkInExemptions = new Map(); // `${userId}:${YYYY-MM-DD}` → used
+function checkInExemptionKey(userId) {
+  const d = new Date();
+  return `${userId}:${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+}
+function takeCheckInExemption(userId) {
+  const key = checkInExemptionKey(userId);
+  const used = checkInExemptions.get(key) || 0;
+  if (used >= CHECKIN_EXEMPT_PER_DAY) return false;
+  checkInExemptions.set(key, used + 1);
+  if (checkInExemptions.size > 10000) {
+    const today = key.slice(key.indexOf(':') + 1);
+    for (const k of checkInExemptions.keys()) if (!k.endsWith(today)) checkInExemptions.delete(k);
+  }
+  return true;
+}
+function refundCheckInExemption(userId) {
+  const key = checkInExemptionKey(userId);
+  const used = checkInExemptions.get(key) || 0;
+  if (used > 0) checkInExemptions.set(key, used - 1);
+}
+
+// enforceMessageLimit, except that a check-in with an exemption left passes
+// without touching daily_message_count.
+async function enforceMessageLimitUnlessCheckIn(req, res) {
+  const kind = req.body?.kind;
+  if (kind === 'morning' || kind === 'evening') {
+    const { userId, tier } = await resolveUserTier(req);
+    if (userId && takeCheckInExemption(userId)) {
+      req.areteTier = tier; // the model ladder reads this, as below
+      req.checkInExempt = true;
+      res.on('finish', () => { if (res.statusCode >= 400) refundCheckInExemption(userId); });
+      return false;
+    }
+  }
+  return enforceMessageLimit(req, res);
+}
+
 async function enforceMessageLimit(req, res) {
   const { userId, tier } = await resolveUserTier(req);
   // Stash for the model ladder — one lookup per request.
@@ -1163,7 +1210,8 @@ app.post('/api/chat', async (req, res) => {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
 
-  if (await enforceMessageLimit(req, res)) return;
+  // Check-ins (body.kind) are exempt from the cap, twice a day.
+  if (await enforceMessageLimitUnlessCheckIn(req, res)) return;
 
   const { system, messages, max_tokens, model, tzOffsetMinutes, user_id } = req.body;
 

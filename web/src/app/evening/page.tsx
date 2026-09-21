@@ -13,7 +13,7 @@ import {
   createJournalEntry,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { CABINET_FALLBACK_REPLY, sendCheckInToCabinet } from '@/lib/claudeService';
+import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
@@ -172,21 +172,24 @@ export default function EveningPage() {
     }
   };
 
+  // Also the Retry handler: nothing is saved to cabinet_evening_response
+  // unless the Cabinet really answered, so the column stays null after a
+  // failure and a second attempt is always possible.
   const handleCheckIn = async () => {
     setIsLoading(true);
+    const isRetry = checkInDone;
     try {
-      const response = await sendCheckInToCabinet('evening');
-      await upsertTodayCheckin({ cabinet_evening_response: response, evening_done: true });
+      const result = await sendCheckInToCabinet('evening');
+      // The routine is complete either way; only a real reply is ever stored.
+      await upsertTodayCheckin(
+        result.ok ? { cabinet_evening_response: result.text, evening_done: true } : { evening_done: true }
+      );
       await incrementStreak();
-      setCheckInResponse(response);
       setCheckInDone(true);
-      // Until R2 returns a typed result, the fallback string is the only
-      // signal that the Cabinet did not actually answer.
-      const replied = !!response && response !== CABINET_FALLBACK_REPLY;
-      logEvent('checkin_completed', { kind: 'evening', cabinet_replied: replied });
-      if (!replied) logEvent('checkin_cabinet_failed', { kind: 'evening', reason: 'fallback' });
+      if (result.ok) setCheckInResponse(result.text);
+      if (!isRetry || result.ok) logEvent('checkin_completed', { kind: 'evening', cabinet_replied: result.ok, retry: isRetry });
+      if (!result.ok) logEvent('checkin_cabinet_failed', { kind: 'evening', reason: result.reason, status: result.status });
     } catch {
-      setCheckInResponse('The Cabinet will speak when you return.');
       logEvent('checkin_cabinet_failed', { kind: 'evening', reason: 'exception' });
     } finally {
       setIsLoading(false);
@@ -485,6 +488,23 @@ export default function EveningPage() {
                   </div>
                 </div>
               </div>
+              {/* Done, but no reply on the row: the call failed (now or on an
+                  earlier visit). Say so and offer another attempt. */}
+              {!checkInResponse && (
+                <div className="px-4 pb-4 flex items-center justify-between gap-3">
+                  <p className="text-[13px]" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}>
+                    {isLoading ? 'Your Cabinet speaks…' : 'The Cabinet could not answer just now.'}
+                  </p>
+                  <button
+                    onClick={handleCheckIn}
+                    disabled={isLoading}
+                    className="text-[12px] font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex-shrink-0"
+                    style={{ background: 'rgba(201,168,76,0.13)', border: '1px solid rgba(201,168,76,0.53)', color: '#c9a84c' }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
             </GlassCard>
 
             {checkInResponse && (

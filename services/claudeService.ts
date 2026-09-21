@@ -7,10 +7,14 @@ import { buildFocusContext, buildMetaSignalsContext, takeCabinetWhatsNewNote } f
 import { buildHealthContext } from '../lib/health';
 import { buildCalendarContext } from '../lib/calendar';
 
-// What sendCheckInToCabinet returns when the Cabinet could not answer. Exported
-// so callers and the event log can tell a real reply from the fallback until
-// the check-in call returns a typed result (retention plan R2).
-export const CABINET_FALLBACK_REPLY = 'The Cabinet will speak when you return.';
+// What a check-in call comes back with. A failure is a value, never a string
+// that looks like a reply: callers must not save anything to check_ins unless
+// ok is true (retention plan R2). The old fallback sentence used to be returned
+// here and was being stored as the day's Cabinet response.
+export type CheckInFailureReason = 'daily_limit' | 'http_error' | 'empty_reply' | 'network';
+export type CheckInResult =
+  | { ok: true; text: string }
+  | { ok: false; reason: CheckInFailureReason; status?: number };
 
 
 // Attach the Supabase JWT so the server can verify identity for tier
@@ -997,9 +1001,14 @@ function attributeCheckInSpeaker(
   return chosen ? { counselorName: chosen.name } : {};
 }
 
-export async function sendCheckInToCabinet(
-  type: 'morning' | 'evening'
-): Promise<string> {
+// A refused check-in: the daily cap (only once the two exempt check-ins are
+// spent) is told apart from any other failure so the screen can say why.
+function checkInFailure(status: number, body: string): CheckInResult {
+  if (status === 403 && body.includes('daily_limit_reached')) return { ok: false, reason: 'daily_limit', status };
+  return { ok: false, reason: 'http_error', status };
+}
+
+export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<CheckInResult> {
   try {
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
@@ -1053,6 +1062,9 @@ export async function sendCheckInToCabinet(
         max_tokens: 350,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
+        // Tells the server this is a routine check-in, which does not count
+        // against the daily message cap (two a day; see /api/chat).
+        kind: type,
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         user_id: _ciUser?.id ?? '',
       }),
@@ -1062,7 +1074,7 @@ export async function sendCheckInToCabinet(
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
       console.error('Cabinet check-in error:', response.status, errorText);
-      return CABINET_FALLBACK_REPLY;
+      return checkInFailure(response.status, errorText);
     }
 
     const data = await response.json();
@@ -1074,12 +1086,12 @@ export async function sendCheckInToCabinet(
         { role: 'user', content: userMessage, timestamp: Date.now() },
         { role: 'assistant', content: assistantReply, timestamp: Date.now(), ...speaker },
       ]);
-      return assistantReply;
+      return { ok: true, text: assistantReply };
     }
-    return CABINET_FALLBACK_REPLY;
+    return { ok: false, reason: 'empty_reply' };
   } catch (error) {
     console.error('Cabinet check-in failed:', error);
-    return CABINET_FALLBACK_REPLY;
+    return { ok: false, reason: 'network' };
   }
 }
 
