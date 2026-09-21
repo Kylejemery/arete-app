@@ -4739,9 +4739,24 @@ app.post('/api/admin/stoic-replies/run', makeAgentRunEndpoint('stoic-replies', {
 // Oracle's 15/day IP rate limit.
 // ===========================================================================
 
+// The shelves change only when the corpus does, which is nightly, but this
+// endpoint is public and both the app's Library tab and the web Library hit
+// it on every visit. It was the app's most expensive query by total database
+// time (1,241s over 712 calls) and timed out against the 8s statement limit;
+// library_shelf() itself is now ~20ms after the excerpt cache, and this keeps
+// the rest of the response — the overrides read and the pending-review count
+// — off the path too. A minute is short enough that an admin sees a fresh
+// ingest on the shelf almost at once, and long enough to absorb a crowd.
+let libraryShelfCache = { payload: null, at: 0 };
+const LIBRARY_SHELF_TTL_MS = 60 * 1000;
+
 // GET /api/library/texts — the shelves: one entry per work, Stoic-flagged.
 app.get('/api/library/texts', async (req, res) => {
   try {
+    if (libraryShelfCache.payload && Date.now() - libraryShelfCache.at < LIBRARY_SHELF_TTL_MS) {
+      return res.json(libraryShelfCache.payload);
+    }
+
     const { data, error } = await supabase.rpc('library_shelf');
     if (error) throw error;
 
@@ -4784,9 +4799,17 @@ app.get('/api/library/texts', async (req, res) => {
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending_review');
 
-    return res.json({ texts, pendingReview: pendingReview || 0 });
+    const payload = { texts, pendingReview: pendingReview || 0 };
+    libraryShelfCache = { payload, at: Date.now() };
+    return res.json(payload);
   } catch (err) {
     console.error('[/api/library/texts] error:', err.message);
+    // A stale shelf beats no shelf: serve the last good payload if we have
+    // one, so a database hiccup does not empty the Library.
+    if (libraryShelfCache.payload) {
+      console.warn('[/api/library/texts] serving the cached shelf after an error');
+      return res.json(libraryShelfCache.payload);
+    }
     return res.status(500).json({ error: 'Failed to load the shelves' });
   }
 });

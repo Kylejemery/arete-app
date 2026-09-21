@@ -405,12 +405,29 @@ async function main() {
     })
     .eq('id', runRow.id);
 
+  // Rebuild the Library shelf's excerpt cache for whatever this run changed.
+  // The shelf is correct without this — a work whose passage count moved
+  // misses the cache and recomputes its own excerpt — but every such work
+  // pays the old per-request cost until the cache catches up, so the run
+  // that moved the counts is the right place to settle them. Never fatal:
+  // the shelf degrades to slow, not wrong.
+  let excerptLine = '';
+  try {
+    const { data, error } = await supabase().rpc('refresh_library_excerpts');
+    if (error) throw new Error(error.message);
+    excerptLine = `Library excerpt cache: ${typeof data === 'number' ? data : '?'} rewritten`;
+  } catch (err) {
+    excerptLine = `Library excerpt refresh failed: ${err.message}`;
+    console.error(excerptLine);
+  }
+
   // Human-readable summary → stdout → Railway logs → morning report.
   const today = new Date().toISOString().slice(0, 10);
   console.log(`\n=== Corpus Agent Run ${today} ===`);
   console.log(`Processed: ${sources.length} | Succeeded: ${succeeded} | Failed: ${failed} | Chunks added: ${totalChunks}`);
   for (const f of failures) console.log(`Failed: ${f}`);
   if (concordanceLine) console.log(concordanceLine);
+  if (excerptLine) console.log(excerptLine);
   console.log(`Corpus now: ${totalCorpusChunks.toLocaleString()} chunks across ${authorCount} authors`);
   if (thinnest.length > 0) console.log(`Thinnest coverage: ${thinnest.join(', ')}`);
   console.log('================================');
