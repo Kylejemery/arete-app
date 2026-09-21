@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
-import { CABINET_FALLBACK_REPLY, sendCheckInToCabinet } from '../../services/claudeService';
+import { sendCheckInToCabinet } from '../../services/claudeService';
 import { logEvent } from '@/lib/events';
 import {
   getTodayCheckin,
@@ -68,6 +68,8 @@ export default function MorningScreen() {
   const [showInput, setShowInput] = useState(false);
   const [checkinResponse, setCheckinResponse] = useState<string | null>(null);
   const [checkinLoading, setCheckinLoading] = useState(false);
+  // The morning is done but the Cabinet's reply never arrived: offer a retry.
+  const [checkinFailed, setCheckinFailed] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
@@ -139,6 +141,11 @@ export default function MorningScreen() {
 
       if (checkin?.cabinet_morning_response) {
         setCheckinResponse(checkin.cabinet_morning_response);
+        setCheckinFailed(false);
+      } else if (checkin?.morning_done) {
+        // Finished earlier today with no reply on the row: the call failed
+        // then. Nothing was saved, so it can be asked again.
+        setCheckinFailed(true);
       }
 
       // Today's intention lives on today's row (shared with the web app), so
@@ -165,23 +172,30 @@ export default function MorningScreen() {
       await updateStreak();
       const checkin = await getTodayCheckin();
       if (!checkin?.cabinet_morning_response) {
-        setCheckinLoading(true);
-        setCheckinResponse(null);
-        const reply = await sendCheckInToCabinet('morning');
-        setCheckinLoading(false);
-        setCheckinResponse(reply);
-        if (reply) {
-          await upsertTodayCheckin({ cabinet_morning_response: reply });
-        }
-        // Until R2 returns a typed result, the fallback string is the only
-        // signal that the Cabinet did not actually answer.
-        const replied = !!reply && reply !== CABINET_FALLBACK_REPLY;
-        logEvent('checkin_completed', { kind: 'morning', cabinet_replied: replied });
-        if (!replied) logEvent('checkin_cabinet_failed', { kind: 'morning', reason: 'fallback' });
+        await requestCabinetReply(false);
       } else {
         logEvent('checkin_completed', { kind: 'morning', cabinet_replied: true, repeat: true });
       }
     }
+  };
+
+  // Ask the Cabinet to answer the finished morning. Only a real reply is ever
+  // written to cabinet_morning_response, so after a failure the column is
+  // still null and the Retry button (isRetry) can ask again.
+  const requestCabinetReply = async (isRetry: boolean) => {
+    setCheckinLoading(true);
+    setCheckinFailed(false);
+    setCheckinResponse(null);
+    const result = await sendCheckInToCabinet('morning');
+    setCheckinLoading(false);
+    if (result.ok) {
+      setCheckinResponse(result.text);
+      await upsertTodayCheckin({ cabinet_morning_response: result.text });
+    } else {
+      setCheckinFailed(true);
+      logEvent('checkin_cabinet_failed', { kind: 'morning', reason: result.reason, status: result.status });
+    }
+    if (!isRetry || result.ok) logEvent('checkin_completed', { kind: 'morning', cabinet_replied: result.ok, retry: isRetry });
   };
 
   const updateStreak = async () => {
@@ -417,6 +431,28 @@ export default function MorningScreen() {
           <View style={styles.checkinLoadingContainer}>
             <ActivityIndicator size="small" color="#c9a84c" />
             <Text style={styles.checkinLoadingText}>The Cabinet is responding…</Text>
+          </View>
+        )}
+        {checkinFailed && !checkinLoading && !checkinResponse && (
+          <View style={styles.checkinCard}>
+            <Text style={styles.checkinLabel}>🏛️ The Cabinet</Text>
+            <Text style={[styles.checkinResponse, { color: '#888' }]}>The Cabinet could not answer just now.</Text>
+            <TouchableOpacity
+              style={{
+                alignSelf: 'flex-start',
+                marginTop: 12,
+                backgroundColor: '#c9a84c22',
+                borderWidth: 1,
+                borderColor: '#c9a84c88',
+                borderRadius: 10,
+                paddingVertical: 10,
+                paddingHorizontal: 28,
+              }}
+              onPress={() => requestCabinetReply(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={{ color: '#c9a84c', fontSize: 15, fontWeight: '600' }}>Retry</Text>
+            </TouchableOpacity>
           </View>
         )}
         {checkinResponse && !checkinLoading && (
