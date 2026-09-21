@@ -1,5 +1,5 @@
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
-import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, MAX_TOKENS_BY_TIER } from '../lib/db';
+import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
 import { buildAttendContext, getShareRoutinesWithCabinet } from '../lib/attend';
@@ -373,6 +373,33 @@ function formatReadingTime(seconds: number): string {
   return mins > 0 ? `${hours} hour${hours > 1 ? 's' : ''} ${mins} minutes` : `${hours} hour${hours > 1 ? 's' : ''}`;
 }
 
+// A routine block the Cabinet can reason about on any day, including one the
+// user has not checked in on.
+//
+// This used to be emitted only when today's check-in row carried tasks, so on
+// a day the user had not opened Morning or Evening the block vanished
+// entirely — and a counselor with no line saying an item was outstanding, but
+// with a week of journal entries and reading sessions behind it, would tell
+// the user they had already trained or read. Absence of the block was
+// indistinguishable from absence of the habit.
+//
+// So the block is always emitted when there are templates to emit. The two
+// states are named differently on purpose: an unticked box on a day the user
+// has checked in is "Not done", while a day with no check-in at all is "not
+// recorded" — at nine in the morning those mean very different things, and
+// asserting failure would be its own kind of wrong.
+function routineLines(label: string, tasks: any[], templates: any[]): string[] {
+  if (tasks.length > 0) {
+    return [`${label}:`, ...tasks.map((t: any) => `- ${t.title}: ${t.done ? 'Done' : 'Not done'}`)];
+  }
+  if (templates.length === 0) return [];
+  const titles = templates.map((t: any) => (t.emoji ? `${t.emoji} ${t.title}` : t.title));
+  return [
+    `${label} (no check-in recorded today — status unknown, do not assume either way):`,
+    ...titles.map((title: string) => `- ${title}: not recorded`),
+  ];
+}
+
 export async function gatherAppContext(): Promise<string> {
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -381,12 +408,15 @@ export async function gatherAppContext(): Promise<string> {
     day: 'numeric',
   });
 
-  const [settings, checkin, journalEntries, readingData, ktComplete] = await Promise.all([
+  const [settings, checkin, journalEntries, readingData, ktComplete, morningTemplates, eveningTemplates, profileStreak] = await Promise.all([
     getUserSettings(),
     getTodayCheckin(),
     getJournalEntries(),
     getReadingData(),
     getKnowThyselfComplete().catch(() => true),
+    getRoutineTemplates('morning').catch(() => []),
+    getRoutineTemplates('evening').catch(() => []),
+    getProfileStreak().catch(() => 0),
   ]);
 
   const userName = settings?.user_name || 'the user';
@@ -404,21 +434,13 @@ export async function gatherAppContext(): Promise<string> {
   const shareRoutines = await getShareRoutinesWithCabinet().catch(() => true);
   if (shareRoutines) {
     try {
-      const morningTasks = checkin?.morning_tasks ?? [];
-      if (morningTasks.length > 0) {
-        lines.push('');
-        lines.push('MORNING ROUTINE:');
-        morningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-      }
+      const morning = routineLines('MORNING ROUTINE', checkin?.morning_tasks ?? [], morningTemplates);
+      if (morning.length > 0) { lines.push(''); lines.push(...morning); }
     } catch { /* skip */ }
 
     try {
-      const eveningTasks = checkin?.evening_tasks ?? [];
-      if (eveningTasks.length > 0) {
-        lines.push('');
-        lines.push('EVENING TASKS:');
-        eveningTasks.forEach((t: any) => lines.push(`- ${t.title}: ${t.done ? 'Done' : 'Not done'}`));
-      }
+      const evening = routineLines('EVENING TASKS', checkin?.evening_tasks ?? [], eveningTemplates);
+      if (evening.length > 0) { lines.push(''); lines.push(...evening); }
     } catch { /* skip */ }
   }
 
@@ -524,7 +546,11 @@ export async function gatherAppContext(): Promise<string> {
 
   // Overall stats
   try {
-    const streak = checkin?.streak ?? 0;
+    // profiles.streak, not checkin.streak: the check-in row only exists once
+    // the user has opened a routine today, so reading the streak off it
+    // reported 0 on any day they had not — telling the Cabinet a streak was
+    // broken when it was intact.
+    const streak = profileStreak;
     const journalCount = journalEntries.length;
     const quoteCount = journalEntries.filter(e => e.type === 'quote').length;
     lines.push('');
@@ -615,12 +641,13 @@ async function gatherWeeklyContext(): Promise<string> {
   const weekAgo = new Date(now);
   weekAgo.setDate(weekAgo.getDate() - 7);
 
-  const [settings, checkin, journalEntries, calendarData, readingData] = await Promise.all([
+  const [settings, checkin, journalEntries, calendarData, readingData, profileStreak] = await Promise.all([
     getUserSettings(),
     getTodayCheckin(),
     getJournalEntries(),
     import('../lib/db').then(db => db.getCalendarData()),
     getReadingData(),
+    getProfileStreak().catch(() => 0),
   ]);
 
   const userName = settings?.user_name || 'the user';
@@ -631,13 +658,20 @@ async function gatherWeeklyContext(): Promise<string> {
   const lines: string[] = [];
   lines.push(`=== ${userName.toUpperCase()}'S WEEKLY DATA (${weekStartLabel} – ${weekEndLabel}) ===`);
 
-  // Streak
+  // Streak. The day streak comes from the profile, which is where it is kept
+  // between days; reading it off today's check-in row reported 0 on any day
+  // the user had not opened a routine yet. The reading streak lives only on
+  // the check-in row, so with no row there is nothing to report and the line
+  // is omitted — saying 0 would assert a broken streak rather than an
+  // unrecorded one.
   try {
-    const streak = checkin?.streak ?? 0;
-    const readingStreak = checkin?.reading_streak ?? 0;
     lines.push('');
-    lines.push(`CURRENT STREAK: ${streak} days`);
-    lines.push(`READING STREAK: ${readingStreak} days`);
+    lines.push(`CURRENT STREAK: ${profileStreak} days`);
+    if (checkin) {
+      lines.push(`READING STREAK: ${checkin.reading_streak ?? 0} days`);
+    } else {
+      lines.push('READING STREAK: not recorded today');
+    }
   } catch { /* skip */ }
 
   // Morning/Evening completion for the past 7 days
