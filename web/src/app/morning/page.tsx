@@ -15,7 +15,13 @@ import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
 import GlassCard from '@/components/GlassCard';
+import CounselorMarkdown from '@/components/CounselorMarkdown';
 import ChapterRule from '@/components/ChapterRule';
+
+// The quote this page shows. Passed into the check-in prompt so the Cabinet is
+// told about the affirmation the user actually saw (R4).
+const MORNING_QUOTE_TEXT = 'When you arise in the morning, think of what a privilege it is to be alive — to think, to enjoy, to love.';
+const MORNING_QUOTE = `${MORNING_QUOTE_TEXT} — Marcus Aurelius`;
 
 interface Task {
   id: string;
@@ -170,7 +176,7 @@ export default function MorningPage() {
     setIsLoading(true);
     const isRetry = checkInDone;
     try {
-      const result = await sendCheckInToCabinet('morning');
+      const result = await sendCheckInToCabinet('morning', { affirmation: MORNING_QUOTE });
       // The routine is complete either way; only a real reply is ever stored.
       await upsertTodayCheckin(
         result.ok ? { cabinet_morning_response: result.text, morning_done: true } : { morning_done: true }
@@ -243,7 +249,7 @@ export default function MorningPage() {
             className="italic text-[15px] opacity-90 leading-relaxed"
             style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
           >
-            &ldquo;When you arise in the morning, think of what a privilege it is to be alive — to think, to enjoy, to love.&rdquo;
+            &ldquo;{MORNING_QUOTE_TEXT}&rdquo;
           </p>
           <div
             className="text-[9.5px] tracking-[1.4px] uppercase mt-2"
@@ -500,12 +506,10 @@ export default function MorningPage() {
               >
                 Your Cabinet speaks
               </div>
-              <p
-                className="text-[14px] leading-relaxed whitespace-pre-wrap"
-                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-              >
-                {checkInResponse}
-              </p>
+              <div
+                className="flex flex-col gap-2">
+                <CounselorMarkdown text={checkInResponse} />
+              </div>
             </div>
           </GlassCard>
         </div>

@@ -23,6 +23,8 @@ export interface ThreadMessage {
   timestamp: number; // Unix ms
   counselorId?: string; // which counselor replied (for group thread rendering)
   counselorName?: string; // display name for the bubble label; absent = 'The Cabinet'
+  // 'checkin': the synthetic routine prompt, rendered as a chip, not a bubble.
+  kind?: 'checkin';
 }
 
 export interface Thread {

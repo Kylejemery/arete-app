@@ -1008,7 +1008,12 @@ function checkInFailure(status: number, body: string): CheckInResult {
   return { ok: false, reason: 'http_error', status };
 }
 
-export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<CheckInResult> {
+// `affirmation` is the quote the screen actually displayed, so the prompt's
+// "Affirmation shown" line is true (R4). Falls back to the day's entry.
+export async function sendCheckInToCabinet(
+  type: 'morning' | 'evening',
+  options: { affirmation?: string } = {}
+): Promise<CheckInResult> {
   try {
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
@@ -1030,7 +1035,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
         "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. — Epictetus",
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
-      const affirmation = affirmations[day];
+      const affirmation = options.affirmation?.trim() || affirmations[day];
       const intention = (checkin?.intention || '').trim();
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
       userMessage = `[Morning check-in] ${userName} has just completed his morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to him briefly as he begins the day.`;
@@ -1083,7 +1088,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
       const roster = await getUserCabinet().catch(() => []);
       const speaker = attributeCheckInSpeaker(assistantReply, roster);
       await appendMessages('cabinet', [
-        { role: 'user', content: userMessage, timestamp: Date.now() },
+        { role: 'user', content: userMessage, timestamp: Date.now(), kind: 'checkin' },
         { role: 'assistant', content: assistantReply, timestamp: Date.now(), ...speaker },
       ]);
       return { ok: true, text: assistantReply };

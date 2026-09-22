@@ -40,6 +40,9 @@ import {
 import DayDivider from '../../components/DayDivider';
 import { clockTime, startsNewDay } from '../../lib/messageDates';
 import { paywallRoute } from '@/lib/paywall';
+import { parseCheckInPrompt } from '@/lib/checkinMessage';
+import CheckInChip from '../../components/CheckInChip';
+import CounselorText from '../../components/CounselorText';
 
 function getTodayDateKey(): string {
   const d = new Date();
@@ -948,7 +951,9 @@ export default function CabinetScreen() {
                       {filteredMessages.map((msg, index) => (
                         <View key={index}>
                           {startsNewDay(filteredMessages, index) && <DayDivider timestamp={msg.timestamp} />}
-                          {msg.role === 'user' ? (
+                          {msg.role === 'user' && (msg.kind === 'checkin' || parseCheckInPrompt(msg.content)) ? (
+                            <CheckInChip summary={parseCheckInPrompt(msg.content)!} time={msg.timestamp ? clockTime(msg.timestamp) : null} />
+                          ) : msg.role === 'user' ? (
                             <View style={styles.userMessageRow}>
                               <View style={styles.userBubble}>
                                 <Text style={styles.userText} selectable>{msg.content}</Text>
@@ -974,7 +979,7 @@ export default function CabinetScreen() {
                                     </TouchableOpacity>
                                   </View>
                                 </View>
-                                <Text style={styles.cabinetText} selectable>{msg.content}</Text>
+                                <CounselorText text={msg.content} style={styles.cabinetText} />
                               </View>
                             </View>
                           )}
@@ -1126,6 +1131,8 @@ export default function CabinetScreen() {
                     <View style={styles.systemNoticeRow}>
                       <Text style={styles.systemNoticeText}>{msg.content}</Text>
                     </View>
+                  ) : msg.role === 'user' && (msg.kind === 'checkin' || parseCheckInPrompt(msg.content)) ? (
+                    <CheckInChip summary={parseCheckInPrompt(msg.content)!} time={msg.timestamp ? clockTime(msg.timestamp) : null} />
                   ) : msg.role === 'user' ? (
                     <View style={styles.userMessageRow}>
                       <View style={styles.userBubble}>
@@ -1155,7 +1162,7 @@ export default function CabinetScreen() {
                             </TouchableOpacity>
                           </View>
                         </View>
-                        <Text style={styles.cabinetText} selectable>{msg.content}</Text>
+                        <CounselorText text={msg.content} style={styles.cabinetText} />
                       </View>
                     </View>
                   )}
