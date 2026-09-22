@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
+import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
@@ -130,7 +130,11 @@ export default function CabinetPage() {
       if (!settings?.user_name) { router.replace('/setup'); return; }
       setUserName(settings.user_name);
 
-      setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
+      // Same signal as Home and Scrolls: the profiles flag, which
+      // markKnowThyselfComplete sets under the one completion rule.
+      getKnowThyselfComplete()
+        .then(complete => setKnowThyselfIncomplete(!complete))
+        .catch(() => {});
 
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);

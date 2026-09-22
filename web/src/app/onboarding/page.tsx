@@ -111,19 +111,23 @@ export default function OnboardingPage() {
     if (!profile || saving || saved) return;
     setSaving(true);
     try {
-      await saveOnboardingProfile(profile);
+      // Saves the answers and, when they meet the completion rule, sets the
+      // flag and starts the first Scroll (markKnowThyselfComplete owns both).
+      const complete = await saveOnboardingProfile(profile);
       setSaved(true);
-      logEvent('kt_completed', {
-        path: 'conversation',
-        fields_filled: countFilled({
-          identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
-          work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
-          daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
-          dependents: profile.dependents,
-        }),
-        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
-        turns: messages.filter(m => m.role === 'user').length,
-      });
+      if (complete) {
+        logEvent('kt_completed', {
+          path: 'conversation',
+          fields_filled: countFilled({
+            identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
+            work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
+            daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
+            dependents: profile.dependents,
+          }),
+          duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+          turns: messages.filter(m => m.role === 'user').length,
+        });
+      }
       setTimeout(() => router.replace('/'), 2000);
     } catch (err) {
       console.error('[onboarding] save error:', err);

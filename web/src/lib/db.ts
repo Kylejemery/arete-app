@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getDevPremiumOverride } from './devMode'
+import { triggerScrollGeneration } from './scrolls'
 import type {
   UserSettings,
   JournalEntry,
@@ -999,9 +1000,9 @@ export interface OnboardingProfile {
  * Saves extracted onboarding profile fields to user_settings and marks
  * know_thyself_complete = true on profiles.
  */
-export async function saveOnboardingProfile(profile: OnboardingProfile): Promise<void> {
+export async function saveOnboardingProfile(profile: OnboardingProfile): Promise<boolean> {
   const userId = await getUserId()
-  if (!userId) return
+  if (!userId) return false
 
   // Map extract_profile fields → existing user_settings columns
   const settingsUpdate: Record<string, unknown> = {}
@@ -1027,18 +1028,54 @@ export async function saveOnboardingProfile(profile: OnboardingProfile): Promise
     console.error('saveOnboardingProfile user_settings exception:', e)
   }
 
-  await markKnowThyselfComplete()
+  return markKnowThyselfComplete()
+}
+
+// The one definition of "Know Thyself complete" (retention plan R3): goals,
+// plus at least two of the other answers. Every path that collects answers
+// (form and conversation here, form, wizard and conversation on mobile) calls
+// markKnowThyselfComplete, which applies this rule; every nudge keys on the
+// resulting profiles.know_thyself_complete flag and nothing else. Mirrors
+// lib/db.ts in the mobile app.
+export const KT_OTHER_FIELDS = [
+  'kt_background', 'kt_identity', 'kt_strengths', 'kt_weaknesses',
+  'kt_patterns', 'kt_major_events', 'future_self_description',
+] as const
+export const KT_MIN_OTHER_FIELDS = 2
+
+type KtFields = Partial<Pick<UserSettings, 'kt_goals' | (typeof KT_OTHER_FIELDS)[number]>>
+
+export function isKnowThyselfProfileComplete(s: KtFields | null | undefined): boolean {
+  if (!s) return false
+  const filled = (v: string | null | undefined) => typeof v === 'string' && v.trim().length > 0
+  if (!filled(s.kt_goals)) return false
+  return KT_OTHER_FIELDS.filter(k => filled(s[k])).length >= KT_MIN_OTHER_FIELDS
 }
 
 /**
- * Marks profiles.know_thyself_complete = true. Every path that collects the
- * Know Thyself answers must call this: the home "Meet Your Future Self"
- * banner and the Scrolls empty state key on this flag, not on the kt_*
- * columns. Mirrors lib/db.ts in the mobile app.
+ * Completes Know Thyself if the saved answers meet the rule above: sets
+ * profiles.know_thyself_complete, stamps user_settings.kt_completed_at on the
+ * first completion, and starts the user's first Scroll if they have none.
+ * Returns whether the profile counts as complete. The home banner, the
+ * Cabinet nudge and the Scrolls empty state all key on the flag this sets.
  */
-export async function markKnowThyselfComplete(): Promise<void> {
+export async function markKnowThyselfComplete(): Promise<boolean> {
   const userId = await getUserId()
-  if (!userId) return
+  if (!userId) return false
+
+  let settings: UserSettings | null = null
+  try {
+    const { data } = await supabase
+      .from('user_settings')
+      .select('user_name, kt_goals, kt_background, kt_identity, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_description')
+      .eq('user_id', userId)
+      .maybeSingle()
+    settings = (data as UserSettings | null) ?? null
+  } catch (e) {
+    console.error('markKnowThyselfComplete read exception:', e)
+  }
+  if (!isKnowThyselfProfileComplete(settings)) return false
+
   try {
     const { error } = await supabase
       .from('profiles')
@@ -1058,4 +1095,22 @@ export async function markKnowThyselfComplete(): Promise<void> {
       .is('kt_completed_at', null)
     if (error) console.warn('markKnowThyselfComplete kt_completed_at:', error.message)
   } catch { /* best effort */ }
+
+  // The first Scroll is the payoff for completing the profile. Fire and
+  // forget: the caller's navigation never waits on a model call.
+  void ensureFirstScroll(userId, settings?.user_name ?? null, settings?.kt_goals ?? '')
+  return true
+}
+
+async function ensureFirstScroll(userId: string, userName: string | null, goalsText: string): Promise<void> {
+  try {
+    const { count, error } = await supabase
+      .from('scrolls')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+    if (error || (count ?? 0) > 0) return
+    await triggerScrollGeneration(userId, userName, goalsText)
+  } catch (e) {
+    console.warn('ensureFirstScroll failed:', e)
+  }
 }

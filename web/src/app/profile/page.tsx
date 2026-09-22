@@ -23,6 +23,8 @@ export default function ProfilePage() {
   const [futureSelfYears, setFutureSelfYears] = useState(10);
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
   const [saved, setSaved] = useState(false);
+  // Whether the last save met the completion rule, for the confirmation line.
+  const [savedComplete, setSavedComplete] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [simulatingFree, setSimulatingFree] = useState(false);
   const startedAt = useRef(Date.now());
@@ -63,16 +65,21 @@ export default function ProfilePage() {
       future_self_years: futureSelfYears,
       future_self_description: futureSelfDescription.trim(),
     });
-    // Saving the form is completing Know Thyself: clear the home banner and
-    // the Scrolls empty state, which key on profiles.know_thyself_complete.
-    await markKnowThyselfComplete();
-    logEvent('kt_completed', {
-      path: 'form',
-      fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
-      duration_s: Math.round((Date.now() - startedAt.current) / 1000),
-    });
+    // Saving the form completes Know Thyself once goals plus two other
+    // answers are filled (the rule lives in markKnowThyselfComplete). That
+    // clears the home banner and the Scrolls empty state, which key on
+    // profiles.know_thyself_complete, and starts the first Scroll.
+    const complete = await markKnowThyselfComplete();
+    if (complete) {
+      logEvent('kt_completed', {
+        path: 'form',
+        fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+      });
+    }
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setSavedComplete(complete);
+    setTimeout(() => setSaved(false), 6000);
   };
 
   if (!loaded) return null;
@@ -218,6 +225,18 @@ export default function ProfilePage() {
         >
           {saved ? '✓ Profile Saved' : 'Save Profile'}
         </button>
+        {/* Visible confirmation (retention plan R3): what saving changed. */}
+        {saved && (
+          <p
+            role="status"
+            className="mt-3 text-center text-[13px]"
+            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: savedComplete ? '#e6eef8' : '#9aa0a6' }}
+          >
+            {savedComplete
+              ? 'Saved. Your Cabinet will use this from your next message.'
+              : 'Saved. Add your goals and at least two more answers to complete Know Thyself.'}
+          </p>
+        )}
       </div>
 
       {/* ── DEV section — preserved exactly ─────────────────────── */}
