@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
 import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -390,7 +390,11 @@ export default function CabinetScreen() {
         try {
           const settings = await getUserSettings();
           setUserSettings(settings);
-          setKnowThyselfIncomplete(!settings?.kt_goals || settings.kt_goals.trim().length === 0);
+          // Same signal as Home and Scrolls: the profiles flag, which
+          // markKnowThyselfComplete sets under the one completion rule.
+          getKnowThyselfComplete()
+            .then(complete => setKnowThyselfIncomplete(!complete))
+            .catch(() => {});
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
         }

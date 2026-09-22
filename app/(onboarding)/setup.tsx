@@ -144,17 +144,20 @@ export default function SetupScreen() {
       future_self_description: futureSelfDescription.trim(),
       cabinet_members: activeMembers,
     });
-    // The wizard has now collected every Know Thyself field, so the Home
-    // banner, Scrolls empty state, and counselor prompt must stop treating
-    // this user as unprofiled. Previously only the conversational agent set
+    // The wizard has collected the Know Thyself answers; if they meet the
+    // completion rule (goals plus two more), the Home banner, Scrolls empty
+    // state and counselor prompt stop treating this user as unprofiled and
+    // the first Scroll starts. Previously only the conversational agent set
     // the flag, and wizard completers were nagged to "Meet Your Future Self".
-    await markKnowThyselfComplete();
-    logEvent('kt_completed', {
-      path: 'wizard',
-      fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
-      duration_s: Math.round((Date.now() - startedAt.current) / 1000),
-      cabinet_size: activeMembers.length,
-    });
+    const complete = await markKnowThyselfComplete();
+    if (complete) {
+      logEvent('kt_completed', {
+        path: 'wizard',
+        fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+        cabinet_size: activeMembers.length,
+      });
+    }
     router.replace('/');
   };
 

@@ -101,7 +101,9 @@ export default function HomePage() {
         return;
       }
       setUserName(settings.user_name);
-      setKnowThyselfIncomplete(!settings.kt_goals || settings.kt_goals.trim().length === 0);
+      // Both home prompts key on the same flag now (retention plan R3), so
+      // they clear together the moment Know Thyself is complete.
+      setKnowThyselfIncomplete(!ktComplete);
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
 

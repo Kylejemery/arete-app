@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { getKnowThyselfComplete } from '@/lib/db';
 import { getUserScrolls, type Scroll } from '@/lib/scrolls';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
@@ -33,6 +34,10 @@ export default function ScrollsTab() {
   const [showModal, setShowModal] = useState(false);
   const [requestTopic, setRequestTopic] = useState('');
   const [requesting, setRequesting] = useState(false);
+  // Know Thyself done but no scroll yet: the first one is being written
+  // (markKnowThyselfComplete started it), so say that instead of asking the
+  // user to complete a profile they have completed.
+  const [ktComplete, setKtComplete] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -45,8 +50,9 @@ export default function ScrollsTab() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const data = await getUserScrolls(user.id);
+      const [data, complete] = await Promise.all([getUserScrolls(user.id), getKnowThyselfComplete()]);
       setScrolls(data);
+      setKtComplete(complete);
     } catch (e) {
       console.error('loadScrolls error:', e);
     } finally {
@@ -125,9 +131,13 @@ export default function ScrollsTab() {
         <ScrollView contentContainerStyle={styles.emptyContent} showsVerticalScrollIndicator={false}>
           <View style={styles.emptyContainer}>
             <Ionicons name="newspaper-outline" size={56} color="#c9a84c22" />
-            <Text style={styles.emptyText}>Your scrolls will appear here.</Text>
+            <Text style={styles.emptyText}>
+              {ktComplete ? 'Your first scroll is being written.' : 'Your scrolls will appear here.'}
+            </Text>
             <Text style={styles.emptySubtext}>
-              Complete your Know Thyself profile to receive your first scroll, written for you by your Counselor.
+              {ktComplete
+                ? 'A counselor is writing to you about your goals. It takes a minute or two; pull down or come back to read it.'
+                : 'Complete your Know Thyself profile to receive your first scroll, written for you by your Counselor.'}
             </Text>
           </View>
         </ScrollView>

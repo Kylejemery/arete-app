@@ -189,7 +189,7 @@ export default function ScrollsPage() {
               className="text-[15px] italic mb-6"
               style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
             >
-              No scrolls yet.
+              {ktComplete ? 'Your first scroll is being written.' : 'No scrolls yet.'}
             </p>
             {ktComplete ? (
               <RequestForm

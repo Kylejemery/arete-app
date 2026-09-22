@@ -13,9 +13,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getUserSettings, saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
+import { saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
 import { countFilled, logEvent } from '@/lib/events';
-import { triggerScrollGeneration } from '@/lib/scrolls';
 import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
@@ -119,33 +118,22 @@ export default function OnboardingScreen() {
     if (!profile || saving || saved) return;
     setSaving(true);
     try {
-      await saveOnboardingProfile(profile);
+      // Saves the answers and, when they meet the completion rule, sets the
+      // flag and starts the first Scroll (markKnowThyselfComplete owns both).
+      const complete = await saveOnboardingProfile(profile);
       setSaved(true);
-      logEvent('kt_completed', {
-        path: 'conversation',
-        fields_filled: countFilled({
-          identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
-          work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
-          daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
-          dependents: profile.dependents,
-        }),
-        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
-        turns: messages.filter(m => m.role === 'user').length,
-      });
-
-      // Post-onboarding payoff: kick off the user's first Scroll from their
-      // stated goals. Fire-and-forget — navigation never waits on this.
-      if (profile.goals) {
-        const goalsText = profile.goals;
-        (async () => {
-          const [{ data: { user } }, settings] = await Promise.all([
-            supabase.auth.getUser(),
-            getUserSettings(),
-          ]);
-          if (user) {
-            await triggerScrollGeneration(user.id, settings?.user_name ?? null, goalsText);
-          }
-        })().catch(err => console.warn('[onboarding] first scroll generation failed:', err));
+      if (complete) {
+        logEvent('kt_completed', {
+          path: 'conversation',
+          fields_filled: countFilled({
+            identity: profile.identity, goals: profile.goals, obstacle: profile.obstacle, virtues: profile.virtues,
+            work_meaning: profile.work_meaning, future_vision: profile.future_vision, good_day: profile.good_day,
+            daily_practice: profile.daily_practice, reading: profile.reading, physical_practice: profile.physical_practice,
+            dependents: profile.dependents,
+          }),
+          duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+          turns: messages.filter(m => m.role === 'user').length,
+        });
       }
 
       setTimeout(() => router.replace('/(tabs)/' as any), 2000);

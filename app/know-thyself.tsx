@@ -62,15 +62,24 @@ export default function KnowThyselfScreen() {
         future_self_description: futureSelfDescription.trim(),
         ...(futureSelfYears.trim() ? { future_self_years: parseInt(futureSelfYears.trim()) } : {}),
       });
-      // Saving the form is completing Know Thyself: clear the Home banner,
-      // the Scrolls empty state, and the "unprofiled" note in the prompt.
-      await markKnowThyselfComplete();
-      logEvent('kt_completed', {
-        path: 'form',
-        fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
-        duration_s: Math.round((Date.now() - startedAt.current) / 1000),
-      });
-      Alert.alert('✅ Profile Saved', 'Your Know Thyself profile has been updated. Changes take effect on your next session.');
+      // Saving the form completes Know Thyself once goals plus two other
+      // answers are filled (the rule lives in markKnowThyselfComplete). That
+      // clears the Home banner, the Scrolls empty state, and the "unprofiled"
+      // note in the prompt, and starts the first Scroll.
+      const complete = await markKnowThyselfComplete();
+      if (complete) {
+        logEvent('kt_completed', {
+          path: 'form',
+          fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
+          duration_s: Math.round((Date.now() - startedAt.current) / 1000),
+        });
+      }
+      Alert.alert(
+        '✅ Profile Saved',
+        complete
+          ? 'Your Know Thyself profile has been updated. Changes take effect on your next session.'
+          : 'Saved. Add your goals and at least two more answers to complete Know Thyself.'
+      );
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Could not save profile.');
