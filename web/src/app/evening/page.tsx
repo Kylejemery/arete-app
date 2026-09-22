@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
 import GlassCard from '@/components/GlassCard';
+import CounselorMarkdown from '@/components/CounselorMarkdown';
 import ChapterRule from '@/components/ChapterRule';
 
 interface Task {
@@ -517,12 +518,10 @@ export default function EveningPage() {
                     >
                       Your Cabinet speaks
                     </div>
-                    <p
-                      className="text-[14px] leading-relaxed whitespace-pre-wrap"
-                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                    >
-                      {checkInResponse}
-                    </p>
+                    <div
+                      className="flex flex-col gap-2">
+                      <CounselorMarkdown text={checkInResponse} />
+                    </div>
                   </div>
                 </GlassCard>
               </div>

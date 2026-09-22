@@ -15,6 +15,9 @@ import { COUNSELOR_LIST } from '@/lib/counselors';
 import { clockTime, startsNewDay } from '@/lib/messageDates';
 import { DayDivider, MessageTime } from '@/components/MessageDates';
 import GlassCard from '@/components/GlassCard';
+import CounselorMarkdown from '@/components/CounselorMarkdown';
+import CheckInChip from '@/components/CheckInChip';
+import { parseCheckInPrompt } from '@/lib/checkinMessage';
 import { upgradeHref } from '@/lib/paywall';
 
 type Tab = 'cabinet' | 'shared' | 'counselors';
@@ -28,19 +31,6 @@ type SharedMessage = Omit<ThreadMessage, 'role'> & {
 
 function getInitials(name: string): string {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
-function parseBlocks(text: string): { type: 'quote' | 'para'; content: string }[] {
-  return text
-    .split(/\n\n+/)
-    .map(block => {
-      const t = block.trim();
-      if ((t.startsWith('"') && t.endsWith('"')) || t.startsWith('> ')) {
-        return { type: 'quote' as const, content: t.replace(/^> /, '').replace(/^"|"$/g, '') };
-      }
-      return { type: 'para' as const, content: t };
-    })
-    .filter(b => b.content.length > 0);
 }
 
 export default function CabinetPage() {
@@ -765,7 +755,11 @@ export default function CabinetPage() {
               <Fragment key={i}>
               {startsNewDay(filteredMessages, i) && <DayDivider timestamp={msg.timestamp} />}
               <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'user' ? (
+                {msg.role === 'user' && (msg.kind === 'checkin' || parseCheckInPrompt(msg.content)) ? (
+                  <CheckInChip summary={parseCheckInPrompt(msg.content)!} timestamp={msg.timestamp} />
+                ) : msg.role === 'user' && (msg.kind === 'checkin' || parseCheckInPrompt(msg.content)) ? (
+                  <CheckInChip summary={parseCheckInPrompt(msg.content)!} timestamp={msg.timestamp} />
+                ) : msg.role === 'user' ? (
                   <div
                     className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
                     style={{
@@ -815,29 +809,8 @@ export default function CabinetPage() {
                           </span>
                         ) : null}
                       </div>
-                      {parseBlocks(msg.content).map((block, bi) =>
-                        block.type === 'quote' ? (
-                          <div
-                            key={bi}
-                            className="pl-3 py-1 italic text-[14px] leading-relaxed"
-                            style={{
-                              borderLeft: '3px solid rgba(201,168,76,0.5)',
-                              fontFamily: 'var(--font-serif, Georgia, serif)',
-                              color: '#c9a84c',
-                            }}
-                          >
-                            &ldquo;{block.content}&rdquo;
-                          </div>
-                        ) : (
-                          <p
-                            key={bi}
-                            className="text-[14px] leading-relaxed"
-                            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                          >
-                            {block.content}
-                          </p>
-                        )
-                      )}
+                      {/* Markdown from the model (bold, italics, rules, lists, quotes) rendered as elements, never as HTML (R4). */}
+                      <CounselorMarkdown text={msg.content} />
                     </div>
                   </div>
                 )}
@@ -1088,29 +1061,8 @@ export default function CabinetPage() {
                           </span>
                         ) : null}
                       </div>
-                      {parseBlocks(msg.content).map((block, bi) =>
-                        block.type === 'quote' ? (
-                          <div
-                            key={bi}
-                            className="pl-3 py-1 italic text-[14px] leading-relaxed"
-                            style={{
-                              borderLeft: '3px solid rgba(201,168,76,0.5)',
-                              fontFamily: 'var(--font-serif, Georgia, serif)',
-                              color: '#c9a84c',
-                            }}
-                          >
-                            &ldquo;{block.content}&rdquo;
-                          </div>
-                        ) : (
-                          <p
-                            key={bi}
-                            className="text-[14px] leading-relaxed"
-                            style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                          >
-                            {block.content}
-                          </p>
-                        )
-                      )}
+                      {/* Markdown from the model (bold, italics, rules, lists, quotes) rendered as elements, never as HTML (R4). */}
+                      <CounselorMarkdown text={msg.content} />
                     </div>
                   </div>
                 )}
@@ -1319,7 +1271,9 @@ export default function CabinetPage() {
                   <Fragment key={i}>
                   {startsNewDay(counselorMessages, i) && <DayDivider timestamp={msg.timestamp} />}
                   <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {msg.role === 'user' ? (
+                    {msg.role === 'user' && (msg.kind === 'checkin' || parseCheckInPrompt(msg.content)) ? (
+                      <CheckInChip summary={parseCheckInPrompt(msg.content)!} timestamp={msg.timestamp} />
+                    ) : msg.role === 'user' ? (
                       <div
                         className="max-w-[82%] px-4 py-3 text-[15px] leading-relaxed"
                         style={{
@@ -1356,29 +1310,8 @@ export default function CabinetPage() {
                             borderRadius: '18px 18px 18px 6px',
                           }}
                         >
-                          {parseBlocks(msg.content).map((block, bi) =>
-                            block.type === 'quote' ? (
-                              <div
-                                key={bi}
-                                className="pl-3 py-1 italic text-[14px] leading-relaxed"
-                                style={{
-                                  borderLeft: '3px solid rgba(201,168,76,0.5)',
-                                  fontFamily: 'var(--font-serif, Georgia, serif)',
-                                  color: '#c9a84c',
-                                }}
-                              >
-                                &ldquo;{block.content}&rdquo;
-                              </div>
-                            ) : (
-                              <p
-                                key={bi}
-                                className="text-[14px] leading-relaxed"
-                                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-                              >
-                                {block.content}
-                              </p>
-                            )
-                          )}
+                          {/* Markdown from the model (bold, italics, rules, lists, quotes) rendered as elements, never as HTML (R4). */}
+                          <CounselorMarkdown text={msg.content} />
                         </div>
                       </div>
                     )}

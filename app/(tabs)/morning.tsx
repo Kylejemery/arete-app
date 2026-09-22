@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
+import CounselorText from '../../components/CounselorText';
 import { sendCheckInToCabinet } from '../../services/claudeService';
 import { logEvent } from '@/lib/events';
 import {
@@ -186,7 +187,7 @@ export default function MorningScreen() {
     setCheckinLoading(true);
     setCheckinFailed(false);
     setCheckinResponse(null);
-    const result = await sendCheckInToCabinet('morning');
+    const result = await sendCheckInToCabinet('morning', { affirmation });
     setCheckinLoading(false);
     if (result.ok) {
       setCheckinResponse(result.text);
@@ -458,7 +459,7 @@ export default function MorningScreen() {
         {checkinResponse && !checkinLoading && (
           <View style={styles.checkinCard}>
             <Text style={styles.checkinLabel}>🏛️ The Cabinet</Text>
-            <Text style={styles.checkinResponse}>{checkinResponse}</Text>
+            <CounselorText text={checkinResponse} style={styles.checkinResponse} />
             <TouchableOpacity
               style={styles.checkinLink}
               onPress={() => router.push({ pathname: '/(tabs)/cabinet', params: { morningMessage: checkinResponse } } as any)}

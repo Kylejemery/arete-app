@@ -633,7 +633,13 @@ function checkInFailure(status: number, body: string): CheckInResult {
   return { ok: false, reason: 'http_error', status };
 }
 
-export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise<CheckInResult> {
+// `affirmation` is the quote the page actually displayed, so the prompt's
+// "Affirmation shown" line is true (R4). Without it the morning falls back to
+// the day's entry in AFFIRMATIONS, which is what the mobile app shows.
+export async function sendCheckInToCabinet(
+  type: 'morning' | 'evening',
+  options: { affirmation?: string } = {}
+): Promise<CheckInResult> {
   try {
     // Today's row is the source of truth for tasks and intention (the morning
     // and evening pages write it), same as the mobile app. The old
@@ -659,7 +665,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
         "He is a wise man who does not grieve for the things which he has not, but rejoices for those which he has. — Epictetus",
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
-      const affirmation = affirmations[day];
+      const affirmation = options.affirmation?.trim() || affirmations[day];
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
       userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
     } else {
@@ -705,7 +711,7 @@ export async function sendCheckInToCabinet(type: 'morning' | 'evening'): Promise
       const roster = await getUserCabinet().catch(() => []);
       const speaker = attributeCheckInSpeaker(assistantReply, roster);
       await appendMessages('cabinet', [
-        { role: 'user', content: userMessage, timestamp: Date.now() },
+        { role: 'user', content: userMessage, timestamp: Date.now(), kind: 'checkin' },
         { role: 'assistant', content: assistantReply, timestamp: Date.now(), ...speaker },
       ]);
       return { ok: true, text: assistantReply };
