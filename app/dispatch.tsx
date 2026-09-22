@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../services/claudeService';
+import { logEvent } from '@/lib/events';
 
 interface Dispatch {
     id: string;
@@ -55,6 +56,8 @@ export default function DispatchScreen() {
                 const res = await fetch(url, {
                     headers: { Authorization: `Bearer ${session.access_token}` },
                 });
+                // Opened from a push (deep link carries the id) or from the app.
+                logEvent('dispatch_opened', { dispatch_id: id ?? undefined, via: id ? 'push' : 'app' });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
                     setError(data?.error || 'Could not load the dispatch.');

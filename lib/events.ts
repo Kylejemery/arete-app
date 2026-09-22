@@ -17,7 +17,12 @@ export type ProductEvent =
   | 'kt_started'
   | 'kt_completed'
   | 'gate_hit'
-  | 'paywall_viewed';
+  | 'paywall_viewed'
+  | 'push_prompt_shown'
+  | 'push_permission_granted'
+  | 'push_permission_denied'
+  | 'reminders_scheduled'
+  | 'dispatch_opened';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 

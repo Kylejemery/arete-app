@@ -2146,37 +2146,65 @@ app.get('/api/dispatch/today', async (req, res) => {
     return res.status(500).json({ error: 'Failed to load dispatch' });
   }
 
-  // An in-app read counts as delivery: flip this user's pending delivery row
-  // to 'read' (atomic on status='pending', so the hourly push agent won't
-  // double-send and concurrent fetches can't double-count) and roll it into
-  // delivered_count. Best-effort — a failure never blocks the read itself.
-  if (data) {
-    try {
-      const { data: flipped } = await supabase
-        .from('dispatch_deliveries')
-        .update({ status: 'read', sent_at: new Date().toISOString() })
-        .eq('dispatch_id', data.id)
-        .eq('user_id', userId)
-        .eq('status', 'pending')
-        .select('id');
-      if (flipped && flipped.length > 0) {
-        const { data: d } = await supabase
-          .from('daily_dispatches')
-          .select('delivered_count')
-          .eq('id', data.id)
-          .single();
-        await supabase
-          .from('daily_dispatches')
-          .update({ delivered_count: (d?.delivered_count || 0) + flipped.length })
-          .eq('id', data.id);
-      }
-    } catch (e) {
-      console.error('[/api/dispatch/today] read-marking failed:', e.message);
-    }
-  }
+  if (data) await markDispatchRead(data.id, userId, '/api/dispatch/today');
 
   return res.json({ dispatch: data || null });
 });
+
+// Records that a member opened a dispatch (retention plan R5). Two things
+// happen, both best-effort so a failure never blocks the read:
+//  1. read_at is stamped on the member's delivery row whatever its status
+//     (a push that was 'sent' used to stay 'sent' forever, so opens from a
+//     notification were invisible), first open only; a row is created when
+//     none exists (no push token at queue time, or the fallback delivery).
+//  2. A still-pending row flips to 'read' (atomic on status='pending', so the
+//     hourly push agent will not also send it) and counts as delivered.
+async function markDispatchRead(dispatchId, userId, route) {
+  const now = new Date().toISOString();
+  try {
+    const { data: flipped } = await supabase
+      .from('dispatch_deliveries')
+      .update({ status: 'read', sent_at: now, read_at: now })
+      .eq('dispatch_id', dispatchId)
+      .eq('user_id', userId)
+      .eq('status', 'pending')
+      .select('id');
+    if (flipped && flipped.length > 0) {
+      const { data: d } = await supabase
+        .from('daily_dispatches')
+        .select('delivered_count')
+        .eq('id', dispatchId)
+        .single();
+      await supabase
+        .from('daily_dispatches')
+        .update({ delivered_count: (d?.delivered_count || 0) + flipped.length })
+        .eq('id', dispatchId);
+      return;
+    }
+    // Not pending: stamp the existing row (sent, failed, dismissed, read) on
+    // its first open, or create the row for a member the queue never had.
+    const { data: stamped } = await supabase
+      .from('dispatch_deliveries')
+      .update({ read_at: now })
+      .eq('dispatch_id', dispatchId)
+      .eq('user_id', userId)
+      .is('read_at', null)
+      .select('id');
+    if (stamped && stamped.length > 0) return;
+    const { count } = await supabase
+      .from('dispatch_deliveries')
+      .select('id', { count: 'exact', head: true })
+      .eq('dispatch_id', dispatchId)
+      .eq('user_id', userId);
+    if ((count ?? 0) === 0) {
+      await supabase
+        .from('dispatch_deliveries')
+        .insert({ dispatch_id: dispatchId, user_id: userId, status: 'read', sent_at: now, read_at: now });
+    }
+  } catch (e) {
+    console.error(`[${route}] read-marking failed:`, e.message);
+  }
+}
 
 // GET /api/dispatch/:id — a specific dispatch (notification deep-link target).
 app.get('/api/dispatch/:id', async (req, res) => {
@@ -2193,6 +2221,8 @@ app.get('/api/dispatch/:id', async (req, res) => {
     return res.status(500).json({ error: 'Failed to load dispatch' });
   }
   if (!data) return res.status(404).json({ error: 'Not found' });
+  // The deep-link target of the push: this is the open the push produced.
+  await markDispatchRead(data.id, userId, '/api/dispatch/:id');
   return res.json({ dispatch: data });
 });
 

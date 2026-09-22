@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { getPushPermissionStatus, promptAndRegisterForDispatch } from '@/lib/pushNotifications';
 import { supabase } from '@/lib/supabase';
+import { logEvent } from '@/lib/events';
+import { ensureRemindersScheduled } from '@/lib/reminders';
 
 const DISMISS_KEY = 'dispatch_nudge_dismissed_at';
 const REASK_DAYS = 7;
@@ -29,6 +31,7 @@ export default function DispatchNudge() {
           return;
         }
         setVisible(true);
+        logEvent('push_prompt_shown', { surface: 'nudge' });
       } catch { /* never block Home over a nudge */ }
     })();
   }, []);
@@ -40,7 +43,12 @@ export default function DispatchNudge() {
     setBusy(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) await promptAndRegisterForDispatch(session);
+      const granted = session ? await promptAndRegisterForDispatch(session) : false;
+      logEvent(granted ? 'push_permission_granted' : 'push_permission_denied', { surface: 'nudge' });
+      // Granted from here means the user never opened Settings: write the
+      // default reminders and schedule them now (R5), instead of leaving
+      // toggles that read "on" with nothing behind them.
+      if (granted) ensureRemindersScheduled('nudge').catch(() => {});
     } finally {
       setBusy(false);
       setVisible(false);
