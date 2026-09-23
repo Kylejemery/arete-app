@@ -12,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import { getKnowThyselfComplete, getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { countFilled, logEvent } from '@/lib/events';
 import CounselorText from '../components/CounselorText';
 
@@ -31,11 +31,31 @@ export default function KnowThyselfScreen() {
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
   // The chair's last reflection on this profile (R6), shown again here.
   const [reflection, setReflection] = useState<{ text: string; counselor: string | null } | null>(null);
+  // R7: three questions first. The rest of the form opens with "Tell your
+  // Cabinet more", or straight away for someone whose profile is already
+  // complete and is here to edit.
+  const [expanded, setExpanded] = useState(false);
+  const [alreadyComplete, setAlreadyComplete] = useState(false);
+  // kt_started fires on the first focus, kt_abandoned on leaving unsaved.
+  const startedRef = useRef(false);
+  const savedRef = useRef(false);
+  const fieldsRef = useRef<Record<string, string>>({});
+  fieldsRef.current = { background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription };
 
   useEffect(() => {
     loadProfile();
-    logEvent('kt_started', { path: 'form' });
+    return () => {
+      if (startedRef.current && !savedRef.current) {
+        logEvent('kt_abandoned', { path: 'form', fields_filled: countFilled(fieldsRef.current) });
+      }
+    };
   }, []);
+
+  const markStarted = () => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    logEvent('kt_started', { path: 'form', short: !expanded });
+  };
 
   const loadProfile = async () => {
     const settings = await getUserSettings();
@@ -50,6 +70,9 @@ export default function KnowThyselfScreen() {
     setFutureSelfYears(settings.future_self_years ? String(settings.future_self_years) : '');
     setFutureSelfDescription(settings.future_self_description || '');
     setReflection(settings.kt_reflection ? { text: settings.kt_reflection, counselor: settings.kt_reflection_counselor ?? null } : null);
+    const complete = await getKnowThyselfComplete();
+    setAlreadyComplete(complete);
+    setExpanded(complete);
   };
 
   const saveProfile = async () => {
@@ -71,9 +94,11 @@ export default function KnowThyselfScreen() {
       // clears the Home banner, the Scrolls empty state, and the "unprofiled"
       // note in the prompt, and starts the first Scroll.
       const complete = await markKnowThyselfComplete();
+      savedRef.current = true;
       if (complete) {
         logEvent('kt_completed', {
           path: 'form',
+          short: !expanded,
           fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
           duration_s: Math.round((Date.now() - startedAt.current) / 1000),
         });
@@ -119,8 +144,9 @@ export default function KnowThyselfScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.intro}>
-            Your profile gives the Cabinet deep context about who you are. Update it any time.
-            Your counselors use it from your very next message.
+            {alreadyComplete
+              ? 'Your profile gives the Cabinet deep context about who you are. Update it any time. Your counselors use it from your very next message.'
+              : 'Three questions, about two minutes. Your counselors will answer differently afterward.'}
           </Text>
 
           {reflection && (
@@ -133,6 +159,62 @@ export default function KnowThyselfScreen() {
             </View>
           )}
 
+          {!alreadyComplete && (
+            <TouchableOpacity onPress={() => router.replace('/onboarding' as any)} style={styles.altLink}>
+              <Text style={styles.altLinkText}>Prefer a conversation? Meet your Future Self →</Text>
+            </TouchableOpacity>
+          )}
+
+          {renderSection('Goals', (
+            <>
+              <Text style={styles.label}>What are you working toward?</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                placeholder="Finish the book draft by December. Run a half marathon in the spring."
+                placeholderTextColor="#555"
+                onFocus={markStarted}
+                value={goals}
+                onChangeText={setGoals}
+                multiline
+                numberOfLines={5}
+                textAlignVertical="top"
+              />
+            </>
+          ))}
+
+          {renderSection('Where you consistently fall short', (
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              placeholder="I say yes to everything and then resent the calendar."
+              placeholderTextColor="#555"
+                onFocus={markStarted}
+              value={weaknesses}
+              onChangeText={setWeaknesses}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+            />
+          ))}
+
+          {renderSection('What you do when things get hard', (
+            <>
+              <Text style={styles.label}>What patterns do you notice in yourself? What tends to derail you?</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                placeholder="I go quiet, reread old messages, and start something new instead."
+                placeholderTextColor="#555"
+                onFocus={markStarted}
+                value={patterns}
+                onChangeText={setPatterns}
+                multiline
+                numberOfLines={6}
+                textAlignVertical="top"
+              />
+            </>
+          ))}
+
+          {expanded ? (
+            <>
           {renderSection('Background & Life Story', (
             <>
               <Text style={styles.label}>
@@ -142,6 +224,7 @@ export default function KnowThyselfScreen() {
                 style={[styles.input, styles.multilineInput]}
                 placeholder="I grew up in..."
                 placeholderTextColor="#555"
+                onFocus={markStarted}
                 value={background}
                 onChangeText={setBackground}
                 multiline
@@ -160,26 +243,11 @@ export default function KnowThyselfScreen() {
                 style={[styles.input, styles.multilineInput]}
                 placeholder="Professionally, I..."
                 placeholderTextColor="#555"
+                onFocus={markStarted}
                 value={identity}
                 onChangeText={setIdentity}
                 multiline
                 numberOfLines={6}
-                textAlignVertical="top"
-              />
-            </>
-          ))}
-
-          {renderSection('Goals', (
-            <>
-              <Text style={styles.label}>What are you working toward?</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                placeholder="I am here to..."
-                placeholderTextColor="#555"
-                value={goals}
-                onChangeText={setGoals}
-                multiline
-                numberOfLines={5}
                 textAlignVertical="top"
               />
             </>
@@ -190,41 +258,13 @@ export default function KnowThyselfScreen() {
               style={[styles.input, styles.multilineInput]}
               placeholder="I am strong at..."
               placeholderTextColor="#555"
+                onFocus={markStarted}
               value={strengths}
               onChangeText={setStrengths}
               multiline
               numberOfLines={5}
               textAlignVertical="top"
             />
-          ))}
-
-          {renderSection('Weaknesses', (
-            <TextInput
-              style={[styles.input, styles.multilineInput]}
-              placeholder="I struggle with..."
-              placeholderTextColor="#555"
-              value={weaknesses}
-              onChangeText={setWeaknesses}
-              multiline
-              numberOfLines={5}
-              textAlignVertical="top"
-            />
-          ))}
-
-          {renderSection('Patterns & Failure Modes', (
-            <>
-              <Text style={styles.label}>What patterns do you notice in yourself? What tends to derail you?</Text>
-              <TextInput
-                style={[styles.input, styles.multilineInput]}
-                placeholder="When under pressure, I tend to..."
-                placeholderTextColor="#555"
-                value={patterns}
-                onChangeText={setPatterns}
-                multiline
-                numberOfLines={6}
-                textAlignVertical="top"
-              />
-            </>
           ))}
 
           {renderSection('Major Life Events & Defining Moments', (
@@ -236,6 +276,7 @@ export default function KnowThyselfScreen() {
                 style={[styles.input, styles.multilineInput]}
                 placeholder="The experiences that made me who I am..."
                 placeholderTextColor="#555"
+                onFocus={markStarted}
                 value={majorEvents}
                 onChangeText={setMajorEvents}
                 multiline
@@ -252,6 +293,7 @@ export default function KnowThyselfScreen() {
                 style={styles.input}
                 placeholder="10"
                 placeholderTextColor="#555"
+                onFocus={markStarted}
                 value={futureSelfYears}
                 onChangeText={setFutureSelfYears}
                 keyboardType="number-pad"
@@ -261,6 +303,7 @@ export default function KnowThyselfScreen() {
                 style={[styles.input, styles.multilineInput]}
                 placeholder="In ten years, I have..."
                 placeholderTextColor="#555"
+                onFocus={markStarted}
                 value={futureSelfDescription}
                 onChangeText={setFutureSelfDescription}
                 multiline
@@ -270,8 +313,16 @@ export default function KnowThyselfScreen() {
             </>
           ))}
 
+            </>
+          ) : (
+            <TouchableOpacity style={styles.moreButton} onPress={() => setExpanded(true)} activeOpacity={0.8}>
+              <Text style={styles.moreButtonText}>Tell your Cabinet more</Text>
+              <Text style={styles.moreButtonSub}>Background, identity, strengths, defining moments, your future self.</Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity style={styles.saveButton} onPress={saveProfile}>
-            <Text style={styles.saveButtonText}>Save Profile</Text>
+            <Text style={styles.saveButtonText}>{alreadyComplete || expanded ? 'Save Profile' : 'Save and meet your Cabinet'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -386,4 +437,17 @@ const styles = StyleSheet.create({
   reflectionText: { color: '#e0e0e0', fontSize: 14, lineHeight: 22 },
   reflectionLink: { alignSelf: 'flex-start', marginTop: 2 },
   reflectionLinkText: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
+  altLink: { alignSelf: 'flex-start', marginBottom: 16 },
+  altLinkText: { color: '#c9a84c', fontSize: 13, fontWeight: '600' },
+  moreButton: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(201,168,76,0.27)',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 20,
+    gap: 4,
+  },
+  moreButtonText: { color: '#c9a84c', fontSize: 15, fontWeight: '600' },
+  moreButtonSub: { color: '#888', fontSize: 12, lineHeight: 17 },
 });

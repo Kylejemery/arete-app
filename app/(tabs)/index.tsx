@@ -283,7 +283,7 @@ export default function HomeScreen() {
         <View style={styles.quoteSkeleton} />
       )}
 
-      {/* Meet Your Future Self banner — shown until onboarding is complete,
+      {/* Know Thyself prompt, the one Home prompt (R7): shown until the profile is complete,
           dismissible for the current session only */}
       {knowThyselfIncomplete && !bannerDismissed && (
         <View style={styles.fsBanner}>
@@ -291,12 +291,12 @@ export default function HomeScreen() {
             <Text style={styles.fsBannerIconGlyph}>✦</Text>
           </View>
           <View style={styles.fsBannerBody}>
-            <Text style={styles.fsBannerKicker}>Personalise Your App</Text>
-            <Text style={styles.fsBannerTitle}>Meet Your Future Self</Text>
+            <Text style={styles.fsBannerKicker}>Three questions, about two minutes</Text>
+            <Text style={styles.fsBannerTitle}>Tell your Cabinet who you are.</Text>
           </View>
           <TouchableOpacity
             style={styles.fsBannerCta}
-            onPress={() => router.push('/onboarding' as any)}
+            onPress={() => router.push('/know-thyself' as any)}
             activeOpacity={0.8}
           >
             <Text style={styles.fsBannerCtaText}>Begin</Text>

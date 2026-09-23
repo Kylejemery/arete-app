@@ -19,7 +19,8 @@ export type ProductEvent =
   | 'reminders_scheduled'
   | 'dispatch_opened'
   | 'kt_reflection_viewed'
-  | 'kt_reflection_answered';
+  | 'kt_reflection_answered'
+  | 'kt_abandoned';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 
