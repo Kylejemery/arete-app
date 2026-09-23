@@ -948,6 +948,69 @@ async function getParticipantProfiles(participantIds) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Know Thyself in the Cabinet (retention plan R6)
+//
+// The group thread builds every counselor's persona server-side and drops the
+// client's system prompt except the app-data tail, so the Know Thyself
+// profile never reached the parallel Cabinet: counselors could only stumble
+// on a detail through the longitudinal portrait or the app data. This block
+// is built from user_settings and injected into every voice.
+// ---------------------------------------------------------------------------
+const KT_SETTINGS_COLUMNS = 'user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_years, future_self_description, feedback_preference, kt_completed_at, cabinet_members';
+
+// The wording every surface now shares (the clients' gatherUserProfile
+// carries the same sentences): connect, do not list.
+const KT_PROFILE_INSTRUCTION = 'You know this person. Do not list the profile back to them. Do connect what they say today to what you know about them, by name and specifics, when it is relevant. When a pattern from this profile appears in the conversation, name it. When their goals are relevant, connect them explicitly. When their known weaknesses or failure modes are playing out in what they are describing, call it by name, with care but without softening or omission.';
+const KT_CONNECT_INSTRUCTION = 'This person completed their Know Thyself profile very recently. Make one specific connection to their profile in this reply: a goal, a pattern, a strength, or something they said about themselves, named plainly.';
+const KT_FRESH_REPLIES = 3;
+
+function describeChallengeStyle(pref) {
+  if (!pref) return null;
+  const p = String(pref).toLowerCase();
+  if (p === 'firm') return 'They asked to be pushed hard. Be direct; skip the cushioning.';
+  if (p === 'compassionate' || p === 'gentle') return 'They asked for compassion first. Hold the standard, but lead with care.';
+  if (p === 'both') return 'They asked for both: challenge them, and make sure they feel you are on their side.';
+  return `Stated preference for how to be challenged: ${pref}.`;
+}
+
+async function loadKnowThyselfSettings(userId) {
+  if (!userId) return null;
+  try {
+    const { data } = await supabase.from('user_settings').select(KT_SETTINGS_COLUMNS).eq('user_id', userId).maybeSingle();
+    return data || null;
+  } catch {
+    return null;
+  }
+}
+
+function hasKnowThyselfAnswers(s) {
+  return !!s && ['kt_background', 'kt_identity', 'kt_goals', 'kt_strengths', 'kt_weaknesses', 'kt_patterns', 'kt_major_events', 'future_self_description']
+    .some(k => typeof s[k] === 'string' && s[k].trim());
+}
+
+// `fresh`: the first few Cabinet replies after completion should each make
+// one explicit connection, so the profile visibly changed something.
+function buildKnowThyselfBlock(s, { fresh = false } = {}) {
+  if (!hasKnowThyselfAnswers(s)) return '';
+  const name = s.user_name || 'the user';
+  const line = (label, v) => `${label}: ${v && String(v).trim() ? String(v).trim() : '(not provided)'}`;
+  const challenge = describeChallengeStyle(s.feedback_preference);
+  return `\n\n[KNOW THYSELF: ${name.toUpperCase()}]\n${KT_PROFILE_INSTRUCTION}${fresh ? '\n' + KT_CONNECT_INSTRUCTION : ''}\n\n` +
+    [
+      line('Background', s.kt_background),
+      line('Professional identity', s.kt_identity),
+      line('Goals', s.kt_goals),
+      line('Strengths', s.kt_strengths),
+      line('Weaknesses', s.kt_weaknesses),
+      line('Known patterns and failure modes', s.kt_patterns),
+      line('Major life events', s.kt_major_events),
+      line(`Future self vision (${s.future_self_years ?? 10} years out)`, s.future_self_description),
+      challenge ? `How they want to be challenged: ${challenge}` : null,
+    ].filter(Boolean).join('\n') +
+    '\n[END KNOW THYSELF]';
+}
+
 function summarizeParticipantProfile(participant) {
   const r = participant.profile;
   if (!r) return '(no Know Thyself profile yet)';
@@ -1387,6 +1450,16 @@ app.post('/api/chat/counselor', async (req, res) => {
   // system prompt below so they know this person over time. Empty for new users.
   const longitudinalContext = await getLongitudinalContext(userId);
 
+  // --- Know Thyself (retention plan R6) ---
+  // Built server-side so the parallel Cabinet finally sees the profile (and
+  // so older app builds get it too). The client counts the assistant replies
+  // since kt_completed_at and sends ktRepliesSinceComplete; under
+  // KT_FRESH_REPLIES each reply is asked to make one explicit connection.
+  const ktSettings = await loadKnowThyselfSettings(userId);
+  const ktRepliesSinceComplete = Number.isFinite(req.body?.ktRepliesSinceComplete) ? req.body.ktRepliesSinceComplete : null;
+  const ktFresh = ktRepliesSinceComplete !== null && ktRepliesSinceComplete < KT_FRESH_REPLIES;
+  const knowThyselfBlock = buildKnowThyselfBlock(ktSettings, { fresh: ktFresh });
+
   // --- Client app data (routines, journal, goals, ATTEND context) ---
   // The client's `system` is buildSystemPrompt + gatherAppContext, but the
   // parallel Cabinet path builds each counselor's persona server-side and
@@ -1454,7 +1527,7 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, knowThyselfBlock + sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens);
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
@@ -1507,22 +1580,15 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   // --- Single counselor path (unchanged) ---
 
-  // Build the Know Thyself injection block
+  // Know Thyself injection block. The clients' single-mode system prompt
+  // already carries gatherUserProfile, so this only adds anything for a
+  // caller that sends userProfile in the body (none do today) and, for a
+  // fresh completion, the one-connection instruction.
   let profileBlock = '';
   if (userProfile && typeof userProfile === 'object') {
-    const name = userProfile.user_name || 'the user';
-    profileBlock = `\n\n[KNOW THYSELF — ${name.toUpperCase()}]
-You know this person. The following is their self-reported profile. Do not recite it back to them. Instead, demonstrate through your responses that you have been paying attention. When you notice a pattern from their profile playing out in the conversation, name it directly. When their stated goals are relevant, connect them. When their known weaknesses or failure modes appear in what they are describing, call it by name — with care, but without softening.
-
-Background: ${userProfile.kt_background || '(not provided)'}
-Professional identity: ${userProfile.kt_identity || '(not provided)'}
-Goals: ${userProfile.kt_goals || '(not provided)'}
-Strengths: ${userProfile.kt_strengths || '(not provided)'}
-Weaknesses: ${userProfile.kt_weaknesses || '(not provided)'}
-Known patterns and failure modes: ${userProfile.kt_patterns || '(not provided)'}
-Major life events: ${userProfile.kt_major_events || '(not provided)'}
-Future self vision: ${userProfile.future_self_description || '(not provided)'}
-[END KNOW THYSELF]`;
+    profileBlock = buildKnowThyselfBlock(userProfile, { fresh: ktFresh });
+  } else if (ktFresh) {
+    profileBlock = `\n\n${KT_CONNECT_INSTRUCTION}`;
   }
 
   // RAG: retrieve relevant source text chunks (silent on failure)
@@ -2456,6 +2522,86 @@ app.post('/api/onboard', async (req, res) => {
 });
 
 // ─── Future Self Onboarding (web) ─────────────────────────────────────────────
+
+// ─── Know Thyself reflection (retention plan R6) ─────────────────────────────
+//
+// "What your Cabinet now sees": right after the profile is saved, the chair
+// of the user's Cabinet says, in three or four sentences, one pattern that
+// connects two things the user wrote, the goal it threatens, and one
+// question. Exempt from the message cap; at most a few generations a day
+// per user (the clients call it once per save). Stored on user_settings so
+// the Know Thyself page can show it again.
+
+const KT_REFLECTIONS_PER_DAY = 6;
+
+function chairForSettings(s, roster) {
+  const members = Array.isArray(s?.cabinet_members) ? s.cabinet_members : [];
+  for (const slug of members) {
+    const id = SLUG_TO_COUNSELOR_ID[slug] || slug;
+    if (id === 'future-self') continue;
+    const c = roster.find(r => r.id === id);
+    if (c) return c;
+  }
+  return roster.find(r => r.id === 'marcus') || roster[0];
+}
+
+app.post('/api/kt-reflection', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  if (!consumeDailyUserCap(userId, KT_REFLECTIONS_PER_DAY, res, 'kt_reflection_limit_reached')) return;
+
+  const settings = await loadKnowThyselfSettings(userId);
+  if (!hasKnowThyselfAnswers(settings)) {
+    return res.status(400).json({ error: 'profile_empty', message: 'Answer a few Know Thyself questions first.' });
+  }
+  const roster = await getCabinetRoster();
+  const chair = chairForSettings(settings, roster);
+  const name = settings.user_name || 'this person';
+  const profile = buildKnowThyselfBlock(settings).replace(/^\n+/, '');
+
+  const system = `${chair.systemPrompt}\n\n${profile}\n\nYou are ${chair.name}, the chair of ${name}'s Cabinet. ${name} has just finished telling the Cabinet who they are. Write what you now see, addressed to ${name} directly, in three or four sentences and nothing else:
+1. Name one pattern that connects two specific things ${name} wrote, quoting or closely paraphrasing their own words.
+2. Name the goal of theirs that this pattern threatens.
+3. End with exactly one question that only ${name} can answer.
+No flattery. No summary of every field. No greeting, no sign-off, no headings, no lists, no markdown. Plain prose in your own voice. Use commas, colons or semicolons, never dashes.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: PREMIUM_MODEL,
+        max_tokens: 400,
+        system,
+        messages: [{ role: 'user', content: `I have finished my Know Thyself profile. What do you see?` }],
+      }),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[/api/kt-reflection] Claude API error:', response.status, errorText);
+      return res.status(502).json({ error: 'reflection_failed' });
+    }
+    const data = await response.json();
+    const text = (data?.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    if (!text) return res.status(502).json({ error: 'reflection_failed' });
+
+    const now = new Date().toISOString();
+    const { error: saveError } = await supabase
+      .from('user_settings')
+      .update({ kt_reflection: text, kt_reflection_at: now, kt_reflection_counselor: chair.name })
+      .eq('user_id', userId);
+    if (saveError) console.error('[/api/kt-reflection] save failed:', saveError.message);
+    eventLog.logEvent(userId, 'kt_reflection_generated', { counselor: chair.id, chars: text.length }, { platform: eventLog.platformFromRequest(req) });
+    console.log(`[/api/kt-reflection] ${chair.id} | ${text.length} chars | user ${userId}`);
+    return res.json({ reflection: text, counselorId: chair.id, counselorName: chair.name, generatedAt: now });
+  } catch (err) {
+    console.error('[/api/kt-reflection] failed:', err.message || err);
+    return res.status(502).json({ error: 'reflection_failed' });
+  }
+});
 
 const ONBOARDING_TURNS_PER_DAY = 40;
 

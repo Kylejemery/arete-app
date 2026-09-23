@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { countFilled, logEvent } from '@/lib/events';
+import CounselorText from '../components/CounselorText';
 
 export default function KnowThyselfScreen() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function KnowThyselfScreen() {
   const [majorEvents, setMajorEvents] = useState('');
   const [futureSelfYears, setFutureSelfYears] = useState('');
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
+  // The chair's last reflection on this profile (R6), shown again here.
+  const [reflection, setReflection] = useState<{ text: string; counselor: string | null } | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -46,6 +49,7 @@ export default function KnowThyselfScreen() {
     setMajorEvents(settings.kt_major_events || '');
     setFutureSelfYears(settings.future_self_years ? String(settings.future_self_years) : '');
     setFutureSelfDescription(settings.future_self_description || '');
+    setReflection(settings.kt_reflection ? { text: settings.kt_reflection, counselor: settings.kt_reflection_counselor ?? null } : null);
   };
 
   const saveProfile = async () => {
@@ -74,12 +78,12 @@ export default function KnowThyselfScreen() {
           duration_s: Math.round((Date.now() - startedAt.current) / 1000),
         });
       }
-      Alert.alert(
-        '✅ Profile Saved',
-        complete
-          ? 'Your Know Thyself profile has been updated. Changes take effect on your next session.'
-          : 'Saved. Add your goals and at least two more answers to complete Know Thyself.'
-      );
+      if (complete) {
+        // The payoff: the chair says what the Cabinet now sees (R6).
+        router.push('/kt-reflection' as any);
+      } else {
+        Alert.alert('✅ Profile Saved', 'Saved. Add your goals and at least two more answers to complete Know Thyself.');
+      }
     } catch (e) {
       console.error(e);
       Alert.alert('Error', 'Could not save profile.');
@@ -115,9 +119,19 @@ export default function KnowThyselfScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={styles.intro}>
-            Your profile gives the Cabinet deep context about who you are. Update it any time —
-            changes take effect on your next session.
+            Your profile gives the Cabinet deep context about who you are. Update it any time.
+            Your counselors use it from your very next message.
           </Text>
+
+          {reflection && (
+            <View style={styles.reflectionCard}>
+              <Text style={styles.reflectionKicker}>{reflection.counselor ? `${reflection.counselor} · What your Cabinet sees` : 'What your Cabinet sees'}</Text>
+              <CounselorText text={reflection.text} style={styles.reflectionText} />
+              <TouchableOpacity onPress={() => router.push('/kt-reflection' as any)} style={styles.reflectionLink}>
+                <Text style={styles.reflectionLinkText}>Ask again after you save →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {renderSection('Background & Life Story', (
             <>
@@ -357,4 +371,19 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  reflectionCard: {
+    backgroundColor: '#16213e',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(201,168,76,0.33)',
+    borderLeftWidth: 3,
+    borderLeftColor: '#c9a84c',
+    padding: 16,
+    marginBottom: 20,
+    gap: 8,
+  },
+  reflectionKicker: { color: '#c9a84c', fontSize: 10, letterSpacing: 1.2, textTransform: 'uppercase', fontWeight: '700' },
+  reflectionText: { color: '#e0e0e0', fontSize: 14, lineHeight: 22 },
+  reflectionLink: { alignSelf: 'flex-start', marginTop: 2 },
+  reflectionLinkText: { color: '#c9a84c', fontSize: 12, fontWeight: '600' },
 });

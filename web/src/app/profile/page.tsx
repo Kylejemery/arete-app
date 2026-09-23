@@ -8,6 +8,8 @@ import { countFilled, logEvent } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
 import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
+import CounselorMarkdown from '@/components/CounselorMarkdown';
+import KtReflectionModal from '@/components/KtReflectionModal';
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
 
@@ -25,6 +27,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false);
   // Whether the last save met the completion rule, for the confirmation line.
   const [savedComplete, setSavedComplete] = useState(false);
+  // R6: the chair's reflection, shown after a completing save and again here.
+  const [showReflection, setShowReflection] = useState(false);
+  const [reflection, setReflection] = useState<{ text: string; counselor: string | null } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [simulatingFree, setSimulatingFree] = useState(false);
   const startedAt = useRef(Date.now());
@@ -46,6 +51,7 @@ export default function ProfilePage() {
       setMajorEvents(settings.kt_major_events || '');
       setFutureSelfYears(settings.future_self_years ?? 10);
       setFutureSelfDescription(settings.future_self_description || '');
+      setReflection(settings.kt_reflection ? { text: settings.kt_reflection, counselor: settings.kt_reflection_counselor ?? null } : null);
       setSimulatingFree(getDevPremiumOverride() === false);
       setLoaded(true);
     }
@@ -79,6 +85,7 @@ export default function ProfilePage() {
     }
     setSaved(true);
     setSavedComplete(complete);
+    if (complete) setShowReflection(true);
     setTimeout(() => setSaved(false), 6000);
   };
 
@@ -137,9 +144,24 @@ export default function ProfilePage() {
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          Changes take effect on your next Cabinet session. The more honest and specific you are, the more useful your counselors will be.
+          Your counselors use this from your very next message. The more honest and specific you are, the more useful they will be.
         </p>
       </div>
+
+      {reflection && (
+        <div className="px-4 pb-5 max-w-2xl">
+          <GlassCard>
+            <div className="p-4 flex flex-col gap-2" style={{ borderLeft: '3px solid #c9a84c' }}>
+              <div className="text-[10px] tracking-[1.4px] uppercase" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}>
+                {reflection.counselor ? `${reflection.counselor} · What your Cabinet sees` : 'What your Cabinet sees'}
+              </div>
+              <CounselorMarkdown text={reflection.text} />
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
+      {showReflection && <KtReflectionModal onClose={() => setShowReflection(false)} />}
 
       {/* ── Sections ────────────────────────────────────────────── */}
       <div className="px-4 flex flex-col gap-4 max-w-2xl">

@@ -142,6 +142,8 @@ export async function gatherUserProfile(): Promise<string> {
 
   lines.push(`=== WHO ${userName.toUpperCase()} IS — PERMANENT PROFILE ===`);
   lines.push('');
+  lines.push('INSTRUCTION: You know this person. Do not list the profile back to them. Do connect what they say today to what you know about them, by name and specifics, when it is relevant. When a pattern from this profile appears in the conversation, name it. When their goals are relevant, connect them explicitly. When their known weaknesses or failure modes are playing out in what they are describing, call it by name, with care but without softening or omission.');
+  lines.push('');
   lines.push('BACKGROUND & LIFE STORY:');
   lines.push(settings?.kt_background || '(not yet provided)');
   lines.push('');
@@ -165,9 +167,34 @@ export async function gatherUserProfile(): Promise<string> {
   lines.push('');
   lines.push(`FUTURE SELF (${settings?.future_self_years ?? 10} years from now):`);
   lines.push(settings?.future_self_description || '(not yet described)');
+  // Collected by the conversational onboarding and, until R6, never used.
+  if (settings?.feedback_preference) {
+    lines.push('');
+    lines.push(`HOW THEY WANT TO BE CHALLENGED: ${settings.feedback_preference}`);
+  }
 
   return lines.join('\n');
 }
+// Retention plan R6: for the first few Cabinet replies after Know Thyself is
+// completed, each reply is asked to make one explicit connection to the
+// profile, so the profile visibly changed something. The count of assistant
+// replies since kt_completed_at is what the server (parallel Cabinet) and the
+// single-counselor system prompt both key on.
+export const KT_FRESH_REPLIES = 3;
+export const KT_CONNECT_INSTRUCTION = 'This person completed their Know Thyself profile very recently. Make one specific connection to their profile in this reply: a goal, a pattern, a strength, or something they said about themselves, named plainly.';
+
+export function repliesSinceKtComplete(messages: { role: string; timestamp?: number }[], ktCompletedAt: string | null | undefined): number | null {
+  if (!ktCompletedAt) return null;
+  const since = Date.parse(ktCompletedAt);
+  if (!Number.isFinite(since)) return null;
+  return messages.filter(m => m.role === 'assistant' && typeof m.timestamp === 'number' && m.timestamp >= since).length;
+}
+
+export function ktConnectSuffix(messages: { role: string; timestamp?: number }[], ktCompletedAt: string | null | undefined): string {
+  const n = repliesSinceKtComplete(messages, ktCompletedAt);
+  return n !== null && n < KT_FRESH_REPLIES ? `\n\n${KT_CONNECT_INSTRUCTION}` : '';
+}
+
 
 function formatReadingTime(seconds: number): string {
   const totalMinutes = Math.floor(seconds / 60);
@@ -541,6 +568,8 @@ export async function sendMessageToCabinet(
         model: 'claude-opus-4-5',
         counselorModels: settings?.counselor_models ?? {},
         cabinetMembers: settings?.cabinet_members ?? [],
+        // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
+        ktRepliesSinceComplete: repliesSinceKtComplete(messages, settings?.kt_completed_at),
         system: fullSystem,
         // Label past counselor replies with the speaker's name so the server
         // director can vary who opens and counselors keep cross-turn
@@ -731,7 +760,7 @@ export async function sendMessageToCounselor(
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
     const { contextMessages, summaryNote } = getContextWindow(syntheticThread);
 
-    const [systemBase, appContext] = await Promise.all([buildCounselorSystemPrompt(counselorId), gatherAppContext()]);
+    const [systemBase, appContext, counselorSettings] = await Promise.all([buildCounselorSystemPrompt(counselorId), gatherAppContext(), getUserSettings()]);
     const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
     const fullSystem = summaryNote ? systemPrompt + '\n\n' + summaryNote : systemPrompt;
 
@@ -746,6 +775,7 @@ export async function sendMessageToCounselor(
         messages: contextMessages.map((m) => ({ role: m.role, content: m.content })),
         tzOffsetMinutes: new Date().getTimezoneOffset(),
         activeCounselorId: counselorId,
+        ktRepliesSinceComplete: repliesSinceKtComplete(messages, counselorSettings?.kt_completed_at),
         userId: counselorSession?.user?.id,
       }),
     });

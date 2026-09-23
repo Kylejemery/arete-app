@@ -103,6 +103,7 @@ export default function CabinetPage() {
   const [cabinetCounselors, setCabinetCounselors] = useState<{ id: string; name: string; role: string; description: string }[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLTextAreaElement>(null);
   const counselorEndRef = useRef<HTMLDivElement>(null);
   const sharedEndRef = useRef<HTMLDivElement>(null);
 
@@ -110,6 +111,8 @@ export default function CabinetPage() {
     const params = new URLSearchParams(window.location.search);
     const q = params.get('q');
     if (q) setInput(q);
+    // R6: arriving from the Know Thyself reflection, cursor in the box.
+    if (params.get('focus') === '1') setTimeout(() => composerRef.current?.focus(), 300);
   }, []);
 
   useEffect(() => {
@@ -876,6 +879,7 @@ export default function CabinetPage() {
             }}
           >
             <textarea
+              ref={composerRef}
               className="flex-1 px-4 py-3 text-[15px] leading-relaxed resize-none outline-none"
               style={{
                 background: 'rgba(255,255,255,0.05)',

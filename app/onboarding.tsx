@@ -136,7 +136,8 @@ export default function OnboardingScreen() {
         });
       }
 
-      setTimeout(() => router.replace('/(tabs)/' as any), 2000);
+      // Complete: the chair says what the Cabinet now sees (R6). Otherwise Home.
+      setTimeout(() => router.replace((complete ? '/kt-reflection' : '/(tabs)/') as any), 2000);
     } catch (err) {
       console.error('[onboarding] save error:', err);
       setSaving(false);
