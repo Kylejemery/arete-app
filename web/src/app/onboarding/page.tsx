@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { saveOnboardingProfile, type OnboardingProfile } from '@/lib/db';
 import { countFilled, logEvent } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
+import KtReflectionModal from '@/components/KtReflectionModal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -30,6 +31,8 @@ export default function OnboardingPage() {
   const [profile, setProfile] = useState<ExtractedProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // R6: after a completing save, the chair's reflection instead of a redirect.
+  const [showReflection, setShowReflection] = useState(false);
   const [error, setError] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -128,7 +131,8 @@ export default function OnboardingPage() {
           turns: messages.filter(m => m.role === 'user').length,
         });
       }
-      setTimeout(() => router.replace('/'), 2000);
+      if (complete) setShowReflection(true);
+      else setTimeout(() => router.replace('/'), 2000);
     } catch (err) {
       console.error('[onboarding] save error:', err);
       setSaving(false);
@@ -146,6 +150,7 @@ export default function OnboardingPage() {
       className="h-screen flex flex-col"
       style={{ background: '#0f1724', maxWidth: 480, margin: '0 auto' }}
     >
+      {showReflection && <KtReflectionModal onClose={() => router.replace('/')} />}
       {/* ── Header ─────────────────────────────────────────────────── */}
       <div
         className="flex-shrink-0 px-4 pt-5 pb-3"

@@ -158,7 +158,8 @@ export default function SetupScreen() {
         cabinet_size: activeMembers.length,
       });
     }
-    router.replace('/');
+    // Complete: the chair says what the Cabinet now sees (R6). Otherwise Home.
+    router.replace(complete ? ('/kt-reflection' as any) : '/');
   };
 
   const renderProgressDots = () => (

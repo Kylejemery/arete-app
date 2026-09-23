@@ -141,10 +141,11 @@ export default function CabinetScreen() {
   const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
 
   // --- beliefContext deep-link param ---
-  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string; sharedSessionId?: string; sharedPartnerName?: string }>();
+  const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string; cabinetSeed?: string; sharedSessionId?: string; sharedPartnerName?: string }>();
   const consumedBeliefContextRef = useRef(false);
   const consumedCabinetContextRef = useRef(false);
   const consumedMorningMessageRef = useRef(false);
+  const cabinetInputRef = useRef<TextInput>(null);
 
   const loadInitialThread = async () => {
     setError(null);
@@ -480,16 +481,22 @@ export default function CabinetScreen() {
   // history, not before.
   useEffect(() => {
     if (initialLoading) return;
-    const mm = params.morningMessage;
+    // cabinetSeed (R6): the Know Thyself reflection was appended to the
+    // thread; fold it in the same way and put the cursor in the box.
+    const mm = params.morningMessage || params.cabinetSeed;
+    const focusAfter = !!params.cabinetSeed;
     if (mm && !consumedMorningMessageRef.current) {
       consumedMorningMessageRef.current = true;
       setActiveTab('cabinet');
-      router.setParams({ morningMessage: undefined });
+      router.setParams({ morningMessage: undefined, cabinetSeed: undefined });
       absorbNewLines().finally(() => {
-        setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+          if (focusAfter) cabinetInputRef.current?.focus();
+        }, 100);
       });
     }
-  }, [params.morningMessage, initialLoading, router, absorbNewLines]);
+  }, [params.morningMessage, params.cabinetSeed, initialLoading, router, absorbNewLines]);
 
   const handleSend = async () => {
     const text = inputText.trim();
@@ -1027,6 +1034,7 @@ export default function CabinetScreen() {
             <>
               <View style={styles.inputBar}>
                 <TextInput
+                  ref={cabinetInputRef}
                   style={styles.textInput}
                   placeholder="Speak to the Cabinet..."
                   placeholderTextColor="#555"

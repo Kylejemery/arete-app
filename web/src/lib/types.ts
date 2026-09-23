@@ -47,6 +47,11 @@ export interface UserSettings {
   last_active_at?: string | null;
   // Set by markKnowThyselfComplete (retention plan R0/R3).
   kt_completed_at?: string | null;
+  // "What your Cabinet now sees" (retention plan R6), written by /api/kt-reflection.
+  kt_reflection?: string | null;
+  kt_reflection_at?: string | null;
+  kt_reflection_counselor?: string | null;
+  feedback_preference?: string | null;
   created_at?: string;
   updated_at?: string;
 }
