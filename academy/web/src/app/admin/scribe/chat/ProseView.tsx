@@ -18,6 +18,7 @@ import {
   type Highlight,
   type Inline,
 } from '@/lib/scribe/prose'
+import { paginate, type PageItem } from '@/lib/scribe/book'
 import styles from './draft.module.css'
 
 interface Painted {
@@ -125,8 +126,11 @@ function renderedOffsetAt(host: HTMLElement, x: number, y: number): number | nul
 function sourceOffset(source: string, rendered: string, at: number): number {
   let s = 0
   let p = 0
+  const same = (a: string, b: string) => a === b || (/\s/.test(a) && /\s/.test(b))
   while (s < source.length && p < at) {
-    if (source[s] === rendered[p]) p++
+    // A paragraph's lines are joined with spaces when rendered, so a newline
+    // in the source matches a space on screen.
+    if (same(source[s], rendered[p])) p++
     s++
   }
   return s
@@ -178,6 +182,8 @@ export default function ProseView({
   highlight = null,
   scrollKey,
   onEditBlock,
+  onInsertChapter,
+  wordsPerPage,
 }: {
   text: string
   compact?: boolean
@@ -188,9 +194,15 @@ export default function ProseView({
   scrollKey?: string | number
   /** Omit to render read-only. */
   onEditBlock?: (block: Block, nextSource: string) => void
+  /** Offered beside each block when set: open a new chapter above it. */
+  onInsertChapter?: (block: Block) => void
+  /** Set to lay the draft out as book pages of this many words. */
+  wordsPerPage?: number
 }) {
   const blocks = parseProse(text)
-  const [editing, setEditing] = useState<{ index: number; caret: number | null } | null>(null)
+  // `at` is the rendered offset of the piece that was clicked, so a paragraph
+  // split across a page break opens on the page it was clicked on.
+  const [editing, setEditing] = useState<{ index: number; caret: number | null; at: number } | null>(null)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const firstHit = useRef<HTMLElement | null>(null)
   const claimed = useRef(false)
@@ -208,19 +220,23 @@ export default function ProseView({
 
   // Click into a passage to type in it. A drag or a double-click is a
   // selection, which belongs to the selection bar, so neither opens the editor.
-  const clickToEdit = (i: number, b: Block) => (e: React.MouseEvent<HTMLDivElement>) => {
+  const clickToEdit = (i: number, b: Block, part?: PageItem['part']) => (e: React.MouseEvent<HTMLDivElement>) => {
     if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null }
     if (!onEditBlock || b.type === 'hr' || e.detail !== 1) return
     if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
     const host = e.currentTarget
-    const rendered = host.textContent ?? ''
-    const at = renderedOffsetAt(host, e.clientX, e.clientY)
+    // A piece of a split paragraph maps into the whole paragraph's text.
+    const rendered = part
+      ? parseInline((b as { text: string }).text).map(x => x.text).join('')
+      : host.textContent ?? ''
+    const local = renderedOffsetAt(host, e.clientX, e.clientY)
+    const at = local === null ? null : local + (part?.plainOffset ?? 0)
     clickTimer.current = setTimeout(() => {
       clickTimer.current = null
       const sel = window.getSelection()
       if (sel && !sel.isCollapsed) return
       const caret = at === null ? null : sourceOffset(blockSource(text, b), rendered, at)
-      setEditing({ index: i, caret })
+      setEditing({ index: i, caret, at: part?.plainOffset ?? 0 })
     }, CLICK_TO_EDIT_MS)
   }
 
@@ -232,38 +248,83 @@ export default function ProseView({
     }
   }
 
-  return (
-    <div className={`${styles.prose} ${compact ? styles.proseCompact : ''} ${pane ? styles.prosePane : ''}`}>
-      {blocks.map((b, i) =>
-        editing?.index === i && onEditBlock ? (
-          <MarkdownEditor
-            key={i}
-            inline
-            caret={editing.caret}
-            source={blockSource(text, b)}
-            onSave={next => { setEditing(null); onEditBlock(b, next) }}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          <div
-            key={i}
-            className={onEditBlock ? `${styles.blockWrap} ${b.type !== 'hr' ? styles.blockTypable : ''}` : undefined}
-            onClick={onEditBlock ? clickToEdit(i, b) : undefined}
+  const renderItem = (b: Block, i: number, part?: PageItem['part'], chapter?: number) => {
+    const key = `${i}:${part?.plainOffset ?? 0}`
+    if (editing?.index === i && onEditBlock) {
+      // A split paragraph opens once, in the piece that was clicked.
+      if ((part?.plainOffset ?? 0) !== editing.at) return null
+      return (
+        <MarkdownEditor
+          key={key}
+          inline
+          caret={editing.caret}
+          source={blockSource(text, b)}
+          onSave={next => { setEditing(null); onEditBlock(b, next) }}
+          onCancel={() => setEditing(null)}
+        />
+      )
+    }
+    const shown = part ? ({ ...b, text: part.text } as Block) : b
+    return (
+      <div
+        key={key}
+        className={[
+          onEditBlock ? styles.blockWrap : '',
+          onEditBlock && b.type !== 'hr' ? styles.blockTypable : '',
+          part?.continues ? styles.runsOn : '',
+        ].join(' ')}
+        onClick={onEditBlock ? clickToEdit(i, b, part) : undefined}
+      >
+        {chapter !== undefined && <div className={styles.chapterKicker}>Chapter {chapter}</div>}
+        <BlockBody block={shown} highlight={highlight} firstRef={takeFirstRef} />
+        {onEditBlock && b.type !== 'hr' && (
+          <button
+            className={styles.blockEditBtn}
+            onClick={() => setEditing({ index: i, caret: null, at: part?.plainOffset ?? 0 })}
+            title="Edit this passage in place"
+            aria-label="Edit this passage"
           >
-            <BlockBody block={b} highlight={highlight} firstRef={takeFirstRef} />
-            {onEditBlock && b.type !== 'hr' && (
-              <button
-                className={styles.blockEditBtn}
-                onClick={() => setEditing({ index: i, caret: null })}
-                title="Edit this passage in place"
-                aria-label="Edit this passage"
-              >
-                ✎
-              </button>
-            )}
-          </div>
-        )
-      )}
-    </div>
-  )
+            ✎
+          </button>
+        )}
+        {onInsertChapter && b.type !== 'h1' && !part?.plainOffset && (
+          <button
+            className={`${styles.blockEditBtn} ${styles.chapterBtn}`}
+            onClick={() => onInsertChapter(b)}
+            title="Start a new chapter here, above this passage"
+            aria-label="Start a chapter here"
+          >
+            §
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  const proseClass = `${styles.prose} ${compact ? styles.proseCompact : ''} ${pane ? styles.prosePane : ''}`
+
+  if (wordsPerPage) {
+    const { pages } = paginate(text, wordsPerPage)
+    return (
+      <div className={styles.bookPages}>
+        {pages.map(pg => (
+          <section
+            key={pg.number}
+            id={`book-page-${pg.number}`}
+            className={`${styles.bookPage} ${pg.chapter ? styles.chapterPage : ''}`}
+            aria-label={`Page ${pg.number}`}
+          >
+            <div className={`${proseClass} ${styles.bookProse}`}>
+              {pg.items.map(it =>
+                renderItem(it.block, it.blockIndex, it.part, it.block.type === 'h1' ? pg.chapter?.number : undefined)
+              )}
+            </div>
+            <footer className={styles.pageNumber}>{pg.number}</footer>
+          </section>
+        ))}
+      </div>
+    )
+  }
+
+  return <div className={proseClass}>{blocks.map((b, i) => renderItem(b, i))}</div>
 }
