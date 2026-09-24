@@ -137,7 +137,7 @@ async function main() {
   check("snapshot saved as stage='full'", (snaps ?? []).some(s => s.stage === 'full'))
   // Commentary can land before or after the draft block — scan both sides.
   const t4Commentary = t4.text.replace(/<draft>[\s\S]*?<\/draft>/, '')
-  check('voice guard — Scribe flags its own lines', /mine|my phrasing/i.test(t4Commentary))
+  check('voice guard — Scribe flags its own lines', /mine|my phrasing|ADDED|\[SCRIBE/i.test(t4Commentary))
   check("Kyle's language survives the full draft", !!d4 && /character|art of living/i.test(d4!))
   console.log('\n  — full-draft commentary excerpt —\n' + excerpt(t4.text.split('<draft>')[0]))
 
