@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import { getKnowThyselfComplete, getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import Link from 'next/link';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
 import { countFilled, logEvent } from '@/lib/events';
 import { supabase } from '@/lib/supabase';
@@ -33,6 +34,32 @@ export default function ProfilePage() {
   const [loaded, setLoaded] = useState(false);
   const [simulatingFree, setSimulatingFree] = useState(false);
   const startedAt = useRef(Date.now());
+  // R7: three questions first. The rest opens with "Tell your Cabinet more",
+  // or straight away for a complete profile being edited.
+  const [expanded, setExpanded] = useState(false);
+  const [alreadyComplete, setAlreadyComplete] = useState(false);
+  // kt_started fires on the first focus, kt_abandoned on leaving unsaved.
+  const startedRef = useRef(false);
+  const savedRef = useRef(false);
+  const fieldsRef = useRef<Record<string, string | number>>({});
+  fieldsRef.current = { background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription };
+
+  const markStarted = () => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    logEvent('kt_started', { path: 'form', short: !expanded });
+  };
+
+  useEffect(() => {
+    const abandon = () => {
+      if (startedRef.current && !savedRef.current) {
+        startedRef.current = false; // once
+        logEvent('kt_abandoned', { path: 'form', fields_filled: countFilled(fieldsRef.current) });
+      }
+    };
+    window.addEventListener('pagehide', abandon);
+    return () => { window.removeEventListener('pagehide', abandon); abandon(); };
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -40,7 +67,9 @@ export default function ProfilePage() {
       if (!user) { router.replace('/login'); return; }
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
-      logEvent('kt_started', { path: 'form' });
+      const complete = await getKnowThyselfComplete();
+      setAlreadyComplete(complete);
+      setExpanded(complete);
 
       setBackground(settings.kt_background || '');
       setIdentity(settings.kt_identity || '');
@@ -76,9 +105,11 @@ export default function ProfilePage() {
     // clears the home banner and the Scrolls empty state, which key on
     // profiles.know_thyself_complete, and starts the first Scroll.
     const complete = await markKnowThyselfComplete();
+    savedRef.current = true;
     if (complete) {
       logEvent('kt_completed', {
         path: 'form',
+        short: !expanded,
         fields_filled: countFilled({ background, identity, goals, strengths, weaknesses, patterns, majorEvents, futureSelfYears, futureSelfDescription }),
         duration_s: Math.round((Date.now() - startedAt.current) / 1000),
       });
@@ -101,15 +132,20 @@ export default function ProfilePage() {
     fontFamily: 'var(--font-serif, Georgia, serif)',
   };
 
-  const sections = [
-    { label: 'Background & Life Story', sub: 'Where did you come from? What shaped you?', value: background, onChange: setBackground, rows: 5 },
-    { label: 'Professional Identity & Pursuits', sub: 'What do you do? What are you building?', value: identity, onChange: setIdentity, rows: 4 },
-    { label: 'Goals', sub: 'What are you working toward? Be specific.', value: goals, onChange: setGoals, rows: 4 },
-    { label: 'Strengths', sub: 'What are you genuinely good at?', value: strengths, onChange: setStrengths, rows: 3 },
-    { label: 'Weaknesses', sub: 'Where do you consistently fall short?', value: weaknesses, onChange: setWeaknesses, rows: 3 },
-    { label: 'Patterns & Failure Modes', sub: 'What do you do when things get hard?', value: patterns, onChange: setPatterns, rows: 4 },
-    { label: 'Major Life Events', sub: 'What defining moments shaped who you are?', value: majorEvents, onChange: setMajorEvents, rows: 4 },
+  // The short step: goals plus two more is the completion rule (R3), so
+  // these three alone complete Know Thyself.
+  const shortSections = [
+    { label: 'Goals', sub: 'What are you working toward? Be specific.', placeholder: 'Finish the book draft by December. Run a half marathon in the spring.', value: goals, onChange: setGoals, rows: 4 },
+    { label: 'Where you consistently fall short', sub: 'The thing you already know about yourself.', placeholder: 'I say yes to everything and then resent the calendar.', value: weaknesses, onChange: setWeaknesses, rows: 3 },
+    { label: 'What you do when things get hard', sub: 'Your pattern under pressure.', placeholder: 'I go quiet, reread old messages, and start something new instead.', value: patterns, onChange: setPatterns, rows: 4 },
   ];
+  const moreSections = [
+    { label: 'Background & Life Story', sub: 'Where did you come from? What shaped you?', placeholder: undefined, value: background, onChange: setBackground, rows: 5 },
+    { label: 'Professional Identity & Pursuits', sub: 'What do you do? What are you building?', placeholder: undefined, value: identity, onChange: setIdentity, rows: 4 },
+    { label: 'Strengths', sub: 'What are you genuinely good at?', placeholder: undefined, value: strengths, onChange: setStrengths, rows: 3 },
+    { label: 'Major Life Events', sub: 'What defining moments shaped who you are?', placeholder: undefined, value: majorEvents, onChange: setMajorEvents, rows: 4 },
+  ];
+  const sections = expanded ? [...shortSections, ...moreSections] : shortSections;
 
   return (
     <div className="min-h-screen pb-24">
@@ -144,9 +180,19 @@ export default function ProfilePage() {
             border: '1px solid rgba(255,255,255,0.06)',
           }}
         >
-          Your counselors use this from your very next message. The more honest and specific you are, the more useful they will be.
+          {alreadyComplete
+            ? 'Your counselors use this from your very next message. The more honest and specific you are, the more useful they will be.'
+            : 'Three questions, about two minutes. Your counselors will answer differently afterward.'}
         </p>
       </div>
+
+      {!alreadyComplete && (
+        <div className="px-4 pb-4">
+          <Link href="/onboarding" className="text-[12px] hover:underline" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}>
+            Prefer a conversation? Meet your Future Self →
+          </Link>
+        </div>
+      )}
 
       {reflection && (
         <div className="px-4 pb-5 max-w-2xl">
@@ -184,14 +230,16 @@ export default function ProfilePage() {
                 className={textareaClass}
                 style={textareaStyle}
                 rows={section.rows}
+                placeholder={section.placeholder}
                 value={section.value}
+                onFocus={markStarted}
                 onChange={e => section.onChange(e.target.value)}
               />
             </div>
           </GlassCard>
         ))}
 
-        {/* Future Self */}
+        {expanded ? (
         <GlassCard>
           <div className="p-4">
             <div
@@ -228,10 +276,21 @@ export default function ProfilePage() {
               rows={5}
               placeholder={`Describe who you are ${futureSelfYears} years from now…`}
               value={futureSelfDescription}
+              onFocus={markStarted}
               onChange={e => setFutureSelfDescription(e.target.value)}
             />
           </div>
         </GlassCard>
+        ) : (
+          <button
+            onClick={() => setExpanded(true)}
+            className="w-full text-left rounded-2xl px-4 py-4"
+            style={{ border: '1px dashed rgba(201,168,76,0.3)', background: 'transparent' }}
+          >
+            <div className="text-[14px] font-semibold" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#c9a84c' }}>Tell your Cabinet more</div>
+            <div className="text-[12px] mt-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>Background, identity, strengths, defining moments, your future self.</div>
+          </button>
+        )}
       </div>
 
       {/* ── Save Button ─────────────────────────────────────────── */}
@@ -245,7 +304,7 @@ export default function ProfilePage() {
               : { background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }
           }
         >
-          {saved ? '✓ Profile Saved' : 'Save Profile'}
+          {saved ? '✓ Profile Saved' : (alreadyComplete || expanded ? 'Save Profile' : 'Save and meet your Cabinet')}
         </button>
         {/* Visible confirmation (retention plan R3): what saving changed. */}
         {saved && (
