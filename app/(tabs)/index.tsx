@@ -6,6 +6,8 @@ import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, Te
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import SideMenu from '../../components/SideMenu';
 import DispatchNudge from '../../components/DispatchNudge';
+import YesterdayCard from '../../components/YesterdayCard';
+import { fetchFollowup, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 import WhatsNewModal from '../../components/WhatsNewModal';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
@@ -74,6 +76,8 @@ export default function HomeScreen() {
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
   const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
+  // R8: yesterday's intention and a counselor's follow-up, top of Home.
+  const [yesterdayCard, setYesterdayCard] = useState<YesterdayCardData | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(futureSelfBannerDismissed);
   const [namePromptVisible, setNamePromptVisible] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -128,6 +132,11 @@ export default function HomeScreen() {
     setMorningDone(freshMorning);
     setEveningDone(freshEvening);
     setCacheLoaded(true);
+    // Off the critical path: the card paints when the line arrives.
+    fetchFollowup(localDate(-1)).then(card => {
+      setYesterdayCard(card);
+      if (card) markYesterdayCardSeenToday().catch(() => {});
+    }).catch(() => {});
 
     // Step 3: write cache for next load
     try {
@@ -267,6 +276,9 @@ export default function HomeScreen() {
       </View>
 
       <SideMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
+
+      {/* Yesterday card (R8): top position when yesterday has a check-in */}
+      {yesterdayCard && <YesterdayCard card={yesterdayCard} />}
 
       <DispatchNudge />
 

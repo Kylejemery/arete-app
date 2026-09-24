@@ -3,6 +3,7 @@ import { Tabs, useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import PendingInviteModal from '../../components/PendingInviteModal';
 import { wasLaunchedFromNotification } from '@/lib/launchIntent';
+import { shouldStayHomeForYesterday } from '@/lib/yesterday';
 
 function getRoutineTab(): string | null {
   const hour = new Date().getHours();
@@ -25,9 +26,11 @@ export default function TabsLayout() {
     const target = getRoutineTab();
     if (!target) return;
     let cancelled = false;
-    wasLaunchedFromNotification()
-      .then((fromNotification) => {
-        if (cancelled || fromNotification) return;
+    // R8: on the first open of a day when a Yesterday card is waiting, stay
+    // on Home so the user actually sees it; later opens redirect as before.
+    Promise.all([wasLaunchedFromNotification(), shouldStayHomeForYesterday()])
+      .then(([fromNotification, stayHome]) => {
+        if (cancelled || fromNotification || stayHome) return;
         router.navigate(target as any);
       })
       .catch(() => {

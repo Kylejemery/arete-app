@@ -20,7 +20,10 @@ export type ProductEvent =
   | 'dispatch_opened'
   | 'kt_reflection_viewed'
   | 'kt_reflection_answered'
-  | 'kt_abandoned';
+  | 'kt_abandoned'
+  | 'home_yesterday_card_viewed'
+  | 'home_yesterday_card_tapped'
+  | 'checkin_continue_tapped';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 

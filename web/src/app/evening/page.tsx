@@ -15,6 +15,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
+import { primeTodaysFollowup } from '@/lib/yesterday';
 import GlassCard from '@/components/GlassCard';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import ChapterRule from '@/components/ChapterRule';
@@ -188,6 +189,8 @@ export default function EveningPage() {
       await incrementStreak();
       setCheckInDone(true);
       if (result.ok) setCheckInResponse(result.text);
+      // Tomorrow's Home card (R8): generate the follow-up now, off the path.
+      primeTodaysFollowup();
       if (!isRetry || result.ok) logEvent('checkin_completed', { kind: 'evening', cabinet_replied: result.ok, retry: isRetry });
       if (!result.ok) logEvent('checkin_cabinet_failed', { kind: 'evening', reason: result.reason, status: result.status });
     } catch {
@@ -485,7 +488,7 @@ export default function EveningPage() {
                     className="text-[14px] mt-0.5"
                     style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
                   >
-                    Well done. Come back tomorrow.
+                    Day sealed. See you at sunrise.
                   </div>
                 </div>
               </div>

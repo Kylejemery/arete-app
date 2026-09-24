@@ -222,6 +222,24 @@ export async function incrementStreak(): Promise<void> {
   }
 }
 
+// Yesterday's row, for the Home card and the tab layout's redirect (R8).
+export async function getYesterdayCheckin(): Promise<DailyCheckin | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('check_in_date', yesterday())
+      .maybeSingle()
+    if (error) return null
+    return (data as DailyCheckin | null) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getTodayCheckin(): Promise<DailyCheckin | null> {
   const userId = await getUserId()
   if (!userId) return null
