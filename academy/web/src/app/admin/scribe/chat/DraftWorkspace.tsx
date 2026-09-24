@@ -25,9 +25,11 @@ import {
   containsPhrase,
   proseStats,
   replaceBlockLines,
+  splitLines,
   type Block,
   type Highlight,
 } from '@/lib/scribe/prose'
+import { DEFAULT_TRIM, TRIMS, paginate, trimById, type TrimId } from '@/lib/scribe/book'
 import { findingPrompt, scopedPrompt, type ScopedAction } from '@/lib/scribe/scoped-turns'
 import {
   countHunks,
@@ -76,6 +78,8 @@ export interface DraftWorkspaceProps {
   onFinalize: () => void
   onExport: () => void
   onExportWord: () => void
+  /** The draft as a print-ready book file at this trim size. */
+  onExportBook: (trim: TrimId) => void
   onSaveToLog: () => void
   onSendToComposer: () => void
   sendingToComposer: boolean
@@ -99,7 +103,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     review, reviewIsSavedFallback, viewingSnapshotStage, drafts, viewedDraftId,
     onViewDraft, sources, highlight, onHighlight, onScopedTurn, onNotice,
     streaming, snapshotting, canSnapshot, onSnapshot, onFinalize,
-    onExport, onExportWord, onSaveToLog, onSendToComposer, sendingToComposer,
+    onExport, onExportWord, onExportBook, onSaveToLog, onSendToComposer, sendingToComposer,
     onApplyRevision, applying, quotes, quotesChecking, history, rawText,
     gapsMode, onToggleGapsMode, onOutsideRead, readingOutside,
   } = props
@@ -112,6 +116,16 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
   // edits a block at a time is too small for.
   const [editingWhole, setEditingWhole] = useState(false)
   const proseRef = useRef<HTMLDivElement>(null)
+  // The trim size the full-page view paginates to, kept per browser.
+  const [trimId, setTrimId] = useState<TrimId>(DEFAULT_TRIM)
+  useEffect(() => {
+    try { setTrimId(trimById(localStorage.getItem('scribe.trim')).id) } catch { /* no storage */ }
+  }, [])
+  const chooseTrim = (id: TrimId) => {
+    setTrimId(id)
+    try { localStorage.setItem('scribe.trim', id) } catch { /* no storage */ }
+  }
+  const trim = trimById(trimId)
 
   // A new turn or a snapshot view closes the whole-draft editor.
   useEffect(() => { if (streaming || viewingSnapshotStage) setEditingWhole(false) }, [streaming, viewingSnapshotStage])
@@ -180,6 +194,17 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     const next = replaceBlockLines(shown, block, nextSource)
     if (next === draftText) { setDecisions({}); return }
     await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then edited a passage by hand` : 'edited a passage by hand')
+    setDecisions({})
+  }
+
+  // Open a chapter above this block: a level-one heading, which the book view
+  // starts on a fresh page. Named as a placeholder for him to click and rename.
+  async function insertChapter(block: Block) {
+    if (!shown) return
+    const lines = splitLines(shown)
+    lines.splice(block.lineStart, 0, '# New chapter', '')
+    const next = lines.join('\n')
+    await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then started a chapter` : 'started a new chapter')
     setDecisions({})
   }
 
@@ -502,10 +527,71 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         highlight={highlight}
         scrollKey={scrollNonce}
         onEditBlock={streaming || viewingSnapshotStage ? undefined : editBlock}
+        onInsertChapter={fullscreen && !streaming && !viewingSnapshotStage ? insertChapter : undefined}
+        wordsPerPage={fullscreen ? trim.wordsPerPage : undefined}
       />
     </>
   ) : (
     <p className={chat.draftEmpty}>The working draft appears here as Scribe writes.</p>
+  )
+
+  // The whole book at a glance, beside the pages: size, length, and where
+  // each chapter falls.
+  const book = useMemo(
+    () => (fullscreen && shown ? paginate(shown, trim.wordsPerPage) : null),
+    [fullscreen, shown, trim.wordsPerPage]
+  )
+  const bookMap = book && (
+    <aside className={styles.bookMap} aria-label="Book map">
+      <div className={styles.bookMapKicker}>The book</div>
+      <label className={styles.bookMapTrim}>
+        Page size
+        <select value={trim.id} onChange={e => chooseTrim(e.target.value as TrimId)}>
+          {TRIMS.map(t => (
+            <option key={t.id} value={t.id}>{t.label} · ~{t.wordsPerPage} words a page</option>
+          ))}
+        </select>
+      </label>
+      <div className={styles.bookMapStats}>
+        <strong>{book.pages.length}</strong> {book.pages.length === 1 ? 'page' : 'pages'}
+        {' · '}
+        <strong>{book.words.toLocaleString()}</strong> words
+      </div>
+      {book.chapters.length ? (
+        <ol className={styles.bookMapChapters}>
+          {book.chapters[0].startPage > 1 && (
+            <li>
+              <button onClick={() => document.getElementById('book-page-1')?.scrollIntoView({ behavior: 'smooth' })}>
+                <span>Opening</span>
+                <span className={styles.bookMapPages}>
+                  {book.chapters[0].startPage - 1 > 1 ? `pp. 1–${book.chapters[0].startPage - 1}` : 'p. 1'}
+                </span>
+              </button>
+            </li>
+          )}
+          {book.chapters.map(c => (
+            <li key={c.number}>
+              <button onClick={() => document.getElementById(`book-page-${c.startPage}`)?.scrollIntoView({ behavior: 'smooth' })}>
+                <span>{c.number}. {c.title}</span>
+                <span className={styles.bookMapPages}>
+                  {c.endPage > c.startPage ? `pp. ${c.startPage}–${c.endPage}` : `p. ${c.startPage}`}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className={styles.bookMapHint}>
+          No chapters yet. Hover a paragraph and click § to start one there, or make any line a # heading.
+        </p>
+      )}
+      <button className={styles.bookMapExport} onClick={() => onExportBook(trim.id)}>
+        Export book (.docx)
+      </button>
+      <p className={styles.bookMapHint}>
+        Sized for print at {trim.label}, chapters on new pages, numbered. Upload it to KDP or IngramSpark as the interior.
+      </p>
+    </aside>
   )
 
   const body =
@@ -662,7 +748,14 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         {actions}
       </div>
       <div className={styles.fsBody} ref={proseRef}>
-        <div className={effTab === 'draft' ? styles.fsColumn : styles.fsColumnWide}>{body}</div>
+        {effTab === 'draft' && book && !editingWhole ? (
+          <div className={styles.fsBook}>
+            {bookMap}
+            <div className={styles.fsBookPages}>{body}</div>
+          </div>
+        ) : (
+          <div className={effTab === 'draft' ? styles.fsColumn : styles.fsColumnWide}>{body}</div>
+        )}
       </div>
       {selectionBar}
       <div className={styles.fsFoot}>

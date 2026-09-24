@@ -119,7 +119,7 @@ export function applyFormat(text: string, start: number, end: number, action: Fo
 export const FORMAT_LABELS: { action: FormatAction; label: string; title: string }[] = [
   { action: 'bold', label: 'B', title: 'Bold (⌘B)' },
   { action: 'italic', label: 'I', title: 'Italic (⌘I)' },
-  { action: 'h1', label: 'H1', title: 'Heading 1' },
+  { action: 'h1', label: 'Chapter', title: 'Chapter title (starts a new page in the book view)' },
   { action: 'h2', label: 'H2', title: 'Heading 2' },
   { action: 'h3', label: 'H3', title: 'Heading 3' },
   { action: 'quote', label: '❝', title: 'Block quote (a corpus passage)' },

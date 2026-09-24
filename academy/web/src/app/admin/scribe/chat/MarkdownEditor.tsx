@@ -40,6 +40,8 @@ export default function MarkdownEditor({
   onSave,
   onCancel,
   whole = false,
+  inline = false,
+  caret = null,
   saveLabel = 'Save',
 }: {
   source: string
@@ -47,11 +49,46 @@ export default function MarkdownEditor({
   onCancel: () => void
   /** The whole draft rather than one block: taller, and the hint says so. */
   whole?: boolean
+  /** Opened by clicking into the prose: set in the prose's own type, sized to
+   *  its content, and saved when focus leaves it. */
+  inline?: boolean
+  /** Where to put the caret on open (a source offset); end of text if null. */
+  caret?: number | null
   saveLabel?: string
 }) {
   const [buffer, setBuffer] = useState(source)
   const ref = useRef<HTMLTextAreaElement>(null)
   const pendingSel = useRef<[number, number] | null>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const done = useRef(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || whole) return
+    const at = caret === null ? el.value.length : Math.min(caret, el.value.length)
+    el.setSelectionRange(at, at)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Grow with the text rather than scroll inside a box, so typing in a
+  // passage reads like typing in the page.
+  useEffect(() => {
+    const el = ref.current
+    if (!el || whole) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [buffer, whole])
+
+  const save = (next: string) => { if (done.current) return; done.current = true; onSave(next) }
+  const cancel = () => { if (done.current) return; done.current = true; onCancel() }
+
+  // Clicking anywhere outside the passage keeps what was typed.
+  function onBlur(e: React.FocusEvent<HTMLDivElement>) {
+    if (!inline) return
+    if (e.relatedTarget instanceof Node && wrapRef.current?.contains(e.relatedTarget)) return
+    if (buffer === source) cancel()
+    else save(buffer)
+  }
 
   useEffect(() => {
     if (!pendingSel.current || !ref.current) return
@@ -70,20 +107,24 @@ export default function MarkdownEditor({
   }
 
   function onKey(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Escape') { e.preventDefault(); onCancel(); return }
-    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); onSave(buffer); return }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); return }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); save(buffer); return }
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'b') { e.preventDefault(); format('bold') }
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'i') { e.preventDefault(); format('italic') }
   }
 
-  const rows = whole ? undefined : Math.min(20, Math.max(3, buffer.split('\n').length + 2))
+  const rows = whole ? undefined : 1
 
   return (
-    <div className={`${styles.blockEditor} ${whole ? styles.wholeEditor : ''}`}>
+    <div
+      ref={wrapRef}
+      className={`${styles.blockEditor} ${whole ? styles.wholeEditor : ''} ${inline ? styles.inlineEditor : ''}`}
+      onBlur={onBlur}
+    >
       <FormatBar onFormat={format} />
       <textarea
         ref={ref}
-        className={`${styles.blockTextarea} ${whole ? styles.wholeTextarea : ''}`}
+        className={`${styles.blockTextarea} ${whole ? styles.wholeTextarea : ''} ${inline ? styles.inlineTextarea : ''}`}
         value={buffer}
         autoFocus
         rows={rows}
@@ -92,12 +133,13 @@ export default function MarkdownEditor({
         onKeyDown={onKey}
       />
       <div className={styles.blockEditorBtns}>
-        <button className={styles.hunkBtn} onClick={() => onSave(buffer)} disabled={buffer === source}>
+        {/* mousedown kept from the textarea so a click here is not a blur-save. */}
+        <button className={styles.hunkBtn} onMouseDown={e => e.preventDefault()} onClick={() => save(buffer)} disabled={buffer === source}>
           {saveLabel}
         </button>
-        <button className={styles.hunkBtn} onClick={onCancel}>Cancel</button>
+        <button className={styles.hunkBtn} onMouseDown={e => e.preventDefault()} onClick={cancel}>Cancel</button>
         <span className={styles.blockEditorHint}>
-          ⌘↵ to save · Esc to cancel · ⌘B bold · ⌘I italic{whole ? ' · the whole draft, as markdown' : ''}
+          {inline ? 'Click away or ⌘↵ to save' : '⌘↵ to save'} · Esc to cancel · ⌘B bold · ⌘I italic{whole ? ' · the whole draft, as markdown' : ''}
         </span>
       </div>
     </div>

@@ -17,6 +17,7 @@ import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
 import type { Highlight } from '@/lib/scribe/prose'
 import type { DraftState } from '@/lib/scribe/provenance'
 import type { QuoteFinding } from './types'
+import type { TrimId } from '@/lib/scribe/book'
 
 // Column widths, dragged and remembered. The draft column takes whatever is
 // left, which on a wide screen is most of it: the essay is the work.
@@ -591,6 +592,38 @@ export default function ScribeChatPage() {
     showToast('Draft copied — retype by hand before publishing')
   }
 
+  // The draft as a print-ready book interior at the chosen trim size. Scribe's
+  // working marks are not stripped: a book that still carries one is not
+  // finished, so the export says which are left rather than hiding them.
+  async function exportBook(trimId: TrimId) {
+    if (!draftShown) return
+    try {
+      const [{ Packer }, { buildBookDocument, bookFilename }, { trimById, openMarkers }] = await Promise.all([
+        import('docx'),
+        import('@/lib/scribe/docx-export'),
+        import('@/lib/scribe/book'),
+      ])
+      const trim = trimById(trimId)
+      const blob = await Packer.toBlob(buildBookDocument(entry?.title ?? null, draftShown, trim))
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = bookFilename(entry?.title ?? null, trim)
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      const left = openMarkers(draftShown)
+      showToast(
+        left.length
+          ? `Book downloaded, but it still has ${left.map(m => `${m.count} ${m.label}`).join(', ')} mark${left.reduce((n, m) => n + m.count, 0) === 1 ? '' : 's'} to settle`
+          : `Book downloaded at ${trim.label}`
+      )
+    } catch (e) {
+      showToast(e instanceof Error ? `Book export failed: ${e.message}` : 'Book export failed')
+    }
+  }
+
   // A .docx of the draft, built on demand; the library loads on first use.
   async function exportWord() {
     if (!draftShown) return
@@ -680,6 +713,7 @@ export default function ScribeChatPage() {
     onFinalize: finalize,
     onExport: exportDraft,
     onExportWord: exportWord,
+    onExportBook: exportBook,
     onSaveToLog: saveToLog,
     onSendToComposer: sendToComposer,
     sendingToComposer,
