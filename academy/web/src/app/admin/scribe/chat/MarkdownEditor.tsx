@@ -43,6 +43,7 @@ export default function MarkdownEditor({
   inline = false,
   caret = null,
   saveLabel = 'Save',
+  onChange,
 }: {
   source: string
   onSave: (next: string) => void
@@ -55,6 +56,8 @@ export default function MarkdownEditor({
   /** Where to put the caret on open (a source offset); end of text if null. */
   caret?: number | null
   saveLabel?: string
+  /** Told of every keystroke, for anything that reflects the text live. */
+  onChange?: (buffer: string) => void
 }) {
   const [buffer, setBuffer] = useState(source)
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -78,6 +81,8 @@ export default function MarkdownEditor({
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
   }, [buffer, whole])
+
+  useEffect(() => { onChange?.(buffer) }, [buffer, onChange])
 
   const save = (next: string) => { if (done.current) return; done.current = true; onSave(next) }
   const cancel = () => { if (done.current) return; done.current = true; onCancel() }
