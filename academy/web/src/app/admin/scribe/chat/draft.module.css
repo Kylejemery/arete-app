@@ -652,7 +652,20 @@
   font: inherit;
   cursor: pointer;
 }
-.bookMapChapters button:hover { background: #1b2d4d; color: #fff; }
+.bookMapChapters button:hover:not(:disabled) { background: #1b2d4d; color: #fff; }
+.bookMapChapters button:disabled { cursor: default; }
+.bookMapAdd {
+  width: 100%;
+  margin: 2px 0 4px;
+  padding: 7px 10px;
+  border: 0.5px dashed #5a6a8e;
+  border-radius: 8px;
+  background: none;
+  color: #d9deeb;
+  font: inherit;
+  cursor: pointer;
+}
+.bookMapAdd:hover { border-color: #afa9ec; color: #fff; }
 .bookMapPages { color: #8391ad; white-space: nowrap; font-size: 11.5px; }
 .bookMapHint { margin: 8px 0 0; color: #8391ad; font-size: 11.5px; }
 .bookMapExport {

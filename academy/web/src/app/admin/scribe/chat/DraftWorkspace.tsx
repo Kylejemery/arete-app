@@ -126,6 +126,10 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     try { localStorage.setItem('scribe.trim', id) } catch { /* no storage */ }
   }
   const trim = trimById(trimId)
+  // What is in the whole-draft editor right now, so the book map follows the
+  // typing rather than the last save.
+  const [wholeBuffer, setWholeBuffer] = useState<string | null>(null)
+  useEffect(() => { if (!editingWhole) setWholeBuffer(null) }, [editingWhole])
 
   // A new turn or a snapshot view closes the whole-draft editor.
   useEffect(() => { if (streaming || viewingSnapshotStage) setEditingWhole(false) }, [streaming, viewingSnapshotStage])
@@ -205,6 +209,14 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     lines.splice(block.lineStart, 0, '# New chapter', '')
     const next = lines.join('\n')
     await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then started a chapter` : 'started a new chapter')
+    setDecisions({})
+  }
+
+  // A chapter at the end of the draft, for when the next one has no text yet.
+  async function appendChapter() {
+    if (!shown) return
+    const next = `${shown.replace(/\s+$/, '')}\n\n# New chapter\n`
+    await onApplyRevision(next, preview ? `${describeDecisions(parts, decisions)}, then added a chapter` : 'added a new chapter')
     setDecisions({})
   }
 
@@ -491,6 +503,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
       whole
       source={shown}
       saveLabel="Save draft"
+      onChange={setWholeBuffer}
       onSave={async next => {
         setEditingWhole(false)
         if (next === draftText) { setDecisions({}); return }
@@ -538,9 +551,15 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
   // The whole book at a glance, beside the pages: size, length, and where
   // each chapter falls.
   const book = useMemo(
-    () => (fullscreen && shown ? paginate(shown, trim.wordsPerPage) : null),
-    [fullscreen, shown, trim.wordsPerPage]
+    () => {
+      const text = editingWhole && wholeBuffer !== null ? wholeBuffer : shown
+      return fullscreen && text ? paginate(text, trim.wordsPerPage) : null
+    },
+    [fullscreen, shown, trim.wordsPerPage, editingWhole, wholeBuffer]
   )
+  const jumpToPage = (n: number) =>
+    document.getElementById(`book-page-${n}`)?.scrollIntoView({ behavior: 'smooth' })
+  const canAddChapter = !editingWhole && !streaming && !viewingSnapshotStage
   const bookMap = book && (
     <aside className={styles.bookMap} aria-label="Book map">
       <div className={styles.bookMapKicker}>The book</div>
@@ -561,7 +580,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         <ol className={styles.bookMapChapters}>
           {book.chapters[0].startPage > 1 && (
             <li>
-              <button onClick={() => document.getElementById('book-page-1')?.scrollIntoView({ behavior: 'smooth' })}>
+              <button disabled={editingWhole} onClick={() => jumpToPage(1)}>
                 <span>Opening</span>
                 <span className={styles.bookMapPages}>
                   {book.chapters[0].startPage - 1 > 1 ? `pp. 1–${book.chapters[0].startPage - 1}` : 'p. 1'}
@@ -571,7 +590,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           )}
           {book.chapters.map(c => (
             <li key={c.number}>
-              <button onClick={() => document.getElementById(`book-page-${c.startPage}`)?.scrollIntoView({ behavior: 'smooth' })}>
+              <button disabled={editingWhole} onClick={() => jumpToPage(c.startPage)}>
                 <span>{c.number}. {c.title}</span>
                 <span className={styles.bookMapPages}>
                   {c.endPage > c.startPage ? `pp. ${c.startPage}–${c.endPage}` : `p. ${c.startPage}`}
@@ -581,10 +600,16 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           ))}
         </ol>
       ) : (
-        <p className={styles.bookMapHint}>
-          No chapters yet. Hover a paragraph and click § to start one there, or make any line a # heading.
-        </p>
+        <p className={styles.bookMapHint}>No chapters yet.</p>
       )}
+      {canAddChapter && (
+        <button className={styles.bookMapAdd} onClick={appendChapter}>+ New chapter at the end</button>
+      )}
+      <p className={styles.bookMapHint}>
+        {editingWhole
+          ? 'To start a chapter here, put the cursor on a line and click Chapter in the toolbar, or type # and the title on its own line. Pages show in Reading view.'
+          : 'To start a chapter partway through, hover a paragraph and click § beside it. Click a chapter title on the page to rename it.'}
+      </p>
       <button className={styles.bookMapExport} onClick={() => onExportBook(trim.id)}>
         Export book (.docx)
       </button>
@@ -748,7 +773,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
         {actions}
       </div>
       <div className={styles.fsBody} ref={proseRef}>
-        {effTab === 'draft' && book && !editingWhole ? (
+        {effTab === 'draft' && book ? (
           <div className={styles.fsBook}>
             {bookMap}
             <div className={styles.fsBookPages}>{body}</div>
