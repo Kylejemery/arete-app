@@ -411,6 +411,22 @@
   line-height: 1.62;
   color: #1a1a1a;
 }
+/* Clicked into from the prose: the passage's own type, a light frame. */
+.blockTypable { cursor: text; }
+.inlineEditor {
+  margin: -6px -10px calc(1em - 6px);
+  padding: 6px 10px 8px;
+  border-color: #d6d3f0;
+  background: #fcfcff;
+}
+.inlineTextarea {
+  font: inherit;
+  line-height: inherit;
+  color: inherit;
+  resize: none;
+  overflow: hidden;
+  display: block;
+}
 .blockEditorBtns { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
 .blockEditorHint { font-size: 10.5px; color: #aaa; font-family: var(--font-sans, system-ui, sans-serif); }
 

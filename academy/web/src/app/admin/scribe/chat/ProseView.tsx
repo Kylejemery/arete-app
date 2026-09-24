@@ -96,6 +96,46 @@ export function Inlines({ text }: { text: string }) {
   return <Painted text={text} highlight={null} />
 }
 
+// Where a click landed, as an offset into the block's rendered text, so the
+// editor can open with the caret in the same place.
+function renderedOffsetAt(host: HTMLElement, x: number, y: number): number | null {
+  type CaretDoc = Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
+    caretRangeFromPoint?: (x: number, y: number) => Range | null
+  }
+  const d = document as CaretDoc
+  let node: Node | null = null
+  let offset = 0
+  const pos = d.caretPositionFromPoint?.(x, y)
+  if (pos) { node = pos.offsetNode; offset = pos.offset }
+  else {
+    const r = d.caretRangeFromPoint?.(x, y)
+    if (r) { node = r.startContainer; offset = r.startOffset }
+  }
+  if (!node || !host.contains(node)) return null
+  const before = document.createRange()
+  before.selectNodeContents(host)
+  before.setEnd(node, offset)
+  return before.toString().length
+}
+
+// The rendered text is the source with its markup (#, >, -, *, _, the gap
+// brackets) taken out, so it is a subsequence of the source. Walk the two
+// together to carry a rendered offset back to a source offset.
+function sourceOffset(source: string, rendered: string, at: number): number {
+  let s = 0
+  let p = 0
+  while (s < source.length && p < at) {
+    if (source[s] === rendered[p]) p++
+    s++
+  }
+  return s
+}
+
+// A click this long without a second click or a drag is a click to type. The
+// wait lets a double-click select a word for the selection bar instead.
+const CLICK_TO_EDIT_MS = 220
+
 function BlockBody({
   block,
   highlight,
@@ -150,7 +190,8 @@ export default function ProseView({
   onEditBlock?: (block: Block, nextSource: string) => void
 }) {
   const blocks = parseProse(text)
-  const [editing, setEditing] = useState<number | null>(null)
+  const [editing, setEditing] = useState<{ index: number; caret: number | null } | null>(null)
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const firstHit = useRef<HTMLElement | null>(null)
   const claimed = useRef(false)
   claimed.current = false
@@ -163,6 +204,26 @@ export default function ProseView({
   // Editing is per-render-position; a new draft closes any open editor.
   useEffect(() => { setEditing(null) }, [text])
 
+  useEffect(() => () => { if (clickTimer.current) clearTimeout(clickTimer.current) }, [])
+
+  // Click into a passage to type in it. A drag or a double-click is a
+  // selection, which belongs to the selection bar, so neither opens the editor.
+  const clickToEdit = (i: number, b: Block) => (e: React.MouseEvent<HTMLDivElement>) => {
+    if (clickTimer.current) { clearTimeout(clickTimer.current); clickTimer.current = null }
+    if (!onEditBlock || b.type === 'hr' || e.detail !== 1) return
+    if ((e.target as HTMLElement).closest('button, a, input, textarea')) return
+    const host = e.currentTarget
+    const rendered = host.textContent ?? ''
+    const at = renderedOffsetAt(host, e.clientX, e.clientY)
+    clickTimer.current = setTimeout(() => {
+      clickTimer.current = null
+      const sel = window.getSelection()
+      if (sel && !sel.isCollapsed) return
+      const caret = at === null ? null : sourceOffset(blockSource(text, b), rendered, at)
+      setEditing({ index: i, caret })
+    }, CLICK_TO_EDIT_MS)
+  }
+
   // Only the first highlighted span in the whole document takes the ref.
   const takeFirstRef = (el: HTMLElement | null) => {
     if (el && !claimed.current) {
@@ -174,20 +235,26 @@ export default function ProseView({
   return (
     <div className={`${styles.prose} ${compact ? styles.proseCompact : ''} ${pane ? styles.prosePane : ''}`}>
       {blocks.map((b, i) =>
-        editing === i && onEditBlock ? (
+        editing?.index === i && onEditBlock ? (
           <MarkdownEditor
             key={i}
+            inline
+            caret={editing.caret}
             source={blockSource(text, b)}
             onSave={next => { setEditing(null); onEditBlock(b, next) }}
             onCancel={() => setEditing(null)}
           />
         ) : (
-          <div key={i} className={onEditBlock ? styles.blockWrap : undefined}>
+          <div
+            key={i}
+            className={onEditBlock ? `${styles.blockWrap} ${b.type !== 'hr' ? styles.blockTypable : ''}` : undefined}
+            onClick={onEditBlock ? clickToEdit(i, b) : undefined}
+          >
             <BlockBody block={b} highlight={highlight} firstRef={takeFirstRef} />
             {onEditBlock && b.type !== 'hr' && (
               <button
                 className={styles.blockEditBtn}
-                onClick={() => setEditing(i)}
+                onClick={() => setEditing({ index: i, caret: null })}
                 title="Edit this passage in place"
                 aria-label="Edit this passage"
               >
