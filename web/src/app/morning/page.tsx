@@ -447,7 +447,7 @@ export default function MorningPage() {
                   className="text-[14px] mt-0.5"
                   style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
                 >
-                  {checkInResponse ? 'Your Cabinet has spoken. Come back tomorrow.' : 'Your routine is recorded.'}
+                  {checkInResponse ? 'Your Cabinet has spoken.' : 'Your routine is recorded.'}
                 </div>
               </div>
             </div>
@@ -466,6 +466,26 @@ export default function MorningPage() {
                 >
                   Retry
                 </button>
+              </div>
+            )}
+            {/* R8: a reply that ends in a question wants an answer; otherwise a
+                quiet pointer to tonight. Day one never ends by sending the
+                user away. */}
+            {checkInResponse && (
+              <div className="px-4 pb-4">
+                {checkInResponse.trim().endsWith('?') ? (
+                  <button
+                    onClick={() => { logEvent('checkin_continue_tapped', { kind: 'morning' }); router.push('/cabinet?focus=1'); }}
+                    className="w-full rounded-xl px-4 py-3 text-[13px] font-semibold"
+                    style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
+                  >
+                    Continue in the Cabinet
+                  </button>
+                ) : (
+                  <p className="text-[13px] italic" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}>
+                    Close the day with them tonight.
+                  </p>
+                )}
               </div>
             )}
           </GlassCard>

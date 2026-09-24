@@ -92,6 +92,24 @@ export async function upsertUserSettings(data: Partial<Omit<UserSettings, 'id' |
 // CHECK-INS (check_ins table)
 // ----------------------------------------------------------------
 
+// Yesterday's row, for the Home card (R8).
+export async function getYesterdayCheckin(): Promise<Record<string, unknown> | null> {
+  const userId = await getUserId()
+  if (!userId) return null
+  try {
+    const { data, error } = await supabase
+      .from('check_ins')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('check_in_date', yesterday())
+      .maybeSingle()
+    if (error) return null
+    return data ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getTodayCheckin(): Promise<Record<string, unknown> | null> {
   const userId = await getUserId()
   if (!userId) return null

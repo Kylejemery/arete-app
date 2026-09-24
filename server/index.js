@@ -2603,6 +2603,111 @@ No flattery. No summary of every field. No greeting, no sign-off, no headings, n
   }
 });
 
+// ─── Check-in follow-up: the Yesterday card (retention plan R8) ──────────────
+//
+// One line from a Cabinet member about a day's intention, at most 25 words,
+// ending in a question, stored on that day's check_ins row. Generated at
+// evening completion (the clients prime it) or at the first open the next
+// day. Exempt from the message cap; the in-memory daily ceiling only stops a
+// loop. The line is stored, so repeat calls for the same day cost nothing.
+
+const CHECKIN_FOLLOWUPS_PER_DAY = 6;
+const FOLLOWUP_MAX_WORDS = 25;
+
+function summarizeTasks(tasks) {
+  const list = Array.isArray(tasks) ? tasks : [];
+  const done = list.filter(t => t && t.done);
+  return {
+    done: done.length,
+    total: list.length,
+    doneTitles: done.map(t => String(t.title || '').trim()).filter(Boolean).slice(0, 4),
+  };
+}
+
+app.post('/api/checkin/followup', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const date = typeof req.body?.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.date) ? req.body.date : null;
+  if (!date) return res.status(400).json({ error: 'bad_date', message: 'date must be YYYY-MM-DD (the user\'s local date).' });
+
+  const { data: row, error } = await supabase
+    .from('check_ins')
+    .select('id, intention, morning_tasks, evening_tasks, morning_done, evening_done, followup_line, followup_counselor')
+    .eq('user_id', userId)
+    .eq('check_in_date', date)
+    .maybeSingle();
+  if (error) {
+    console.error('[/api/checkin/followup] read failed:', error.message);
+    return res.status(500).json({ error: 'read_failed' });
+  }
+  if (!row) return res.status(404).json({ error: 'no_checkin' });
+
+  const settings = await loadKnowThyselfSettings(userId);
+  const roster = await getCabinetRoster();
+  const chair = chairForSettings(settings, roster);
+  const name = settings?.user_name || 'they';
+  const intention = typeof row.intention === 'string' && row.intention.trim() ? row.intention.trim() : null;
+  const morning = summarizeTasks(row.morning_tasks);
+  const evening = summarizeTasks(row.evening_tasks);
+  const tasksDone = morning.done + evening.done;
+  const tasksTotal = morning.total + evening.total;
+  const payload = (line, counselor) => ({
+    date, intention, line, counselorId: counselor.id, counselorName: counselor.name, tasksDone, tasksTotal,
+  });
+
+  // Already written: return it. The stored counselor name is matched back to
+  // the roster so the id is right even if the cabinet changed since.
+  if (typeof row.followup_line === 'string' && row.followup_line.trim()) {
+    const stored = roster.find(c => c.name === row.followup_counselor) || chair;
+    return res.json(payload(row.followup_line.trim(), stored));
+  }
+  if (!consumeDailyUserCap(userId, CHECKIN_FOLLOWUPS_PER_DAY, res, 'followup_limit_reached')) return;
+
+  const facts = intention
+    ? `On ${date} ${name} wrote this intention for the day: "${intention}". They completed ${tasksDone} of ${tasksTotal} disciplines${morning.doneTitles.length ? ` (done: ${[...morning.doneTitles, ...evening.doneTitles].join(', ')})` : ''}.`
+    : `On ${date} ${name} set no written intention. They completed ${tasksDone} of ${tasksTotal} disciplines${morning.doneTitles.length || evening.doneTitles.length ? ` (done: ${[...morning.doneTitles, ...evening.doneTitles].join(', ')})` : ''}.`;
+  const system = `${chair.systemPrompt}\n\nYou are ${chair.name}. It is the morning after. Write exactly one line to ${name}, at most ${FOLLOWUP_MAX_WORDS} words, that holds them to what they said or did yesterday and ends with a question mark. ${intention ? 'Quote or closely paraphrase their own intention.' : 'Speak to what they did or left undone.'} No greeting, no name at the start, no praise for its own sake, no markdown, no dashes. Plain prose in your voice.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: HAIKU_MODEL,
+        max_tokens: 120,
+        system,
+        messages: [{ role: 'user', content: facts }],
+      }),
+    });
+    if (!response.ok) {
+      console.error('[/api/checkin/followup] Claude API error:', response.status, await response.text());
+      return res.status(502).json({ error: 'followup_failed' });
+    }
+    const data = await response.json();
+    let line = (data?.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').replace(/\s+/g, ' ').trim();
+    line = line.replace(/^["“]|["”]$/g, '').replace(/\s*[—–]\s*/g, ', ').trim();
+    if (!line) return res.status(502).json({ error: 'followup_failed' });
+    // Hard ceiling on length; a question mark is restored if the trim cut it.
+    const words = line.split(' ');
+    if (words.length > FOLLOWUP_MAX_WORDS + 5) line = words.slice(0, FOLLOWUP_MAX_WORDS).join(' ').replace(/[,.;:]$/, '') + '?';
+    if (!line.endsWith('?')) line = line.replace(/[.!]$/, '') + '?';
+
+    const { error: saveError } = await supabase
+      .from('check_ins')
+      .update({ followup_line: line, followup_counselor: chair.name })
+      .eq('id', row.id);
+    if (saveError) console.error('[/api/checkin/followup] save failed:', saveError.message);
+    console.log(`[/api/checkin/followup] ${chair.id} | ${date} | ${words.length} words | user ${userId}`);
+    return res.json(payload(line, chair));
+  } catch (err) {
+    console.error('[/api/checkin/followup] failed:', err.message || err);
+    return res.status(502).json({ error: 'followup_failed' });
+  }
+});
+
 const ONBOARDING_TURNS_PER_DAY = 40;
 
 app.post('/api/onboard-web', async (req, res) => {

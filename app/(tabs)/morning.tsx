@@ -460,12 +460,30 @@ export default function MorningScreen() {
           <View style={styles.checkinCard}>
             <Text style={styles.checkinLabel}>🏛️ The Cabinet</Text>
             <CounselorText text={checkinResponse} style={styles.checkinResponse} />
-            <TouchableOpacity
-              style={styles.checkinLink}
-              onPress={() => router.push({ pathname: '/(tabs)/cabinet', params: { morningMessage: checkinResponse } } as any)}
-            >
-              <Text style={styles.checkinLinkText}>View in Cabinet →</Text>
-            </TouchableOpacity>
+            {/* R8: a reply that ends in a question wants an answer; otherwise a
+                quiet pointer to tonight. */}
+            {checkinResponse.trim().endsWith('?') ? (
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={() => {
+                  logEvent('checkin_continue_tapped', { kind: 'morning' });
+                  router.push({ pathname: '/(tabs)/cabinet', params: { morningMessage: checkinResponse, cabinetSeed: '1' } } as any);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.continueButtonText}>Continue in the Cabinet</Text>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Text style={styles.closeTonight}>Close the day with them tonight.</Text>
+                <TouchableOpacity
+                  style={styles.checkinLink}
+                  onPress={() => router.push({ pathname: '/(tabs)/cabinet', params: { morningMessage: checkinResponse } } as any)}
+                >
+                  <Text style={styles.checkinLinkText}>View in Cabinet →</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
@@ -893,4 +911,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  continueButton: {
+    marginTop: 12,
+    backgroundColor: '#c9a84c',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  continueButtonText: { color: '#1a1a2e', fontSize: 14, fontWeight: '700' },
+  closeTonight: { color: '#888', fontSize: 13, fontStyle: 'italic', marginTop: 10 },
 });

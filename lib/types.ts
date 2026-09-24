@@ -79,6 +79,9 @@ export interface DailyCheckin {
   cabinet_evening_response: string | null;
   /** The one sentence the member commits to for the day (morning screen). */
   intention?: string | null;
+  // The Yesterday card (retention plan R8): a counselor's one line follow-up.
+  followup_line?: string | null;
+  followup_counselor?: string | null;
   daily_question_counselor?: string | null;
   daily_question_response?: string | null;
   created_at?: string;

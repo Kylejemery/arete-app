@@ -22,6 +22,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import { sendCheckInToCabinet } from '../../services/claudeService';
 import { logEvent } from '@/lib/events';
+import { primeTodaysFollowup } from '@/lib/yesterday';
 import {
   getTodayCheckin,
   upsertTodayCheckin,
@@ -181,6 +182,8 @@ export default function EveningScreen() {
     try { await AsyncStorage.setItem('arete:evening_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
     if (allDone) {
       await incrementStreak();
+      // Tomorrow's Home card (R8): generate the follow-up now, off the path.
+      primeTodaysFollowup();
       // The mobile evening routine does not call the Cabinet on completion
       // (the reply arrives through counselor lines), so cabinet_replied is
       // false here by construction. R8 changes what happens at this moment.
@@ -398,8 +401,8 @@ export default function EveningScreen() {
           {completedCount === totalCount && totalCount > 0 && (
             <View style={styles.allDoneContainer}>
               <Text style={styles.allDoneEmoji}>🌿</Text>
-              <Text style={styles.allDoneText}>Evening Complete</Text>
-              <Text style={styles.allDoneSubtext}>Sleep sound. You have lived this day well.</Text>
+              <Text style={styles.allDoneText}>Day sealed.</Text>
+              <Text style={styles.allDoneSubtext}>See you at sunrise.</Text>
             </View>
           )}
 

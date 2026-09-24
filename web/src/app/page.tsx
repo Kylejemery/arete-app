@@ -16,6 +16,8 @@ import { DAILY_QUOTES, getDailyPrompt } from '@/lib/quotes';
 import GlassCard from '@/components/GlassCard';
 import StreakArc from '@/components/StreakArc';
 import CabinetReplay from '@/components/CabinetReplay';
+import YesterdayCard from '@/components/YesterdayCard';
+import { fetchFollowup, localDate, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 
 // ── Counselor display metadata ────────────────────────────────────
 const COUNSELOR_META: Record<string, { name: string; initials: string }> = {
@@ -79,6 +81,8 @@ export default function HomePage() {
   const [streak, setStreak] = useState(0);
   const [dailyQuestion, setDailyQuestion] = useState<{ counselorSlug: string; response: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
+  // R8: yesterday's intention and a counselor's follow-up, top of Home.
+  const [yesterdayCard, setYesterdayCard] = useState<YesterdayCardData | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -119,6 +123,9 @@ export default function HomePage() {
       setDailyQuestion(dqCache);
       setAuthState('authenticated');
       setLoaded(true);
+      // Off the critical path: the card paints when the line arrives (the
+      // server may have to generate it on a first open).
+      fetchFollowup(localDate(-1)).then(setYesterdayCard).catch(() => {});
     }
     load();
   }, [router]);
@@ -289,6 +296,9 @@ export default function HomePage() {
         className="h-px mx-5 mt-4"
         style={{ background: 'linear-gradient(90deg, rgba(201,168,76,0.4), transparent)' }}
       />
+
+      {/* ── Yesterday card (R8): top position when yesterday has a check-in */}
+      {yesterdayCard && <YesterdayCard card={yesterdayCard} />}
 
       {/* ── Streak Row ────────────────────────────────────────────── */}
       <div className="px-5 py-5 flex gap-4 items-center">
