@@ -15,6 +15,14 @@ import {
 import { getKnowThyselfComplete, getUserSettings, markKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
 import { countFilled, logEvent } from '@/lib/events';
 import CounselorText from '../components/CounselorText';
+import KnownFactsSection from '../components/KnownFactsSection';
+import { KT_EXPLANATION, logFormFieldsFilled } from '@/lib/profileFields';
+
+const FEEDBACK_OPTIONS: { value: string; label: string }[] = [
+  { value: 'firm', label: 'Push me hard' },
+  { value: 'compassionate', label: 'Care first' },
+  { value: 'both', label: 'Both' },
+];
 
 export default function KnowThyselfScreen() {
   const router = useRouter();
@@ -29,6 +37,13 @@ export default function KnowThyselfScreen() {
   const [majorEvents, setMajorEvents] = useState('');
   const [futureSelfYears, setFutureSelfYears] = useState('');
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
+  // Activation Part 3: the rest of the registry's top five, and off-limits.
+  const [feedbackPreference, setFeedbackPreference] = useState('');
+  const [arriveReason, setArriveReason] = useState('');
+  const [lifeSituation, setLifeSituation] = useState('');
+  const [offLimits, setOffLimits] = useState('');
+  const [settingsSnapshot, setSettingsSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [factsReload, setFactsReload] = useState(0);
   // The chair's last reflection on this profile (R6), shown again here.
   const [reflection, setReflection] = useState<{ text: string; counselor: string | null } | null>(null);
   // R7: three questions first. The rest of the form opens with "Tell your
@@ -69,6 +84,11 @@ export default function KnowThyselfScreen() {
     setMajorEvents(settings.kt_major_events || '');
     setFutureSelfYears(settings.future_self_years ? String(settings.future_self_years) : '');
     setFutureSelfDescription(settings.future_self_description || '');
+    setFeedbackPreference(settings.feedback_preference || '');
+    setArriveReason(settings.app_usage_intent || '');
+    setLifeSituation(settings.kt_life_situation || '');
+    setOffLimits(settings.kt_off_limits || '');
+    setSettingsSnapshot(settings as unknown as Record<string, unknown>);
     setReflection(settings.kt_reflection ? { text: settings.kt_reflection, counselor: settings.kt_reflection_counselor ?? null } : null);
     const complete = await getKnowThyselfComplete();
     setAlreadyComplete(complete);
@@ -77,7 +97,7 @@ export default function KnowThyselfScreen() {
 
   const saveProfile = async () => {
     try {
-      await upsertUserSettings({
+      const update = {
         kt_background: background.trim(),
         kt_identity: identity.trim(),
         kt_goals: goals.trim(),
@@ -87,8 +107,16 @@ export default function KnowThyselfScreen() {
         kt_patterns: patterns.trim(),
         kt_major_events: majorEvents.trim(),
         future_self_description: futureSelfDescription.trim(),
+        feedback_preference: feedbackPreference || null,
+        app_usage_intent: arriveReason.trim(),
+        kt_life_situation: lifeSituation.trim(),
+        kt_off_limits: offLimits.trim(),
         ...(futureSelfYears.trim() ? { future_self_years: parseInt(futureSelfYears.trim()) } : {}),
-      });
+      };
+      await upsertUserSettings(update);
+      logFormFieldsFilled(settingsSnapshot, update);
+      setSettingsSnapshot({ ...(settingsSnapshot || {}), ...update });
+      setFactsReload(n => n + 1);
       // Saving the form completes Know Thyself once goals plus two other
       // answers are filled (the rule lives in markKnowThyselfComplete). That
       // clears the Home banner, the Scrolls empty state, and the "unprofiled"
@@ -107,7 +135,7 @@ export default function KnowThyselfScreen() {
         // The payoff: the chair says what the Cabinet now sees (R6).
         router.push('/kt-reflection' as any);
       } else {
-        Alert.alert('✅ Profile Saved', 'Saved. Add your goals and at least two more answers to complete Know Thyself.');
+        Alert.alert('✅ Profile Saved', 'Saved. Your Cabinet will fill in the rest as you talk.');
       }
     } catch (e) {
       console.error(e);
@@ -143,6 +171,10 @@ export default function KnowThyselfScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <Text style={styles.explanation}>{KT_EXPLANATION}</Text>
+
+          <KnownFactsSection settings={settingsSnapshot} reloadKey={factsReload} />
+
           <Text style={styles.intro}>
             {alreadyComplete
               ? 'Your profile gives the Cabinet deep context about who you are. Update it any time. Your counselors use it from your very next message.'
@@ -215,6 +247,66 @@ export default function KnowThyselfScreen() {
 
           {expanded ? (
             <>
+          {renderSection('How you want to be challenged', (
+            <View style={styles.chipRow}>
+              {FEEDBACK_OPTIONS.map(o => (
+                <TouchableOpacity
+                  key={o.value}
+                  style={[styles.chip, feedbackPreference === o.value && styles.chipActive]}
+                  onPress={() => { markStarted(); setFeedbackPreference(feedbackPreference === o.value ? '' : o.value); }}
+                >
+                  <Text style={[styles.chipText, feedbackPreference === o.value && styles.chipTextActive]}>{o.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ))}
+
+          {renderSection('What brought you to Arete', (
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              placeholder="I want to stop drifting through my days."
+              placeholderTextColor="#555"
+              onFocus={markStarted}
+              value={arriveReason}
+              onChangeText={setArriveReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+          ))}
+
+          {renderSection('Your life right now', (
+            <>
+              <Text style={styles.label}>Work, home, who depends on you. As much or as little as you like.</Text>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                placeholder="Two kids, a new job, and not enough sleep."
+                placeholderTextColor="#555"
+                onFocus={markStarted}
+                value={lifeSituation}
+                onChangeText={setLifeSituation}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </>
+          ))}
+
+          {renderSection('Anything your Cabinet should never bring up?', (
+            <TextInput
+              style={[styles.input, styles.multilineInput]}
+              placeholder="Optional."
+              placeholderTextColor="#555"
+              onFocus={markStarted}
+              value={offLimits}
+              onChangeText={setOffLimits}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              maxLength={500}
+            />
+          ))}
+
           {renderSection('Background & Life Story', (
             <>
               <Text style={styles.label}>
@@ -317,7 +409,7 @@ export default function KnowThyselfScreen() {
           ) : (
             <TouchableOpacity style={styles.moreButton} onPress={() => setExpanded(true)} activeOpacity={0.8}>
               <Text style={styles.moreButtonText}>Tell your Cabinet more</Text>
-              <Text style={styles.moreButtonSub}>Background, identity, strengths, defining moments, your future self.</Text>
+              <Text style={styles.moreButtonSub}>How to challenge you, why you came, your life now, background, strengths, your future self.</Text>
             </TouchableOpacity>
           )}
 
@@ -369,6 +461,17 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 40,
   },
+  explanation: {
+    fontSize: 14,
+    color: '#e0e0e0',
+    lineHeight: 21,
+    marginBottom: 16,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chip: { borderWidth: 1, borderColor: '#c9a84c55', borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12 },
+  chipActive: { backgroundColor: '#c9a84c', borderColor: '#c9a84c' },
+  chipText: { color: '#c9a84c', fontSize: 13 },
+  chipTextActive: { color: '#1a1a2e', fontWeight: '700' },
   intro: {
     fontSize: 14,
     color: '#aaa',

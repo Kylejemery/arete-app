@@ -1,3 +1,4 @@
+import { getProfileFacts, topFiveFilled, type ProfileFact } from './profileFields'
 import { supabase } from './supabase'
 import { getDevPremiumOverride } from './devMode'
 import { triggerScrollGeneration } from './scrolls'
@@ -494,10 +495,26 @@ export async function upsertCalendarData(calendarData: Record<string, { morning:
 // COUNSELORS
 // ----------------------------------------------------------------
 
-const FUTURE_SELF_SLUG = 'futureSelf';
+export const FUTURE_SELF_SLUG = 'futureSelf';
 
 // Default cabinet slugs — matches is_default=true counselors in the DB
 const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
+
+// Counselors a free tier user may talk to, in the counselors-table spelling
+// the web writes to cabinet_members. Mirror of FREE_COUNSELOR_SLUGS in
+// lib/db.ts (mobile, short spellings) and server/lib/free-counselors.js,
+// which accepts both spellings. Change all three together when a counselor
+// moves across the paywall (Epictetus moved behind it on 2026-08-28).
+export const FREE_COUNSELOR_SLUGS = ['marcus-aurelius', 'david-goggins', 'theodore-roosevelt'] as const;
+// Marcus chairs every Cabinet (retention plan decision D5).
+export const CABINET_CHAIR_SLUG = 'marcus-aurelius';
+// What web setup writes for a new member (retention plan R10): the three
+// free counselors plus Future Self.
+export const DEFAULT_WEB_CABINET: string[] = [...FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUG];
+
+export function isFreeCounselorSlug(slug: string): boolean {
+  return (FREE_COUNSELOR_SLUGS as readonly string[]).includes(slug) || slug === FUTURE_SELF_SLUG;
+}
 
 // Fetch all counselors from the database
 export async function getCounselors(): Promise<Counselor[]> {
@@ -571,7 +588,7 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 }
 
 // Check if current user is premium.
-// Unlocked when:  tier === 'premium' | tier === 'scholar' | is_premium === true
+// Unlocked when:  tier === 'premium' | 'pro' | 'scholar' | is_premium === true
 // Locked when:    tier === 'free' AND is_premium === false (or both absent)
 export async function getIsPremium(): Promise<boolean> {
   // Dev mode override
@@ -588,7 +605,7 @@ export async function getIsPremium(): Promise<boolean> {
   if (error) return false;
   const tier: string = data?.tier ?? 'free';
   const isPrem: boolean = data?.is_premium ?? false;
-  return isPrem || tier === 'premium' || tier === 'scholar';
+  return isPrem || tier === 'premium' || tier === 'pro' || tier === 'scholar';
 }
 
 // ----------------------------------------------------------------
@@ -1049,25 +1066,17 @@ export async function saveOnboardingProfile(profile: OnboardingProfile): Promise
   return markKnowThyselfComplete()
 }
 
-// The one definition of "Know Thyself complete" (retention plan R3): goals,
-// plus at least two of the other answers. Every path that collects answers
-// (form and conversation here, form, wizard and conversation on mobile) calls
-// markKnowThyselfComplete, which applies this rule; every nudge keys on the
-// resulting profiles.know_thyself_complete flag and nothing else. Mirrors
-// lib/db.ts in the mobile app.
-export const KT_OTHER_FIELDS = [
-  'kt_background', 'kt_identity', 'kt_strengths', 'kt_weaknesses',
-  'kt_patterns', 'kt_major_events', 'future_self_description',
-] as const
-export const KT_MIN_OTHER_FIELDS = 2
-
-type KtFields = Partial<Pick<UserSettings, 'kt_goals' | (typeof KT_OTHER_FIELDS)[number]>>
-
-export function isKnowThyselfProfileComplete(s: KtFields | null | undefined): boolean {
-  if (!s) return false
-  const filled = (v: string | null | undefined) => typeof v === 'string' && v.trim().length > 0
-  if (!filled(s.kt_goals)) return false
-  return KT_OTHER_FIELDS.filter(k => filled(s[k])).length >= KT_MIN_OTHER_FIELDS
+// The one definition of "Know Thyself complete" (activation plan, Part 3):
+// the five highest priority registry fields (lib/profileFields.ts) are
+// filled, by any source: the form, an answer to a counselor, a confirmed or
+// an inferred fact. A database trigger on user_profile_facts applies the same
+// rule when the Cabinet fills a field, so the flag is set whichever way the
+// fifth field arrives. The flag is never unset.
+export function isKnowThyselfProfileComplete(
+  s: Record<string, unknown> | null | undefined,
+  facts: ProfileFact[] = [],
+): boolean {
+  return topFiveFilled(facts, (s as Record<string, unknown> | null) ?? null)
 }
 
 /**
@@ -1085,14 +1094,15 @@ export async function markKnowThyselfComplete(): Promise<boolean> {
   try {
     const { data } = await supabase
       .from('user_settings')
-      .select('user_name, kt_goals, kt_background, kt_identity, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_description')
+      .select('user_name, kt_goals, kt_weaknesses, feedback_preference, app_usage_intent, kt_life_situation')
       .eq('user_id', userId)
       .maybeSingle()
     settings = (data as UserSettings | null) ?? null
   } catch (e) {
     console.error('markKnowThyselfComplete read exception:', e)
   }
-  if (!isKnowThyselfProfileComplete(settings)) return false
+  const facts = await getProfileFacts()
+  if (!isKnowThyselfProfileComplete(settings as unknown as Record<string, unknown> | null, facts)) return false
 
   try {
     const { error } = await supabase

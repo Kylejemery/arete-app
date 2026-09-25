@@ -13,9 +13,14 @@ interface CounselorLibraryProps {
   selectedSlugs: string[];
   onToggle: (slug: string) => void;
   maxSelections?: number;
+  // Free members (retention plan R10): every counselor outside this set is
+  // shown locked, and a tap on a locked one calls onLockedTap. Omit for a
+  // fully unlocked library.
+  isUnlocked?: (slug: string) => boolean;
+  onLockedTap?: (slug: string) => void;
 }
 
-export default function CounselorLibrary({ selectedSlugs, onToggle, maxSelections = 5 }: CounselorLibraryProps) {
+export default function CounselorLibrary({ selectedSlugs, onToggle, maxSelections = 5, isUnlocked, onLockedTap }: CounselorLibraryProps) {
   const [counselors, setCounselors] = useState<Counselor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +44,11 @@ export default function CounselorLibrary({ selectedSlugs, onToggle, maxSelection
   const filtered = activeCategory === 'all'
     ? counselors
     : counselors.filter(c => c.category === activeCategory);
+  // Unlocked counselors first, so a free member sees their own three at the
+  // top and the locked library beneath.
+  const ordered = isUnlocked
+    ? [...filtered].sort((a, b) => Number(isUnlocked(b.slug)) - Number(isUnlocked(a.slug)))
+    : filtered;
 
   return (
     <div>
@@ -66,15 +76,20 @@ export default function CounselorLibrary({ selectedSlugs, onToggle, maxSelection
 
       {/* Counselor grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(counselor => (
-          <CounselorCard
-            key={counselor.slug}
-            counselor={counselor}
-            isSelected={selectedSlugs.includes(counselor.slug)}
-            isDisabled={selectedSlugs.length >= maxSelections && !selectedSlugs.includes(counselor.slug)}
-            onToggle={onToggle}
-          />
-        ))}
+        {ordered.map(counselor => {
+          const locked = isUnlocked ? !isUnlocked(counselor.slug) : false;
+          return (
+            <CounselorCard
+              key={counselor.slug}
+              counselor={counselor}
+              isSelected={selectedSlugs.includes(counselor.slug)}
+              isDisabled={selectedSlugs.length >= maxSelections && !selectedSlugs.includes(counselor.slug)}
+              isLocked={locked}
+              onToggle={onToggle}
+              onLockedTap={onLockedTap}
+            />
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (

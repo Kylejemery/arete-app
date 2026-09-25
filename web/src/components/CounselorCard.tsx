@@ -6,7 +6,12 @@ interface CounselorCardProps {
   counselor: Counselor;
   isSelected: boolean;
   isDisabled: boolean;
+  // Premium counselor shown to a free member (retention plan R10): the card
+  // stays visible with a lock, and a tap goes to onLockedTap instead of
+  // toggling.
+  isLocked?: boolean;
   onToggle: (slug: string) => void;
+  onLockedTap?: (slug: string) => void;
 }
 
 const categoryBadgeClass: Record<string, string> = {
@@ -24,27 +29,34 @@ const challengeBadgeClass: Record<string, string> = {
   gentle: 'bg-green-900/30 text-green-400',
 };
 
-export default function CounselorCard({ counselor, isSelected, isDisabled, onToggle }: CounselorCardProps) {
+export default function CounselorCard({ counselor, isSelected, isDisabled, isLocked = false, onToggle, onLockedTap }: CounselorCardProps) {
   const handleClick = () => {
+    if (isLocked) {
+      onLockedTap?.(counselor.slug);
+      return;
+    }
     if (!isDisabled) {
       onToggle(counselor.slug);
     }
   };
+  const inert = isDisabled && !isLocked;
 
   return (
     <div
       onClick={handleClick}
       role="button"
-      tabIndex={isDisabled ? -1 : 0}
+      tabIndex={inert ? -1 : 0}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
       aria-pressed={isSelected}
-      aria-disabled={isDisabled}
+      aria-disabled={inert}
+      aria-label={isLocked ? `${counselor.name}, Premium counselor` : undefined}
       className={`
         relative p-4 rounded-lg transition-all
         ${isSelected
           ? 'bg-arete-surface border-2 border-arete-gold ring-1 ring-arete-gold/30'
           : 'bg-arete-surface border border-arete-border'}
-        ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-arete-gold/60'}
+        ${inert ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-arete-gold/60'}
+        ${isLocked ? 'opacity-60' : ''}
       `}
     >
       {/* Badges row */}
@@ -55,6 +67,11 @@ export default function CounselorCard({ counselor, isSelected, isDisabled, onTog
         <span className={`text-xs px-2 py-0.5 rounded-full capitalize ${challengeBadgeClass[counselor.challenge_level] ?? 'bg-arete-border text-arete-muted'}`}>
           {counselor.challenge_level}
         </span>
+        {isLocked && (
+          <span className="ml-auto text-xs px-2 py-0.5 rounded-full bg-arete-gold/15 text-arete-gold font-medium">
+            🔒 Premium
+          </span>
+        )}
       </div>
 
       {/* Name */}

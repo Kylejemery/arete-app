@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GARDEN_TITLE } from '@/lib/exhibits';
+import { hasUnseenInferredFacts } from '@/lib/profileFields';
 
 interface NavItem {
   href: string;
@@ -96,6 +97,17 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [showMore, setShowMore] = useState(false);
+  // A small dot on Know Thyself while the Cabinet has learned something the
+  // user has not looked at yet (activation plan, Part 3f). No push for this.
+  const [ktDot, setKtDot] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    hasUnseenInferredFacts().then(v => { if (!cancelled) setKtDot(v); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [pathname]);
+  const dotFor = (href: string) => (ktDot && href === '/profile'
+    ? <span aria-label="New" className="inline-block w-1.5 h-1.5 rounded-full ml-1 align-middle" style={{ background: '#c9a84c' }} />
+    : null);
 
   const isActive = (href: string) =>
     !href.startsWith('/') ? false
@@ -176,7 +188,7 @@ export default function Sidebar() {
                       />
                     )}
                     <span className="text-base leading-none">{item.emoji}</span>
-                    <span className="font-medium flex-1 min-w-0 leading-tight">{item.label}</span>
+                    <span className="font-medium flex-1 min-w-0 leading-tight">{item.label}{dotFor(item.href)}</span>
                     {item.external && (
                       <span
                         className="text-[10px] leading-none opacity-50"
@@ -349,7 +361,7 @@ export default function Sidebar() {
                       className="text-center leading-tight"
                       style={{ fontFamily: 'var(--font-mono, monospace)' }}
                     >
-                      {item.short ?? item.label}
+                      {item.short ?? item.label}{dotFor(item.href)}
                     </span>
                   </>
                 );

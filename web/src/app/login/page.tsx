@@ -1,5 +1,6 @@
 'use client'
 
+import { AGE_BANDS, UNDER_13_MESSAGE, savePendingAgeBand, setMyAgeBand, type AgeBand } from '@/lib/ageBand'
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -16,6 +17,9 @@ function LoginForm() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  // Run B, Part B5: the age band is asked at signup; under 13 stops here.
+  const [ageBand, setAgeBand] = useState<AgeBand | null>(null)
+  const [underAge, setUnderAge] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -71,8 +75,20 @@ function LoginForm() {
       setError('Password must be at least 6 characters.')
       return
     }
+    if (!ageBand) {
+      setError('Please choose your age range.')
+      return
+    }
+    if (ageBand === 'under_13') {
+      // No account is created, and nothing about this person is stored.
+      setUnderAge(true)
+      return
+    }
     setLoading(true)
     try {
+      // Kept until a signed-in page applies it (the age gate), whether or
+      // not email confirmation is needed first.
+      savePendingAgeBand(ageBand)
       const { data, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -85,6 +101,7 @@ function LoginForm() {
         // right after creating their account. The event is awaited because
         // the full page navigation below would cancel a pending insert.
         await logEventNow('signup_completed', { method: 'email', invited: isInvite })
+        await setMyAgeBand(ageBand)
         window.location.href = safeRedirectTo()
       } else {
         setMessage('Account created! Check your email to confirm your account, then sign in.')
@@ -303,6 +320,29 @@ function LoginForm() {
                     className="w-full bg-arete-surface border border-arete-border rounded-xl px-4 py-3 text-arete-text caret-arete-text placeholder-arete-muted focus:outline-none focus:border-arete-gold transition-colors"
                     required
                   />
+                </div>
+              )}
+
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">
+                    Your age
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {AGE_BANDS.map(b => (
+                      <button
+                        type="button"
+                        key={b.value}
+                        onClick={() => { setAgeBand(b.value); setUnderAge(false) }}
+                        className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${ageBand === b.value ? 'bg-arete-gold text-arete-bg border-arete-gold font-semibold' : 'border-arete-border text-arete-text hover:border-arete-gold'}`}
+                      >
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                  {underAge && (
+                    <p className="text-sm mt-3 leading-relaxed" style={{ color: '#e6eef8' }}>{UNDER_13_MESSAGE}</p>
+                  )}
                 </div>
               )}
 

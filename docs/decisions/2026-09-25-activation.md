@@ -1,0 +1,198 @@
+# Activation plan decisions, 2026-09-25
+
+This file records the judgement calls made while carrying out the activation prompt without stopping to ask. Each entry gives what was chosen, why, and the alternative.
+
+## Process
+
+**D0.1 Branch.** The prompt says to commit to `main` only. This session runs in a managed cloud environment whose harness assigns the development branch `claude/optimistic-fermat-xyt1j9` and forbids pushing elsewhere without explicit permission.
+- **Chosen:** every Part is committed to that branch, one commit per Part, pushed once at the end, with a draft PR into `main`.
+- **Why:** it is the conservative option. Kyle merges it and gets the same history on `main`.
+- **Alternative:** pushing to `main` directly.
+
+**D0.2 PowerShell rules.** The container is Linux, so the PowerShell-specific rules (no `&&`, `Select-String`) do not apply. Everything else in the operating rules is followed.
+
+**D0.3 Unapplied retention migrations.** Five committed migrations were never applied to the project (see the recon).
+- **Chosen:** apply only `20260921120000_product_events.sql`.
+  - Part 2 needs an events table, and this one is already the house standard (`logEvent` on three surfaces).
+  - It is purely additive: two tables, two nullable columns, and RLS that is insert-own only.
+- **Not applied:**
+  - `20260925100000_email_sends.sql`. Applying it turns on outbound lifecycle email to real users. That is Kyle's call.
+  - `20260922100000_dispatch_read_at.sql`, `20260923100000_kt_reflection.sql` and `20260924100000_checkin_followup.sql`. They are left for Kyle and listed in the report.
+- **Alternative:** apply all five, or none. Applying none would have meant creating a second events table next to one the code already writes.
+
+## Part 1
+
+**D1.1 Why the job runs twice.** The Railway service `coverage-gap-agent` has its config-as-code path set to `/server/railway.agent.json`, the journal agent's file, so it ran the journal agent at 09:00 daily. The fix has two parts:
+- **Railway:** the path was changed to `/server/railway.gap-agent.json` through the Railway API. This takes effect on that service's next deploy.
+- **Code:** the agent now claims a run through `claim_agent_run('journal-analysis', '20 hours')`. A second scheduler firing the same morning exits without doing anything, so this holds even before the Railway change deploys, or if the path drifts again.
+- **Alternative:** Railway only, with no in-code guard.
+
+**D1.2 What "analyses created since the last successful run" means.** `journal_analysis` is upserted per `(user, week)`, so a flag raised on a Wednesday lands on a row created on Monday.
+- **Chosen:** enqueue flagged analyses written by this run, plus a sweep for flagged analyses with `created_at` after the last successful run that have no queue row. The sweep catches a run that crashed between the store and the enqueue.
+- **Dedupe:** "never enqueue an analysis that already has a row" is guaranteed by the unique index and `on conflict do nothing`.
+- **Why:** reading the rule literally (only rows whose `created_at` is after the last run) would silently drop a mid-week distress flag. That is the one failure this queue exists to prevent.
+
+**D1.3 Flags are sticky within a week.** Once an analysis for a week is flagged, a later re-run that week can no longer clear `distress_flagged`. A flagged analysis in the review queue could otherwise become deliverable as an insight the next morning.
+- **Alternative:** keep re-evaluating the flag daily.
+
+**D1.4 Open analyses after the collapse.** The prompt expected "two pending, one escalated". The collapse rule it specifies (escalated > reviewed > dismissed > pending) gives:
+- Two pending: `1497f6ff` and `6540a17c`.
+- Two escalated: `032cef37` and `4321568f`. The second was escalated on 9/15 and marked reviewed on 9/20. Escalated outranks reviewed, so it stays escalated.
+- **Chosen:** the rule as written. The discrepancy is reported rather than overridden by hand.
+
+**D1.5 Forward-only status.** The status may only move forward in the order pending → dismissed → reviewed → escalated.
+- Moving forward is allowed, for example dismissed → reviewed, or reviewed → escalated.
+- Moving backward is refused by a trigger. The admin route also refuses it, with a 409, before the database is hit.
+
+**D1.6 Support card.**
+- **Where:** it is shown on the Journal tab on mobile and the Journal page on web.
+- **When:** for 7 days after the analysis's `created_at`, when the user has any `distress_flagged` analysis.
+- **Dismissal:** a dismissal is stored locally per analysis id.
+- **Data exposure:** the server endpoint returns only `{ show, key, until }`. It returns no notes and does not say why the card is shown.
+
+## Part 2
+
+**D2.1 `speaker_slugs`, not `counselor_slugs`.** `counselor_slugs` is the thread's identity: null is the solo group Cabinet thread and `[slug]` is a 1:1 thread. The one-row-per-thread trigger and every client look threads up by it. Writing the speakers into it would fork all 105 group threads into new rows on the next save.
+- **Chosen:** a new column, `speaker_slugs`, recomputed by a trigger from `messages` on every save. It needs no client release and fills the same analytics need.
+- **Alternative:** repurpose `counselor_slugs`, which would break threading.
+
+**D2.2 `check_ins.type` holds `morning`, `evening`, `both`, or null.** Rows have been one per day since the parity migration. The original values were `morning` and `evening` per row. `both` covers a day where both halves are done. A trigger sets it on every save, so installed builds that never write the column are covered too.
+
+**D2.3 `reflection_answer` is dead, not broken.** No screen writes it. The evening reflection box writes `stoic_answer`.
+- Four prompt builders sent "EVENING REFLECTION: (not answered)" to the model on every check-in, and the Enchiridion agent fell back to the column.
+- All of those references are removed, and the evening check-in prompt now labels `stoic_answer` as the evening reflection.
+- The column stays in place with a comment saying it is dead.
+
+**D2.4 Where "conversation ended after one exchange" is detected.** Threads are persistent, so a "conversation" is a session: messages with no gap over 30 minutes.
+- An hourly cycle, riding on the existing `broadcast-delivery-agent` cron, processes threads idle for 30 minutes or more.
+- It logs `conversation_ended {user_turns, thread}` for every session, and `conversation_ended_one_exchange {thread}` when the user wrote once and got a reply. The first event gives the denominator.
+- The events go to the existing `product_events`, not a new `app_events` table (see D0.3).
+- **Alternative:** a new Railway cron service. The prompt prefers hooking into an existing cycle. The dispatch-delivery cron was not used because it runs as two duplicate Railway services (see the report).
+
+**D2.5 The "Know Thyself field filled" event ships with Part 3.** It is keyed by registry field key and source, and the registry is created in Part 3.
+
+## Part 3
+
+**D3.1 Registry keys, and what counts as sensitive.**
+- **Keys:** there was no registry, so one was created: `server/lib/profile-fields.js`, mirrored in `lib/profileFields.ts`, `web/src/lib/profileFields.ts` and SQL `profile_field_columns()`. A test checks that all copies carry the same keys.
+- **Sensitive fields:** `life_situation` (family and relationships), `background` (life story, which routinely includes loss and family), `major_events` (loss, health), and `off_limits`.
+- **The cost:** `life_situation` is in the top five but can never be inferred. So the top-five completion flag needs the user to state it, either in the form or when a counselor asks. That is intended.
+- **Alternative:** mark only `major_events` as sensitive. Rejected as too permissive.
+
+**D3.2 `user_settings` stays the store of what the user wrote.** Installed app builds read and write `user_settings` directly. Two triggers keep it in sync with `user_profile_facts`:
+- A form edit on any client becomes a `form` fact.
+- A value the user confirmed or answered is mirrored back into the column.
+- Inferred values are never mirrored, so every older reader (client prompts, the Enchiridion agent) sees only what the user said.
+
+**D3.3 The backfill excludes the admin account** (rule 9). The admin's form answers remain readable, because the prompt builder falls back to `user_settings` for any field without a fact. They become facts on the admin's next form save.
+
+**D3.4 Facts reach prompts only for a JWT-verified user.** `/api/chat/counselor` accepts a body `userId` as a fallback identity for old builds. The existing Know Thyself block already trusts that fallback, and the report flags it. The new facts block, the tentative facts and the asks use only `req.areteVerifiedUserId`.
+
+**D3.5 Extraction runs in the hourly conversation cycle** (Part 2's hook on the broadcast cron), on sessions idle for 30 minutes or more.
+- It reads that day's check-in text (intention, evening reflection) only alongside a conversation from that day, and marks the check-in `profile_extracted_at`.
+- Check-ins from users with no conversation are not read.
+- **Alternative:** a separate pass over all check-ins. That is a larger surface for a first version.
+
+**D3.6 The ask rules.**
+- **Who asks:** the closing voice of the turn, the last counselor in the relay. By then the user's topic has been addressed.
+- **What limits it:**
+  - An ask is recorded as "offered" when the instruction is put in the prompt. On the next user turn, a Haiku check decides whether the counselor actually asked.
+  - If the counselor did not ask, the offer is released (`asked_at` cleared), so the 48-hour budget is not spent.
+  - If the user deflected, `ask_declined_at` is set, which starts the 14-day cooldown.
+- **Relevance:** relevance to the topic comes first, then priority. A sensitive field is asked about only when the user's own message touches it.
+- **Distress:** shown by a keyword check on the session, or by a flag in the last 14 days. Either blocks asks.
+
+**D3.7 Completion.**
+- `profiles.know_thyself_complete` is now set when the top five fields are filled by any source.
+- A trigger on `user_profile_facts` applies the rule, and so do the clients' `markKnowThyselfComplete`.
+- The old rule (goals plus two other answers) is retired.
+- The form gained the three top-five fields it lacked (how to be challenged, what brought you, life now) and the off-limits field.
+- The completeness score (`computeCompleteness` / `completenessScore`) is computed, not stored.
+
+**D3.8 Signup and nudges.**
+- **Mobile email signup** now goes to one optional screen (name and off-limits, both skippable), then straight to the Cabinet. The 11-step wizard is no longer in the signup path but still exists at `/setup`.
+- **Web signup** keeps its required username step, because the web app keys every page on `user_name`. The step gains the optional off-limits field and now lands on `/cabinet`.
+- **Nudges removed:** the Home and Cabinet "complete your Know Thyself" prompts, on both platforms. The form remains reachable from Settings, the web sidebar and the Know Thyself screen.
+- **Alternative:** keep the nudges. The prompt says the form is no longer a prompted step.
+
+## Part 4
+
+**D4.1 What "the first assistant turn" means.** It is the first reply in a conversation, where a conversation is a session: no user turn in the thread in the last 30 minutes.
+- For a verified user this is read from the stored thread.
+- For old builds that send no JWT, the only signal is a single user message in the payload.
+
+**D4.2 One voice on the first turn.** In the group Cabinet, the director picks one to three voices. On the first turn only its first pick replies, so the opening is one short reply ending in one question, rather than three replies each ending in a question.
+- **Alternative:** give every voice the first-reply rules. That would still stack two or three questions.
+- The Know Thyself ask is suppressed on the first turn. It is suppressed anyway before the third user turn.
+
+## Part 5
+
+**D5.1 Whose voice asks.**
+- **Order:** today's daily-question counselor (`check_ins.daily_question_counselor`), then the first member of the user's Cabinet, then a neutral "Your Cabinet".
+- **Where the questions live:** there is one fixed question per counselor, in `lib/intentionQuestion.ts`, mirrored in `web/src/lib/intentionQuestion.ts`. Each is phrased around "what would make you proud tonight".
+- **Behavior:** the input, the debounced save to `check_ins.intention`, and the daily question are unchanged.
+- **Alternative:** generate the question with a model each morning. That adds a model call and latency to a screen the prompt did not ask to make slower.
+
+## Part 6
+
+**D6.1 How the counselor offers a goal.**
+- The closing voice is told that, if the person stated a concrete intention, it may end with one sentence offering to save it, plus a marker line: `[[GOAL|title|CATEGORY|date]]`.
+- The server strips every marker, and returns the offer to the client as a card with the title, category (the Journal tab's 8) and target date, all editable.
+- Accepting creates the goal server-side with `source = 'cabinet'` and `counselor` set.
+- **Why:** there is no extra model call and no added latency, and a stated intention is judged by the model that just read the conversation.
+- **Alternative:** a Haiku classifier on every turn.
+
+**D6.2 Limits.** At most one goal offer per conversation (session). There are no offers on the first turn, in distress, or for callers without a verified JWT. Nothing is created without a tap on Save goal.
+
+**D6.3 One commit carries the shared offer mechanism.** Goal and scroll offers share `cabinet_offers`, the offer card (mobile and web) and `POST /api/cabinet/offers/:id/respond`. That shared code is in the Part 6 commit. The Part 9 commit carries the scroll-specific tests and decisions.
+
+## Part 9
+
+**D9.1 Which counselor gets the scroll.** The existing scroll pipeline only has voices for Marcus, Epictetus and Seneca, and `scrolls.counselor` is check-constrained.
+- The scroll is attributed to whichever of those three spoke most in the conversation.
+- If none of them spoke, the pipeline's own topic-based assignment chooses.
+- **Alternative:** add voices for every counselor to the scroll pipeline. That is a larger change to a surface the prompt did not ask to change.
+
+**D9.2 The offer.**
+- **When:** at least six messages in the conversation (user and counselor turns, this turn's replies included). At most one offer per user per 72 hours. Never in the same turn as a goal offer, and never in distress.
+- **The card:** "Would you like a scroll on this?"
+- **On Yes:** the server writes a one-sentence, general-terms topic from the person's own turns with Haiku, then writes the scroll through the same generation function as `POST /api/scrolls/generate`, with `request_type = 'requested'`. It appears in Scrolls when ready.
+
+## Part 7
+
+**D7.1 Paywall copy for a daily limit.**
+- **The three limit sources** (`cabinet_daily_limit`, `cabinet_limit_card`, `counselor_daily_limit`) now read "Keep talking with <counselor>". The counselor is the one who last spoke, or "your Cabinet".
+- **The promise:** "saved exactly where you left off, your unsent message included".
+- **Resuming:** the conversation is already saved. The unsent message is now kept per thread (AsyncStorage on mobile, localStorage on web) and restored into the composer.
+  - Mobile returns to the conversation after a successful web checkout.
+  - The web `/upgrade?status=success` screen links back to the conversation.
+- Prices and tiers are unchanged.
+
+**D7.2 A bug fixed along the way.** The mobile 1:1 counselor chat turned a server 403 `daily_limit_reached` into the counselor's reply, "temporarily unavailable (Error 403)", and saved it into the thread. It now raises `DailyLimitError`. The chat keeps the message and opens the paywall for that counselor.
+
+**D7.3 Why only 8 of 70 insights were delivered** (admin excluded). There is no delivery job. Insights are delivered when a client pulls `GET /api/user/insight`, which marks them delivered. Three causes:
+- **11 reset:** these were delivered, and the next morning's upsert reset `delivered` to false. The agent no longer rewrites a delivered analysis. A migration restored the 11, so 19 of 70 are now delivered.
+- **47 never fetched:** only the mobile Journal tab pulls insights, and the web app had no insight card. The web Journal page now has one.
+- **4 distress-flagged:** correctly held.
+
+**D7.4 Distress in the insight path.**
+- The endpoint returns nothing while the user has a distress flag from the last 14 days, or when their latest analysis is flagged.
+- Before this change, a flagged week was answered with the previous week's insight, which a free user saw as a teaser with an upsell.
+- **Free tier** now receives only the first paragraph from the server, or the first two sentences when the insight is one paragraph, with `teaser: true`. The full text no longer reaches the device.
+
+## Part 8
+
+**D8.1 What drifted.** 19 active manual Premium rows had profiles reading free: 18 with `is_premium` false, and 1 with `is_premium` true but tier free.
+- These are the 2026-08-25 grandfather grants: `current_period_end` is null and they were created by the tier consolidation migration.
+- That migration's own update set those profiles to premium. Their `updated_at` is also 2026-08-25, so something reset them to free later that day.
+- Nothing in the repo does that: the grant expiry function skips rows with a null period end, and the Stripe webhook honours manual rows. It was most likely a hand-run statement.
+- **Flag for Kyle:** if the reset was a deliberate decision to end the grandfathering, the auto-fix reverses it. The prompt asked for upgrades to be auto-fixed, so they were. Revoking means deleting those manual rows and setting the profiles back.
+
+**D8.2 The fix going forward.**
+- **Trigger:** `subscriptions_sync_profile_upgrade` upgrades a free profile whenever a subscription row becomes an active entitlement, whoever writes it. It never downgrades.
+- **Web:** `getIsPremium` now counts `pro`. Before, a Pro user whose `is_premium` was false would have been gated on web.
+
+**D8.3 Left for review, never auto-fixed.**
+- 12 profiles read paid with no active subscription.
+- 2 active manual subscriptions belong to user ids with no profile row.
+- Both are listed in `v_tier_reconciliation`, which is service-role only and shows IDs only.

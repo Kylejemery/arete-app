@@ -31,6 +31,8 @@ export const PAYWALL_SOURCES = [
   'whats_new_cabinet_sight',
   // Settings
   'settings_upgrade',
+  // Your practices: the free-tier practice limit (run C, Part C6)
+  'module_limit',
 ] as const;
 
 export type PaywallSource = (typeof PAYWALL_SOURCES)[number];

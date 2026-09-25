@@ -1,3 +1,4 @@
+import { useAgeStatus } from '../../hooks/useAgeStatus';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CABINET_THREAD_UPDATED } from '@/lib/counselorLines';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,8 +22,15 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, takeCabinetProposal, takeSupportFlag, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
+import { ImmediateSupportCard } from '../../components/SupportCard';
+import { pickStarters, type Starter } from '@/lib/starters';
+import { logEvent } from '@/lib/events';
+import OfferCard from '../../components/OfferCard';
+import ProposalCard from '../../components/ProposalCard';
+import { fetchPendingProposals, type CabinetProposal } from '@/lib/practices';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -85,6 +93,26 @@ type SharedMsg = Omit<ThreadMessage, 'role'> & {
   senderName?: string;
 };
 
+// Run B, Part B3: the starter chips of the empty Cabinet. Its own component so
+// the send handler is only ever called from a press, never during render.
+function StarterChips({ starters, disabled, onPick }: { starters: Starter[]; disabled: boolean; onPick: (s: Starter) => void }) {
+  return (
+    <View style={styles.starterList}>
+      {starters.map(s => (
+        <TouchableOpacity
+          key={s.id}
+          style={styles.starterChip}
+          onPress={() => onPick(s)}
+          disabled={disabled}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.starterText}>{s.text}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function CabinetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -96,6 +124,12 @@ export default function CabinetScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run C: a practice the closing voice proposed, or one waiting from before.
+  const [pendingProposal, setPendingProposal] = useState<CabinetProposal | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -126,8 +160,6 @@ export default function CabinetScreen() {
   const [shareQuote, setShareQuote] = useState<{ text: string; counselor: string } | null>(null);
 
   // --- Know Thyself nudge state ---
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
-  const [dismissedKtNudge, setDismissedKtNudge] = useState(false);
 
   // --- Counselors Tab State ---
   const [cabinetCounselors, setCabinetCounselors] = useState<Counselor[]>([]);
@@ -138,7 +170,22 @@ export default function CabinetScreen() {
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  // Activation 7.1: the paywall names the counselor the person was talking
+  // to, the unsent message waits in the composer, and an upgrade reopens the
+  // composer right where they left off.
+  const lastSpeaker = [...messages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null;
+  // An upgrade (tier no longer free) lifts the limit card without a reload.
+  const limitActive = dailyLimitReached && tier === 'free';
+  const { isTeen } = useAgeStatus();
+  useEffect(() => {
+    takeLimitDraft('cabinet').then(draft => {
+      if (draft) setInputText(prev => (prev.trim() ? prev : draft));
+    }).catch(() => {});
+  }, []);
   const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
+  // Run B, Part B3: starters for the empty Cabinet, weighted to the stated
+  // goal and today's intention.
+  const [starters, setStarters] = useState<Starter[]>(() => pickStarters({}));
 
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string; cabinetSeed?: string; sharedSessionId?: string; sharedPartnerName?: string }>();
@@ -394,10 +441,8 @@ export default function CabinetScreen() {
         try {
           const settings = await getUserSettings();
           setUserSettings(settings);
-          // Same signal as Home and Scrolls: the profiles flag, which
-          // markKnowThyselfComplete sets under the one completion rule.
-          getKnowThyselfComplete()
-            .then(complete => setKnowThyselfIncomplete(!complete))
+          getTodayCheckin()
+            .then(checkin => setStarters(pickStarters({ goal: settings?.kt_goals ?? null, intention: checkin?.intention ?? null })))
             .catch(() => {});
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
@@ -498,8 +543,20 @@ export default function CabinetScreen() {
     }
   }, [params.morningMessage, params.cabinetSeed, initialLoading, router, absorbNewLines]);
 
-  const handleSend = async () => {
-    const text = inputText.trim();
+  // Run C: a proposal still waiting for an answer (a shipped feature the
+  // person asked for, or one from earlier today) shows when the Cabinet opens.
+  useEffect(() => {
+    if (initialLoading) return;
+    let cancelled = false;
+    fetchPendingProposals().then(list => {
+      if (!cancelled && list[0]) setPendingProposal(prev => prev ?? list[0]);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [initialLoading]);
+
+  const handleSend = async (starter?: Starter | unknown) => {
+    const fromStarter = starter && typeof starter === 'object' && 'id' in starter && 'text' in starter ? (starter as Starter) : null;
+    const text = (fromStarter ? fromStarter.text : inputText).trim();
     if (!text || isLoading) return;
 
     // Enforce daily message limit before sending
@@ -508,7 +565,8 @@ export default function CabinetScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push(paywallRoute('cabinet_daily_limit'));
+      await saveLimitDraft('cabinet', text);
+      router.push(paywallRoute('cabinet_daily_limit', { counselor: lastSpeaker }));
       return;
     }
 
@@ -521,16 +579,26 @@ export default function CabinetScreen() {
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
+    setPendingOffer(null);
+    setPendingProposal(null);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
+      if (fromStarter) {
+        // Only the id is logged, never the conversation that follows.
+        setNextStarterId(fromStarter.id);
+        logEvent('cabinet_starter_used', { starter_id: fromStarter.id });
+      }
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
       const replies = await sendMessageToCabinet(updatedMessages);
       const assistantMessages = repliesToMessages(replies);
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
+      setPendingOffer(takeCabinetOffer());
+      setPendingProposal(takeCabinetProposal());
+      if (takeSupportFlag()) setShowSupport(true);
       const newCount = count + 1;
       await AsyncStorage.setItem(dateKey, String(newCount));
       setMessageCount(newCount);
@@ -544,9 +612,11 @@ export default function CabinetScreen() {
       setMessages(prev => prev.slice(0, -1));
       setInputText(text);
       if (e instanceof DailyLimitError) {
+        await saveLimitDraft('cabinet', text);
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push(paywallRoute('cabinet_daily_limit'));
+        await saveLimitDraft('cabinet', text);
+        router.push(paywallRoute('cabinet_daily_limit', { counselor: lastSpeaker }));
       } else {
         Alert.alert(
           'Not sent',
@@ -913,37 +983,14 @@ export default function CabinetScreen() {
                   ))}
                   <Text style={styles.counselorName}>{futureName}</Text>
                 </View>
-                {knowThyselfIncomplete && (
-                  <TouchableOpacity
-                    style={styles.ktEmptyBanner}
-                    onPress={() => router.push('/know-thyself' as any)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.ktEmptyBannerText}>
-                      {"📖 Your counselors don't know you yet — complete your Know Thyself profile for more personal responses."}
-                    </Text>
-                    <Text style={styles.ktEmptyBannerLink}>Complete Now →</Text>
-                  </TouchableOpacity>
-                )}
+                <StarterChips
+                  starters={starters}
+                  disabled={isLoading || limitActive}
+                  onPick={handleSend}
+                />
               </View>
             ) : (
               <>
-                {knowThyselfIncomplete && !dismissedKtNudge && (
-                  <View style={styles.ktNudgeBanner}>
-                    <TouchableOpacity
-                      style={styles.ktNudgeContent}
-                      onPress={() => router.push('/know-thyself' as any)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.ktNudgeText}>
-                        {'💡 Tip: Complete your Know Thyself profile so the Cabinet can give you more personal responses. →'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setDismissedKtNudge(true)} style={styles.ktNudgeDismiss}>
-                      <Ionicons name="close" size={16} color="#888" />
-                    </TouchableOpacity>
-                  </View>
-                )}
                 {(() => {
                   const filteredMessages = searchQuery.length > 0
                     ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -998,6 +1045,20 @@ export default function CabinetScreen() {
               </>
             )}
 
+            {showSupport && (
+              <View style={{ paddingHorizontal: 16 }}>
+                <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />
+              </View>
+            )}
+
+            {pendingOffer && !isLoading && (
+              <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+            )}
+
+            {pendingProposal && !pendingOffer && !isLoading && (
+              <ProposalCard key={pendingProposal.id} proposal={pendingProposal} onClose={() => setPendingProposal(null)} />
+            )}
+
             {isLoading && (
               <View style={styles.cabinetMessageRow}>
                 <View style={styles.cabinetBubble}>
@@ -1012,22 +1073,34 @@ export default function CabinetScreen() {
           </ScrollView>
 
           {/* Input Bar */}
-          {dailyLimitReached ? (
+          {limitActive ? (
             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
+              {isTeen ? (
+                <>
+                  <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
+                    {"That's today's messages."}
+                  </Text>
+                  <Text style={{ color: '#888', textAlign: 'center', fontSize: 13 }}>
+                    {"Your conversation is saved, your unsent message too. Pick it up tomorrow."}
+                  </Text>
+                </>
+              ) : (
+              <>
               <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
-                The Cabinet was mid-counsel.
+                {lastSpeaker ? `Keep talking with ${lastSpeaker}.` : 'Keep talking with your Cabinet.'}
               </Text>
               <Text style={{ color: '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                Your 10 free messages are spent, and the conversation isn't finished. Premium
-                continues it: 50 messages a day, deeper reasoning, all 23 counselors.
+                {"Today's free messages are spent, and this conversation isn't finished. It's saved exactly where you left off, your unsent message included. Premium picks it up from here."}
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => router.push(paywallRoute('cabinet_limit_card'))}
+                onPress={() => router.push(paywallRoute('cabinet_limit_card', { counselor: lastSpeaker }))}
                 activeOpacity={0.8}
               >
-                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Upgrade to Premium →</Text>
+                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Continue this conversation →</Text>
               </TouchableOpacity>
+              </>
+              )}
               <Text style={{ color: '#555', textAlign: 'center', marginTop: 8, fontSize: 12 }}>Resets at midnight</Text>
             </View>
           ) : (
@@ -1044,17 +1117,17 @@ export default function CabinetScreen() {
                   maxLength={2000}
                   onSubmitEditing={handleSend}
                   blurOnSubmit={false}
-                  editable={!dailyLimitReached}
+                  editable={!limitActive}
                 />
                 <TouchableOpacity
-                  style={[styles.sendButton, (!inputText.trim() || isLoading || dailyLimitReached) && styles.sendButtonDisabled]}
+                  style={[styles.sendButton, (!inputText.trim() || isLoading || limitActive) && styles.sendButtonDisabled]}
                   onPress={handleSend}
-                  disabled={!inputText.trim() || isLoading || dailyLimitReached}
+                  disabled={!inputText.trim() || isLoading || limitActive}
                 >
                   <Ionicons
                     name="send"
                     size={18}
-                    color={!inputText.trim() || isLoading || dailyLimitReached ? '#555' : '#1a1a2e'}
+                    color={!inputText.trim() || isLoading || limitActive ? '#555' : '#1a1a2e'}
                   />
                 </TouchableOpacity>
               </View>
@@ -1432,6 +1505,12 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 8,
   },
+  starterList: { marginTop: 20, width: '100%', gap: 8 },
+  starterChip: {
+    borderWidth: 1, borderColor: '#c9a84c55', borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#16213e',
+  },
+  starterText: { color: '#e0e0e0', fontSize: 14, lineHeight: 20 },
   emptyState: {
     flex: 1,
     alignItems: 'center',
@@ -1709,49 +1788,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     fontStyle: 'italic',
-  },
-  // Know Thyself banners
-  ktEmptyBanner: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    width: '100%',
-  },
-  ktEmptyBannerText: {
-    color: '#ccc',
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  ktEmptyBannerLink: {
-    color: '#c9a84c',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  ktNudgeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  ktNudgeContent: {
-    flex: 1,
-    padding: 12,
-  },
-  ktNudgeText: {
-    color: '#aaa',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  ktNudgeDismiss: {
-    padding: 12,
   },
   limitCounter: {
     alignItems: 'center',

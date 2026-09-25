@@ -114,3 +114,8 @@ anything critical — but the habit is still worth having.
   never apply SQL that is not also committed.
 - Ask before deleting rows from any table. Deprecation is almost always the
   right move instead.
+- Measurement (metrics, dashboards, analytics, backfill counts) reads
+  `measured_profiles`, or excludes both `profiles.is_admin` and
+  `profiles.is_internal`. Internal accounts are listed in
+  `config/internal-accounts.ts`; `node scripts/sync-internal-accounts.mjs`
+  applies the list. The flag never changes product behaviour.

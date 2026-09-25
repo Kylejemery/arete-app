@@ -1,5 +1,7 @@
 'use client';
 
+import { useAgeStatus } from '@/lib/useAgeStatus';
+import PronounSetting from '@/components/PronounSetting';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -9,17 +11,31 @@ import PageHeader from '@/components/PageHeader';
 import { upgradeHref } from '@/lib/paywall';
 
 export default function SettingsPage() {
+  // Run B, Part B5: no upgrade or subscription prompts for teens.
+  const { isTeen } = useAgeStatus();
   const router = useRouter();
   const [simulatingFree, setSimulatingFree] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
   // Dev Tools (tier simulation) is for admins and local development only.
   // Hidden until the profile check resolves so it never flashes for members.
   const [devToolsVisible, setDevToolsVisible] = useState(false);
+  // Arete email (retention plan R9): the welcome note, the day two follow
+  // up, and the weekly pattern note. Stored as profiles.email_opt_out, the
+  // same flag the unsubscribe link in each email sets, so one switch covers
+  // every kind of Arete email. null until the profile has loaded.
+  const [emailOn, setEmailOn] = useState<boolean | null>(null);
+  const [emailSaving, setEmailSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.replace('/login'); return; }
+      supabase
+        .from('profiles')
+        .select('email_opt_out')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => setEmailOn(data ? !data.email_opt_out : null));
       if (process.env.NODE_ENV !== 'production') {
         setDevToolsVisible(true);
         return;
@@ -78,6 +94,27 @@ export default function SettingsPage() {
     }
   };
 
+  const toggleEmail = async () => {
+    if (emailOn === null || emailSaving) return;
+    const next = !emailOn;
+    setEmailSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ email_opt_out: !next, email_opt_out_at: next ? null : new Date().toISOString() })
+        .eq('id', user.id);
+      if (error) {
+        alert('Could not save your email preference. Please try again.');
+        return;
+      }
+      setEmailOn(next);
+    } finally {
+      setEmailSaving(false);
+    }
+  };
+
   const toggleSimulateFree = () => {
     const next = !simulatingFree;
     setSimulatingFree(next);
@@ -100,8 +137,11 @@ export default function SettingsPage() {
           </Link>
         </div>
 
+        <PronounSetting />
+
         {/* Subscription — /upgrade shows plans to free users and the Stripe
             Customer Portal entry (manage/cancel) to paid users */}
+        {!isTeen && (
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-text font-semibold mb-3">Subscription</p>
           <Link
@@ -110,6 +150,27 @@ export default function SettingsPage() {
           >
             Manage Subscription
           </Link>
+        </div>
+        )}
+
+        {/* Email (retention plan R9) */}
+        <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
+          <p className="text-arete-text font-semibold mb-1">Email</p>
+          <p className="text-arete-muted text-xs mb-3">
+            A welcome note, one follow up after your first check in, and a note when your
+            counselors have noticed a pattern in your week. Nothing else.
+          </p>
+          <label className="flex items-center justify-between gap-4 cursor-pointer">
+            <span className="text-arete-text text-sm">Send me Arete email</span>
+            <input
+              type="checkbox"
+              checked={emailOn === true}
+              disabled={emailOn === null || emailSaving}
+              onChange={toggleEmail}
+              className="h-4 w-4 accent-arete-gold disabled:opacity-50"
+              aria-label="Send me Arete email"
+            />
+          </label>
         </div>
 
         {/* Account */}

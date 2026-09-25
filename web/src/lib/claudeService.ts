@@ -1,3 +1,5 @@
+import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
+import { pronounsFor } from './pronouns';
 import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
@@ -265,12 +267,6 @@ export async function gatherAppContext(): Promise<string> {
     if (block.length > 0) { lines.push(''); lines.push(...block); }
   } catch { /* skip */ }
 
-  // Evening reflection (from localStorage)
-  const reflectionAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_reflection_answer') : null;
-  lines.push('');
-  lines.push('EVENING REFLECTION:');
-  lines.push(`A: ${reflectionAnswer || '(not yet answered)'}`);
-
   // Stoic journal (from localStorage)
   const stoicAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_stoic_answer') : null;
   lines.push('');
@@ -523,6 +519,69 @@ Their communication style is warm, wise, and unhurried.`;
   return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${userProfile}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate.\n- Use Socratic questioning.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
+// An offer the Cabinet made at the end of the last reply (activation Parts 6
+// and 9). The page that sent the message takes it once and shows a card;
+// nothing happens unless the person accepts. Mirrors services/claudeService.ts.
+export interface CabinetOffer {
+  id: string;
+  kind: 'goal' | 'scroll' | 'task';
+  counselorId: string | null;
+  title?: string;
+  routine?: 'morning' | 'evening';
+  category?: string;
+  target_date?: string;
+}
+let lastCabinetOffer: CabinetOffer | null = null;
+// The starter tapped in the empty Cabinet (run B, Part B3), sent once with
+// the next message so "ask_me" can open with a question.
+let nextStarterId: string | null = null;
+export function setNextStarterId(id: string | null): void {
+  nextStarterId = id;
+}
+function noteCabinetOffer(data: { offer?: unknown; support?: unknown; proposal?: unknown } | null): void {
+  lastSupportFlag = data?.support === true;
+  const o = data?.offer as CabinetOffer | undefined;
+  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? o : null;
+  lastCabinetProposal = asCabinetProposal(data?.proposal);
+}
+// Run C: a practice (or feature request) card the closing voice proposed.
+let lastCabinetProposal: CabinetProposal | null = null;
+export function takeCabinetProposal(): CabinetProposal | null {
+  const p = lastCabinetProposal;
+  lastCabinetProposal = null;
+  return p;
+}
+// Run B, Part B5: the server sets support: true when a teen's message reads
+// as distress; the conversation shows the support card at once.
+let lastSupportFlag = false;
+export function takeSupportFlag(): boolean {
+  const v = lastSupportFlag;
+  lastSupportFlag = false;
+  return v;
+}
+export function takeCabinetOffer(): CabinetOffer | null {
+  const o = lastCabinetOffer;
+  lastCabinetOffer = null;
+  return o;
+}
+export async function respondToCabinetOffer(
+  offerId: string,
+  body: { accept: boolean; title?: string; category?: string; target_date?: string | null; routine?: string }
+): Promise<{ ok: boolean; status?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${API_BASE_URL}/api/cabinet/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: data?.status };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export interface CabinetReply {
   counselorId: string | null;
   counselorName: string | null;
@@ -568,6 +627,10 @@ export async function sendMessageToCabinet(
         model: 'claude-opus-4-5',
         counselorModels: settings?.counselor_models ?? {},
         cabinetMembers: settings?.cabinet_members ?? [],
+        starterId: (() => { const id = nextStarterId; nextStarterId = null; return id; })(),
+        // Run C: this build shows proposal and feature-request cards, so the
+        // server may offer them (older builds never get a card they cannot show).
+        clientCards: ['proposal'],
         // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, settings?.kt_completed_at),
         system: fullSystem,
@@ -594,6 +657,7 @@ export async function sendMessageToCabinet(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
         .map((r: { counselorId?: string; counselorName?: string; response?: string }): CabinetReply => ({
@@ -675,6 +739,8 @@ export async function sendCheckInToCabinet(
     // localStorage keys read here were no longer written by anything.
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
+    // Run B, Part B4: they/them/their unless the person set pronouns.
+    const pr = pronounsFor((settings as { pronouns?: string | null } | null)?.pronouns);
     const intention = String(checkin?.intention ?? '').trim();
 
     let userMessage: string;
@@ -696,16 +762,15 @@ export async function sendCheckInToCabinet(
       ];
       const affirmation = options.affirmation?.trim() || affirmations[day];
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
-      userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
+      userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
       const eveningTasks = (checkin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = String(checkin?.reflection_answer ?? '') || '(not answered)';
       const stoic = String(checkin?.stoic_answer ?? '') || '(not answered)';
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
-      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
+      userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }
 
     const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
@@ -787,6 +852,7 @@ export async function sendMessageToCounselor(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       return content;

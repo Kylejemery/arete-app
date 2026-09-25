@@ -26,6 +26,8 @@ export async function GET() {
   }
 }
 
+const STATUS_RANK: Record<string, number> = { pending: 1, dismissed: 2, reviewed: 3, escalated: 4 }
+
 // POST { id, status } — update a review item's status.
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -36,6 +38,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'id and a valid status are required' }, { status: 400 })
     }
     const admin = createAdminClient()
+    // A status only moves forward (pending < dismissed < reviewed < escalated),
+    // never back to pending. A trigger enforces the same rule in the database.
+    const { data: current, error: readError } = await admin
+      .from('distress_review_queue')
+      .select('status')
+      .eq('id', id)
+      .maybeSingle()
+    if (readError) throw new Error(readError.message)
+    if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (STATUS_RANK[status] < STATUS_RANK[current.status]) {
+      return NextResponse.json(
+        { error: `A ${current.status} case cannot move back to ${status}` },
+        { status: 409 }
+      )
+    }
+    if (status === current.status) return NextResponse.json({ success: true })
     const { error } = await admin
       .from('distress_review_queue')
       .update({ status, reviewed_at: new Date().toISOString() })

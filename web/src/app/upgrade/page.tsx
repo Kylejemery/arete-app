@@ -1,11 +1,14 @@
 'use client';
 
+import { useAgeStatus } from '@/lib/useAgeStatus';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubscription } from '@/lib/useSubscription';
 import { supabase } from '@/lib/supabase';
 import { logEvent } from '@/lib/events';
 import { isPaywallSource } from '@/lib/paywall';
+import { takeLimitReturn } from '@/lib/limitDraft';
+import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
 type PlanKey = 'monthly' | 'yearly' | 'pro';
@@ -54,8 +57,15 @@ function UpgradeContent() {
   const status = searchParams.get('status');
   const srcParam = searchParams.get('src');
   const { tier, isPremium, loading } = useSubscription();
+  const { isTeen } = useAgeStatus();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Activation 7.1: after checkout, back to the conversation the daily limit
+  // interrupted, where the unsent message is waiting.
+  const [limitReturn, setLimitReturn] = useState<string | null>(null);
+  useEffect(() => {
+    if (status === 'success') setLimitReturn(takeLimitReturn());
+  }, [status]);
 
   // Funnel telemetry: one paywall_viewed per visit, labeled with the gate
   // that sent the user here (upgradeHref) and the tier they held at the time.
@@ -135,6 +145,19 @@ function UpgradeContent() {
     );
   }
 
+  // Run B, Part B5: teens never see plans or an upgrade prompt.
+  if (isTeen) {
+    return (
+      <div className="min-h-screen bg-arete-bg p-6 md:p-8">
+        <div className="max-w-xl mx-auto">
+          <h1 className="text-2xl text-arete-gold font-semibold mb-3">Not available on your account</h1>
+          <p className="text-arete-muted mb-6">This part of Arete isn&apos;t part of your account. Everything in your Cabinet is here for you.</p>
+          <Link href="/cabinet" className="text-arete-gold underline">Go to your Cabinet</Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-arete-bg p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -162,6 +185,11 @@ function UpgradeContent() {
               Your subscription is active. It may take a few seconds for your account to
               reflect the change — refresh if you don&apos;t see it yet.
             </p>
+            {limitReturn && (
+              <Link href={limitReturn} className="inline-block mt-4 font-semibold text-arete-gold hover:underline">
+                Continue your conversation →
+              </Link>
+            )}
           </div>
         )}
         {status === 'cancelled' && (

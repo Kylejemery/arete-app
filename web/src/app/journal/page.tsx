@@ -6,6 +6,11 @@ import { getUserSettings, getJournalEntries, createJournalEntry, updateJournalEn
 import { supabase } from '@/lib/supabase';
 import type { JournalEntry } from '@/lib/types';
 import ChapterRule from '@/components/ChapterRule';
+import SupportCard from '@/components/SupportCard';
+import InsightCard from '@/components/InsightCard';
+import { ImmediateSupportCard } from '@/components/SupportCard';
+import { looksDistressed } from '@/lib/distress';
+import { useAgeStatus } from '@/lib/useAgeStatus';
 
 interface DisplayEntry {
   id: string;
@@ -66,6 +71,8 @@ export default function JournalPage() {
   const [quoteText, setQuoteText] = useState('');
   const [quoteBook, setQuoteBook] = useState('');
   const [quoteAuthor, setQuoteAuthor] = useState('');
+  const { isTeen } = useAgeStatus();
+  const [showImmediateSupport, setShowImmediateSupport] = useState(false);
 
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -117,6 +124,9 @@ export default function JournalPage() {
       return;
     }
     if (!textInput.trim()) return;
+    // Run B, Part B5: the support card at once after a teen's entry that
+    // reads as distress. Checked in the browser; nothing is sent or logged.
+    if (isTeen && looksDistressed(textInput)) setShowImmediateSupport(true);
     const created = await createJournalEntry({ type: inputType!, content: textInput.trim() });
     if (created) {
       const d = dbToDisplay(created);
@@ -299,6 +309,10 @@ export default function JournalPage() {
       </div>
 
       <ChapterRule className="mx-5" />
+
+      {showImmediateSupport && <ImmediateSupportCard onDismiss={() => setShowImmediateSupport(false)} />}
+      <SupportCard />
+      <InsightCard />
 
       {/* ── Search ──────────────────────────────────────────────── */}
       <div className="px-4 pb-3">

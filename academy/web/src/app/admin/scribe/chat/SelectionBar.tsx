@@ -26,6 +26,7 @@ export default function SelectionBar({
   const [noting, setNoting] = useState(false)
   const [note, setNote] = useState('')
   const rangeRef = useRef<Range | null>(null)
+  const barRef = useRef<HTMLDivElement | null>(null)
 
   const place = useCallback((range: Range, text: string) => {
     const r = range.getBoundingClientRect()
@@ -42,7 +43,12 @@ export default function SelectionBar({
   useEffect(() => {
     if (disabled) { clear(); return }
 
-    const read = () => {
+    const read = (e: Event) => {
+      // Typing or clicking in the bar itself moves focus into its input, which
+      // collapses the page selection. Reading that as "nothing selected" would
+      // close the bar after the first keystroke of a note, so the bar's own
+      // events never re-read the selection.
+      if (e.target instanceof Node && barRef.current?.contains(e.target)) return
       const s = window.getSelection()
       if (!s || s.isCollapsed || s.rangeCount === 0) { clear(); return }
       const range = s.getRangeAt(0)
@@ -80,10 +86,12 @@ export default function SelectionBar({
 
   return (
     <div
+      ref={barRef}
       className={styles.selBar}
       style={{ top: Math.max(8, sel.top - 46), left: sel.left }}
-      // Keep the selection alive while the bar is being clicked.
-      onMouseDown={e => e.preventDefault()}
+      // Keep the selection alive while the bar is being clicked, except in the
+      // note input, which has to take focus and a caret.
+      onMouseDown={e => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault() }}
     >
       {noting ? (
         <>

@@ -11,6 +11,14 @@ import GlassCard from '@/components/GlassCard';
 import ChapterRule from '@/components/ChapterRule';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import KtReflectionModal from '@/components/KtReflectionModal';
+import KnownFactsSection from '@/components/KnownFactsSection';
+import { KT_EXPLANATION, logFormFieldsFilled } from '@/lib/profileFields';
+
+const FEEDBACK_OPTIONS: { value: string; label: string }[] = [
+  { value: 'firm', label: 'Push me hard' },
+  { value: 'compassionate', label: 'Care first' },
+  { value: 'both', label: 'Both' },
+];
 
 const YEAR_OPTIONS = [5, 10, 15, 20];
 
@@ -25,6 +33,13 @@ export default function ProfilePage() {
   const [majorEvents, setMajorEvents] = useState('');
   const [futureSelfYears, setFutureSelfYears] = useState(10);
   const [futureSelfDescription, setFutureSelfDescription] = useState('');
+  // Activation Part 3: the rest of the registry's top five, and off-limits.
+  const [feedbackPreference, setFeedbackPreference] = useState('');
+  const [arriveReason, setArriveReason] = useState('');
+  const [lifeSituation, setLifeSituation] = useState('');
+  const [offLimits, setOffLimits] = useState('');
+  const [settingsSnapshot, setSettingsSnapshot] = useState<Record<string, unknown> | null>(null);
+  const [factsReload, setFactsReload] = useState(0);
   const [saved, setSaved] = useState(false);
   // Whether the last save met the completion rule, for the confirmation line.
   const [savedComplete, setSavedComplete] = useState(false);
@@ -80,6 +95,11 @@ export default function ProfilePage() {
       setMajorEvents(settings.kt_major_events || '');
       setFutureSelfYears(settings.future_self_years ?? 10);
       setFutureSelfDescription(settings.future_self_description || '');
+      setFeedbackPreference(settings.feedback_preference || '');
+      setArriveReason(settings.app_usage_intent || '');
+      setLifeSituation(settings.kt_life_situation || '');
+      setOffLimits(settings.kt_off_limits || '');
+      setSettingsSnapshot(settings as unknown as Record<string, unknown>);
       setReflection(settings.kt_reflection ? { text: settings.kt_reflection, counselor: settings.kt_reflection_counselor ?? null } : null);
       setSimulatingFree(getDevPremiumOverride() === false);
       setLoaded(true);
@@ -88,7 +108,7 @@ export default function ProfilePage() {
   }, [router]);
 
   const handleSave = async () => {
-    await upsertUserSettings({
+    const update = {
       kt_background: background.trim(),
       kt_identity: identity.trim(),
       kt_goals: goals.trim(),
@@ -99,7 +119,15 @@ export default function ProfilePage() {
       kt_major_events: majorEvents.trim(),
       future_self_years: futureSelfYears,
       future_self_description: futureSelfDescription.trim(),
-    });
+      feedback_preference: feedbackPreference || null,
+      app_usage_intent: arriveReason.trim(),
+      kt_life_situation: lifeSituation.trim(),
+      kt_off_limits: offLimits.trim(),
+    };
+    await upsertUserSettings(update);
+    logFormFieldsFilled(settingsSnapshot, update);
+    setSettingsSnapshot({ ...(settingsSnapshot || {}), ...update });
+    setFactsReload(n => n + 1);
     // Saving the form completes Know Thyself once goals plus two other
     // answers are filled (the rule lives in markKnowThyselfComplete). That
     // clears the home banner and the Scrolls empty state, which key on
@@ -140,6 +168,9 @@ export default function ProfilePage() {
     { label: 'What you do when things get hard', sub: 'Your pattern under pressure.', placeholder: 'I go quiet, reread old messages, and start something new instead.', value: patterns, onChange: setPatterns, rows: 4 },
   ];
   const moreSections = [
+    { label: 'What brought you to Arete', sub: 'Why now?', placeholder: 'I want to stop drifting through my days.', value: arriveReason, onChange: setArriveReason, rows: 3 },
+    { label: 'Your life right now', sub: 'Work, home, who depends on you. As much or as little as you like.', placeholder: 'Two kids, a new job, and not enough sleep.', value: lifeSituation, onChange: setLifeSituation, rows: 3 },
+    { label: 'Anything your Cabinet should never bring up?', sub: 'Optional. Your counselors will steer clear.', placeholder: undefined, value: offLimits, onChange: setOffLimits, rows: 2 },
     { label: 'Background & Life Story', sub: 'Where did you come from? What shaped you?', placeholder: undefined, value: background, onChange: setBackground, rows: 5 },
     { label: 'Professional Identity & Pursuits', sub: 'What do you do? What are you building?', placeholder: undefined, value: identity, onChange: setIdentity, rows: 4 },
     { label: 'Strengths', sub: 'What are you genuinely good at?', placeholder: undefined, value: strengths, onChange: setStrengths, rows: 3 },
@@ -168,6 +199,14 @@ export default function ProfilePage() {
       </div>
 
       <ChapterRule className="mx-5" />
+
+      <div className="px-4 pt-4 pb-3 max-w-2xl">
+        <p className="text-[14px] leading-relaxed" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}>
+          {KT_EXPLANATION}
+        </p>
+      </div>
+
+      <KnownFactsSection settings={settingsSnapshot} reloadKey={factsReload} />
 
       {/* Intro note */}
       <div className="px-4 pb-5">
@@ -239,6 +278,35 @@ export default function ProfilePage() {
           </GlassCard>
         ))}
 
+        {expanded && (
+          <GlassCard>
+            <div className="p-4">
+              <div
+                className="text-[11px] tracking-[1.4px] uppercase mb-2"
+                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
+              >
+                How you want to be challenged
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {FEEDBACK_OPTIONS.map(o => (
+                  <button
+                    key={o.value}
+                    onClick={() => { markStarted(); setFeedbackPreference(feedbackPreference === o.value ? '' : o.value); }}
+                    className="px-3 py-1.5 rounded-lg text-[12px] transition-all"
+                    style={
+                      feedbackPreference === o.value
+                        ? { background: '#c9a84c', color: '#0f1724', border: '1px solid #c9a84c', fontWeight: 700 }
+                        : { background: 'rgba(255,255,255,0.04)', color: '#9aa0a6', border: '1px solid rgba(255,255,255,0.08)' }
+                    }
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </GlassCard>
+        )}
+
         {expanded ? (
         <GlassCard>
           <div className="p-4">
@@ -288,7 +356,7 @@ export default function ProfilePage() {
             style={{ border: '1px dashed rgba(201,168,76,0.3)', background: 'transparent' }}
           >
             <div className="text-[14px] font-semibold" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#c9a84c' }}>Tell your Cabinet more</div>
-            <div className="text-[12px] mt-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>Background, identity, strengths, defining moments, your future self.</div>
+            <div className="text-[12px] mt-1" style={{ fontFamily: 'var(--font-mono, monospace)', color: '#9aa0a6' }}>How to challenge you, why you came, your life now, background, strengths, your future self.</div>
           </button>
         )}
       </div>
@@ -315,7 +383,7 @@ export default function ProfilePage() {
           >
             {savedComplete
               ? 'Saved. Your Cabinet will use this from your next message.'
-              : 'Saved. Add your goals and at least two more answers to complete Know Thyself.'}
+              : 'Saved. Your Cabinet will fill in the rest as you talk.'}
           </p>
         )}
       </div>

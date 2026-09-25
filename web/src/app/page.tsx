@@ -9,7 +9,6 @@ import {
   checkAndResetStreakIfMissed,
   getDailyQuestionCache,
   upsertTodayCheckin,
-  getKnowThyselfComplete,
 } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { DAILY_QUOTES, getDailyPrompt } from '@/lib/quotes';
@@ -17,6 +16,7 @@ import GlassCard from '@/components/GlassCard';
 import StreakArc from '@/components/StreakArc';
 import CabinetReplay from '@/components/CabinetReplay';
 import YesterdayCard from '@/components/YesterdayCard';
+import YourPractices from '@/components/YourPractices';
 import { fetchFollowup, localDate, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 
 // ── Counselor display metadata ────────────────────────────────────
@@ -77,7 +77,6 @@ export default function HomePage() {
   const [userName, setUserName] = useState('');
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   const [streak, setStreak] = useState(0);
   const [dailyQuestion, setDailyQuestion] = useState<{ counselorSlug: string; response: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -91,22 +90,18 @@ export default function HomePage() {
         setAuthState('guest');
         return;
       }
-      const [settings, morningDoneToday, eveningDoneToday, streakVal, dqCache, ktComplete] = await Promise.all([
+      const [settings, morningDoneToday, eveningDoneToday, streakVal, dqCache] = await Promise.all([
         getUserSettings(),
         hasCheckInToday('morning'),
         hasCheckInToday('evening'),
         checkAndResetStreakIfMissed(),
         getDailyQuestionCache(),
-        getKnowThyselfComplete(),
       ]);
       if (!settings?.user_name) {
         router.replace('/setup');
         return;
       }
       setUserName(settings.user_name);
-      // Both home prompts key on the same flag now (retention plan R3), so
-      // they clear together the moment Know Thyself is complete.
-      setKnowThyselfIncomplete(!ktComplete);
       setMorningDone(morningDoneToday);
       setEveningDone(eveningDoneToday);
 
@@ -435,37 +430,8 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ── Know Thyself nudge ────────────────────────────────────── */}
-      {knowThyselfIncomplete && (
-        <div className="px-4 pb-4">
-          <GlassCard>
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-arete-gold">👤</span>
-                <span
-                  className="text-[10px] tracking-[1.6px] uppercase"
-                  style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-                >
-                  Know Thyself
-                </span>
-              </div>
-              <p
-                className="text-[14px] leading-relaxed mb-3"
-                style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
-              >
-                Tell your Cabinet who you are. Three questions, about two minutes. They will answer differently afterward.
-              </p>
-              <Link
-                href="/profile"
-                className="inline-block px-4 py-2 rounded-full text-[10px] tracking-[1.4px] uppercase font-semibold"
-                style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724', fontFamily: 'var(--font-mono, monospace)' }}
-              >
-                Begin →
-              </Link>
-            </div>
-          </GlassCard>
-        </div>
-      )}
+      {/* Your practices (run C): below everything else; nothing when none are on. */}
+      <YourPractices />
 
     </div>
   );
