@@ -3,12 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getUserSettings, getUserCabinet, saveCabinetSelection, getIsPremium } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getIsPremium, isFreeCounselorSlug, FREE_COUNSELOR_SLUGS } from '@/lib/db';
 import PageHeader from '@/components/PageHeader';
 import CounselorLibrary from '@/components/CounselorLibrary';
 import { upgradeHref } from '@/lib/paywall';
+import { logEvent } from '@/lib/events';
 
 const SAVE_SUCCESS_REDIRECT_DELAY_MS = 2000;
+const MAX_SELECTIONS = 5;
 
 export default function CabinetSelectPage() {
   const router = useRouter();
@@ -35,7 +37,15 @@ export default function CabinetSelectPage() {
       setIsPremium(premium);
 
       if (Array.isArray(cabinet)) {
-        setSelectedSlugs(cabinet.map(c => c.slug).filter(s => s !== 'futureSelf'));
+        let slugs = cabinet.map(c => c.slug).filter(s => s !== 'futureSelf');
+        // A free member's selection is the free counselors only (retention
+        // plan R10). A locked counselor left over in cabinet_members would
+        // otherwise show as selected here while the server never fires it.
+        if (!premium) {
+          slugs = slugs.filter(isFreeCounselorSlug);
+          if (slugs.length === 0) slugs = [...FREE_COUNSELOR_SLUGS];
+        }
+        setSelectedSlugs(slugs);
       }
 
       setLoading(false);
@@ -51,9 +61,20 @@ export default function CabinetSelectPage() {
     setError(null);
   };
 
+  // A locked card is the paywall entry for this page: no modal over the
+  // whole library, just the tap on the counselor the member wanted.
+  const handleLockedTap = (slug: string) => {
+    logEvent('gate_hit', { gate: 'cabinet_select_locked', counselor: slug });
+    router.push(upgradeHref('cabinet_select_locked'));
+  };
+
+  // Premium builds a Cabinet of 3 to 5. A free member rearranges among the
+  // three free counselors and only needs to keep one.
+  const minSelections = isPremium ? 3 : 1;
+
   const handleSave = async () => {
-    if (selectedSlugs.length < 3) {
-      setError('Select at least 3 counselors');
+    if (selectedSlugs.length < minSelections) {
+      setError(isPremium ? 'Select at least 3 counselors' : 'Keep at least one counselor');
       return;
     }
     setError(null);
@@ -79,36 +100,15 @@ export default function CabinetSelectPage() {
 
   return (
     <div className="min-h-screen bg-arete-bg p-6 md:p-8">
-      {/* Paywall overlay */}
-      {!isPremium && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-arete-surface border border-arete-border rounded-xl p-8 max-w-sm mx-4 text-center">
-            <p className="text-arete-text font-bold text-lg mb-3">Custom Cabinet is a Premium Feature</p>
-            <p className="text-arete-muted text-sm mb-6">
-              Upgrade to Arete Premium to build a custom cabinet from the full counselor library.
-            </p>
-            <button
-              onClick={() => router.push(upgradeHref('custom_cabinet'))}
-              className="w-full bg-arete-gold text-arete-bg font-semibold px-6 py-3 rounded-lg hover:opacity-90 mb-3"
-            >
-              Upgrade
-            </button>
-            <button
-              onClick={() => router.push('/cabinet')}
-              className="w-full text-arete-muted hover:text-arete-text text-sm py-2"
-            >
-              Not now
-            </button>
-          </div>
-        </div>
-      )}
-
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.back()} className="text-arete-muted hover:text-arete-text">
             ← Back
           </button>
-          <PageHeader title="Build Your Cabinet" subtitle="Choose 3 to 5 counselors" />
+          <PageHeader
+            title="Build Your Cabinet"
+            subtitle={isPremium ? 'Choose 3 to 5 counselors' : 'Your three free counselors. Premium opens the full library.'}
+          />
         </div>
 
         <p className="text-arete-muted text-sm mb-6">
@@ -118,7 +118,9 @@ export default function CabinetSelectPage() {
         <CounselorLibrary
           selectedSlugs={selectedSlugs}
           onToggle={handleToggle}
-          maxSelections={5}
+          maxSelections={MAX_SELECTIONS}
+          isUnlocked={isPremium ? undefined : isFreeCounselorSlug}
+          onLockedTap={isPremium ? undefined : handleLockedTap}
         />
 
         <div className="mt-8 flex flex-col items-start gap-3">

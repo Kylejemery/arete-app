@@ -7,10 +7,17 @@
 // Future Self is not a paid counselor: it is always present in every Cabinet,
 // so both spellings of its slug pass the gate.
 const FREE_COUNSELOR_SLUGS = ['marcus', 'goggins', 'roosevelt'];
+// The web app stores the counselors-table spellings in cabinet_members and
+// names them in 1:1 chats (retention plan R10). Before these were accepted,
+// a free web member's Cabinet was silently replaced by the default three,
+// and a 1:1 with Goggins or Roosevelt from the web answered 403.
+const FREE_COUNSELOR_TABLE_SLUGS = ['marcus-aurelius', 'david-goggins', 'theodore-roosevelt'];
 const FUTURE_SELF_SLUGS = ['futureSelf', 'future-self'];
 
 function isFreeCounselorSlug(slug) {
-  return FREE_COUNSELOR_SLUGS.includes(slug) || FUTURE_SELF_SLUGS.includes(slug);
+  return FREE_COUNSELOR_SLUGS.includes(slug)
+    || FREE_COUNSELOR_TABLE_SLUGS.includes(slug)
+    || FUTURE_SELF_SLUGS.includes(slug);
 }
 
-module.exports = { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug };
+module.exports = { FREE_COUNSELOR_SLUGS, FREE_COUNSELOR_TABLE_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug };

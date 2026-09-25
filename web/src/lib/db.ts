@@ -495,10 +495,26 @@ export async function upsertCalendarData(calendarData: Record<string, { morning:
 // COUNSELORS
 // ----------------------------------------------------------------
 
-const FUTURE_SELF_SLUG = 'futureSelf';
+export const FUTURE_SELF_SLUG = 'futureSelf';
 
 // Default cabinet slugs — matches is_default=true counselors in the DB
 const DEFAULT_CABINET_SLUGS = ['marcus-aurelius', 'epictetus', 'david-goggins', 'theodore-roosevelt'];
+
+// Counselors a free tier user may talk to, in the counselors-table spelling
+// the web writes to cabinet_members. Mirror of FREE_COUNSELOR_SLUGS in
+// lib/db.ts (mobile, short spellings) and server/lib/free-counselors.js,
+// which accepts both spellings. Change all three together when a counselor
+// moves across the paywall (Epictetus moved behind it on 2026-08-28).
+export const FREE_COUNSELOR_SLUGS = ['marcus-aurelius', 'david-goggins', 'theodore-roosevelt'] as const;
+// Marcus chairs every Cabinet (retention plan decision D5).
+export const CABINET_CHAIR_SLUG = 'marcus-aurelius';
+// What web setup writes for a new member (retention plan R10): the three
+// free counselors plus Future Self.
+export const DEFAULT_WEB_CABINET: string[] = [...FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUG];
+
+export function isFreeCounselorSlug(slug: string): boolean {
+  return (FREE_COUNSELOR_SLUGS as readonly string[]).includes(slug) || slug === FUTURE_SELF_SLUG;
+}
 
 // Fetch all counselors from the database
 export async function getCounselors(): Promise<Counselor[]> {
