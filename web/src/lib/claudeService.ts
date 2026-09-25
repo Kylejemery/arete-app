@@ -265,12 +265,6 @@ export async function gatherAppContext(): Promise<string> {
     if (block.length > 0) { lines.push(''); lines.push(...block); }
   } catch { /* skip */ }
 
-  // Evening reflection (from localStorage)
-  const reflectionAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_reflection_answer') : null;
-  lines.push('');
-  lines.push('EVENING REFLECTION:');
-  lines.push(`A: ${reflectionAnswer || '(not yet answered)'}`);
-
   // Stoic journal (from localStorage)
   const stoicAnswer = typeof window !== 'undefined' ? localStorage.getItem('arete_stoic_answer') : null;
   lines.push('');
@@ -702,10 +696,9 @@ export async function sendCheckInToCabinet(
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = String(checkin?.reflection_answer ?? '') || '(not answered)';
       const stoic = String(checkin?.stoic_answer ?? '') || '(not answered)';
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
-      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to them as they close the day.`;
+      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to them as they close the day.`;
     }
 
     const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);

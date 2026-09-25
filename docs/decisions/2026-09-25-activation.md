@@ -49,3 +49,24 @@ This file records the judgement calls made while carrying out the activation pro
 - **When:** for 7 days after the analysis's `created_at`, when the user has any `distress_flagged` analysis.
 - **Dismissal:** a dismissal is stored locally per analysis id.
 - **Data exposure:** the server endpoint returns only `{ show, key, until }`. It returns no notes and does not say why the card is shown.
+
+## Part 2
+
+**D2.1 `speaker_slugs`, not `counselor_slugs`.** `counselor_slugs` is the thread's identity: null is the solo group Cabinet thread and `[slug]` is a 1:1 thread. The one-row-per-thread trigger and every client look threads up by it. Writing the speakers into it would fork all 105 group threads into new rows on the next save.
+- **Chosen:** a new column, `speaker_slugs`, recomputed by a trigger from `messages` on every save. It needs no client release and fills the same analytics need.
+- **Alternative:** repurpose `counselor_slugs`, which would break threading.
+
+**D2.2 `check_ins.type` holds `morning`, `evening`, `both`, or null.** Rows have been one per day since the parity migration. The original values were `morning` and `evening` per row. `both` covers a day where both halves are done. A trigger sets it on every save, so installed builds that never write the column are covered too.
+
+**D2.3 `reflection_answer` is dead, not broken.** No screen writes it. The evening reflection box writes `stoic_answer`.
+- Four prompt builders sent "EVENING REFLECTION: (not answered)" to the model on every check-in, and the Enchiridion agent fell back to the column.
+- All of those references are removed, and the evening check-in prompt now labels `stoic_answer` as the evening reflection.
+- The column stays in place with a comment saying it is dead.
+
+**D2.4 Where "conversation ended after one exchange" is detected.** Threads are persistent, so a "conversation" is a session: messages with no gap over 30 minutes.
+- An hourly cycle, riding on the existing `broadcast-delivery-agent` cron, processes threads idle for 30 minutes or more.
+- It logs `conversation_ended {user_turns, thread}` for every session, and `conversation_ended_one_exchange {thread}` when the user wrote once and got a reply. The first event gives the denominator.
+- The events go to the existing `product_events`, not a new `app_events` table (see D0.3).
+- **Alternative:** a new Railway cron service. The prompt prefers hooking into an existing cycle. The dispatch-delivery cron was not used because it runs as two duplicate Railway services (see the report).
+
+**D2.5 The "Know Thyself field filled" event ships with Part 3.** It is keyed by registry field key and source, and the registry is created in Part 3.

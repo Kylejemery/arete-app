@@ -71,7 +71,6 @@ export interface DailyCheckin {
   morning_tasks: Task[] | null;
   evening_done: boolean;
   evening_tasks: Task[] | null;
-  reflection_answer: string | null;
   stoic_answer: string | null;
   streak: number;
   reading_streak: number;

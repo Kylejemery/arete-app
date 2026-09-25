@@ -478,12 +478,6 @@ export async function gatherAppContext(): Promise<string> {
     } catch { /* skip */ }
   }
 
-  // Evening reflection
-  lines.push('');
-  lines.push('EVENING REFLECTION:');
-  lines.push(`Q: Evening Reflection`);
-  lines.push(`A: ${checkin?.reflection_answer || '(not yet answered)'}`);
-
   // Stoic journal
   lines.push('');
   lines.push('STOIC JOURNAL:');
@@ -744,10 +738,6 @@ async function gatherWeeklyContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // Evening reflections (most recent)
-  lines.push('');
-  lines.push('EVENING REFLECTION (most recent):');
-  lines.push(checkin?.reflection_answer || '(not answered)');
   lines.push('');
   lines.push('STOIC JOURNAL (most recent):');
   lines.push(checkin?.stoic_answer || '(not answered)');
@@ -1071,11 +1061,10 @@ export async function sendCheckInToCabinet(
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = checkin?.reflection_answer || '(not answered)';
       const stoic = checkin?.stoic_answer || '(not answered)';
       const intention = (checkin?.intention || '').trim();
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
-      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
+      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to him as he closes the day.`;
     }
 
     const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);

@@ -279,8 +279,26 @@ async function closeIfFinished(broadcast) {
 
 module.exports = { runBroadcastDelivery };
 
+// The hourly conversation cycle (server/lib/conversation-cycle.js) rides on
+// this cron rather than a Railway service of its own. It runs after the
+// broadcasts, and its failure never fails the delivery run.
+async function runHourly() {
+  await runBroadcastDelivery();
+  try {
+    const { runConversationCycle } = require('./lib/conversation-cycle');
+    const { createEventLog } = require('./lib/events');
+    const { logEvent } = createEventLog(supabase);
+    const tally = await runConversationCycle(supabase, { logEvent });
+    console.log(`Conversation cycle: ${tally.threads} threads | ${tally.sessions} sessions | ${tally.oneExchange} one-exchange | ${tally.hookFailures} hook failures`);
+    // logEvent is fire and forget; give the inserts a moment before exit.
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  } catch (err) {
+    console.error('Conversation cycle failed:', err.message);
+  }
+}
+
 if (require.main === module) {
-  runBroadcastDelivery()
+  runHourly()
     .then(() => process.exit(0))
     .catch(err => {
       console.error('Fatal error:', err);
