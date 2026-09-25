@@ -54,6 +54,18 @@ function currentSession(messages, now = Date.now(), gapMs = SESSION_GAP_MS) {
   return { messages: [], start: null, end: null };
 }
 
+// How a session began, with the same rules as the database's
+// cabinet_message_origin(): user | check_in | daily_question | escalation.
+// Conversation-start metrics count origin = 'user' only.
+function messageOrigin(m) {
+  if (!m) return null;
+  if (m.role === 'assistant') return 'daily_question';
+  const text = typeof m.content === 'string' ? m.content : '';
+  if (m.kind === 'checkin' || /^\s*\[(morning|evening) check-in\]/i.test(text)) return 'check_in';
+  if (/^\s*\[escalated from private/i.test(text)) return 'escalation';
+  return 'user';
+}
+
 function countUserTurns(messages) {
   return (messages || []).filter(isUserTurn).length;
 }
@@ -65,4 +77,5 @@ module.exports = {
   splitSessions,
   currentSession,
   countUserTurns,
+  messageOrigin,
 };

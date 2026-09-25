@@ -12,7 +12,7 @@
 //
 // A thread is only processed once idle, so every session it sees is complete,
 // and a later message always starts a new session.
-const { SESSION_GAP_MS, messageTime, splitSessions, countUserTurns, isUserTurn } = require('./conversation-sessions');
+const { SESSION_GAP_MS, messageTime, splitSessions, countUserTurns, isUserTurn, messageOrigin } = require('./conversation-sessions');
 
 const LOOKBACK_MS = 3 * 24 * 60 * 60 * 1000;   // threads touched in the last 3 days
 const FIRST_SEEN_MS = 24 * 60 * 60 * 1000;     // a thread never processed: its last day only
@@ -63,10 +63,12 @@ async function runConversationCycle(supabase, { logEvent, onSession = null, now 
       const replied = session.messages.some(m => m && m.role === 'assistant');
       tally.sessions++;
       if (logEvent) {
-        logEvent(row.user_id, 'conversation_ended', { user_turns: userTurns, thread }, { platform: 'server' });
+        // origin (run B, Part B2): conversation-start metrics count 'user' only.
+        const origin = messageOrigin(session.messages[0]);
+        logEvent(row.user_id, 'conversation_ended', { user_turns: userTurns, thread, origin }, { platform: 'server' });
         if (userTurns === 1 && replied) {
           tally.oneExchange++;
-          logEvent(row.user_id, 'conversation_ended_one_exchange', { thread }, { platform: 'server' });
+          logEvent(row.user_id, 'conversation_ended_one_exchange', { thread, origin }, { platform: 'server' });
         }
       }
       if (onSession) {

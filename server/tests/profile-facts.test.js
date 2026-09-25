@@ -192,3 +192,12 @@ test('the client registries and the SQL mapping carry the same keys and columns'
   const sqlPairs = [...values.matchAll(/\('([a-z_]+)',\s+'([a-z_]+)'\)/g)].map(m => `${m[1]}:${m[2]}`).sort();
   assert.deepEqual(sqlPairs, pairs);
 });
+
+test('session origin mirrors the database rule', () => {
+  const { messageOrigin } = require('../lib/conversation-sessions');
+  assert.equal(messageOrigin({ role: 'user', content: '[Morning check-in] Sam has just completed...' }), 'check_in');
+  assert.equal(messageOrigin({ role: 'user', content: 'x', kind: 'checkin' }), 'check_in');
+  assert.equal(messageOrigin({ role: 'user', content: '[Escalated from private session] ...' }), 'escalation');
+  assert.equal(messageOrigin({ role: 'assistant', content: 'What would make today count?' }), 'daily_question');
+  assert.equal(messageOrigin({ role: 'user', content: 'I keep putting things off' }), 'user');
+});

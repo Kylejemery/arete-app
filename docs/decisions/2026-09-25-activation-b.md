@@ -32,3 +32,29 @@ This file records the judgement calls made while carrying out Run B without stop
 - **Why internal accounts stay in the mailing counts:** those counts are who can be mailed, not a metric, and internal accounts keep full functionality.
 
 **DB1.3 Clients cannot change `is_internal`.** The 2026-08-25 lockdown grants the authenticated role UPDATE only on named columns, and this is not one of them. Verified: `has_column_privilege` returns false.
+
+## B2
+
+**DB2.1 The cause.** The mobile app, until 2026-09-04, and the web client, until 2026-09-15, looked for a solo Cabinet row created *today* and inserted a new one otherwise. Each new row carried a full copy of the thread so far.
+- **Pattern:** chains of daily snapshots with the same first message. One user had 25 rows.
+- **Already fixed:** since 2026-09-15 the table's `cabinet_conversations_one_row_per_thread` trigger merges any second insert for a thread into the existing row. No duplicate has been created since 2026-09-14.
+- **Check-ins and the daily question:** they do not spawn threads. They write into the same thread, which is why so many rows begin with a check-in message.
+- **This run:** cleans up the leftovers and adds `origin`.
+
+**DB2.2 What counts as a "true duplicate".** A row must match on all of these:
+- same user, same thread (`counselor_slugs` and `session_type`), same first user message
+- created within 24 hours of the *first* row of its group
+- one row's messages contain every message of the other, so it is a snapshot
+
+Rows outside the window are kept and start a new group. Rows that fail the containment test are left and counted as diverged.
+- **Alternative:** chain rows that are each within 24 hours of the previous one. That would fold a 12-day chain into one row, which is beyond the prompt's "within 24 hours of each other".
+- **Dry run:** before applying, the migration was run in a transaction that rolled back. It lost no messages.
+
+**DB2.3 References.** `session_participants` and `session_messages` reference the row with `ON DELETE CASCADE`. The merge moves every reference (those two tables, plus `cabinet_offers` and the fact evidence ids) to the kept row before deleting, so nothing cascades.
+- **`conversation_memory`:** keyed by (`user_id`, `counselor_slug`), not by row, so it needs no change. The Cabinet's thread lookup already takes the most recently updated row for a thread, and the kept row takes the latest `updated_at` of its group.
+
+**DB2.4 `origin` values.**
+- **The four values:** `check_in` for the check-in chip or a `[Morning/Evening check-in]` message, `escalation` for `[Escalated from private ...]`, `daily_question` whenever a counselor spoke first (the daily question, and also broadcast counselor lines), and `user` otherwise.
+- **Null:** a row with no messages yet. It is set when the first message arrives.
+- **Sessions:** the hourly cycle stamps the same `origin` on each session's `conversation_ended` events, so start metrics can count `user` only.
+- **Alternative:** a fifth value for broadcast lines. The prompt fixes the set at four.
