@@ -6,6 +6,8 @@ import { useSubscription } from '@/lib/useSubscription';
 import { supabase } from '@/lib/supabase';
 import { logEvent } from '@/lib/events';
 import { isPaywallSource } from '@/lib/paywall';
+import { takeLimitReturn } from '@/lib/limitDraft';
+import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
 type PlanKey = 'monthly' | 'yearly' | 'pro';
@@ -56,6 +58,12 @@ function UpgradeContent() {
   const { tier, isPremium, loading } = useSubscription();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Activation 7.1: after checkout, back to the conversation the daily limit
+  // interrupted, where the unsent message is waiting.
+  const [limitReturn, setLimitReturn] = useState<string | null>(null);
+  useEffect(() => {
+    if (status === 'success') setLimitReturn(takeLimitReturn());
+  }, [status]);
 
   // Funnel telemetry: one paywall_viewed per visit, labeled with the gate
   // that sent the user here (upgradeHref) and the tier they held at the time.
@@ -162,6 +170,11 @@ function UpgradeContent() {
               Your subscription is active. It may take a few seconds for your account to
               reflect the change — refresh if you don&apos;t see it yet.
             </p>
+            {limitReturn && (
+              <Link href={limitReturn} className="inline-block mt-4 font-semibold text-arete-gold hover:underline">
+                Continue your conversation →
+              </Link>
+            )}
           </div>
         )}
         {status === 'cancelled' && (

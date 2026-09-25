@@ -240,7 +240,7 @@ async function storeAnalysis(userId, analysis, groundingPassages) {
   const analysisWeek = getMondayOfCurrentWeek();
   const { data: existing } = await supabase
     .from('journal_analysis')
-    .select('distress_flagged, distress_notes')
+    .select('id, distress_flagged, distress_notes, delivered')
     .eq('user_id', userId)
     .eq('analysis_week', analysisWeek)
     .maybeSingle();
@@ -251,6 +251,22 @@ async function storeAnalysis(userId, analysis, groundingPassages) {
   const distressNotes = flaggedNow
     ? (analysis.distress_notes || null)
     : (wasFlagged ? existing.distress_notes : null);
+
+  // Once the week's insight has been delivered, the person has read it: a
+  // re-run no longer rewrites it or marks it undelivered (11 delivered
+  // insights had been reset that way). A new distress flag still lands.
+  if (existing && existing.delivered) {
+    if (flaggedNow && !wasFlagged) {
+      const { data, error } = await supabase
+        .from('journal_analysis')
+        .update({ distress_flagged: true, distress_notes: distressNotes })
+        .eq('id', existing.id)
+        .select('id, distress_flagged, distress_notes');
+      if (error) throw new Error(`flag delivered analysis: ${error.message}`);
+      return data;
+    }
+    return [{ id: existing.id, distress_flagged: existing.distress_flagged, distress_notes: existing.distress_notes }];
+  }
 
   const { data, error } = await supabase
     .from('journal_analysis')

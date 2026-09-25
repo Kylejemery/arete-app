@@ -46,6 +46,8 @@ export function isPaywallSource(value: unknown): value is PaywallSource {
 // out because expo-router's typed routes do not know the paywall's params;
 // the argument is what matters, and it is checked.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function paywallRoute(src: PaywallSource): any {
-  return { pathname: '/paywall', params: { src } };
+export function paywallRoute(src: PaywallSource, extra?: { counselor?: string | null }): any {
+  // counselor: who the person was talking to when a daily limit stopped
+  // them, so the paywall can say "Keep talking with Marcus" (activation 7.1).
+  return { pathname: '/paywall', params: extra?.counselor ? { src, counselor: extra.counselor } : { src } };
 }

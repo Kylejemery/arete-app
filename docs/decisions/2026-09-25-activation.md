@@ -157,3 +157,25 @@ This file records the judgement calls made while carrying out the activation pro
 - **When:** at least six messages in the conversation (user and counselor turns, this turn's replies included). At most one offer per user per 72 hours. Never in the same turn as a goal offer, and never in distress.
 - **The card:** "Would you like a scroll on this?"
 - **On Yes:** the server writes a one-sentence, general-terms topic from the person's own turns with Haiku, then writes the scroll through the same generation function as `POST /api/scrolls/generate`, with `request_type = 'requested'`. It appears in Scrolls when ready.
+
+## Part 7
+
+**D7.1 Paywall copy for a daily limit.**
+- **The three limit sources** (`cabinet_daily_limit`, `cabinet_limit_card`, `counselor_daily_limit`) now read "Keep talking with <counselor>". The counselor is the one who last spoke, or "your Cabinet".
+- **The promise:** "saved exactly where you left off, your unsent message included".
+- **Resuming:** the conversation is already saved. The unsent message is now kept per thread (AsyncStorage on mobile, localStorage on web) and restored into the composer.
+  - Mobile returns to the conversation after a successful web checkout.
+  - The web `/upgrade?status=success` screen links back to the conversation.
+- Prices and tiers are unchanged.
+
+**D7.2 A bug fixed along the way.** The mobile 1:1 counselor chat turned a server 403 `daily_limit_reached` into the counselor's reply, "temporarily unavailable (Error 403)", and saved it into the thread. It now raises `DailyLimitError`. The chat keeps the message and opens the paywall for that counselor.
+
+**D7.3 Why only 8 of 70 insights were delivered** (admin excluded). There is no delivery job. Insights are delivered when a client pulls `GET /api/user/insight`, which marks them delivered. Three causes:
+- **11 reset:** these were delivered, and the next morning's upsert reset `delivered` to false. The agent no longer rewrites a delivered analysis. A migration restored the 11, so 19 of 70 are now delivered.
+- **47 never fetched:** only the mobile Journal tab pulls insights, and the web app had no insight card. The web Journal page now has one.
+- **4 distress-flagged:** correctly held.
+
+**D7.4 Distress in the insight path.**
+- The endpoint returns nothing while the user has a distress flag from the last 14 days, or when their latest analysis is flagged.
+- Before this change, a flagged week was answered with the previous week's insight, which a free user saw as a teaser with an upsell.
+- **Free tier** now receives only the first paragraph from the server, or the first two sentences when the insight is one paragraph, with `teaser: true`. The full text no longer reaches the device.

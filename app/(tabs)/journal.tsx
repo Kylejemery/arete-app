@@ -38,6 +38,8 @@ interface WeeklyInsight {
     insight_text: string;
     dominant_theme: string | null;
     analysis_week: string;
+    // Free tier: the server sends the first paragraph only (activation 7.2).
+    teaser?: boolean;
 }
 
 export interface UnifiedEntry {
@@ -753,7 +755,7 @@ export default function JournalScreen() {
                             onPress={() => {
                                 // Free tier sees the 3-line preview; the full
                                 // insight is the premium moment.
-                                if (tier === 'free') {
+                                if (tier === 'free' || weeklyInsight.teaser) {
                                     router.push(paywallRoute('insight_tease'));
                                 } else {
                                     setInsightExpanded(prev => !prev);
@@ -773,12 +775,12 @@ export default function JournalScreen() {
                             ) : null}
                             <Text
                                 style={styles.insightText}
-                                numberOfLines={insightExpanded ? undefined : 3}
+                                numberOfLines={insightExpanded || weeklyInsight.teaser ? undefined : 3}
                             >
                                 {weeklyInsight.insight_text}
                             </Text>
                             <Text style={styles.dispatchReadMore}>
-                                {tier === 'free'
+                                {tier === 'free' || weeklyInsight.teaser
                                   ? 'Your counselors noticed a pattern this week. Unlock the full insight →'
                                   : insightExpanded ? 'Show less' : 'Read insight →'}
                             </Text>

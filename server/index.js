@@ -2398,36 +2398,59 @@ app.post('/api/sessions/accept', async (req, res) => {
 
 // ─── Weekly journal-analysis insight (delivered in-app) ──────────────────────
 
-// Returns the most recent non-distress insight for the authenticated user and
-// marks it delivered. Distress-flagged analyses are intentionally excluded —
-// those route to distress_review_queue for human review, never auto-surfaced.
+// Returns this user's most recent insight and marks it delivered
+// (activation Part 7.2):
+//   - Nothing while the user has a distress flag from the last 14 days, and
+//     nothing when their latest analysis is itself flagged: a flagged week is
+//     never answered with last week's insight, and never with a teaser or an
+//     upsell. Flagged analyses go to distress_review_queue for human review.
+//   - Free tier gets the first paragraph (teaser: true); the clients show the
+//     insight_tease upgrade prompt for the rest. Premium and pro get it all.
+// Delivery is still pull-based; the web Journal page now pulls too.
 app.get('/api/user/insight', async (req, res) => {
   const userId = await getAuthenticatedUserId(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+  if (await profileExtraction.hasRecentDistressFlag(supabase, userId)) return res.json({ insight: null });
+
   const { data, error } = await supabase
     .from('journal_analysis')
-    .select('*')
+    .select('id, analysis_week, themes, dominant_theme, insight_text, grounding_passages, weeks_analyzed, distress_flagged, delivered, created_at')
     .eq('user_id', userId)
-    .eq('distress_flagged', false)
     .order('analysis_week', { ascending: false })
     .limit(1)
     .maybeSingle();
 
   if (error) {
-    console.error('[/api/user/insight] error:', error.message);
+    console.error('[/api/user/insight] lookup failed');
     return res.status(500).json({ error: 'Failed to load insight' });
   }
-  if (!data) return res.json({ insight: null });
+  if (!data || data.distress_flagged || !data.insight_text) return res.json({ insight: null });
+
+  const { data: profile } = await supabase.from('profiles').select('tier, is_premium').eq('id', userId).maybeSingle();
+  const tier = normalizeTier(profile?.tier, profile?.is_premium);
 
   if (!data.delivered) {
     await supabase
       .from('journal_analysis')
       .update({ delivered: true, delivered_at: new Date().toISOString() })
-      .eq('id', data.id);
+      .eq('id', data.id)
+      .eq('distress_flagged', false);
   }
 
-  return res.json({ insight: data });
+  const { distress_flagged: _flag, delivered: _delivered, ...insight } = data;
+  if (tier === 'free') {
+    // The first paragraph; an insight written as one paragraph gives its
+    // first two sentences, so the rest is still the premium read.
+    const full = String(data.insight_text).trim();
+    let first = full.split(/\n\s*\n/)[0].trim();
+    if (first === full) {
+      const sentences = full.match(/[^.!?]+[.!?]+(\s|$)/g) || [full];
+      first = sentences.slice(0, 2).join('').trim();
+    }
+    return res.json({ insight: { ...insight, insight_text: first, grounding_passages: [], teaser: true } });
+  }
+  return res.json({ insight: { ...insight, teaser: false } });
 });
 
 // ─── Support resources card ───────────────────────────────────────────────────

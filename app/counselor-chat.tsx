@@ -16,7 +16,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor, MessageLimitError, CabinetUnavailableError, takeCabinetOffer, type CabinetOffer } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError, DailyLimitError, CabinetUnavailableError, takeCabinetOffer, type CabinetOffer } from '../services/claudeService';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import OfferCard from '../components/OfferCard';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import DayDivider from '../components/DayDivider';
@@ -111,6 +112,13 @@ export default function CounselorChatScreen() {
     return () => sub.remove();
   }, [router]);
 
+  // A message stopped by the daily limit waits in the composer (7.1).
+  useEffect(() => {
+    takeLimitDraft(counselorId).then(draft => {
+      if (draft) setInputText(prev => (prev.trim() ? prev : draft));
+    }).catch(() => {});
+  }, [counselorId]);
+
   // Load today's message count on mount
   useEffect(() => {
     AsyncStorage.getItem(getTodayDateKey()).then(val => {
@@ -128,7 +136,8 @@ export default function CounselorChatScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push(paywallRoute('counselor_daily_limit'));
+      await saveLimitDraft(counselorId, text);
+      router.push(paywallRoute('counselor_daily_limit', { counselor: counselorName }));
       return;
     }
 
@@ -167,8 +176,11 @@ export default function CounselorChatScreen() {
       // failed send used to save the error text as the counselor's reply.
       setMessages(prev => prev.slice(0, -1));
       setInputText(text);
-      if (e instanceof MessageLimitError) {
-        router.push(paywallRoute('counselor_daily_limit'));
+      if (e instanceof MessageLimitError || e instanceof DailyLimitError) {
+        // Activation 7.1: the words wait in the composer, the paywall names
+        // the counselor, and the thread picks up where it stopped.
+        await saveLimitDraft(counselorId, text);
+        router.push(paywallRoute('counselor_daily_limit', { counselor: counselorName }));
       } else {
         Alert.alert(
           'Not sent',

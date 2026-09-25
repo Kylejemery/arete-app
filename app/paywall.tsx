@@ -93,6 +93,8 @@ const FEATURES = [
 // Source-specific headline copy: whoever arrives from a tease lands on a
 // paywall that speaks to the exact thing they just reached for. Sources not
 // listed fall back to the generic header.
+const LIMIT_SOURCES = new Set(['cabinet_daily_limit', 'cabinet_limit_card', 'counselor_daily_limit']);
+
 const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
   attend_cabinet_sight: {
     title: 'Let Them See Your Hours',
@@ -137,7 +139,16 @@ const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
 export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ src?: string }>();
+  const params = useLocalSearchParams<{ src?: string; counselor?: string }>();
+  // A daily limit mid-conversation (activation 7.1): speak to that exact
+  // conversation, name the counselor, and say it is kept where it stopped.
+  const limitCopy = LIMIT_SOURCES.has(String(params.src ?? ''))
+    ? {
+        title: `Keep talking with ${params.counselor ? String(params.counselor).slice(0, 40) : 'your Cabinet'}`,
+        subtitle: 'Your conversation is saved exactly where you left off,\nyour unsent message included. Premium picks it up from there.',
+      }
+    : null;
+  const headerCopy = limitCopy ?? SOURCE_COPY[String(params.src ?? '')] ?? null;
   const loggedRef = useRef(false);
 
   // Funnel telemetry: one row per view, labeled with what triggered it, so we
@@ -170,6 +181,12 @@ export default function PaywallScreen() {
   const openWebCheckout = async () => {
     await openWebSignedIn(UPGRADE_PATH);
     refreshTier();
+    // Back to the conversation the limit interrupted, which resumes with the
+    // unsent message in the composer.
+    if (limitCopy) {
+      const tierNow = await getSubscriptionTier().catch(() => 'free' as const);
+      if (tierNow !== 'free' && router.canGoBack()) router.back();
+    }
   };
 
   return (
@@ -191,10 +208,10 @@ export default function PaywallScreen() {
         <View style={styles.header}>
           <Text style={styles.eyebrow}>Arete</Text>
           <Text style={styles.title}>
-            {SOURCE_COPY[String(params.src ?? '')]?.title ?? 'Unlock Your Cabinet'}
+            {headerCopy?.title ?? 'Unlock Your Cabinet'}
           </Text>
           <Text style={styles.subtitle}>
-            {SOURCE_COPY[String(params.src ?? '')]?.subtitle ??
+            {headerCopy?.subtitle ??
               'More counselors. More conversations.\nThe discipline to actually use them.'}
           </Text>
           {IS_US_STOREFRONT && (

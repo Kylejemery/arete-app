@@ -7,6 +7,7 @@ import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } fro
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
 import OfferCard from '@/components/OfferCard';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
 import DailyLimitCard from '@/components/DailyLimitCard';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
@@ -127,6 +128,9 @@ export default function CabinetPage() {
 
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);
+      // A message the daily limit stopped waits in the box (activation 7.1).
+      const draft = takeLimitDraft('cabinet');
+      if (draft) setInput(prev => (prev.trim() ? prev : draft));
 
       if (Array.isArray(settings.cabinet_members) && settings.cabinet_members.length > 0) {
         setActiveMembers(settings.cabinet_members);
@@ -475,6 +479,8 @@ export default function CabinetPage() {
     setSelectedCounselor(id);
     const thread = await loadThread(id);
     setCounselorMessages(thread.messages);
+    const draft = takeLimitDraft(id);
+    if (draft) setCounselorInput(prev => (prev.trim() ? prev : draft));
   };
 
   const handleSendCounselor = async () => {
@@ -840,7 +846,14 @@ export default function CabinetPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {showLimitCard && <DailyLimitCard source="cabinet_daily_limit" limit={FREE_DAILY_MESSAGES} />}
+          {showLimitCard && (
+            <DailyLimitCard
+              source="cabinet_daily_limit"
+              limit={FREE_DAILY_MESSAGES}
+              counselorName={[...cabinetMessages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null}
+              onContinue={() => saveLimitDraft('cabinet', input, '/cabinet')}
+            />
+          )}
           {sendError && (
             <div
               className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
@@ -1346,7 +1359,14 @@ export default function CabinetPage() {
                 <div ref={counselorEndRef} />
               </div>
 
-              {showLimitCard && <DailyLimitCard source="counselor_daily_limit" limit={FREE_DAILY_MESSAGES} />}
+              {showLimitCard && (
+                <DailyLimitCard
+                  source="counselor_daily_limit"
+                  limit={FREE_DAILY_MESSAGES}
+                  counselorName={selectedCounselorMeta?.name ?? null}
+                  onContinue={() => { if (selectedCounselor) saveLimitDraft(selectedCounselor, counselorInput, '/cabinet'); }}
+                />
+              )}
               {sendError && (
                 <div
                   className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"

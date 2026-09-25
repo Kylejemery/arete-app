@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import type { JournalEntry } from '@/lib/types';
 import ChapterRule from '@/components/ChapterRule';
 import SupportCard from '@/components/SupportCard';
+import InsightCard from '@/components/InsightCard';
 
 interface DisplayEntry {
   id: string;
@@ -302,6 +303,7 @@ export default function JournalPage() {
       <ChapterRule className="mx-5" />
 
       <SupportCard />
+      <InsightCard />
 
       {/* ── Search ──────────────────────────────────────────────── */}
       <div className="px-4 pb-3">

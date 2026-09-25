@@ -1285,8 +1285,15 @@ export async function sendMessageToCounselor(
     if (!response.ok) {
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
-      console.error('Backend/Claude API error:', response.status, errorText);
-      return `Your counselor is temporarily unavailable. (Error ${response.status})`;
+      // The server's daily cap: a real limit, not an outage. This used to
+      // come back as the counselor's "reply" and be saved into the thread.
+      if (response.status === 403) {
+        let errData: any = {};
+        try { errData = JSON.parse(errorText); } catch { /* ignore */ }
+        if (errData.error === 'daily_limit_reached') throw new DailyLimitError();
+      }
+      console.error('Backend/Claude API error:', response.status);
+      throw new CabinetUnavailableError(`Your counselor is temporarily unavailable. (Error ${response.status})`);
     }
 
     const data = await response.json();
@@ -1323,6 +1330,7 @@ export async function sendMessageToCounselor(
     throw new CabinetUnavailableError('No response received. Please try again.');
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
+    if (error instanceof DailyLimitError) throw error;
     if (error instanceof CabinetUnavailableError) throw error;
     console.error('Backend request failed:', error);
     throw new CabinetUnavailableError();

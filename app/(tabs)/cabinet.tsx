@@ -23,6 +23,7 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
 import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, type CabinetOffer } from '../../services/claudeService';
 import OfferCard from '../../components/OfferCard';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
@@ -139,6 +140,18 @@ export default function CabinetScreen() {
   const { tier, maxMessages } = useTierLimits();
   const [messageCount, setMessageCount] = useState(0);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
+  // Activation 7.1: the paywall names the counselor the person was talking
+  // to, the unsent message waits in the composer, and an upgrade reopens the
+  // composer right where they left off.
+  const lastSpeaker = [...messages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null;
+  useEffect(() => {
+    if (tier !== 'free') setDailyLimitReached(false);
+  }, [tier]);
+  useEffect(() => {
+    takeLimitDraft('cabinet').then(draft => {
+      if (draft) setInputText(prev => (prev.trim() ? prev : draft));
+    }).catch(() => {});
+  }, []);
   const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
 
   // --- beliefContext deep-link param ---
@@ -504,7 +517,8 @@ export default function CabinetScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push(paywallRoute('cabinet_daily_limit'));
+      await saveLimitDraft('cabinet', text);
+      router.push(paywallRoute('cabinet_daily_limit', { counselor: lastSpeaker }));
       return;
     }
 
@@ -542,9 +556,11 @@ export default function CabinetScreen() {
       setMessages(prev => prev.slice(0, -1));
       setInputText(text);
       if (e instanceof DailyLimitError) {
+        await saveLimitDraft('cabinet', text);
         setDailyLimitReached(true);
       } else if (e instanceof MessageLimitError) {
-        router.push(paywallRoute('cabinet_daily_limit'));
+        await saveLimitDraft('cabinet', text);
+        router.push(paywallRoute('cabinet_daily_limit', { counselor: lastSpeaker }));
       } else {
         Alert.alert(
           'Not sent',
@@ -989,18 +1005,18 @@ export default function CabinetScreen() {
           {dailyLimitReached ? (
             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
               <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
-                The Cabinet was mid-counsel.
+                {lastSpeaker ? `Keep talking with ${lastSpeaker}.` : 'Keep talking with your Cabinet.'}
               </Text>
               <Text style={{ color: '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                Your 10 free messages are spent, and the conversation isn't finished. Premium
-                continues it: 50 messages a day, deeper reasoning, all 23 counselors.
+                Today's free messages are spent, and this conversation isn't finished. It's saved
+                exactly where you left off, your unsent message included. Premium picks it up from here.
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
-                onPress={() => router.push(paywallRoute('cabinet_limit_card'))}
+                onPress={() => router.push(paywallRoute('cabinet_limit_card', { counselor: lastSpeaker }))}
                 activeOpacity={0.8}
               >
-                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Upgrade to Premium →</Text>
+                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Continue this conversation →</Text>
               </TouchableOpacity>
               <Text style={{ color: '#555', textAlign: 'center', marginTop: 8, fontSize: 12 }}>Resets at midnight</Text>
             </View>

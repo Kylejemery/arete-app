@@ -10,7 +10,15 @@ import { upgradeHref, type PaywallSource } from '@/lib/paywall';
 // 403 daily_limit_reached (or the user arrives with none left). The user's
 // unsent text stays in the box underneath. Web port of the limit card in
 // app/(tabs)/cabinet.tsx; copy from the conversion audit, section 5.2.
-export default function DailyLimitCard({ source, limit = 10 }: { source: PaywallSource; limit?: number }) {
+// Activation 7.1: counselorName makes it "Keep talking with Marcus", and
+// onContinue lets the page keep the unsent message and remember where to
+// come back to before it leaves for /upgrade.
+export default function DailyLimitCard({ source, limit = 10, counselorName = null, onContinue }: {
+  source: PaywallSource;
+  limit?: number;
+  counselorName?: string | null;
+  onContinue?: () => void;
+}) {
   // One gate_hit and one paywall_viewed per time the card appears. The server
   // logs its own gate_hit for the refused request (origin: 'server'); this one
   // records that the user actually saw the explanation.
@@ -33,17 +41,18 @@ export default function DailyLimitCard({ source, limit = 10 }: { source: Paywall
         className="text-[18px] leading-snug mb-1"
         style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
       >
-        Your Cabinet wasn&apos;t finished.
+        Keep talking with {counselorName || 'your Cabinet'}.
       </p>
       <p className="text-[13px] leading-relaxed mb-2" style={{ color: '#9aa0a6' }}>
-        You&apos;ve used today&apos;s {limit} free messages. With Premium the conversation continues:
-        50 messages a day, five counselors answering together instead of one, and longer, deeper replies.
+        You&apos;ve used today&apos;s {limit} free messages, and this conversation isn&apos;t finished. It&apos;s
+        saved exactly where you left off, your unsent message included. Premium picks it up from here.
       </p>
       <p className="text-[13px] font-semibold mb-3" style={{ color: '#c9a84c' }}>
         Try it free for 7 days. Cancel any time.
       </p>
       <Link
         href={upgradeHref(source)}
+        onClick={() => onContinue?.()}
         className="inline-block w-full font-semibold px-6 py-3 rounded-xl hover:opacity-90 transition-opacity"
         style={{ background: '#c9a84c', color: '#0f1724' }}
       >
