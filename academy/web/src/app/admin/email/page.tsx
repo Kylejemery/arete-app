@@ -16,6 +16,7 @@ type Recipient = {
   tier: TierKey
   rawTier: string | null
   isAdmin: boolean
+  isInternal?: boolean
   onboarded: boolean
   createdAt: string | null
   premiumSource: 'grant' | 'manual' | 'stripe' | 'apple' | null
@@ -714,6 +715,7 @@ export default function EmailPage() {
                         <td className={styles.sigTd} style={{ fontFamily: 'ui-monospace, Menlo, monospace', fontSize: 12.5 }}>
                           {r.email}
                           {r.isAdmin && <span className={styles.guideTag} style={{ marginLeft: 6 }}>admin</span>}
+                          {!r.isAdmin && r.isInternal && <span className={styles.guideTag} style={{ marginLeft: 6 }}>internal</span>}
                           {r.optOut && (
                             <span
                               className={styles.pill}
