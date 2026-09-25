@@ -26,6 +26,7 @@ export type ProductEvent =
   | 'kt_reflection_viewed'
   | 'kt_reflection_answered'
   | 'kt_field_filled'
+  | 'cabinet_starter_used'
   | 'kt_fact_removed'
   | 'kt_abandoned'
   | 'home_yesterday_card_viewed'

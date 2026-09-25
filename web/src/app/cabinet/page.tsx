@@ -3,9 +3,11 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
+import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { pickStarters, type Starter } from '@/lib/starters';
+import { logEvent } from '@/lib/events';
 import OfferCard from '@/components/OfferCard';
 import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
@@ -43,6 +45,8 @@ export default function CabinetPage() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B3: starters for the empty Cabinet.
+  const [starters, setStarters] = useState<Starter[]>(() => pickStarters({}));
   // A send that failed: shown above the composer, never in the thread.
   const [sendError, setSendError] = useState<string | null>(null);
   // Free tier daily cap. `remaining` is read from the same profile columns the
@@ -127,6 +131,9 @@ export default function CabinetPage() {
 
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);
+      getTodayCheckin()
+        .then(checkin => setStarters(pickStarters({ goal: settings.kt_goals ?? null, intention: (checkin?.intention as string | null) ?? null })))
+        .catch(() => {});
       // A message the daily limit stopped waits in the box (activation 7.1).
       const draft = takeLimitDraft('cabinet');
       if (draft) setInput(prev => (prev.trim() ? prev : draft));
@@ -291,9 +298,15 @@ export default function CabinetPage() {
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
   useEffect(() => { sharedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sharedMessages]);
 
-  const handleSendCabinet = async () => {
-    if (!input.trim() || isLoading) return;
-    const userMsg: ThreadMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
+  const handleSendCabinet = async (starter?: Starter) => {
+    const text = (starter ? starter.text : input).trim();
+    if (!text || isLoading) return;
+    if (starter) {
+      // Only the id is logged, never the conversation that follows.
+      setNextStarterId(starter.id);
+      logEvent('cabinet_starter_used', { starter_id: starter.id });
+    }
+    const userMsg: ThreadMessage = { role: 'user', content: text, timestamp: Date.now() };
     const newMessages = [...cabinetMessages, userMsg];
     setCabinetMessages(newMessages);
     setInput('');
@@ -737,6 +750,21 @@ export default function CabinetPage() {
                 >
                   Ask them anything.
                 </p>
+                {cabinetMessages.length === 0 && !searchQuery && (
+                  <div className="flex flex-col gap-2 mt-6 w-full max-w-md">
+                    {starters.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSendCabinet(s)}
+                        disabled={isLoading || showLimitCard}
+                        className="text-left px-4 py-2.5 rounded-xl text-[14px] hover:opacity-90 disabled:opacity-50"
+                        style={{ border: '1px solid rgba(201,168,76,0.3)', background: 'rgba(255,255,255,0.03)', color: '#e6eef8' }}
+                      >
+                        {s.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -894,7 +922,7 @@ export default function CabinetPage() {
               }}
             />
             <button
-              onClick={handleSendCabinet}
+              onClick={() => handleSendCabinet()}
               disabled={isLoading || !input.trim() || showLimitCard}
               className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}

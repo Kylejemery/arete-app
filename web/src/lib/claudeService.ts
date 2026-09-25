@@ -529,6 +529,12 @@ export interface CabinetOffer {
   target_date?: string;
 }
 let lastCabinetOffer: CabinetOffer | null = null;
+// The starter tapped in the empty Cabinet (run B, Part B3), sent once with
+// the next message so "ask_me" can open with a question.
+let nextStarterId: string | null = null;
+export function setNextStarterId(id: string | null): void {
+  nextStarterId = id;
+}
 function noteCabinetOffer(data: { offer?: unknown } | null): void {
   const o = data?.offer as CabinetOffer | undefined;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll') ? o : null;
@@ -601,6 +607,7 @@ export async function sendMessageToCabinet(
         model: 'claude-opus-4-5',
         counselorModels: settings?.counselor_models ?? {},
         cabinetMembers: settings?.cabinet_members ?? [],
+        starterId: (() => { const id = nextStarterId; nextStarterId = null; return id; })(),
         // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, settings?.kt_completed_at),
         system: fullSystem,

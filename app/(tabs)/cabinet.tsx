@@ -21,10 +21,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, type CabinetOffer } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
+import { pickStarters, type Starter } from '@/lib/starters';
+import { logEvent } from '@/lib/events';
 import OfferCard from '../../components/OfferCard';
 import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
-import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -152,6 +154,9 @@ export default function CabinetScreen() {
     }).catch(() => {});
   }, []);
   const [userSettings, setUserSettings] = useState<{ user_name?: string; future_self_years?: number } | null>(null);
+  // Run B, Part B3: starters for the empty Cabinet, weighted to the stated
+  // goal and today's intention.
+  const [starters, setStarters] = useState<Starter[]>(() => pickStarters({}));
 
   // --- beliefContext deep-link param ---
   const params = useLocalSearchParams<{ beliefContext?: string; cabinetContext?: string; morningMessage?: string; cabinetSeed?: string; sharedSessionId?: string; sharedPartnerName?: string }>();
@@ -407,6 +412,9 @@ export default function CabinetScreen() {
         try {
           const settings = await getUserSettings();
           setUserSettings(settings);
+          getTodayCheckin()
+            .then(checkin => setStarters(pickStarters({ goal: settings?.kt_goals ?? null, intention: checkin?.intention ?? null })))
+            .catch(() => {});
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
         }
@@ -506,8 +514,9 @@ export default function CabinetScreen() {
     }
   }, [params.morningMessage, params.cabinetSeed, initialLoading, router, absorbNewLines]);
 
-  const handleSend = async () => {
-    const text = inputText.trim();
+  const handleSend = async (starter?: Starter | unknown) => {
+    const fromStarter = starter && typeof starter === 'object' && 'id' in starter && 'text' in starter ? (starter as Starter) : null;
+    const text = (fromStarter ? fromStarter.text : inputText).trim();
     if (!text || isLoading) return;
 
     // Enforce daily message limit before sending
@@ -535,6 +544,11 @@ export default function CabinetScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
+      if (fromStarter) {
+        // Only the id is logged, never the conversation that follows.
+        setNextStarterId(fromStarter.id);
+        logEvent('cabinet_starter_used', { starter_id: fromStarter.id });
+      }
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
       const replies = await sendMessageToCabinet(updatedMessages);
@@ -925,6 +939,19 @@ export default function CabinetScreen() {
                     <Text key={name} style={styles.counselorName}>{name}</Text>
                   ))}
                   <Text style={styles.counselorName}>{futureName}</Text>
+                </View>
+                <View style={styles.starterList}>
+                  {starters.map(s => (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={styles.starterChip}
+                      onPress={() => handleSend(s)}
+                      disabled={isLoading || limitActive}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.starterText}>{s.text}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             ) : (
@@ -1420,6 +1447,12 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 8,
   },
+  starterList: { marginTop: 20, width: '100%', gap: 8 },
+  starterChip: {
+    borderWidth: 1, borderColor: '#c9a84c55', borderRadius: 12,
+    paddingVertical: 10, paddingHorizontal: 14, backgroundColor: '#16213e',
+  },
+  starterText: { color: '#e0e0e0', fontSize: 14, lineHeight: 20 },
   emptyState: {
     flex: 1,
     alignItems: 'center',

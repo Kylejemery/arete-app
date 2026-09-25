@@ -968,6 +968,9 @@ const KT_PROFILE_INSTRUCTION = 'You know this person. Do not list the profile ba
 const KT_CONNECT_INSTRUCTION = 'This person completed their Know Thyself profile very recently. Make one specific connection to their profile in this reply: a goal, a pattern, a strength, or something they said about themselves, named plainly.';
 const KT_FRESH_REPLIES = 3;
 
+// Run B, Part B3: the person tapped "I'm not sure what to ask. Ask me something."
+const ASK_ME_STARTER_INSTRUCTION = `\n\n[OPEN WITH A QUESTION]\nThe person has just arrived and chose "I'm not sure what to ask. Ask me something." Open the conversation yourself: one or two warm sentences in your own voice, then exactly one specific, answerable question about their life right now (what is on their mind this week, what they are working toward, what has been hard). No advice, no lists, no quotes. One question only.\n[END OPEN WITH A QUESTION]`;
+
 // Activation Part 4: the first assistant turn of a new conversation.
 const FIRST_REPLY_INSTRUCTION = `\n\n[FIRST REPLY IN THIS CONVERSATION]\nThis is your first reply in a new conversation, and it decides whether the person keeps talking. Keep it short: three to five sentences, no lists, no headings. Acknowledge the specific situation they described, in their terms, not a general version of it. Give one concrete observation about it. Do not stack advice, do not give a framework, do not quote at length. End with exactly one specific question that invites them to tell you more about their situation. This overrides any longer length guidance for this reply only.\n[END FIRST REPLY]`;
 
@@ -1664,7 +1667,10 @@ app.post('/api/chat/counselor', async (req, res) => {
   const isFirstTurn = sessionType !== 'shared' && (req.areteVerifiedUserId
     ? personal.isFirstTurn
     : (Array.isArray(messages) && messages.filter(m => m && m.role === 'user').length === 1));
-  const firstReplyBlock = isFirstTurn ? FIRST_REPLY_INSTRUCTION : '';
+  // Run B, Part B3: the empty-Cabinet starter "I'm not sure what to ask. Ask
+  // me something." has the counselor open with one question instead.
+  const askMeStarter = req.body?.starterId === 'ask_me';
+  const firstReplyBlock = isFirstTurn ? (askMeStarter ? ASK_ME_STARTER_INSTRUCTION : FIRST_REPLY_INSTRUCTION) : '';
 
   // --- Goal offer (activation Part 6) ---
   const goalOfferAllowed = cabinetOffers.canOfferGoal({

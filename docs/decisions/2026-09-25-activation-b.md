@@ -58,3 +58,15 @@ Rows outside the window are kept and start a new group. Rows that fail the conta
 - **Null:** a row with no messages yet. It is set when the first message arrives.
 - **Sessions:** the hourly cycle stamps the same `origin` on each session's `conversation_ended` events, so start metrics can count `user` only.
 - **Alternative:** a fifth value for broadcast lines. The prompt fixes the set at four.
+
+## B3
+
+**DB3.1 Which starters are shown.**
+- **The set:** always five. Four of the five topical starters, plus "I'm not sure what to ask. Ask me something." last.
+- **Order:** starters are ranked by keyword hits in the person's stated goal (`kt_goals`) and today's intention. Ties rotate by day.
+- **Where:** on the empty Cabinet thread only, on mobile and web. On web they are also hidden during a search with no results.
+
+**DB3.2 "Ask me something".**
+- The client sends `starterId: 'ask_me'` once with that message.
+- On the conversation's first turn, the server replaces the first-reply instruction (Part 4 of Run A) with an instruction to open with one or two warm sentences and exactly one question. The first turn already has a single voice.
+- **Logging:** only the id is logged, as `cabinet_starter_used {starter_id}` through `product_events`. No text is logged.
