@@ -40,9 +40,9 @@ import {
   type Decision,
 } from '@/lib/scribe/diff'
 import { attributeDraft, originSpans, type DraftState } from '@/lib/scribe/provenance'
-import type { DiffBase, Draft, QuoteFinding, Review, ReviewFinding, Source } from './types'
+import type { DiffBase, Draft, Finding, QuoteFinding, Review, ReviewFinding, Source } from './types'
 
-export type DraftTab = 'draft' | 'changes' | 'review' | 'sources' | 'quotes'
+export type DraftTab = 'draft' | 'changes' | 'review' | 'sources' | 'quotes' | 'findings'
 
 function reviewHasFindings(r: Review | null | undefined): boolean {
   return !!r && (r.not_kyle.length > 0 || r.unearned.length > 0 || r.narrated_over.length > 0 || (r.tells?.length ?? 0) > 0)
@@ -95,6 +95,9 @@ export interface DraftWorkspaceProps {
   onToggleGapsMode: () => void
   onOutsideRead: () => void
   readingOutside: boolean
+  /** Gap and fact check findings on this entry, every status. */
+  findings: Finding[]
+  onFindingStatus: (id: string, status: 'open' | 'fixed' | 'dismissed') => void
 }
 
 export default function DraftWorkspace(props: DraftWorkspaceProps) {
@@ -106,7 +109,10 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     onExport, onExportWord, onExportBook, onSaveToLog, onSendToComposer, sendingToComposer,
     onApplyRevision, applying, quotes, quotesChecking, history, rawText,
     gapsMode, onToggleGapsMode, onOutsideRead, readingOutside,
+    findings, onFindingStatus,
   } = props
+  const [showResolvedFindings, setShowResolvedFindings] = useState(false)
+  const openFindings = findings.filter(f => f.status === 'open')
 
   const [baseId, setBaseId] = useState<string | null>(bases[0]?.id ?? null)
   const [decisions, setDecisions] = useState<Record<number, Decision>>({})
@@ -165,6 +171,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     : tab === 'changes' && hunkCount > 0 ? 'changes'
     : tab === 'sources' ? 'sources'
     : tab === 'quotes' ? 'quotes'
+    : tab === 'findings' && findings.length > 0 ? 'findings'
     : 'draft'
 
   const voiceMetrics = shown ? computeVoiceMetrics(shown) : null
@@ -293,7 +300,96 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
           Quotes{unverifiedQuotes.length ? ` (${unverifiedQuotes.length}!)` : ' ✓'}
         </button>
       )}
+      {findings.length > 0 && (
+        <button
+          className={`${styles.tab} ${effTab === 'findings' ? styles.tabOn : ''} ${openFindings.some(f => f.verdict === 'contradicted') ? styles.tabAlert : ''}`}
+          onClick={() => onTabChange('findings')}
+          title="Gaps in the argument and checked claims about the Stoics, from /gaps and /factcheck"
+        >
+          Findings{openFindings.length ? ` (${openFindings.length})` : ''}
+        </button>
+      )}
     </span>
+  )
+
+  const findingsBody = (
+    <>
+      <div className={styles.reviewMeta}>
+        {openFindings.length
+          ? `${openFindings.length} open. Gaps are where the argument needs something; fact findings are claims checked against the corpus, and a verdict only stands when its passage was really retrieved.`
+          : 'Nothing open.'}
+        {' '}
+        <button className={styles.hunkBtn} onClick={() => setShowResolvedFindings(s => !s)}>
+          {showResolvedFindings ? 'Open only' : 'Show resolved'}
+        </button>
+      </div>
+      <ul className={styles.reviewList}>
+        {(showResolvedFindings ? findings.filter(f => f.status !== 'superseded') : openFindings).map(f => {
+          const stillThere = !shown || containsPhrase(shown, f.passage)
+          const label =
+            f.kind === 'fact' ? (f.verdict ?? 'checked')
+            : f.kind === 'cross_gap' ? 'across chapters'
+            : 'gap'
+          const flag =
+            f.verdict === 'supported' ? styles.quoteOk
+            : f.verdict === 'contradicted' ? styles.quoteBad
+            : f.verdict === 'unverifiable' ? styles.quoteWarn
+            : ''
+          const fixWhy =
+            f.kind === 'fact'
+              ? `The fact check found this claim ${f.verdict}${f.evidence?.[0] ? `, against ${f.evidence[0].author}, ${f.evidence[0].work}` : ''}: ${f.note}`
+              : f.note
+          return (
+            <li key={f.id} className={styles.finding}>
+              <span className={`${styles.quoteFlag} ${flag}`}>{label}</span>{' '}
+              {f.status !== 'open' && <span className={styles.quoteFlag}>{f.status}</span>}{' '}
+              <button
+                className={styles.findingQuote}
+                onClick={() => focusPhrase(f.passage)}
+                disabled={!stillThere}
+                title={stillThere ? 'Show this passage in the draft' : 'This passage is no longer in the draft'}
+              >
+                “{f.passage.length > 220 ? `${f.passage.slice(0, 220)}…` : f.passage}”
+              </button>
+              {f.claim && f.kind === 'fact' && <span className={styles.reviewWhy}> Claim: {f.claim}.</span>}
+              <span className={styles.reviewWhy}> {f.note}</span>
+              {f.evidence?.length > 0 && (
+                <div className={styles.reviewWhy} style={{ marginLeft: 12 }}>
+                  {f.evidence.map((e, i) => (
+                    <div key={i}>
+                      {e.author}, {[e.work, e.section_label].filter(Boolean).join(' ')}
+                      {e.translator ? `, trans. ${e.translator}` : ''}
+                      {e.mode === 'paraphrase' ? ' (a summary of modern scholarship)' : ''}: “{e.excerpt}”
+                    </div>
+                  ))}
+                </div>
+              )}
+              <span className={styles.findingBtns}>
+                {!stillThere && <span className={styles.findingGone}>passage no longer in the draft</span>}
+                {stillThere && f.status === 'open' && f.verdict !== 'supported' && (
+                  <button
+                    className={styles.hunkBtn}
+                    onClick={() => onScopedTurn(findingPrompt(f.passage, fixWhy))}
+                    disabled={streaming}
+                    title="Send this to Scribe as a scoped fix"
+                  >
+                    Fix this
+                  </button>
+                )}
+                {f.status === 'open' ? (
+                  <>
+                    <button className={styles.hunkBtn} onClick={() => onFindingStatus(f.id, 'fixed')}>Fixed</button>
+                    <button className={styles.hunkBtn} onClick={() => onFindingStatus(f.id, 'dismissed')}>Dismiss</button>
+                  </>
+                ) : f.status !== 'superseded' ? (
+                  <button className={styles.hunkBtn} onClick={() => onFindingStatus(f.id, 'open')}>Reopen</button>
+                ) : null}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+    </>
   )
 
   const canEditWhole = !!shown && !streaming && !viewingSnapshotStage && effTab === 'draft'
@@ -623,6 +719,7 @@ export default function DraftWorkspace(props: DraftWorkspaceProps) {
     effTab === 'review' ? reviewBody
     : effTab === 'changes' ? changesBody
     : effTab === 'quotes' ? quotesBody
+    : effTab === 'findings' ? findingsBody
     : effTab === 'sources' ? (
       <SourceList
         sources={sources}

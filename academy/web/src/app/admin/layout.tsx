@@ -73,6 +73,7 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
     tabs: [
       { href: '/admin/scribe', label: 'Scribe' },
       { href: '/admin/scribe/chat', label: 'Scribe Chat' },
+      { href: '/admin/scribe/book', label: 'Book' },
       { href: '/admin/scribe/log', label: 'Log' },
     ],
   },

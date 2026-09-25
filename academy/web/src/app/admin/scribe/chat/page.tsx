@@ -10,10 +10,11 @@ import admin from '../../admin.module.css'
 import styles from './chat.module.css'
 import DraftWorkspace, { type DraftTab } from './DraftWorkspace'
 import SourceList from './SourceList'
-import type { DiffBase, Draft, Entry, Message, Review, Source } from './types'
+import type { BookInfo, DiffBase, Draft, Entry, Finding, Message, Review, Source } from './types'
 import { withAttribution } from '@/lib/scribe/attribution'
 import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
 import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
+import { describeCommandTurn, parseCommand, stripFindingsBlock } from '@/lib/scribe/book-draft'
 import type { Highlight } from '@/lib/scribe/prose'
 import type { DraftState } from '@/lib/scribe/provenance'
 import type { QuoteFinding } from './types'
@@ -82,14 +83,22 @@ function revisionSummary(content: string): string {
   return content.match(/<kyle-edit summary="([^"]*)"/)?.[1] ?? ''
 }
 
-// Chat-bubble text: commentary only — the draft lives in its own pane.
+// Chat-bubble text: commentary only — the draft lives in its own pane, and a
+// gap analysis's findings block lives in the Findings tab.
 function commentaryOf(text: string): string {
-  const out = stripEdits(
+  const out = stripFindingsBlock(stripEdits(
     text
       .replace(/<snapshot stage="(?:middle|full|final)"\s*\/>/g, '')
       .replace(/<draft>[\s\S]*?(<\/draft>|$)/, '')
-  ).trim()
+  )).trim()
   return out || '(revised the working draft — see the draft pane)'
+}
+
+// Kyle's turn as the conversation shows it: a command as the command typed,
+// an imported chapter as a note, a scoped turn condensed, else verbatim.
+function userTurnText(content: string): string {
+  if (content.startsWith('<chapter-import/>')) return content.replace('<chapter-import/>\n', '')
+  return describeCommandTurn(content) ?? describeScopedTurn(content) ?? content
 }
 
 // While streaming, show the partial draft as it grows.
@@ -106,6 +115,10 @@ export default function ScribeChatPage() {
   const [entry, setEntry] = useState<Entry | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [drafts, setDrafts] = useState<Draft[]>([])
+  // The book this entry is a chapter of, or null for a standalone essay.
+  const [book, setBook] = useState<BookInfo | null>(null)
+  const [findings, setFindings] = useState<Finding[]>([])
+  const [checkingFacts, setCheckingFacts] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
 
@@ -179,6 +192,8 @@ export default function ScribeChatPage() {
       setEntry(json.entry)
       setMessages(json.messages || [])
       setDrafts(json.drafts || [])
+      setBook(json.book ?? null)
+      setFindings(json.findings || [])
       setViewedDraftId(null)
       setRightTab('draft')
       // Another entry's quotations are not this entry's; clear until the
@@ -310,6 +325,14 @@ export default function ScribeChatPage() {
             const v = ev.v as { text: string | null; mode: string; applied: number; failed: number }
             if (v.text) setLiveDraft(v.text)
             if (v.failed) showToast(`${v.failed} of Scribe's edits could not be placed — see the note in the conversation`)
+          } else if (ev.t === 'findings') {
+            const v = ev.v as Finding[]
+            setFindings(prev => [...v, ...prev.map(f => (f.status === 'open' && f.kind !== 'fact' ? { ...f, status: 'superseded' as const } : f))])
+            if (v.length) setRightTab('findings')
+            showToast(v.length ? `${v.length} finding${v.length === 1 ? '' : 's'} in the Findings tab` : 'No gaps found; the argument holds as far as Scribe can see')
+          } else if (ev.t === 'book') {
+            const v = ev.v as { reindexed: boolean; summarized: boolean }
+            if (v.summarized) showToast('Chapter summary and book index updated')
           } else if (ev.t === 'error') {
             throw new Error(ev.v as string)
           } else if (ev.t === 'done') {
@@ -359,10 +382,55 @@ export default function ScribeChatPage() {
     setCreating(false)
   }
 
-  async function send() {
-    const msg = input.trim()
+  // The fact check is not a conversation turn: it extracts the claims, checks
+  // each against the corpus and the paper chunks, and lands in Findings.
+  const runFactCheck = useCallback(async (entryId: string) => {
+    if (checkingFacts) return
+    setCheckingFacts(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/admin/scribe/entries/${entryId}/factcheck`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Fact check failed')
+      await loadEntry(entryId)
+      setRightTab('findings')
+      const contradicted = (json.results as { verdict: string }[] | undefined)?.filter(r => r.verdict === 'contradicted').length ?? 0
+      showToast(
+        json.nothingToCheck
+          ? 'No checkable claims about the Stoics in this draft'
+          : `${json.claims} claim${json.claims === 1 ? '' : 's'} checked${contradicted ? `, ${contradicted} contradicted by the corpus` : ''}`
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Fact check failed')
+    }
+    setCheckingFacts(false)
+  }, [checkingFacts, loadEntry])
+
+  async function send(text?: string) {
+    const msg = (text ?? input).trim()
     if (!msg || !selectedId || streaming) return
     setInput('')
+    // /factcheck and /summarize are jobs, not turns.
+    const cmd = parseCommand(msg)
+    if (cmd?.name === 'factcheck') {
+      if (cmd.arg === 'book' && book) { window.open(`/admin/scribe/book/${book.id}`, '_blank', 'noopener'); return }
+      await runFactCheck(selectedId)
+      return
+    }
+    if (cmd?.name === 'summarize') {
+      if (!book) { showToast('This entry is not in a book; there is nothing to summarise yet'); return }
+      window.open(`/admin/scribe/book/${book.id}`, '_blank', 'noopener')
+      return
+    }
+    if (cmd?.name === 'gaps' && cmd.arg === 'book') {
+      if (!book) { showToast('This entry is not in a book'); return }
+      window.open(`/admin/scribe/book/${book.id}`, '_blank', 'noopener')
+      return
+    }
     // Optimistic echo of Kyle's turn; the reload after the stream replaces it.
     setMessages(prev => [...prev, {
       id: `optimistic-${Date.now()}`,
@@ -373,6 +441,20 @@ export default function ScribeChatPage() {
     }])
     await runTurn(selectedId, msg)
   }
+
+  async function setFindingStatus(id: string, status: 'open' | 'fixed' | 'dismissed') {
+    setFindings(prev => prev.map(f => (f.id === id ? { ...f, status } : f)))
+    const res = await fetch(`/api/admin/scribe/findings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    })
+    if (!res.ok) showToast('Could not update the finding')
+  }
+
+  const chapterIndex = book ? book.chapters.findIndex(c => c.entry_id === selectedId) : -1
+  const prevChapter = chapterIndex > 0 ? book!.chapters[chapterIndex - 1] : null
+  const nextChapter = book && chapterIndex >= 0 && chapterIndex < book.chapters.length - 1 ? book.chapters[chapterIndex + 1] : null
 
   // Every committed draft in thread order, whoever produced it — Scribe's turns
   // and Kyle's hand revisions alike. The last one is the working draft.
@@ -727,6 +809,8 @@ export default function ScribeChatPage() {
     readingOutside,
     onApplyRevision: applyRevision,
     applying,
+    findings,
+    onFindingStatus: setFindingStatus,
   }
 
   const fit = fitLayout(layout, viewportW)
@@ -800,6 +884,25 @@ export default function ScribeChatPage() {
               </div>
             )}
             <div className={styles.paneBody}>
+              {book && (
+                <>
+                  <div className={styles.searchNote}>
+                    <a href={`/admin/scribe/book/${book.id}`}>{book.title}</a> · chapters
+                  </div>
+                  {book.chapters.map(c => (
+                    <button
+                      key={c.id}
+                      className={`${styles.entryItem} ${c.entry_id === selectedId ? styles.entryItemOn : ''}`}
+                      onClick={() => setSelectedId(c.entry_id)}
+                      title={`${c.status}, ${c.word_count.toLocaleString()} words`}
+                    >
+                      {c.position}. {c.title}
+                      <span className={styles.entryDate}>{c.status}</span>
+                    </button>
+                  ))}
+                  <div className={styles.searchNote}>all entries</div>
+                </>
+              )}
               {entries.length === 0 && <p className={styles.draftEmpty}>No entries yet.</p>}
               {entries.map(e => (
                 <button
@@ -830,7 +933,17 @@ export default function ScribeChatPage() {
 
         {/* ── Conversation ── */}
         <div className={`${styles.pane} ${styles.convo}`}>
-          <div className={styles.paneHead}>Conversation</div>
+          <div className={styles.paneHead}>
+            {book && chapterIndex >= 0
+              ? `Chapter ${book.chapters[chapterIndex].position} of ${book.chapters.length}`
+              : 'Conversation'}
+            {book && (
+              <span className={styles.headBtns}>
+                <button className={styles.railBtn} onClick={() => prevChapter && setSelectedId(prevChapter.entry_id)} disabled={!prevChapter || streaming} title={prevChapter ? `Previous: ${prevChapter.title}` : 'First chapter'}>‹</button>
+                <button className={styles.railBtn} onClick={() => nextChapter && setSelectedId(nextChapter.entry_id)} disabled={!nextChapter || streaming} title={nextChapter ? `Next: ${nextChapter.title}` : 'Last chapter'}>›</button>
+              </span>
+            )}
+          </div>
           <div className={styles.paneBody} ref={threadRef}>
             {!selectedId && <p className={styles.draftEmpty}>Pick an entry or start a new one.</p>}
             <div className={styles.thread}>
@@ -843,11 +956,10 @@ export default function ScribeChatPage() {
                     </div>
                   )
                 }
-                const scoped = m.role === 'user' ? describeScopedTurn(m.content) : null
                 return (
                   <div key={m.id} className={`${styles.msg} ${m.role === 'user' ? styles.msgUser : styles.msgScribe}`}>
                     <div className={styles.msgRole}>{m.role === 'user' ? 'Kyle' : 'Scribe'}</div>
-                    {m.role === 'scribe' ? commentaryOf(m.content) : (scoped ?? m.content)}
+                    {m.role === 'scribe' ? commentaryOf(m.content) : userTurnText(m.content)}
                   </div>
                 )
               })}
@@ -874,10 +986,36 @@ export default function ScribeChatPage() {
               )}
             </div>
           </div>
+          <div className={styles.draftActions}>
+            <button
+              className={styles.snapshotChip}
+              onClick={() => send('/rewrite')}
+              disabled={!canChat || streaming || !committedDraft}
+              title="Turn the raw draft into finished prose in your voice, as edits you review one by one. About two thousand words a turn; /rewrite next continues."
+            >
+              /rewrite
+            </button>
+            <button
+              className={styles.snapshotChip}
+              onClick={() => send('/gaps')}
+              disabled={!canChat || streaming || !committedDraft}
+              title="Where the argument has gaps, in this chapter and against the rest of the book. Changes nothing."
+            >
+              /gaps
+            </button>
+            <button
+              className={styles.snapshotChip}
+              onClick={() => send('/factcheck')}
+              disabled={!canChat || streaming || checkingFacts || !committedDraft}
+              title="Check every claim about Stoic figures, texts, dates and doctrines against the corpus. A verdict only stands with the passage it rests on."
+            >
+              {checkingFacts ? 'checking…' : '/factcheck'}
+            </button>
+          </div>
           <div className={styles.composer}>
             <textarea
               className={styles.composerInput}
-              placeholder='Direct the revision — “concede that point”, “make character the moat”, “bring in Marcus on the citadel”, “develop the full draft”…'
+              placeholder='Direct the revision, or type a command: /rewrite, /gaps, /factcheck. “concede that point”, “bring in Marcus on the citadel”, “develop the full draft”…'
               value={input}
               rows={2}
               disabled={!canChat || streaming}
@@ -886,7 +1024,7 @@ export default function ScribeChatPage() {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() }
               }}
             />
-            <button className={admin.primaryBtn} onClick={send} disabled={!canChat || streaming || !input.trim()}>
+            <button className={admin.primaryBtn} onClick={() => send()} disabled={!canChat || streaming || !input.trim()}>
               {streaming ? 'Working…' : 'Send'}
             </button>
           </div>
