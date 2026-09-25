@@ -51,7 +51,7 @@ export default function SupportCard() {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>If things feel heavy right now, you don't have to carry it alone.</Text>
+        <Text style={styles.title}>{"If things feel heavy right now, you don't have to carry it alone."}</Text>
         <TouchableOpacity onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Dismiss">
           <Ionicons name="close" size={16} color="#888" />
         </TouchableOpacity>

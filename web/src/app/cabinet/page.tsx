@@ -16,7 +16,6 @@ import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
 import { clockTime, startsNewDay } from '@/lib/messageDates';
 import { DayDivider, MessageTime } from '@/components/MessageDates';
-import GlassCard from '@/components/GlassCard';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import CheckInChip from '@/components/CheckInChip';
 import { parseCheckInPrompt } from '@/lib/checkinMessage';

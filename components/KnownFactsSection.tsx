@@ -19,9 +19,11 @@ export default function KnownFactsSection({ settings, reloadKey = 0 }: { setting
   }, []);
 
   useEffect(() => {
-    void load();
+    let cancelled = false;
+    getProfileFacts().then(f => { if (!cancelled) setFacts(f); });
     void markFactsSeen();
-  }, [load, reloadKey]);
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   const views = fieldViews(facts, settings).filter(v => v.field.key !== 'off_limits');
   if (views.length === 0) return null;

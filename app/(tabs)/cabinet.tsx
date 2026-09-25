@@ -144,9 +144,8 @@ export default function CabinetScreen() {
   // to, the unsent message waits in the composer, and an upgrade reopens the
   // composer right where they left off.
   const lastSpeaker = [...messages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null;
-  useEffect(() => {
-    if (tier !== 'free') setDailyLimitReached(false);
-  }, [tier]);
+  // An upgrade (tier no longer free) lifts the limit card without a reload.
+  const limitActive = dailyLimitReached && tier === 'free';
   useEffect(() => {
     takeLimitDraft('cabinet').then(draft => {
       if (draft) setInputText(prev => (prev.trim() ? prev : draft));
@@ -1002,14 +1001,13 @@ export default function CabinetScreen() {
           </ScrollView>
 
           {/* Input Bar */}
-          {dailyLimitReached ? (
+          {limitActive ? (
             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
               <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
                 {lastSpeaker ? `Keep talking with ${lastSpeaker}.` : 'Keep talking with your Cabinet.'}
               </Text>
               <Text style={{ color: '#888', textAlign: 'center', marginBottom: 12, fontSize: 13 }}>
-                Today's free messages are spent, and this conversation isn't finished. It's saved
-                exactly where you left off, your unsent message included. Premium picks it up from here.
+                {"Today's free messages are spent, and this conversation isn't finished. It's saved exactly where you left off, your unsent message included. Premium picks it up from here."}
               </Text>
               <TouchableOpacity
                 style={{ backgroundColor: '#c9a84c', borderRadius: 10, paddingVertical: 12, alignItems: 'center' }}
@@ -1034,17 +1032,17 @@ export default function CabinetScreen() {
                   maxLength={2000}
                   onSubmitEditing={handleSend}
                   blurOnSubmit={false}
-                  editable={!dailyLimitReached}
+                  editable={!limitActive}
                 />
                 <TouchableOpacity
-                  style={[styles.sendButton, (!inputText.trim() || isLoading || dailyLimitReached) && styles.sendButtonDisabled]}
+                  style={[styles.sendButton, (!inputText.trim() || isLoading || limitActive) && styles.sendButtonDisabled]}
                   onPress={handleSend}
-                  disabled={!inputText.trim() || isLoading || dailyLimitReached}
+                  disabled={!inputText.trim() || isLoading || limitActive}
                 >
                   <Ionicons
                     name="send"
                     size={18}
-                    color={!inputText.trim() || isLoading || dailyLimitReached ? '#555' : '#1a1a2e'}
+                    color={!inputText.trim() || isLoading || limitActive ? '#555' : '#1a1a2e'}
                   />
                 </TouchableOpacity>
               </View>
