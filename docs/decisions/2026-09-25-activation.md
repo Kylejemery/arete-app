@@ -132,3 +132,28 @@ This file records the judgement calls made while carrying out the activation pro
 - **Where the questions live:** there is one fixed question per counselor, in `lib/intentionQuestion.ts`, mirrored in `web/src/lib/intentionQuestion.ts`. Each is phrased around "what would make you proud tonight".
 - **Behavior:** the input, the debounced save to `check_ins.intention`, and the daily question are unchanged.
 - **Alternative:** generate the question with a model each morning. That adds a model call and latency to a screen the prompt did not ask to make slower.
+
+## Part 6
+
+**D6.1 How the counselor offers a goal.**
+- The closing voice is told that, if the person stated a concrete intention, it may end with one sentence offering to save it, plus a marker line: `[[GOAL|title|CATEGORY|date]]`.
+- The server strips every marker, and returns the offer to the client as a card with the title, category (the Journal tab's 8) and target date, all editable.
+- Accepting creates the goal server-side with `source = 'cabinet'` and `counselor` set.
+- **Why:** there is no extra model call and no added latency, and a stated intention is judged by the model that just read the conversation.
+- **Alternative:** a Haiku classifier on every turn.
+
+**D6.2 Limits.** At most one goal offer per conversation (session). There are no offers on the first turn, in distress, or for callers without a verified JWT. Nothing is created without a tap on Save goal.
+
+**D6.3 One commit carries the shared offer mechanism.** Goal and scroll offers share `cabinet_offers`, the offer card (mobile and web) and `POST /api/cabinet/offers/:id/respond`. That shared code is in the Part 6 commit. The Part 9 commit carries the scroll-specific tests and decisions.
+
+## Part 9
+
+**D9.1 Which counselor gets the scroll.** The existing scroll pipeline only has voices for Marcus, Epictetus and Seneca, and `scrolls.counselor` is check-constrained.
+- The scroll is attributed to whichever of those three spoke most in the conversation.
+- If none of them spoke, the pipeline's own topic-based assignment chooses.
+- **Alternative:** add voices for every counselor to the scroll pipeline. That is a larger change to a surface the prompt did not ask to change.
+
+**D9.2 The offer.**
+- **When:** at least six messages in the conversation (user and counselor turns, this turn's replies included). At most one offer per user per 72 hours. Never in the same turn as a goal offer, and never in distress.
+- **The card:** "Would you like a scroll on this?"
+- **On Yes:** the server writes a one-sentence, general-terms topic from the person's own turns with Haiku, then writes the scroll through the same generation function as `POST /api/scrolls/generate`, with `request_type = 'requested'`. It appears in Scrolls when ready.
