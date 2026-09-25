@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../../services/claudeService';
 import type { Goal, Book } from '@/lib/types';
 import { paywallRoute } from '@/lib/paywall';
+import SupportCard from '../../components/SupportCard';
 
 interface TodayDispatch {
     id: string;
@@ -725,6 +726,7 @@ export default function JournalScreen() {
                     contentContainerStyle={styles.feedContent}
                     showsVerticalScrollIndicator={false}
                 >
+                    <SupportCard />
                     {todayDispatch && !dispatchDismissed && (
                         <TouchableOpacity
                             activeOpacity={0.85}

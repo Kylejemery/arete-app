@@ -2153,6 +2153,39 @@ app.get('/api/user/insight', async (req, res) => {
   return res.json({ insight: data });
 });
 
+// ─── Support resources card ───────────────────────────────────────────────────
+
+// Whether to show the gentle "you don't have to carry it alone" card on the
+// Journal screen: true for 7 days after this user's most recent distress flag
+// (the queue row's created_at is the moment of the flag). Returns only a key
+// for per-card dismissal and the end of the window, never notes, status, or
+// any hint of why, so nothing on the client can reveal that writing was
+// analyzed.
+const SUPPORT_CARD_DAYS = 7;
+app.get('/api/user/support-card', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const since = new Date(Date.now() - SUPPORT_CARD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from('distress_review_queue')
+    .select('analysis_id, created_at')
+    .eq('user_id', userId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[/api/user/support-card] lookup failed');
+    return res.json({ show: false });
+  }
+  if (!data) return res.json({ show: false });
+
+  const until = new Date(new Date(data.created_at).getTime() + SUPPORT_CARD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  return res.json({ show: true, key: data.analysis_id, until });
+});
+
 // ─── Lifecycle email unsubscribe (retention plan R9) ─────────────────────────
 
 // One-click unsubscribe from every kind of Arete email. The link in each
@@ -5038,7 +5071,7 @@ app.post('/api/admin/journal/run', async (req, res) => {
     }
 
     journalAnalysisRunning = true;
-    runJournalAnalysis()
+    runJournalAnalysis({ manual: true })
       .then(result => {
         console.log('[/api/admin/journal/run] finished:', JSON.stringify(result));
       })
