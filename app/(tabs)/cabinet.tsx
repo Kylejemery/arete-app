@@ -91,6 +91,26 @@ type SharedMsg = Omit<ThreadMessage, 'role'> & {
   senderName?: string;
 };
 
+// Run B, Part B3: the starter chips of the empty Cabinet. Its own component so
+// the send handler is only ever called from a press, never during render.
+function StarterChips({ starters, disabled, onPick }: { starters: Starter[]; disabled: boolean; onPick: (s: Starter) => void }) {
+  return (
+    <View style={styles.starterList}>
+      {starters.map(s => (
+        <TouchableOpacity
+          key={s.id}
+          style={styles.starterChip}
+          onPress={() => onPick(s)}
+          disabled={disabled}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.starterText}>{s.text}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 export default function CabinetScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -946,19 +966,11 @@ export default function CabinetScreen() {
                   ))}
                   <Text style={styles.counselorName}>{futureName}</Text>
                 </View>
-                <View style={styles.starterList}>
-                  {starters.map(s => (
-                    <TouchableOpacity
-                      key={s.id}
-                      style={styles.starterChip}
-                      onPress={() => handleSend(s)}
-                      disabled={isLoading || limitActive}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.starterText}>{s.text}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                <StarterChips
+                  starters={starters}
+                  disabled={isLoading || limitActive}
+                  onPick={handleSend}
+                />
               </View>
             ) : (
               <>

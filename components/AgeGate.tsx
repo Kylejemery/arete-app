@@ -10,12 +10,14 @@ import {
 } from '@/lib/ageBand';
 import { useAgeStatus } from '../hooks/useAgeStatus';
 
-export default function AgeGate({ userId }: { userId: string }) {
+export default function AgeGate({ userId }: { userId: string | null }) {
   const { status } = useAgeStatus();
-  const [checked, setChecked] = useState(false);
+  // The user the startup check has finished for, so a new sign-in checks again.
+  const [checkedFor, setCheckedFor] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!userId) return;
     let cancelled = false;
     (async () => {
       let s: AgeStatus | null = await fetchAgeStatus();
@@ -23,12 +25,12 @@ export default function AgeGate({ userId }: { userId: string }) {
         const pending = await takePendingAgeBand();
         if (pending) s = await setMyAgeBand(pending);
       }
-      if (!cancelled) setChecked(true);
+      if (!cancelled) setCheckedFor(userId);
     })();
     return () => { cancelled = true; };
   }, [userId]);
 
-  if (!checked || !status) return null;
+  if (!userId || checkedFor !== userId || !status) return null;
 
   if (status.locked) {
     return (

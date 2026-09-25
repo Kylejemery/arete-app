@@ -233,7 +233,7 @@ export default function RootLayout() {
             <DeepLinkHandler />
             <NotificationTapHandler />
             <Slot />
-            {session?.user?.id ? <AgeGate userId={session.user.id} /> : null}
+            <AgeGate userId={session?.user?.id ?? null} />
           </SessionContext.Provider>
         </GestureHandlerRootView>
       </ErrorBoundary>
