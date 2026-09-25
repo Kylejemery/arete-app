@@ -25,6 +25,7 @@ import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../../services/claudeService';
 import type { Goal, Book } from '@/lib/types';
 import { paywallRoute } from '@/lib/paywall';
+import { firstSentence } from '@/lib/paywallCopy';
 import SupportCard, { ImmediateSupportCard } from '../../components/SupportCard';
 import { looksDistressed } from '@/lib/distress';
 
@@ -780,22 +781,34 @@ export default function JournalScreen() {
                                     <Ionicons name="close" size={16} color="#888" />
                                 </TouchableOpacity>
                             </View>
-                            {weeklyInsight.dominant_theme ? (
-                                <Text style={styles.insightTheme}>{weeklyInsight.dominant_theme}</Text>
-                            ) : null}
-                            <Text
-                                style={styles.insightText}
-                                numberOfLines={insightExpanded || weeklyInsight.teaser ? undefined : 3}
-                            >
-                                {weeklyInsight.insight_text}
-                            </Text>
-                            <Text style={styles.dispatchReadMore}>
-                                {isTeen
-                                  ? (insightExpanded ? 'Show less' : 'Read insight →')
-                                  : tier === 'free' || weeklyInsight.teaser
-                                  ? 'Your counselors noticed a pattern this week. Unlock the full insight →'
-                                  : insightExpanded ? 'Show less' : 'Read insight →'}
-                            </Text>
+                            {!isTeen && (tier === 'free' || weeklyInsight.teaser) ? (
+                                // The free tier tease (audit section 5.3, retention plan
+                                // R11): what they noticed, the first sentence of it, and
+                                // what Premium adds.
+                                <>
+                                    <Text style={styles.insightTheme}>Your counselors noticed something in your week.</Text>
+                                    <Text style={styles.insightText}>{firstSentence(weeklyInsight.insight_text)}</Text>
+                                    <Text style={styles.insightTeaseNote}>
+                                        Premium shows the full pattern: what they saw, where it shows up in your check ins, and one thing to try. Free for 7 days.
+                                    </Text>
+                                    <Text style={styles.dispatchReadMore}>Unlock the full insight →</Text>
+                                </>
+                            ) : (
+                                <>
+                                    {weeklyInsight.dominant_theme ? (
+                                        <Text style={styles.insightTheme}>{weeklyInsight.dominant_theme}</Text>
+                                    ) : null}
+                                    <Text
+                                        style={styles.insightText}
+                                        numberOfLines={insightExpanded ? undefined : 3}
+                                    >
+                                        {weeklyInsight.insight_text}
+                                    </Text>
+                                    <Text style={styles.dispatchReadMore}>
+                                        {insightExpanded ? 'Show less' : 'Read insight →'}
+                                    </Text>
+                                </>
+                            )}
                         </TouchableOpacity>
                     )}
                     {filteredEntries.length === 0 ? (
@@ -1246,6 +1259,7 @@ const styles = StyleSheet.create({
         fontStyle: 'italic', marginBottom: 6,
     },
     insightText: { color: '#ccc', fontSize: 14, lineHeight: 22 },
+    insightTeaseNote: { color: '#9aa0a6', fontSize: 13, lineHeight: 19, marginTop: 8 },
 
     // ── Journal feed ─────────────────────────────────────────────────────────
     feedContent: { padding: 16, paddingTop: 10, paddingBottom: 100 },

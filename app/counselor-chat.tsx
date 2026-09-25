@@ -410,7 +410,7 @@ export default function CounselorChatScreen() {
           <View style={styles.accessBlockedPanel}>
             <Text style={styles.accessBlockedTitle}>Counselor Locked</Text>
             <Text style={styles.accessBlockedBody}>
-              Free members have access to Marcus Aurelius, Epictetus, and David Goggins. Upgrade to Arete to unlock all 23 counselors.
+              Free members have access to Marcus Aurelius, David Goggins, and Theodore Roosevelt. Upgrade to Arete to unlock all 23 counselors.
             </Text>
             <TouchableOpacity
               style={styles.accessUpgradeButton}

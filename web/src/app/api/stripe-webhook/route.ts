@@ -249,6 +249,32 @@ async function syncStripeSubscription(
     if (historyError) {
       console.error('[stripe-webhook] subscription_events insert failed:', historyError.message)
     }
+
+    // Funnel telemetry (retention plan R11): the same transition as a product
+    // event, so trial_started and subscription_activated sit next to
+    // paywall_viewed and checkout_opened in product_events. Gated on the
+    // status change above, so a replayed delivery logs nothing.
+    const funnelEvent =
+      status === 'trialing' ? 'trial_started'
+      : status === 'active' ? 'subscription_activated'
+      : REVOKE_STATUSES.includes(status) ? 'subscription_cancelled'
+      : null
+    if (funnelEvent) {
+      const { error: funnelError } = await admin.from('product_events').insert({
+        user_id: userId,
+        event: funnelEvent,
+        props: {
+          plan: planKeyForPrice(priceId) ?? tier,
+          source: subscription.metadata?.source ?? null,
+          status_from: statusFrom,
+          status_to: status,
+        },
+        platform: 'stripe',
+      })
+      if (funnelError) {
+        console.error(`[stripe-webhook] ${funnelEvent} insert failed:`, funnelError.message)
+      }
+    }
   }
 
   if (GRANT_STATUSES.includes(status) && tier) {
