@@ -1239,6 +1239,103 @@ async function recordCabinetOffer({ userId, personal, goal, task = null, goalCou
   }
 }
 
+// ---------------------------------------------------------------------------
+// Practice proposals (personalization run C, Part C2)
+// ---------------------------------------------------------------------------
+const proposalRules = require('./lib/proposals');
+const practiceRegistry = require('./lib/module-registry');
+
+// Whether this turn may carry a practice proposal, and which practices. Cheap
+// checks first, so most turns cost no query.
+async function loadProposalContext({ userId, personal, cabinetThread }) {
+  const none = { block: '', eligible: [], allowed: false };
+  if (!userId || !personal || !personal.session || !cabinetThread) return none;
+  const early = proposalRules.proposalGate({
+    verified: true,
+    cabinetThread,
+    userTurns: personal.session.userTurns,
+    distressedNow: personal.session.distressed,
+  });
+  if (!early.allowed) return none;
+  try {
+    const now = Date.now();
+    const since = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const [rowsRes, recentRes, recentDistress] = await Promise.all([
+      supabase.from('user_app_config').select('module_key, enabled').eq('user_id', userId),
+      supabase.from('adjustment_proposals').select('module_key, status, source, created_at, responded_at, undone_at')
+        .eq('user_id', userId).gte('created_at', since),
+      profileExtraction.hasRecentDistressFlag(supabase, userId, proposalRules.DISTRESS_LOOKBACK_DAYS),
+    ]);
+    if (rowsRes.error || recentRes.error) return none;
+    const recent = recentRes.data || [];
+    const gate = proposalRules.proposalGate({
+      verified: true,
+      cabinetThread,
+      userTurns: personal.session.userTurns,
+      distressedNow: personal.session.distressed,
+      recentProposals: recent,
+      sessionStart: personal.session.start,
+      now,
+    });
+    if (!gate.allowed) return none;
+    const eligible = proposalRules.eligibleModules({
+      rows: rowsRes.data || [],
+      recentProposals: recent,
+      isTeen: !!personal.isTeen,
+      recentDistress,
+      now,
+    });
+    if (eligible.length === 0) return none;
+    return { block: proposalRules.proposalInstruction(eligible), eligible: eligible.map(m => m.key), allowed: true };
+  } catch (err) {
+    console.error('[proposals] context failed');
+    return none;
+  }
+}
+
+// Records the practice the closing voice proposed, if this turn allowed it
+// and the practice was one it was allowed to offer. Returns the card.
+async function recordCabinetProposal({ userId, personal, ctx, adjust, counselorId }) {
+  if (!userId || !ctx || !ctx.allowed || !adjust || !ctx.eligible.includes(adjust.module_key)) return null;
+  const mod = practiceRegistry.getModule(adjust.module_key);
+  if (!mod) return null;
+  try {
+    const settings = proposalRules.proposedSettings(mod.key, adjust.note);
+    const { data, error } = await supabase.from('adjustment_proposals').insert({
+      user_id: userId,
+      module_key: mod.key,
+      tier: mod.tier,
+      source: 'cabinet',
+      conversation_id: personal && personal.conversationId,
+      counselor_id: counselorId || null,
+      settings,
+    }).select('id').single();
+    if (error || !data) return null;
+    eventLog.logEvent(userId, 'adjustment_proposed', { module_key: mod.key, tier: mod.tier, source: 'cabinet' }, { platform: 'server' });
+    return proposalCard({ id: data.id, module_key: mod.key, settings, counselor_id: counselorId || null, source: 'cabinet' });
+  } catch (err) {
+    console.error('[proposals] record failed');
+    return null;
+  }
+}
+
+// What a card shows. Holds the person's own note (their free-text field),
+// which only ever goes back to them.
+function proposalCard(p) {
+  const mod = practiceRegistry.getModule(p.module_key);
+  return {
+    id: p.id,
+    kind: 'adjustment',
+    source: p.source || 'cabinet',
+    moduleKey: p.module_key,
+    label: mod ? mod.label : p.module_key,
+    description: mod ? mod.description : '',
+    tier: mod ? mod.tier : null,
+    note: mod && p.settings ? String(p.settings[mod.freeTextField] || '') : '',
+    counselorId: p.counselor_id || null,
+  };
+}
+
 function summarizeParticipantProfile(participant) {
   const r = participant.profile;
   if (!r) return '(no Know Thyself profile yet)';
@@ -1735,6 +1832,12 @@ app.post('/api/chat/counselor', async (req, res) => {
     ? cabinetOffers.taskOfferInstruction(personal.goalText)
     : (goalOfferAllowed ? cabinetOffers.GOAL_OFFER_INSTRUCTION : '');
 
+  // --- Practice proposals (run C, Part C2) ---
+  // The group Cabinet thread only, never a shared session or a 1:1 chat.
+  const cabinetThread = sessionType !== 'shared' && (activeCounselorId || counselorSlug || 'cabinet') === 'cabinet';
+  const proposalCtx = await loadProposalContext({ userId: req.areteVerifiedUserId || null, personal, cabinetThread });
+  const closingActionsBlock = goalOfferBlock + proposalCtx.block;
+
   // The facts block supersedes the user_settings-only block: it falls back to
   // the same columns for any field without a fact.
   const cabinetProfileBlock = personal.factsBlock
@@ -1815,7 +1918,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       allVoices: firstReplyBlock,
       // No Know Thyself ask on the first reply: it must end on the one
       // question about the person's own situation.
-      lastVoice: isFirstTurn ? '' : personal.askBlock + goalOfferBlock,
+      lastVoice: isFirstTurn ? '' : personal.askBlock + closingActionsBlock,
     });
 
     // Offers (Parts 6 and 9): strip any goal marker from every voice; the
@@ -1823,13 +1926,17 @@ app.post('/api/chat/counselor', async (req, res) => {
     let offeredGoal = null;
     let offeredTask = null;
     let goalCounselorId = null;
+    let offeredAdjust = null;
+    let adjustCounselorId = null;
     for (const r of results) {
       if (!r || typeof r.response !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(r.response);
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
-      r.response = parsedTask.text;
+      const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
+      r.response = parsedAdjust.text;
       if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
       if (parsedTask.task && !offeredTask) { offeredTask = parsedTask.task; goalCounselorId = r.counselorId || null; }
+      if (parsedAdjust.adjust && !offeredAdjust) { offeredAdjust = parsedAdjust.adjust; adjustCounselorId = r.counselorId || null; }
     }
     const offer = await recordCabinetOffer({
       userId: req.areteVerifiedUserId,
@@ -1838,6 +1945,14 @@ app.post('/api/chat/counselor', async (req, res) => {
       goal: goalOfferAllowed && !taskOfferAllowed ? offeredGoal : null,
       goalCounselorId,
       replies: results.filter(r => !r.error && r.response).map(r => r.counselorId),
+    });
+    // One card per turn: a proposal only when no offer was made.
+    const proposal = offer ? null : await recordCabinetProposal({
+      userId: req.areteVerifiedUserId,
+      personal,
+      ctx: proposalCtx,
+      adjust: offeredAdjust,
+      counselorId: adjustCounselorId,
     });
 
     // Post-hoc usage attribution across the whole Cabinet turn.
@@ -1887,6 +2002,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       mode: 'parallel',
       request_id: requestId,
       ...(offer ? { offer } : {}),
+      ...(proposal ? { proposal } : {}),
       ...(personal.teenSupport ? { support: true } : {}),
     });
   }
@@ -1906,7 +2022,7 @@ app.post('/api/chat/counselor', async (req, res) => {
   // The client's single-mode prompt carries the Known profile already; add
   // what only the server knows: tentative facts and off-limits topics.
   profileBlock += personal.tentativeBlock;
-  const singleTurnBlock = isFirstTurn ? firstReplyBlock : personal.askBlock + goalOfferBlock;
+  const singleTurnBlock = isFirstTurn ? firstReplyBlock : personal.askBlock + closingActionsBlock;
   const singleCounselorId = THREAD_ID_ALIASES[activeCounselorId || counselorSlug] || activeCounselorId || counselorSlug || null;
 
   // RAG: retrieve relevant source text chunks (silent on failure)
@@ -2036,7 +2152,8 @@ app.post('/api/chat/counselor', async (req, res) => {
         });
         const parsedReply = cabinetOffers.parseGoalMarker(finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`));
         const parsedTask = cabinetOffers.parseTaskMarker(parsedReply.text);
-        const text = parsedTask.text;
+        const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
+        const text = parsedAdjust.text;
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
@@ -2049,7 +2166,14 @@ app.post('/api/chat/counselor', async (req, res) => {
           goalCounselorId: singleCounselorId,
           replies: text ? [singleCounselorId] : [],
         });
-        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(personal.teenSupport ? { support: true } : {}) });
+        const proposal = offer ? null : await recordCabinetProposal({
+          userId: req.areteVerifiedUserId,
+          personal,
+          ctx: proposalCtx,
+          adjust: parsedAdjust.adjust,
+          counselorId: singleCounselorId,
+        });
+        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
         return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
@@ -2094,13 +2218,16 @@ app.post('/api/chat/counselor', async (req, res) => {
     // Strip any goal marker from the text blocks before anything else sees it.
     let singleGoal = null;
     let singleTask = null;
+    let singleAdjust = null;
     for (const b of (data.content || [])) {
       if (b.type !== 'text' || typeof b.text !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(b.text);
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
-      b.text = parsedTask.text;
+      const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
+      b.text = parsedAdjust.text;
       if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
       if (parsedTask.task && !singleTask) singleTask = parsedTask.task;
+      if (parsedAdjust.adjust && !singleAdjust) singleAdjust = parsedAdjust.adjust;
     }
     const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     await writeSharedAssistant(assistantText);
@@ -2113,6 +2240,14 @@ app.post('/api/chat/counselor', async (req, res) => {
       replies: assistantText ? [singleCounselorId] : [],
     });
     if (singleOffer) data.offer = singleOffer;
+    const singleProposal = singleOffer ? null : await recordCabinetProposal({
+      userId: req.areteVerifiedUserId,
+      personal,
+      ctx: proposalCtx,
+      adjust: singleAdjust,
+      counselorId: singleCounselorId,
+    });
+    if (singleProposal) data.proposal = singleProposal;
     if (personal.teenSupport) data.support = true;
     if (assistantText && loggedChunks.length > 0) {
       attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
@@ -3611,6 +3746,143 @@ app.post('/api/practices/:key/off', async (req, res) => {
   if (!data || data.length === 0) return res.status(404).json({ error: 'not_enabled' });
   eventLog.logEvent(userId, 'practice_turned_off', { module_key: key }, { platform: eventLog.platformFromRequest(req) });
   return res.json({ ok: true });
+});
+
+// GET /api/practices/proposals/pending — open proposal cards to show when the
+// Cabinet opens: any from a shipped feature (Part C4), and a Cabinet one from
+// the last day that was never answered.
+app.get('/api/practices/proposals/pending', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from('adjustment_proposals')
+    .select('id, module_key, settings, counselor_id, source, created_at')
+    .eq('user_id', userId)
+    .eq('status', 'offered')
+    .order('created_at', { ascending: false })
+    .limit(5);
+  if (error) return res.json({ proposals: [] });
+  const open = (data || []).filter(p => p.source === 'feature_shipped' || p.created_at >= since);
+  return res.json({ proposals: open.map(proposalCard) });
+});
+
+// POST /api/practices/proposals/:id/respond { accept, swapOut? } — the
+// person's answer on a proposal card. On yes every rule is checked again.
+app.post('/api/practices/proposals/:id/respond', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const accept = req.body?.accept === true;
+  const platform = eventLog.platformFromRequest(req);
+  const { data: proposal, error } = await supabase.from('adjustment_proposals')
+    .select('id, user_id, module_key, tier, source, settings, status')
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: 'lookup_failed' });
+  if (!proposal) return res.status(404).json({ error: 'not_found' });
+  if (proposal.status !== 'offered') return res.status(409).json({ error: 'already_answered', status: proposal.status });
+  const now = new Date().toISOString();
+
+  if (!accept) {
+    await supabase.from('adjustment_proposals').update({ status: 'declined', responded_at: now }).eq('id', proposal.id).eq('status', 'offered');
+    eventLog.logEvent(userId, 'adjustment_declined', { module_key: proposal.module_key, source: proposal.source }, { platform });
+    return res.json({ ok: true, status: 'declined' });
+  }
+
+  const result = await acceptProposal({ userId, proposal, swapOut: req.body?.swapOut ?? null, platform });
+  return res.status(result.status).json(result.body);
+});
+
+// Applies an accepted proposal. Revalidates against the registry and the
+// person's situation today, records the exact prior state for Undo, then
+// turns the practice on. Returns { status, body } for the response.
+async function acceptProposal({ userId, proposal, swapOut = null, platform }) {
+  const mod = moduleRegistry.getModule(proposal.module_key);
+  const withdraw = async (reason) => {
+    await supabase.from('adjustment_proposals').update({ status: 'withdrawn', responded_at: new Date().toISOString() })
+      .eq('id', proposal.id).eq('status', 'offered');
+    eventLog.logEvent(userId, 'adjustment_withdrawn', { module_key: proposal.module_key, reason }, { platform });
+    return { status: 409, body: { error: 'no_longer_available', reason } };
+  };
+  if (!mod) return withdraw('unknown_module');
+  const subject = await loadPracticeSubject(userId);
+  const recentDistress = await profileExtraction.hasRecentDistressFlag(supabase, userId, proposalRules.DISTRESS_LOOKBACK_DAYS);
+  const excluded = moduleRegistry.exclusionFor(mod.key, { isTeen: subject.isTeen, recentDistress });
+  if (excluded) return withdraw(excluded);
+  const settings = moduleRegistry.validateSettings(mod.key, proposal.settings, { tier: 'free' });
+  if (!settings.ok) return withdraw('invalid_settings');
+
+  let rows;
+  try {
+    rows = await practices.loadRows(supabase, userId);
+  } catch {
+    return { status: 500, body: { error: 'lookup_failed' } };
+  }
+  const existing = rows.find(r => r.module_key === mod.key) || null;
+
+  // Claim the proposal so a double tap applies it once.
+  const nowIso = new Date().toISOString();
+  const { data: claimed } = await supabase.from('adjustment_proposals')
+    .update({ status: 'accepted', responded_at: nowIso })
+    .eq('id', proposal.id).eq('status', 'offered').select('id');
+  if (!claimed || claimed.length === 0) return { status: 409, body: { error: 'already_answered' } };
+  const unclaim = () => supabase.from('adjustment_proposals')
+    .update({ status: 'offered', responded_at: null, prior_state: null }).eq('id', proposal.id);
+
+  const priorState = [{ module_key: mod.key, row: existing }];
+  const { error: priorError } = await supabase.from('adjustment_proposals').update({ prior_state: priorState }).eq('id', proposal.id);
+  if (priorError) { await unclaim(); return { status: 500, body: { error: 'save_failed' } }; }
+
+  const values = {
+    enabled: true,
+    pinned: true,
+    // A practice turned on before keeps the settings the person gave it.
+    settings: existing ? existing.settings : settings.settings,
+    enabled_by: 'cabinet',
+    proposal_id: proposal.id,
+    updated_at: nowIso,
+  };
+  const write = existing
+    ? await supabase.from('user_app_config').update(values).eq('id', existing.id)
+    : await supabase.from('user_app_config').insert({ user_id: userId, module_key: mod.key, ...values });
+  if (write.error) { await unclaim(); return { status: 500, body: { error: 'save_failed' } }; }
+
+  eventLog.logEvent(userId, 'adjustment_accepted', { module_key: mod.key, tier: mod.tier, source: proposal.source }, { platform });
+  return { status: 200, body: { ok: true, status: 'accepted', moduleKey: mod.key } };
+}
+
+// POST /api/practices/proposals/:id/undo — put user_app_config back exactly
+// as it was before this proposal was accepted.
+app.post('/api/practices/proposals/:id/undo', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const { data: proposal, error } = await supabase.from('adjustment_proposals')
+    .select('id, module_key, source, status, prior_state')
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: 'lookup_failed' });
+  if (!proposal) return res.status(404).json({ error: 'not_found' });
+  if (proposal.status !== 'accepted') return res.status(409).json({ error: 'not_accepted', status: proposal.status });
+
+  const { data: claimed } = await supabase.from('adjustment_proposals')
+    .update({ status: 'undone', undone_at: new Date().toISOString() })
+    .eq('id', proposal.id).eq('status', 'accepted').select('id');
+  if (!claimed || claimed.length === 0) return res.status(409).json({ error: 'not_accepted' });
+
+  for (const step of proposalRules.undoPlan(proposal.prior_state)) {
+    const q = step.action === 'delete'
+      ? supabase.from('user_app_config').delete().eq('user_id', userId).eq('module_key', step.module_key)
+      : supabase.from('user_app_config').update(step.values).eq('user_id', userId).eq('module_key', step.module_key);
+    const { error: stepError } = await q;
+    if (stepError) {
+      console.error('[proposals] undo step failed');
+      await supabase.from('adjustment_proposals').update({ status: 'accepted', undone_at: null }).eq('id', proposal.id);
+      return res.status(500).json({ error: 'undo_failed' });
+    }
+  }
+  eventLog.logEvent(userId, 'adjustment_undone', { module_key: proposal.module_key, source: proposal.source }, { platform: eventLog.platformFromRequest(req) });
+  return res.json({ ok: true, status: 'undone' });
 });
 
 // ─── Resource feed ────────────────────────────────────────────────────────────

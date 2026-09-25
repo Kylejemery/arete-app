@@ -65,3 +65,42 @@ export function savePracticeSettings(moduleKey: string, settings: Record<string,
 export function turnOffPractice(moduleKey: string) {
   return post(`/api/practices/${encodeURIComponent(moduleKey)}/off`, {});
 }
+
+// ── Proposal cards (run C, Part C2) ─────────────────────────────────────────
+
+export interface CabinetProposal {
+  id: string;
+  kind: 'adjustment' | 'feature_request';
+  source: 'cabinet' | 'feature_shipped';
+  moduleKey?: string;
+  label?: string;
+  description?: string;
+  note?: string;
+  counselorId: string | null;
+}
+
+export function asCabinetProposal(p: unknown): CabinetProposal | null {
+  const o = p as Partial<CabinetProposal> | null | undefined;
+  if (!o || typeof o.id !== 'string') return null;
+  if (o.kind !== 'adjustment' && o.kind !== 'feature_request') return null;
+  return o as CabinetProposal;
+}
+
+export async function fetchPendingProposals(): Promise<CabinetProposal[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/practices/proposals/pending`, { headers: await authHeaders() });
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => ({}));
+    return (Array.isArray(data?.proposals) ? data.proposals : []).map(asCabinetProposal).filter(Boolean) as CabinetProposal[];
+  } catch {
+    return [];
+  }
+}
+
+export function respondToProposal(id: string, accept: boolean, swapOut?: string | null) {
+  return post(`/api/practices/proposals/${encodeURIComponent(id)}/respond`, { accept, ...(swapOut ? { swapOut } : {}) });
+}
+
+export function undoProposal(id: string) {
+  return post(`/api/practices/proposals/${encodeURIComponent(id)}/undo`, {});
+}

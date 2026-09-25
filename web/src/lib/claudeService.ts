@@ -1,3 +1,4 @@
+import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { pronounsFor } from './pronouns';
 import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
@@ -537,10 +538,18 @@ let nextStarterId: string | null = null;
 export function setNextStarterId(id: string | null): void {
   nextStarterId = id;
 }
-function noteCabinetOffer(data: { offer?: unknown; support?: unknown } | null): void {
+function noteCabinetOffer(data: { offer?: unknown; support?: unknown; proposal?: unknown } | null): void {
   lastSupportFlag = data?.support === true;
   const o = data?.offer as CabinetOffer | undefined;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? o : null;
+  lastCabinetProposal = asCabinetProposal(data?.proposal);
+}
+// Run C: a practice (or feature request) card the closing voice proposed.
+let lastCabinetProposal: CabinetProposal | null = null;
+export function takeCabinetProposal(): CabinetProposal | null {
+  const p = lastCabinetProposal;
+  lastCabinetProposal = null;
+  return p;
 }
 // Run B, Part B5: the server sets support: true when a teen's message reads
 // as distress; the conversation shows the support card at once.

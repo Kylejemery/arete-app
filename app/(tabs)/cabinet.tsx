@@ -22,11 +22,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, takeSupportFlag, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, takeCabinetProposal, takeSupportFlag, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
 import { ImmediateSupportCard } from '../../components/SupportCard';
 import { pickStarters, type Starter } from '@/lib/starters';
 import { logEvent } from '@/lib/events';
 import OfferCard from '../../components/OfferCard';
+import ProposalCard from '../../components/ProposalCard';
+import { fetchPendingProposals, type CabinetProposal } from '@/lib/practices';
 import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
@@ -124,6 +126,8 @@ export default function CabinetScreen() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run C: a practice the closing voice proposed, or one waiting from before.
+  const [pendingProposal, setPendingProposal] = useState<CabinetProposal | null>(null);
   // Run B, Part B5: support card shown at once for a teen in distress.
   const [showSupport, setShowSupport] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -539,6 +543,17 @@ export default function CabinetScreen() {
     }
   }, [params.morningMessage, params.cabinetSeed, initialLoading, router, absorbNewLines]);
 
+  // Run C: a proposal still waiting for an answer (a shipped feature the
+  // person asked for, or one from earlier today) shows when the Cabinet opens.
+  useEffect(() => {
+    if (initialLoading) return;
+    let cancelled = false;
+    fetchPendingProposals().then(list => {
+      if (!cancelled && list[0]) setPendingProposal(prev => prev ?? list[0]);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [initialLoading]);
+
   const handleSend = async (starter?: Starter | unknown) => {
     const fromStarter = starter && typeof starter === 'object' && 'id' in starter && 'text' in starter ? (starter as Starter) : null;
     const text = (fromStarter ? fromStarter.text : inputText).trim();
@@ -565,6 +580,7 @@ export default function CabinetScreen() {
     setInputText('');
     setIsLoading(true);
     setPendingOffer(null);
+    setPendingProposal(null);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
@@ -581,6 +597,7 @@ export default function CabinetScreen() {
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
       setPendingOffer(takeCabinetOffer());
+      setPendingProposal(takeCabinetProposal());
       if (takeSupportFlag()) setShowSupport(true);
       const newCount = count + 1;
       await AsyncStorage.setItem(dateKey, String(newCount));
@@ -1036,6 +1053,10 @@ export default function CabinetScreen() {
 
             {pendingOffer && !isLoading && (
               <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+            )}
+
+            {pendingProposal && !pendingOffer && !isLoading && (
+              <ProposalCard key={pendingProposal.id} proposal={pendingProposal} onClose={() => setPendingProposal(null)} />
             )}
 
             {isLoading && (

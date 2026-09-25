@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, takeSupportFlag, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, takeCabinetProposal, takeSupportFlag, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
 import { ImmediateSupportCard } from '@/components/SupportCard';
 import { pickStarters, type Starter } from '@/lib/starters';
 import { logEvent } from '@/lib/events';
 import OfferCard from '@/components/OfferCard';
+import ProposalCard from '@/components/ProposalCard';
+import { fetchPendingProposals, type CabinetProposal } from '@/lib/practices';
 import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
 import DailyLimitCard from '@/components/DailyLimitCard';
@@ -46,6 +48,15 @@ export default function CabinetPage() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run C: a practice the closing voice proposed, or one waiting from before.
+  const [pendingProposal, setPendingProposal] = useState<CabinetProposal | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPendingProposals().then(list => {
+      if (!cancelled && list[0]) setPendingProposal(prev => prev ?? list[0]);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   // Run B, Part B5: support card shown at once for a teen in distress.
   const [showSupport, setShowSupport] = useState(false);
   // Run B, Part B3: starters for the empty Cabinet.
@@ -316,6 +327,7 @@ export default function CabinetPage() {
     setIsLoading(true);
     setSendError(null);
     setPendingOffer(null);
+    setPendingProposal(null);
     try {
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
@@ -330,6 +342,7 @@ export default function CabinetPage() {
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
       setPendingOffer(takeCabinetOffer());
+      setPendingProposal(takeCabinetProposal());
       if (takeSupportFlag()) setShowSupport(true);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
       refreshRemaining();
@@ -844,6 +857,10 @@ export default function CabinetPage() {
 
             {pendingOffer && !isLoading && (
               <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+            )}
+
+            {pendingProposal && !pendingOffer && !isLoading && (
+              <ProposalCard key={pendingProposal.id} proposal={pendingProposal} onClose={() => setPendingProposal(null)} />
             )}
 
             {isLoading && (

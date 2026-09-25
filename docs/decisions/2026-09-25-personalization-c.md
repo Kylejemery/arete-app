@@ -41,3 +41,42 @@ This file records the judgement calls made while carrying out Run C without stop
 **DC1.5 Turning a practice off keeps the row.** `enabled` and `pinned` go false and the settings stay. The person removing their own practice is their choice, not the system hiding something.
 
 **DC1.6 Free edits.** On free, an edit changes only the free-text field and keeps every other stored setting. A person who set 45 minutes while paid keeps 45 after a downgrade. The alternative, resetting to defaults, would take away something they had.
+
+## C2
+
+**DC2.1 The limits and where they live.**
+- **The limits:** these are in `server/lib/proposals.js`.
+  - never in the first two user turns of a conversation
+  - one per conversation
+  - two per person per 7 days, counting only proposals from the Cabinet
+  - never while the conversation reads as distress
+  - a module declined or undone is not proposed again for 30 days
+  - a module with an open, unanswered card is not proposed twice
+- **Exclusions:** the registry's exclusions apply as well, meaning teens, and distress in the last 14 days read from `distress_review_queue` (failing closed).
+- **Shipped notices:** a notice from Part C4 is not the Cabinet proposing, so it does not count against the weekly limit.
+
+**DC2.2 One card per turn.**
+- **Chosen:** a proposal is recorded only when the turn made no goal, task or scroll offer. The instruction tells the closing voice never to combine offers.
+- **Why:** the Run A and Run B offers keep their priority, and a reply never ends in two cards.
+- **Alternative:** show both cards.
+
+**DC2.3 Server-side revalidation.**
+- **What is checked on Yes:** the registry, teen status and 14-day distress, all read at that moment.
+- **When a check fails:** the proposal becomes `withdrawn`, and the card says the practice is not available.
+- **Double taps:** the proposal is claimed with a conditional update, so a double tap applies it once.
+
+**DC2.4 Undo restores exactly.**
+- **What is recorded:** `prior_state` holds the full `user_app_config` row as it was, or null, for every row the acceptance touched.
+- **What Undo does:** it writes each row back field for field, `updated_at` included, and deletes a row that did not exist before.
+- **Alternative:** set `enabled = false`. That leaves a row that was not there and does not restore earlier settings.
+
+**DC2.5 Re-enabling a practice keeps its settings.** When the person had turned a practice off earlier, a yes turns the same row back on with the settings they gave it, rather than the proposal's defaults.
+
+**DC2.6 A proposal the person never answered.**
+- **When it comes back:** it shows again when the Cabinet next opens, for 24 hours. A shipped-feature notice shows until answered.
+- **Why:** someone who left mid-conversation still gets to answer.
+- **Alternative:** drop it. It would then count against the weekly limit without ever being seen.
+
+**DC2.7 Events.**
+- **The events:** `adjustment_proposed`, `adjustment_accepted`, `adjustment_declined`, `adjustment_undone` and `adjustment_withdrawn`, plus `practice_settings_saved` and `practice_turned_off`.
+- **Props:** `module_key`, `tier`, `source` and a reason code only, never the note.

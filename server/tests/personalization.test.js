@@ -98,3 +98,79 @@ test('Your practices is the last thing on both Home screens and renders nothing 
     assert.match(src, /\.filter\(r => r && r\.enabled && r\.pinned && moduleInfo\(r\.module_key\)\)/, rel);
   }
 });
+
+// ── C2: propose_adjustment ───────────────────────────────────────────────────
+
+const proposals = require('../lib/proposals');
+const DAY = 24 * 60 * 60 * 1000;
+const NOW = Date.parse('2026-09-25T12:00:00Z');
+const gateBase = { verified: true, cabinetThread: true, userTurns: 3, distressedNow: false, recentProposals: [], sessionStart: NOW - 10 * 60 * 1000, now: NOW };
+
+test('never in the first two turns, never outside the Cabinet, never in distress', () => {
+  assert.equal(proposals.proposalGate({ ...gateBase, userTurns: 2 }).reason, 'too_early');
+  assert.equal(proposals.proposalGate({ ...gateBase, userTurns: 3 }).allowed, true);
+  assert.equal(proposals.proposalGate({ ...gateBase, cabinetThread: false }).reason, 'not_cabinet');
+  assert.equal(proposals.proposalGate({ ...gateBase, distressedNow: true }).reason, 'distress');
+  assert.equal(proposals.proposalGate({ ...gateBase, verified: false }).allowed, false);
+});
+
+test('one per conversation and two per week', () => {
+  const inThisConversation = [{ module_key: 'habit_tracker', status: 'declined', source: 'cabinet', created_at: new Date(NOW - 5 * 60 * 1000).toISOString() }];
+  assert.equal(proposals.proposalGate({ ...gateBase, recentProposals: inThisConversation }).reason, 'one_per_conversation');
+  const twoThisWeek = [2, 5].map(d => ({ module_key: 'focus_timer', status: 'accepted', source: 'cabinet', created_at: new Date(NOW - d * DAY).toISOString() }));
+  assert.equal(proposals.proposalGate({ ...gateBase, recentProposals: twoThisWeek }).reason, 'weekly_limit');
+  const oneOld = [2, 8].map(d => ({ module_key: 'focus_timer', status: 'accepted', source: 'cabinet', created_at: new Date(NOW - d * DAY).toISOString() }));
+  assert.equal(proposals.proposalGate({ ...gateBase, recentProposals: oneOld }).allowed, true);
+  // A shipped-feature notice is not the Cabinet proposing, and does not count.
+  const shipped = [1, 2].map(d => ({ module_key: 'focus_timer', status: 'offered', source: 'feature_shipped', created_at: new Date(NOW - d * DAY).toISOString() }));
+  assert.equal(proposals.proposalGate({ ...gateBase, recentProposals: shipped }).allowed, true);
+});
+
+test('eligible modules respect exclusions, what is on, open cards and the 30-day decline cooldown', () => {
+  const keys = o => proposals.eligibleModules({ now: NOW, ...o }).map(m => m.key);
+  assert.deepEqual(keys({}), ['focus_timer', 'evening_review', 'premeditatio', 'habit_tracker']);
+  assert.ok(!keys({ isTeen: true }).includes('premeditatio'));
+  assert.ok(!keys({ recentDistress: true }).includes('premeditatio'));
+  assert.ok(!keys({ rows: [{ module_key: 'focus_timer', enabled: true }] }).includes('focus_timer'));
+  assert.ok(keys({ rows: [{ module_key: 'focus_timer', enabled: false }] }).includes('focus_timer'));
+  const declined = d => [{ module_key: 'habit_tracker', status: 'declined', responded_at: new Date(NOW - d * DAY).toISOString(), created_at: new Date(NOW - d * DAY).toISOString() }];
+  assert.ok(!keys({ recentProposals: declined(29) }).includes('habit_tracker'));
+  assert.ok(keys({ recentProposals: declined(31) }).includes('habit_tracker'));
+  assert.ok(!keys({ recentProposals: [{ module_key: 'habit_tracker', status: 'offered', created_at: new Date(NOW).toISOString() }] }).includes('habit_tracker'));
+});
+
+test('the marker is always stripped; unknown modules are ignored', () => {
+  const ok = proposals.parseAdjustMarker('A habit might help here.\n[[ADJUST|habit_tracker|reading before bed]]');
+  assert.equal(ok.text, 'A habit might help here.');
+  assert.deepEqual(ok.adjust, { module_key: 'habit_tracker', note: 'reading before bed' });
+  const unknown = proposals.parseAdjustMarker('Hm.\n[[ADJUST|mood_ring|x]]');
+  assert.equal(unknown.text, 'Hm.');
+  assert.equal(unknown.adjust, null);
+  const mid = proposals.parseAdjustMarker('Before [[ADJUST|focus_timer]] after');
+  assert.ok(!mid.text.includes('[['));
+  assert.equal(proposals.parseAdjustMarker('[[ADJUST|focus_timer]]').adjust.note, '');
+});
+
+test('the instruction lists only the eligible practices, and is empty when none are', () => {
+  const block = proposals.proposalInstruction([registry.getModule('habit_tracker')]);
+  assert.match(block, /habit_tracker/);
+  assert.ok(!block.includes('premeditatio'));
+  assert.equal(proposals.proposalInstruction([]), '');
+});
+
+test('proposed settings carry the note in the free-text field and nothing else', () => {
+  assert.deepEqual(proposals.proposedSettings('focus_timer', 'the thesis'), { minutes: 25, intention: 'the thesis' });
+  assert.deepEqual(proposals.proposedSettings('habit_tracker', ''), { habit: '', target_per_week: 7 });
+});
+
+test('undo restores the exact prior rows and removes rows that did not exist', () => {
+  const prior = [
+    { module_key: 'habit_tracker', row: null },
+    { module_key: 'focus_timer', row: { enabled: false, pinned: false, settings: { minutes: 45, intention: 'x' }, enabled_by: 'user', proposal_id: null, updated_at: '2026-09-01T00:00:00Z' } },
+  ];
+  assert.deepEqual(proposals.undoPlan(prior), [
+    { action: 'delete', module_key: 'habit_tracker' },
+    { action: 'restore', module_key: 'focus_timer', values: { enabled: false, pinned: false, settings: { minutes: 45, intention: 'x' }, enabled_by: 'user', proposal_id: null, updated_at: '2026-09-01T00:00:00Z' } },
+  ]);
+  assert.deepEqual(proposals.undoPlan(null), []);
+});

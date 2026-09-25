@@ -1,3 +1,4 @@
+import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { pronounsFor } from '../lib/pronouns';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
@@ -888,6 +889,14 @@ function noteCabinetOffer(data: any): void {
   lastSupportFlag = data?.support === true;
   const o = data?.offer;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? (o as CabinetOffer) : null;
+  lastCabinetProposal = asCabinetProposal(data?.proposal);
+}
+// Run C: a practice (or feature request) card the closing voice proposed.
+let lastCabinetProposal: CabinetProposal | null = null;
+export function takeCabinetProposal(): CabinetProposal | null {
+  const p = lastCabinetProposal;
+  lastCabinetProposal = null;
+  return p;
 }
 export async function respondToCabinetOffer(
   offerId: string,
