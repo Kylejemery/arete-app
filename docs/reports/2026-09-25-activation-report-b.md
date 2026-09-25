@@ -68,8 +68,8 @@ Nothing.
 | Pronouns set | 0 |
 
 ## What Kyle needs to do
-1. **Placeholders:** replace `AUNDREA_EMAIL_PLACEHOLDER` and `DEVON_EMAIL_PLACEHOLDER` in `config/internal-accounts.ts` with the real emails, then run `node scripts/sync-internal-accounts.mjs`.
-2. **The other "Kyle":** confirm whether the other non-admin account named "Kyle" is yours. If it is, add it to the list (DB1.1).
+1. **Placeholders:** done 2026-09-25. Aundrea and Devon are in `config/internal-accounts.ts` and marked internal (8 internal accounts, 69 measured).
+2. **The other "Kyle":** confirmed not Kyle's; it stays a measured user.
 3. **EAS build:** yes, one is required. The age gate, teen mode screens, starters, pronoun setting, neutral defaults and immediate support card are all in the mobile app, and existing installs see none of it until a new build ships. The server and web changes are live on deploy.
 4. **Deletion queue:** check `account_deletion_queue` from time to time. Under-13 accounts wait there for a person to review them.
 5. **Apple Declared Age Range:** decide whether to add a native module for it.
