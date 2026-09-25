@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import OfferCard from '@/components/OfferCard';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
 import DailyLimitCard from '@/components/DailyLimitCard';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
@@ -40,6 +41,8 @@ export default function CabinetPage() {
   const [cabinetMessages, setCabinetMessages] = useState<ThreadMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
   // A send that failed: shown above the composer, never in the thread.
   const [sendError, setSendError] = useState<string | null>(null);
   // Free tier daily cap. `remaining` is read from the same profile columns the
@@ -293,6 +296,7 @@ export default function CabinetPage() {
     setInput('');
     setIsLoading(true);
     setSendError(null);
+    setPendingOffer(null);
     try {
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
@@ -306,6 +310,7 @@ export default function CabinetPage() {
       }));
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
+      setPendingOffer(takeCabinetOffer());
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
       refreshRemaining();
     } catch (e) {
@@ -480,8 +485,10 @@ export default function CabinetPage() {
     setCounselorInput('');
     setCounselorLoading(true);
     setSendError(null);
+    setPendingOffer(null);
     try {
       const response = await sendMessageToCounselor(selectedCounselor, newMessages);
+      setPendingOffer(takeCabinetOffer());
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
@@ -794,6 +801,10 @@ export default function CabinetPage() {
               </div>
               </Fragment>
             ))}
+
+            {pendingOffer && !isLoading && (
+              <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+            )}
 
             {isLoading && (
               <div className="flex justify-start">
@@ -1296,6 +1307,10 @@ export default function CabinetPage() {
                   </div>
                   </Fragment>
                 ))}
+
+                {pendingOffer && !counselorLoading && (
+                  <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+                )}
 
                 {counselorLoading && (
                   <div className="flex justify-start">

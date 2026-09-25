@@ -1054,10 +1054,15 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
   const empty = { factsBlock: '', tentativeBlock: '', askBlock: '', isFirstTurn: false, conversationId: null, session: null };
   if (!userId) return empty;
   try {
-    const [thread, facts, flagged] = await Promise.all([
+    const [thread, facts, flagged, recentOffers] = await Promise.all([
       loadCabinetThread(userId, activeCounselorId),
       profileExtraction.loadFacts(supabase, userId),
       profileExtraction.hasRecentDistressFlag(supabase, userId),
+      supabase.from('cabinet_offers').select('kind, created_at')
+        .eq('user_id', userId)
+        .gte('created_at', new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .then(r => r.data || [], () => []),
     ]);
     const now = Date.now();
     const session = ktCurrentSession(thread && Array.isArray(thread.messages) ? thread.messages : [], now);
@@ -1106,10 +1111,22 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
       }
     }
 
+    const speakerCounts = {};
+    for (const m of session.messages) {
+      if (m && m.role === 'assistant' && m.counselorId) speakerCounts[m.counselorId] = (speakerCounts[m.counselorId] || 0) + 1;
+    }
+    const sessionStartIso = new Date(session.start != null ? session.start : now).toISOString();
+    const lastScroll = recentOffers.find(o => o.kind === 'scroll');
+
     return {
       factsBlock,
       tentativeBlock,
       askBlock,
+      speakerCounts,
+      offers: {
+        goalOfferedThisConversation: recentOffers.some(o => o.kind === 'goal' && o.created_at >= sessionStartIso),
+        lastScrollOfferAt: lastScroll ? lastScroll.created_at : null,
+      },
       isFirstTurn: priorUserTurns === 0,
       conversationId: thread ? thread.id : null,
       session: {
@@ -1122,6 +1139,58 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
   } catch (err) {
     console.error('[profile] personal context failed:', err.message);
     return empty;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Cabinet offers (activation plan, Parts 6 and 9)
+// ---------------------------------------------------------------------------
+const cabinetOffers = require('./lib/cabinet-offers');
+
+// Records at most one offer for this turn and returns it for the client's
+// card: the goal the closing voice offered, else a scroll offer when the
+// conversation has run six messages and none was offered in 72 hours.
+async function recordCabinetOffer({ userId, personal, goal, goalCounselorId, replies }) {
+  if (!userId || !personal || !personal.session) return null;
+  try {
+    if (goal) {
+      const { data, error } = await supabase.from('cabinet_offers').insert({
+        user_id: userId,
+        kind: 'goal',
+        conversation_id: personal.conversationId,
+        counselor_id: goalCounselorId,
+        payload: goal,
+      }).select('id').single();
+      if (error || !data) return null;
+      eventLog.logEvent(userId, 'cabinet_offer_made', { kind: 'goal', category: goal.category }, { platform: 'server' });
+      return { id: data.id, kind: 'goal', counselorId: goalCounselorId, ...goal };
+    }
+    const replyIds = (replies || []).filter(Boolean);
+    const messageCount = personal.session.messageCount + (replies || []).length;
+    const allowed = cabinetOffers.canOfferScroll({
+      verified: true,
+      distressed: personal.session.distressed,
+      messageCount,
+      lastScrollOfferAt: personal.offers && personal.offers.lastScrollOfferAt,
+      goalOfferedThisTurn: false,
+    });
+    if (!allowed) return null;
+    const counts = { ...(personal.speakerCounts || {}) };
+    for (const id of replyIds) counts[id] = (counts[id] || 0) + 1;
+    const counselorId = cabinetOffers.pickScrollCounselor(counts);
+    const { data, error } = await supabase.from('cabinet_offers').insert({
+      user_id: userId,
+      kind: 'scroll',
+      conversation_id: personal.conversationId,
+      counselor_id: counselorId,
+      payload: {},
+    }).select('id').single();
+    if (error || !data) return null;
+    eventLog.logEvent(userId, 'cabinet_offer_made', { kind: 'scroll' }, { platform: 'server' });
+    return { id: data.id, kind: 'scroll', counselorId };
+  } catch (err) {
+    console.error('[offers] record failed:', err.message);
+    return null;
   }
 }
 
@@ -1597,6 +1666,15 @@ app.post('/api/chat/counselor', async (req, res) => {
     : (Array.isArray(messages) && messages.filter(m => m && m.role === 'user').length === 1));
   const firstReplyBlock = isFirstTurn ? FIRST_REPLY_INSTRUCTION : '';
 
+  // --- Goal offer (activation Part 6) ---
+  const goalOfferAllowed = cabinetOffers.canOfferGoal({
+    verified: !!req.areteVerifiedUserId && !!personal.session,
+    isFirstTurn,
+    distressed: !!(personal.session && personal.session.distressed),
+    goalOfferedThisConversation: !!(personal.offers && personal.offers.goalOfferedThisConversation),
+  });
+  const goalOfferBlock = goalOfferAllowed ? cabinetOffers.GOAL_OFFER_INSTRUCTION : '';
+
   // The facts block supersedes the user_settings-only block: it falls back to
   // the same columns for any field without a fact.
   const cabinetProfileBlock = personal.factsBlock
@@ -1677,7 +1755,25 @@ app.post('/api/chat/counselor', async (req, res) => {
       allVoices: firstReplyBlock,
       // No Know Thyself ask on the first reply: it must end on the one
       // question about the person's own situation.
-      lastVoice: isFirstTurn ? '' : personal.askBlock,
+      lastVoice: isFirstTurn ? '' : personal.askBlock + goalOfferBlock,
+    });
+
+    // Offers (Parts 6 and 9): strip any goal marker from every voice; the
+    // person only ever sees a card.
+    let offeredGoal = null;
+    let goalCounselorId = null;
+    for (const r of results) {
+      if (!r || typeof r.response !== 'string') continue;
+      const parsed = cabinetOffers.parseGoalMarker(r.response);
+      r.response = parsed.text;
+      if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
+    }
+    const offer = await recordCabinetOffer({
+      userId: req.areteVerifiedUserId,
+      personal,
+      goal: goalOfferAllowed ? offeredGoal : null,
+      goalCounselorId,
+      replies: results.filter(r => !r.error && r.response).map(r => r.counselorId),
     });
 
     // Post-hoc usage attribution across the whole Cabinet turn.
@@ -1726,6 +1822,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       responses: results.map(r => ({ ...r, sources })),
       mode: 'parallel',
       request_id: requestId,
+      ...(offer ? { offer } : {}),
     });
   }
 
@@ -1744,7 +1841,8 @@ app.post('/api/chat/counselor', async (req, res) => {
   // The client's single-mode prompt carries the Known profile already; add
   // what only the server knows: tentative facts and off-limits topics.
   profileBlock += personal.tentativeBlock;
-  const singleTurnBlock = isFirstTurn ? firstReplyBlock : personal.askBlock;
+  const singleTurnBlock = isFirstTurn ? firstReplyBlock : personal.askBlock + goalOfferBlock;
+  const singleCounselorId = THREAD_ID_ALIASES[activeCounselorId || counselorSlug] || activeCounselorId || counselorSlug || null;
 
   // RAG: retrieve relevant source text chunks (silent on failure)
   const lastUserMessage = messages[messages.length - 1]?.content || '';
@@ -1871,12 +1969,20 @@ app.post('/api/chat/counselor', async (req, res) => {
           messages,
           maxTokens: serverMaxTokens,
         });
-        const text = finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`);
+        const parsedReply = cabinetOffers.parseGoalMarker(finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`));
+        const text = parsedReply.text;
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
         }
-        return res.json({ content: [{ type: 'text', text }], request_id: requestId });
+        const offer = await recordCabinetOffer({
+          userId: req.areteVerifiedUserId,
+          personal,
+          goal: goalOfferAllowed ? parsedReply.goal : null,
+          goalCounselorId: singleCounselorId,
+          replies: text ? [singleCounselorId] : [],
+        });
+        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}) });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
         return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
@@ -1918,8 +2024,24 @@ app.post('/api/chat/counselor', async (req, res) => {
       if (textBlocks.length > 0) data.content = textBlocks;
       repairTruncatedContent(data, '/api/chat/counselor');
     }
+    // Strip any goal marker from the text blocks before anything else sees it.
+    let singleGoal = null;
+    for (const b of (data.content || [])) {
+      if (b.type !== 'text' || typeof b.text !== 'string') continue;
+      const parsed = cabinetOffers.parseGoalMarker(b.text);
+      b.text = parsed.text;
+      if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
+    }
     const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     await writeSharedAssistant(assistantText);
+    const singleOffer = await recordCabinetOffer({
+      userId: req.areteVerifiedUserId,
+      personal,
+      goal: goalOfferAllowed ? singleGoal : null,
+      goalCounselorId: singleCounselorId,
+      replies: assistantText ? [singleCounselorId] : [],
+    });
+    if (singleOffer) data.offer = singleOffer;
     if (assistantText && loggedChunks.length > 0) {
       attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
     }
@@ -3096,17 +3218,10 @@ const COUNSELOR_VOICES = {
   seneca: `You are Seneca — Roman statesman, playwright, and Stoic philosopher who wrote his greatest work in letters. Your voice is warm, literary, and mentorial. You write as a wise friend who has lived much and regrets some of it. You are rich in metaphor and historical example. You reference your Letters to Lucilius and your essays. You acknowledge the gap between knowing and doing — you have lived that gap yourself. Your prose is elegant without being cold.`,
 };
 
-app.post('/api/scrolls/generate', async (req, res) => {
-  if (!CLAUDE_API_KEY) {
-    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
-  }
-
-  const { goal, counselor: requestedCounselor, userName, requestType } = req.body;
-
-  if (!goal || typeof goal !== 'string') {
-    return res.status(400).json({ error: 'Missing required field: goal' });
-  }
-
+// Writes one scroll: { title, body, counselor }. Throws on failure. Shared by
+// POST /api/scrolls/generate and the Cabinet's scroll offer (activation
+// Part 9), so an offered scroll goes through the same pipeline.
+async function generateScrollContent({ goal, counselor: requestedCounselor, userName }) {
   const counselor = requestedCounselor || assignCounselor(goal);
   const name = userName || 'you';
   const counselorName = COUNSELOR_NAMES[counselor];
@@ -3134,63 +3249,192 @@ Where relevant, include 1-2 specific external resources (books or articles) that
 You must respond with ONLY valid JSON in exactly this format, nothing else:
 {"title": "<evocative title, 5–12 words>", "body": "<full article text, paragraphs separated by \\n\\n>"}`;
 
+  console.log(`[/api/scrolls/generate] messages: 1 | est. tokens: ${Math.round(goal.length / 4)} | model: claude-opus-4-5`);
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': CLAUDE_API_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-beta': 'web-search-2025-03-05',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-5',
+      max_tokens: 1800,
+      system: systemPrompt,
+      tools: [
+        {
+          type: 'web_search_20250305',
+          name: 'web_search',
+        },
+      ],
+      messages: [
+        {
+          role: 'user',
+          content: `Write the scroll for ${name} about: ${goal}`,
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    const err = new Error(errorText);
+    err.status = response.status;
+    throw err;
+  }
+
+  const data = await response.json();
+  const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+
+  let parsed;
   try {
-    console.log(`[/api/scrolls/generate] messages: 1 | est. tokens: ${Math.round(goal.length / 4)} | model: claude-opus-4-5`);
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
-      },
-      body: JSON.stringify({
-        model: 'claude-opus-4-5',
-        max_tokens: 1800,
-        system: systemPrompt,
-        tools: [
-          {
-            type: 'web_search_20250305',
-            name: 'web_search',
-          },
-        ],
-        messages: [
-          {
-            role: 'user',
-            content: `Write the scroll for ${name} about: ${goal}`,
-          },
-        ],
-      }),
-    });
+    // Strip markdown code fences if Claude wrapped it
+    const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
+    parsed = JSON.parse(cleaned);
+  } catch {
+    const err = new Error('Failed to parse generated scroll');
+    err.status = 500;
+    throw err;
+  }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error (scrolls/generate):', response.status, errorText);
-      return res.status(response.status).json({ error: errorText });
-    }
+  return { title: parsed.title, body: parsed.body, counselor };
+}
 
-    const data = await response.json();
-    const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+app.post('/api/scrolls/generate', async (req, res) => {
+  if (!CLAUDE_API_KEY) {
+    return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
+  }
 
-    let parsed;
-    try {
-      // Strip markdown code fences if Claude wrapped it
-      const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
-      console.error('Failed to parse scroll JSON:', rawText);
-      return res.status(500).json({ error: 'Failed to parse generated scroll' });
-    }
+  const { goal, counselor: requestedCounselor, userName } = req.body;
 
-    return res.json({
-      title: parsed.title,
-      body: parsed.body,
-      counselor,
-    });
+  if (!goal || typeof goal !== 'string') {
+    return res.status(400).json({ error: 'Missing required field: goal' });
+  }
+
+  try {
+    return res.json(await generateScrollContent({ goal, counselor: requestedCounselor, userName }));
   } catch (error) {
-    console.error('Failed to generate scroll:', error);
+    if (error.status) {
+      console.error('Scroll generation failed:', error.status);
+      return res.status(error.status).json({ error: error.message });
+    }
+    console.error('Failed to generate scroll:', error.message);
     return res.status(502).json({ error: 'Failed to reach Claude API' });
   }
+});
+
+// ─── Cabinet offers: accept or decline (activation Parts 6 and 9) ───────────
+
+// POST /api/cabinet/offers/:id/respond { accept, title?, category?, target_date? }
+// goal:   accepting creates the goal (source = 'cabinet') with the title,
+//         category and target date the person confirmed on the card.
+// scroll: accepting answers 202 at once and writes the scroll in the
+//         background through the same pipeline as a requested scroll; it
+//         appears on the Scrolls page when ready.
+// Nothing is created on decline, or without an offer the server made.
+const { GOAL_CATEGORIES } = require('./lib/cabinet-offers');
+
+async function scrollTopicForOffer(offer) {
+  // The topic, in general terms, from the person's own turns in the
+  // conversation the offer came from. Held only on the scroll row.
+  const { data: thread } = await supabase.from('cabinet_conversations').select('messages').eq('id', offer.conversation_id).maybeSingle();
+  const offeredAt = Date.parse(offer.created_at);
+  const session = ktCurrentSession(thread && Array.isArray(thread.messages) ? thread.messages : [], offeredAt);
+  const userTurns = session.messages.filter(ktIsUserTurn).map(m => m.content).slice(-8);
+  if (userTurns.length === 0) return null;
+  const raw = await profileExtraction.callHaiku(
+    'Write ONE sentence, in the second person, naming the struggle or goal this person is working through, in general terms, for the title brief of a short personal essay. No names of other people. No quotes. Output only the sentence.',
+    userTurns.map(t => `- ${t}`).join('\n'),
+    120
+  );
+  const topic = String(raw || '').trim().split('\n')[0].slice(0, 300);
+  return topic || null;
+}
+
+app.post('/api/cabinet/offers/:id/respond', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const accept = req.body?.accept === true;
+
+  const { data: offer, error } = await supabase
+    .from('cabinet_offers')
+    .select('id, user_id, kind, conversation_id, counselor_id, payload, status, created_at')
+    .eq('id', req.params.id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) return res.status(500).json({ error: 'Failed to load offer' });
+  if (!offer) return res.status(404).json({ error: 'not_found' });
+  if (offer.status !== 'offered') return res.status(409).json({ error: 'already_answered', status: offer.status });
+
+  const now = new Date().toISOString();
+  if (!accept) {
+    await supabase.from('cabinet_offers').update({ status: 'declined', responded_at: now }).eq('id', offer.id).eq('status', 'offered');
+    eventLog.logEvent(userId, 'cabinet_offer_declined', { kind: offer.kind }, { platform: eventLog.platformFromRequest(req) });
+    return res.json({ ok: true, status: 'declined' });
+  }
+
+  // Claim the offer first so a double tap cannot create two goals.
+  const { data: claimed } = await supabase
+    .from('cabinet_offers')
+    .update({ status: 'accepted', responded_at: now })
+    .eq('id', offer.id)
+    .eq('status', 'offered')
+    .select('id');
+  if (!claimed || claimed.length === 0) return res.status(409).json({ error: 'already_answered' });
+
+  if (offer.kind === 'goal') {
+    const p = offer.payload || {};
+    const title = String(req.body?.title ?? p.title ?? '').trim().slice(0, 120);
+    const category = GOAL_CATEGORIES.includes(String(req.body?.category ?? p.category ?? '').toUpperCase())
+      ? String(req.body?.category ?? p.category).toUpperCase()
+      : 'GENERAL';
+    const rawDate = String(req.body?.target_date ?? p.target_date ?? '');
+    const targetDate = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && Number.isFinite(Date.parse(rawDate)) ? rawDate : null;
+    if (!title) {
+      await supabase.from('cabinet_offers').update({ status: 'offered', responded_at: null }).eq('id', offer.id);
+      return res.status(400).json({ error: 'title_required' });
+    }
+    const { data: goal, error: goalError } = await supabase.from('goals').insert({
+      user_id: userId,
+      title,
+      target_date: targetDate,
+      category,
+      counselor: offer.counselor_id || null,
+      source: 'cabinet',
+      completed: false,
+    }).select('id, title, category, target_date').single();
+    if (goalError || !goal) {
+      await supabase.from('cabinet_offers').update({ status: 'offered', responded_at: null }).eq('id', offer.id);
+      return res.status(500).json({ error: 'Failed to save goal' });
+    }
+    await supabase.from('cabinet_offers').update({ result_id: goal.id }).eq('id', offer.id);
+    eventLog.logEvent(userId, 'cabinet_offer_accepted', { kind: 'goal', category }, { platform: eventLog.platformFromRequest(req) });
+    return res.json({ ok: true, status: 'accepted', goal });
+  }
+
+  // Scroll: write it in the background.
+  eventLog.logEvent(userId, 'cabinet_offer_accepted', { kind: 'scroll' }, { platform: eventLog.platformFromRequest(req) });
+  res.status(202).json({ ok: true, status: 'writing' });
+  (async () => {
+    try {
+      const topic = await scrollTopicForOffer(offer);
+      if (!topic) return;
+      const { data: settings } = await supabase.from('user_settings').select('user_name').eq('user_id', userId).maybeSingle();
+      const scroll = await generateScrollContent({ goal: topic, counselor: offer.counselor_id || undefined, userName: settings?.user_name || undefined });
+      const { data: row } = await supabase.from('scrolls').insert({
+        user_id: userId,
+        title: scroll.title,
+        body: scroll.body,
+        counselor: scroll.counselor,
+        goal_source: topic,
+        request_type: 'requested',
+      }).select('id').single();
+      if (row) await supabase.from('cabinet_offers').update({ result_id: row.id }).eq('id', offer.id);
+    } catch (err) {
+      console.error('[offers] scroll generation failed:', err.status || 'error');
+    }
+  })();
 });
 
 // ─── Resource feed ────────────────────────────────────────────────────────────

@@ -21,7 +21,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, type CabinetOffer } from '../../services/claudeService';
+import OfferCard from '../../components/OfferCard';
 import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
@@ -96,6 +97,8 @@ export default function CabinetScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -514,6 +517,7 @@ export default function CabinetScreen() {
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
+    setPendingOffer(null);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
@@ -524,6 +528,7 @@ export default function CabinetScreen() {
       const assistantMessages = repliesToMessages(replies);
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
+      setPendingOffer(takeCabinetOffer());
       const newCount = count + 1;
       await AsyncStorage.setItem(dateKey, String(newCount));
       setMessageCount(newCount);
@@ -961,6 +966,10 @@ export default function CabinetScreen() {
                   );
                 })()}
               </>
+            )}
+
+            {pendingOffer && !isLoading && (
+              <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
             )}
 
             {isLoading && (

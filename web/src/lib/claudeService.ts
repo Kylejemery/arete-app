@@ -517,6 +517,45 @@ Their communication style is warm, wise, and unhurried.`;
   return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${userProfile}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate.\n- Use Socratic questioning.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
+// An offer the Cabinet made at the end of the last reply (activation Parts 6
+// and 9). The page that sent the message takes it once and shows a card;
+// nothing happens unless the person accepts. Mirrors services/claudeService.ts.
+export interface CabinetOffer {
+  id: string;
+  kind: 'goal' | 'scroll';
+  counselorId: string | null;
+  title?: string;
+  category?: string;
+  target_date?: string;
+}
+let lastCabinetOffer: CabinetOffer | null = null;
+function noteCabinetOffer(data: { offer?: unknown } | null): void {
+  const o = data?.offer as CabinetOffer | undefined;
+  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll') ? o : null;
+}
+export function takeCabinetOffer(): CabinetOffer | null {
+  const o = lastCabinetOffer;
+  lastCabinetOffer = null;
+  return o;
+}
+export async function respondToCabinetOffer(
+  offerId: string,
+  body: { accept: boolean; title?: string; category?: string; target_date?: string | null }
+): Promise<{ ok: boolean; status?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`${API_BASE_URL}/api/cabinet/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: data?.status };
+  } catch {
+    return { ok: false };
+  }
+}
+
 export interface CabinetReply {
   counselorId: string | null;
   counselorName: string | null;
@@ -588,6 +627,7 @@ export async function sendMessageToCabinet(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
         .map((r: { counselorId?: string; counselorName?: string; response?: string }): CabinetReply => ({
@@ -780,6 +820,7 @@ export async function sendMessageToCounselor(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       return content;

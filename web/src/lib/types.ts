@@ -176,7 +176,7 @@ export interface Goal {
   target_date?: string;
   completed: boolean;
   completed_at?: string;
-  source: 'onboarding' | 'user';
+  source: 'onboarding' | 'user' | 'cabinet';
   category?: string;
   created_at: string;
   updated_at: string;

@@ -16,7 +16,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor, MessageLimitError, CabinetUnavailableError } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError, CabinetUnavailableError, takeCabinetOffer, type CabinetOffer } from '../services/claudeService';
+import OfferCard from '../components/OfferCard';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import DayDivider from '../components/DayDivider';
 import { clockTime, startsNewDay } from '../lib/messageDates';
@@ -52,6 +53,8 @@ export default function CounselorChatScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
   const [counselorName, setCounselorName] = useState(nameParam || metaEntry?.name || counselorId);
   const [counselorRole, setCounselorRole] = useState<string | undefined>(roleParam || metaEntry?.role);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -139,11 +142,13 @@ export default function CounselorChatScreen() {
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
+    setPendingOffer(null);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
       const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+      setPendingOffer(takeCabinetOffer());
       const assistantMessage: ThreadMessage = {
         role: 'assistant',
         content: reply,
@@ -304,6 +309,10 @@ export default function CounselorChatScreen() {
                 )}
               </View>
             ))
+          )}
+
+          {pendingOffer && !isLoading && (
+            <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
           )}
 
           {isLoading && (

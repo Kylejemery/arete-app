@@ -863,6 +863,45 @@ The week has ended. Give me your honest assessment.`;
   throw new Error('The Cabinet did not respond. Please try again.');
 }
 
+// An offer the Cabinet made at the end of the last reply (activation Parts 6
+// and 9): save a stated intention as a goal, or write a scroll on the
+// conversation. The screen that sent the message takes it once and shows a
+// card; nothing happens unless the person accepts.
+export interface CabinetOffer {
+  id: string;
+  kind: 'goal' | 'scroll';
+  counselorId: string | null;
+  title?: string;
+  category?: string;
+  target_date?: string;
+}
+let lastCabinetOffer: CabinetOffer | null = null;
+function noteCabinetOffer(data: any): void {
+  const o = data?.offer;
+  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll') ? (o as CabinetOffer) : null;
+}
+export async function respondToCabinetOffer(
+  offerId: string,
+  body: { accept: boolean; title?: string; category?: string; target_date?: string | null }
+): Promise<{ ok: boolean; status?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cabinet/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: data?.status };
+  } catch {
+    return { ok: false };
+  }
+}
+export function takeCabinetOffer(): CabinetOffer | null {
+  const o = lastCabinetOffer;
+  lastCabinetOffer = null;
+  return o;
+}
+
 // One Cabinet reply per counselor. counselorId/Name are null in single-voice
 // mode (legacy path) — the UI labels those bubbles 'The Cabinet'.
 export interface CabinetReply {
@@ -954,6 +993,7 @@ export async function sendMessageToCabinet(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
         .map((r: any): CabinetReply => ({
@@ -1250,6 +1290,7 @@ export async function sendMessageToCounselor(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       // Fire background memory summarization — only if conversation is substantial
