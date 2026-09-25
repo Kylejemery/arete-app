@@ -1,3 +1,4 @@
+import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { pronounsFor } from './pronouns';
 import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
@@ -537,10 +538,18 @@ let nextStarterId: string | null = null;
 export function setNextStarterId(id: string | null): void {
   nextStarterId = id;
 }
-function noteCabinetOffer(data: { offer?: unknown; support?: unknown } | null): void {
+function noteCabinetOffer(data: { offer?: unknown; support?: unknown; proposal?: unknown } | null): void {
   lastSupportFlag = data?.support === true;
   const o = data?.offer as CabinetOffer | undefined;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? o : null;
+  lastCabinetProposal = asCabinetProposal(data?.proposal);
+}
+// Run C: a practice (or feature request) card the closing voice proposed.
+let lastCabinetProposal: CabinetProposal | null = null;
+export function takeCabinetProposal(): CabinetProposal | null {
+  const p = lastCabinetProposal;
+  lastCabinetProposal = null;
+  return p;
 }
 // Run B, Part B5: the server sets support: true when a teen's message reads
 // as distress; the conversation shows the support card at once.
@@ -619,6 +628,9 @@ export async function sendMessageToCabinet(
         counselorModels: settings?.counselor_models ?? {},
         cabinetMembers: settings?.cabinet_members ?? [],
         starterId: (() => { const id = nextStarterId; nextStarterId = null; return id; })(),
+        // Run C: this build shows proposal and feature-request cards, so the
+        // server may offer them (older builds never get a card they cannot show).
+        clientCards: ['proposal'],
         // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, settings?.kt_completed_at),
         system: fullSystem,

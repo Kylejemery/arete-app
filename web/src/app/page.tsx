@@ -16,6 +16,7 @@ import GlassCard from '@/components/GlassCard';
 import StreakArc from '@/components/StreakArc';
 import CabinetReplay from '@/components/CabinetReplay';
 import YesterdayCard from '@/components/YesterdayCard';
+import YourPractices from '@/components/YourPractices';
 import { fetchFollowup, localDate, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 
 // ── Counselor display metadata ────────────────────────────────────
@@ -429,6 +430,8 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Your practices (run C): below everything else; nothing when none are on. */}
+      <YourPractices />
 
     </div>
   );

@@ -97,6 +97,10 @@ const FEATURES = [
 const LIMIT_SOURCES = new Set(['cabinet_daily_limit', 'cabinet_limit_card', 'counselor_daily_limit']);
 
 const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
+  module_limit: {
+    title: 'Keep Every Practice',
+    subtitle: 'Free keeps one practice on Home at a time.\nPremium keeps all you choose, each tuned your way.',
+  },
   attend_cabinet_sight: {
     title: 'Let Them See Your Hours',
     subtitle: 'Your counselors see your screen-time signals —\nand hold you to the limit you set yourself.',
