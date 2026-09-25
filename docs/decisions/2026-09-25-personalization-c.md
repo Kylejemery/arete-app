@@ -131,3 +131,17 @@ This file records the judgement calls made while carrying out Run C without stop
 - **What the line quotes:** the neutral summary the person agreed to pass along, never their own words.
 
 **DC4.4 Where shipping runs.** On the Railway server, because it owns the registry, push and the Cabinet threads. The academy tab proxies to it with the admin's token, the same pattern as the journal-agent run button.
+
+## C5
+
+**DC5.1 "Unpersonalized Home is identical" is proved on the source.**
+- **The check:** a test strips exactly the lines Run C added to each Home screen (the import, the comment and `<YourPractices />`) and compares the result, by sha256, with the file as it was before Run C (`cf0246a`).
+- **Rendering:** the test also runs the client's own `visiblePractices` as TypeScript (Node's type stripping) to show that no practices means nothing renders, and that only enabled, pinned, registry-known practices show.
+- **If Home changes later:** the test's two hashes need recomputing, and the test says how.
+- **Why not a render test:** there is no React Native test renderer in the repo, and adding one is a new dependency for one test.
+
+**DC5.2 Nothing removed elsewhere.** `git diff --numstat` from before Run C shows only three deleted lines in client code, each an import or function signature replaced by its extended form. No element was removed, hidden or moved.
+
+**DC5.3 What the tests do not cover.**
+- **Not unit tested:** the accept, undo and ship endpoints in `server/index.js`, which need the database. Their rules are unit tested through the pure modules they call (`proposals`, `practices`, `feature-requests`, `feature-shipping`).
+- **SQL:** the clustering SQL was exercised with a rolled-back dry run.

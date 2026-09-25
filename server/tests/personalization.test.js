@@ -299,3 +299,53 @@ test('the counselor line names the practice and asks before turning anything on'
   assert.ok(!line.includes('..'));
   assert.ok(!/\[\[/.test(line));
 });
+
+// ── C5: an unpersonalized Home is exactly what it was ───────────────────────
+
+const crypto = require('crypto');
+const { spawnSync } = require('child_process');
+
+// sha256 of both Home screens as they were before run C (commit cf0246a).
+// Stripping exactly the lines run C added must give these back, which proves
+// run C changed nothing else on Home. If Home is changed on purpose later,
+// recompute these from the new file with the same stripping.
+const HOME_BEFORE_RUN_C = {
+  'app/(tabs)/index.tsx': '8a5a3da461fd67f16a54372fd75cc378a38c1b6bb2700842773f03ec16db9ac3',
+  'web/src/app/page.tsx': '7f7b939ee901861ce754f2d72781cac43a329240b64e3aa052e156f7fd50aff8',
+};
+
+test('Home minus the Your practices lines is byte-for-byte the Home from before run C', () => {
+  const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+  const mobile = fs.readFileSync(path.join(ROOT, 'app/(tabs)/index.tsx'), 'utf8')
+    .replace("import YourPractices from '../../components/YourPractices';\n", '')
+    .replace(/      \{\/\* Your practices \(run C\)[^\n]*\n      <YourPractices \/>\n\n/, '');
+  const web = fs.readFileSync(path.join(ROOT, 'web/src/app/page.tsx'), 'utf8')
+    .replace("import YourPractices from '@/components/YourPractices';\n", '')
+    .replace(/      \{\/\* Your practices \(run C\)[^\n]*\n      <YourPractices \/>\n/, '');
+  assert.equal(sha(mobile), HOME_BEFORE_RUN_C['app/(tabs)/index.tsx'], 'mobile Home changed beyond the Your practices lines');
+  assert.equal(sha(web), HOME_BEFORE_RUN_C['web/src/app/page.tsx'], 'web Home changed beyond the Your practices lines');
+});
+
+// The client's own visiblePractices, run as TypeScript (Node 22.6+ strips
+// types). Skips, and says so, on an older Node.
+function runClientModules(rel, expr) {
+  const r = spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings', '--input-type=module', '-e',
+    `const m = await import(${JSON.stringify(path.join(ROOT, rel))}); console.log(JSON.stringify(${expr}));`], { encoding: 'utf8' });
+  if (r.status !== 0) return { skipped: r.stderr.split('\n')[0] };
+  return { value: JSON.parse(r.stdout) };
+}
+
+for (const rel of ['lib/modules.ts', 'web/src/lib/modules.ts']) {
+  test(`${rel}: nothing on means nothing shown; only enabled, pinned, known practices show, in registry order`, t => {
+    const rows = JSON.stringify([
+      { module_key: 'habit_tracker', enabled: true, pinned: true, settings: {}, enabled_by: 'cabinet' },
+      { module_key: 'focus_timer', enabled: true, pinned: true, settings: {}, enabled_by: 'user' },
+      { module_key: 'evening_review', enabled: true, pinned: false, settings: {}, enabled_by: 'user' },
+      { module_key: 'premeditatio', enabled: false, pinned: true, settings: {}, enabled_by: 'user' },
+      { module_key: 'retired_module', enabled: true, pinned: true, settings: {}, enabled_by: 'user' },
+    ]);
+    const r = runClientModules(rel, `[m.visiblePractices([]).length, m.visiblePractices(null).length, m.visiblePractices(${rows}).map(x => x.module_key)]`);
+    if (r.skipped) return t.skip(`TypeScript import unavailable: ${r.skipped}`);
+    assert.deepEqual(r.value, [0, 0, ['focus_timer', 'habit_tracker']]);
+  });
+}
