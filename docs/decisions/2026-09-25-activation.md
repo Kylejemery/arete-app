@@ -114,3 +114,13 @@ This file records the judgement calls made while carrying out the activation pro
 - **Web signup** keeps its required username step, because the web app keys every page on `user_name`. The step gains the optional off-limits field and now lands on `/cabinet`.
 - **Nudges removed:** the Home and Cabinet "complete your Know Thyself" prompts, on both platforms. The form remains reachable from Settings, the web sidebar and the Know Thyself screen.
 - **Alternative:** keep the nudges. The prompt says the form is no longer a prompted step.
+
+## Part 4
+
+**D4.1 What "the first assistant turn" means.** It is the first reply in a conversation, where a conversation is a session: no user turn in the thread in the last 30 minutes.
+- For a verified user this is read from the stored thread.
+- For old builds that send no JWT, the only signal is a single user message in the payload.
+
+**D4.2 One voice on the first turn.** In the group Cabinet, the director picks one to three voices. On the first turn only its first pick replies, so the opening is one short reply ending in one question, rather than three replies each ending in a question.
+- **Alternative:** give every voice the first-reply rules. That would still stack two or three questions.
+- The Know Thyself ask is suppressed on the first turn. It is suppressed anyway before the third user turn.

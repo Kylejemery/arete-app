@@ -968,6 +968,9 @@ const KT_PROFILE_INSTRUCTION = 'You know this person. Do not list the profile ba
 const KT_CONNECT_INSTRUCTION = 'This person completed their Know Thyself profile very recently. Make one specific connection to their profile in this reply: a goal, a pattern, a strength, or something they said about themselves, named plainly.';
 const KT_FRESH_REPLIES = 3;
 
+// Activation Part 4: the first assistant turn of a new conversation.
+const FIRST_REPLY_INSTRUCTION = `\n\n[FIRST REPLY IN THIS CONVERSATION]\nThis is your first reply in a new conversation, and it decides whether the person keeps talking. Keep it short: three to five sentences, no lists, no headings. Acknowledge the specific situation they described, in their terms, not a general version of it. Give one concrete observation about it. Do not stack advice, do not give a framework, do not quote at length. End with exactly one specific question that invites them to tell you more about their situation. This overrides any longer length guidance for this reply only.\n[END FIRST REPLY]`;
+
 function describeChallengeStyle(pref) {
   if (!pref) return null;
   const p = String(pref).toLowerCase();
@@ -1583,6 +1586,17 @@ app.post('/api/chat/counselor', async (req, res) => {
         ktSettings,
         userMessage: lastUserText,
       });
+  // --- First reply of a conversation (activation Part 4) ---
+  // 34% of conversations ended after one exchange. The first assistant turn
+  // of a new conversation stays short, speaks to the specific situation,
+  // offers one concrete observation and ends on one question that invites
+  // the person to keep going. Later turns are unchanged. Without a verified
+  // user (old builds) the only signal is a single user message in the payload.
+  const isFirstTurn = sessionType !== 'shared' && (req.areteVerifiedUserId
+    ? personal.isFirstTurn
+    : (Array.isArray(messages) && messages.filter(m => m && m.role === 'user').length === 1));
+  const firstReplyBlock = isFirstTurn ? FIRST_REPLY_INSTRUCTION : '';
+
   // The facts block supersedes the user_settings-only block: it falls back to
   // the same columns for any field without a fact.
   const cabinetProfileBlock = personal.factsBlock
@@ -1654,10 +1668,16 @@ app.post('/api/chat/counselor', async (req, res) => {
       mode: retrievalMode(),
     });
 
-    const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
+    const selectedCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
+    // First reply: one voice, so the opening is one short, specific reply
+    // with one question rather than a stack of advice from several people.
+    const respondingCounselors = isFirstTurn ? selectedCounselors.slice(0, 1) : selectedCounselors;
 
     const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, cabinetProfileBlock + sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens, {
-      lastVoice: personal.askBlock,
+      allVoices: firstReplyBlock,
+      // No Know Thyself ask on the first reply: it must end on the one
+      // question about the person's own situation.
+      lastVoice: isFirstTurn ? '' : personal.askBlock,
     });
 
     // Post-hoc usage attribution across the whole Cabinet turn.
@@ -1724,7 +1744,7 @@ app.post('/api/chat/counselor', async (req, res) => {
   // The client's single-mode prompt carries the Known profile already; add
   // what only the server knows: tentative facts and off-limits topics.
   profileBlock += personal.tentativeBlock;
-  const singleTurnBlock = personal.askBlock;
+  const singleTurnBlock = isFirstTurn ? firstReplyBlock : personal.askBlock;
 
   // RAG: retrieve relevant source text chunks (silent on failure)
   const lastUserMessage = messages[messages.length - 1]?.content || '';
