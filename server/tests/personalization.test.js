@@ -245,3 +245,57 @@ test('the admin Requests route returns no identities and counts from measured pr
   const nav = fs.readFileSync(path.join(ROOT, 'academy/web/src/app/admin/layout.tsx'), 'utf8');
   assert.match(nav, /\{ href: '\/admin\/email', label: 'Email' \},\s*\{ href: '\/admin\/requests', label: 'Requests' \}/);
 });
+
+// ── C4: shipping ─────────────────────────────────────────────────────────────
+
+const shipping = require('../lib/feature-shipping');
+
+test('shipped requires a registry module key, in SQL and on the server', () => {
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260925191937_feature_requests.sql'), 'utf8');
+  assert.match(sql, /CHECK \(status <> 'shipped' OR module_key IS NOT NULL\)/);
+  const server = fs.readFileSync(path.join(ROOT, 'server/index.js'), 'utf8');
+  const ship = server.slice(server.indexOf("app.post('/api/admin/feature-clusters/:id/ship'"));
+  assert.match(ship.slice(0, 1200), /moduleRegistry\.getModule\(moduleKey\)[\s\S]*module_key_required/);
+});
+
+test('each person who asked is told once per cluster, and only if the practice is for them', () => {
+  const subjects = new Map([
+    ['teen', { isTeen: true }],
+    ['on', { enabledModules: new Set(['premeditatio']) }],
+    ['sad', { recentDistress: true }],
+  ]);
+  const plan = shipping.planNotifications({
+    moduleKey: 'premeditatio',
+    requesters: [
+      { user_id: 'a', counselor_id: 'seneca' },
+      { user_id: 'a', counselor_id: 'marcus' },
+      { user_id: 'told' },
+      { user_id: 'teen' },
+      { user_id: 'on' },
+      { user_id: 'sad' },
+    ],
+    notified: new Set(['told']),
+    subjects,
+  });
+  assert.deepEqual(plan.map(p => [p.user_id, p.action, p.reason]), [
+    ['a', 'notify', null],
+    ['told', 'skip', 'already_notified'],
+    ['teen', 'skip', 'teen'],
+    ['on', 'skip', 'already_on'],
+    ['sad', 'skip', 'recent_distress'],
+  ]);
+  assert.equal(plan[0].counselor_id, 'seneca');
+});
+
+test('the once-per-cluster guard is a unique index', () => {
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260925193004_feature_shipped_notices.sql'), 'utf8');
+  assert.match(sql, /CREATE UNIQUE INDEX IF NOT EXISTS adjustment_proposals_one_notice_per_cluster\s+ON adjustment_proposals \(user_id, cluster_id\)/);
+});
+
+test('the counselor line names the practice and asks before turning anything on', () => {
+  const line = shipping.shippedLine({ summary: 'Rehearse hard conversations before they happen.', moduleKey: 'premeditatio' });
+  assert.match(line, /premeditatio/);
+  assert.match(line, /Would you like me to turn it on/);
+  assert.ok(!line.includes('..'));
+  assert.ok(!/\[\[/.test(line));
+});

@@ -111,3 +111,23 @@ This file records the judgement calls made while carrying out Run C without stop
 - **What it shows:** each cluster's title, up to five anonymous summaries, the number of distinct people who asked, the last date and the status.
 - **What it never shows:** the route selects no `user_id`, email, conversation or draft, and a test checks this.
 - **Counts:** they come from `feature_request_cluster_counts`, which joins `measured_profiles`, so admin and internal accounts are excluded.
+
+## C4
+
+**DC4.1 Shipped requires a module.**
+- **In SQL:** a check constraint on `feature_request_clusters` refuses `status = 'shipped'` without a `module_key`.
+- **On the server:** the ship endpoint refuses any key the registry does not list.
+- **In the admin tab:** it offers only the registry's modules, fetched from the server so there is no fourth copy of the list.
+
+**DC4.2 Told once, and only if it is for them.**
+- **The guard:** the `adjustment_proposals` row with `source = 'feature_shipped'` and the cluster id. A unique index on `(user_id, cluster_id)` means re-running the ship tells only people not yet told.
+- **Who is skipped:** people for whom the practice is excluded (teen, recent distress) and people who already have it on. The response and the admin notice carry counts only.
+- **Alternative:** tell everyone and let the card say it is unavailable. That sends a teenager a line about a practice they cannot use.
+
+**DC4.3 How they are told.**
+- **In the Cabinet thread:** one counselor line, the counselor who took the request or "The Cabinet". It is appended in a single statement by `append_cabinet_message()` (service role only), so it cannot race the app's own saves.
+- **By push:** "Something you asked for is here.", routed to `/cabinet`, which the app already handles.
+- **The card:** the proposal card shows when the Cabinet opens ("You asked for this"), and a yes is revalidated like any other proposal.
+- **What the line quotes:** the neutral summary the person agreed to pass along, never their own words.
+
+**DC4.4 Where shipping runs.** On the Railway server, because it owns the registry, push and the Cabinet threads. The academy tab proxies to it with the admin's token, the same pattern as the journal-agent run button.

@@ -3874,6 +3874,136 @@ app.post('/api/admin/feature-requests/process', async (req, res) => {
   return res.json({ ok: true, pending: (data || []).length, processed });
 });
 
+// POST /api/admin/feature-clusters/:id/ship { module_key } — admin only
+// (run C, Part C4). Marks a cluster shipped, which needs a module registry
+// key, then tells each person who asked, once per cluster: a counselor line
+// in their Cabinet thread, a push, and a card to turn the practice on.
+// Re-running it tells only people not yet told. Returns counts only.
+const featureShipping = require('./lib/feature-shipping');
+
+// GET /api/admin/modules — admin only: the module registry's keys and labels,
+// the only values a cluster can be marked shipped with.
+app.get('/api/admin/modules', async (req, res) => {
+  const adminId = await getAuthenticatedUserId(req);
+  if (!adminId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await isAdmin(adminId))) return res.status(403).json({ error: 'Forbidden' });
+  return res.json({ modules: moduleRegistry.MODULE_KEYS.map(k => ({ key: k, label: moduleRegistry.getModule(k).label })) });
+});
+app.post('/api/admin/feature-clusters/:id/ship', async (req, res) => {
+  const adminId = await getAuthenticatedUserId(req);
+  if (!adminId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await isAdmin(adminId))) return res.status(403).json({ error: 'Forbidden' });
+  const moduleKey = typeof req.body?.module_key === 'string' ? req.body.module_key : '';
+  const mod = moduleRegistry.getModule(moduleKey);
+  if (!mod) return res.status(400).json({ error: 'module_key_required', modules: moduleRegistry.MODULE_KEYS });
+
+  const { data: cluster, error: clusterError } = await supabase.from('feature_request_clusters')
+    .select('id, title, status, module_key').eq('id', req.params.id).maybeSingle();
+  if (clusterError) return res.status(500).json({ error: 'lookup_failed' });
+  if (!cluster) return res.status(404).json({ error: 'not_found' });
+  if (cluster.status === 'shipped' && cluster.module_key !== mod.key) {
+    return res.status(409).json({ error: 'shipped_as_other_module', module_key: cluster.module_key });
+  }
+  if (cluster.status !== 'shipped') {
+    const { error } = await supabase.from('feature_request_clusters')
+      .update({ status: 'shipped', module_key: mod.key, shipped_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', cluster.id);
+    if (error) return res.status(500).json({ error: 'save_failed' });
+  }
+
+  try {
+    const { data: requests } = await supabase.from('feature_requests')
+      .select('user_id, counselor_id, need_summary, responded_at')
+      .eq('cluster_id', cluster.id).eq('status', 'submitted')
+      .order('responded_at', { ascending: false });
+    const byUser = new Map();
+    for (const r of requests || []) if (!byUser.has(r.user_id)) byUser.set(r.user_id, r);
+    const userIds = [...byUser.keys()];
+    if (userIds.length === 0) return res.json({ ok: true, requesters: 0, notified: 0, skipped: {} });
+
+    const [notifiedRes, profilesRes, configRes, settingsRes, counselorNames] = await Promise.all([
+      supabase.from('adjustment_proposals').select('user_id').eq('cluster_id', cluster.id).in('user_id', userIds),
+      supabase.from('profiles').select('id, age_band').in('id', userIds),
+      supabase.from('user_app_config').select('user_id, module_key, enabled').in('user_id', userIds).eq('module_key', mod.key),
+      supabase.from('user_settings').select('user_id, expo_push_token').in('user_id', userIds),
+      loadCounselorNames(supabase),
+    ]);
+    const subjects = new Map();
+    for (const id of userIds) {
+      const profile = (profilesRes.data || []).find(p => p.id === id);
+      const enabled = (configRes.data || []).some(c => c.user_id === id && c.enabled);
+      subjects.set(id, {
+        isTeen: !!profile && practices.TEEN_BANDS.includes(profile.age_band),
+        recentDistress: mod.excludedFor.includes('recent_distress')
+          ? await profileExtraction.hasRecentDistressFlag(supabase, id, proposalRules.DISTRESS_LOOKBACK_DAYS)
+          : false,
+        enabledModules: new Set(enabled ? [mod.key] : []),
+      });
+    }
+    const plan = featureShipping.planNotifications({
+      moduleKey: mod.key,
+      requesters: [...byUser.values()],
+      notified: new Set((notifiedRes.data || []).map(n => n.user_id)),
+      subjects,
+    });
+
+    const { Expo } = require('expo-server-sdk');
+    const expo = new Expo();
+    let notified = 0;
+    const skipped = {};
+    for (const step of plan) {
+      if (step.action !== 'notify') { skipped[step.reason] = (skipped[step.reason] || 0) + 1; continue; }
+      // The proposal row is the once-per-cluster guard (unique index).
+      const settings = proposalRules.proposedSettings(mod.key, '');
+      const { data: proposal, error } = await supabase.from('adjustment_proposals').insert({
+        user_id: step.user_id,
+        module_key: mod.key,
+        tier: mod.tier,
+        source: 'feature_shipped',
+        counselor_id: step.counselor_id,
+        settings,
+        cluster_id: cluster.id,
+      }).select('id').single();
+      if (error || !proposal) { skipped.already_notified = (skipped.already_notified || 0) + 1; continue; }
+
+      const counselorName = (step.counselor_id && counselorNames[step.counselor_id]) || 'The Cabinet';
+      const summary = byUser.get(step.user_id)?.need_summary || null;
+      await supabase.rpc('append_cabinet_message', {
+        p_user_id: step.user_id,
+        p_message: {
+          role: 'assistant',
+          content: featureShipping.shippedLine({ summary, moduleKey: mod.key }),
+          timestamp: Date.now(),
+          counselorId: step.counselor_id,
+          counselorName,
+          kind: 'feature_shipped',
+        },
+      });
+      const token = (settingsRes.data || []).find(s => s.user_id === step.user_id)?.expo_push_token;
+      if (token && Expo.isExpoPushToken(token)) {
+        try {
+          await expo.sendPushNotificationsAsync([{
+            to: token,
+            sound: 'default',
+            title: counselorName,
+            body: featureShipping.PUSH_BODY,
+            data: { type: 'feature_shipped', route: '/cabinet' },
+            channelId: 'counselor-messages',
+          }]);
+        } catch {
+          console.error('[feature-shipping] push failed');
+        }
+      }
+      eventLog.logEvent(step.user_id, 'feature_shipped_notified', { module_key: mod.key }, { platform: 'server' });
+      notified++;
+    }
+    return res.json({ ok: true, requesters: userIds.length, notified, skipped });
+  } catch (err) {
+    console.error('[feature-shipping] notify failed');
+    return res.status(500).json({ error: 'notify_failed' });
+  }
+});
+
 // POST /api/practices/proposals/:id/respond { accept, swapOut? } — the
 // person's answer on a proposal card. On yes every rule is checked again.
 app.post('/api/practices/proposals/:id/respond', async (req, res) => {
