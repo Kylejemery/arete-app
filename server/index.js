@@ -17,7 +17,7 @@ const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
-const { FREE_COUNSELOR_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
+const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog } = require('./lib/events');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
@@ -1738,7 +1738,11 @@ app.post('/api/chat/counselor', async (req, res) => {
       ? effectiveCabinetMembers
       : [];
     const allowed = source.filter(isFreeCounselorSlug);
-    effectiveCabinetMembers = allowed.some(s => FREE_COUNSELOR_SLUGS.includes(s)) ? allowed : [...FREE_COUNSELOR_SLUGS];
+    // Keep the member's own selection when at least one free counselor
+    // survives the filter, in either slug spelling (the web writes the
+    // counselors-table spelling); otherwise fall back to the default three.
+    const hasFreeCounselor = allowed.some(s => !FUTURE_SELF_SLUGS.includes(s));
+    effectiveCabinetMembers = hasFreeCounselor ? allowed : [...FREE_COUNSELOR_SLUGS];
   }
 
   // Ceilings, not targets: a reply ends when the model is done (end_turn), so
