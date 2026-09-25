@@ -1,3 +1,4 @@
+import { useAgeStatus } from '../../hooks/useAgeStatus';
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
@@ -24,6 +25,8 @@ import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../../services/claudeService';
 import type { Goal, Book } from '@/lib/types';
 import { paywallRoute } from '@/lib/paywall';
+import SupportCard, { ImmediateSupportCard } from '../../components/SupportCard';
+import { looksDistressed } from '@/lib/distress';
 
 interface TodayDispatch {
     id: string;
@@ -37,6 +40,8 @@ interface WeeklyInsight {
     insight_text: string;
     dominant_theme: string | null;
     analysis_week: string;
+    // Free tier: the server sends the first paragraph only (activation 7.2).
+    teaser?: boolean;
 }
 
 export interface UnifiedEntry {
@@ -127,6 +132,10 @@ export default function JournalScreen() {
     const [weeklyInsight, setWeeklyInsight] = useState<WeeklyInsight | null>(null);
     const [insightDismissed, setInsightDismissed] = useState(false);
     const [insightExpanded, setInsightExpanded] = useState(false);
+    const { isTeen } = useAgeStatus();
+    // Run B, Part B5: the support card at once after a teen's entry that
+    // reads as distress. Checked on the device; nothing is sent or logged.
+    const [showImmediateSupport, setShowImmediateSupport] = useState(false);
 
     // ── Goals state ──────────────────────────────────────────────────────────
     const [goals, setGoals] = useState<Goal[]>([]);
@@ -282,6 +291,7 @@ export default function JournalScreen() {
             return;
         }
         if (!textInput.trim()) return;
+        if (isTeen && looksDistressed(textInput)) setShowImmediateSupport(true);
         const created = await createJournalEntry({
             type: inputType!,
             content: textInput.trim(),
@@ -725,6 +735,8 @@ export default function JournalScreen() {
                     contentContainerStyle={styles.feedContent}
                     showsVerticalScrollIndicator={false}
                 >
+                    {showImmediateSupport && <ImmediateSupportCard onDismiss={() => setShowImmediateSupport(false)} />}
+                    <SupportCard />
                     {todayDispatch && !dispatchDismissed && (
                         <TouchableOpacity
                             activeOpacity={0.85}
@@ -751,7 +763,9 @@ export default function JournalScreen() {
                             onPress={() => {
                                 // Free tier sees the 3-line preview; the full
                                 // insight is the premium moment.
-                                if (tier === 'free') {
+                                if (isTeen) {
+                                    setInsightExpanded(prev => !prev);
+                                } else if (tier === 'free' || weeklyInsight.teaser) {
                                     router.push(paywallRoute('insight_tease'));
                                 } else {
                                     setInsightExpanded(prev => !prev);
@@ -771,12 +785,14 @@ export default function JournalScreen() {
                             ) : null}
                             <Text
                                 style={styles.insightText}
-                                numberOfLines={insightExpanded ? undefined : 3}
+                                numberOfLines={insightExpanded || weeklyInsight.teaser ? undefined : 3}
                             >
                                 {weeklyInsight.insight_text}
                             </Text>
                             <Text style={styles.dispatchReadMore}>
-                                {tier === 'free'
+                                {isTeen
+                                  ? (insightExpanded ? 'Show less' : 'Read insight →')
+                                  : tier === 'free' || weeklyInsight.teaser
                                   ? 'Your counselors noticed a pattern this week. Unlock the full insight →'
                                   : insightExpanded ? 'Show less' : 'Read insight →'}
                             </Text>

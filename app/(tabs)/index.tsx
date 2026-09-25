@@ -9,16 +9,12 @@ import DispatchNudge from '../../components/DispatchNudge';
 import YesterdayCard from '../../components/YesterdayCard';
 import { fetchFollowup, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 import WhatsNewModal from '../../components/WhatsNewModal';
-import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, getKnowThyselfComplete, upsertUserSettings } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
 
 const QUOTE_CACHE_KEY = 'home_quote_cache';
-
-// Per-session banner dismissal: module-level so it survives tab switches but
-// resets on the next app launch (deliberately not persisted).
-let futureSelfBannerDismissed = false;
 
 // Per-session skip for the name prompt — reappears next launch until a name
 // is actually saved.
@@ -75,10 +71,8 @@ export default function HomeScreen() {
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   // R8: yesterday's intention and a counselor's follow-up, top of Home.
   const [yesterdayCard, setYesterdayCard] = useState<YesterdayCardData | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(futureSelfBannerDismissed);
   const [namePromptVisible, setNamePromptVisible] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -118,9 +112,6 @@ export default function HomeScreen() {
     if (!settings?.user_name && !namePromptSkipped) {
       setNamePromptVisible(true);
     }
-    getKnowThyselfComplete()
-      .then(complete => setKnowThyselfIncomplete(!complete))
-      .catch(() => {});
 
     const [checkin, freshStreak] = await Promise.all([
       getTodayCheckin(),
@@ -295,37 +286,6 @@ export default function HomeScreen() {
         <View style={styles.quoteSkeleton} />
       )}
 
-      {/* Know Thyself prompt, the one Home prompt (R7): shown until the profile is complete,
-          dismissible for the current session only */}
-      {knowThyselfIncomplete && !bannerDismissed && (
-        <View style={styles.fsBanner}>
-          <View style={styles.fsBannerIcon}>
-            <Text style={styles.fsBannerIconGlyph}>✦</Text>
-          </View>
-          <View style={styles.fsBannerBody}>
-            <Text style={styles.fsBannerKicker}>Three questions, about two minutes</Text>
-            <Text style={styles.fsBannerTitle}>Tell your Cabinet who you are.</Text>
-          </View>
-          <TouchableOpacity
-            style={styles.fsBannerCta}
-            onPress={() => router.push('/know-thyself' as any)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.fsBannerCtaText}>Begin</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.fsBannerDismiss}
-            onPress={() => {
-              futureSelfBannerDismissed = true;
-              setBannerDismissed(true);
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Ionicons name="close" size={14} color="#9aa0a6" />
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Status Pills */}
       <View style={styles.pillRow}>
         <TouchableOpacity
@@ -474,69 +434,6 @@ const styles = StyleSheet.create({
     height: 90,
     marginBottom: 20,
     opacity: 0.4,
-  },
-  fsBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: 'rgba(201, 168, 76, 0.09)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(201, 168, 76, 0.35)',
-  },
-  fsBannerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(201, 168, 76, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(201, 168, 76, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fsBannerIconGlyph: {
-    color: '#c9a84c',
-    fontSize: 18,
-  },
-  fsBannerBody: {
-    flex: 1,
-    minWidth: 0,
-  },
-  fsBannerKicker: {
-    color: '#c9a84c',
-    fontSize: 9.5,
-    letterSpacing: 1.6,
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  fsBannerTitle: {
-    color: '#e6eef8',
-    fontSize: 15,
-    marginTop: 2,
-    fontWeight: '600',
-  },
-  fsBannerCta: {
-    backgroundColor: '#c9a84c',
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 14,
-  },
-  fsBannerCtaText: {
-    color: '#1a1a2e',
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  fsBannerDismiss: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   nameModalOverlay: {
     flex: 1,

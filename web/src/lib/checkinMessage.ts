@@ -28,7 +28,7 @@ export function parseCheckInPrompt(content: string): CheckInSummary | null {
   const marks = tasksSection ? tasksSection[1] : '';
   const done = (marks.match(/✓/g) || []).length;
   const total = done + (marks.match(/✗/g) || []).length;
-  const intentionMatch = content.match(/(?:in their own words|in his own words|intention was): '([^']*)'/);
+  const intentionMatch = content.match(/(?:in their own words|in his own words|in her own words|intention was): '([^']*)'/);
   const intention = intentionMatch ? intentionMatch[1].trim() || null : null;
   return { kind, done, total, intention };
 }

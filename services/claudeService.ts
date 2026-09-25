@@ -1,3 +1,4 @@
+import { pronounsFor } from '../lib/pronouns';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
@@ -478,12 +479,6 @@ export async function gatherAppContext(): Promise<string> {
     } catch { /* skip */ }
   }
 
-  // Evening reflection
-  lines.push('');
-  lines.push('EVENING REFLECTION:');
-  lines.push(`Q: Evening Reflection`);
-  lines.push(`A: ${checkin?.reflection_answer || '(not yet answered)'}`);
-
   // Stoic journal
   lines.push('');
   lines.push('STOIC JOURNAL:');
@@ -744,10 +739,6 @@ async function gatherWeeklyContext(): Promise<string> {
     }
   } catch { /* skip */ }
 
-  // Evening reflections (most recent)
-  lines.push('');
-  lines.push('EVENING REFLECTION (most recent):');
-  lines.push(checkin?.reflection_answer || '(not answered)');
   lines.push('');
   lines.push('STOIC JOURNAL (most recent):');
   lines.push(checkin?.stoic_answer || '(not answered)');
@@ -873,6 +864,61 @@ The week has ended. Give me your honest assessment.`;
   throw new Error('The Cabinet did not respond. Please try again.');
 }
 
+// An offer the Cabinet made at the end of the last reply (activation Parts 6
+// and 9): save a stated intention as a goal, or write a scroll on the
+// conversation. The screen that sent the message takes it once and shows a
+// card; nothing happens unless the person accepts.
+export interface CabinetOffer {
+  id: string;
+  kind: 'goal' | 'scroll' | 'task';
+  counselorId: string | null;
+  title?: string;
+  routine?: 'morning' | 'evening';
+  category?: string;
+  target_date?: string;
+}
+let lastCabinetOffer: CabinetOffer | null = null;
+// The starter the person tapped in the empty Cabinet (run B, Part B3),
+// sent once with the next message so "ask_me" can open with a question.
+let nextStarterId: string | null = null;
+export function setNextStarterId(id: string | null): void {
+  nextStarterId = id;
+}
+function noteCabinetOffer(data: any): void {
+  lastSupportFlag = data?.support === true;
+  const o = data?.offer;
+  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? (o as CabinetOffer) : null;
+}
+export async function respondToCabinetOffer(
+  offerId: string,
+  body: { accept: boolean; title?: string; category?: string; target_date?: string | null; routine?: string }
+): Promise<{ ok: boolean; status?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/cabinet/offers/${encodeURIComponent(offerId)}/respond`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: data?.status };
+  } catch {
+    return { ok: false };
+  }
+}
+// Run B, Part B5: the server sets support: true when a teen's message reads
+// as distress; the conversation shows the support card at once.
+let lastSupportFlag = false;
+export function takeSupportFlag(): boolean {
+  const v = lastSupportFlag;
+  lastSupportFlag = false;
+  return v;
+}
+export function takeCabinetOffer(): CabinetOffer | null {
+  const o = lastCabinetOffer;
+  lastCabinetOffer = null;
+  return o;
+}
+
 // One Cabinet reply per counselor. counselorId/Name are null in single-voice
 // mode (legacy path) — the UI labels those bubbles 'The Cabinet'.
 export interface CabinetReply {
@@ -931,6 +977,7 @@ export async function sendMessageToCabinet(
         model: 'claude-opus-4-5',
         counselorModels: cabinetSettings?.counselor_models ?? {},
         cabinetMembers: cabinetSettings?.cabinet_members ?? [],
+        starterId: (() => { const id = nextStarterId; nextStarterId = null; return id; })(),
         // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, cabinetSettings?.kt_completed_at),
         max_tokens: MAX_TOKENS_BY_TIER[limitStatus.tier],
@@ -964,6 +1011,7 @@ export async function sendMessageToCabinet(
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
         .map((r: any): CabinetReply => ({
@@ -1044,6 +1092,8 @@ export async function sendCheckInToCabinet(
   try {
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
+    // Run B, Part B4: they/them/their unless the person set pronouns.
+    const pr = pronounsFor((settings as { pronouns?: string | null } | null)?.pronouns);
 
     let userMessage: string;
 
@@ -1065,17 +1115,16 @@ export async function sendCheckInToCabinet(
       const affirmation = options.affirmation?.trim() || affirmations[day];
       const intention = (checkin?.intention || '').trim();
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
-      userMessage = `[Morning check-in] ${userName} has just completed his morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to him briefly as he begins the day.`;
+      userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
       const eveningTasks = checkin?.evening_tasks ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
-      const reflection = checkin?.reflection_answer || '(not answered)';
       const stoic = checkin?.stoic_answer || '(not answered)';
       const intention = (checkin?.intention || '').trim();
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
-      userMessage = `[Evening check-in] ${userName} is wrapping up his evening. Tasks: ${taskSummary}.${intentionLine} Reflection: '${reflection}'. Stoic: '${stoic}'. Speak to him as he closes the day.`;
+      userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }
 
     const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
@@ -1256,11 +1305,19 @@ export async function sendMessageToCounselor(
     if (!response.ok) {
       let errorText = '';
       try { errorText = await response.text(); } catch { /* ignore */ }
-      console.error('Backend/Claude API error:', response.status, errorText);
-      return `Your counselor is temporarily unavailable. (Error ${response.status})`;
+      // The server's daily cap: a real limit, not an outage. This used to
+      // come back as the counselor's "reply" and be saved into the thread.
+      if (response.status === 403) {
+        let errData: any = {};
+        try { errData = JSON.parse(errorText); } catch { /* ignore */ }
+        if (errData.error === 'daily_limit_reached') throw new DailyLimitError();
+      }
+      console.error('Backend/Claude API error:', response.status);
+      throw new CabinetUnavailableError(`Your counselor is temporarily unavailable. (Error ${response.status})`);
     }
 
     const data = await response.json();
+    noteCabinetOffer(data);
     const content = data?.content?.[0]?.text;
     if (typeof content === 'string' && content.length > 0) {
       // Fire background memory summarization — only if conversation is substantial
@@ -1293,6 +1350,7 @@ export async function sendMessageToCounselor(
     throw new CabinetUnavailableError('No response received. Please try again.');
   } catch (error) {
     if (error instanceof MessageLimitError) throw error;
+    if (error instanceof DailyLimitError) throw error;
     if (error instanceof CabinetUnavailableError) throw error;
     console.error('Backend request failed:', error);
     throw new CabinetUnavailableError();

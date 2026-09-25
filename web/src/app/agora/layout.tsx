@@ -1,4 +1,5 @@
 import { Playfair_Display } from 'next/font/google';
+import AgoraTeenGate from '@/components/AgoraTeenGate';
 
 // The Agora reads in the academy idiom: navy ground, Playfair Display
 // titles. The font is loaded here rather than in the root layout so the
@@ -14,7 +15,7 @@ const playfair = Playfair_Display({
 export default function AgoraLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={playfair.variable} style={{ minHeight: '100%', background: '#0a1628', color: '#f5edd6' }}>
-      {children}
+      <AgoraTeenGate>{children}</AgoraTeenGate>
     </div>
   );
 }

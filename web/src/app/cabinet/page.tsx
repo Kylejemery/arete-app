@@ -3,9 +3,14 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
+import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, takeSupportFlag, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { ImmediateSupportCard } from '@/components/SupportCard';
+import { pickStarters, type Starter } from '@/lib/starters';
+import { logEvent } from '@/lib/events';
+import OfferCard from '@/components/OfferCard';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
 import DailyLimitCard from '@/components/DailyLimitCard';
 import { loadThread, saveThread, clearThread } from '@/lib/threadService';
@@ -14,7 +19,6 @@ import type { ThreadMessage } from '@/lib/threadService';
 import { COUNSELOR_LIST } from '@/lib/counselors';
 import { clockTime, startsNewDay } from '@/lib/messageDates';
 import { DayDivider, MessageTime } from '@/components/MessageDates';
-import GlassCard from '@/components/GlassCard';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import CheckInChip from '@/components/CheckInChip';
 import { parseCheckInPrompt } from '@/lib/checkinMessage';
@@ -40,6 +44,12 @@ export default function CabinetPage() {
   const [cabinetMessages, setCabinetMessages] = useState<ThreadMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
+  // Run B, Part B3: starters for the empty Cabinet.
+  const [starters, setStarters] = useState<Starter[]>(() => pickStarters({}));
   // A send that failed: shown above the composer, never in the thread.
   const [sendError, setSendError] = useState<string | null>(null);
   // Free tier daily cap. `remaining` is read from the same profile columns the
@@ -73,7 +83,6 @@ export default function CabinetPage() {
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
 
   // Shared sessions (Arete for Couples) — same contract as the mobile app:
   // the cabinet_conversations row id doubles as the shared-session id.
@@ -123,14 +132,14 @@ export default function CabinetPage() {
       if (!settings?.user_name) { router.replace('/setup'); return; }
       setUserName(settings.user_name);
 
-      // Same signal as Home and Scrolls: the profiles flag, which
-      // markKnowThyselfComplete sets under the one completion rule.
-      getKnowThyselfComplete()
-        .then(complete => setKnowThyselfIncomplete(!complete))
-        .catch(() => {});
-
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);
+      getTodayCheckin()
+        .then(checkin => setStarters(pickStarters({ goal: settings.kt_goals ?? null, intention: (checkin?.intention as string | null) ?? null })))
+        .catch(() => {});
+      // A message the daily limit stopped waits in the box (activation 7.1).
+      const draft = takeLimitDraft('cabinet');
+      if (draft) setInput(prev => (prev.trim() ? prev : draft));
 
       if (Array.isArray(settings.cabinet_members) && settings.cabinet_members.length > 0) {
         setActiveMembers(settings.cabinet_members);
@@ -292,14 +301,21 @@ export default function CabinetPage() {
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
   useEffect(() => { sharedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sharedMessages]);
 
-  const handleSendCabinet = async () => {
-    if (!input.trim() || isLoading) return;
-    const userMsg: ThreadMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
+  const handleSendCabinet = async (starter?: Starter) => {
+    const text = (starter ? starter.text : input).trim();
+    if (!text || isLoading) return;
+    if (starter) {
+      // Only the id is logged, never the conversation that follows.
+      setNextStarterId(starter.id);
+      logEvent('cabinet_starter_used', { starter_id: starter.id });
+    }
+    const userMsg: ThreadMessage = { role: 'user', content: text, timestamp: Date.now() };
     const newMessages = [...cabinetMessages, userMsg];
     setCabinetMessages(newMessages);
     setInput('');
     setIsLoading(true);
     setSendError(null);
+    setPendingOffer(null);
     try {
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
@@ -313,6 +329,8 @@ export default function CabinetPage() {
       }));
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
+      setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
       refreshRemaining();
     } catch (e) {
@@ -477,6 +495,8 @@ export default function CabinetPage() {
     setSelectedCounselor(id);
     const thread = await loadThread(id);
     setCounselorMessages(thread.messages);
+    const draft = takeLimitDraft(id);
+    if (draft) setCounselorInput(prev => (prev.trim() ? prev : draft));
   };
 
   const handleSendCounselor = async () => {
@@ -487,8 +507,11 @@ export default function CabinetPage() {
     setCounselorInput('');
     setCounselorLoading(true);
     setSendError(null);
+    setPendingOffer(null);
     try {
       const response = await sendMessageToCounselor(selectedCounselor, newMessages);
+      setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
@@ -676,25 +699,6 @@ export default function CabinetPage() {
         </div>
       </div>
 
-      {/* Know Thyself nudge */}
-      {knowThyselfIncomplete && (
-        <div className="mx-4 mt-3 flex-shrink-0">
-          <GlassCard>
-            <div className="px-4 py-3 flex items-center justify-between">
-              <p className="text-[13px]" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}>
-                The Cabinet&apos;s responses are generic until you complete your profile.
-              </p>
-              <a
-                href="/profile"
-                className="text-[10px] tracking-[1px] uppercase ml-3 flex-shrink-0 hover:opacity-80"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-              >
-                Complete →
-              </a>
-            </div>
-          </GlassCard>
-        </div>
-      )}
 
       {/* ── Cabinet tab ──────────────────────────────────────────── */}
       {tab === 'cabinet' && (
@@ -751,6 +755,21 @@ export default function CabinetPage() {
                 >
                   Ask them anything.
                 </p>
+                {cabinetMessages.length === 0 && !searchQuery && (
+                  <div className="flex flex-col gap-2 mt-6 w-full max-w-md">
+                    {starters.map(s => (
+                      <button
+                        key={s.id}
+                        onClick={() => handleSendCabinet(s)}
+                        disabled={isLoading || showLimitCard}
+                        className="text-left px-4 py-2.5 rounded-xl text-[14px] hover:opacity-90 disabled:opacity-50"
+                        style={{ border: '1px solid rgba(201,168,76,0.3)', background: 'rgba(255,255,255,0.03)', color: '#e6eef8' }}
+                      >
+                        {s.text}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -821,6 +840,12 @@ export default function CabinetPage() {
               </Fragment>
             ))}
 
+            {showSupport && <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />}
+
+            {pendingOffer && !isLoading && (
+              <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+            )}
+
             {isLoading && (
               <div className="flex justify-start">
                 <div className="flex gap-3 items-start">
@@ -855,7 +880,14 @@ export default function CabinetPage() {
             <div ref={messagesEndRef} />
           </div>
 
-          {showLimitCard && <DailyLimitCard source="cabinet_daily_limit" limit={FREE_DAILY_MESSAGES} />}
+          {showLimitCard && (
+            <DailyLimitCard
+              source="cabinet_daily_limit"
+              limit={FREE_DAILY_MESSAGES}
+              counselorName={[...cabinetMessages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null}
+              onContinue={() => saveLimitDraft('cabinet', input, '/cabinet')}
+            />
+          )}
           {sendError && (
             <div
               className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"
@@ -897,7 +929,7 @@ export default function CabinetPage() {
               }}
             />
             <button
-              onClick={handleSendCabinet}
+              onClick={() => handleSendCabinet()}
               disabled={isLoading || !input.trim() || showLimitCard}
               className="flex items-center justify-center flex-shrink-0 w-11 h-11 rounded-full font-bold text-lg transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)', color: '#0f1724' }}
@@ -1323,6 +1355,12 @@ export default function CabinetPage() {
                   </Fragment>
                 ))}
 
+                {showSupport && <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />}
+
+                {pendingOffer && !counselorLoading && (
+                  <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
+                )}
+
                 {counselorLoading && (
                   <div className="flex justify-start">
                     <div className="flex gap-3 items-start">
@@ -1357,7 +1395,14 @@ export default function CabinetPage() {
                 <div ref={counselorEndRef} />
               </div>
 
-              {showLimitCard && <DailyLimitCard source="counselor_daily_limit" limit={FREE_DAILY_MESSAGES} />}
+              {showLimitCard && (
+                <DailyLimitCard
+                  source="counselor_daily_limit"
+                  limit={FREE_DAILY_MESSAGES}
+                  counselorName={selectedCounselorMeta?.name ?? null}
+                  onContinue={() => { if (selectedCounselor) saveLimitDraft(selectedCounselor, counselorInput, '/cabinet'); }}
+                />
+              )}
               {sendError && (
                 <div
                   className="mx-4 mb-2 px-3 py-2 text-[13px] flex-shrink-0"

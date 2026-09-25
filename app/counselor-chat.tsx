@@ -16,7 +16,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor, MessageLimitError, CabinetUnavailableError } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError, DailyLimitError, CabinetUnavailableError, takeCabinetOffer, takeSupportFlag, type CabinetOffer } from '../services/claudeService';
+import { ImmediateSupportCard } from '../components/SupportCard';
+import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
+import OfferCard from '../components/OfferCard';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
 import DayDivider from '../components/DayDivider';
 import { clockTime, startsNewDay } from '../lib/messageDates';
@@ -52,6 +55,10 @@ export default function CounselorChatScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // Goal or scroll offer from the last reply (activation Parts 6 and 9).
+  const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
   const [counselorName, setCounselorName] = useState(nameParam || metaEntry?.name || counselorId);
   const [counselorRole, setCounselorRole] = useState<string | undefined>(roleParam || metaEntry?.role);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -108,6 +115,13 @@ export default function CounselorChatScreen() {
     return () => sub.remove();
   }, [router]);
 
+  // A message stopped by the daily limit waits in the composer (7.1).
+  useEffect(() => {
+    takeLimitDraft(counselorId).then(draft => {
+      if (draft) setInputText(prev => (prev.trim() ? prev : draft));
+    }).catch(() => {});
+  }, [counselorId]);
+
   // Load today's message count on mount
   useEffect(() => {
     AsyncStorage.getItem(getTodayDateKey()).then(val => {
@@ -125,7 +139,8 @@ export default function CounselorChatScreen() {
     const count = stored !== null ? parseInt(stored, 10) : 0;
     console.log('[MessageLimit] count:', count, 'max:', maxMessages);
     if (maxMessages !== null && count >= maxMessages) {
-      router.push(paywallRoute('counselor_daily_limit'));
+      await saveLimitDraft(counselorId, text);
+      router.push(paywallRoute('counselor_daily_limit', { counselor: counselorName }));
       return;
     }
 
@@ -139,11 +154,14 @@ export default function CounselorChatScreen() {
     setMessages(updatedMessages);
     setInputText('');
     setIsLoading(true);
+    setPendingOffer(null);
 
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
       const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+      setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       const assistantMessage: ThreadMessage = {
         role: 'assistant',
         content: reply,
@@ -162,8 +180,11 @@ export default function CounselorChatScreen() {
       // failed send used to save the error text as the counselor's reply.
       setMessages(prev => prev.slice(0, -1));
       setInputText(text);
-      if (e instanceof MessageLimitError) {
-        router.push(paywallRoute('counselor_daily_limit'));
+      if (e instanceof MessageLimitError || e instanceof DailyLimitError) {
+        // Activation 7.1: the words wait in the composer, the paywall names
+        // the counselor, and the thread picks up where it stopped.
+        await saveLimitDraft(counselorId, text);
+        router.push(paywallRoute('counselor_daily_limit', { counselor: counselorName }));
       } else {
         Alert.alert(
           'Not sent',
@@ -304,6 +325,16 @@ export default function CounselorChatScreen() {
                 )}
               </View>
             ))
+          )}
+
+          {showSupport && (
+            <View style={{ paddingHorizontal: 16 }}>
+              <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />
+            </View>
+          )}
+
+          {pendingOffer && !isLoading && (
+            <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
           )}
 
           {isLoading && (

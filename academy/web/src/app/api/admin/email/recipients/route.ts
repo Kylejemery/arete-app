@@ -18,6 +18,7 @@ export type Recipient = {
   tier: TierKey
   rawTier: string | null
   isAdmin: boolean
+  isInternal: boolean
   onboarded: boolean
   createdAt: string | null
   // Where a paid tier comes from, so the tab can offer or withhold a grant:
@@ -59,7 +60,7 @@ export async function GET() {
 
     const [{ data: profiles, error: pErr }, { data: settings }, { data: subs }] = await Promise.all([
       admin.from('profiles')
-        .select('id, email, tier, is_premium, is_admin, know_thyself_complete, created_at, email_opt_out, email_opt_out_at')
+        .select('id, email, tier, is_premium, is_admin, is_internal, know_thyself_complete, created_at, email_opt_out, email_opt_out_at')
         .order('created_at', { ascending: false }),
       admin.from('user_settings').select('user_id, user_name'),
       admin.from('subscriptions').select('user_id, billing_source, tier, status, current_period_end'),
@@ -104,6 +105,7 @@ export async function GET() {
         tier: normalizeTier(p.tier, p.is_premium),
         rawTier: p.tier ?? null,
         isAdmin: !!p.is_admin || p.email === adminEmail,
+        isInternal: !!p.is_internal,
         onboarded: !!p.know_thyself_complete,
         createdAt: p.created_at ?? null,
         premiumSource: source.get(p.id)?.src ?? null,

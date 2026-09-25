@@ -52,3 +52,20 @@ embedding spend, bounded by the active-user count.
   `GET /api/user/insight` (marks delivered on first fetch).
 - **Distress cases are excluded** from that endpoint and routed to
   `distress_review_queue`. Review them at `/admin/distress`.
+- **One queue row per analysis.** `distress_review_queue.analysis_id` is
+  unique. The agent writes only through `enqueue_distress_review`
+  (`insert ... on conflict (analysis_id) do nothing`), so a reviewed or
+  escalated case never comes back as pending. A trigger allows status to
+  move forward only (pending < dismissed < reviewed < escalated).
+- **A week's flag is sticky.** Once any run that week flags an analysis, a
+  later re-run that week cannot clear `distress_flagged`.
+- **One run per morning.** Each run claims a row in `agent_runs` through
+  `claim_agent_run('journal-analysis', '20 hours')`, and a second scheduler
+  firing the same morning exits. The admin "run now" button skips the
+  window but still refuses to overlap a run in progress. Until 2026-09-25 the
+  `coverage-gap-agent` Railway service had its config-as-code path pointed at
+  `railway.agent.json`, so the job ran twice every day. Check that no other
+  service points at this file.
+- **Support card.** For 7 days after a user's flag, the Journal screen (web
+  and mobile) shows a dismissible card with 988 and findahelpline.com
+  (`GET /api/user/support-card`). The card never mentions analysis.

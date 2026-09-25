@@ -52,6 +52,13 @@ export interface UserSettings {
   kt_reflection_at?: string | null;
   kt_reflection_counselor?: string | null;
   feedback_preference?: string | null;
+  // Know Thyself fields the Cabinet can learn (activation plan, Part 3).
+  app_usage_intent?: string | null;
+  kt_life_situation?: string | null;
+  kt_off_limits?: string | null;
+  kt_facts_seen_at?: string | null;
+  // Run B, Part B4: optional; they/them/their when unset.
+  pronouns?: 'he/him' | 'she/her' | 'they/them' | 'prefer_not_to_say' | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -64,7 +71,6 @@ export interface DailyCheckin {
   morning_tasks: Task[] | null;
   evening_done: boolean;
   evening_tasks: Task[] | null;
-  reflection_answer: string | null;
   stoic_answer: string | null;
   streak: number;
   reading_streak: number;
@@ -172,7 +178,7 @@ export interface Goal {
   target_date?: string;
   completed: boolean;
   completed_at?: string;
-  source: 'onboarding' | 'user';
+  source: 'onboarding' | 'user' | 'cabinet';
   category?: string;
   created_at: string;
   updated_at: string;

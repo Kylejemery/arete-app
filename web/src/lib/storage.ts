@@ -60,7 +60,6 @@ export const STORAGE_KEYS = {
   morningDone: 'morningDone',
   eveningTasks: 'eveningTasks',
   eveningDone: 'eveningDone',
-  reflectionAnswer: 'reflectionAnswer',
   stoicAnswer: 'stoicAnswer',
 
   // Progress

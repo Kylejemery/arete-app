@@ -1,3 +1,4 @@
+import { getProfileFacts, topFiveFilled, type ProfileFact } from './profileFields'
 import { supabase } from './supabase'
 import { getDevPremiumOverride } from './devMode'
 import { triggerScrollGeneration } from './scrolls'
@@ -758,25 +759,17 @@ export async function saveOnboardingProfile(profile: OnboardingProfile): Promise
   return markKnowThyselfComplete()
 }
 
-// The one definition of "Know Thyself complete" (retention plan R3): goals,
-// plus at least two of the other answers. Every path that collects answers
-// (form, wizard, conversation, on both platforms) calls
-// markKnowThyselfComplete, which applies this rule; every nudge keys on the
-// resulting profiles.know_thyself_complete flag and nothing else. Mirrored in
-// web/src/lib/db.ts.
-export const KT_OTHER_FIELDS = [
-  'kt_background', 'kt_identity', 'kt_strengths', 'kt_weaknesses',
-  'kt_patterns', 'kt_major_events', 'future_self_description',
-] as const
-export const KT_MIN_OTHER_FIELDS = 2
-
-type KtFields = Partial<Pick<UserSettings, 'kt_goals' | (typeof KT_OTHER_FIELDS)[number]>>
-
-export function isKnowThyselfProfileComplete(s: KtFields | null | undefined): boolean {
-  if (!s) return false
-  const filled = (v: string | null | undefined) => typeof v === 'string' && v.trim().length > 0
-  if (!filled(s.kt_goals)) return false
-  return KT_OTHER_FIELDS.filter(k => filled(s[k])).length >= KT_MIN_OTHER_FIELDS
+// The one definition of "Know Thyself complete" (activation plan, Part 3):
+// the five highest priority registry fields (lib/profileFields.ts) are
+// filled, by any source: the form, an answer to a counselor, a confirmed or
+// an inferred fact. A database trigger on user_profile_facts applies the same
+// rule when the Cabinet fills a field, so the flag is set whichever way the
+// fifth field arrives. The flag is never unset.
+export function isKnowThyselfProfileComplete(
+  s: Record<string, unknown> | null | undefined,
+  facts: ProfileFact[] = [],
+): boolean {
+  return topFiveFilled(facts, (s as Record<string, unknown> | null) ?? null)
 }
 
 /**
@@ -795,14 +788,15 @@ export async function markKnowThyselfComplete(): Promise<boolean> {
   try {
     const { data } = await supabase
       .from('user_settings')
-      .select('user_name, kt_goals, kt_background, kt_identity, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_description')
+      .select('user_name, kt_goals, kt_weaknesses, feedback_preference, app_usage_intent, kt_life_situation')
       .eq('user_id', userId)
       .maybeSingle()
     settings = (data as UserSettings | null) ?? null
   } catch (e) {
     console.error('markKnowThyselfComplete read exception:', e)
   }
-  if (!isKnowThyselfProfileComplete(settings)) return false
+  const facts = await getProfileFacts()
+  if (!isKnowThyselfProfileComplete(settings as unknown as Record<string, unknown> | null, facts)) return false
 
   try {
     const { error } = await supabase

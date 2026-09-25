@@ -165,7 +165,7 @@ async function gatherMaterial(userId, config) {
       .limit(config.max_scrolls),
     supabase
       .from('check_ins')
-      .select('check_in_date, intention, stoic_answer, reflection_answer, morning_done, evening_done, daily_question_response')
+      .select('check_in_date, intention, stoic_answer, morning_done, evening_done, daily_question_response')
       .eq('user_id', userId)
       .gte('check_in_date', new Date(Date.now() - 365 * DAY).toISOString().slice(0, 10))
       .order('check_in_date', { ascending: true }),
@@ -226,7 +226,7 @@ async function gatherMaterial(userId, config) {
 
   // Check-ins: the sentences the member committed to and the evening answers.
   const intentions = (checkins || []).filter(c => c.intention && c.intention.trim().length >= 8);
-  const eveningAnswers = (checkins || []).filter(c => (c.stoic_answer || c.reflection_answer || '').trim().length >= 40);
+  const eveningAnswers = (checkins || []).filter(c => (c.stoic_answer || '').trim().length >= 40);
 
   const scrollsClean = (scrolls || []).map(s => ({
     ...s,
@@ -608,7 +608,7 @@ async function chapterJournal(ctx) {
   const pool = [...m.reflections];
   // Evening answers stored only on check_ins (older builds) join the pool.
   for (const c of m.eveningAnswers) {
-    const text = c.stoic_answer || c.reflection_answer;
+    const text = c.stoic_answer;
     if (!pool.some(e => e.content && e.content.trim() === text.trim())) {
       pool.push({ id: `checkin:${c.check_in_date}`, type: 'reflection', content: text, source: 'evening_reflection', raw_input: null, created_at: `${c.check_in_date}T20:00:00Z`, topic: null });
     }

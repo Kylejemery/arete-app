@@ -21,8 +21,12 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import CounselorText from '../../components/CounselorText';
 import { sendCheckInToCabinet } from '../../services/claudeService';
 import { logEvent } from '@/lib/events';
+import { intentionQuestion } from '@/lib/intentionQuestion';
+import { morningDefaultsFor } from '@/lib/checkinDefaults';
+import { supabase } from '@/lib/supabase';
 import {
   getTodayCheckin,
+  getUserSettings,
   upsertTodayCheckin,
   incrementStreak,
   getRoutineTemplates,
@@ -75,6 +79,9 @@ export default function MorningScreen() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskEmoji, setNewTaskEmoji] = useState('');
   const [intention, setIntention] = useState('');
+  // Activation Part 5: the intention is asked as a question in the voice of
+  // today's daily-question counselor, else the first member of the Cabinet.
+  const [intentionAsk, setIntentionAsk] = useState(intentionQuestion(null));
   const intentionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingIntention = useRef<string | null>(null);
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
@@ -111,9 +118,13 @@ export default function MorningScreen() {
       if (tmpl.length === 0) {
         const alreadySeeded = await AsyncStorage.getItem('morning_defaults_seeded');
         if (!alreadySeeded) {
-          await addRoutineTemplate('morning', 'Eat breakfast', '🍳', 0);
-          await addRoutineTemplate('morning', 'Train', '🥊', 1);
-          await addRoutineTemplate('morning', 'Meditate', '🌿', 2);
+          // Run B, Part B4: neutral defaults for new accounts; older
+          // accounts keep the defaults they have always had.
+          const { data: { user } } = await supabase.auth.getUser();
+          const defaults = morningDefaultsFor(user?.created_at ?? null);
+          for (const [i, d] of defaults.entries()) {
+            await addRoutineTemplate('morning', d.title, d.emoji, i);
+          }
           await AsyncStorage.setItem('morning_defaults_seeded', 'true');
           tmpl = await getRoutineTemplates('morning');
         }
@@ -153,6 +164,14 @@ export default function MorningScreen() {
       // it is blank each new day rather than carrying yesterday's forward.
       if (pendingIntention.current === null) {
         setIntention(checkin?.intention ?? '');
+      }
+      {
+        let counselorId: string | null = (checkin as { daily_question_counselor?: string | null } | null)?.daily_question_counselor ?? null;
+        if (!counselorId) {
+          const settings = await getUserSettings().catch(() => null);
+          counselorId = Array.isArray(settings?.cabinet_members) && settings!.cabinet_members.length > 0 ? settings!.cabinet_members[0] : null;
+        }
+        setIntentionAsk(intentionQuestion(counselorId));
       }
 
       // Step 3: write date-stamped cache
@@ -327,11 +346,12 @@ export default function MorningScreen() {
         <View style={styles.intentionCard}>
           <View style={styles.intentionHeader}>
             <Ionicons name="sparkles-outline" size={16} color="#c9a84c" />
-            <Text style={styles.intentionLabel}>TODAY&apos;S INTENTION</Text>
+            <Text style={styles.intentionLabel}>{intentionAsk.name.toUpperCase()} ASKS</Text>
           </View>
+          <Text style={styles.intentionQuestion}>{intentionAsk.question}</Text>
           <TextInput
             style={styles.intentionInput}
-            placeholder="Write one sentence the Cabinet will hold you to…"
+            placeholder="One sentence is enough."
             placeholderTextColor="#555"
             value={intention}
             onChangeText={saveIntention}
@@ -618,6 +638,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 8,
+  },
+  intentionQuestion: {
+    color: '#e0e0e0',
+    fontSize: 15,
+    lineHeight: 22,
     marginBottom: 8,
   },
   intentionLabel: {
