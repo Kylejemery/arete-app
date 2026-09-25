@@ -128,3 +128,18 @@ Rows outside the window are kept and start a new group. Rows that fail the conta
 - **Unanswered accounts:** an account that has not answered yet is treated as it was before. That matters only until its next open, when the gate asks.
 
 **DB5.5 Apple Declared Age Range.** Nothing in this Expo 56 project provides it: no expo or community module for it is installed, and it needs native code. It is noted as a follow-up and not added.
+
+## Final checks
+
+**DBF.1 The PR merged before the checks finished.** Kyle merged Kylejemery/arete-app#272 with Parts B1–B5 in it, before this report and the last checks were done. The session branch was fast-forwarded to the merged `main`, which rewrites nothing. The checks, two fixes and this report ride a new PR.
+
+**DBF.2 The root layout's try/catch.**
+- **The problem:** the React Compiler lint rule `error-boundaries` flags every element built inside the `try` in `app/_layout.tsx`, so adding the age gate there added one more error.
+- **Chosen:** remove the try/catch. It could never catch a render error, because children render after the function returns. It only logged and rethrew. `ErrorBoundary` wraps the tree and already logs what it catches.
+- **Result:** that file now has zero lint errors, down from nine at the baseline.
+- **Alternative:** move the gate into another handler component so the count stayed level. That hides the gate in an unrelated component.
+
+**DBF.3 `measured_profiles` did not show the age columns.**
+- **The problem:** a Postgres view fixes its column list when it is created, and B1 created this one before B5 added `age_band`, `age_band_set_at`, `locked_at` and `locked_reason`.
+- **Fix:** migration `20260925182645_measured_profiles_age_columns` recreates it with the same filter and those four columns appended.
+- **Alternative:** leave it and query `profiles` with both exclusions. That breaks the convention B1 set.

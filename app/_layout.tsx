@@ -215,33 +215,28 @@ export default function RootLayout() {
     setupDispatchNotifications(session).catch(() => {});
   }, [session]);
 
-  try {
-    if (session === undefined) {
-      return (
-        <ErrorBoundary>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
-          </GestureHandlerRootView>
-        </ErrorBoundary>
-      );
-    }
-
+  // Render errors below are caught and logged by ErrorBoundary; a try/catch
+  // here never saw them, because JSX is rendered after this function returns.
+  if (session === undefined) {
     return (
       <ErrorBoundary>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <SessionContext.Provider value={session}>
-            <DeepLinkHandler />
-            <NotificationTapHandler />
-            <Slot />
-            <AgeGate userId={session?.user?.id ?? null} />
-          </SessionContext.Provider>
+          <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
         </GestureHandlerRootView>
       </ErrorBoundary>
     );
-  } catch (error: unknown) {
-    const e = error as Error;
-    console.error('[ROOT LAYOUT RENDER ERROR]', e?.message, e?.stack);
-    // Re-throw so React's error boundary still catches it
-    throw error;
   }
+
+  return (
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SessionContext.Provider value={session}>
+          <DeepLinkHandler />
+          <NotificationTapHandler />
+          <Slot />
+          <AgeGate userId={session?.user?.id ?? null} />
+        </SessionContext.Provider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
+  );
 }
