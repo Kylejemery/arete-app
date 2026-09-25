@@ -52,6 +52,11 @@ export interface UserSettings {
   kt_reflection_at?: string | null;
   kt_reflection_counselor?: string | null;
   feedback_preference?: string | null;
+  // Know Thyself fields the Cabinet can learn (activation plan, Part 3).
+  app_usage_intent?: string | null;
+  kt_life_situation?: string | null;
+  kt_off_limits?: string | null;
+  kt_facts_seen_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

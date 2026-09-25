@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
 import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL } from '../../services/claudeService';
-import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
+import { getUserSettings, getUserCabinet, saveCabinetSelection, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import type { Counselor } from '@/lib/types';
 import { useTierLimits } from '../../hooks/useTierLimits';
@@ -126,8 +126,6 @@ export default function CabinetScreen() {
   const [shareQuote, setShareQuote] = useState<{ text: string; counselor: string } | null>(null);
 
   // --- Know Thyself nudge state ---
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
-  const [dismissedKtNudge, setDismissedKtNudge] = useState(false);
 
   // --- Counselors Tab State ---
   const [cabinetCounselors, setCabinetCounselors] = useState<Counselor[]>([]);
@@ -394,11 +392,6 @@ export default function CabinetScreen() {
         try {
           const settings = await getUserSettings();
           setUserSettings(settings);
-          // Same signal as Home and Scrolls: the profiles flag, which
-          // markKnowThyselfComplete sets under the one completion rule.
-          getKnowThyselfComplete()
-            .then(complete => setKnowThyselfIncomplete(!complete))
-            .catch(() => {});
         } catch (err) {
           console.warn('[Cabinet] Failed to load KT settings:', err);
         }
@@ -913,37 +906,9 @@ export default function CabinetScreen() {
                   ))}
                   <Text style={styles.counselorName}>{futureName}</Text>
                 </View>
-                {knowThyselfIncomplete && (
-                  <TouchableOpacity
-                    style={styles.ktEmptyBanner}
-                    onPress={() => router.push('/know-thyself' as any)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.ktEmptyBannerText}>
-                      {"📖 Your counselors don't know you yet — complete your Know Thyself profile for more personal responses."}
-                    </Text>
-                    <Text style={styles.ktEmptyBannerLink}>Complete Now →</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             ) : (
               <>
-                {knowThyselfIncomplete && !dismissedKtNudge && (
-                  <View style={styles.ktNudgeBanner}>
-                    <TouchableOpacity
-                      style={styles.ktNudgeContent}
-                      onPress={() => router.push('/know-thyself' as any)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.ktNudgeText}>
-                        {'💡 Tip: Complete your Know Thyself profile so the Cabinet can give you more personal responses. →'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setDismissedKtNudge(true)} style={styles.ktNudgeDismiss}>
-                      <Ionicons name="close" size={16} color="#888" />
-                    </TouchableOpacity>
-                  </View>
-                )}
                 {(() => {
                   const filteredMessages = searchQuery.length > 0
                     ? messages.filter(m => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -1709,49 +1674,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 12,
     fontStyle: 'italic',
-  },
-  // Know Thyself banners
-  ktEmptyBanner: {
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    width: '100%',
-  },
-  ktEmptyBannerText: {
-    color: '#ccc',
-    fontSize: 13,
-    lineHeight: 20,
-    marginBottom: 8,
-  },
-  ktEmptyBannerLink: {
-    color: '#c9a84c',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  ktNudgeBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#16213e',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#c9a84c33',
-    marginBottom: 14,
-    overflow: 'hidden',
-  },
-  ktNudgeContent: {
-    flex: 1,
-    padding: 12,
-  },
-  ktNudgeText: {
-    color: '#aaa',
-    fontSize: 13,
-    lineHeight: 19,
-  },
-  ktNudgeDismiss: {
-    padding: 12,
   },
   limitCounter: {
     alignItems: 'center',

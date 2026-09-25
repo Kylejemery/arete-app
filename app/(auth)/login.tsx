@@ -92,7 +92,7 @@ export default function LoginScreen() {
         // the home-tab banner later, never forced.
         router.replace({ pathname: '/join-session', params: { token: inviteToken } } as any);
       } else {
-        router.replace('/setup' as any);
+        router.replace('/(onboarding)/first-step' as any);
       }
     } catch {
       setError('An unexpected error occurred. Please try again.');

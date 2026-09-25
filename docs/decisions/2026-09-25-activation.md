@@ -70,3 +70,47 @@ This file records the judgement calls made while carrying out the activation pro
 - **Alternative:** a new Railway cron service. The prompt prefers hooking into an existing cycle. The dispatch-delivery cron was not used because it runs as two duplicate Railway services (see the report).
 
 **D2.5 The "Know Thyself field filled" event ships with Part 3.** It is keyed by registry field key and source, and the registry is created in Part 3.
+
+## Part 3
+
+**D3.1 Registry keys, and what counts as sensitive.**
+- **Keys:** there was no registry, so one was created: `server/lib/profile-fields.js`, mirrored in `lib/profileFields.ts`, `web/src/lib/profileFields.ts` and SQL `profile_field_columns()`. A test checks that all copies carry the same keys.
+- **Sensitive fields:** `life_situation` (family and relationships), `background` (life story, which routinely includes loss and family), `major_events` (loss, health), and `off_limits`.
+- **The cost:** `life_situation` is in the top five but can never be inferred. So the top-five completion flag needs the user to state it, either in the form or when a counselor asks. That is intended.
+- **Alternative:** mark only `major_events` as sensitive. Rejected as too permissive.
+
+**D3.2 `user_settings` stays the store of what the user wrote.** Installed app builds read and write `user_settings` directly. Two triggers keep it in sync with `user_profile_facts`:
+- A form edit on any client becomes a `form` fact.
+- A value the user confirmed or answered is mirrored back into the column.
+- Inferred values are never mirrored, so every older reader (client prompts, the Enchiridion agent) sees only what the user said.
+
+**D3.3 The backfill excludes the admin account** (rule 9). The admin's form answers remain readable, because the prompt builder falls back to `user_settings` for any field without a fact. They become facts on the admin's next form save.
+
+**D3.4 Facts reach prompts only for a JWT-verified user.** `/api/chat/counselor` accepts a body `userId` as a fallback identity for old builds. The existing Know Thyself block already trusts that fallback, and the report flags it. The new facts block, the tentative facts and the asks use only `req.areteVerifiedUserId`.
+
+**D3.5 Extraction runs in the hourly conversation cycle** (Part 2's hook on the broadcast cron), on sessions idle for 30 minutes or more.
+- It reads that day's check-in text (intention, evening reflection) only alongside a conversation from that day, and marks the check-in `profile_extracted_at`.
+- Check-ins from users with no conversation are not read.
+- **Alternative:** a separate pass over all check-ins. That is a larger surface for a first version.
+
+**D3.6 The ask rules.**
+- **Who asks:** the closing voice of the turn, the last counselor in the relay. By then the user's topic has been addressed.
+- **What limits it:**
+  - An ask is recorded as "offered" when the instruction is put in the prompt. On the next user turn, a Haiku check decides whether the counselor actually asked.
+  - If the counselor did not ask, the offer is released (`asked_at` cleared), so the 48-hour budget is not spent.
+  - If the user deflected, `ask_declined_at` is set, which starts the 14-day cooldown.
+- **Relevance:** relevance to the topic comes first, then priority. A sensitive field is asked about only when the user's own message touches it.
+- **Distress:** shown by a keyword check on the session, or by a flag in the last 14 days. Either blocks asks.
+
+**D3.7 Completion.**
+- `profiles.know_thyself_complete` is now set when the top five fields are filled by any source.
+- A trigger on `user_profile_facts` applies the rule, and so do the clients' `markKnowThyselfComplete`.
+- The old rule (goals plus two other answers) is retired.
+- The form gained the three top-five fields it lacked (how to be challenged, what brought you, life now) and the off-limits field.
+- The completeness score (`computeCompleteness` / `completenessScore`) is computed, not stored.
+
+**D3.8 Signup and nudges.**
+- **Mobile email signup** now goes to one optional screen (name and off-limits, both skippable), then straight to the Cabinet. The 11-step wizard is no longer in the signup path but still exists at `/setup`.
+- **Web signup** keeps its required username step, because the web app keys every page on `user_name`. The step gains the optional off-limits field and now lands on `/cabinet`.
+- **Nudges removed:** the Home and Cabinet "complete your Know Thyself" prompts, on both platforms. The form remains reachable from Settings, the web sidebar and the Know Thyself screen.
+- **Alternative:** keep the nudges. The prompt says the form is no longer a prompted step.

@@ -5,8 +5,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 // module scope — native calls before the TurboModule layer is ready was the
 // original Build 44 crash. All calls here happen in effects/handlers.
 import * as Notifications from 'expo-notifications';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -22,6 +22,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings } from '@/lib/db';
+import { hasUnseenInferredFacts } from '@/lib/profileFields';
 import { refreshTier, useSubscription } from '@/lib/useSubscription';
 import { openWebSignedIn } from '@/lib/webHandoff';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
@@ -111,6 +112,13 @@ export default function SettingsScreen() {
       setDeletingAccount(false);
     }
   };
+
+  // A dot on the Know Thyself entry while the Cabinet has learned something
+  // not yet looked at (activation plan, Part 3f). No push for this.
+  const [ktDot, setKtDot] = useState(false);
+  useFocusEffect(useCallback(() => {
+    hasUnseenInferredFacts().then(setKtDot).catch(() => {});
+  }, []));
 
   // Health & Cabinet (iOS HealthKit builds only)
   const [healthConnected, setHealthConnected] = useState(false);
@@ -438,7 +446,7 @@ export default function SettingsScreen() {
       </View>
 
       <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/know-thyself' as any)}>
-        <Text style={styles.profileButtonText}>📖 Edit Your Know Thyself Profile</Text>
+        <Text style={styles.profileButtonText}>📖 Edit Your Know Thyself Profile{ktDot ? '  •' : ''}</Text>
       </TouchableOpacity>
 
       {/* Morning Check-In */}

@@ -288,7 +288,12 @@ async function runHourly() {
     const { runConversationCycle } = require('./lib/conversation-cycle');
     const { createEventLog } = require('./lib/events');
     const { logEvent } = createEventLog(supabase);
-    const tally = await runConversationCycle(supabase, { logEvent });
+    // Know Thyself extraction (Haiku) runs on each finished session when the
+    // service has a Claude key; without one the cycle still logs its events.
+    const onSession = process.env.CLAUDE_API_KEY
+      ? require('./lib/profile-extraction').makeExtractFromSession(supabase, { logEvent })
+      : null;
+    const tally = await runConversationCycle(supabase, { logEvent, onSession });
     console.log(`Conversation cycle: ${tally.threads} threads | ${tally.sessions} sessions | ${tally.oneExchange} one-exchange | ${tally.hookFailures} hook failures`);
     // logEvent is fire and forget; give the inserts a moment before exit.
     await new Promise(resolve => setTimeout(resolve, 2000));

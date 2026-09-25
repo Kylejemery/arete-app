@@ -764,6 +764,9 @@ async function resolveUserTier(req) {
     const { data: { user }, error } = await supabase.auth.getUser(token);
     if (!error && user) userId = user.id;
   }
+  // Only a JWT-verified id may unlock the user's private Know Thyself facts
+  // (server/lib/profile-facts.js); the body fallback never does.
+  req.areteVerifiedUserId = userId;
   if (!userId) userId = req.body?.user_id || req.body?.userId || null;
   if (!userId) return { userId: null, tier: 'free' };
   // Older app builds send no Authorization header, so the middleware never
@@ -957,7 +960,7 @@ async function getParticipantProfiles(participantIds) {
 // on a detail through the longitudinal portrait or the app data. This block
 // is built from user_settings and injected into every voice.
 // ---------------------------------------------------------------------------
-const KT_SETTINGS_COLUMNS = 'user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_years, future_self_description, feedback_preference, kt_completed_at, cabinet_members';
+const KT_SETTINGS_COLUMNS = 'user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_years, future_self_description, feedback_preference, app_usage_intent, kt_life_situation, kt_off_limits, kt_completed_at, cabinet_members';
 
 // The wording every surface now shares (the clients' gatherUserProfile
 // carries the same sentences): connect, do not list.
@@ -1009,6 +1012,114 @@ function buildKnowThyselfBlock(s, { fresh = false } = {}) {
       challenge ? `How they want to be challenged: ${challenge}` : null,
     ].filter(Boolean).join('\n') +
     '\n[END KNOW THYSELF]';
+}
+
+// ---------------------------------------------------------------------------
+// Know Thyself, filled by the Cabinet (activation plan, Part 3)
+//
+// For a JWT-verified user, loads user_profile_facts and the current
+// conversation (the session inside the thread's cabinet_conversations row)
+// and returns:
+//   factsBlock     Known / Tentative / off-limits, for every voice
+//   tentativeBlock Tentative + off-limits only, for the single path, whose
+//                  client-built prompt already carries the Known profile
+//   askBlock       at most one missing field the closing voice may ask about
+//   isFirstTurn    no earlier user turn in this conversation (Part 4)
+//   session        { userTurns, messageCount, start, distressed }
+// On the next user turn after an ask, detectAskAnswer runs in the
+// background. Nothing here logs content.
+// ---------------------------------------------------------------------------
+const { currentSession: ktCurrentSession, countUserTurns: ktCountUserTurns, isUserTurn: ktIsUserTurn } = require('./lib/conversation-sessions');
+const profileFacts = require('./lib/profile-facts');
+const profileExtraction = require('./lib/profile-extraction');
+
+const THREAD_ID_ALIASES = { 'marcus-aurelius': 'marcus', 'david-goggins': 'goggins', 'theodore-roosevelt': 'roosevelt', 'future-self': 'futureSelf' };
+
+async function loadCabinetThread(userId, activeCounselorId) {
+  let q = supabase.from('cabinet_conversations').select('id, messages').eq('user_id', userId);
+  if (!activeCounselorId || activeCounselorId === 'cabinet') {
+    q = q.is('counselor_slugs', null);
+  } else {
+    const slug = THREAD_ID_ALIASES[activeCounselorId] || activeCounselorId;
+    q = q.filter('counselor_slugs', 'eq', `{${slug}}`);
+  }
+  const { data } = await q.order('updated_at', { ascending: false }).limit(1).maybeSingle();
+  return data || null;
+}
+
+async function buildPersonalContext({ userId, activeCounselorId, ktSettings, userMessage }) {
+  const empty = { factsBlock: '', tentativeBlock: '', askBlock: '', isFirstTurn: false, conversationId: null, session: null };
+  if (!userId) return empty;
+  try {
+    const [thread, facts, flagged] = await Promise.all([
+      loadCabinetThread(userId, activeCounselorId),
+      profileExtraction.loadFacts(supabase, userId),
+      profileExtraction.hasRecentDistressFlag(supabase, userId),
+    ]);
+    const now = Date.now();
+    const session = ktCurrentSession(thread && Array.isArray(thread.messages) ? thread.messages : [], now);
+    const priorUserTurns = ktCountUserTurns(session.messages);
+    const sessionUserTexts = session.messages.filter(ktIsUserTurn).map(m => m.content);
+    const distressed = flagged || profileFacts.looksDistressed([...sessionUserTexts, userMessage]);
+
+    const merged = profileFacts.mergeProfile(facts, ktSettings);
+    const name = ktSettings && ktSettings.user_name;
+    const factsBlock = profileFacts.buildFactsBlock(merged, { name });
+    const tentativeBlock = profileFacts.buildFactsBlock({ known: [], tentative: merged.tentative, offLimits: merged.offLimits }, { name });
+
+    // An ask from earlier in this conversation still awaiting its answer?
+    const sessionStart = session.start != null ? session.start : now;
+    const pending = facts.find(f => f.asked_at && !f.value && f.status === 'active'
+      && Date.parse(f.asked_at) >= sessionStart - 60 * 1000
+      && (!f.ask_declined_at || Date.parse(f.ask_declined_at) < Date.parse(f.asked_at)));
+    if (pending && CLAUDE_API_KEY) {
+      const lastAssistant = [...session.messages].reverse().find(m => m && m.role === 'assistant' && typeof m.content === 'string');
+      if (lastAssistant) {
+        profileExtraction.detectAskAnswer(supabase, {
+          userId,
+          fieldKey: pending.field_key,
+          assistantText: lastAssistant.content,
+          userText: userMessage,
+          logEvent: eventLog.logEvent,
+        }).catch(() => console.error('[profile] ask answer detection failed'));
+      }
+    }
+
+    let askBlock = '';
+    if (!pending) {
+      const field = profileFacts.chooseAskField({
+        facts,
+        settings: ktSettings,
+        userMessage,
+        sessionUserTurns: priorUserTurns + 1,
+        sessionStart: session.start,
+        distress: distressed,
+        now,
+      });
+      if (field) {
+        askBlock = profileFacts.buildAskInstruction(field);
+        profileExtraction.recordAskOffered(supabase, { userId, fieldKey: field.key, conversationId: thread ? thread.id : null })
+          .catch(() => console.error('[profile] record ask failed'));
+      }
+    }
+
+    return {
+      factsBlock,
+      tentativeBlock,
+      askBlock,
+      isFirstTurn: priorUserTurns === 0,
+      conversationId: thread ? thread.id : null,
+      session: {
+        userTurns: priorUserTurns + 1,
+        messageCount: session.messages.filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.kind !== 'checkin').length + 1,
+        start: session.start,
+        distressed,
+      },
+    };
+  } catch (err) {
+    console.error('[profile] personal context failed:', err.message);
+    return empty;
+  }
 }
 
 function summarizeParticipantProfile(participant) {
@@ -1460,6 +1571,24 @@ app.post('/api/chat/counselor', async (req, res) => {
   const ktFresh = ktRepliesSinceComplete !== null && ktRepliesSinceComplete < KT_FRESH_REPLIES;
   const knowThyselfBlock = buildKnowThyselfBlock(ktSettings, { fresh: ktFresh });
 
+  // --- Know Thyself facts, filled by the Cabinet (activation Part 3) ---
+  // Verified users only; shared sessions keep the per-participant profiles
+  // above and never carry an ask.
+  const lastUserText = Array.isArray(messages) ? String(messages[messages.length - 1]?.content || '') : '';
+  const personal = sessionType === 'shared'
+    ? { factsBlock: '', tentativeBlock: '', askBlock: '', isFirstTurn: false, conversationId: null, session: null }
+    : await buildPersonalContext({
+        userId: req.areteVerifiedUserId || null,
+        activeCounselorId: activeCounselorId || counselorSlug || 'cabinet',
+        ktSettings,
+        userMessage: lastUserText,
+      });
+  // The facts block supersedes the user_settings-only block: it falls back to
+  // the same columns for any field without a fact.
+  const cabinetProfileBlock = personal.factsBlock
+    ? personal.factsBlock + (ktFresh ? `\n${KT_CONNECT_INSTRUCTION}` : '')
+    : knowThyselfBlock;
+
   // --- Client app data (routines, journal, goals, ATTEND context) ---
   // The client's `system` is buildSystemPrompt + gatherAppContext, but the
   // parallel Cabinet path builds each counselor's persona server-side and
@@ -1527,7 +1656,9 @@ app.post('/api/chat/counselor', async (req, res) => {
 
     const respondingCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
 
-    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, knowThyselfBlock + sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens);
+    const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, cabinetProfileBlock + sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens, {
+      lastVoice: personal.askBlock,
+    });
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
@@ -1590,6 +1721,10 @@ app.post('/api/chat/counselor', async (req, res) => {
   } else if (ktFresh) {
     profileBlock = `\n\n${KT_CONNECT_INSTRUCTION}`;
   }
+  // The client's single-mode prompt carries the Known profile already; add
+  // what only the server knows: tentative facts and off-limits topics.
+  profileBlock += personal.tentativeBlock;
+  const singleTurnBlock = personal.askBlock;
 
   // RAG: retrieve relevant source text chunks (silent on failure)
   const lastUserMessage = messages[messages.length - 1]?.content || '';
@@ -1656,10 +1791,10 @@ app.post('/api/chat/counselor', async (req, res) => {
   // half (persona, profile, catalog, self-knowledge) is byte-stable across a
   // conversation's turns; RAG retrievals, session context, and the pulse vary
   // per message and must stay after the cache breakpoint.
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + pulseBlock;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + pulseBlock + singleTurnBlock;
   const counselorSystemBlocks = buildSystemBlocks(
     system + profileBlock + catalogBlock + resourceInstruction + SELF_KNOWLEDGE,
-    dateTimeBlock + sharedContext + longitudinalContext + ragContext + libraryContext + pulseBlock
+    dateTimeBlock + sharedContext + longitudinalContext + ragContext + libraryContext + pulseBlock + singleTurnBlock
   );
 
   // Shared session: mirror this single-counselor turn into session_messages so
@@ -3920,7 +4055,9 @@ function fallbackDialogue(roster) {
  * them by name before adding their own view.
  * Returns array of { counselorId, counselorName, response, error }
  */
-async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '', tier = 'free', maxTokensPerVoice = 800) {
+// extras.allVoices is appended to every voice; extras.lastVoice only to the
+// last voice of the turn (the one that closes it: an ask, an offer).
+async function fireParallelCounselors(question, counselors, history, contextChunks, checkInContext, priorResponses, counselorModels = {}, sharedContext = '', tier = 'free', maxTokensPerVoice = 800, extras = {}) {
   const voiceGuard = `\n\nIMPORTANT: You are speaking as yourself only. Never write words for another Cabinet member or imitate their voice. You may briefly react to what a colleague has already said in this turn — agree, sharpen, or push back, addressing them by name — but the response is yours alone.`;
 
   const lengthGuard = `\n\nLength: You are one voice in a Cabinet of counselors. Keep your response to 2-3 short paragraphs maximum. Be direct. Leave room for the conversation to continue. Do not summarize, do not wrap up, do not deliver a closing thought. Speak and stop.`;
@@ -3949,8 +4086,9 @@ async function fireParallelCounselors(question, counselors, history, contextChun
   const startAll = Date.now();
   const results = [];
 
-  for (const counselor of counselors) {
+  for (const [voiceIndex, counselor] of counselors.entries()) {
     const colleagues = [...seedColleagues, ...results.filter(r => !r.error)];
+    const voiceExtras = (extras.allVoices || '') + (voiceIndex === counselors.length - 1 ? (extras.lastVoice || '') : '');
     const colleaguesBlock = colleagues.length > 0
       ? `\n\n[WHAT YOUR COLLEAGUES SAID]\nThe following counselors have already spoken in this turn. You are speaking after them. Do not repeat their points. You may briefly react to one of them by name — agree, sharpen, or push back in a sentence — then add what only you can add.\n${colleagues.map(r => `${r.counselorName}:\n${r.response}`).join('\n\n')}\n[END COLLEAGUE RESPONSES]`
       : '';
@@ -3960,7 +4098,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
     try {
       const { text, stopReason } = await callCounselorModel({
         model,
-        system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock,
+        system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock + voiceExtras,
         messages,
         maxTokens: maxTokensPerVoice,
       });

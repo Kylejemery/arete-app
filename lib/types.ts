@@ -59,6 +59,9 @@ export interface UserSettings {
   kt_reflection?: string | null;
   kt_reflection_at?: string | null;
   kt_reflection_counselor?: string | null;
+  // Know Thyself, filled by the Cabinet (activation plan, Part 3).
+  kt_off_limits?: string | null;
+  kt_facts_seen_at?: string | null;
   created_at?: string;
   updated_at?: string;
 }

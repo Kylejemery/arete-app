@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getKnowThyselfComplete } from '@/lib/db';
+import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
 import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, type CabinetReply } from '@/lib/claudeService';
 import { FREE_DAILY_MESSAGES, getFreeMessagesRemaining } from '@/lib/messageLimit';
@@ -73,7 +73,6 @@ export default function CabinetPage() {
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
 
   // Shared sessions (Arete for Couples) — same contract as the mobile app:
   // the cabinet_conversations row id doubles as the shared-session id.
@@ -122,12 +121,6 @@ export default function CabinetPage() {
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
       setUserName(settings.user_name);
-
-      // Same signal as Home and Scrolls: the profiles flag, which
-      // markKnowThyselfComplete sets under the one completion rule.
-      getKnowThyselfComplete()
-        .then(complete => setKnowThyselfIncomplete(!complete))
-        .catch(() => {});
 
       const thread = await loadThread('cabinet');
       setCabinetMessages(thread.messages);
@@ -676,25 +669,6 @@ export default function CabinetPage() {
         </div>
       </div>
 
-      {/* Know Thyself nudge */}
-      {knowThyselfIncomplete && (
-        <div className="mx-4 mt-3 flex-shrink-0">
-          <GlassCard>
-            <div className="px-4 py-3 flex items-center justify-between">
-              <p className="text-[13px]" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}>
-                The Cabinet&apos;s responses are generic until you complete your profile.
-              </p>
-              <a
-                href="/profile"
-                className="text-[10px] tracking-[1px] uppercase ml-3 flex-shrink-0 hover:opacity-80"
-                style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
-              >
-                Complete →
-              </a>
-            </div>
-          </GlassCard>
-        </div>
-      )}
 
       {/* ── Cabinet tab ──────────────────────────────────────────── */}
       {tab === 'cabinet' && (
