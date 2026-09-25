@@ -174,3 +174,74 @@ test('undo restores the exact prior rows and removes rows that did not exist', (
   ]);
   assert.deepEqual(proposals.undoPlan(null), []);
 });
+
+// ── C3: request_feature ──────────────────────────────────────────────────────
+
+const featureRequests = require('../lib/feature-requests');
+
+test('a feature request is asked first, and the card asks the same question', () => {
+  assert.match(featureRequests.REQUEST_INSTRUCTION, /Want me to pass this idea along to the person who builds Arete\?/);
+  for (const rel of ['components/ProposalCard.tsx', 'web/src/components/ProposalCard.tsx']) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.ok(src.includes(featureRequests.ASK_LINE), rel);
+  }
+});
+
+test('request gate: Cabinet only, not the first turn, not in distress, one per conversation, three a week', () => {
+  const base = { verified: true, cabinetThread: true, userTurns: 2, distressedNow: false, recentRequests: [], sessionStart: NOW - 60 * 1000, now: NOW };
+  assert.equal(featureRequests.requestGate(base).allowed, true);
+  assert.equal(featureRequests.requestGate({ ...base, userTurns: 1 }).reason, 'too_early');
+  assert.equal(featureRequests.requestGate({ ...base, cabinetThread: false }).reason, 'not_cabinet');
+  assert.equal(featureRequests.requestGate({ ...base, distressedNow: true }).reason, 'distress');
+  assert.equal(featureRequests.requestGate({ ...base, recentRequests: [{ created_at: new Date(NOW - 30 * 1000).toISOString() }] }).reason, 'one_per_conversation');
+  const three = [1, 2, 3].map(d => ({ created_at: new Date(NOW - d * DAY).toISOString() }));
+  assert.equal(featureRequests.requestGate({ ...base, recentRequests: three }).reason, 'weekly_limit');
+});
+
+test('the request marker is always stripped', () => {
+  const r = featureRequests.parseRequestMarker('I cannot do that yet. Want me to pass this idea along to the person who builds Arete?\n[[REQUEST|A way to track sleep alongside the journal]]');
+  assert.ok(!r.text.includes('[['));
+  assert.deepEqual(r.request, { need: 'A way to track sleep alongside the journal' });
+  assert.equal(featureRequests.parseRequestMarker('No marker here.').request, null);
+  assert.ok(!featureRequests.parseRequestMarker('x [[REQUEST|]] y').text.includes('[['));
+});
+
+test('summaries are one line, unquoted, and a non-feature is dropped', () => {
+  assert.equal(featureRequests.cleanSummary('"Track sleep alongside journal entries."\nExtra chatter'), 'Track sleep alongside journal entries.');
+  assert.equal(featureRequests.cleanSummary('NOT_A_FEATURE'), null);
+  assert.equal(featureRequests.cleanSummary(''), null);
+  assert.match(featureRequests.SUMMARY_SYSTEM, /Never include names/);
+});
+
+test('processing: summarize, embed, cluster, and the draft is cleared', async () => {
+  const updates = [];
+  let rpc = null;
+  const fake = {
+    from: () => ({
+      select() { return this; },
+      eq() { return this; },
+      maybeSingle: async () => ({ data: { id: 'r1', status: 'submitted', need_draft: 'my private wording', need_summary: null, embedding: null }, error: null }),
+      update(values) { updates.push(values); return { eq: async () => ({ error: null }) }; },
+    }),
+    rpc: async (name, args) => { rpc = { name, args }; return { data: 'c1', error: null }; },
+  };
+  const cluster = await featureRequests.processRequest(fake, 'r1', {
+    summarize: async () => 'Track sleep alongside the journal.',
+    embed: async () => new Array(1536).fill(0.01),
+  });
+  assert.equal(cluster, 'c1');
+  assert.equal(updates[0].need_draft, null);
+  assert.equal(updates[0].need_summary, 'Track sleep alongside the journal.');
+  assert.deepEqual(rpc, { name: 'assign_feature_request_cluster', args: { p_request_id: 'r1', p_threshold: featureRequests.CLUSTER_THRESHOLD } });
+});
+
+test('the admin Requests route returns no identities and counts from measured profiles', () => {
+  const src = fs.readFileSync(path.join(ROOT, 'academy/web/src/app/api/admin/requests/route.ts'), 'utf8');
+  const selected = [...src.matchAll(/\.select\('([^']+)'/g)].map(m => m[1]).join(',');
+  assert.ok(selected.length > 0);
+  assert.ok(!/user_id|email|conversation_id|need_draft|counselor_id/.test(selected), `route selects an identifying column: ${selected}`);
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260925191937_feature_requests.sql'), 'utf8');
+  assert.match(sql, /LEFT JOIN measured_profiles mp ON mp\.id = r\.user_id/);
+  const nav = fs.readFileSync(path.join(ROOT, 'academy/web/src/app/admin/layout.tsx'), 'utf8');
+  assert.match(nav, /\{ href: '\/admin\/email', label: 'Email' \},\s*\{ href: '\/admin\/requests', label: 'Requests' \}/);
+});

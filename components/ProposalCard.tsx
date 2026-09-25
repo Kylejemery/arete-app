@@ -4,21 +4,22 @@
 // Cabinet will not suggest that practice again for 30 days.
 import { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { respondToProposal, undoProposal, type CabinetProposal } from '@/lib/practices';
+import { respondToFeatureRequest, respondToProposal, undoProposal, type CabinetProposal } from '@/lib/practices';
 
 type State = 'open' | 'saving' | 'done' | 'undone' | 'unavailable' | 'error';
 
 export default function ProposalCard({ proposal, onClose }: { proposal: CabinetProposal; onClose: () => void }) {
   const [state, setState] = useState<State>('open');
 
+  const isRequest = proposal.kind === 'feature_request';
   const answer = async (accept: boolean) => {
     if (!accept) {
-      void respondToProposal(proposal.id, false);
+      void (isRequest ? respondToFeatureRequest(proposal.id, false) : respondToProposal(proposal.id, false));
       onClose();
       return;
     }
     setState('saving');
-    const r = await respondToProposal(proposal.id, true);
+    const r = isRequest ? await respondToFeatureRequest(proposal.id, true) : await respondToProposal(proposal.id, true);
     if (r.ok) setState('done');
     else if (r.data?.error === 'no_longer_available') setState('unavailable');
     else setState('error');
@@ -35,13 +36,13 @@ export default function ProposalCard({ proposal, onClose }: { proposal: CabinetP
       <View style={styles.card}>
         <Text style={styles.body}>
           {state === 'done'
-            ? `${proposal.label} is on. You'll find it under Your practices on Home.`
+            ? (isRequest ? 'Passed along. Thank you for the idea.' : `${proposal.label} is on. You'll find it under Your practices on Home.`)
             : state === 'undone'
               ? 'Undone. Everything is as it was.'
               : 'That practice is not available on your account right now.'}
         </Text>
         <View style={styles.row}>
-          {state === 'done' && (
+          {state === 'done' && !isRequest && (
             <TouchableOpacity onPress={undo}><Text style={styles.link}>Undo</Text></TouchableOpacity>
           )}
           <TouchableOpacity onPress={onClose}><Text style={styles.linkMuted}>Close</Text></TouchableOpacity>
@@ -52,14 +53,23 @@ export default function ProposalCard({ proposal, onClose }: { proposal: CabinetP
 
   return (
     <View style={styles.card}>
-      <Text style={styles.kicker}>{proposal.source === 'feature_shipped' ? 'You asked for this' : 'A practice for Home'}</Text>
-      <Text style={styles.title}>{proposal.label}</Text>
-      {!!proposal.description && <Text style={styles.body}>{proposal.description}</Text>}
-      {!!proposal.note && <Text style={styles.note}>For: {proposal.note}</Text>}
+      {isRequest ? (
+        <>
+          <Text style={styles.kicker}>An idea for Arete</Text>
+          <Text style={styles.body}>Want me to pass this idea along to the person who builds Arete?</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.kicker}>{proposal.source === 'feature_shipped' ? 'You asked for this' : 'A practice for Home'}</Text>
+          <Text style={styles.title}>{proposal.label}</Text>
+          {!!proposal.description && <Text style={styles.body}>{proposal.description}</Text>}
+          {!!proposal.note && <Text style={styles.note}>For: {proposal.note}</Text>}
+        </>
+      )}
       {state === 'error' && <Text style={styles.error}>That did not go through. Try again.</Text>}
       <View style={styles.row}>
         <TouchableOpacity style={[styles.yes, state === 'saving' && styles.disabled]} disabled={state === 'saving'} onPress={() => answer(true)}>
-          <Text style={styles.yesText}>Yes, add it</Text>
+          <Text style={styles.yesText}>{isRequest ? 'Yes, pass it along' : 'Yes, add it'}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => answer(false)} disabled={state === 'saving'}>
           <Text style={styles.linkMuted}>Not now</Text>

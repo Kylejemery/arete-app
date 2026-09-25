@@ -1244,52 +1244,69 @@ async function recordCabinetOffer({ userId, personal, goal, task = null, goalCou
 // ---------------------------------------------------------------------------
 const proposalRules = require('./lib/proposals');
 const practiceRegistry = require('./lib/module-registry');
+const featureRequests = require('./lib/feature-requests');
 
-// Whether this turn may carry a practice proposal, and which practices. Cheap
-// checks first, so most turns cost no query.
+// Whether this turn may carry a practice proposal (and which practices) or
+// a feature request (Part C3). Cheap checks first, so most turns cost no
+// query.
 async function loadProposalContext({ userId, personal, cabinetThread }) {
-  const none = { block: '', eligible: [], allowed: false };
+  const none = { block: '', eligible: [], allowed: false, requestAllowed: false };
   if (!userId || !personal || !personal.session || !cabinetThread) return none;
-  const early = proposalRules.proposalGate({
+  const base = {
     verified: true,
     cabinetThread,
     userTurns: personal.session.userTurns,
     distressedNow: personal.session.distressed,
-  });
-  if (!early.allowed) return none;
+  };
+  const earlyProposal = proposalRules.proposalGate(base);
+  const earlyRequest = featureRequests.requestGate(base);
+  if (!earlyProposal.allowed && !earlyRequest.allowed) return none;
   try {
     const now = Date.now();
     const since = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
-    const [rowsRes, recentRes, recentDistress] = await Promise.all([
+    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const [rowsRes, recentRes, requestsRes, recentDistress] = await Promise.all([
       supabase.from('user_app_config').select('module_key, enabled').eq('user_id', userId),
       supabase.from('adjustment_proposals').select('module_key, status, source, created_at, responded_at, undone_at')
         .eq('user_id', userId).gte('created_at', since),
-      profileExtraction.hasRecentDistressFlag(supabase, userId, proposalRules.DISTRESS_LOOKBACK_DAYS),
+      supabase.from('feature_requests').select('created_at').eq('user_id', userId).gte('created_at', weekAgo),
+      earlyProposal.allowed
+        ? profileExtraction.hasRecentDistressFlag(supabase, userId, proposalRules.DISTRESS_LOOKBACK_DAYS)
+        : Promise.resolve(true),
     ]);
-    if (rowsRes.error || recentRes.error) return none;
+    if (rowsRes.error || recentRes.error || requestsRes.error) return none;
     const recent = recentRes.data || [];
-    const gate = proposalRules.proposalGate({
-      verified: true,
-      cabinetThread,
-      userTurns: personal.session.userTurns,
-      distressedNow: personal.session.distressed,
-      recentProposals: recent,
-      sessionStart: personal.session.start,
-      now,
-    });
-    if (!gate.allowed) return none;
-    const eligible = proposalRules.eligibleModules({
-      rows: rowsRes.data || [],
-      recentProposals: recent,
-      isTeen: !!personal.isTeen,
-      recentDistress,
-      now,
-    });
-    if (eligible.length === 0) return none;
-    return { block: proposalRules.proposalInstruction(eligible), eligible: eligible.map(m => m.key), allowed: true };
+    const gate = proposalRules.proposalGate({ ...base, recentProposals: recent, sessionStart: personal.session.start, now });
+    const eligible = gate.allowed
+      ? proposalRules.eligibleModules({ rows: rowsRes.data || [], recentProposals: recent, isTeen: !!personal.isTeen, recentDistress, now })
+      : [];
+    const requestAllowed = featureRequests.requestGate({ ...base, recentRequests: requestsRes.data || [], sessionStart: personal.session.start, now }).allowed;
+    const block = proposalRules.proposalInstruction(eligible) + (requestAllowed ? featureRequests.REQUEST_INSTRUCTION : '');
+    return { block, eligible: eligible.map(m => m.key), allowed: eligible.length > 0, requestAllowed };
   } catch (err) {
     console.error('[proposals] context failed');
     return none;
+  }
+}
+
+// Records a feature-request card (Part C3) when this turn allowed one. The
+// wish is held as a draft until the person answers; nothing is passed along
+// without a yes.
+async function recordFeatureRequestOffer({ userId, personal, ctx, request, counselorId }) {
+  if (!userId || !ctx || !ctx.requestAllowed || !request) return null;
+  try {
+    const { data, error } = await supabase.from('feature_requests').insert({
+      user_id: userId,
+      conversation_id: personal && personal.conversationId,
+      counselor_id: counselorId || null,
+      need_draft: request.need,
+    }).select('id').single();
+    if (error || !data) return null;
+    eventLog.logEvent(userId, 'feature_request_offered', {}, { platform: 'server' });
+    return { id: data.id, kind: 'feature_request', source: 'cabinet', counselorId: counselorId || null };
+  } catch (err) {
+    console.error('[feature-requests] record failed');
+    return null;
   }
 }
 
@@ -1928,12 +1945,16 @@ app.post('/api/chat/counselor', async (req, res) => {
     let goalCounselorId = null;
     let offeredAdjust = null;
     let adjustCounselorId = null;
+    let offeredRequest = null;
+    let requestCounselorId = null;
     for (const r of results) {
       if (!r || typeof r.response !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(r.response);
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
       const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
-      r.response = parsedAdjust.text;
+      const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
+      r.response = parsedRequest.text;
+      if (parsedRequest.request && !offeredRequest) { offeredRequest = parsedRequest.request; requestCounselorId = r.counselorId || null; }
       if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
       if (parsedTask.task && !offeredTask) { offeredTask = parsedTask.task; goalCounselorId = r.counselorId || null; }
       if (parsedAdjust.adjust && !offeredAdjust) { offeredAdjust = parsedAdjust.adjust; adjustCounselorId = r.counselorId || null; }
@@ -1947,13 +1968,19 @@ app.post('/api/chat/counselor', async (req, res) => {
       replies: results.filter(r => !r.error && r.response).map(r => r.counselorId),
     });
     // One card per turn: a proposal only when no offer was made.
-    const proposal = offer ? null : await recordCabinetProposal({
+    const proposal = offer ? null : (await recordCabinetProposal({
       userId: req.areteVerifiedUserId,
       personal,
       ctx: proposalCtx,
       adjust: offeredAdjust,
       counselorId: adjustCounselorId,
-    });
+    })) || (await recordFeatureRequestOffer({
+      userId: req.areteVerifiedUserId,
+      personal,
+      ctx: proposalCtx,
+      request: offeredRequest,
+      counselorId: requestCounselorId,
+    }));
 
     // Post-hoc usage attribution across the whole Cabinet turn.
     const cabinetText = results.filter(r => !r.error && r.response).map(r => r.response).join('\n\n');
@@ -2153,7 +2180,8 @@ app.post('/api/chat/counselor', async (req, res) => {
         const parsedReply = cabinetOffers.parseGoalMarker(finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`));
         const parsedTask = cabinetOffers.parseTaskMarker(parsedReply.text);
         const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
-        const text = parsedAdjust.text;
+        const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
+        const text = parsedRequest.text;
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
@@ -2166,13 +2194,19 @@ app.post('/api/chat/counselor', async (req, res) => {
           goalCounselorId: singleCounselorId,
           replies: text ? [singleCounselorId] : [],
         });
-        const proposal = offer ? null : await recordCabinetProposal({
+        const proposal = offer ? null : (await recordCabinetProposal({
           userId: req.areteVerifiedUserId,
           personal,
           ctx: proposalCtx,
           adjust: parsedAdjust.adjust,
           counselorId: singleCounselorId,
-        });
+        })) || (await recordFeatureRequestOffer({
+          userId: req.areteVerifiedUserId,
+          personal,
+          ctx: proposalCtx,
+          request: parsedRequest.request,
+          counselorId: singleCounselorId,
+        }));
         return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
@@ -2219,12 +2253,15 @@ app.post('/api/chat/counselor', async (req, res) => {
     let singleGoal = null;
     let singleTask = null;
     let singleAdjust = null;
+    let singleRequest = null;
     for (const b of (data.content || [])) {
       if (b.type !== 'text' || typeof b.text !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(b.text);
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
       const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
-      b.text = parsedAdjust.text;
+      const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
+      b.text = parsedRequest.text;
+      if (parsedRequest.request && !singleRequest) singleRequest = parsedRequest.request;
       if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
       if (parsedTask.task && !singleTask) singleTask = parsedTask.task;
       if (parsedAdjust.adjust && !singleAdjust) singleAdjust = parsedAdjust.adjust;
@@ -2240,13 +2277,19 @@ app.post('/api/chat/counselor', async (req, res) => {
       replies: assistantText ? [singleCounselorId] : [],
     });
     if (singleOffer) data.offer = singleOffer;
-    const singleProposal = singleOffer ? null : await recordCabinetProposal({
+    const singleProposal = singleOffer ? null : (await recordCabinetProposal({
       userId: req.areteVerifiedUserId,
       personal,
       ctx: proposalCtx,
       adjust: singleAdjust,
       counselorId: singleCounselorId,
-    });
+    })) || (await recordFeatureRequestOffer({
+      userId: req.areteVerifiedUserId,
+      personal,
+      ctx: proposalCtx,
+      request: singleRequest,
+      counselorId: singleCounselorId,
+    }));
     if (singleProposal) data.proposal = singleProposal;
     if (personal.teenSupport) data.support = true;
     if (assistantText && loggedChunks.length > 0) {
@@ -3763,7 +3806,72 @@ app.get('/api/practices/proposals/pending', async (req, res) => {
     .limit(5);
   if (error) return res.json({ proposals: [] });
   const open = (data || []).filter(p => p.source === 'feature_shipped' || p.created_at >= since);
-  return res.json({ proposals: open.map(proposalCard) });
+  // A feature-request card from earlier today that was never answered.
+  const { data: requests } = await supabase.from('feature_requests')
+    .select('id, counselor_id')
+    .eq('user_id', userId).eq('status', 'offered').gte('created_at', since)
+    .order('created_at', { ascending: false }).limit(1);
+  const requestCards = (requests || []).map(r => ({ id: r.id, kind: 'feature_request', source: 'cabinet', counselorId: r.counselor_id || null }));
+  return res.json({ proposals: [...open.map(proposalCard), ...requestCards] });
+});
+
+// ─── Feature requests (run C, Part C3) ──────────────────────────────────────
+
+async function summarizeFeatureNeed(text) {
+  return profileExtraction.callHaiku(featureRequests.SUMMARY_SYSTEM, String(text).slice(0, 300), 80);
+}
+
+async function embedFeatureNeed(text) {
+  if (!process.env.OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
+  const r = await fetch('https://api.openai.com/v1/embeddings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
+  });
+  if (!r.ok) throw new Error(`embedding ${r.status}`);
+  const data = await r.json();
+  return data.data?.[0]?.embedding || null;
+}
+
+function processFeatureRequest(id) {
+  return featureRequests.processRequest(supabase, id, { summarize: summarizeFeatureNeed, embed: embedFeatureNeed })
+    .catch(() => { console.error('[feature-requests] processing failed'); return null; });
+}
+
+// POST /api/feature-requests/:id/respond { accept } — the answer to "Want me
+// to pass this idea along?". Yes keeps it (summarized, embedded, clustered in
+// the background); Not now clears the wording.
+app.post('/api/feature-requests/:id/respond', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const accept = req.body?.accept === true;
+  const now = new Date().toISOString();
+  const { data: claimed, error } = await supabase.from('feature_requests')
+    .update(accept ? { status: 'submitted', responded_at: now } : { status: 'declined', responded_at: now, need_draft: null })
+    .eq('id', req.params.id).eq('user_id', userId).eq('status', 'offered')
+    .select('id');
+  if (error) return res.status(500).json({ error: 'save_failed' });
+  if (!claimed || claimed.length === 0) return res.status(409).json({ error: 'already_answered' });
+  eventLog.logEvent(userId, accept ? 'feature_request_submitted' : 'feature_request_declined', {}, { platform: eventLog.platformFromRequest(req) });
+  if (accept) processFeatureRequest(claimed[0].id);
+  return res.json({ ok: true, status: accept ? 'submitted' : 'declined' });
+});
+
+// POST /api/admin/feature-requests/process — admin only. Retries any
+// submitted request not yet summarized and clustered (a Haiku or embedding
+// failure the first time). The academy Requests tab calls it on open.
+app.post('/api/admin/feature-requests/process', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+  if (!(await isAdmin(userId))) return res.status(403).json({ error: 'Forbidden' });
+  const { data } = await supabase.from('feature_requests')
+    .select('id').eq('status', 'submitted').is('cluster_id', null).is('summarized_at', null)
+    .order('created_at', { ascending: true }).limit(25);
+  let processed = 0;
+  for (const r of data || []) {
+    if (await processFeatureRequest(r.id)) processed++;
+  }
+  return res.json({ ok: true, pending: (data || []).length, processed });
 });
 
 // POST /api/practices/proposals/:id/respond { accept, swapOut? } — the

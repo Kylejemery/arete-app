@@ -80,3 +80,34 @@ This file records the judgement calls made while carrying out Run C without stop
 **DC2.7 Events.**
 - **The events:** `adjustment_proposed`, `adjustment_accepted`, `adjustment_declined`, `adjustment_undone` and `adjustment_withdrawn`, plus `practice_settings_saved` and `practice_turned_off`.
 - **Props:** `module_key`, `tier`, `source` and a reason code only, never the note.
+
+## C3
+
+**DC3.1 Asked first, kept only on yes.**
+- **The question:** the closing voice asks "Want me to pass this idea along to the person who builds Arete?", and the card asks the same.
+- **What is stored before an answer:** only the counselor's plain wording of the wish, as `need_draft`.
+- **On Not now:** the draft is cleared.
+- **On Yes:** Haiku rewrites it as one neutral sentence with no personal details (`need_summary`). The draft is cleared once that succeeds, so the wording in the person's own words is never kept.
+- **Alternative:** keep the wording for context. The admin does not need it, and the privacy rule says aggregate only.
+
+**DC3.2 Limits.**
+- **The limits:** Cabinet thread only, not the first user turn, not in distress, one per conversation, three per person per week.
+- **Priority:** a turn carries at most one card, in this order: offer, then practice proposal, then feature request. The instruction tells the voice to prefer a listed practice when one fits the wish.
+
+**DC3.3 Clustering.**
+- **How:** each summary is embedded with `text-embedding-3-small`, the same model and 1536 dimensions as the rest of Arete. It joins the nearest open cluster at cosine similarity 0.82 or above, or starts its own.
+- **Where:** `assign_feature_request_cluster()`, service role only. It keeps each cluster's centroid as `avg(embedding)` of its requests, and the cluster title is its first summary.
+- **Shipped or declined clusters:** they take no new members.
+- **Tested:** a rolled-back dry run on synthetic vectors confirmed that near vectors join and distant ones split.
+- **Alternative:** a Haiku pass that labels clusters. That is more calls for a list that is still small.
+
+**DC3.4 Processing and retry.**
+- **Normal path:** summarizing and clustering run in the background on the API server when the person says yes.
+- **Retry:** a failure leaves the request `submitted` with no summary, and opening the admin Requests tab retries up to 25 of them through `POST /api/admin/feature-requests/process`.
+- **Alternative:** a new cron. The recon rule is no new Railway service without need.
+
+**DC3.5 The admin tab shows no identities.**
+- **Where:** the Requests tab sits next to Email.
+- **What it shows:** each cluster's title, up to five anonymous summaries, the number of distinct people who asked, the last date and the status.
+- **What it never shows:** the route selects no `user_id`, email, conversation or draft, and a test checks this.
+- **Counts:** they come from `feature_request_cluster_counts`, which joins `measured_profiles`, so admin and internal accounts are excluded.

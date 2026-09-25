@@ -104,3 +104,8 @@ export function respondToProposal(id: string, accept: boolean, swapOut?: string 
 export function undoProposal(id: string) {
   return post(`/api/practices/proposals/${encodeURIComponent(id)}/undo`, {});
 }
+
+// Run C, Part C3: the answer to "Want me to pass this idea along?".
+export function respondToFeatureRequest(id: string, accept: boolean) {
+  return post(`/api/feature-requests/${encodeURIComponent(id)}/respond`, { accept });
+}
