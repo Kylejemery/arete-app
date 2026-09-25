@@ -1851,7 +1851,10 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   // --- Practice proposals (run C, Part C2) ---
   // The group Cabinet thread only, never a shared session or a 1:1 chat.
-  const cabinetThread = sessionType !== 'shared' && (activeCounselorId || counselorSlug || 'cabinet') === 'cabinet';
+  // Only a client that says it can show the card (clientCards) is offered one,
+  // so an older build never collects proposals it cannot display.
+  const clientShowsCards = Array.isArray(req.body?.clientCards) && req.body.clientCards.includes('proposal');
+  const cabinetThread = clientShowsCards && sessionType !== 'shared' && (activeCounselorId || counselorSlug || 'cabinet') === 'cabinet';
   const proposalCtx = await loadProposalContext({ userId: req.areteVerifiedUserId || null, personal, cabinetThread });
   const closingActionsBlock = goalOfferBlock + proposalCtx.block;
 

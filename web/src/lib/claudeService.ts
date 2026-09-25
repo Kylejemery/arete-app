@@ -628,6 +628,9 @@ export async function sendMessageToCabinet(
         counselorModels: settings?.counselor_models ?? {},
         cabinetMembers: settings?.cabinet_members ?? [],
         starterId: (() => { const id = nextStarterId; nextStarterId = null; return id; })(),
+        // Run C: this build shows proposal and feature-request cards, so the
+        // server may offer them (older builds never get a card they cannot show).
+        clientCards: ['proposal'],
         // R6: under KT_FRESH_REPLIES the server asks each voice for one profile connection.
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, settings?.kt_completed_at),
         system: fullSystem,

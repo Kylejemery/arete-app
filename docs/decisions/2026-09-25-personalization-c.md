@@ -172,3 +172,10 @@ This file records the judgement calls made while carrying out Run C without stop
 **DC6.5 Events.**
 - **Server:** `module_limit_shown` (module key, source, limit) and `module_limit_swap` (module key, swapped-out key).
 - **Client:** `module_limit_upgrade_click` (module key), added to the closed event unions on mobile and web.
+
+## Final checks
+
+**DF.1 Cards only for clients that can show them.**
+- **The problem:** an older mobile build ignores the `proposal` field, and until the next EAS build that is every mobile user. Proposals recorded for it would never be seen, yet would count toward the weekly limit and block that practice as "awaiting an answer".
+- **Chosen:** the new clients send `clientCards: ['proposal']` with Cabinet messages, and the server offers practice or feature-request cards only when it is present.
+- **Alternative:** let unseen proposals expire. That costs people proposals they never saw.

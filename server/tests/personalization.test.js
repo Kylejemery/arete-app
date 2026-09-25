@@ -425,3 +425,11 @@ test('undo after a swap restores both practices exactly', () => {
   assert.equal(plan[0].action, 'delete');
   assert.deepEqual(plan[1].values, { enabled: true, pinned: true, settings: { minutes: 25, intention: '' }, enabled_by: 'cabinet', proposal_id: 'p0', updated_at: '2026-09-20T00:00:00Z', grandfathered: false });
 });
+
+test('only a client that can show the card is offered one', () => {
+  const server = fs.readFileSync(path.join(ROOT, 'server/index.js'), 'utf8');
+  assert.match(server, /const cabinetThread = clientShowsCards && sessionType !== 'shared'/);
+  for (const rel of ['services/claudeService.ts', 'web/src/lib/claudeService.ts']) {
+    assert.match(fs.readFileSync(path.join(ROOT, rel), 'utf8'), /clientCards: \['proposal'\]/, rel);
+  }
+});
