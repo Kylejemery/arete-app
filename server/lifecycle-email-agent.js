@@ -243,7 +243,7 @@ async function fetchAll(makeQuery, pageSize = 1000) {
 async function planRun({ supabase, now, onlyUser = null }) {
   const profiles = await fetchAll(() => supabase
     .from('profiles')
-    .select('id, email, created_at, email_opt_out')
+    .select('id, email, created_at, email_opt_out, age_band, locked_at')
     .order('id'));
   const sends = await fetchAll(() => supabase
     .from('email_sends')
@@ -263,7 +263,10 @@ async function planRun({ supabase, now, onlyUser = null }) {
   const profileFor = new Map(profiles.map(p => [p.id, p]));
 
   const has = (userId, kind) => recorded.get(userId)?.has(kind) === true;
+  // Run B, Part B5: no marketing email to teens (13-17), under-13 or
+  // locked accounts.
   const eligible = (p) => p && !p.email_opt_out && typeof p.email === 'string' && p.email.includes('@')
+    && !['under_13', '13_15', '16_17'].includes(p.age_band) && !p.locked_at
     && (!onlyUser || p.id === onlyUser);
 
   const due = [];    // { userId, email, kind, ctx }

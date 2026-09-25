@@ -1,3 +1,4 @@
+import { AGE_BANDS, UNDER_13_MESSAGE, savePendingAgeBand, setMyAgeBand, type AgeBand } from '@/lib/ageBand';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -34,6 +35,9 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Run B, Part B5: the age band is asked at signup; under 13 stops here.
+  const [ageBand, setAgeBand] = useState<AgeBand | null>(null);
+  const [underAge, setUnderAge] = useState(false);
 
   const handleSignIn = async () => {
     setError(null);
@@ -75,9 +79,18 @@ export default function LoginScreen() {
       setError('Password must be at least 6 characters.');
       return;
     }
+    if (!ageBand) {
+      setError('Please choose your age range.');
+      return;
+    }
+    if (ageBand === 'under_13') {
+      // No account is created, and nothing about this person is stored.
+      setUnderAge(true);
+      return;
+    }
     setLoading(true);
     try {
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: signUpData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
       });
@@ -85,6 +98,10 @@ export default function LoginScreen() {
         setError(authError.message);
         return;
       }
+      // Store the band now if there is a session; otherwise the age gate
+      // applies it on the first signed-in open.
+      if (signUpData.session) await setMyAgeBand(ageBand);
+      else await savePendingAgeBand(ageBand);
       // Awaited (it never throws) so the insert is not racing the navigation.
       await logEventNow('signup_completed', { method: 'email', invited: !!inviteToken });
       if (inviteToken) {
@@ -203,6 +220,28 @@ export default function LoginScreen() {
             </>
           )}
 
+          {mode === 'signup' && (
+            <>
+              <Text style={styles.label}>Your age</Text>
+              <View style={styles.ageRow}>
+                {AGE_BANDS.map(b => (
+                  <TouchableOpacity
+                    key={b.value}
+                    onPress={() => { setAgeBand(b.value); setUnderAge(false); }}
+                    style={[styles.ageChip, ageBand === b.value && styles.ageChipOn]}
+                  >
+                    <Text style={[styles.ageChipText, ageBand === b.value && styles.ageChipTextOn]}>{b.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {underAge && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{UNDER_13_MESSAGE}</Text>
+                </View>
+              )}
+            </>
+          )}
+
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
@@ -241,6 +280,11 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  ageRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  ageChip: { borderWidth: 1, borderColor: '#c9a84c55', borderRadius: 16, paddingVertical: 7, paddingHorizontal: 12 },
+  ageChipOn: { backgroundColor: '#c9a84c', borderColor: '#c9a84c' },
+  ageChipText: { color: '#c9a84c', fontSize: 13 },
+  ageChipTextOn: { color: '#1a1a2e', fontWeight: '700' },
   container: {
     flex: 1,
     backgroundColor: '#1a1a2e',

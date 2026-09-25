@@ -1,5 +1,6 @@
 'use client';
 
+import { useAgeStatus } from '@/lib/useAgeStatus';
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubscription } from '@/lib/useSubscription';
@@ -56,6 +57,7 @@ function UpgradeContent() {
   const status = searchParams.get('status');
   const srcParam = searchParams.get('src');
   const { tier, isPremium, loading } = useSubscription();
+  const { isTeen } = useAgeStatus();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Activation 7.1: after checkout, back to the conversation the daily limit
@@ -139,6 +141,19 @@ function UpgradeContent() {
     return (
       <div className="min-h-screen bg-arete-bg flex items-center justify-center">
         <p className="text-arete-muted">Loading...</p>
+      </div>
+    );
+  }
+
+  // Run B, Part B5: teens never see plans or an upgrade prompt.
+  if (isTeen) {
+    return (
+      <div className="min-h-screen bg-arete-bg p-6 md:p-8">
+        <div className="max-w-xl mx-auto">
+          <h1 className="text-2xl text-arete-gold font-semibold mb-3">Not available on your account</h1>
+          <p className="text-arete-muted mb-6">This part of Arete isn&apos;t part of your account. Everything in your Cabinet is here for you.</p>
+          <Link href="/cabinet" className="text-arete-gold underline">Go to your Cabinet</Link>
+        </div>
       </div>
     );
   }

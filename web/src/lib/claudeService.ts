@@ -537,9 +537,18 @@ let nextStarterId: string | null = null;
 export function setNextStarterId(id: string | null): void {
   nextStarterId = id;
 }
-function noteCabinetOffer(data: { offer?: unknown } | null): void {
+function noteCabinetOffer(data: { offer?: unknown; support?: unknown } | null): void {
+  lastSupportFlag = data?.support === true;
   const o = data?.offer as CabinetOffer | undefined;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? o : null;
+}
+// Run B, Part B5: the server sets support: true when a teen's message reads
+// as distress; the conversation shows the support card at once.
+let lastSupportFlag = false;
+export function takeSupportFlag(): boolean {
+  const v = lastSupportFlag;
+  lastSupportFlag = false;
+  return v;
 }
 export function takeCabinetOffer(): CabinetOffer | null {
   const o = lastCabinetOffer;

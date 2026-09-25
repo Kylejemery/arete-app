@@ -40,6 +40,17 @@ export default function SupportCard() {
     setCardKey(null);
   };
 
+  return <SupportCardBody onDismiss={dismiss} />;
+}
+
+// Run B, Part B5: the same card, shown at once inside a conversation or after
+// a journal entry when a teen's words read as distress, with a line about a
+// trusted adult. It never says why it appeared.
+export function ImmediateSupportCard({ onDismiss }: { onDismiss: () => void }) {
+  return <SupportCardBody onDismiss={onDismiss} trustedAdult />;
+}
+
+function SupportCardBody({ onDismiss, trustedAdult = false }: { onDismiss: () => void; trustedAdult?: boolean }) {
   return (
     <div
       className="mx-4 mt-4 mb-4 px-5 py-4"
@@ -56,12 +67,14 @@ export default function SupportCard() {
         >
           If things feel heavy right now, you don&apos;t have to carry it alone.
         </p>
-        <button onClick={dismiss} aria-label="Dismiss" className="text-[16px] leading-none" style={{ color: '#9aa0a6' }}>
+        <button onClick={onDismiss} aria-label="Dismiss" className="text-[16px] leading-none" style={{ color: '#9aa0a6' }}>
           ×
         </button>
       </div>
       <p className="text-[13px] leading-relaxed" style={{ color: '#9aa0a6' }}>
-        Talking with someone can help. In the US you can call or text 988 any time.
+        {trustedAdult
+          ? 'Talking to a trusted adult, like a parent, a teacher, or a school counselor, can really help. In the US you can also call or text 988 any time.'
+          : 'Talking with someone can help. In the US you can call or text 988 any time.'}
       </p>
       <div className="flex gap-2 mt-3">
         <a href="tel:988" className="px-4 py-2 rounded-xl text-[13px] font-semibold" style={{ border: '1px solid #8fb3c9', color: '#cfe3ef' }}>

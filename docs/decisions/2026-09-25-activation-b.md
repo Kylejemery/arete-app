@@ -91,3 +91,40 @@ Rows outside the window are kept and start a new group. Rows that fail the conta
 - **Memory summary:** its example had described the user as "his", and it now models they/them.
 - **Not changed:** gendered language about the counselors themselves (Marcus, Goggins, Roosevelt) and about Kyle as founder (the audit agent's prompt). Those are not defaults about a user.
 - **Check-in chip parser:** it now also recognises "in her own words", so old and new check-in messages both render.
+
+## B5
+
+**DB5.1 How the band is stored.** `profiles` is not writable by clients (the 2026-08-25 lockdown), so the band is set through `set_my_age_band(band)`.
+- It is security definer and writes only the caller's own row.
+- It writes once: an answered band cannot be changed from the client. Changes go through support.
+- **Alternative:** grant clients UPDATE on `age_band`. That would let anyone change their band freely.
+- Only the band is stored, never a birthdate.
+
+**DB5.2 Signup.**
+- **The question:** mobile and web signup ask for the band before `signUp` is called.
+- **Under 13:** signup stops with the kind message. No account is created and nothing is stored.
+- **13 and over:** the band is applied at once when signup returns a session. Otherwise it is kept on the device (AsyncStorage on mobile, localStorage on web) and the age gate applies it on the first signed-in open, so nobody is asked twice.
+
+**DB5.3 Existing users.** A full-screen gate appears on the first signed-in open until the question is answered: a Modal on mobile, a fixed overlay on web.
+- **Under 13:** answering under 13 locks the account (`locked_at`) and queues it in `account_deletion_queue` with a delete-after date 30 days out and status `pending_review`. Nothing deletes automatically.
+- **Locked accounts:** the gate shows a locked screen with sign-out, and the server refuses Cabinet requests (`403 account_locked`).
+- **Rendering:** the gate draws on top of the app instead of replacing it, so the app does not wait on this query to open.
+
+**DB5.4 Teen mode (13–15, 16–17).**
+- **Prompts:** a teen addendum goes into every counselor prompt, whether the parallel Cabinet, a 1:1 chat or the single path. It covers:
+  - age-appropriate replies only
+  - no romantic or sexual advice beyond healthy general guidance
+  - never encouraging alcohol, vaping or drugs
+  - tough-love voices, Goggins by name, keep the drive but drop profanity and harshness
+  - in distress: warmth, a trusted adult, and 988
+- **Distress in a conversation:** when a teen's message reads as distress (the server's keyword check), the response carries `support: true`. The conversation shows the Run A support card at once, with a trusted-adult line.
+- **Distress in the journal:** the same check runs on the device when a teen saves an entry. Nothing is sent or logged.
+- **Agora:** restrictive RLS policies on `agora_essays` and `agora_comments` stop teens reading or writing. The Agora screens on mobile and web say so instead of showing an empty room.
+- **Marketing email:** the lifecycle email agent and the admin Email send route skip teen, under-13 and locked accounts.
+- **Paywall and upgrades:**
+  - The paywall screen, the gate every upsell routes through on mobile, shows teens a neutral "not available on your account" screen with no plans and no mention of Premium.
+  - The web `/upgrade` page does the same.
+  - The limit cards, the insight teaser CTA and the Settings upgrade or subscription rows are hidden or reworded for teens.
+- **Unanswered accounts:** an account that has not answered yet is treated as it was before. That matters only until its next open, when the gate asks.
+
+**DB5.5 Apple Declared Age Range.** Nothing in this Expo 56 project provides it: no expo or community module for it is installed, and it needs native code. It is noted as a follow-up and not added.

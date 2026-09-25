@@ -1,3 +1,4 @@
+import { useAgeStatus } from '../hooks/useAgeStatus';
 import {
   ScrollView,
   StyleSheet,
@@ -140,6 +141,7 @@ export default function PaywallScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ src?: string; counselor?: string }>();
+  const { isTeen } = useAgeStatus();
   // A daily limit mid-conversation (activation 7.1): speak to that exact
   // conversation, name the counselor, and say it is kept where it stopped.
   const limitCopy = LIMIT_SOURCES.has(String(params.src ?? ''))
@@ -188,6 +190,20 @@ export default function PaywallScreen() {
       if (tierNow !== 'free' && router.canGoBack()) router.back();
     }
   };
+
+  // Run B, Part B5: teens never see a paywall or upgrade prompt. Any gate
+  // that routes here gets a neutral screen with no plans and no Premium.
+  if (isTeen) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top + 48, paddingHorizontal: 28 }]}>
+        <Text style={styles.title}>Not available on your account</Text>
+        <Text style={[styles.subtitle, { marginTop: 12 }]}>This part of Arete isn&apos;t part of your account. Everything in your Cabinet is here for you.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 28 }}>
+          <Text style={{ color: '#c9a84c', fontSize: 16, fontWeight: '600' }}>Go back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

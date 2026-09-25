@@ -1,3 +1,4 @@
+import { useAgeStatus } from '../hooks/useAgeStatus';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 // Reinstated post-crash-resolution: the launch SIGABRT was never
@@ -117,6 +118,7 @@ export default function SettingsScreen() {
   // A dot on the Know Thyself entry while the Cabinet has learned something
   // not yet looked at (activation plan, Part 3f). No push for this.
   const [ktDot, setKtDot] = useState(false);
+  const { isTeen } = useAgeStatus();
   useFocusEffect(useCallback(() => {
     hasUnseenInferredFacts().then(setKtDot).catch(() => {});
   }, []));
@@ -838,6 +840,8 @@ export default function SettingsScreen() {
       {/* Subscription — purchase and management both live on the web (no IAP
           in this app), so paid users manage/cancel through the Stripe
           Customer Portal reached from the web upgrade page. */}
+      {/* Run B, Part B5: no upgrade row for teens. */}
+      {!isTeen && (
       <TouchableOpacity
         onPress={() => {
           if (tier === 'free') {
@@ -854,6 +858,7 @@ export default function SettingsScreen() {
           {tier === 'free' ? 'Upgrade to Premium' : 'Manage Subscription'}
         </Text>
       </TouchableOpacity>
+      )}
 
       {/* Privacy Policy */}
       <TouchableOpacity

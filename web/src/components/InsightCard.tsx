@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '@/lib/claudeService';
 import { upgradeHref } from '@/lib/paywall';
+import { useAgeStatus } from '@/lib/useAgeStatus';
 
 interface Insight {
   id: string;
@@ -24,6 +25,7 @@ const DISMISS_KEY = 'arete_insight_dismissed_week';
 
 export default function InsightCard() {
   const [insight, setInsight] = useState<Insight | null>(null);
+  const { isTeen } = useAgeStatus();
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +72,7 @@ export default function InsightCard() {
       <p className="text-[14px] leading-relaxed whitespace-pre-line" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}>
         {insight.insight_text}
       </p>
-      {insight.teaser && (
+      {insight.teaser && !isTeen && (
         <Link href={upgradeHref('insight_tease')} className="inline-block mt-3 text-[13px] font-semibold hover:underline" style={{ color: '#c9a84c' }}>
           Your counselors noticed a pattern this week. Unlock the full insight →
         </Link>

@@ -885,6 +885,7 @@ export function setNextStarterId(id: string | null): void {
   nextStarterId = id;
 }
 function noteCabinetOffer(data: any): void {
+  lastSupportFlag = data?.support === true;
   const o = data?.offer;
   lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? (o as CabinetOffer) : null;
 }
@@ -903,6 +904,14 @@ export async function respondToCabinetOffer(
   } catch {
     return { ok: false };
   }
+}
+// Run B, Part B5: the server sets support: true when a teen's message reads
+// as distress; the conversation shows the support card at once.
+let lastSupportFlag = false;
+export function takeSupportFlag(): boolean {
+  const v = lastSupportFlag;
+  lastSupportFlag = false;
+  return v;
 }
 export function takeCabinetOffer(): CabinetOffer | null {
   const o = lastCabinetOffer;

@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getUserSettings, getUserCabinet, getOrCreateCabinetConversationId, getTodayCheckin } from '@/lib/db';
 import { supabase } from '@/lib/supabase';
-import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { sendMessageToCabinet, sendMessageToCounselor, CabinetUnavailableError, DailyLimitReachedError, API_BASE_URL, takeCabinetOffer, takeSupportFlag, setNextStarterId, type CabinetReply, type CabinetOffer } from '@/lib/claudeService';
+import { ImmediateSupportCard } from '@/components/SupportCard';
 import { pickStarters, type Starter } from '@/lib/starters';
 import { logEvent } from '@/lib/events';
 import OfferCard from '@/components/OfferCard';
@@ -45,6 +46,8 @@ export default function CabinetPage() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
   // Run B, Part B3: starters for the empty Cabinet.
   const [starters, setStarters] = useState<Starter[]>(() => pickStarters({}));
   // A send that failed: shown above the composer, never in the thread.
@@ -327,6 +330,7 @@ export default function CabinetPage() {
       const finalMessages = [...newMessages, ...assistantMsgs];
       setCabinetMessages(finalMessages);
       setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       await saveThread({ id: 'cabinet', messages: finalMessages, lastUpdated: Date.now() });
       refreshRemaining();
     } catch (e) {
@@ -507,6 +511,7 @@ export default function CabinetPage() {
     try {
       const response = await sendMessageToCounselor(selectedCounselor, newMessages);
       setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
       const finalMessages = [...newMessages, assistantMsg];
       setCounselorMessages(finalMessages);
@@ -834,6 +839,8 @@ export default function CabinetPage() {
               </div>
               </Fragment>
             ))}
+
+            {showSupport && <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />}
 
             {pendingOffer && !isLoading && (
               <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
@@ -1347,6 +1354,8 @@ export default function CabinetPage() {
                   </div>
                   </Fragment>
                 ))}
+
+                {showSupport && <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />}
 
                 {pendingOffer && !counselorLoading && (
                   <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />

@@ -115,7 +115,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: `At most ${MAX_PER_REQUEST} recipients per request` }, { status: 400 })
     }
     const [{ data: profiles, error: pErr }, { data: settings }] = await Promise.all([
-      admin.from('profiles').select('id, email, email_opt_out').in('id', ids),
+      admin.from('profiles').select('id, email, email_opt_out, age_band, locked_at').in('id', ids),
       admin.from('user_settings').select('user_id, user_name').in('user_id', ids),
     ])
     if (pErr) return NextResponse.json({ error: pErr.message }, { status: 500 })
@@ -131,6 +131,9 @@ export async function POST(req: Request) {
       // The "do not email" flag is enforced here, not just in the tab, so a
       // stale selection or a hand-built request can never reach them.
       if (p.email_opt_out) { skipped.push(email); continue }
+      // Run B, Part B5: never email teens (13-17), under-13 or locked
+      // accounts, whatever the selection says.
+      if (['under_13', '13_15', '16_17'].includes(p.age_band ?? '') || p.locked_at) { skipped.push(email); continue }
       seen.add(email)
       targets.push({ id: p.id, email, name: names.get(p.id) ?? null })
     }

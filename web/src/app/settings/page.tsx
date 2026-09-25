@@ -1,5 +1,6 @@
 'use client';
 
+import { useAgeStatus } from '@/lib/useAgeStatus';
 import PronounSetting from '@/components/PronounSetting';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,6 +11,8 @@ import PageHeader from '@/components/PageHeader';
 import { upgradeHref } from '@/lib/paywall';
 
 export default function SettingsPage() {
+  // Run B, Part B5: no upgrade or subscription prompts for teens.
+  const { isTeen } = useAgeStatus();
   const router = useRouter();
   const [simulatingFree, setSimulatingFree] = useState(false);
   const [signOutLoading, setSignOutLoading] = useState(false);
@@ -138,6 +141,7 @@ export default function SettingsPage() {
 
         {/* Subscription — /upgrade shows plans to free users and the Stripe
             Customer Portal entry (manage/cancel) to paid users */}
+        {!isTeen && (
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">
           <p className="text-arete-text font-semibold mb-3">Subscription</p>
           <Link
@@ -147,6 +151,7 @@ export default function SettingsPage() {
             Manage Subscription
           </Link>
         </div>
+        )}
 
         {/* Email (retention plan R9) */}
         <div className="bg-arete-surface rounded-lg border border-arete-border p-5">

@@ -48,16 +48,29 @@ export default function SupportCard() {
     setCardKey(null);
   };
 
+  return <SupportCardBody onDismiss={dismiss} />;
+}
+
+// Run B, Part B5: the same card, shown at once inside a conversation or after
+// a journal entry when a teen's words read as distress, with a line about
+// talking to a trusted adult. It never says why it appeared.
+export function ImmediateSupportCard({ onDismiss }: { onDismiss: () => void }) {
+  return <SupportCardBody onDismiss={onDismiss} trustedAdult />;
+}
+
+function SupportCardBody({ onDismiss, trustedAdult = false }: { onDismiss: () => void; trustedAdult?: boolean }) {
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{"If things feel heavy right now, you don't have to carry it alone."}</Text>
-        <TouchableOpacity onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Dismiss">
+        <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityLabel="Dismiss">
           <Ionicons name="close" size={16} color="#888" />
         </TouchableOpacity>
       </View>
       <Text style={styles.body}>
-        Talking with someone can help. In the US you can call or text 988 any time.
+        {trustedAdult
+          ? 'Talking to a trusted adult, like a parent, a teacher, or a school counselor, can really help. In the US you can also call or text 988 any time.'
+          : 'Talking with someone can help. In the US you can call or text 988 any time.'}
       </Text>
       <View style={styles.row}>
         <TouchableOpacity style={styles.button} onPress={() => Linking.openURL('tel:988')}>

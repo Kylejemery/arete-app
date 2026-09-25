@@ -775,10 +775,13 @@ async function resolveUserTier(req) {
 
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('tier, is_premium')
+    .select('tier, is_premium, age_band, locked_at')
     .eq('id', userId)
     .single();
   if (error || !profile) return { userId, tier: 'free' };
+  // Run B, Part B5: age band for teen mode, and the under-13 lock.
+  req.areteAgeBand = profile.age_band || null;
+  req.areteLocked = !!profile.locked_at;
   return { userId, tier: normalizeTier(profile.tier, profile.is_premium) };
 }
 
@@ -873,6 +876,11 @@ async function enforceMessageLimit(req, res) {
   // Stash for the model ladder — one lookup per request.
   req.areteTier = tier;
   if (!userId) return false; // anonymous flows: nothing to count against
+  // Run B, Part B5: a locked account (under 13) gets no Cabinet.
+  if (req.areteLocked) {
+    res.status(403).json({ error: 'account_locked' });
+    return true;
+  }
 
   const limit = Object.prototype.hasOwnProperty.call(MESSAGE_LIMITS, tier) ? MESSAGE_LIMITS[tier] : MESSAGE_LIMITS.free;
 
@@ -1039,6 +1047,9 @@ const { currentSession: ktCurrentSession, countUserTurns: ktCountUserTurns, isUs
 const profileFacts = require('./lib/profile-facts');
 const profileExtraction = require('./lib/profile-extraction');
 
+// Run B, Part B5: appended to every counselor prompt for a 13-17 year old.
+const TEEN_ADDENDUM = `\n\n[THIS PERSON IS A TEENAGER (13-17)]\nSpeak in an age-appropriate way. No romantic or sexual advice beyond healthy, general guidance about relationships (respect, boundaries, honesty). Never encourage or normalise alcohol, vaping, or drug use. If you are one of the tough-love voices, especially David Goggins, keep the drive and the challenge but drop profanity and harshness: firm, never demeaning. If they express distress, respond with warmth, encourage them to talk to a trusted adult (a parent, a teacher, a school counselor), and mention that in the US they can call or text 988 at any time.\n[END TEENAGER]`;
+
 const THREAD_ID_ALIASES = { 'marcus-aurelius': 'marcus', 'david-goggins': 'goggins', 'theodore-roosevelt': 'roosevelt', 'future-self': 'futureSelf' };
 
 async function loadCabinetThread(userId, activeCounselorId) {
@@ -1066,7 +1077,7 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
         .gte('created_at', new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false })
         .then(r => r.data || [], () => []),
-      supabase.from('profiles').select('created_at').eq('id', userId).maybeSingle().then(r => r.data, () => null),
+      supabase.from('profiles').select('created_at, age_band').eq('id', userId).maybeSingle().then(r => r.data, () => null),
       supabase.from('cabinet_offers').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', 'task')
         .then(r => r.count || 0, () => 1),
     ]);
@@ -1084,8 +1095,11 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
     const pronounLine = pronounSetting === 'he/him' || pronounSetting === 'she/her' || pronounSetting === 'they/them'
       ? `\n\n[PRONOUNS] When you refer to this person in the third person, use ${pronounSetting}.`
       : '\n\n[PRONOUNS] Do not assume this person\'s gender; if you refer to them in the third person, use they/them.';
-    const factsBlock = profileFacts.buildFactsBlock(merged, { name }) + pronounLine;
-    const tentativeBlock = profileFacts.buildFactsBlock({ known: [], tentative: merged.tentative, offLimits: merged.offLimits }, { name }) + pronounLine;
+    // Run B, Part B5: teen mode for the 13-15 and 16-17 bands.
+    const isTeen = !!accountRow && (accountRow.age_band === '13_15' || accountRow.age_band === '16_17');
+    const teenLine = isTeen ? TEEN_ADDENDUM : '';
+    const factsBlock = profileFacts.buildFactsBlock(merged, { name }) + pronounLine + teenLine;
+    const tentativeBlock = profileFacts.buildFactsBlock({ known: [], tentative: merged.tentative, offLimits: merged.offLimits }, { name }) + pronounLine + teenLine;
 
     // An ask from earlier in this conversation still awaiting its answer?
     const sessionStart = session.start != null ? session.start : now;
@@ -1136,6 +1150,10 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
       askBlock,
       speakerCounts,
       accountCreatedAt: accountRow ? accountRow.created_at : null,
+      isTeen,
+      // A teen whose words right now read as distress sees the support card
+      // in the conversation straight away (run B, Part B5).
+      teenSupport: isTeen && profileFacts.looksDistressed([userMessage]),
       goalText: (merged.known.concat(merged.tentative).find(e => e.field.key === 'top_goal') || {}).value || null,
       offers: {
         taskOfferedEver: taskOffers > 0,
@@ -1869,6 +1887,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       mode: 'parallel',
       request_id: requestId,
       ...(offer ? { offer } : {}),
+      ...(personal.teenSupport ? { support: true } : {}),
     });
   }
 
@@ -2030,7 +2049,7 @@ app.post('/api/chat/counselor', async (req, res) => {
           goalCounselorId: singleCounselorId,
           replies: text ? [singleCounselorId] : [],
         });
-        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}) });
+        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(personal.teenSupport ? { support: true } : {}) });
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
         return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
@@ -2094,6 +2113,7 @@ app.post('/api/chat/counselor', async (req, res) => {
       replies: assistantText ? [singleCounselorId] : [],
     });
     if (singleOffer) data.offer = singleOffer;
+    if (personal.teenSupport) data.support = true;
     if (assistantText && loggedChunks.length > 0) {
       attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
     }

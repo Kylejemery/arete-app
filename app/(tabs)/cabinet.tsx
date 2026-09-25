@@ -1,3 +1,4 @@
+import { useAgeStatus } from '../../hooks/useAgeStatus';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CABINET_THREAD_UPDATED } from '@/lib/counselorLines';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +22,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import ShareQuoteModal from '../../components/ShareQuoteModal';
-import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
+import { sendMessageToCabinet, CabinetReply, MessageLimitError, DailyLimitError, CabinetUnavailableError, API_BASE_URL, takeCabinetOffer, takeSupportFlag, setNextStarterId, type CabinetOffer } from '../../services/claudeService';
+import { ImmediateSupportCard } from '../../components/SupportCard';
 import { pickStarters, type Starter } from '@/lib/starters';
 import { logEvent } from '@/lib/events';
 import OfferCard from '../../components/OfferCard';
@@ -102,6 +104,8 @@ export default function CabinetScreen() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -148,6 +152,7 @@ export default function CabinetScreen() {
   const lastSpeaker = [...messages].reverse().find(m => m.role === 'assistant' && m.counselorName)?.counselorName ?? null;
   // An upgrade (tier no longer free) lifts the limit card without a reload.
   const limitActive = dailyLimitReached && tier === 'free';
+  const { isTeen } = useAgeStatus();
   useEffect(() => {
     takeLimitDraft('cabinet').then(draft => {
       if (draft) setInputText(prev => (prev.trim() ? prev : draft));
@@ -556,6 +561,7 @@ export default function CabinetScreen() {
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
       setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       const newCount = count + 1;
       await AsyncStorage.setItem(dateKey, String(newCount));
       setMessageCount(newCount);
@@ -1010,6 +1016,12 @@ export default function CabinetScreen() {
               </>
             )}
 
+            {showSupport && (
+              <View style={{ paddingHorizontal: 16 }}>
+                <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />
+              </View>
+            )}
+
             {pendingOffer && !isLoading && (
               <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
             )}
@@ -1030,6 +1042,17 @@ export default function CabinetScreen() {
           {/* Input Bar */}
           {limitActive ? (
             <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: '#2a2a3e', backgroundColor: '#13131f' }}>
+              {isTeen ? (
+                <>
+                  <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
+                    {"That's today's messages."}
+                  </Text>
+                  <Text style={{ color: '#888', textAlign: 'center', fontSize: 13 }}>
+                    {"Your conversation is saved, your unsent message too. Pick it up tomorrow."}
+                  </Text>
+                </>
+              ) : (
+              <>
               <Text style={{ color: '#e0d5b5', fontWeight: '600', textAlign: 'center', marginBottom: 4 }}>
                 {lastSpeaker ? `Keep talking with ${lastSpeaker}.` : 'Keep talking with your Cabinet.'}
               </Text>
@@ -1043,6 +1066,8 @@ export default function CabinetScreen() {
               >
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 15 }}>Continue this conversation →</Text>
               </TouchableOpacity>
+              </>
+              )}
               <Text style={{ color: '#555', textAlign: 'center', marginTop: 8, fontSize: 12 }}>Resets at midnight</Text>
             </View>
           ) : (

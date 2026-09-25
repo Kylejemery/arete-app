@@ -1,5 +1,6 @@
 'use client';
 
+import { useAgeStatus } from '@/lib/useAgeStatus';
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { logEvent } from '@/lib/events';
@@ -22,10 +23,25 @@ export default function DailyLimitCard({ source, limit = 10, counselorName = nul
   // One gate_hit and one paywall_viewed per time the card appears. The server
   // logs its own gate_hit for the refused request (origin: 'server'); this one
   // records that the user actually saw the explanation.
+  const { isTeen } = useAgeStatus();
   useEffect(() => {
     logEvent('gate_hit', { source, reason: 'daily_limit_reached', blocked: true, origin: 'client' });
-    logEvent('paywall_viewed', { source, surface: 'limit_card', tier_at_view: 'free' });
-  }, [source]);
+    if (!isTeen) logEvent('paywall_viewed', { source, surface: 'limit_card', tier_at_view: 'free' });
+  }, [source, isTeen]);
+
+  // Run B, Part B5: no upgrade prompt for teens, just the limit.
+  if (isTeen) {
+    return (
+      <div className="mx-4 mb-2 px-5 py-4 flex-shrink-0 text-center" role="status" style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 16 }}>
+        <p className="text-[16px] leading-snug mb-1" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}>
+          That&apos;s today&apos;s messages.
+        </p>
+        <p className="text-[13px] leading-relaxed" style={{ color: '#9aa0a6' }}>
+          Your conversation is saved, your unsent message too. Pick it up tomorrow.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div

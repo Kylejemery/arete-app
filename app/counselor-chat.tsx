@@ -16,7 +16,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { sendMessageToCounselor, MessageLimitError, DailyLimitError, CabinetUnavailableError, takeCabinetOffer, type CabinetOffer } from '../services/claudeService';
+import { sendMessageToCounselor, MessageLimitError, DailyLimitError, CabinetUnavailableError, takeCabinetOffer, takeSupportFlag, type CabinetOffer } from '../services/claudeService';
+import { ImmediateSupportCard } from '../components/SupportCard';
 import { saveLimitDraft, takeLimitDraft } from '@/lib/limitDraft';
 import OfferCard from '../components/OfferCard';
 import { ThreadMessage, appendMessages, clearThread, loadThread, normalizeCounselorId } from '../services/threadService';
@@ -56,6 +57,8 @@ export default function CounselorChatScreen() {
   const [isLoading, setIsLoading] = useState(false);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
+  // Run B, Part B5: support card shown at once for a teen in distress.
+  const [showSupport, setShowSupport] = useState(false);
   const [counselorName, setCounselorName] = useState(nameParam || metaEntry?.name || counselorId);
   const [counselorRole, setCounselorRole] = useState<string | undefined>(roleParam || metaEntry?.role);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -158,6 +161,7 @@ export default function CounselorChatScreen() {
     try {
       const reply = await sendMessageToCounselor(counselorId, updatedMessages);
       setPendingOffer(takeCabinetOffer());
+      if (takeSupportFlag()) setShowSupport(true);
       const assistantMessage: ThreadMessage = {
         role: 'assistant',
         content: reply,
@@ -321,6 +325,12 @@ export default function CounselorChatScreen() {
                 )}
               </View>
             ))
+          )}
+
+          {showSupport && (
+            <View style={{ paddingHorizontal: 16 }}>
+              <ImmediateSupportCard onDismiss={() => setShowSupport(false)} />
+            </View>
           )}
 
           {pendingOffer && !isLoading && (
