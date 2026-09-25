@@ -145,3 +145,30 @@ This file records the judgement calls made while carrying out Run C without stop
 **DC5.3 What the tests do not cover.**
 - **Not unit tested:** the accept, undo and ship endpoints in `server/index.js`, which need the database. Their rules are unit tested through the pure modules they call (`proposals`, `practices`, `feature-requests`, `feature-shipping`).
 - **SQL:** the clustering SQL was exercised with a rolled-back dry run.
+
+## C6
+
+**DC6.1 Where the limit lives.**
+- **Primary:** `agent_config` row `personalization`, key `free_active_module_limit` (seeded to 1). It is read by the server with a five-minute cache, so changing the row changes the limit without a deploy.
+- **Fallback:** `server/config/personalization.json` (`FREE_ACTIVE_MODULE_LIMIT: 1`), used if the row is missing or malformed.
+- **Guard:** a test checks that no literal limit appears in the server code.
+
+**DC6.2 What free gets.** Free gets the registry defaults plus the one free-text field. Proposals always apply defaults plus the note, and a free edit changes only the free-text field while keeping anything else already stored (DC1.6).
+
+**DC6.3 The choice card.**
+- **When it appears:** a free yes at the limit returns `409 module_limit` with the practices that count, and the card changes in place.
+- **Swap:** "Swap out <practice>" re-sends the yes with `swapOut`. The server turns only that practice off, with its settings kept, and records it in `prior_state`, so Undo brings both back exactly.
+- **See Premium:** opens the paywall with source `module_limit`, which is added to both source unions, with its own copy on mobile.
+- **Not now:** declines.
+- **Teens:** they get Swap and Not now only. The server sends `canUpgrade: false`, and the card never mentions Premium.
+- **Nothing is claimed** until the practice fits.
+
+**DC6.4 Grandfathering.**
+- **What it is:** `user_app_config.grandfathered` marks practices on before the limit existed. They stay on and do not count toward the limit.
+- **At launch:** the migration grandfathered every row present when it ran. There were none, since Run C shipped the table and the limit the same day, so today it grandfathers nothing and the column exists for any future tightening.
+- **Downgrades:** a paid account that drops to free keeps every practice it has, because nothing is ever turned off by the limit. It just needs a swap to add another, and a swap is refused if it could not bring the count under the limit.
+- **Alternative:** turn extra practices off on downgrade. That breaks the additive rule.
+
+**DC6.5 Events.**
+- **Server:** `module_limit_shown` (module key, source, limit) and `module_limit_swap` (module key, swapped-out key).
+- **Client:** `module_limit_upgrade_click` (module key), added to the closed event unions on mobile and web.

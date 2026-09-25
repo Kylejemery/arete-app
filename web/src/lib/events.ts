@@ -26,7 +26,8 @@ export type ProductEvent =
   | 'kt_abandoned'
   | 'home_yesterday_card_viewed'
   | 'home_yesterday_card_tapped'
-  | 'checkin_continue_tapped';
+  | 'checkin_continue_tapped'
+  | 'module_limit_upgrade_click';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 

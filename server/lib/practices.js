@@ -29,7 +29,7 @@ function mergeSettings(key, existing, input, { tier = 'free' } = {}) {
 async function loadRow(supabase, userId, key) {
   const { data, error } = await supabase
     .from('user_app_config')
-    .select('id, user_id, module_key, enabled, pinned, settings, enabled_by, proposal_id, created_at, updated_at')
+    .select('id, user_id, module_key, enabled, pinned, settings, enabled_by, proposal_id, grandfathered, created_at, updated_at')
     .eq('user_id', userId)
     .eq('module_key', key)
     .maybeSingle();
@@ -40,13 +40,40 @@ async function loadRow(supabase, userId, key) {
 async function loadRows(supabase, userId) {
   const { data, error } = await supabase
     .from('user_app_config')
-    .select('id, user_id, module_key, enabled, pinned, settings, enabled_by, proposal_id, created_at, updated_at')
+    .select('id, user_id, module_key, enabled, pinned, settings, enabled_by, proposal_id, grandfathered, created_at, updated_at')
     .eq('user_id', userId);
   if (error) throw new Error('practice lookup failed');
   return data || [];
 }
 
+// ── Part C6: the free-tier limit on active practices ────────────────────────
+// The limit is configuration: agent_config 'personalization'
+// .free_active_module_limit, falling back to server/config/personalization.json.
+const DEFAULTS = require('../config/personalization.json');
+
+function limitFromConfig(config) {
+  const v = config && config.free_active_module_limit;
+  return Number.isInteger(v) && v >= 0 ? v : DEFAULTS.FREE_ACTIVE_MODULE_LIMIT;
+}
+
+// Whether turning moduleKey on is within the limit. Paid tiers have none.
+// Grandfathered practices (on before the limit existed) never count. A swap
+// names a counted practice to turn off in the same step; it is allowed only
+// when it brings the count under the limit. Nothing already on is ever
+// turned off except the one the person chose to swap.
+function moduleLimitCheck({ tier, rows = [], moduleKey, limit, swapOut = null }) {
+  if (isPaidTier(tier)) return { ok: true, swap: null };
+  const counted = rows.filter(r => r.enabled && !r.grandfathered && r.module_key !== moduleKey);
+  if (counted.length < limit) return { ok: true, swap: null };
+  if (swapOut && counted.some(r => r.module_key === swapOut) && counted.length - 1 < limit) {
+    return { ok: true, swap: swapOut };
+  }
+  return { ok: false, active: counted.map(r => r.module_key) };
+}
+
 module.exports = {
+  limitFromConfig,
+  moduleLimitCheck,
   TEEN_BANDS,
   isPaidTier,
   mergeSettings,

@@ -349,3 +349,79 @@ for (const rel of ['lib/modules.ts', 'web/src/lib/modules.ts']) {
     assert.deepEqual(r.value, [0, 0, ['focus_timer', 'habit_tracker']]);
   });
 }
+
+// ── C6: the free-tier practice limit ────────────────────────────────────────
+
+test('the limit is configuration: agent_config first, then the config file, never a literal in code', () => {
+  const file = JSON.parse(fs.readFileSync(path.join(ROOT, 'server/config/personalization.json'), 'utf8'));
+  assert.equal(file.FREE_ACTIVE_MODULE_LIMIT, 1);
+  assert.equal(practices.limitFromConfig({ free_active_module_limit: 3 }), 3);
+  assert.equal(practices.limitFromConfig({ free_active_module_limit: 0 }), 0);
+  assert.equal(practices.limitFromConfig({ free_active_module_limit: 'two' }), file.FREE_ACTIVE_MODULE_LIMIT);
+  assert.equal(practices.limitFromConfig(null), file.FREE_ACTIVE_MODULE_LIMIT);
+  for (const rel of ['server/index.js', 'server/lib/practices.js']) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.ok(!/FREE_ACTIVE_MODULE_LIMIT\s*=\s*\d/.test(src), rel);
+    assert.ok(!/limit\s*[:=]\s*1\b/.test(src.slice(src.indexOf('moduleLimitCheck'))), `${rel}: a literal limit`);
+  }
+  const sql = fs.readFileSync(path.join(ROOT, 'supabase/migrations/20260925193443_free_module_limit.sql'), 'utf8');
+  assert.match(sql, /'personalization', '\{"free_active_module_limit": 1\}'/);
+});
+
+test('free at the limit must swap or upgrade; paid has no limit', () => {
+  const rows = [{ module_key: 'focus_timer', enabled: true }];
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'free', rows, moduleKey: 'habit_tracker', limit: 1 }), { ok: false, active: ['focus_timer'] });
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'free', rows, moduleKey: 'habit_tracker', limit: 1, swapOut: 'focus_timer' }), { ok: true, swap: 'focus_timer' });
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'free', rows, moduleKey: 'habit_tracker', limit: 1, swapOut: 'evening_review' }).ok, false);
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'premium', rows, moduleKey: 'habit_tracker', limit: 1 }), { ok: true, swap: null });
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'pro', rows, moduleKey: 'habit_tracker', limit: 0 }), { ok: true, swap: null });
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'free', rows: [], moduleKey: 'habit_tracker', limit: 1 }), { ok: true, swap: null });
+});
+
+test('grandfathered and turned-off practices do not count; nothing on is turned off except a chosen swap', () => {
+  const rows = [
+    { module_key: 'focus_timer', enabled: true, grandfathered: true },
+    { module_key: 'evening_review', enabled: false },
+  ];
+  assert.deepEqual(practices.moduleLimitCheck({ tier: 'free', rows, moduleKey: 'habit_tracker', limit: 1 }), { ok: true, swap: null });
+  // A grandfathered practice cannot be the one swapped out: it was never counted.
+  const two = [{ module_key: 'focus_timer', enabled: true, grandfathered: true }, { module_key: 'premeditatio', enabled: true }];
+  assert.equal(practices.moduleLimitCheck({ tier: 'free', rows: two, moduleKey: 'habit_tracker', limit: 1, swapOut: 'focus_timer' }).ok, false);
+  // A downgraded account over the limit keeps everything; one swap cannot
+  // bring three under one, so it is refused rather than turning off more.
+  const three = ['focus_timer', 'evening_review', 'premeditatio'].map(k => ({ module_key: k, enabled: true }));
+  assert.equal(practices.moduleLimitCheck({ tier: 'free', rows: three, moduleKey: 'habit_tracker', limit: 1, swapOut: 'focus_timer' }).ok, false);
+});
+
+test('teens get Swap only: the server withholds Premium, and the card only offers it when allowed', () => {
+  const server = fs.readFileSync(path.join(ROOT, 'server/index.js'), 'utf8');
+  assert.match(server, /error: 'module_limit',[\s\S]{0,200}canUpgrade: !subject\.isTeen/);
+  for (const rel of ['components/ProposalCard.tsx', 'web/src/components/ProposalCard.tsx']) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(src, /\{limitInfo\.canUpgrade && \(/, rel);
+    assert.match(src, /Swap out \{a\.label\}/, rel);
+    assert.match(src, /logEvent\('module_limit_upgrade_click'/, rel);
+    assert.match(src, /'module_limit'\)/, rel);
+  }
+});
+
+test('module_limit is a paywall source on both clients; the three events are wired', () => {
+  for (const rel of ['lib/paywall.ts', 'web/src/lib/paywall.ts']) {
+    assert.match(fs.readFileSync(path.join(ROOT, rel), 'utf8'), /'module_limit',/, rel);
+  }
+  for (const rel of ['lib/events.ts', 'web/src/lib/events.ts']) {
+    assert.match(fs.readFileSync(path.join(ROOT, rel), 'utf8'), /'module_limit_upgrade_click'/, rel);
+  }
+  const server = fs.readFileSync(path.join(ROOT, 'server/index.js'), 'utf8');
+  assert.match(server, /'module_limit_shown'/);
+  assert.match(server, /'module_limit_swap'/);
+});
+
+test('undo after a swap restores both practices exactly', () => {
+  const plan = proposals.undoPlan([
+    { module_key: 'habit_tracker', row: null },
+    { module_key: 'focus_timer', row: { enabled: true, pinned: true, settings: { minutes: 25, intention: '' }, enabled_by: 'cabinet', proposal_id: 'p0', grandfathered: false, updated_at: '2026-09-20T00:00:00Z' } },
+  ]);
+  assert.equal(plan[0].action, 'delete');
+  assert.deepEqual(plan[1].values, { enabled: true, pinned: true, settings: { minutes: 25, intention: '' }, enabled_by: 'cabinet', proposal_id: 'p0', updated_at: '2026-09-20T00:00:00Z', grandfathered: false });
+});

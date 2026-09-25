@@ -96,6 +96,7 @@ function undoPlan(priorState) {
           enabled_by: entry.row.enabled_by,
           proposal_id: entry.row.proposal_id ?? null,
           updated_at: entry.row.updated_at,
+          ...(entry.row.grandfathered !== undefined ? { grandfathered: entry.row.grandfathered } : {}),
         } }
       : { action: 'delete', module_key: entry && entry.module_key }
   )).filter(p => p.module_key);

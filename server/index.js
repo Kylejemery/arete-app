@@ -3737,6 +3737,18 @@ app.post('/api/cabinet/offers/:id/respond', async (req, res) => {
 const moduleRegistry = require('./lib/module-registry');
 const practices = require('./lib/practices');
 
+// Part C6: the free-tier practice limit, from agent_config (row
+// 'personalization'), cached for five minutes, else the default in
+// server/config/personalization.json.
+let freeModuleLimitCache = { value: null, at: 0 };
+async function loadFreeModuleLimit() {
+  if (freeModuleLimitCache.value != null && Date.now() - freeModuleLimitCache.at < 5 * 60 * 1000) return freeModuleLimitCache.value;
+  const { data } = await supabase.from('agent_config').select('config').eq('agent_name', 'personalization').maybeSingle();
+  const value = practices.limitFromConfig(data && data.config);
+  freeModuleLimitCache = { value, at: Date.now() };
+  return value;
+}
+
 // Tier and age band for a verified user, read fresh on every write so a
 // proposal accepted after a downgrade or a birthday is judged on today.
 async function loadPracticeSubject(userId) {
@@ -4058,6 +4070,24 @@ async function acceptProposal({ userId, proposal, swapOut = null, platform }) {
   }
   const existing = rows.find(r => r.module_key === mod.key) || null;
 
+  // Part C6: the free-tier limit. At the limit, the card offers a swap, or
+  // Premium (never to teens). Nothing is claimed until it fits.
+  let swapRow = null;
+  if (!(existing && existing.enabled)) {
+    const limit = await loadFreeModuleLimit();
+    const check = practices.moduleLimitCheck({ tier: subject.tier, rows, moduleKey: mod.key, limit, swapOut });
+    if (!check.ok) {
+      eventLog.logEvent(userId, 'module_limit_shown', { module_key: mod.key, source: proposal.source, limit }, { platform });
+      return { status: 409, body: {
+        error: 'module_limit',
+        limit,
+        active: check.active.map(k => ({ key: k, label: moduleRegistry.getModule(k)?.label || k })),
+        canUpgrade: !subject.isTeen,
+      } };
+    }
+    swapRow = check.swap ? rows.find(r => r.module_key === check.swap) : null;
+  }
+
   // Claim the proposal so a double tap applies it once.
   const nowIso = new Date().toISOString();
   const { data: claimed } = await supabase.from('adjustment_proposals')
@@ -4067,7 +4097,7 @@ async function acceptProposal({ userId, proposal, swapOut = null, platform }) {
   const unclaim = () => supabase.from('adjustment_proposals')
     .update({ status: 'offered', responded_at: null, prior_state: null }).eq('id', proposal.id);
 
-  const priorState = [{ module_key: mod.key, row: existing }];
+  const priorState = [{ module_key: mod.key, row: existing }, ...(swapRow ? [{ module_key: swapRow.module_key, row: swapRow }] : [])];
   const { error: priorError } = await supabase.from('adjustment_proposals').update({ prior_state: priorState }).eq('id', proposal.id);
   if (priorError) { await unclaim(); return { status: 500, body: { error: 'save_failed' } }; }
 
@@ -4084,6 +4114,11 @@ async function acceptProposal({ userId, proposal, swapOut = null, platform }) {
     ? await supabase.from('user_app_config').update(values).eq('id', existing.id)
     : await supabase.from('user_app_config').insert({ user_id: userId, module_key: mod.key, ...values });
   if (write.error) { await unclaim(); return { status: 500, body: { error: 'save_failed' } }; }
+  if (swapRow) {
+    // The practice the person chose to swap out goes off, settings kept.
+    await supabase.from('user_app_config').update({ enabled: false, pinned: false, updated_at: nowIso }).eq('id', swapRow.id);
+    eventLog.logEvent(userId, 'module_limit_swap', { module_key: mod.key, swapped_out: swapRow.module_key }, { platform });
+  }
 
   eventLog.logEvent(userId, 'adjustment_accepted', { module_key: mod.key, tier: mod.tier, source: proposal.source }, { platform });
   return { status: 200, body: { ok: true, status: 'accepted', moduleKey: mod.key } };
