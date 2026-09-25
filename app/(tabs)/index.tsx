@@ -9,6 +9,7 @@ import DispatchNudge from '../../components/DispatchNudge';
 import YesterdayCard from '../../components/YesterdayCard';
 import { fetchFollowup, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 import WhatsNewModal from '../../components/WhatsNewModal';
+import YourPractices from '../../components/YourPractices';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, upsertUserSettings } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
@@ -354,6 +355,9 @@ export default function HomeScreen() {
           </TouchableOpacity>
         );
       })()}
+
+      {/* Your practices (run C): below everything else; nothing when none are on. */}
+      <YourPractices />
 
     </ScrollView>
   );

@@ -3553,6 +3553,66 @@ app.post('/api/cabinet/offers/:id/respond', async (req, res) => {
   })();
 });
 
+// ---------------------------------------------------------------------------
+// Your practices (personalization run C)
+// ---------------------------------------------------------------------------
+const moduleRegistry = require('./lib/module-registry');
+const practices = require('./lib/practices');
+
+// Tier and age band for a verified user, read fresh on every write so a
+// proposal accepted after a downgrade or a birthday is judged on today.
+async function loadPracticeSubject(userId) {
+  const { data } = await supabase.from('profiles').select('tier, is_premium, age_band').eq('id', userId).maybeSingle();
+  return {
+    tier: data ? normalizeTier(data.tier, data.is_premium) : 'free',
+    isTeen: !!data && practices.TEEN_BANDS.includes(data.age_band),
+  };
+}
+
+// POST /api/practices/:key/settings { settings } — edit a practice that is on.
+// Free keeps its other settings and changes only the free-text field.
+app.post('/api/practices/:key/settings', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const key = req.params.key;
+  if (!moduleRegistry.getModule(key)) return res.status(404).json({ error: 'unknown_module' });
+  try {
+    const row = await practices.loadRow(supabase, userId, key);
+    if (!row || !row.enabled) return res.status(404).json({ error: 'not_enabled' });
+    const { tier } = await loadPracticeSubject(userId);
+    const merged = practices.mergeSettings(key, row.settings, req.body?.settings, { tier });
+    if (!merged.ok) return res.status(400).json({ error: merged.error });
+    const { error } = await supabase.from('user_app_config')
+      .update({ settings: merged.settings, updated_at: new Date().toISOString() })
+      .eq('id', row.id);
+    if (error) return res.status(500).json({ error: 'save_failed' });
+    eventLog.logEvent(userId, 'practice_settings_saved', { module_key: key }, { platform: eventLog.platformFromRequest(req) });
+    return res.json({ ok: true, settings: merged.settings });
+  } catch (err) {
+    console.error('[practices] settings save failed');
+    return res.status(500).json({ error: 'save_failed' });
+  }
+});
+
+// POST /api/practices/:key/off — the person turns a practice off. The row is
+// kept (enabled and pinned false), so turning it back on restores its
+// settings.
+app.post('/api/practices/:key/off', async (req, res) => {
+  const userId = await requireVerifiedUser(req, res);
+  if (!userId) return;
+  const key = req.params.key;
+  if (!moduleRegistry.getModule(key)) return res.status(404).json({ error: 'unknown_module' });
+  const { data, error } = await supabase.from('user_app_config')
+    .update({ enabled: false, pinned: false, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('module_key', key)
+    .select('id');
+  if (error) return res.status(500).json({ error: 'save_failed' });
+  if (!data || data.length === 0) return res.status(404).json({ error: 'not_enabled' });
+  eventLog.logEvent(userId, 'practice_turned_off', { module_key: key }, { platform: eventLog.platformFromRequest(req) });
+  return res.json({ ok: true });
+});
+
 // ─── Resource feed ────────────────────────────────────────────────────────────
 
 app.post('/api/resources/fetch', async (req, res) => {
