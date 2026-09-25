@@ -23,7 +23,9 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
     setState('saving');
     const r = await respondToCabinetOffer(offer.id, offer.kind === 'goal'
       ? { accept: true, title: title.trim(), category, target_date: targetDate || null }
-      : { accept: true });
+      : offer.kind === 'task'
+        ? { accept: true, title: title.trim(), routine: offer.routine }
+        : { accept: true });
     setState(r.ok ? 'done' : 'error');
   };
 
@@ -34,7 +36,11 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
     return (
       <div className="px-4 py-3 flex items-center justify-between gap-3" style={box}>
         <p className="text-[14px]" style={{ color: '#e6eef8' }}>
-          {offer.kind === 'goal' ? 'Saved to your goals.' : 'Your scroll is being written. It will appear in Scrolls.'}
+          {offer.kind === 'goal'
+            ? 'Saved to your goals.'
+            : offer.kind === 'task'
+              ? `Added to your ${offer.routine === 'evening' ? 'evening' : 'morning'} check-in.`
+              : 'Your scroll is being written. It will appear in Scrolls.'}
         </p>
         <button onClick={onClose} className="text-[12px]" style={{ ...mono, color: '#9aa0a6' }}>Close</button>
       </div>
@@ -78,6 +84,19 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
             />
           </label>
         </>
+      ) : offer.kind === 'task' ? (
+        <>
+          <div className="text-[10px] tracking-[1.4px] uppercase" style={{ ...mono, color: '#c9a84c' }}>
+            Add to your {offer.routine === 'evening' ? 'evening' : 'morning'} check-in
+          </div>
+          <input
+            className="w-full px-3 py-2 rounded-xl text-[14px] outline-none"
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#e6eef8' }}
+            value={title}
+            maxLength={60}
+            onChange={e => setTitle(e.target.value)}
+          />
+        </>
       ) : (
         <p className="text-[15px]" style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}>
           Would you like a scroll on this?
@@ -87,11 +106,11 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
       <div className="flex items-center gap-4">
         <button
           onClick={() => answer(true)}
-          disabled={state === 'saving' || (offer.kind === 'goal' && !title.trim())}
+          disabled={state === 'saving' || (offer.kind !== 'scroll' && !title.trim())}
           className="px-4 py-2 rounded-xl text-[13px] font-semibold disabled:opacity-50"
           style={{ background: '#c9a84c', color: '#0f1724' }}
         >
-          {offer.kind === 'goal' ? 'Save goal' : 'Yes'}
+          {offer.kind === 'goal' ? 'Save goal' : offer.kind === 'task' ? 'Add it' : 'Yes'}
         </button>
         <button onClick={() => answer(false)} disabled={state === 'saving'} className="text-[13px]" style={{ color: '#9aa0a6' }}>
           Not now

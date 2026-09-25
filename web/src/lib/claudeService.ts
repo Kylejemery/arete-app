@@ -1,3 +1,4 @@
+import { pronounsFor } from './pronouns';
 import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
@@ -522,9 +523,10 @@ Their communication style is warm, wise, and unhurried.`;
 // nothing happens unless the person accepts. Mirrors services/claudeService.ts.
 export interface CabinetOffer {
   id: string;
-  kind: 'goal' | 'scroll';
+  kind: 'goal' | 'scroll' | 'task';
   counselorId: string | null;
   title?: string;
+  routine?: 'morning' | 'evening';
   category?: string;
   target_date?: string;
 }
@@ -537,7 +539,7 @@ export function setNextStarterId(id: string | null): void {
 }
 function noteCabinetOffer(data: { offer?: unknown } | null): void {
   const o = data?.offer as CabinetOffer | undefined;
-  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll') ? o : null;
+  lastCabinetOffer = o && typeof o.id === 'string' && (o.kind === 'goal' || o.kind === 'scroll' || o.kind === 'task') ? o : null;
 }
 export function takeCabinetOffer(): CabinetOffer | null {
   const o = lastCabinetOffer;
@@ -546,7 +548,7 @@ export function takeCabinetOffer(): CabinetOffer | null {
 }
 export async function respondToCabinetOffer(
   offerId: string,
-  body: { accept: boolean; title?: string; category?: string; target_date?: string | null }
+  body: { accept: boolean; title?: string; category?: string; target_date?: string | null; routine?: string }
 ): Promise<{ ok: boolean; status?: string }> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -716,6 +718,8 @@ export async function sendCheckInToCabinet(
     // localStorage keys read here were no longer written by anything.
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
     const userName = settings?.user_name || 'the user';
+    // Run B, Part B4: they/them/their unless the person set pronouns.
+    const pr = pronounsFor((settings as { pronouns?: string | null } | null)?.pronouns);
     const intention = String(checkin?.intention ?? '').trim();
 
     let userMessage: string;
@@ -737,7 +741,7 @@ export async function sendCheckInToCabinet(
       ];
       const affirmation = options.affirmation?.trim() || affirmations[day];
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
-      userMessage = `[Morning check-in] ${userName} has just completed their morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to them briefly as they begin the day.`;
+      userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
       const eveningTasks = (checkin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = eveningTasks.length > 0
@@ -745,7 +749,7 @@ export async function sendCheckInToCabinet(
         : '(no tasks)';
       const stoic = String(checkin?.stoic_answer ?? '') || '(not answered)';
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
-      userMessage = `[Evening check-in] ${userName} is wrapping up their evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to them as they close the day.`;
+      userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }
 
     const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);

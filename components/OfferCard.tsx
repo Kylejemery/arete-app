@@ -24,7 +24,9 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
     const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(targetDate.trim());
     const r = await respondToCabinetOffer(offer.id, offer.kind === 'goal'
       ? { accept: true, title: title.trim(), category, target_date: dateOk ? targetDate.trim() : null }
-      : { accept: true });
+      : offer.kind === 'task'
+        ? { accept: true, title: title.trim(), routine: offer.routine }
+        : { accept: true });
     setState(r.ok ? 'done' : 'error');
   };
 
@@ -32,7 +34,11 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
     return (
       <View style={styles.card}>
         <Text style={styles.body}>
-          {offer.kind === 'goal' ? 'Saved to your goals.' : 'Your scroll is being written. It will appear in Scrolls.'}
+          {offer.kind === 'goal'
+            ? 'Saved to your goals.'
+            : offer.kind === 'task'
+              ? `Added to your ${offer.routine === 'evening' ? 'evening' : 'morning'} check-in.`
+              : 'Your scroll is being written. It will appear in Scrolls.'}
         </Text>
         <TouchableOpacity onPress={onClose}><Text style={styles.linkMuted}>Close</Text></TouchableOpacity>
       </View>
@@ -55,17 +61,22 @@ export default function OfferCard({ offer, onClose }: { offer: CabinetOffer; onC
           <Text style={styles.label}>Target date (YYYY-MM-DD)</Text>
           <TextInput style={styles.input} value={targetDate} onChangeText={setTargetDate} maxLength={10} placeholder="Optional" placeholderTextColor="#555" />
         </>
+      ) : offer.kind === 'task' ? (
+        <>
+          <Text style={styles.kicker}>Add to your {offer.routine === 'evening' ? 'evening' : 'morning'} check-in</Text>
+          <TextInput style={styles.input} value={title} onChangeText={setTitle} maxLength={60} />
+        </>
       ) : (
         <Text style={styles.body}>Would you like a scroll on this?</Text>
       )}
       {state === 'error' && <Text style={styles.error}>That did not go through. Try again.</Text>}
       <View style={styles.row}>
         <TouchableOpacity
-          style={[styles.yes, (state === 'saving' || (offer.kind === 'goal' && !title.trim())) && styles.disabled]}
-          disabled={state === 'saving' || (offer.kind === 'goal' && !title.trim())}
+          style={[styles.yes, (state === 'saving' || (offer.kind !== 'scroll' && !title.trim())) && styles.disabled]}
+          disabled={state === 'saving' || (offer.kind !== 'scroll' && !title.trim())}
           onPress={() => answer(true)}
         >
-          <Text style={styles.yesText}>{offer.kind === 'goal' ? 'Save goal' : 'Yes'}</Text>
+          <Text style={styles.yesText}>{offer.kind === 'goal' ? 'Save goal' : offer.kind === 'task' ? 'Add it' : 'Yes'}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => answer(false)} disabled={state === 'saving'}>
           <Text style={styles.linkMuted}>Not now</Text>

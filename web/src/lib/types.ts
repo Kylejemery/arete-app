@@ -57,6 +57,8 @@ export interface UserSettings {
   kt_life_situation?: string | null;
   kt_off_limits?: string | null;
   kt_facts_seen_at?: string | null;
+  // Run B, Part B4: optional; they/them/their when unset.
+  pronouns?: 'he/him' | 'she/her' | 'they/them' | 'prefer_not_to_say' | null;
   created_at?: string;
   updated_at?: string;
 }

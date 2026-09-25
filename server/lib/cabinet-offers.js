@@ -21,6 +21,31 @@ const SCROLL_ALIASES = { 'marcus-aurelius': 'marcus' };
 
 const GOAL_OFFER_INSTRUCTION = `\n\n[OFFERING A GOAL]\nIf, in this conversation, the person has stated a concrete intention of their own (something specific they mean to do, not a vague wish), you may close your reply with one short sentence in your own voice offering to save it as a goal, followed on its own final line by exactly:\n[[GOAL|<the goal in their terms, under 60 characters>|<one of ${GOAL_CATEGORIES.join(', ')}>|<a sensible target date, YYYY-MM-DD>]]\nThe line is turned into a card they can accept or dismiss; they will not see the brackets. Never invent an intention they did not state. If there is no concrete intention, leave this out entirely. If you include it, do not also ask any other question about them.\n[END OFFERING A GOAL]`;
 
+// Run B, Part B4: in a person's first week, once ever, the closing voice may
+// suggest one small check-in task tied to their stated goal.
+const FIRST_WEEK_MS = 7 * DAY_MS;
+function taskOfferInstruction(goalText) {
+  return `\n\n[SUGGESTING ONE CHECK-IN TASK]\nThis person is in their first week. Their stated goal: "${String(goalText).slice(0, 300)}". If it fits what they are talking about, you may close your reply with one short sentence in your own voice suggesting ONE small daily task for their check-in that serves that goal (concrete, doable in under 30 minutes), followed on its own final line by exactly:\n[[TASK|<the task, under 50 characters>|<morning or evening>]]\nThe line becomes a card they can accept or dismiss; they will not see the brackets. If it does not fit this conversation, leave it out entirely. If you include it, do not also ask any other question about them.\n[END SUGGESTING ONE CHECK-IN TASK]`;
+}
+
+const TASK_MARKER = /\n?\s*\[\[TASK\|([^|\]\n]{1,80})\|(morning|evening)\]\]\s*$/i;
+const ANY_TASK_MARKER = /\[\[TASK\|[^\]]*\]\]/g;
+
+function parseTaskMarker(text) {
+  if (typeof text !== 'string') return { text, task: null };
+  const m = text.match(TASK_MARKER);
+  const clean = text.replace(ANY_TASK_MARKER, '').replace(/\s+$/, '');
+  if (!m || !m[1].trim()) return { text: clean, task: null };
+  return { text: clean, task: { title: m[1].trim().slice(0, 60), routine: m[2].toLowerCase() } };
+}
+
+function canOfferTask({ verified, isFirstTurn, distressed, accountCreatedAt, taskOfferedEver, goalText, now = Date.now() }) {
+  if (!verified || isFirstTurn || distressed || taskOfferedEver) return false;
+  if (!goalText || !String(goalText).trim()) return false;
+  const created = accountCreatedAt ? Date.parse(accountCreatedAt) : NaN;
+  return Number.isFinite(created) && now - created <= FIRST_WEEK_MS;
+}
+
 const GOAL_MARKER = /\n?\s*\[\[GOAL\|([^|\]\n]{1,120})\|([A-Za-z_ ]{1,20})\|(\d{4}-\d{2}-\d{2})\]\]\s*$/;
 const ANY_GOAL_MARKER = /\[\[GOAL\|[^\]]*\]\]/g;
 
@@ -79,6 +104,9 @@ module.exports = {
   GOAL_OFFER_INSTRUCTION,
   parseGoalMarker,
   canOfferGoal,
+  taskOfferInstruction,
+  parseTaskMarker,
+  canOfferTask,
   canOfferScroll,
   pickScrollCounselor,
 };

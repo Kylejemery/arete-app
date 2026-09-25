@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { getUserSettings } from '@/lib/db';
 import { hasUnseenInferredFacts } from '@/lib/profileFields';
+import PronounSetting from '../components/PronounSetting';
 import { refreshTier, useSubscription } from '@/lib/useSubscription';
 import { openWebSignedIn } from '@/lib/webHandoff';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
@@ -448,6 +449,8 @@ export default function SettingsScreen() {
       <TouchableOpacity style={styles.profileButton} onPress={() => router.push('/know-thyself' as any)}>
         <Text style={styles.profileButtonText}>📖 Edit Your Know Thyself Profile{ktDot ? '  •' : ''}</Text>
       </TouchableOpacity>
+
+      <PronounSetting />
 
       {/* Morning Check-In */}
       <View style={styles.card}>

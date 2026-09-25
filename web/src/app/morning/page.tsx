@@ -15,6 +15,13 @@ import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
 import { intentionQuestion } from '@/lib/intentionQuestion';
+import { NEUTRAL_DEFAULTS_SINCE, NEUTRAL_MORNING_DEFAULTS } from '@/lib/checkinDefaults';
+
+function defaultTasksFor(createdAt: string | null): Task[] {
+  const t = createdAt ? Date.parse(createdAt) : NaN;
+  if (Number.isFinite(t) && t < Date.parse(NEUTRAL_DEFAULTS_SINCE)) return LEGACY_DEFAULT_TASKS;
+  return NEUTRAL_MORNING_DEFAULTS.map((d, i) => ({ id: `default-${i + 1}`, title: d.title, done: false }));
+}
 import GlassCard from '@/components/GlassCard';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import ChapterRule from '@/components/ChapterRule';
@@ -30,7 +37,9 @@ interface Task {
   done: boolean;
 }
 
-const DEFAULT_TASKS: Task[] = [
+// Accounts created before run B (Part B4) keep these; newer accounts get the
+// neutral defaults in lib/checkinDefaults.ts.
+const LEGACY_DEFAULT_TASKS: Task[] = [
   { id: 'default-1', title: 'Eat Breakfast', done: false },
   { id: 'default-2', title: 'Meditate',      done: false },
 ];
@@ -91,7 +100,7 @@ export default function MorningPage() {
         const fallback =
           settings.morning_tasks?.length > 0
             ? (settings.morning_tasks as Task[]).map(t => ({ ...t, done: false }))
-            : DEFAULT_TASKS;
+            : defaultTasksFor(user?.created_at ?? null);
         setTasks(fallback);
         setUsingDefaults(true);
       }

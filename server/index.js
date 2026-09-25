@@ -960,7 +960,7 @@ async function getParticipantProfiles(participantIds) {
 // on a detail through the longitudinal portrait or the app data. This block
 // is built from user_settings and injected into every voice.
 // ---------------------------------------------------------------------------
-const KT_SETTINGS_COLUMNS = 'user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_years, future_self_description, feedback_preference, app_usage_intent, kt_life_situation, kt_off_limits, kt_completed_at, cabinet_members';
+const KT_SETTINGS_COLUMNS = 'user_name, kt_background, kt_identity, kt_goals, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events, future_self_years, future_self_description, feedback_preference, app_usage_intent, kt_life_situation, kt_off_limits, pronouns, kt_completed_at, cabinet_members';
 
 // The wording every surface now shares (the clients' gatherUserProfile
 // carries the same sentences): connect, do not list.
@@ -1057,7 +1057,7 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
   const empty = { factsBlock: '', tentativeBlock: '', askBlock: '', isFirstTurn: false, conversationId: null, session: null };
   if (!userId) return empty;
   try {
-    const [thread, facts, flagged, recentOffers] = await Promise.all([
+    const [thread, facts, flagged, recentOffers, accountRow, taskOffers] = await Promise.all([
       loadCabinetThread(userId, activeCounselorId),
       profileExtraction.loadFacts(supabase, userId),
       profileExtraction.hasRecentDistressFlag(supabase, userId),
@@ -1066,6 +1066,9 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
         .gte('created_at', new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false })
         .then(r => r.data || [], () => []),
+      supabase.from('profiles').select('created_at').eq('id', userId).maybeSingle().then(r => r.data, () => null),
+      supabase.from('cabinet_offers').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', 'task')
+        .then(r => r.count || 0, () => 1),
     ]);
     const now = Date.now();
     const session = ktCurrentSession(thread && Array.isArray(thread.messages) ? thread.messages : [], now);
@@ -1075,8 +1078,14 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
 
     const merged = profileFacts.mergeProfile(facts, ktSettings);
     const name = ktSettings && ktSettings.user_name;
-    const factsBlock = profileFacts.buildFactsBlock(merged, { name });
-    const tentativeBlock = profileFacts.buildFactsBlock({ known: [], tentative: merged.tentative, offLimits: merged.offLimits }, { name });
+    // Run B, Part B4: the person's pronouns if they set them; otherwise no
+    // guessed gender.
+    const pronounSetting = ktSettings && ktSettings.pronouns;
+    const pronounLine = pronounSetting === 'he/him' || pronounSetting === 'she/her' || pronounSetting === 'they/them'
+      ? `\n\n[PRONOUNS] When you refer to this person in the third person, use ${pronounSetting}.`
+      : '\n\n[PRONOUNS] Do not assume this person\'s gender; if you refer to them in the third person, use they/them.';
+    const factsBlock = profileFacts.buildFactsBlock(merged, { name }) + pronounLine;
+    const tentativeBlock = profileFacts.buildFactsBlock({ known: [], tentative: merged.tentative, offLimits: merged.offLimits }, { name }) + pronounLine;
 
     // An ask from earlier in this conversation still awaiting its answer?
     const sessionStart = session.start != null ? session.start : now;
@@ -1126,7 +1135,10 @@ async function buildPersonalContext({ userId, activeCounselorId, ktSettings, use
       tentativeBlock,
       askBlock,
       speakerCounts,
+      accountCreatedAt: accountRow ? accountRow.created_at : null,
+      goalText: (merged.known.concat(merged.tentative).find(e => e.field.key === 'top_goal') || {}).value || null,
       offers: {
+        taskOfferedEver: taskOffers > 0,
         goalOfferedThisConversation: recentOffers.some(o => o.kind === 'goal' && o.created_at >= sessionStartIso),
         lastScrollOfferAt: lastScroll ? lastScroll.created_at : null,
       },
@@ -1153,9 +1165,21 @@ const cabinetOffers = require('./lib/cabinet-offers');
 // Records at most one offer for this turn and returns it for the client's
 // card: the goal the closing voice offered, else a scroll offer when the
 // conversation has run six messages and none was offered in 72 hours.
-async function recordCabinetOffer({ userId, personal, goal, goalCounselorId, replies }) {
+async function recordCabinetOffer({ userId, personal, goal, task = null, goalCounselorId, replies }) {
   if (!userId || !personal || !personal.session) return null;
   try {
+    if (task) {
+      const { data, error } = await supabase.from('cabinet_offers').insert({
+        user_id: userId,
+        kind: 'task',
+        conversation_id: personal.conversationId,
+        counselor_id: goalCounselorId,
+        payload: task,
+      }).select('id').single();
+      if (error || !data) return null;
+      eventLog.logEvent(userId, 'cabinet_offer_made', { kind: 'task', routine: task.routine }, { platform: 'server' });
+      return { id: data.id, kind: 'task', counselorId: goalCounselorId, ...task };
+    }
     if (goal) {
       const { data, error } = await supabase.from('cabinet_offers').insert({
         user_id: userId,
@@ -1254,9 +1278,9 @@ const RECALL_WINDOW_DAYS = 180;
 const RECALL_EXCERPT_CHARS = 320;
 
 // Not every journal row is quotable material as-is, but only one kind must never
-// reach a counselor that has been told to quote the user back to himself: saved
+// reach a counselor that has been told to quote the user back to themselves: saved
 // Cabinet transcripts the user pasted back in. Those are the counselors' own
-// words, not his, and they are the longest rows in the table — so any
+// words, not theirs, and they are the longest rows in the table — so any
 // length-based selection actively prefers them, and quoting one back would have
 // a counselor attribute its own dialogue to the user.
 //
@@ -1679,7 +1703,19 @@ app.post('/api/chat/counselor', async (req, res) => {
     distressed: !!(personal.session && personal.session.distressed),
     goalOfferedThisConversation: !!(personal.offers && personal.offers.goalOfferedThisConversation),
   });
-  const goalOfferBlock = goalOfferAllowed ? cabinetOffers.GOAL_OFFER_INSTRUCTION : '';
+  // Run B, Part B4: in the first week, once ever, a check-in task tied to the
+  // stated goal takes the goal offer's place.
+  const taskOfferAllowed = cabinetOffers.canOfferTask({
+    verified: !!req.areteVerifiedUserId && !!personal.session,
+    isFirstTurn,
+    distressed: !!(personal.session && personal.session.distressed),
+    accountCreatedAt: personal.accountCreatedAt,
+    taskOfferedEver: !personal.offers || personal.offers.taskOfferedEver,
+    goalText: personal.goalText,
+  });
+  const goalOfferBlock = taskOfferAllowed
+    ? cabinetOffers.taskOfferInstruction(personal.goalText)
+    : (goalOfferAllowed ? cabinetOffers.GOAL_OFFER_INSTRUCTION : '');
 
   // The facts block supersedes the user_settings-only block: it falls back to
   // the same columns for any field without a fact.
@@ -1767,17 +1803,21 @@ app.post('/api/chat/counselor', async (req, res) => {
     // Offers (Parts 6 and 9): strip any goal marker from every voice; the
     // person only ever sees a card.
     let offeredGoal = null;
+    let offeredTask = null;
     let goalCounselorId = null;
     for (const r of results) {
       if (!r || typeof r.response !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(r.response);
-      r.response = parsed.text;
+      const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
+      r.response = parsedTask.text;
       if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
+      if (parsedTask.task && !offeredTask) { offeredTask = parsedTask.task; goalCounselorId = r.counselorId || null; }
     }
     const offer = await recordCabinetOffer({
       userId: req.areteVerifiedUserId,
       personal,
-      goal: goalOfferAllowed ? offeredGoal : null,
+      task: taskOfferAllowed ? offeredTask : null,
+      goal: goalOfferAllowed && !taskOfferAllowed ? offeredGoal : null,
       goalCounselorId,
       replies: results.filter(r => !r.error && r.response).map(r => r.counselorId),
     });
@@ -1976,7 +2016,8 @@ app.post('/api/chat/counselor', async (req, res) => {
           maxTokens: serverMaxTokens,
         });
         const parsedReply = cabinetOffers.parseGoalMarker(finishTruncatedReply(rawText, stopReason, `counselor/${compatModel}`));
-        const text = parsedReply.text;
+        const parsedTask = cabinetOffers.parseTaskMarker(parsedReply.text);
+        const text = parsedTask.text;
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
@@ -1984,7 +2025,8 @@ app.post('/api/chat/counselor', async (req, res) => {
         const offer = await recordCabinetOffer({
           userId: req.areteVerifiedUserId,
           personal,
-          goal: goalOfferAllowed ? parsedReply.goal : null,
+          task: taskOfferAllowed ? parsedTask.task : null,
+          goal: goalOfferAllowed && !taskOfferAllowed ? parsedReply.goal : null,
           goalCounselorId: singleCounselorId,
           replies: text ? [singleCounselorId] : [],
         });
@@ -2032,18 +2074,22 @@ app.post('/api/chat/counselor', async (req, res) => {
     }
     // Strip any goal marker from the text blocks before anything else sees it.
     let singleGoal = null;
+    let singleTask = null;
     for (const b of (data.content || [])) {
       if (b.type !== 'text' || typeof b.text !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(b.text);
-      b.text = parsed.text;
+      const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
+      b.text = parsedTask.text;
       if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
+      if (parsedTask.task && !singleTask) singleTask = parsedTask.task;
     }
     const assistantText = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
     await writeSharedAssistant(assistantText);
     const singleOffer = await recordCabinetOffer({
       userId: req.areteVerifiedUserId,
       personal,
-      goal: goalOfferAllowed ? singleGoal : null,
+      task: taskOfferAllowed ? singleTask : null,
+      goal: goalOfferAllowed && !taskOfferAllowed ? singleGoal : null,
       goalCounselorId: singleCounselorId,
       replies: assistantText ? [singleCounselorId] : [],
     });
@@ -2837,7 +2883,7 @@ The summary must capture:
 
 Write 3-5 sentences in third person. Be specific — use the user's actual words and situations where possible. Do not be generic. This summary will be injected into the next conversation so the counselor can open with genuine continuity.
 
-Good example: "Kyle discussed his tendency to avoid difficult conversations at work, particularly with his manager about the RTI layoffs. Marcus identified an all-or-nothing pattern in how Kyle frames career decisions. Kyle committed to drafting one honest email this week. The question of whether fear or wisdom is driving his caution remains unresolved."
+Good example: "Sam discussed their tendency to avoid difficult conversations at work, particularly with their manager about the layoffs. Marcus identified an all-or-nothing pattern in how Sam frames career decisions. Sam committed to drafting one honest email this week. The question of whether fear or wisdom is driving their caution remains unresolved." Refer to the person by name, and with they/them/their rather than a guessed gender.
 
 Bad example: "The user discussed personal development topics and received philosophical guidance from the counselor."
 
@@ -3440,6 +3486,27 @@ app.post('/api/cabinet/offers/:id/respond', async (req, res) => {
     await supabase.from('cabinet_offers').update({ result_id: goal.id }).eq('id', offer.id);
     eventLog.logEvent(userId, 'cabinet_offer_accepted', { kind: 'goal', category }, { platform: eventLog.platformFromRequest(req) });
     return res.json({ ok: true, status: 'accepted', goal });
+  }
+
+  if (offer.kind === 'task') {
+    const p = offer.payload || {};
+    const title = String(req.body?.title ?? p.title ?? '').trim().slice(0, 60);
+    const routine = (req.body?.routine ?? p.routine) === 'evening' ? 'evening' : 'morning';
+    if (!title) {
+      await supabase.from('cabinet_offers').update({ status: 'offered', responded_at: null }).eq('id', offer.id);
+      return res.status(400).json({ error: 'title_required' });
+    }
+    const { count } = await supabase.from('routine_templates').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('type', routine);
+    const { data: tmpl, error: tmplError } = await supabase.from('routine_templates').insert({
+      user_id: userId, type: routine, title, emoji: '✨', sort_order: count || 0,
+    }).select('id').single();
+    if (tmplError || !tmpl) {
+      await supabase.from('cabinet_offers').update({ status: 'offered', responded_at: null }).eq('id', offer.id);
+      return res.status(500).json({ error: 'Failed to add task' });
+    }
+    await supabase.from('cabinet_offers').update({ result_id: tmpl.id }).eq('id', offer.id);
+    eventLog.logEvent(userId, 'cabinet_offer_accepted', { kind: 'task', routine }, { platform: eventLog.platformFromRequest(req) });
+    return res.json({ ok: true, status: 'accepted', task: { id: tmpl.id, title, routine } });
   }
 
   // Scroll: write it in the background.

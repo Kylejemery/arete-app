@@ -70,3 +70,24 @@ Rows outside the window are kept and start a new group. Rows that fail the conta
 - The client sends `starterId: 'ask_me'` once with that message.
 - On the conversation's first turn, the server replaces the first-reply instruction (Part 4 of Run A) with an instruction to open with one or two warm sentences and exactly one question. The first turn already has a single voice.
 - **Logging:** only the id is logged, as `cabinet_starter_used {starter_id}` through `product_events`. No text is logged.
+
+## B4
+
+**DB4.1 Who is a "new user" for the neutral defaults.** It is an account created on or after 2026-09-25 00:00 UTC (`NEUTRAL_DEFAULTS_SINCE` in `lib/checkinDefaults.ts`).
+- **New accounts** get "Move your body" 🏃, "Something for your mind" 📖, "One thing for someone else" 🤝.
+- **Older accounts** keep the defaults they have always had: the mobile seed of Eat breakfast / Train 🥊 / Meditate, and the web placeholders Eat Breakfast / Meditate.
+- **Accounts with their own tasks** are untouched, because defaults only apply when a person has none.
+- **Why:** mobile seeds templates per device, so an older account with no templates on a new device would otherwise receive a different routine than before.
+
+**DB4.2 First-week task suggestion.**
+- **When:** within 7 days of account creation, once ever per person, when a goal is known (`top_goal` from the facts or the form). Never on the first turn, and never in distress.
+- **How:** the closing voice may suggest one small check-in task with a `[[TASK|title|morning or evening]]` marker, and it takes the goal offer's place for that turn. The server strips the marker and records a `cabinet_offers` row of kind `task`.
+- **On acceptance:** the card lets the person edit the title, then adds a `routine_templates` row. Nothing is added otherwise.
+
+**DB4.3 Pronouns.**
+- **Setting:** `user_settings.pronouns` is optional (he/him, she/her, they/them, prefer_not_to_say) and set from Settings on mobile and web.
+- **Defaults:** system text defaults to they/them/their. The mobile check-in prompt was the one place hard-coded to "his/him/he". The web copy already used "their".
+- **Counselors** get a `[PRONOUNS]` line: the chosen pronouns, or an instruction not to assume gender.
+- **Memory summary:** its example had described the user as "his", and it now models they/them.
+- **Not changed:** gendered language about the counselors themselves (Marcus, Goggins, Roosevelt) and about Kyle as founder (the audit agent's prompt). Those are not defaults about a user.
+- **Check-in chip parser:** it now also recognises "in her own words", so old and new check-in messages both render.

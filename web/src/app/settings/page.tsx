@@ -1,5 +1,6 @@
 'use client';
 
+import PronounSetting from '@/components/PronounSetting';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -132,6 +133,8 @@ export default function SettingsPage() {
             👤 Edit Know Thyself Profile
           </Link>
         </div>
+
+        <PronounSetting />
 
         {/* Subscription — /upgrade shows plans to free users and the Stripe
             Customer Portal entry (manage/cancel) to paid users */}

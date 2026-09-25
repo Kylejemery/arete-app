@@ -47,3 +47,16 @@ test('the scroll goes to the scroll voice who spoke most', () => {
   assert.equal(pickScrollCounselor({ 'marcus-aurelius': 3, epictetus: 2 }), 'marcus');
   assert.equal(pickScrollCounselor({ goggins: 4 }), null);
 });
+
+test('first-week task offer: parsed, stripped, and offered once in the first week only', () => {
+  const { parseTaskMarker, canOfferTask } = require('../lib/cabinet-offers');
+  const r = parseTaskMarker('Try this.\n[[TASK|Write 200 words|Morning]]');
+  assert.equal(r.text, 'Try this.');
+  assert.deepEqual(r.task, { title: 'Write 200 words', routine: 'morning' });
+  const ok = { verified: true, isFirstTurn: false, distressed: false, accountCreatedAt: new Date(NOW - 3 * 86400000).toISOString(), taskOfferedEver: false, goalText: 'Run a marathon', now: NOW };
+  assert.equal(canOfferTask(ok), true);
+  assert.equal(canOfferTask({ ...ok, taskOfferedEver: true }), false);
+  assert.equal(canOfferTask({ ...ok, accountCreatedAt: new Date(NOW - 8 * 86400000).toISOString() }), false);
+  assert.equal(canOfferTask({ ...ok, goalText: '' }), false);
+  assert.equal(canOfferTask({ ...ok, distressed: true }), false);
+});

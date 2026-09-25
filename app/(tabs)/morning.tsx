@@ -22,6 +22,8 @@ import CounselorText from '../../components/CounselorText';
 import { sendCheckInToCabinet } from '../../services/claudeService';
 import { logEvent } from '@/lib/events';
 import { intentionQuestion } from '@/lib/intentionQuestion';
+import { morningDefaultsFor } from '@/lib/checkinDefaults';
+import { supabase } from '@/lib/supabase';
 import {
   getTodayCheckin,
   getUserSettings,
@@ -116,9 +118,13 @@ export default function MorningScreen() {
       if (tmpl.length === 0) {
         const alreadySeeded = await AsyncStorage.getItem('morning_defaults_seeded');
         if (!alreadySeeded) {
-          await addRoutineTemplate('morning', 'Eat breakfast', '🍳', 0);
-          await addRoutineTemplate('morning', 'Train', '🥊', 1);
-          await addRoutineTemplate('morning', 'Meditate', '🌿', 2);
+          // Run B, Part B4: neutral defaults for new accounts; older
+          // accounts keep the defaults they have always had.
+          const { data: { user } } = await supabase.auth.getUser();
+          const defaults = morningDefaultsFor(user?.created_at ?? null);
+          for (const [i, d] of defaults.entries()) {
+            await addRoutineTemplate('morning', d.title, d.emoji, i);
+          }
           await AsyncStorage.setItem('morning_defaults_seeded', 'true');
           tmpl = await getRoutineTemplates('morning');
         }
