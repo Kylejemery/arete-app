@@ -220,3 +220,38 @@ counselor router already calls, and the request omits `temperature` for gpt-5.x.
 460px minimum, collapses the side pane the writer did not most recently open
 when there is no room, gives the conversation's width up before the draft's,
 and stacks the panes below 900px.
+
+## Book mode (added 2026-09-25)
+
+Chat mode now scales to a book. A book (`scribe_books`) is a run of chapters
+(`scribe_chapters`), each owning one ordinary entry, so every chat feature
+keeps working per chapter. Design, budget numbers and the exact prompts:
+`docs/scribe/BOOK_DRAFT_DESIGN.md`. Migration
+`20260924120000_scribe_book_draft.sql` (applied by hand, never by the branch).
+
+- **Import and shaping.** `/admin/scribe/book/[id]` takes a pasted draft and
+  previews the split before storing: Scribe shapes a stream of consciousness
+  into parts (paragraphs regrouped and reordered, never rewritten), or the
+  paste is split at headings, chapter markers, or size. Every paragraph lands
+  in exactly one chapter.
+- **The working set.** A chapter turn sends the system prompt plus a book
+  appendix, the book brief (argument card, rolling summary, one line per
+  chapter, this chapter's card and its neighbours' summaries) as a cached
+  system block, the entry's running thread summary, the recent turns with
+  draft bodies stripped, and only this chapter's draft. Older turns are
+  folded into `scribe_entries.thread_summary` when they outgrow the budget.
+  Two new tools, `search_book` and `read_chapter`, reach the other chapters.
+- **Retrieval over the draft.** `scribe_book_chunks` is the book's own index:
+  paragraph aligned chunks of about 400 words, re-embedded by content hash
+  after each change. Nothing else reads it; `rag_corpus` is untouched.
+- **Three commands** in the chat composer, also buttons: `/rewrite` (edit
+  blocks only, about 2,000 words a turn, `/rewrite next` continues), `/gaps`
+  (findings, no edits; `/gaps book` from the book view), `/factcheck`
+  (extract claims, retrieve from the corpus and the paper chunks, judge
+  against the retrieved passages only; a verdict whose excerpt is not in the
+  cited chunk is downgraded). Findings live in `scribe_findings` and the
+  Findings tab; a fresh run supersedes the last, never deletes.
+- **Model.** The chat and the judge run on `claude-opus-5-5` at high effort;
+  summaries on the distill tier. The system prompt carries a cache
+  breakpoint. Checks: `npx tsx src/scripts/scribe-book-smoke.ts` (offline,
+  synthetic 60,000 word draft).

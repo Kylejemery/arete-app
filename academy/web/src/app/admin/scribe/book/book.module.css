@@ -1,0 +1,161 @@
+/* The book views: the list, and one book's outline, import, summary and
+   findings. Built on the admin page styles; only what those lack is here. */
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+}
+
+.outlineRow {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.outlinePos {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+  text-align: right;
+}
+
+.outlineTitle {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+}
+
+.outlineTitle:hover { text-decoration: underline; }
+
+.outlineMeta {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-top: 2px;
+}
+
+.outlineBtns { display: flex; gap: 4px; }
+
+.status {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.statusRaw { background: #f4e7c8; }
+.statusWorking { background: #d9e8f7; }
+.statusSettled { background: #d8efd8; }
+
+.previewCard {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.previewHead {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.previewTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.previewNote {
+  font-size: 13px;
+  opacity: 0.8;
+  margin: 6px 0 0;
+}
+
+.previewText {
+  font-size: 12px;
+  opacity: 0.7;
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  max-height: 72px;
+  overflow: hidden;
+}
+
+.finding {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  font-size: 14px;
+}
+
+.findingKind {
+  display: inline-block;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.verdictSupported { background: #d8efd8; }
+.verdictContradicted { background: #f7d6d6; }
+.verdictUnverifiable { background: #f4e7c8; }
+
+.findingPassage {
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.findingNote { margin: 4px 0 0; }
+
+.findingEvidence {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: pre-wrap;
+}
+
+.findingBtns {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.smallBtn {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: white;
+  cursor: pointer;
+}
+
+.smallBtn:disabled { opacity: 0.5; cursor: default; }
+
+.progress {
+  font-size: 13px;
+  opacity: 0.75;
+  margin: 6px 0;
+}
+
+.argument {
+  font-size: 14px;
+  white-space: pre-wrap;
+  margin: 6px 0 0;
+}

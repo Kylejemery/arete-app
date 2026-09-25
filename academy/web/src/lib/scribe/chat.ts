@@ -3,6 +3,8 @@ import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
 import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
+import { BOOK_APPENDIX } from './book-prompts'
+import { fitExemplars } from './book'
 import {
   cabinetCaveat,
   cabinetDate,
@@ -21,8 +23,13 @@ import {
 // argument-formation work, and Kyle authors essays rarely enough that the
 // cost is justified.
 
-const CHAT_MODEL = 'claude-opus-4-6'
-const MAX_TOKENS = 8000
+// Opus 5.5 (2026-09-25, was Opus 4.6). Thinking is always on for this model
+// and counts against max_tokens, so the ceiling is higher than the old 8,000;
+// a rewrite turn raises it further (the turn route). Effort is set explicitly
+// because this model defaults to medium.
+const CHAT_MODEL = 'claude-opus-5-5'
+const CHAT_EFFORT = 'high' as const
+export const MAX_TOKENS = 16000
 // Search iterations per turn. Enough for a support + counterposition pass and
 // a follow-up; a runaway loop stops here.
 const MAX_TOOL_ROUNDS = 6
@@ -34,7 +41,7 @@ const SIMILARITY_FLOOR = 0.25
 // text was never stored, so there is nothing to quote.
 // Verbatim layers may be quoted; summaries, syntheses, and apparatus are
 // paraphrased. Value set: rag_corpus_text_type_check.
-const QUOTABLE_TYPES = new Set(['primary', 'scholarship', 'modern_primary'])
+export const QUOTABLE_TYPES = new Set(['primary', 'scholarship', 'modern_primary'])
 
 export interface TurnSource {
   chunk_id: string
@@ -61,7 +68,7 @@ export interface VoiceProfile {
   guidance: string | null
 }
 
-type RagHit = {
+export type RagHit = {
   id: string
   chunk_text: string
   author: string
@@ -194,6 +201,56 @@ const SEARCH_TOOL: Anthropic.Tool = {
   },
 }
 
+// Book mode only: the other chapters, by meaning and by number.
+const SEARCH_BOOK_TOOL: Anthropic.Tool = {
+  name: 'search_book',
+  description:
+    "Semantic search over the whole book Kyle is writing: every chapter's working draft, in 400 word passages, each returned with its chapter number and title. Use it before saying what another chapter argues, when a claim here might be made or contradicted elsewhere, and when Kyle asks how this chapter sits with the rest. Scope 'other_chapters' (default) leaves out the chapter in front of you; 'all' includes it.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      query: {
+        type: 'string',
+        description: 'The claim, image or question to look for across the book, e.g. "character as the only durable advantage" or "the gutter he never fixed"',
+      },
+      scope: {
+        type: 'string',
+        enum: ['other_chapters', 'all'],
+        description: "Which chapters to search: 'other_chapters' (default) or 'all'",
+      },
+    },
+    required: ['query'],
+  },
+}
+
+const READ_CHAPTER_TOOL: Anthropic.Tool = {
+  name: 'read_chapter',
+  description:
+    "Read one chapter of the book by its position number in the outline. 'summary' (default) returns its summary and argument card; 'text' returns its working draft, capped at 3,000 words. Ask for the summary first; ask for the text only when the exact wording matters.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      position: { type: 'integer', description: 'The chapter number as shown in the OUTLINE' },
+      what: { type: 'string', enum: ['summary', 'text'], description: "'summary' (default) or 'text'" },
+    },
+    required: ['position'],
+  },
+}
+
+// What a book mode turn brings to runScribeTurn: the brief block for the
+// system prompt, and the two tools' handlers, bound to the book by the
+// server half (book-store.ts).
+export interface BookTurnContext {
+  brief: string
+  searchBook: (query: string, scope: 'other_chapters' | 'all') => Promise<string>
+  readChapter: (position: number, what: 'summary' | 'text') => Promise<string>
+}
+
+export interface TurnOptions {
+  book?: BookTurnContext | null
+  maxTokens?: number
+}
+
 let client: Anthropic | null = null
 function getClient(): Anthropic {
   if (!client) {
@@ -204,12 +261,12 @@ function getClient(): Anthropic {
   return client
 }
 
-async function searchCorpus(query: string): Promise<{ hits: RagHit[]; toolResult: string }> {
+export async function searchCorpus(query: string, k = SEARCH_K): Promise<{ hits: RagHit[]; toolResult: string }> {
   const admin = createAdminClient()
   const embedding = await embedChunk(query)
   const { data, error } = await admin.rpc('match_rag_corpus_cited', {
     query_embedding: embedding,
-    match_count: SEARCH_K,
+    match_count: k,
   })
   if (error) throw new Error(`match_rag_corpus_cited: ${error.message}`)
 
@@ -323,13 +380,15 @@ His own words are the exception that proves the rule: a sentence copied verbatim
 
 Everything else in these instructions still governs: the spine, the corpus rules, the machine tells, the pushback. You are still the editor with a spine. You are simply not the writer.`
 
-function buildSystem(voice: VoiceProfile | null, gapsMode = false): string {
-  if (!voice && !gapsMode) return SYSTEM_PROMPT
+function buildSystem(voice: VoiceProfile | null, gapsMode = false, bookMode = false): string {
+  if (!voice && !gapsMode && !bookMode) return SYSTEM_PROMPT
   let s = SYSTEM_PROMPT
   if (gapsMode) s += GAPS_APPENDIX
+  if (bookMode) s += BOOK_APPENDIX
   if (!voice) return s
-  const exemplars = (voice.exemplars ?? [])
-    .filter(e => e?.text?.trim())
+  // Exemplars are capped at the voice budget, newest first, so a style
+  // profile with long posts cannot crowd out the draft.
+  const exemplars = fitExemplars(voice.exemplars ?? [])
     .map((e, i) => `--- exemplar ${i + 1}: ${e.title} ---\n${e.text}`)
     .join('\n\n')
   if (exemplars) {
@@ -357,7 +416,8 @@ export async function runScribeTurn(
   voice: VoiceProfile | null = null,
   cabinetUserId: string | null = null,
   workingDraft: string | null = null,
-  gapsMode = false
+  gapsMode = false,
+  opts: TurnOptions = {}
 ): Promise<{ text: string; sources: TurnSource[] }> {
   const messages: Anthropic.MessageParam[] = history.map((m, i) => ({
     role: m.role === 'scribe' ? 'assistant' : 'user',
@@ -365,8 +425,18 @@ export async function runScribeTurn(
       i === history.length - 1 && m.role === 'user' ? withWorkingDraft(m.content, workingDraft) : m.content,
   }))
 
-  const systemText = buildSystem(voice, gapsMode)
-  const tools = cabinetUserId ? [SEARCH_TOOL, JOURNAL_TOOL, CABINET_TOOL] : [SEARCH_TOOL, JOURNAL_TOOL]
+  const book = opts.book ?? null
+  // The system prompt is stable across a session and the book brief across
+  // turns until a summary changes, so each is its own cache breakpoint. The
+  // history and the working draft follow and are what varies.
+  const system: Anthropic.TextBlockParam[] = [
+    { type: 'text', text: buildSystem(voice, gapsMode, !!book), cache_control: { type: 'ephemeral' } },
+  ]
+  if (book) system.push({ type: 'text', text: book.brief, cache_control: { type: 'ephemeral' } })
+  const tools: Anthropic.Tool[] = [SEARCH_TOOL, JOURNAL_TOOL]
+  if (cabinetUserId) tools.push(CABINET_TOOL)
+  if (book) tools.push(SEARCH_BOOK_TOOL, READ_CHAPTER_TOOL)
+  const maxTokens = opts.maxTokens ?? MAX_TOKENS
   const turnSources: TurnSource[] = []
   const seenChunks = new Set<string>()
   let fullText = ''
@@ -375,8 +445,9 @@ export async function runScribeTurn(
     const lastRound = round === MAX_TOOL_ROUNDS
     const stream = getClient().messages.stream({
       model: CHAT_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: systemText,
+      max_tokens: maxTokens,
+      output_config: { effort: CHAT_EFFORT },
+      system,
       messages,
       // On the final permitted round withhold the tools so the model must
       // finish the turn with what it has retrieved.
@@ -400,7 +471,9 @@ export async function runScribeTurn(
     const results: Anthropic.ToolResultBlockParam[] = []
     for (const tu of toolUses) {
       const query = String((tu.input as { query?: unknown }).query ?? '')
-      events.onSearching(query)
+      events.onSearching(
+        tu.name === 'read_chapter' ? `chapter ${String((tu.input as { position?: unknown }).position ?? '?')}` : query
+      )
       let content: string
       try {
         if (tu.name === 'search_journal') {
@@ -452,6 +525,17 @@ export async function runScribeTurn(
               })
             }
           }
+        } else if (tu.name === 'search_book') {
+          const scope = (tu.input as { scope?: string }).scope === 'all' ? 'all' : 'other_chapters'
+          content = book
+            ? await book.searchBook(query, scope)
+            : 'This conversation is not part of a book, so there is nothing else to search.'
+        } else if (tu.name === 'read_chapter') {
+          const input = tu.input as { position?: unknown; what?: string }
+          const position = Number(input.position)
+          content = book && Number.isFinite(position)
+            ? await book.readChapter(position, input.what === 'text' ? 'text' : 'summary')
+            : 'This conversation is not part of a book, so there is no chapter to read.'
         } else {
           const { hits, toolResult } = await searchCorpus(query)
           content = toolResult

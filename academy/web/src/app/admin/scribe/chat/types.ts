@@ -69,3 +69,52 @@ export type Draft = {
 
 // A base the working draft can be compared against in the changes view.
 export type DiffBase = { id: string; label: string; text: string }
+
+// One finding from a review job: a gap in the argument (gap, cross_gap) or a
+// checked claim about the Stoics (fact). See lib/scribe/book-store.ts.
+export type FindingEvidence = {
+  chunk_table: 'rag_corpus' | 'scribe_source_chunks'
+  chunk_id: string
+  author: string
+  work: string
+  section_label: string | null
+  translator: string | null
+  text_type: string
+  mode: 'quote' | 'paraphrase'
+  excerpt: string
+}
+
+export type Finding = {
+  id: string
+  entry_id: string | null
+  book_id: string | null
+  chapter_id: string | null
+  kind: 'gap' | 'cross_gap' | 'fact'
+  status: 'open' | 'fixed' | 'dismissed' | 'superseded'
+  passage: string
+  note: string
+  verdict: 'supported' | 'contradicted' | 'unverifiable' | null
+  claim: string | null
+  claim_kind: string | null
+  evidence: FindingEvidence[]
+  message_id: string | null
+  created_at: string
+  resolved_at: string | null
+}
+
+// The book an entry belongs to, when it is a chapter.
+export type BookChapterRef = {
+  id: string
+  entry_id: string
+  position: number
+  title: string
+  status: string
+  word_count: number
+}
+
+export type BookInfo = {
+  id: string
+  title: string
+  chapter: BookChapterRef & { summary: string | null }
+  chapters: BookChapterRef[]
+}

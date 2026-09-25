@@ -26,6 +26,11 @@ export default function SelectionBar({
   const [noting, setNoting] = useState(false)
   const [note, setNote] = useState('')
   const rangeRef = useRef<Range | null>(null)
+  const barRef = useRef<HTMLDivElement>(null)
+  // Mirrors `noting` for the document listeners, which are registered once
+  // and would otherwise see a stale value.
+  const notingRef = useRef(false)
+  notingRef.current = noting
 
   const place = useCallback((range: Range, text: string) => {
     const r = range.getBoundingClientRect()
@@ -42,7 +47,12 @@ export default function SelectionBar({
   useEffect(() => {
     if (disabled) { clear(); return }
 
-    const read = () => {
+    const read = (e: Event) => {
+      // Typing the note, or clicking inside the bar, collapses the document
+      // selection into the input. That is not the passage going away, so the
+      // bar stays; without this guard the first letter typed dismissed it.
+      if (notingRef.current) return
+      if (e.target instanceof Node && barRef.current?.contains(e.target)) return
       const s = window.getSelection()
       if (!s || s.isCollapsed || s.rangeCount === 0) { clear(); return }
       const range = s.getRangeAt(0)
@@ -80,10 +90,12 @@ export default function SelectionBar({
 
   return (
     <div
+      ref={barRef}
       className={styles.selBar}
       style={{ top: Math.max(8, sel.top - 46), left: sel.left }}
-      // Keep the selection alive while the bar is being clicked.
-      onMouseDown={e => e.preventDefault()}
+      // Keep the selection alive while the bar is being clicked, but let the
+      // note input take focus when it is the thing clicked.
+      onMouseDown={e => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault() }}
     >
       {noting ? (
         <>

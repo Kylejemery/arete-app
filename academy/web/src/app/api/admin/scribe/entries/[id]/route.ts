@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { chapterForEntry, listFindings } from '@/lib/scribe/book-store'
 
 export const dynamic = 'force-dynamic'
 
 // GET /api/admin/scribe/entries/[id] — the whole reopenable session: entry,
-// full message thread in order, and every draft snapshot.
+// full message thread in order, every draft snapshot, the findings on it,
+// and, when the entry is a chapter, its book and the chapter list.
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const denied = await requireAdmin()
   if (denied) return denied
@@ -13,7 +15,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params
   const admin = createAdminClient()
 
-  const [entryRes, messagesRes, draftsRes] = await Promise.all([
+  const [entryRes, messagesRes, draftsRes, bookInfo, findings] = await Promise.all([
     admin.from('scribe_entries').select('*').eq('id', id).maybeSingle(),
     admin
       .from('scribe_messages')
@@ -25,6 +27,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .select('id, stage, draft_text, sources_used, review, created_at')
       .eq('entry_id', id)
       .order('created_at', { ascending: true }),
+    chapterForEntry(admin, id).catch(e => {
+      console.warn('[scribe/entries] book lookup failed:', e instanceof Error ? e.message : e)
+      return null
+    }),
+    listFindings(admin, { entryId: id }).catch(() => []),
   ])
 
   if (entryRes.error) return NextResponse.json({ error: entryRes.error.message }, { status: 500 })
@@ -36,6 +43,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     entry: entryRes.data,
     messages: messagesRes.data,
     drafts: draftsRes.data,
+    findings,
+    book: bookInfo
+      ? {
+          id: bookInfo.book.id,
+          title: bookInfo.book.title,
+          chapter: bookInfo.chapter,
+          chapters: bookInfo.chapters.map(c => ({
+            id: c.id,
+            entry_id: c.entry_id,
+            position: c.position,
+            title: c.title,
+            status: c.status,
+            word_count: c.word_count,
+          })),
+        }
+      : null,
   })
 }
 
