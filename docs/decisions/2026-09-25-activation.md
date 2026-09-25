@@ -179,3 +179,20 @@ This file records the judgement calls made while carrying out the activation pro
 - The endpoint returns nothing while the user has a distress flag from the last 14 days, or when their latest analysis is flagged.
 - Before this change, a flagged week was answered with the previous week's insight, which a free user saw as a teaser with an upsell.
 - **Free tier** now receives only the first paragraph from the server, or the first two sentences when the insight is one paragraph, with `teaser: true`. The full text no longer reaches the device.
+
+## Part 8
+
+**D8.1 What drifted.** 19 active manual Premium rows had profiles reading free: 18 with `is_premium` false, and 1 with `is_premium` true but tier free.
+- These are the 2026-08-25 grandfather grants: `current_period_end` is null and they were created by the tier consolidation migration.
+- That migration's own update set those profiles to premium. Their `updated_at` is also 2026-08-25, so something reset them to free later that day.
+- Nothing in the repo does that: the grant expiry function skips rows with a null period end, and the Stripe webhook honours manual rows. It was most likely a hand-run statement.
+- **Flag for Kyle:** if the reset was a deliberate decision to end the grandfathering, the auto-fix reverses it. The prompt asked for upgrades to be auto-fixed, so they were. Revoking means deleting those manual rows and setting the profiles back.
+
+**D8.2 The fix going forward.**
+- **Trigger:** `subscriptions_sync_profile_upgrade` upgrades a free profile whenever a subscription row becomes an active entitlement, whoever writes it. It never downgrades.
+- **Web:** `getIsPremium` now counts `pro`. Before, a Pro user whose `is_premium` was false would have been gated on web.
+
+**D8.3 Left for review, never auto-fixed.**
+- 12 profiles read paid with no active subscription.
+- 2 active manual subscriptions belong to user ids with no profile row.
+- Both are listed in `v_tier_reconciliation`, which is service-role only and shows IDs only.

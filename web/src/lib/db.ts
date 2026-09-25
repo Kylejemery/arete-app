@@ -572,7 +572,7 @@ export async function getDefaultCabinet(): Promise<Counselor[]> {
 }
 
 // Check if current user is premium.
-// Unlocked when:  tier === 'premium' | tier === 'scholar' | is_premium === true
+// Unlocked when:  tier === 'premium' | 'pro' | 'scholar' | is_premium === true
 // Locked when:    tier === 'free' AND is_premium === false (or both absent)
 export async function getIsPremium(): Promise<boolean> {
   // Dev mode override
@@ -589,7 +589,7 @@ export async function getIsPremium(): Promise<boolean> {
   if (error) return false;
   const tier: string = data?.tier ?? 'free';
   const isPrem: boolean = data?.is_premium ?? false;
-  return isPrem || tier === 'premium' || tier === 'scholar';
+  return isPrem || tier === 'premium' || tier === 'pro' || tier === 'scholar';
 }
 
 // ----------------------------------------------------------------
