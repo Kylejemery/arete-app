@@ -2153,6 +2153,58 @@ app.get('/api/user/insight', async (req, res) => {
   return res.json({ insight: data });
 });
 
+// ─── Lifecycle email unsubscribe (retention plan R9) ─────────────────────────
+
+// One-click unsubscribe from every kind of Arete email. The link in each
+// email carries an HMAC token for the member (server/lib/email-unsubscribe.js),
+// so it works without a login and can only ever set profiles.email_opt_out
+// to true for that one account. GET is the link in the email body; POST is
+// what mail clients send for the List-Unsubscribe-Post header (RFC 8058).
+// Turning email back on is done from Settings on the web app.
+const { verifyUnsubscribeToken } = require('./lib/email-unsubscribe');
+
+function unsubscribePage(title, body) {
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>
+<body style="margin:0;background:#0f1117;color:#e6eef8;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
+<div style="max-width:520px;margin:0 auto;padding:48px 20px;">
+<p style="font-family:Georgia,serif;font-size:22px;margin:0 0 20px;">Arete</p>
+<h1 style="font-family:Georgia,serif;font-size:24px;font-weight:500;margin:0 0 12px;">${title}</h1>
+<p style="line-height:1.55;color:#c6cfdb;margin:0 0 16px;">${body}</p>
+<p><a href="${WEB_APP_URL}/settings" style="color:#c9a84c;">Open Settings</a></p>
+</div></body></html>`;
+}
+
+async function handleEmailUnsubscribe(req, res) {
+  const token = String(req.query?.token || req.body?.token || '');
+  const userId = verifyUnsubscribeToken(token);
+  res.set('Content-Type', 'text/html; charset=utf-8');
+  if (!userId) {
+    return res.status(400).send(unsubscribePage(
+      'This link is not valid.',
+      'The unsubscribe link may be incomplete. You can turn Arete email off from Settings in the web app instead.'
+    ));
+  }
+  const { error } = await supabase
+    .from('profiles')
+    .update({ email_opt_out: true, email_opt_out_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) {
+    console.error('[email/unsubscribe] update failed:', error.message);
+    return res.status(500).send(unsubscribePage(
+      'Something went wrong.',
+      'We could not save your choice just now. Please try the link again in a moment, or turn Arete email off from Settings in the web app.'
+    ));
+  }
+  eventLog.logEvent(userId, 'email_unsubscribed', {}, { platform: 'email' });
+  return res.send(unsubscribePage(
+    'You are unsubscribed.',
+    'Arete will not send you any more email. Your account and your Cabinet are unchanged. If you change your mind, you can turn email back on from Settings.'
+  ));
+}
+
+app.get('/api/email/unsubscribe', handleEmailUnsubscribe);
+app.post('/api/email/unsubscribe', express.urlencoded({ extended: false }), handleEmailUnsubscribe);
+
 // ─── Daily Dispatch — push token, timezone, and dispatch fetch ───────────────
 
 // POST /api/user/push-token — save the Expo push token to user_settings.
