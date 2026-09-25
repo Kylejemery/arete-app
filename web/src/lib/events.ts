@@ -27,7 +27,9 @@ export type ProductEvent =
   | 'home_yesterday_card_viewed'
   | 'home_yesterday_card_tapped'
   | 'checkin_continue_tapped'
-  | 'module_limit_upgrade_click';
+  | 'module_limit_upgrade_click'
+  | 'onboarding_step_viewed'
+  | 'onboarding_committed';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 
