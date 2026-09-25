@@ -14,7 +14,7 @@ import type { BookInfo, DiffBase, Draft, Entry, Finding, Message, Review, Source
 import { withAttribution } from '@/lib/scribe/attribution'
 import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
 import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
-import { describeCommandTurn, parseCommand, stripFindingsBlock } from '@/lib/scribe/book'
+import { describeCommandTurn, parseCommand, stripFindingsBlock } from '@/lib/scribe/book-draft'
 import type { Highlight } from '@/lib/scribe/prose'
 import type { DraftState } from '@/lib/scribe/provenance'
 import type { QuoteFinding } from './types'

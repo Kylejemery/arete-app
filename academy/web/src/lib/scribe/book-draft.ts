@@ -4,7 +4,8 @@
 // findings the review jobs emit, and the chat commands that start them.
 //
 // No React, no DOM, no network, no Supabase: safe in the browser, on the
-// server, and in the offline smoke script (src/scripts/scribe-book-smoke.ts).
+// server, and in the offline smoke script (src/scripts/scribe-book-smoke.ts). Named book-draft.ts because
+// book.ts is the print layout module.
 // The server half (rows, embeddings, model calls) is book-store.ts.
 //
 // Design and numbers: docs/scribe/BOOK_DRAFT_DESIGN.md.

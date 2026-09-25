@@ -4,7 +4,7 @@ import { embedChunk } from '@/lib/corpus/ingest'
 import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
 import { BOOK_APPENDIX } from './book-prompts'
-import { fitExemplars } from './book'
+import { fitExemplars } from './book-draft'
 import {
   cabinetCaveat,
   cabinetDate,

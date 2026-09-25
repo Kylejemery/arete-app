@@ -11,7 +11,7 @@ import {
   parseFindings,
   rewriteStopPoint,
   type ThreadMessage,
-} from '@/lib/scribe/book'
+} from '@/lib/scribe/book-draft'
 import {
   afterChapterDraftChanged,
   bookTurnContext,

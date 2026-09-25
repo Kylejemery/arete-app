@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { countWords, splitChapters, type ChapterDraft, type SplitStrategy } from '@/lib/scribe/book'
+import { countWords, splitChapters, type ChapterDraft, type SplitStrategy } from '@/lib/scribe/book-draft'
 import { createChapter, loadBook, nextPosition, proposeShape, reindexChapter } from '@/lib/scribe/book-store'
 
 export const dynamic = 'force-dynamic'

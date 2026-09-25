@@ -34,7 +34,7 @@ import {
   TURN_BUDGET_TOKENS,
   type PassageRef,
   type ThreadMessage,
-} from '../lib/scribe/book'
+} from '../lib/scribe/book-draft'
 import * as prompts from '../lib/scribe/book-prompts'
 
 let pass = 0

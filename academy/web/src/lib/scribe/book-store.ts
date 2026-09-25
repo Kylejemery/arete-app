@@ -53,7 +53,7 @@ import {
   type ShapeProposal,
   type ThreadMessage,
   type VerifiedResult,
-} from './book'
+} from './book-draft'
 
 type Admin = SupabaseClient
 

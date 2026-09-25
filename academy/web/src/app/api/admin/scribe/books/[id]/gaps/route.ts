@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAdmin } from '@/lib/scribe/admin-auth'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { runBookGaps } from '@/lib/scribe/book-store'
-import { stripFindingsBlock } from '@/lib/scribe/book'
+import { stripFindingsBlock } from '@/lib/scribe/book-draft'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
