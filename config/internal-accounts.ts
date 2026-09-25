@@ -22,9 +22,9 @@ export const INTERNAL_ACCOUNT_EMAILS: string[] = [
   'tester@pursuearete.com',
   'tester2@pursuearete.com',
 
-  // PLACEHOLDERS: Kyle to fill in. Entries without an @ are ignored.
-  'AUNDREA_EMAIL_PLACEHOLDER',
-  'DEVON_EMAIL_PLACEHOLDER',
+  // Family
+  'aundrea.c.emery@gmail.com',
+  'devon.e.emery@gmail.com',
 ];
 
 // Rules applied in the database as well as the list above: any profile
