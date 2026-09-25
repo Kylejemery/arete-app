@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { sendCheckInToCabinet } from '@/lib/claudeService';
 import { logEvent } from '@/lib/events';
+import { intentionQuestion } from '@/lib/intentionQuestion';
 import GlassCard from '@/components/GlassCard';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
 import ChapterRule from '@/components/ChapterRule';
@@ -48,6 +49,9 @@ export default function MorningPage() {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddInput, setShowAddInput] = useState(false);
   const [intention, setIntention] = useState('');
+  // Activation Part 5: the intention asked in the voice of today's
+  // daily-question counselor, else the first member of the Cabinet.
+  const [intentionAsk, setIntentionAsk] = useState(intentionQuestion(null));
   const [checkInResponse, setCheckInResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [checkInDone, setCheckInDone] = useState(false);
@@ -99,6 +103,11 @@ export default function MorningPage() {
       // Today's intention comes from today's row, so it is blank on a new
       // day and shared with the mobile app.
       setIntention(((checkin?.intention as string | null) ?? '').toString());
+      {
+        const dq = (checkin?.daily_question_counselor as string | null | undefined) ?? null;
+        const first = Array.isArray(settings.cabinet_members) && settings.cabinet_members.length > 0 ? settings.cabinet_members[0] : null;
+        setIntentionAsk(intentionQuestion(dq || first));
+      }
       if (typeof window !== 'undefined') {
         try { localStorage.removeItem(LEGACY_INTENTION_KEY); } catch { /* ignore */ }
       }
@@ -404,16 +413,22 @@ export default function MorningPage() {
                 className="text-[10px] tracking-[1.6px] uppercase"
                 style={{ fontFamily: 'var(--font-mono, monospace)', color: '#c9a84c' }}
               >
-                Today&apos;s intention
+                {intentionAsk.name} asks
               </span>
             </div>
+            <p
+              className="text-[16px] leading-relaxed mb-2"
+              style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#e6eef8' }}
+            >
+              {intentionAsk.question}
+            </p>
             <textarea
               className="w-full bg-transparent italic text-[17px] leading-relaxed resize-none outline-none min-h-[48px]"
               style={{
                 fontFamily: 'var(--font-serif, Georgia, serif)',
                 color: intention ? '#e6eef8' : '#9aa0a6',
               }}
-              placeholder="Write one sentence the Cabinet will hold you to…"
+              placeholder="One sentence is enough."
               value={intention}
               onChange={e => saveIntention(e.target.value)}
               onBlur={flushIntention}

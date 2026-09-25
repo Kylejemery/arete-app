@@ -124,3 +124,11 @@ This file records the judgement calls made while carrying out the activation pro
 **D4.2 One voice on the first turn.** In the group Cabinet, the director picks one to three voices. On the first turn only its first pick replies, so the opening is one short reply ending in one question, rather than three replies each ending in a question.
 - **Alternative:** give every voice the first-reply rules. That would still stack two or three questions.
 - The Know Thyself ask is suppressed on the first turn. It is suppressed anyway before the third user turn.
+
+## Part 5
+
+**D5.1 Whose voice asks.**
+- **Order:** today's daily-question counselor (`check_ins.daily_question_counselor`), then the first member of the user's Cabinet, then a neutral "Your Cabinet".
+- **Where the questions live:** there is one fixed question per counselor, in `lib/intentionQuestion.ts`, mirrored in `web/src/lib/intentionQuestion.ts`. Each is phrased around "what would make you proud tonight".
+- **Behavior:** the input, the debounced save to `check_ins.intention`, and the daily question are unchanged.
+- **Alternative:** generate the question with a model each morning. That adds a model call and latency to a screen the prompt did not ask to make slower.
