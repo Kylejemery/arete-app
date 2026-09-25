@@ -431,7 +431,7 @@ split before anything is stored. Four ways to divide it, chosen in the box:
 3. Otherwise fixed size, about 3,000 words, cut at the nearest paragraph
    break, titled "Section N".
 
-Splitting and assembly are a pure module (`lib/scribe/book.ts`).
+Splitting and assembly are a pure module (`lib/scribe/book-draft.ts` (`book.ts` is the print layout module)).
 
 The preview lists each chapter's title and word count; Kyle can merge, split
 at a paragraph, rename, and reorder before committing. Commit creates one
