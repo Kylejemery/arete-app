@@ -108,19 +108,31 @@ export async function POST(req: NextRequest) {
     .filter(Boolean)
     .join('\n\n')
 
-  const messages: Turn[] = critique
+  const thread: Turn[] = critique
     ? [{ role: 'user', content: draftBlock }, { role: 'assistant', content: critique }, ...turns]
     : [
         { role: 'user', content: `${draftBlock}\n\n${turns[0].content}` },
         ...turns.slice(1),
       ]
 
+  // Prompt caching. Every turn resends the system prompt, the draft (up to
+  // ~15k tokens) and the critique, so three breakpoints: the system, the seed
+  // (the draft and critique, which survive the MAX_TURNS window sliding), and
+  // the newest turn, so the next turn reads the whole thread from cache.
+  const seedIndex = critique ? 1 : 0
+  const lastIndex = thread.length - 1
+  const messages: Anthropic.MessageParam[] = thread.map((m, i) =>
+    i === seedIndex || i === lastIndex
+      ? { role: m.role, content: [{ type: 'text', text: m.content, cache_control: { type: 'ephemeral' } }] }
+      : m
+  )
+
   try {
     const response = await client.messages.create({
       model: 'claude-opus-4-8',
       max_tokens: 4000,
       thinking: { type: 'adaptive' },
-      system,
+      system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
       messages,
     })
 
