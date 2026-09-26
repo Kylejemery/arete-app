@@ -17,7 +17,7 @@ import StreakArc from '@/components/StreakArc';
 import CabinetReplay from '@/components/CabinetReplay';
 import YesterdayCard from '@/components/YesterdayCard';
 import YourPractices from '@/components/YourPractices';
-import { fetchFollowup, localDate, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
+import { fetchFollowup, isYesterdayAnswered, localDate, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 
 // ── Counselor display metadata ────────────────────────────────────
 const COUNSELOR_META: Record<string, { name: string; initials: string }> = {
@@ -120,7 +120,11 @@ export default function HomePage() {
       setLoaded(true);
       // Off the critical path: the card paints when the line arrives (the
       // server may have to generate it on a first open).
-      fetchFollowup(localDate(-1)).then(setYesterdayCard).catch(() => {});
+      // Once answered in the Cabinet, the card has done its job and hides.
+      fetchFollowup(localDate(-1))
+        .then(async card => (card && (await isYesterdayAnswered(card)) ? null : card))
+        .then(setYesterdayCard)
+        .catch(() => {});
     }
     load();
   }, [router]);
