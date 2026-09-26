@@ -362,7 +362,9 @@ async function callCounselorModel({ model, system, messages, maxTokens }) {
   const route = isNonAnthropicModel(model) ? compatRouteFor(model) : undefined;
 
   if (route) {
-    return callOpenAICompat(route, { model, system, messages, maxTokens });
+    // Cache breakpoints are Anthropic-only; other providers take one string.
+    const systemText = Array.isArray(system) ? system.map(b => b.text).join('') : system;
+    return callOpenAICompat(route, { model, system: systemText, messages, maxTokens });
   }
   if (route === null) {
     console.warn(`[Models] No API key for ${model}; falling back to ${DEFAULT_COUNSELOR_MODEL}`);
@@ -5060,9 +5062,14 @@ async function fireParallelCounselors(question, counselors, history, contextChun
   // a specific work is in the library, beyond the few chunks retrieved above.
   const catalogBlock = await getLibraryCatalogBlock();
 
+  // Split for prompt caching: everything that holds for this counselor and
+  // user across turns goes first (cached via buildSystemBlocks), and what
+  // changes per turn (retrieved passages, pulse, check-in, colleagues) after.
+  const stableBlock = catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE;
+
   const contextBlock = (contextChunks.length > 0
     ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
-    : '') + catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE + (await getObservatoryPulseBlock());
+    : '') + (await getObservatoryPulseBlock());
 
   const checkInBlock = checkInContext
     ? `\n\n[MORNING CHECK-IN DATA — TREAT AS TENTATIVE]\nThe following was reported by the user's check-in system. This is background context only — do not state these as confirmed facts. Ask before assuming. The user may not have completed all items, or items may be incomplete at the time of this message.\n${checkInContext}\n[END CHECK-IN DATA]`
@@ -5090,7 +5097,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
     try {
       const { text, stopReason } = await callCounselorModel({
         model,
-        system: counselor.systemPrompt + contextBlock + checkInBlock + colleaguesBlock + voiceExtras,
+        system: buildSystemBlocks(counselor.systemPrompt + stableBlock, contextBlock + checkInBlock + colleaguesBlock + voiceExtras),
         messages,
         maxTokens: maxTokensPerVoice,
       });
