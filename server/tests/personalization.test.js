@@ -305,13 +305,14 @@ test('the counselor line names the practice and asks before turning anything on'
 const crypto = require('crypto');
 const { spawnSync } = require('child_process');
 
-// sha256 of both Home screens as they were before run C (commit cf0246a).
-// Stripping exactly the lines run C added must give these back, which proves
-// run C changed nothing else on Home. If Home is changed on purpose later,
-// recompute these from the new file with the same stripping.
+// sha256 of both Home screens without the Your practices lines. First taken
+// before run C (commit cf0246a), so stripping run C's lines gave the old Home
+// back byte for byte; recomputed on 2026-09-26 when the Yesterday card began
+// hiding once answered (a deliberate Home change). Recompute the same way
+// whenever Home is changed on purpose.
 const HOME_BEFORE_RUN_C = {
-  'app/(tabs)/index.tsx': '8a5a3da461fd67f16a54372fd75cc378a38c1b6bb2700842773f03ec16db9ac3',
-  'web/src/app/page.tsx': '7f7b939ee901861ce754f2d72781cac43a329240b64e3aa052e156f7fd50aff8',
+  'app/(tabs)/index.tsx': 'e659612d5d1e8dc4543f06e1806b0934e89d55ef453acc6d79d8b3c5bd785718',
+  'web/src/app/page.tsx': 'ba37a6a4b52e01e62a396a7bf8087baf86cdb147c04d0d04948442fe9a7c8f86',
 };
 
 test('Home minus the Your practices lines is byte-for-byte the Home from before run C', () => {
@@ -431,5 +432,32 @@ test('only a client that can show the card is offered one', () => {
   assert.match(server, /const cabinetThread = clientShowsCards && sessionType !== 'shared'/);
   for (const rel of ['services/claudeService.ts', 'web/src/lib/claudeService.ts']) {
     assert.match(fs.readFileSync(path.join(ROOT, rel), 'utf8'), /clientCards: \['proposal'\]/, rel);
+  }
+});
+
+// ── Home: the Yesterday card hides once answered ────────────────────────────
+
+for (const rel of ['lib/yesterdayAnswered.ts', 'web/src/lib/yesterdayAnswered.ts']) {
+  test(`${rel}: answered only when the person replied after the card's line`, t => {
+    const line = 'You said you would run six miles yesterday, did you?';
+    const cases = JSON.stringify([
+      [],
+      [{ role: 'assistant', content: line }],
+      [{ role: 'assistant', content: line }, { role: 'user', content: 'Yes, all six.' }],
+      [{ role: 'user', content: 'earlier' }, { role: 'assistant', content: line }],
+      [{ role: 'assistant', content: line }, { role: 'user', content: '[Morning check-in] ...', kind: 'checkin' }],
+      [{ role: 'assistant', content: line }, { role: 'user', content: '   ' }],
+      [{ role: 'assistant', content: 'a different line' }, { role: 'user', content: 'hi' }],
+    ]);
+    const r = runClientModules(rel, `${cases}.map(c => m.answeredIn(c, ${JSON.stringify(line)}))`);
+    if (r.skipped) return t.skip(`TypeScript import unavailable: ${r.skipped}`);
+    assert.deepEqual(r.value, [false, false, true, false, false, false, false]);
+  });
+}
+
+test('both Home screens drop an answered Yesterday card', () => {
+  for (const rel of ['app/(tabs)/index.tsx', 'web/src/app/page.tsx']) {
+    const src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    assert.match(src, /card && \(await isYesterdayAnswered\(card\)\) \? null : card/, rel);
   }
 });

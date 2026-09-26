@@ -8,6 +8,7 @@
 import { supabase } from './supabase';
 import { appendMessages, loadThread } from './threadService';
 import { logEvent } from './events';
+import { answeredIn } from './yesterdayAnswered';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
@@ -47,6 +48,17 @@ export async function fetchFollowup(date: string): Promise<YesterdayCard | null>
   } catch (e) {
     console.warn('[yesterday] followup fetch failed:', (e as Error)?.message);
     return null;
+  }
+}
+
+// The card has done its job once the person has replied to its line in the
+// Cabinet (see yesterdayAnswered.ts).
+export async function isYesterdayAnswered(card: YesterdayCard): Promise<boolean> {
+  try {
+    const thread = await loadThread('cabinet');
+    return answeredIn(thread.messages as unknown as { role: string; content: unknown; kind?: string }[], card.line);
+  } catch {
+    return false;
   }
 }
 

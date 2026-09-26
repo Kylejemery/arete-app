@@ -7,7 +7,7 @@ import { useSwipeNavigation } from '../../hooks/useSwipeNavigation';
 import SideMenu from '../../components/SideMenu';
 import DispatchNudge from '../../components/DispatchNudge';
 import YesterdayCard from '../../components/YesterdayCard';
-import { fetchFollowup, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
+import { fetchFollowup, isYesterdayAnswered, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 import WhatsNewModal from '../../components/WhatsNewModal';
 import YourPractices from '../../components/YourPractices';
 import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, upsertUserSettings } from '@/lib/db';
@@ -125,10 +125,13 @@ export default function HomeScreen() {
     setEveningDone(freshEvening);
     setCacheLoaded(true);
     // Off the critical path: the card paints when the line arrives.
-    fetchFollowup(localDate(-1)).then(card => {
-      setYesterdayCard(card);
-      if (card) markYesterdayCardSeenToday().catch(() => {});
-    }).catch(() => {});
+    // Once answered in the Cabinet, the card has done its job and hides.
+    fetchFollowup(localDate(-1))
+      .then(async card => (card && (await isYesterdayAnswered(card)) ? null : card))
+      .then(card => {
+        setYesterdayCard(card);
+        if (card) markYesterdayCardSeenToday().catch(() => {});
+      }).catch(() => {});
 
     // Step 3: write cache for next load
     try {
