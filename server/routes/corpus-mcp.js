@@ -27,7 +27,7 @@ const TOOLS = [
   {
     name: 'search_corpus',
     description:
-      'Semantic search over the Arete corpus: Stoic primary texts (Epictetus, Marcus Aurelius, Seneca, Musonius Rufus and others) plus related sources. Returns the most relevant passages with author, work, and section for citation. Query with a philosophical idea or question, not keywords.',
+      'Semantic search over the Arete corpus: Stoic primary texts (Epictetus, Marcus Aurelius, Seneca, Musonius Rufus and others) plus related sources. Returns the most relevant passages with author, work, section, and chunk id (the rag_corpus row id) for citation. Query with a philosophical idea or question, not keywords.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -90,7 +90,7 @@ async function searchCorpus({ query, author, k }) {
   return data
     .map((row, i) => {
       const where = [row.work, row.section_label].filter(Boolean).join(', ');
-      return `[${i + 1}] ${row.author}${where ? ` — ${where}` : ''} (similarity ${row.similarity.toFixed(2)})\n${row.chunk_text}`;
+      return `[${i + 1}] ${row.author}${where ? ` — ${where}` : ''} (similarity ${row.similarity.toFixed(2)}; chunk ${row.id})\n${row.chunk_text}`;
     })
     .join('\n\n');
 }
