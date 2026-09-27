@@ -1,0 +1,520 @@
+# Themata Project, Phase 1: rules and connectives ledger.
+#
+# suite.yaml holds argument forms, which become the harness's test items.
+# This file holds what the brief also asked Phase 1 to collect: every passage
+# that states or paraphrases a thema, the synthetic theorem, and the
+# definitions of the connectives that Params.lean will have to choose between.
+# These are not test items. They are inputs to Phase 2 and Phase 3.
+#
+# Same fields and conventions as suite.yaml (see its header on retrieval and
+# on witness strength), with two changes: `schema` holds the rule or definition
+# as stated, and `verdict` is replaced by `status`:
+#   attested       stated in an ancient text in the corpus (possibly quoted
+#                  in a secondary work)
+#   reported       stated only in a modern summary or reconstruction
+#   context        bears on the rule without stating it
+# `kind` here is one of: thema | synthetic_theorem | dialectical_theorem |
+#   connective | validity_criterion | reconstruction | context
+
+# ---------------------------------------------------------------------------
+# The themata
+# ---------------------------------------------------------------------------
+
+- id: T01
+  schema: "An argument is syllogistic iff it is an indemonstrable or is reduced to the indemonstrables by one or more themata."
+  status: attested
+  kind: thema
+  source: "Diogenes Laertius, Lives VII 7.78, Greek quoted in Zeller, ch. V n.241"
+  passage: |
+    [241] Diog. 78: συλλογιστικοὶ [λόγοι] μὲν οὖν εἰσιν οἱ ἤτοι ἀναπόδεικτοι
+    ὄντες ἢ ἀναγόμενοι ἐπὶ τοὺς ἀναποδείκτους κατά τι τῶν θεμάτων ἢ τινά.
+    According to Galen, Hipp. et Plat. ii. 3, p. 224, Chrysippus had taken
+    great pains in resolving the composite forms of inference (Diog. 190 and
+    194). Antipater suggested still simpler modes.
+  corpus_ref: "8e7bb081-9d8b-481f-b3ac-57183751efa5"
+  notes: |
+    This is the only statement in the corpus, in an ancient author's words,
+    that the themata are the reduction rules. Hicks's English for the same
+    sentence (7.78, chunk f9d254ff-01b0-4b37-b98d-9d71132839a9) drops the
+    word: "The syllogistic are such as either do not admit of, or are
+    reducible to such as do not admit of, immediate proof in respect of one or
+    more of the premisses". "κατά τι τῶν θεμάτων ἢ τινά" (by one or some of
+    the themata) becomes "in respect of one or more of the premisses". So the
+    word "thema" does not appear in the English of the one primary text the
+    corpus holds, which is the vocabulary problem CLAUDE.md describes for the
+    concordances.
+    Recommendation: a concordance entry for θέμα / θέματα.
+  confidence: high
+  verified_by_kyle: false
+
+- id: T02
+  schema: "There are (at least) a first, second, third and fourth thema."
+  status: attested
+  kind: thema
+  source: "Galen, De placitis Hippocratis et Platonis II.3, and Alexander, in APr., as cited in Zeller, ch. V n.244"
+  passage: |
+    Or else the πρῶτον, δεύτερον, τρίτον and τέταρτον θέμα mentioned by Galen,
+    Hipp. et Plat. ii. 3, vol. v. 224; Alex. Anal. Pr. 53, b, would hardly
+    suggest to him the various forms of the ἀναπόδεικτοι instead of the
+    formulæ for the resolution of composite conclusions.
+  corpus_ref: "6a3cffd7-8e11-4dc9-92b9-9a3863d19713"
+  notes: |
+    This establishes that there were four numbered themata and that they were
+    rules for resolving composite arguments. The sentence is Zeller's, and it
+    is directed against Prantl. The Galen and Alexander texts themselves are
+    not in the corpus (gaps.md).
+  confidence: medium
+  verified_by_kyle: false
+
+- id: T03
+  schema: "Third thema: if from the premises of an argument a conclusion follows, and from that conclusion together with a further premise a third proposition follows, then that third proposition also follows from the original premises together with the further premise."
+  status: attested
+  kind: thema
+  source: "Simplicius, in De Caelo (Schol. in Arist. 483b26), Greek quoted in Zeller, ch. V n.244; English gloss is Zeller's"
+  passage: |
+    Reference is made to the same thing in Simpl. De Cœlo; Schol. in Arist.
+    483, b, 26: ἡ δὲ τοιαύτη ἀνάλυσις τοῦ λόγου, ἡ τὸ συμπέρασμα λαμβάνουσα
+    καὶ προσλαμβάνουσα ἄλλην πρότασιν, κατὰ τὸ τρίτον λεγόμενον παρὰ τοῖς
+    Στωϊκοῖς θέμα περαίνεται, the rule of which is, that when a third
+    proposition can be drawn from the conclusion of an inference and a second
+    proposition, that third proposition can be drawn also from the premisses
+    of the inference and the second proposition.
+  corpus_ref: "6a3cffd7-8e11-4dc9-92b9-9a3863d19713"
+  notes: |
+    The Greek (Simplicius) says only that an analysis which takes the
+    conclusion and adds another premise "is completed according to what the
+    Stoics call the third thema". The general statement of the rule after
+    "the rule of which is" is Zeller's gloss, not Simplicius. Phase 3 should
+    encode the Greek's content and treat Zeller's wording as one
+    reconstruction among others.
+    Mates's summary (T06) states the third thema almost identically. Structurally
+    this is a cut rule, and cut is exactly where redundancy (suite S016) can
+    enter: if the further premise is idle, cut can manufacture a redundant
+    argument. This is the interaction the harness exists to test.
+  confidence: medium
+  verified_by_kyle: false
+
+- id: T04
+  schema: "Synthetic theorem (συνθετικὸν θεώρημα): the Peripatetic chain rule, from which the Stoics are said to have made their second, third and fourth themata."
+  status: attested
+  kind: synthetic_theorem
+  source: "Alexander of Aphrodisias, in APr. I.25 (42b5), p. 94b, Greek quoted in Zeller, ch. V n.244"
+  passage: |
+    [244] Alex. on Anal. Pr. i. 25, 42, b, 5, after speaking of the Sorites,
+    continues (p. 94, b): ἐν τῇ τοιαύτῃ τῶν προτάσεων συνεχείᾳ τό τε
+    συνθετικόν ἐστι θεώρημα ... καὶ οἱ καλούμενοι ὑπὸ τῶν νεωτέρων
+    ἐπιβάλλοντές τε καὶ ἐπιβαλλόμενοι. The συνθετικὸν θεώρημα (or
+    chain-argument), the meaning of which is next investigated, must be a
+    Peripatetic expression. The same meaning must attach to ἐπιβάλλοντές τε
+    καὶ ἐπιβαλλόμενοι, which are to be found ἐν ταῖς συνεχῶς λαμβανομέναις
+    προτάσεσι χωρὶς τῶν συμπερασμάτων· for instance, A is a property of B, B
+    of C, C of D; ∴ A is a property of D. ἐπιβαλλόμενος means the inference,
+    the conclusion of which is omitted; ἐπιβάλλων, the one with the omitted
+    premiss. These inferences may be in either of the three Aristotelian
+    figures κατὰ τὸ παραδεδομένον συνθετικὸν θεώρημα. ὃ οἱ μὲν περὶ
+    Ἀριστοτέλην τῇ χρείᾳ παραμετρήσαντες παρέδοσαν, ἐφ’ ὅσον αὐτὴ ἀπῇτει, οἱ
+    δὲ ἀπὸ τῆς τοῦ [στοᾶς] παρ’ ἐκείνων λαβόντες καὶ διελόντες ἐποίησαν ἐξ
+    αὐτοῦ τὸ καλούμενον παρ’ αὐτοῖς δεύτερον καὶ τρίτον θέμα καὶ τέταρτον,
+    ἀμελήσαντες μὲν τοῦ χρησίμου, πᾶν δὲ τὸ ὁπωσοῦν δυνάμενον λέγεσθαι ἐν τῇ
+    τοιαύτῃ θεωρίᾳ κἂν ἄχρηστος ᾖ, ἐπεξελθόντες τε καὶ ζηλώσαντες.
+  corpus_ref: "6a3cffd7-8e11-4dc9-92b9-9a3863d19713"
+  notes: |
+    Chunk 8e7bb081-9d8b-481f-b3ac-57183751efa5 holds the start of the note
+    (up to "ἐν τῇ τοιαύτῃ τῶν προτάσεων συνεχείᾳ τό τε συνθετικόν ἐστι
+    θεώρημα ... καὶ οἱ καλούμενοι ὑπὸ τῶν"). The passage above is from the
+    overlapping next chunk. The Greek of the last sentence is untranslated in
+    the corpus. It says that the Aristotelians handed the synthetic theorem
+    down as far as use required, while the Stoics took it over, divided it,
+    and made from it what they call the second, third and fourth thema,
+    working out everything that could be said even where useless. This is
+    our reading of the retrieved Greek, not a retrieved translation. It must
+    be checked by Kyle or a specialist before any Phase 3 module relies on it.
+    Consequence for Phase 3: themata 2 to 4 should be encoded as a family
+    derived from a single chain/cut principle. The first thema has a
+    different origin (contraposition, T06).
+    The "..." inside the Greek is Zeller's own ellipsis.
+  confidence: medium
+  verified_by_kyle: false
+
+- id: T05
+  schema: "Dialectical theorem: in analysis, a conclusion validly drawn from some premises of an argument may be treated as an additional premise for later steps."
+  status: reported
+  kind: dialectical_theorem
+  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    Sextus also reports a "dialectical theorem" (theorema) permitting analysts
+    to treat any conclusion derived during analysis as if it were an
+    additional premise available for subsequent steps. Mates considers it
+    probable that this theorema is one of the four themata — possibly the
+    second — but concedes the identification is uncertain and notes that it
+    might simply be a restatement of the third.
+  corpus_ref: "401a8e59-19ef-4e5e-80f0-dbeb990103a0"
+  notes: |
+    Also chunk acc6e721-4a81-421d-8660-5f5c496ddb95: "whenever premises
+    entail a conclusion, that conclusion may be treated as implicitly present
+    among the premises even if unstated." The Sextus text is not in the corpus.
+    Whether the "additional premise" is added (so the premise count grows) or
+    substituted matters for redundancy, and the summary cannot settle it.
+  confidence: low
+  verified_by_kyle: false
+
+- id: T06
+  schema: "First thema: if from two premises a conclusion follows, then from either premise together with the contradictory of the conclusion, the contradictory of the other premise follows."
+  status: reported
+  kind: thema
+  source: "Benson Mates, Stoic Logic (Mode 2 summary); Mates's ancient source is not named in the summary"
+  passage: |
+    Mates describes the Stoic procedure of analysis (the reduction of complex
+    arguments to sequences of basic undemonstrated arguments) and the four
+    general meta-rules (themata) governing it. Of the four, only the first and
+    third are directly attested. The first thema holds that if two premises
+    jointly yield a conclusion, then either premise combined with the negation
+    of the conclusion yields the negation of the other. The third thema holds
+    that if two premises yield a conclusion, and some further propositions
+    yield one of those premises, then those further propositions together
+    with the other premise yield the original conclusion. The content of the
+    second and fourth themata is not known, and Mates acknowledges this gap
+    plainly.
+  corpus_ref: "f02a4416-3430-4014-bd73-fbdb3ed20170"
+  notes: |
+    No ancient statement of the first thema is in the corpus (gaps.md). Note
+    "negation" in the summary against "contradictory" in the ancient
+    definitions of the indemonstrables (suite S002). The difference matters for
+    the double negation parameter.
+    The summary's statement of the third thema differs from Zeller's gloss
+    (T03). Mates, as summarised, lets "further propositions" yield one of the
+    premises. Zeller has the conclusion plus one further proposition yield a
+    third. These are two readings to encode separately in Phase 3.
+  confidence: low
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Connectives and the validity criterion (inputs to Params.lean)
+# ---------------------------------------------------------------------------
+
+- id: C01
+  schema: "Chrysippean conditional: 'if p, q' is true iff the contradictory of q conflicts with p."
+  status: attested
+  kind: connective
+  source: "Diogenes Laertius, Lives VII 7.73 (tr. R.D. Hicks, 1925)"
+  passage: |
+    A hypothetical proposition is therefore true, if the contradictory of its
+    conclusion is incompatible with its premiss, e.g. “If it is day, it is
+    light.” This is true. For the statement “It is not light,” contradicting
+    the conclusion, is incompatible with the premiss “It is day.” On the other
+    hand, a hypothetical proposition is false, if the contradictory of its
+    conclusion does not conflict with the premiss, e.g. “If it is day, Dion is
+    walking.” For the statement “Dion is not walking” does not conflict with
+    the premiss “It is day.”
+  corpus_ref: "14f8f3d9-bf33-4ed6-a6ed-ae36b9bfdc6b"
+  notes: |
+    Hicks translates antecedent and consequent as "premiss" and "conclusion",
+    which invites confusion with argument premises. Zeller n.221 (chunk
+    05958d2e-5680-46e2-a7aa-bb5c95a250b7) attributes this criterion to
+    Chrysippus: "The first of these requirements, which is mentioned by Diog.
+    73 as the only criterion of the Stoic School, was due to Chrysippus".
+    DL 7.71 (chunk 0188bfdf-30f2-4517-8244-1fa27d5ae588): the conjunction "If"
+    "promises that the second of two things follows consequentially upon the
+    first".
+  confidence: high
+  verified_by_kyle: false
+
+- id: C02
+  schema: "The truth-conditions of the conditional were disputed: Diodorus, Philo and Chrysippus each held a different view. Philo's: true unless antecedent true and consequent false."
+  status: attested
+  kind: connective
+  source: "Cicero, Academica II (Lucullus) ch. XLVII (tr. C.D. Yonge, 1856); Sextus as quoted in Zeller, ch. V n.221"
+  passage: |
+    In this very thing, which the dialecticians teach among the elements of
+    their art, how one ought to judge whether an argument be true or false
+    which is connected in this manner, “If it is day, it shines,” how great a
+    contest there is;—Diodorus has one opinion, Philo another, Chrysippus a
+    third.
+  corpus_ref: "c0a540bf-80c4-4e6e-9c1e-3d968ee41331"
+  notes: |
+    Zeller n.221 (chunk 524a0d82-8e4b-4147-a8ef-0cfa6cb6d760) quotes Sext.
+    Math. viii. 112 in Greek ("κοινῶς μὲν γάρ φασιν ἅπαντες οἱ Διαλεκτικοὶ
+    ὑγιὲς εἶναι συνημμένον, ὅταν ἀκολουθῇ τῷ ἐν αὐτῷ ἡγουμένῳ τὸ ἐν αὐτῷ λῆγον.
+    περὶ δὲ τοῦ πότε ἀκολουθεῖ καὶ πῶς, στασιάζουσι πρὸς ἀλλήλους") and
+    reports Philo's view: "who declared all conditional sentences to be right
+    in which a false inferential clause is not drawn from a true leading
+    clause. According to this view, conditional sentences would be right,
+    with both clauses true, or both false, or with a false leading clause and
+    true inferential clause (Sext. l.c. viii. 245 and 449; Pyrrh. ii. 110).
+    According to Sext. Pyrrh. ii. 104, the view of Philo appears to have gained
+    acceptance among the Stoics". Zeller also reports a containment criterion
+    (Sext. Pyrrh. ii. 111). So the corpus attests four readings: Philonian,
+    Diodorean, Chrysippean (connexion), and containment.
+    Mates's summary (chunk 9b9e26c8-317b-43b4-bf43-834337b0c922) models them as
+    material, always-true, strict, and a fourth that "would rule out the
+    'duplicated propositions'". That fourth reading would falsify "if p, p"
+    and so the major premise of suite S009.
+    Parameter values for Params.lean: philonian | diodorean | chrysippean |
+    containment.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C03
+  schema: "Chrysippus would restate a conditional that fails his test as a negated conjunction: not 'if p, not q' but 'not (p and q)'."
+  status: attested
+  kind: connective
+  source: "Cicero, De Fato ch. 8 (tr. C.D. Yonge, 1853); Latin quoted in Zeller, ch. V n.221"
+  passage: |
+    He would rather have them announce the prognostic in this fashion, — "
+    It is not the case that if any one is born under the dog-star he will be
+    drowned in the sea." What an excel lent joke ! Rather than agree with the
+    rational Diodorus, he sets about instructing the Chaldeans how they should
+    frame their responses. I ask, then, if the Chaldeans should allow
+    themselves to change affirmative indefinites into negative indefinite
+    conjunctives
+  corpus_ref: "dfd1d864-021a-4b4a-b9b6-71223d8d16fb"
+  notes: |
+    Yonge's English, as printed in the chunk, reads as a negated conditional
+    ("It is not the case that if..."). Cicero's own description in the same
+    sentence ("negative indefinite conjunctives") and Zeller's Latin show it
+    is a negated conjunction. Zeller n.221 (chunk
+    05958d2e-5680-46e2-a7aa-bb5c95a250b7): "it was not right to say, Si quis natus est oriente
+    canicula, is in mari non morietur; but, Non et natus est quis oriente
+    canicula et is in mari morietur." The OCR spacing ("excel lent") and the
+    stray quotation mark are in the chunk.
+    This bears on the parameter directly. Under the Chrysippean reading, a
+    true negated conjunction does not license the conditional, so third
+    indemonstrables and first indemonstrables cannot be interconverted.
+    Under the Philonian reading they can.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C04
+  schema: "Disjunction is exclusive: exactly one disjunct is true."
+  status: attested
+  kind: connective
+  source: "Diogenes Laertius, Lives VII 7.72 (tr. R.D. Hicks, 1925); Cicero, Academica II ch. XXX (tr. Yonge)"
+  passage: |
+    A disjunctive proposition is one which is constituted such by the
+    disjunctive conjunction “Either,” as e.g. “Either it is day or it is
+    night.” This conjunction guarantees that one or other of the alternatives
+    is false.
+  corpus_ref: "0188bfdf-30f2-4517-8244-1fa27d5ae588"
+  notes: |
+    DL gives only "one ... is false", which on its own is weaker than
+    exclusivity. The other half (at least one is true) comes from Cicero,
+    Academica II ch. XXX (chunk 2ba79887-49fa-4618-8a50-f5c70d5cb00c): "when
+    the dialecticians lay it down that every disjunctive proposition, such as
+    'either yes or no' is not only true but necessary". Together these give
+    exclusive disjunction for the two-disjunct case the indemonstrables use.
+    Mates's summary (chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e) cites Gellius
+    for "exactly one disjunct ... true and all others false". Gellius XVI.8 is
+    not in the corpus (only XIX.1 is), see gaps.md.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C05
+  schema: "Conjunction: formed by coupling conjunctions; 'It is day-time and it is light'."
+  status: attested
+  kind: connective
+  source: "Diogenes Laertius, Lives VII 7.72 (tr. R.D. Hicks, 1925)"
+  passage: |
+    A coupled proposition is one which is put together by certain coupling
+    conjunctions, e.g. “It is day-time and it is light.”
+  corpus_ref: "0188bfdf-30f2-4517-8244-1fa27d5ae588"
+  notes: |
+    The corpus gives no truth-condition for conjunction. It is not
+    needed for the brief, since classical conjunction is uncontested, but
+    it should be recorded as an assumption in NOTES.md.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C06
+  schema: "Negation and double negation: 'not not-p' presupposes p."
+  status: attested
+  kind: connective
+  source: "Diogenes Laertius, Lives VII 7.69 (tr. R.D. Hicks, 1925)"
+  passage: |
+    An example of a negative proposition is “It is not day.” Of the negative
+    proposition one species is the double negative. By double negative is
+    meant the negation of a negation, e.g. “It is not not-day.” Now this
+    presupposes that it is day.
+  corpus_ref: "0188bfdf-30f2-4517-8244-1fa27d5ae588"
+  notes: |
+    The indemonstrables are defined with "contradictory", not "negation"
+    (suite S002 to S005). With double negation as a separate proposition, the
+    contradictory of "not p" is "p", not "not not p". The corpus also shows
+    the Stoics treating "not not p" as a distinct (double negative)
+    proposition that "presupposes" p. So whether "not not p" and "p" are
+    interchangeable in a derivation is a real parameter, not a detail. Mates's
+    summary raises exactly this (chunk 401a8e59-19ef-4e5e-80f0-dbeb990103a0,
+    "Double negation assumption") and "declines to settle" it.
+    Parameter: contradictory = syntactic toggle (strip or add one "not") |
+    negation plus double-negation elimination.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C07
+  schema: "Other non-simple propositions: inferential ('since'), causal ('because'), comparative ('rather than')."
+  status: attested
+  kind: context
+  source: "Diogenes Laertius, Lives VII 7.71–7.74 (tr. R.D. Hicks, 1925)"
+  passage: |
+    An inferential proposition according to Crinis in his Art of Dialectic is
+    one which is introduced by the conjunction “Since” and consists of an
+    initial proposition and a conclusion; for example, “Since it is day-time,
+    it is light.” This conjunction guarantees both that the second thing
+    follows from the first and that the first is really a fact.
+  corpus_ref: "0188bfdf-30f2-4517-8244-1fa27d5ae588"
+  notes: |
+    Out of scope: the five indemonstrables use only the conditional, negated
+    conjunction and disjunction. Recorded so that Syntax.lean's choice to omit
+    these connectives is a documented decision.
+  confidence: high
+  verified_by_kyle: false
+
+- id: C08
+  schema: "Validity criterion: an argument is conclusive iff the contradictory of the conclusion is incompatible with the conjunction of the premises."
+  status: attested
+  kind: validity_criterion
+  source: "Diogenes Laertius, Lives VII 7.77 (tr. R.D. Hicks, 1925)"
+  passage: |
+    Inconclusive are such that the contradictory of the conclusion is not
+    incompatible with combination of the premisses
+  corpus_ref: "f9d254ff-01b0-4b37-b98d-9d71132839a9"
+  notes: |
+    This is the semantic side. It is the connexion criterion for conditionals
+    (C01) applied to the conditional whose antecedent is the conjunction of
+    the premises. Mates's summary (chunk f02a4416-3430-4014-bd73-fbdb3ed20170)
+    calls it a "conditionalization principle" and notes that the Stoics
+    "always stated the principle as a biconditional".
+    This criterion gives the harness a possible route to "proven underivable"
+    (Phase 4): an argument whose premises are compatible with the
+    contradictory of its conclusion under a chosen semantics is invalid on
+    this criterion. The criterion alone is monotonic, since adding a premise
+    never restores compatibility, so it cannot by itself explain the
+    rejection of redundant arguments (suite S016). That gap is itself
+    evidence to report.
+  confidence: high
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Modern reconstructions present in the corpus (for Phase 3)
+# ---------------------------------------------------------------------------
+
+- id: R01
+  schema: "Mates (1953): four themata, only the first and third attested; dialectical theorem possibly the second."
+  status: reported
+  kind: reconstruction
+  source: "Benson Mates, Stoic Logic (Mode 2 summary, 60 chunks)"
+  passage: |
+    Mates notes only the first and third *themata* are recoverable with any
+    confidence from surviving texts, leaving the complete system an open
+    question.
+  corpus_ref: "d52a33eb-6dec-493a-b471-15e09c782015"
+  notes: |
+    Detail in T05, T06. Also chunk d9268300-6d68-4084-bcb7-3902c24a08b9:
+    "whether Stoic logic actually was complete cannot be determined until all
+    four meta-rules (themata) are fully recovered". A Phase 3 module for
+    Mates can encode T1 and T3 as the summary states them. It must leave T2
+    and T4 open, or encode the dialectical theorem as T2 and label that as
+    Mates's conjecture.
+  confidence: low
+  verified_by_kyle: false
+
+- id: R02
+  schema: "Bobzien (Cambridge Companion ch., pp. 126–157): four themata reconstructed chiefly from Simplicius and Alexander; third thema as a transitivity / cut rule."
+  status: reported
+  kind: reconstruction
+  source: "Susanne Bobzien, Stoic Logic (Cambridge Companion), part 2 (Mode 2 summary)"
+  passage: |
+    A central portion of the analysis concerns the *themata* — meta-rules for
+    reducing complex arguments to indemonstrable ones. Bobzien reconstructs
+    the first, second, third, and fourth *themata* from surviving sources
+    (primarily Simplicius and Alexander), showing how the Stoics used these
+    reduction procedures to analyse multi-premise arguments into chains of
+    two-premise indemonstrable steps.
+  corpus_ref: "a94845be-9245-4327-b1d0-770bc5dc6064"
+  notes: |
+    The summary does not state the content of any thema, so a Phase 3
+    module cannot be built from it. It also contains an error. It describes
+    the third and fourth indemonstrables as both involving conjunctions and
+    the fifth as "given a disjunction and one disjunct, the contradictory of
+    the other follows", which is DL's fourth (suite S004). The summary is
+    not reliable on details.
+  confidence: low
+  verified_by_kyle: false
+
+- id: R03
+  schema: "Bobzien (OSAP 1996, 'Stoic Syllogistic'): four themata as chain-inference rules; the reconstructed system as summarised satisfies monotonicity, cut, premise permutation; not contraction."
+  status: reported
+  kind: reconstruction
+  source: "Susanne Bobzien, Stoic Syllogistic (Mode 2 summary)"
+  passage: |
+    Section five surveys the general logical properties of the reconstructed
+    system: it satisfies reflexivity (in a limited sense), monotonicity, cut
+    (transitivity), and premise permutation; it does not satisfy contraction
+    (in the standard sense), suppression, or antilogism.
+  corpus_ref: "76b4b6e1-9e59-478b-8807-457e1a7756b2"
+  notes: |
+    Flag: "monotonicity" contradicts the project's working constraint that
+    redundant premises invalidate (suite S016). There are three possibilities:
+    the summary is wrong; Bobzien's reconstruction is monotonic, and
+    redundancy is then a separate condition outside the syllogistic; or
+    "monotonicity" means something narrower there. The summary cannot settle
+    which. Read the paper before Phase 3 encodes a Bobzien module. This is
+    the most consequential open item in Phase 1.
+    Same summary, chunk 562791d2-28ed-4b57-b5ad-112693d25b3e: "Bobzien argues
+    that the first thema handles contraposition, the second enables chain
+    inference, the third and fourth handle more complex reductions involving
+    three or more premises and 'external' assumptions". It also says she
+    "carefully compares the two principal ancient reconstructions, those of
+    Alexander and Simplicius". Neither ancient text is in the corpus
+    except for the fragments quoted in Zeller (T03, T04).
+    The summary names Frede, Mignucci, Mates and Barnes as rival
+    reconstructions. Of these, only Mates is in the corpus.
+  confidence: low
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Context
+# ---------------------------------------------------------------------------
+
+- id: X01
+  schema: "Chrysippus's logical catalogue includes works on analysis, redundancy and reduction to the indemonstrables."
+  status: attested
+  kind: context
+  source: "Diogenes Laertius, Lives VII 7.195 (tr. R.D. Hicks, 1925)"
+  passage: |
+    Second series: On Conclusive Arguments, addressed to Zeno, one book. On
+    the Primary Indemonstrable Syllogisms, addressed to Zeno, one book. On the
+    Analysis of Syllogisms, one book. Of Redundant Arguments, addressed to
+    Pasylus, two books. Of the Rules for Syllogisms, one book. Of Introductory
+    or Elementary Syllogisms, addressed to Zeno, one book. Of the Introductory
+    Moods, addressed to Zeno, three books.
+  corpus_ref: "58bb05d5-174a-40fa-9615-e955c1814514"
+  notes: |
+    The list continues in the overlapping next chunk (7.195–7.198, chunk
+    6a33f045-1c35-4799-92d3-04fe5330989d): "Of the Syllogisms under False
+    Figures, five books. Syllogistic Arguments by Resolution in Indemonstrable
+    Arguments, one book."
+    Titles only. They show that redundancy and reduction were Chrysippean
+    topics, which strengthens the attribution of S016's doctrine to
+    Chrysippus without supplying its content. The same catalogue (7.191,
+    chunk 5dd1abfc-3ec7-483f-bb17-b95965b8a8ad) lists "On the Argument which
+    employs three Terms", which Zeller n.244 connects with the Greek title
+    περὶ τοῦ διὰ τριῶν.
+  confidence: high
+  verified_by_kyle: false
+
+- id: X02
+  schema: "Composite arguments are resolved into the simple forms; Antipater proposed simpler modes."
+  status: attested
+  kind: context
+  source: "Zeller, The Stoics, Epicureans and Sceptics, ch. V (main text)"
+  passage: |
+    The combination of these five simple forms of inference gives rise to the
+    composite forms of inference, [240] all of which may be again resolved
+    into their simple forms. [241]
+  corpus_ref: "8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca"
+  notes: |
+    Zeller's own claim, supported by the note at T01 (Diog. 78, Galen). The
+    Zeller rows in the corpus carry text_type "primary", but this is 19th
+    century scholarship. The label should be corrected (NOTES.md).
+  confidence: medium
+  verified_by_kyle: false
