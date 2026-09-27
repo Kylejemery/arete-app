@@ -1,0 +1,5 @@
+name = "stoic"
+defaultTargets = ["Stoic"]
+
+[[lean_lib]]
+name = "Stoic"

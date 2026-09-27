@@ -1,0 +1,559 @@
+# Themata Project, Phase 1: evidence ledger (the test suite).
+#
+# One entry per argument form. Every `passage` is copied verbatim from the
+# chunk named in `corpus_ref` (a `rag_corpus.id`). Ellipses inside a passage
+# mark text we left out. The chunk text itself sometimes contains " … ", and
+# where it does, that is noted. Nothing here comes from model recall.
+#
+# How the passages were retrieved: the read-only Arete corpus MCP server
+# (server/routes/corpus-mcp.js) was not connected to the session that built
+# this file. Passages were read from the same table it serves (`rag_corpus`,
+# non-deprecated rows) with read-only SELECTs through the Supabase connector.
+# See ../NOTES.md, "Retrieval". A side benefit is that the MCP server's
+# `search_corpus` output does not include chunk ids, while these queries do.
+#
+# Witness strength is recorded in `source` and `confidence`:
+#   - An ancient text in a public-domain translation (Hicks 1925, Yonge 1853/
+#     1856 for Cicero) is a primary witness.
+#   - Zeller's footnotes (Reichel's translation) quote Alexander, Simplicius
+#     and others in Greek. They are verbatim ancient text reached through a
+#     secondary work: "quoted in Zeller".
+#   - Mates and Bobzien are present only as Mode 2 paper summaries, the
+#     corpus agent's own paraphrase. They are the weakest kind of evidence here
+#     and never carry more than `low` confidence as testimony about ancient
+#     doctrine.
+#
+# Vocabulary (amended by Kyle's rulings of 2026-09-27, see ../NOTES.md):
+#   verdict: valid | invalid | disputed | valid_nonsyllogistic
+#     valid_nonsyllogistic: the harness passes such an item only if it is
+#     valid under the validity criterion (rules.yaml C08) AND not derivable
+#     through the themata. Deriving it is overgeneration.
+#   kind: indemonstrable | derived | redundant | single_premise | sophism | other
+#   flags: optional list. `non_formal` keeps the entry in the ledger but out of
+#     the formal suite: its verdict turns on something propositional form
+#     cannot see (material truth of a premise, equivocation).
+#
+# verified_by_kyle is false on every entry. Nothing enters the harness until
+# Kyle signs off.
+
+# ---------------------------------------------------------------------------
+# The five indemonstrables
+# ---------------------------------------------------------------------------
+
+- id: S001
+  schema: "if p, q; p; therefore q"
+  verdict: valid
+  kind: indemonstrable
+  source: "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The first kind of indemonstrable statement is that in which the whole
+    argument is constructed of a hypothetical proposition and the clause with
+    which the hypothetical proposition begins, while the final clause is the
+    conclusion; as e.g. “If the first, then the second; but the first is,
+    therefore the second is.”
+  corpus_ref: "dbaf3427-c4d5-4f04-bd95-b5c332606b3a"
+  notes: |
+    Same chunk (7.79): "As to the number of these, authorities differ;
+    Chrysippus makes them five." Concrete instances of the same form, all in
+    DL VII Hicks: "If it is day, it is light; but it is day, therefore it is
+    light" (7.76, chunk 0b12119b-5019-4600-98b9-20bc2cc1139a); "If Dion walks,
+    then Dion is in motion; but Dion is walking, therefore Dion is in motion",
+    given as the example of a syllogistic argument (7.78, chunk
+    f9d254ff-01b0-4b37-b98d-9d71132839a9); "If virtue does good, vice does
+    harm; but virtue does good, therefore vice does harm", given as a true
+    argument (7.79, same chunk). The mixed form "If Plato is alive, he
+    breathes; but the first is true, therefore the second is true" (7.77,
+    same chunk) is the logotropos, the same form with numerals in the minor
+    premise and conclusion. Also corroborated by Arnold, Roman Stoicism §162
+    (scholarship, chunk 35f286cd-cf33-400a-80e0-417dce60038c) and by Cicero,
+    Academica II, who calls it "the first mood" (see S010).
+  confidence: high
+  verified_by_kyle: false
+
+- id: S002
+  schema: "if p, q; not q; therefore not p"
+  verdict: valid
+  kind: indemonstrable
+  source: "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The second is that which employs a hypothetical proposition and the
+    contradictory of the consequent, while the conclusion is the contradictory
+    of the antecedent; e.g. “If it is day, it is light; but it is night,
+    therefore it is not day.” Here the minor premiss is the contradictory of
+    the consequent; the conclusion the contradictory of the antecedent.
+  corpus_ref: "dbaf3427-c4d5-4f04-bd95-b5c332606b3a"
+  notes: |
+    In Hicks's example the minor premise is "it is night", which is not the
+    contradictory of the consequent "it is light", although the next sentence
+    says it is. The schema follows the definition, not the example. The
+    example should be checked against the Greek before this entry is used to
+    decide anything about contradictories versus contraries.
+    The definition uses "the contradictory" rather than "not". Whether an
+    argument like "if not p, q; not q; therefore p" (with the double negation
+    removed) counts as a second indemonstrable is a parameter question (see
+    rules.yaml C06, and Params.lean in Phase 2).
+  confidence: high
+  verified_by_kyle: false
+
+- id: S003
+  schema: "not (p and q); p; therefore not q"
+  verdict: valid
+  kind: indemonstrable
+  source: "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The third kind of indemonstrable employs a conjunction of negative
+    propositions for major premiss and one of the conjoined propositions for
+    minor premiss, concluding thence the contradictory of the remaining
+    proposition; e.g. “It is not the case that Plato is both dead and alive;
+    but he is dead, therefore Plato is not alive.”
+  corpus_ref: "dbaf3427-c4d5-4f04-bd95-b5c332606b3a"
+  notes: |
+    Hicks says "a conjunction of negative propositions", but his own example
+    is a negated conjunction ("It is not the case that Plato is both dead and
+    alive"). The schema follows the example. Zeller n.230 (chunk
+    4b20ae16-4914-4fb8-9953-7b8efd451523) likewise reads the premise as "it is
+    not at the same time A and B", citing Diog. 80.
+    Mates (Mode 2 summary, chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e)
+    reports that the negated conjunction "leaves open the possibility that both
+    fail", and that one source (apparently Galen) held that no syllogism from a
+    negated conjunction is useful for demonstration. That is a dispute about
+    usefulness, not validity.
+  confidence: high
+  verified_by_kyle: false
+
+- id: S004
+  schema: "either p or q; p; therefore not q"
+  verdict: valid
+  kind: indemonstrable
+  source: "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The fourth kind employs a disjunctive proposition and one of the two
+    alternatives in the disjunction as premisses, and its conclusion is the
+    contradictory of the other alternative; e.g. “Either A or B; but A is,
+    therefore B is not.”
+  corpus_ref: "dbaf3427-c4d5-4f04-bd95-b5c332606b3a"
+  notes: |
+    This is valid only if "either ... or" is exclusive. For the corpus
+    evidence on disjunction see rules.yaml C04.
+  confidence: high
+  verified_by_kyle: false
+
+- id: S005
+  schema: "either p or q; not p; therefore q"
+  verdict: valid
+  kind: indemonstrable
+  source: "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The fifth kind is that in which the argument as a whole is constructed of
+    a disjunctive proposition and the contradictory of one of the alternatives
+    in the disjunction, its conclusion being the other alternative; e.g.
+    “Either it is day or it is night; but it is not night, therefore it is
+    day.”
+  corpus_ref: "dbaf3427-c4d5-4f04-bd95-b5c332606b3a"
+  notes: |
+    Zeller n.238 (chunk 8e7bb081-9d8b-481f-b3ac-57183751efa5) mentions a
+    "πέμπτος ἀναπόδεικτος διὰ πλειόνων" (a fifth indemonstrable with more than
+    two disjuncts). The corpus gives the name only, not the form. See gaps.md.
+  confidence: high
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Forms the sources reject
+# ---------------------------------------------------------------------------
+
+- id: S006
+  schema: "if p, q; p; therefore r"
+  verdict: invalid
+  kind: other
+  source: "Diogenes Laertius, Lives VII 7.77 (tr. R.D. Hicks, 1925)"
+  passage: |
+    Of arguments some are conclusive, others inconclusive. Inconclusive are
+    such that the contradictory of the conclusion is not incompatible with
+    combination of the premisses, as in the following: “If it is day, it is
+    light; but it is day, therefore Dion walks.”
+  corpus_ref: "f9d254ff-01b0-4b37-b98d-9d71132839a9"
+  notes: |
+    The conclusion is unconnected to the premises. The same example recurs at
+    7.79 as a false argument ("If it is day, it is light; but it is day,
+    therefore Dion is alive"), false because it is inconclusive (same chunk).
+    Mates's summary of Sextus's four kinds of invalidity (chunk
+    6dea256b-8bed-46db-9df4-e015a90e5636) lists "incoherent arguments (para
+    diartesin)", which fail because "premises bear no logical connection to
+    each other or to the conclusion". This example may be of that kind, but no
+    primary source in the corpus says so.
+    This passage is also the corpus's statement of the validity criterion:
+    see rules.yaml C08.
+  confidence: high
+  verified_by_kyle: false
+
+- id: S007
+  schema: "if p, q; not p; therefore not q"
+  verdict: invalid
+  kind: other
+  source: "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)"
+  passage: |
+    Arguments not syllogistic are those which plausibly resemble syllogistic
+    arguments, but are not cogent proof; e.g. “If Dion is a horse, he is an
+    animal; but Dion is not a horse, therefore he is not an animal.”
+  corpus_ref: "f9d254ff-01b0-4b37-b98d-9d71132839a9"
+  notes: |
+    Denying the antecedent. Mates's summary (chunk
+    6dea256b-8bed-46db-9df4-e015a90e5636) reports Sextus's class of arguments
+    "propounded in an invalid schema (en asustatō schēmati)" and describes its
+    example as "affirming the consequent's negation while denying the
+    antecedent". That description is garbled in the summary and cannot be
+    matched to a schema without the Sextus text.
+  confidence: high
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Valid, but not syllogistic
+# ---------------------------------------------------------------------------
+
+- id: S008
+  schema: "'p and q' is false; p; therefore not q"
+  verdict: valid_nonsyllogistic
+  kind: other
+  source: "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)"
+  passage: |
+    Of conclusive some are denoted by the common name of the whole class,
+    “conclusive proper,” others are called syllogistic. The syllogistic are
+    such as either do not admit of, or are reducible to such as do not admit
+    of, immediate proof in respect of one or more of the premisses; e.g. “If
+    Dion walks, then Dion is in motion; but Dion is walking, therefore Dion is
+    in motion.” Conclusive specifically are those which draw conclusions, but
+    not by syllogism; e.g. the statement “It is both day and night” is false:
+    “now it is day; therefore it is not night.”
+  corpus_ref: "f9d254ff-01b0-4b37-b98d-9d71132839a9"
+  notes: |
+    An important boundary case. DL calls this argument conclusive (valid) but
+    not syllogistic, so a correct reconstruction of the themata must NOT derive
+    it from the indemonstrables. Mates's summary (chunk
+    78c91994-ccd2-47ac-9eb9-17201baa0783) reads it the same way: the premise
+    says a conjunction "is false" rather than negating it, and "the Stoics
+    distinguished between the negation of a proposition and the assertion that
+    a proposition is false".
+    Ruling (Kyle, 2026-09-27): verdict valid_nonsyllogistic. The harness must
+    check both that the argument is valid under the validity criterion and
+    that it is not derivable through the themata.
+    Phase 2 represents "'p' is false" as its own operator (`saidFalse` in
+    Syntax.lean), semantically the negation but syntactically distinct, so no
+    indemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is
+    valid under the criterion and not derivable from the base cases.
+  confidence: high
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Duplicated and indifferently concluding arguments
+# ---------------------------------------------------------------------------
+
+- id: S009
+  schema: "if p, p; p; therefore p"
+  verdict: valid
+  kind: other
+  source: "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)"
+  passage: |
+    These are the arguments of Chrysippus, which even he himself did not
+    refute. For what could he do with such a conclusion as this,—“If it
+    shines, it shines: but it does shine, therefore it does shine?” He must
+    give in; for the principle of the connexion compels you to grant the last
+    proposition after you have once granted the first.
+  corpus_ref: "df555ec8-e886-440d-9d99-b7376a22b63a"
+  notes: |
+    A duplicated argument (διφορούμενος). Zeller n.239 (chunk
+    8e7bb081-9d8b-481f-b3ac-57183751efa5, quoted in Zeller from Alex. Anal. Pr.
+    and Cic. Acad. ii. 30, 96): "Two such cases are distinguished, one in which
+    all three clauses, the other in which the conclusion and minor premiss are
+    identical. The first class are called διφορούμενοι· If it is day, it is
+    day; It is day, ∴ It is day." In the next chunk (
+    2ba79887-49fa-4618-8a50-f5c70d5cb00c, ch. XXX) Cicero adds: "I have learnt that everything which is
+    connected with itself is true". That is evidence that "if p, p" is a true
+    conditional (rules.yaml C01).
+    The Peripatetics objected to these arguments. Mates's summary (chunk
+    78c91994-ccd2-47ac-9eb9-17201baa0783) says they rejected "duplicated
+    arguments" and "tautologous inferences" because a genuine syllogism must
+    establish something not already known. The Stoic verdict is valid. The
+    Peripatetic objection is recorded here and does not change the verdict.
+    This form is an instance of S001 with q := p, so any reconstruction that
+    has S001 derives it. It serves as a sanity check, not a discriminator.
+  confidence: high
+  verified_by_kyle: false
+
+- id: S010
+  schema: "if (p and q), r; p and q; therefore r"
+  verdict: valid
+  kind: indemonstrable
+  source: "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)"
+  passage: |
+    What then do you think of this conclusion,—“If you say that the sun
+    shines, and if you speak truth, therefore the sun does shine?” At all
+    events you approve of the kind of argument, and you say that the
+    conclusion has been most correctly inferred. Therefore, in teaching, you
+    deliver that as the first mood in which to draw conclusions.
+  corpus_ref: "df555ec8-e886-440d-9d99-b7376a22b63a"
+  notes: |
+    Yonge's English runs the conditional and the minor premise together. It
+    is read here as a first indemonstrable whose antecedent is a conjunction,
+    since Cicero calls it "the first mood". The Liar variant follows in the
+    same chunk: "If you say that you are a liar, and speak the truth, then you
+    are a liar. But you do say that you are a liar, and you do speak the truth,
+    therefore you are a liar." The form is not disputed there. The dispute is
+    whether the Liar's premises can be assented to.
+    This is a test of whether the object language lets an indemonstrable take
+    a compound as its antecedent.
+  confidence: medium
+  verified_by_kyle: false
+
+- id: S011
+  schema: "either p or q; p; therefore p"
+  verdict: valid
+  kind: other
+  source: "Alexander of Aphrodisias, in APr., as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V n.239"
+  passage: |
+    [239] Two such cases are distinguished, one in which all three clauses,
+    the other in which the conclusion and minor premiss are identical. The
+    first class are called διφορούμενοι· If it is day, it is day; It is day, ∴
+    It is day. The second class, ἀδιαφόρως περαίνοντες· It is either day or
+    night; It is day, ∴ It is day. The latter term is, however, applied to both
+    kinds. See Alex. Anal. Pr. 7, a; 53, b; Top. 7; Schol. in Arist. 294, b,
+    25; Cic. Acad. ii. 30, 96; Prantl, 476, 185.
+  corpus_ref: "8e7bb081-9d8b-481f-b3ac-57183751efa5"
+  notes: |
+    An indifferently concluding argument (ἀδιαφόρως περαίνων). Zeller's main
+    text (chunk 8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca) says that among the
+    indemonstrable forms "importance is attached to some in which the same
+    sentence is repeated tautologically in the form of a conclusion". So the
+    Stoics accepted these arguments, and the verdict is valid on the Stoic
+    side.
+    This entry is in tension with the redundancy rule (S016). The disjunctive
+    premise does no work in reaching "p", yet the argument is not called
+    redundant. Any candidate that invalidates every argument with an idle
+    premise will reject this one. That makes it a strong discriminator between
+    readings of "redundant", and possibly evidence that redundancy was defined
+    relative to the premises' role rather than to derivability.
+    Ruling (Kyle, 2026-09-27): the conflict is not resolved. It is recorded
+    as finding F1 in NOTES.md, and redundancy becomes a parameter in
+    Params.lean. Under `strict` this argument is redundant and so invalid.
+    Under `narrow` indifferently concluding arguments are exempt, so it is
+    valid.
+    Mates's summary (chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e) uses
+    "adiaphorōs perainontes" for the transitivity arguments that Zeller calls
+    ἀμεθόδως περαίνοντες (n.232). That looks like a conflation in the summary.
+    Zeller is followed here because he quotes the terms in Greek.
+  confidence: medium
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Derived (non-indemonstrable) syllogisms
+# ---------------------------------------------------------------------------
+
+- id: S012
+  schema: "if p, (if p, q); p; therefore q"
+  verdict: valid
+  kind: derived
+  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    Mates illustrates the procedure with two examples from Sextus. The first
+    shows that an argument of the form "If p, then (if p then q); p; therefore
+    q" decomposes into two successive applications of the type 1 undemonstrated
+    argument.
+  corpus_ref: "401a8e59-19ef-4e5e-80f0-dbeb990103a0"
+  notes: |
+    The only derived syllogism in the corpus whose form is explicit, together
+    with S013. Both come through a Mode 2 summary, not through Sextus, who is
+    absent from the corpus (gaps.md). Note that the premise p is used twice,
+    which makes this a test of how premise multiplicity is handled (Phase 2,
+    Argument.lean).
+  confidence: low
+  verified_by_kyle: false
+
+- id: S013
+  schema: "if (p and q), r; not r; p; therefore not q"
+  verdict: valid
+  kind: derived
+  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    The second shows that an argument of the form "If (p and q) then r; not-r;
+    p; therefore not-q" decomposes into a type 2 argument followed by a type 3
+    argument, with the intermediate conclusion licensed as a usable premise by
+    the dialectical theorema.
+  corpus_ref: "401a8e59-19ef-4e5e-80f0-dbeb990103a0"
+  notes: |
+    The analysis runs: a second indemonstrable gives not (p and q), then a
+    third indemonstrable with p gives not q. The summary attributes the step
+    to the "dialectical theorem" (rules.yaml T05), not to a named thema.
+  confidence: low
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Single-premise arguments (Antipater vs Chrysippus)
+# ---------------------------------------------------------------------------
+
+- id: S014
+  schema: "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light')"
+  verdict: disputed
+  kind: single_premise
+  source: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245"
+  passage: |
+    With these [(δ) Inference from a single premiss.] composite forms of
+    inference Antipater contrasted other forms having only a single premiss,
+    [245] but it was an addition to the field of logic of very doubtful worth.
+  corpus_ref: "8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca"
+  notes: |
+    Zeller n.245 (chunk 73ca2320-47fc-4eed-b9b0-fc8ad0d060e4) gives the Greek
+    name and the examples: "[245] Called μονολήμματοι συλλογισμοί. Such were
+    ἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα. See Alex. Top. 6, 274;
+    Anal. Pr. 7, a, 8, a: Sext. Pyrrh. ii. 167; Math. viii. 443; Apul. Dogm.
+    Plat. iii. 272, Oud."
+    That Chrysippus rejected them appears in the corpus only through Mates's
+    summary (chunk 78c91994-ccd2-47ac-9eb9-17201baa0783): "Chrysippus denied
+    them; Antipater of Tarsus defended them with examples like 'You are
+    breathing, therefore you are living.' Opponents held that such arguments
+    are merely abbreviated two-premised arguments (a suppressed conditional
+    being the missing premise)."
+    Verdict by parameter: valid under Antipater's policy, invalid under
+    Chrysippus's. Formally it is valid only given the conditional, so under
+    Chrysippus's policy it becomes S001 with the conditional made explicit.
+    How to represent "p; therefore q" without a propositional link is a
+    Phase 2 decision (Params.lean).
+  confidence: medium
+  verified_by_kyle: false
+
+- id: S015
+  schema: "p; therefore q   (where 'if p, q' is true, e.g. 'You are breathing; therefore you are living')"
+  verdict: disputed
+  kind: single_premise
+  source: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    [245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα
+    ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.
+  corpus_ref: "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4"
+  notes: |
+    The second attested example of the same form as S014. It is kept as its
+    own entry because the two examples come down separately in the sources.
+    Kyle may prefer to merge them.
+  confidence: medium
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Redundant and deficient arguments
+# ---------------------------------------------------------------------------
+
+- id: S016
+  schema: "if p, q; p; r; therefore q   (r superfluous)"
+  verdict: invalid
+  kind: redundant
+  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    (2) Redundant arguments (para parhelkon) contain a superfluous premise;
+    Mates notes, pointedly, that by standard logical criteria these would
+    count as valid, and suggests either that Sextus erred or was working from
+    a poor handbook.
+  corpus_ref: "6dea256b-8bed-46db-9df4-e015a90e5636"
+  notes: |
+    This is the non-monotonicity constraint in the project brief, and the
+    corpus supports it only weakly. The schema is a generic
+    instantiation. The corpus holds no ancient example of a redundant
+    argument, because Sextus, the source, is absent (gaps.md). Chrysippus's
+    catalogue lists "Of Redundant Arguments, addressed to Pasylus, two books"
+    (DL VII 7.195, chunk 58bb05d5-174a-40fa-9615-e955c1814514), which shows
+    that the topic was his, not what the rule was.
+    Mates, as summarised, doubts the doctrine ("Sextus erred or was working
+    from a poor handbook"). See S011 for an accepted argument with an idle
+    premise, and see the Bobzien summary's monotonicity claim, which conflicts
+    with this entry (rules.yaml R03).
+    Do not promote this entry to high confidence until the Sextus text is in
+    the corpus.
+    Redundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see
+    NOTES.md finding F1). This entry is invalid under both readings, since r
+    is an unrelated atom.
+  confidence: low
+  verified_by_kyle: false
+
+- id: S017
+  schema: "either p or q; not p; therefore q   (where a third alternative r exists and was omitted)"
+  verdict: invalid
+  kind: other
+  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  passage: |
+    (4) Deficient arguments (para elleipsin) rest on a premise that is
+    incomplete — the example is a disjunction that omits a third alternative,
+    making the inference structurally unsound.
+  corpus_ref: "6dea256b-8bed-46db-9df4-e015a90e5636"
+  notes: |
+    Formally this is S005. The defect lies in the truth of the disjunctive
+    premise, not in the form. A purely formal harness cannot tell this
+    apart from S005 unless the object language has n-ary exclusive
+    disjunction and the "complete" disjunction is written out. Kept as
+    evidence that the ancient classification of invalid arguments mixes formal
+    and material defects. Probably excluded from the formal suite. Kyle to
+    decide.
+    Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
+    ledger flagged non_formal.
+  flags: [non_formal]
+  confidence: low
+  verified_by_kyle: false
+
+# ---------------------------------------------------------------------------
+# Sophisms and paradoxes whose form appears in the corpus
+# ---------------------------------------------------------------------------
+
+- id: S018
+  schema: "not (p1 and not p2); not (p2 and not p3); ... ; not (p9 and not p10); p1; therefore p10"
+  verdict: valid
+  kind: sophism
+  source: "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)"
+  passage: |
+    There are also certain insoluble arguments: the Veiled Men, the Concealed,
+    Sorites, Horned Folk, the Nobodies. The Veiled is as follows: … “It cannot
+    be that if two is few, three is not so likewise, nor that if two or three
+    are few, four is not so; and so on up to ten. But two is few, therefore so
+    also is ten.”
+  corpus_ref: "e624f24d-83d0-4efd-98d3-19457ace3554"
+  notes: |
+    The Sorites. The " … " is in the chunk text itself. The corpus copy of
+    7.82 is abridged, so what DL says about the Veiled argument is lost.
+    Hicks's "It cannot be that if two is few, three is not so likewise" is
+    read as "not (two is few and three is not few)", a negated conjunction.
+    Each step is then a third indemonstrable followed by removal of a double
+    negation, which makes the form a test of the double negation parameter
+    (rules.yaml C06).
+    Chrysippus's response concerns assent, not form. Cicero, Academica II ch.
+    XXIX (chunk dc6299a6-98fb-450b-abd5-e19a5d96a49b): "For Chrysippus’s plan
+    is, when he is interrogated step by step (by way of giving an instance),
+    whether there are three, or few, or many, to rest a little before he comes
+    to the “many;”".
+    Ruling (Kyle, 2026-09-27): the chain form is valid, tagged kind: sophism.
+    The fault of the Sorites lies in its premises, not its form. Under the
+    syntactic reading of "contradictory" (C06), each link is a plain third
+    indemonstrable, since the contradictory of "not p2" is "p2". Under the
+    negation reading, each link also needs double-negation elimination.
+  confidence: low
+  verified_by_kyle: false
+
+- id: S019
+  schema: "if someone is here, that one is not in Rhodes; someone is here; therefore no one is in Rhodes"
+  verdict: invalid
+  kind: sophism
+  source: "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)"
+  passage: |
+    The Nobody argument is an argument whose major premiss consists of an
+    indefinite and a definite clause, followed by a minor premiss and
+    conclusion; for example, “If anyone is here, he is not in Rhodes; but there
+    is some one here, therefore there is not anyone in Rhodes.”
+  corpus_ref: "e624f24d-83d0-4efd-98d3-19457ace3554"
+  notes: |
+    Listed by DL among the "insoluble arguments", that is, a sophism, which
+    is why the verdict is invalid. It has the surface shape of S001, but it
+    turns on indefinite pronouns ("anyone", "some one"), which a propositional
+    object language cannot represent. It is out of scope for the Phase 2
+    propositional encoding and kept as a warning: a string-level matcher would
+    wrongly classify it as a first indemonstrable. Chrysippus wrote on it
+    ("Of the 'Nobody' Puzzle, addressed to Menecrates, eight books", DL VII
+    7.198, chunk a0776b89-9bed-4664-850c-7e4db6102c59).
+    Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
+    ledger flagged non_formal. Its fault is equivocation on the indefinite
+    ("anyone" / "some one"), which propositional form cannot see.
+  flags: [non_formal]
+  confidence: medium
+  verified_by_kyle: false
