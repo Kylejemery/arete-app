@@ -160,3 +160,86 @@ whose conclusion is one of their premises, are exempt). The harness will
 report the fit of each candidate under both. If only `narrow` lets a candidate
 fit the suite, that is itself a result about what the Stoics meant by
 παρέλκων.
+
+## Phase 2 (2026-09-27)
+
+A compiling base system is in `lean/` (Lean 4.22.0, no Mathlib). `lake build`
+checks everything below. The proofs use only the axioms `propext` and
+`Quot.sound`: no `sorry`, no `native_decide`.
+
+### Deliverable
+
+- **The five indemonstrables are derivable** under every parameter setting
+  (`first_derivable` … `fifth_derivable`, with atom instances in `Tests`).
+- **A redundant-premise argument is not derivable from the base cases
+  alone.** `redundant_not_derivable` shows that `if p, q; p; r; therefore q` is
+  not derivable for any p, q, r with r distinct from both premises, under
+  every parameter setting and background theory. `S016_not_derivable` is the
+  atom instance. It follows from a general result, `not_derives_three_distinct`:
+  no argument with three pairwise-distinct premises is base-derivable,
+  because every base argument has at most two premises and every premise view
+  preserves membership.
+
+This is non-derivability from the *base cases*. Whether themata can
+manufacture redundant arguments is the Phase 3/4 question. Where proof search
+is the only method, Phase 4 must report "not found within depth N", never
+"proven underivable" (guardrail 4).
+
+### Decisions
+
+1. **Themata are values, not constructors.** The brief says to add each
+   candidate's themata "as further constructors". A Lean inductive cannot be
+   extended from another file, so `Derives P T R` takes the rule set `R` as
+   a parameter, with one generic `thema` constructor. Each Phase 3 candidate
+   is a `List Thema`, and all candidates share one base system and one
+   harness. The effect is the same as adding constructors.
+2. **`saidFalse` is its own operator** (S008). Semantically it is negation,
+   syntactically it is not, so no indemonstrable applies to it.
+   `S008_not_derivable` proves that the argument is not base-derivable, and a
+   `#guard` shows it is valid by the criterion. That is exactly the
+   `valid_nonsyllogistic` expectation.
+3. **Third, fourth and fifth indemonstrables in both positions.** DL says "one
+   of the conjoined propositions" and "one of the two alternatives", which
+   does not fix a side. The major premise is always listed first, as in all
+   of DL's examples. Whether that order binds is the premise-view parameter.
+4. **Premise view** (`list | multiset | set`, default `multiset`) is the
+   brief's "order and multiplicity may matter" made a parameter. Tests show
+   what each setting changes. Under `list`, minor-premise-first is not
+   derivable (`minor_first_list`). Under `multiset` it is
+   (`minor_first_multiset`). Under `set`, a repeated premise collapses and
+   `if p, q; p; p; therefore q` is derivable (`repeated_premise_set`), while
+   under `list` and `multiset` it is not (`repeated_premise_not_derivable`).
+   The default is not a claim about the Stoics. Nothing in the corpus bears
+   on it (gaps.md §2).
+5. **Contradictory** (`toggle | negate`, default `toggle`) is C06. Under
+   `toggle` the contradictory of "not p" is "p", which is why the Sorites
+   links (S018) are plain third indemonstrables.
+6. **Single premise** (`chrysippus | antipater`). Antipater's arguments are
+   base cases relative to a background `Theory` of accepted conditionals,
+   since "it is day; therefore it is light" is an argument only because "if
+   it is day, it is light" is held true. Under `chrysippus` no one-premise
+   argument is derivable (proved for the list and multiset views).
+7. **Conditional reading** lives in the semantics (`Semantics.lean`), not in
+   derivability. The indemonstrables are the same under every reading.
+   What changes is which arguments the validity criterion calls conclusive.
+   Chrysippean is modelled as strict implication over a model's worlds, which
+   is Mates's gloss. Containment is a labelled placeholder. Diodorean has
+   truth conditions but no complete validity procedure yet, so its checks
+   return `none` rather than a guess.
+8. **Redundancy** (`strict | narrow`) is finding F1 made a parameter.
+   "Idle" is defined semantically: the argument without that premise is still
+   valid by the criterion. The `#guard`s show S016 redundant under both
+   readings, S001 under neither, and S009 and S011 redundant under `strict`
+   but not under `narrow`.
+9. **Validity checks are evaluations, not proofs.** The criterion is decided
+   by enumerating finite models (`#guard`, checked at build time). They are
+   honest decision procedures for the Philonian reading, and, up to four
+   atoms, for the Chrysippean one. They are not kernel-checked theorems.
+   Phase 4 can promote them to certificates where "proven underivable" is
+   claimed.
+
+### Not started
+
+Phase 3: no themata are defined, and `R = []` throughout. The ledger's open
+items still stand for Phase 3: T04 (pending Kyle), no Bobzien module, and the
+two Mates readings of the third thema (rules T03, T06).
