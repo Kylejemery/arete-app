@@ -69,7 +69,9 @@ no retrieved passage states it.
 ## 3. Corpus defects found during the search
 
 These are reported, not fixed. Phase 1 is read-only, and CLAUDE.md requires
-care with the corpus.
+care with the corpus. Items 1 (the θέμα tag at DL 7.78), 2 to 4 (as
+annotations; canon text untouched) and 5 (Zeller relabel) are written as an
+unapplied migration in #283, per Kyle's ruling of 2026-09-27.
 
 1. **The word "thema" is invisible in the English primary text.** Hicks renders DL 7.78's κατά τι τῶν θεμάτων ἢ τινά as "in respect of one or more of the premisses" (rules T01). A vector search for "themata" cannot reach the one primary passage that names them. This is the problem the concordances in `academy/corpus-ingestion/concordance/` were built for, and θέμα / θέματα, ἀναπόδεικτος, παρέλκων, μονολήμματος, and συνθετικὸν θεώρημα are candidates for a logic concordance.
 2. **DL 7.82 is abridged.** Chunk `e624f24d-…` contains " … " at three points: in the list of insoluble arguments, in the Sorites, and before the Nobody argument. The Veiled argument's description is missing.
@@ -79,7 +81,7 @@ care with the corpus.
 6. **Mode 2 summary errors.** Bobzien, Cambridge Companion part 2 (chunk `a94845be-…`) misnumbers the indemonstrables. Mates (chunk `fcdf4b9c-…`) applies "adiaphorōs perainontes" to the transitivity arguments Zeller calls ἀμεθόδως περαίνοντες. Bobzien, *Stoic Syllogistic* (chunk `76b4b6e1-…`) reports "monotonicity". This may be right, but it should be checked against the paper, because it bears directly on the project's premise.
 7. **Cicero, *Academica*** rows have no `locator`, so citations fall back to Yonge's chapter numerals quoted in the text.
 8. **Plutarch** gives two different figures for Hipparchus's count of affirmative conjunctions from ten propositions: 103,049 in *On Stoic Self-Contradictions* (chunk `b5f26d84-…`) and 101,049 in *Essays and Miscellanies* vol. 3 (chunk `284435a5-…`). This is not in the ledger, but one of the two is a transcription or translation error.
-9. **The read-only MCP server cannot satisfy guardrail 1 as built.** `search_corpus` in `server/routes/corpus-mcp.js` prints author, work, section and similarity but not the chunk `id`, so a ledger built through it cannot record `corpus_ref`. The fix is a one-line read-only change: include `row.id` in the output. It is not made here, because Phase 1 is evidence-gathering only.
+9. **The read-only MCP server cannot satisfy guardrail 1 as built.** `search_corpus` in `server/routes/corpus-mcp.js` prints author, work, section and similarity but not the chunk `id`, so a ledger built through it cannot record `corpus_ref`. Fixed in #282, which adds the chunk id to the output.
 
 ## 4. Found, but out of scope for a propositional ledger
 

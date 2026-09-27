@@ -36,7 +36,7 @@ Constraints that make this logic unlike the classical logic built into Lean:
 
 ## Guardrails
 
-1. Every entry in the evidence ledger must cite a passage actually retrieved from the Arete corpus through the read only MCP server. No citations from model recall alone.
+1. Every entry in the evidence ledger must cite a passage actually retrieved from the Arete corpus, either through the read only MCP server or by read only SELECTs against `rag_corpus`. Every passage must be verified, by query, as an exact substring (whitespace collapsed) of a live chunk, meaning `deprecated = false`, whose id is recorded as `corpus_ref`. No citations from model recall alone. *(Amended 2026-09-27; see NOTES.md.)*
 2. Every scholarly reconstruction encoded in Phase 3 must come from a retrieved text, with the source recorded.
 3. Kyle signs off on each ledger entry before it enters the test suite.
 4. Distinguish "not derivable within search depth N" from "proven underivable." Never report the first as the second.
@@ -51,8 +51,9 @@ Build `evidence/suite.yaml`. One entry per argument form:
 ```yaml
 - id: S001
   schema: "if p, q; p; therefore q"
-  verdict: valid          # valid | invalid | disputed
-  kind: indemonstrable    # indemonstrable | derived | redundant | single_premise | other
+  verdict: valid          # valid | invalid | disputed | valid_nonsyllogistic
+  kind: indemonstrable    # indemonstrable | derived | redundant | single_premise | sophism | other
+  flags: []               # optional; non_formal = kept in the ledger, excluded from the formal suite
   source: "Sextus Empiricus, Against the Logicians"
   passage: "<retrieved text>"
   corpus_ref: "<chunk id from MCP>"
@@ -72,7 +73,7 @@ Encode Stoic logic as its own object language. Do not use Lean's `Prop` connecti
 1. `Syntax.lean`: atoms, Stoic negation, conjunction, exclusive disjunction, conditional.
 2. `Argument.lean`: an argument is a list of premises and a conclusion. Premise order and multiplicity may matter; represent both and test.
 3. `Indemonstrables.lean`: the five as base cases of an inductive derivability predicate.
-4. `Params.lean`: conditional reading, single premise policy, and anything else Phase 1 surfaces.
+4. `Params.lean`: conditional reading, single premise policy, and anything else Phase 1 surfaces. Phase 1 surfaced: redundancy (at least `strict` and `narrow`), the reading of "contradictory" (double negation), and how premise order and multiplicity are compared.
 
 Deliverable: a compiling base system with the five indemonstrables proven derivable, and a test showing a redundant premise argument is not derivable from the base cases alone.
 
@@ -81,7 +82,7 @@ Deliverable: a compiling base system with the five indemonstrables proven deriva
 Each candidate is a set of themata added as further constructors. Encode:
 
 1. The attested themata as the sources state them.
-2. Each published reconstruction found in the corpus (for example Bobzien's work on Stoic syllogistic, Frede, Mates), one module per author.
+2. Each published reconstruction found in the corpus (for example Bobzien's work on Stoic syllogistic, Frede, Mates), one module per author. No Bobzien module until the paper itself, not only a Mode 2 summary, is in the corpus (ruling of 2026-09-27).
 3. Generated variants: systematic loosening and tightening of each rule, logged with how they were produced.
 
 ### Phase 4: Evaluation harness
@@ -90,7 +91,7 @@ For every candidate crossed with every parameter setting:
 
 1. Attempt a derivation of each suite item by bounded proof search.
 2. Record: derived, not found within depth N, or proven underivable (where an invariant or semantic argument is available).
-3. Flag any rejected form that becomes derivable (overgeneration) and any valid form that does not (undergeneration).
+3. Flag any rejected form that becomes derivable (overgeneration) and any valid form that does not (undergeneration). A `valid_nonsyllogistic` item passes only if it is valid under the validity criterion and not derivable. Deriving it is overgeneration. Items flagged `non_formal` are not run.
 
 Output `results/matrix.md`: candidates as rows, suite items as columns, plus a summary of which candidates fit perfectly.
 

@@ -105,3 +105,58 @@ separated by ";" and listed in the order the source gives them.
 - The five indemonstrables are the complete base. DL says "Chrysippus makes
   them five" and "authorities differ" (S001 notes), and the brief takes
   Chrysippus's list.
+
+### Rulings (Kyle, 2026-09-27)
+
+- **Guardrail 1: accepted and amended.** Read-only SELECTs against
+  `rag_corpus` are allowed, provided each passage is verified by query as an
+  exact substring of a live chunk. THEMATA_PROJECT.md now says so. The MCP
+  server's `search_corpus` now returns chunk ids (#282), so either route can
+  meet the guardrail.
+- **Ruling 1: new verdict `valid_nonsyllogistic`** (S008). The harness passes
+  it only if the argument is valid under the validity criterion (rules C08)
+  and not derivable through the themata.
+- **Ruling 2: the Sorites chain (S018) is valid, `kind: sophism`.** The Nobody
+  argument (S019) stays in the ledger flagged `non_formal` and leaves the
+  formal suite. Its fault is equivocation, which propositional form cannot
+  see.
+- **Ruling 3: S017 is flagged `non_formal`** and leaves the formal suite.
+- **Ruling 4 (T04): pending.** Kyle is checking the Alexander reading. Nothing
+  in Phase 2 depends on it.
+- **Redundancy: not resolved.** It is a parameter with at least two readings
+  (below, and Params.lean), and the conflict is recorded as finding F1.
+- **Bobzien: no module** until the paper itself is in the corpus.
+- **Corpus fixes:** written as an unapplied migration in its own PR (#283):
+  Zeller relabelled as scholarship with `contains_quoted_primary`; the Hicks
+  and Yonge errors recorded in a new `rag_corpus_annotations` table, canon text
+  untouched; a `greek_terms` column starting with θέμα at DL 7.78.
+
+Vocabulary change: `flags` is a new optional list field on suite entries. Its
+only value so far is `non_formal`.
+
+### Finding F1: the ledger's evidence on redundancy is inconsistent
+
+The brief's premise is that a superfluous premise invalidates an argument
+(S016: "if p, q; p; r; therefore q" is invalid). The same ledger holds
+arguments the Stoics accepted whose premises are not all needed:
+
+- S011, "either p or q; p; therefore p" (ἀδιαφόρως περαίνων). The disjunction
+  does no work. Zeller reports that the Stoics "attached importance" to such
+  arguments.
+- S009, "if p, p; p; therefore p" (διφορούμενος). The conditional does no work
+  either, since "p; therefore p" already reaches the conclusion. Cicero puts
+  it among "the arguments of Chrysippus".
+
+If "redundant" means "some premise is idle", these are redundant and so
+invalid. If the Stoics accepted them, they were not using that definition. The
+evidence for S016 is also the weakest in the ledger (a Mode 2 summary of Mates
+reporting Sextus, whom Mates suspects of error), while S009 and S011 have
+primary or quoted-primary witnesses.
+
+The project does not choose between them. `Params.lean` carries
+`Redundancy.strict` (any idle premise makes the argument redundant) and
+`Redundancy.narrow` (as strict, but indifferently concluding arguments,
+whose conclusion is one of their premises, are exempt). The harness will
+report the fit of each candidate under both. If only `narrow` lets a candidate
+fit the suite, that is itself a result about what the Stoics meant by
+παρέλκων.

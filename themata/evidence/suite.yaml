@@ -23,6 +23,16 @@
 #     and never carry more than `low` confidence as testimony about ancient
 #     doctrine.
 #
+# Vocabulary (amended by Kyle's rulings of 2026-09-27, see ../NOTES.md):
+#   verdict: valid | invalid | disputed | valid_nonsyllogistic
+#     valid_nonsyllogistic: the harness passes such an item only if it is
+#     valid under the validity criterion (rules.yaml C08) AND not derivable
+#     through the themata. Deriving it is overgeneration.
+#   kind: indemonstrable | derived | redundant | single_premise | sophism | other
+#   flags: optional list. `non_formal` keeps the entry in the ledger but out of
+#     the formal suite: its verdict turns on something propositional form
+#     cannot see (material truth of a premise, equivocation).
+#
 # verified_by_kyle is false on every entry. Nothing enters the harness until
 # Kyle signs off.
 
@@ -202,7 +212,7 @@
 
 - id: S008
   schema: "'p and q' is false; p; therefore not q"
-  verdict: valid
+  verdict: valid_nonsyllogistic
   kind: other
   source: "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)"
   passage: |
@@ -223,11 +233,13 @@
     says a conjunction "is false" rather than negating it, and "the Stoics
     distinguished between the negation of a proposition and the assertion that
     a proposition is false".
-    Harness consequence: the verdict enum cannot express "valid but not
-    syllogistic". The harness needs a separate expected outcome for this
-    class, namely "must not be derivable, and must not count as
-    overgeneration". Phase 2 must also decide whether "'p' is false" is
-    represented as its own operator. See NOTES.md and gaps.md.
+    Ruling (Kyle, 2026-09-27): verdict valid_nonsyllogistic. The harness must
+    check both that the argument is valid under the validity criterion and
+    that it is not derivable through the themata.
+    Phase 2 represents "'p' is false" as its own operator (`saidFalse` in
+    Syntax.lean), semantically the negation but syntactically distinct, so no
+    indemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is
+    valid under the criterion and not derivable from the base cases.
   confidence: high
   verified_by_kyle: false
 
@@ -318,8 +330,12 @@
     redundant. Any candidate that invalidates every argument with an idle
     premise will reject this one. That makes it a strong discriminator between
     readings of "redundant", and possibly evidence that redundancy was defined
-    relative to the premises' role rather than to derivability. This is
-    interpretive and left open.
+    relative to the premises' role rather than to derivability.
+    Ruling (Kyle, 2026-09-27): the conflict is not resolved. It is recorded
+    as finding F1 in NOTES.md, and redundancy becomes a parameter in
+    Params.lean. Under `strict` this argument is redundant and so invalid.
+    Under `narrow` indifferently concluding arguments are exempt, so it is
+    valid.
     Mates's summary (chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e) uses
     "adiaphorōs perainontes" for the transitivity arguments that Zeller calls
     ἀμεθόδως περαίνοντες (n.232). That looks like a conflation in the summary.
@@ -448,6 +464,9 @@
     with this entry (rules.yaml R03).
     Do not promote this entry to high confidence until the Sextus text is in
     the corpus.
+    Redundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see
+    NOTES.md finding F1). This entry is invalid under both readings, since r
+    is an unrelated atom.
   confidence: low
   verified_by_kyle: false
 
@@ -469,6 +488,9 @@
     evidence that the ancient classification of invalid arguments mixes formal
     and material defects. Probably excluded from the formal suite. Kyle to
     decide.
+    Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
+    ledger flagged non_formal.
+  flags: [non_formal]
   confidence: low
   verified_by_kyle: false
 
@@ -478,8 +500,8 @@
 
 - id: S018
   schema: "not (p1 and not p2); not (p2 and not p3); ... ; not (p9 and not p10); p1; therefore p10"
-  verdict: disputed
-  kind: other
+  verdict: valid
+  kind: sophism
   source: "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)"
   passage: |
     There are also certain insoluble arguments: the Veiled Men, the Concealed,
@@ -500,16 +522,19 @@
     XXIX (chunk dc6299a6-98fb-450b-abd5-e19a5d96a49b): "For Chrysippus’s plan
     is, when he is interrogated step by step (by way of giving an instance),
     whether there are three, or few, or many, to rest a little before he comes
-    to the “many;”". Verdict set to disputed
-    because no source in the corpus rules on the form as opposed to the
-    premises. Kyle to decide whether the form enters the suite as valid.
+    to the “many;”".
+    Ruling (Kyle, 2026-09-27): the chain form is valid, tagged kind: sophism.
+    The fault of the Sorites lies in its premises, not its form. Under the
+    syntactic reading of "contradictory" (C06), each link is a plain third
+    indemonstrable, since the contradictory of "not p2" is "p2". Under the
+    negation reading, each link also needs double-negation elimination.
   confidence: low
   verified_by_kyle: false
 
 - id: S019
   schema: "if someone is here, that one is not in Rhodes; someone is here; therefore no one is in Rhodes"
   verdict: invalid
-  kind: other
+  kind: sophism
   source: "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)"
   passage: |
     The Nobody argument is an argument whose major premiss consists of an
@@ -526,5 +551,9 @@
     wrongly classify it as a first indemonstrable. Chrysippus wrote on it
     ("Of the 'Nobody' Puzzle, addressed to Menecrates, eight books", DL VII
     7.198, chunk a0776b89-9bed-4664-850c-7e4db6102c59).
+    Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
+    ledger flagged non_formal. Its fault is equivocation on the indefinite
+    ("anyone" / "some one"), which propositional form cannot see.
+  flags: [non_formal]
   confidence: medium
   verified_by_kyle: false
