@@ -45,6 +45,7 @@ import {
   type BookArgument,
   type ChapterArgument,
   type ChapterDraft,
+  type ChapterProposal,
   type ExtractedClaim,
   type HistoryMessage,
   type OutlineChapter,
@@ -277,6 +278,106 @@ export async function nextPosition(admin: Admin, bookId: string): Promise<number
     .limit(1)
     .maybeSingle()
   return ((data?.position as number | undefined) ?? 0) + 1
+}
+
+// Make an existing conversation a chapter, at the end of the book. Unlike
+// createChapter nothing new is written to the entry: its thread, draft and
+// snapshots stay exactly as they are, and the chapter row points at it. The
+// book index and summary follow on the book view's refresh (indexed_hash is
+// null, so the chapter reads as stale).
+export async function attachEntryAsChapter(
+  admin: Admin,
+  bookId: string,
+  entryId: string,
+  title?: string
+): Promise<ChapterRow> {
+  const existing = await chapterForEntry(admin, entryId)
+  if (existing) {
+    throw new Error(`This conversation is already chapter ${existing.chapter.position} of "${existing.book.title}"`)
+  }
+  const { data: entry, error: entryError } = await admin
+    .from('scribe_entries')
+    .select('id, title, raw_text')
+    .eq('id', entryId)
+    .maybeSingle()
+  if (entryError) throw new Error(entryError.message)
+  if (!entry) throw new Error('Entry not found')
+  const draft = await workingDraftForEntry(admin, entryId)
+  const name =
+    title?.trim().slice(0, 200) ||
+    (entry.title as string | null)?.trim() ||
+    (entry.raw_text as string).trim().split('\n')[0].slice(0, 80) ||
+    'Untitled chapter'
+  const { data: chapter, error } = await admin
+    .from('scribe_chapters')
+    .insert({
+      book_id: bookId,
+      entry_id: entryId,
+      position: await nextPosition(admin, bookId),
+      title: name,
+      status: draft ? 'working' : 'raw',
+      word_count: countWords(draft ?? (entry.raw_text as string)),
+    })
+    .select(CHAPTER_COLUMNS)
+    .single()
+  if (error) throw new Error(error.message)
+  await touchBook(admin, bookId)
+  return chapter as ChapterRow
+}
+
+// The propose_chapter tool's handler. It resolves the book and checks the
+// request, and returns what Scribe is told plus, when the request holds, the
+// proposal the page shows Kyle as a card. It writes nothing.
+export async function proposeChapter(
+  admin: Admin,
+  entryId: string,
+  input: { kind?: unknown; title?: unknown; book?: unknown }
+): Promise<{ result: string; proposal: ChapterProposal | null }> {
+  const kind = input.kind === 'blank' ? 'blank' : 'attach'
+  const wanted = typeof input.book === 'string' ? input.book.trim().toLowerCase() : ''
+  const [books, current, entryRes] = await Promise.all([
+    listBooks(admin),
+    chapterForEntry(admin, entryId),
+    admin.from('scribe_entries').select('title').eq('id', entryId).maybeSingle(),
+  ])
+  if (!books.length) {
+    return { result: 'Kyle has no books yet. Tell him to create one on the Book tab first; nothing was proposed.', proposal: null }
+  }
+  const names = books.map(b => `"${b.title}"`).join(', ')
+  let book = wanted
+    ? books.find(b => b.title.toLowerCase() === wanted) ?? books.find(b => b.title.toLowerCase().includes(wanted))
+    : undefined
+  if (wanted && !book) {
+    return { result: `No book matches "${input.book}". His books are ${names}. Ask him which one; nothing was proposed.`, proposal: null }
+  }
+  if (!book && current) book = books.find(b => b.id === current.book.id)
+  if (!book && books.length === 1) book = books[0]
+  if (!book) {
+    return { result: `Kyle has more than one book (${names}) and did not say which. Ask him; nothing was proposed.`, proposal: null }
+  }
+  if (kind === 'attach' && current) {
+    return {
+      result: `This conversation is already chapter ${current.chapter.position} of "${current.book.title}". To start another chapter, propose kind "blank" with its title.`,
+      proposal: null,
+    }
+  }
+  const title = (typeof input.title === 'string' ? input.title.trim().slice(0, 200) : '') ||
+    (kind === 'attach' ? ((entryRes.data?.title as string | null) ?? '').trim() : '')
+  if (!title) return { result: 'A new chapter needs a title. Ask Kyle what to call it; nothing was proposed.', proposal: null }
+  const position = await nextPosition(admin, book.id)
+  const proposal: ChapterProposal = {
+    kind,
+    book_id: book.id,
+    book_title: book.title,
+    title,
+    position,
+    entry_id: kind === 'attach' ? entryId : null,
+  }
+  const what = kind === 'attach' ? 'this conversation, draft and all,' : 'a new blank chapter'
+  return {
+    result: `Proposed to Kyle as a card under this turn: add ${what} to "${book.title}" as chapter ${position}, "${title}". Nothing has been added; it happens only if he confirms on the card. Tell him in one line what you proposed, and do not say it is done.`,
+    proposal,
+  }
 }
 
 // Reorder: positions are unique per book, deferrable within a transaction,

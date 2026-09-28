@@ -66,6 +66,20 @@ export interface ChapterDraft {
   words: number
 }
 
+// A chapter Scribe proposes from the chat. Scribe never adds one itself: the
+// proposal is shown to Kyle as a card, and only his confirmation writes it.
+// 'attach' makes the conversation in front of him the chapter; 'blank' adds
+// a new empty chapter he types into.
+export interface ChapterProposal {
+  kind: 'attach' | 'blank'
+  book_id: string
+  book_title: string
+  title: string
+  // Where it would land if confirmed now; the add itself always appends.
+  position: number
+  entry_id: string | null
+}
+
 export interface SplitResult {
   strategy: Exclude<SplitStrategy, 'auto'>
   chapters: ChapterDraft[]

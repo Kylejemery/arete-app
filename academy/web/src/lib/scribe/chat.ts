@@ -4,7 +4,7 @@ import { embedChunk } from '@/lib/corpus/ingest'
 import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
 import { BOOK_APPENDIX } from './book-prompts'
-import { fitExemplars } from './book-draft'
+import { fitExemplars, type ChapterProposal } from './book-draft'
 import {
   cabinetCaveat,
   cabinetDate,
@@ -311,6 +311,34 @@ const READ_CHAPTER_TOOL: Anthropic.Tool = {
   },
 }
 
+// Any conversation: propose that it become a chapter, or that a blank chapter
+// be added. A proposal only; Kyle confirms it on a card before anything is
+// written.
+const PROPOSE_CHAPTER_TOOL: Anthropic.Tool = {
+  name: 'propose_chapter',
+  description:
+    "Propose adding a chapter to one of Kyle's books. Use it only when Kyle asks for a chapter to be added (\"make this a chapter of my book\", \"add a chapter called X\"), never on your own initiative. kind 'attach' makes this conversation, with its draft and history, the next chapter; kind 'blank' adds a new empty chapter he will write into. It adds nothing itself: Kyle sees the proposal as a card and confirms or dismisses it there. If it comes back asking which book or what title, ask him.",
+  input_schema: {
+    type: 'object',
+    properties: {
+      kind: {
+        type: 'string',
+        enum: ['attach', 'blank'],
+        description: "'attach' (this conversation becomes the chapter) or 'blank' (a new empty chapter)",
+      },
+      title: {
+        type: 'string',
+        description: "The chapter's title. Required for 'blank'; for 'attach' it defaults to this conversation's title",
+      },
+      book: {
+        type: 'string',
+        description: "The book's title as Kyle names it. Leave it out when this conversation is already a chapter (the same book) or he has only one book",
+      },
+    },
+    required: ['kind'],
+  },
+}
+
 // What a book mode turn brings to runScribeTurn: the brief block for the
 // system prompt, and the two tools' handlers, bound to the book by the
 // server half (book-store.ts).
@@ -320,8 +348,14 @@ export interface BookTurnContext {
   readChapter: (position: number, what: 'summary' | 'text') => Promise<string>
 }
 
+// The propose_chapter handler, bound to the entry by the turn route. Absent,
+// the tool is withheld.
+export type ProposeChapter = (input: { kind?: unknown; title?: unknown; book?: unknown }) =>
+  Promise<{ result: string; proposal: ChapterProposal | null }>
+
 export interface TurnOptions {
   book?: BookTurnContext | null
+  proposeChapter?: ProposeChapter | null
   maxTokens?: number
 }
 
@@ -423,6 +457,7 @@ export interface TurnEvents {
   onText: (text: string) => void
   onSources: (sources: TurnSource[]) => void
   onSearching: (query: string) => void
+  onProposal?: (proposal: ChapterProposal) => void
 }
 
 // Run one Scribe turn: full thread as history, agentic search loop, streamed
@@ -510,6 +545,8 @@ export async function runScribeTurn(
   const tools: Anthropic.Tool[] = [SEARCH_TOOL, JOURNAL_TOOL]
   if (cabinetUserId) tools.push(CABINET_TOOL)
   if (book) tools.push(SEARCH_BOOK_TOOL, READ_CHAPTER_TOOL)
+  const proposeChapter = opts.proposeChapter ?? null
+  if (proposeChapter) tools.push(PROPOSE_CHAPTER_TOOL)
   const maxTokens = opts.maxTokens ?? MAX_TOKENS
   const turnSources: TurnSource[] = []
   const seenChunks = new Set<string>()
@@ -545,9 +582,11 @@ export async function runScribeTurn(
     const results: Anthropic.ToolResultBlockParam[] = []
     for (const tu of toolUses) {
       const query = String((tu.input as { query?: unknown }).query ?? '')
-      events.onSearching(
-        tu.name === 'read_chapter' ? `chapter ${String((tu.input as { position?: unknown }).position ?? '?')}` : query
-      )
+      if (tu.name !== 'propose_chapter') {
+        events.onSearching(
+          tu.name === 'read_chapter' ? `chapter ${String((tu.input as { position?: unknown }).position ?? '?')}` : query
+        )
+      }
       let content: string
       try {
         if (tu.name === 'search_journal') {
@@ -604,6 +643,14 @@ export async function runScribeTurn(
           content = book
             ? await book.searchBook(query, scope)
             : 'This conversation is not part of a book, so there is nothing else to search.'
+        } else if (tu.name === 'propose_chapter') {
+          if (!proposeChapter) {
+            content = 'Adding chapters is not available in this session. Tell Kyle to use the Book tab.'
+          } else {
+            const r = await proposeChapter(tu.input as { kind?: unknown; title?: unknown; book?: unknown })
+            content = r.result
+            if (r.proposal) events.onProposal?.(r.proposal)
+          }
         } else if (tu.name === 'read_chapter') {
           const input = tu.input as { position?: unknown; what?: string }
           const position = Number(input.position)
