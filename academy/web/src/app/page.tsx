@@ -225,6 +225,9 @@ export default function LandingPage() {
         <Link href="/library" className="hover:text-gold transition-colors">
           The Library
         </Link>
+        <Link href="/research/stoic-qca" className="hover:text-gold transition-colors">
+          Research
+        </Link>
         <a
           href="https://pursuearete.com"
           target="_blank"

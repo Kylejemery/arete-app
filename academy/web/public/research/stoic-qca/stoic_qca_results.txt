@@ -1,0 +1,359 @@
+Stoic QCA results
+ 2026-09-28 01:48:19 
+
+==== Necessity: single conditions for CONS ====
+
+          inclN   RoN   covN  
+----------------------------- 
+1    POW  0.526  0.911  0.868 
+2   WLTH  0.606  0.806  0.793 
+3    ADV  0.736  0.806  0.847 
+4  TEACH  0.789  0.501  0.715 
+5   PROF  0.580  0.657  0.668 
+6  COURT  0.105  0.920  0.498 
+----------------------------- 
+
+
+==== Necessity: negated conditions for CONS ====
+
+           inclN   RoN   covN  
+------------------------------ 
+1    ~POW  0.630  0.767  0.774 
+2   ~WLTH  0.550  0.878  0.839 
+3    ~ADV  0.368  0.826  0.668 
+4  ~TEACH  0.237  0.933  0.750 
+5   ~PROF  0.420  0.868  0.761 
+6  ~COURT  0.921  0.422  0.762 
+------------------------------ 
+
+
+
+==== Model A truth table (no COURT) ====
+
+  OUT: output value
+    n: number of cases in configuration
+ incl: sufficiency inclusion score
+  PRI: proportional reduction in inconsistency
+
+     POW WLTH ADV TEACH PROF   OUT    n  incl  PRI  
+14    0   1    1    0    1      1     1  1.000 1.000
+28    1   1    0    1    1      1     2  1.000 1.000
+29    1   1    1    0    0      1     2  1.000 1.000
+ 4    0   0    0    1    1      1     2  0.901 0.802
+12    0   1    0    1    1      1     1  0.875 0.670
+31    1   1    1    1    0      1     5  0.830 0.775
+ 8    0   0    1    1    1      1     4  0.817 0.777
+ 2    0   0    0    0    1      0     1  0.000 0.000
+     cases                                                          
+14   Musonius Rufus                                                 
+28   Posidonius,Athenodorus Cananites                               
+29   Thrasea Paetus,Helvidius Priscus                               
+ 4   Chrysippus,Diogenes of Babylon                                 
+12   Panaetius                                                      
+31   Persaeus,Rutilius Rufus,Cato the Younger,Seneca,Marcus Aurelius
+ 8   Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus      
+ 2   Egnatius Celer                                                 
+
+
+---- Model A: conservative solution ----
+
+M1: ~POW*~WLTH*TEACH*PROF + POW*WLTH*ADV*~PROF + WLTH*~ADV*TEACH*PROF +
+    ~POW*WLTH*ADV*~TEACH*PROF -> CONS
+
+                              inclS   PRI   covS   covU  
+-------------------------------------------------------- 
+1      ~POW*~WLTH*TEACH*PROF  0.882  0.833  0.394  0.238 
+2         POW*WLTH*ADV*~PROF  0.855  0.816  0.316  0.316 
+3       WLTH*~ADV*TEACH*PROF  0.901  0.804  0.237  0.080 
+4  ~POW*WLTH*ADV*~TEACH*PROF  1.000  1.000  0.053  0.053 
+-------------------------------------------------------- 
+                          M1  0.888  0.857  0.844 
+
+                              cases 
+----------------------------------- 
+1      ~POW*~WLTH*TEACH*PROF  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus
+2         POW*WLTH*ADV*~PROF  Thrasea Paetus,Helvidius Priscus; Persaeus,Rutilius Rufus,Cato the Younger,Seneca,Marcus Aurelius
+3       WLTH*~ADV*TEACH*PROF  Panaetius; Posidonius,Athenodorus Cananites
+4  ~POW*WLTH*ADV*~TEACH*PROF  Musonius Rufus
+----------------------------------- 
+
+
+---- Model A: parsimonious solution (uses remainders) ----
+
+M1: TEACH + (WLTH) -> CONS 
+M2: TEACH + (ADV) <-> CONS 
+
+                               ------------------- 
+          inclS   PRI   covS   covU   (M1)   (M2)  
+-------------------------------------------------- 
+1 TEACH  0.715  0.649  0.789  0.106  0.290  0.264 
+-------------------------------------------------- 
+2   WLTH  0.793  0.716  0.606  0.000  0.106        
+3    ADV  0.847  0.821  0.736  0.104         0.211 
+-------------------------------------------------- 
+      M1  0.710  0.652  0.896 
+      M2  0.746  0.699  1.000 
+
+          cases 
+--------------- 
+1  TEACH  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus;
+          Panaetius; Posidonius,Athenodorus Cananites; Persaeus,Rutilius Rufus,Cato the Younger,Seneca,Marcus Aurelius
+--------------- 
+2   WLTH  Panaetius; Musonius Rufus; Posidonius,Athenodorus Cananites; Thrasea Paetus,Helvidius Priscus;
+          Persaeus,Rutilius Rufus,Cato the Younger,Seneca,Marcus Aurelius
+3    ADV  Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus; Musonius Rufus;
+          Thrasea Paetus,Helvidius Priscus; Persaeus,Rutilius Rufus,Cato the Younger,Seneca,Marcus Aurelius
+--------------- 
+
+
+
+==== Model B truth table (with COURT) ====
+
+  OUT: output value
+    n: number of cases in configuration
+ incl: sufficiency inclusion score
+  PRI: proportional reduction in inconsistency
+
+     POW WLTH ADV TEACH PROF COURT   OUT    n  incl  PRI  
+27    0   1    1    0    1     0      1     1  1.000 1.000
+55    1   1    0    1    1     0      1     1  1.000 1.000
+56    1   1    0    1    1     1      1     1  1.000 1.000
+57    1   1    1    0    0     0      1     2  1.000 1.000
+61    1   1    1    1    0     0      1     3  1.000 1.000
+ 7    0   0    0    1    1     0      1     2  0.901 0.802
+23    0   1    0    1    1     0      1     1  0.875 0.670
+15    0   0    1    1    1     0      1     4  0.817 0.777
+62    1   1    1    1    0     1      0     2  0.493 0.000
+ 3    0   0    0    0    1     0      0     1  0.000 0.000
+     cases                                                    
+27   Musonius Rufus                                           
+55   Posidonius                                               
+56   Athenodorus Cananites                                    
+57   Thrasea Paetus,Helvidius Priscus                         
+61   Rutilius Rufus,Cato the Younger,Marcus Aurelius          
+ 7   Chrysippus,Diogenes of Babylon                           
+23   Panaetius                                                
+15   Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus
+62   Persaeus,Seneca                                          
+ 3   Egnatius Celer                                           
+
+
+---- Model B: conservative solution ----
+
+M1: ~POW*~WLTH*TEACH*PROF*~COURT + POW*WLTH*~ADV*TEACH*PROF +
+    POW*WLTH*ADV*~PROF*~COURT + ~POW*WLTH*ADV*~TEACH*PROF*~COURT +
+    (~POW*~ADV*TEACH*PROF*~COURT) -> CONS 
+M2: ~POW*~WLTH*TEACH*PROF*~COURT + POW*WLTH*~ADV*TEACH*PROF +
+    POW*WLTH*ADV*~PROF*~COURT + ~POW*WLTH*ADV*~TEACH*PROF*~COURT +
+    (WLTH*~ADV*TEACH*PROF*~COURT) -> CONS 
+
+                                                          ------------------- 
+                                     inclS   PRI   covS   covU   (M1)   (M2)  
+----------------------------------------------------------------------------- 
+1     ~POW*~WLTH*TEACH*PROF*~COURT  0.882  0.833  0.394  0.159  0.159  0.238 
+2         POW*WLTH*~ADV*TEACH*PROF  1.000  1.000  0.158  0.027  0.054  0.027 
+3        POW*WLTH*ADV*~PROF*~COURT  1.000  1.000  0.264  0.264  0.264  0.264 
+4 ~POW*WLTH*ADV*~TEACH*PROF*~COURT  1.000  1.000  0.053  0.053  0.053  0.053 
+----------------------------------------------------------------------------- 
+5       ~POW*~ADV*TEACH*PROF*~COURT  0.910  0.836  0.263  0.000  0.027        
+6       WLTH*~ADV*TEACH*PROF*~COURT  0.890  0.754  0.210  0.000         0.027 
+----------------------------------------------------------------------------- 
+                                 M1  0.937  0.923  0.792 
+                                 M2  0.937  0.923  0.792 
+
+                                     cases 
+------------------------------------------ 
+1      ~POW*~WLTH*TEACH*PROF*~COURT  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus
+2          POW*WLTH*~ADV*TEACH*PROF  Posidonius; Athenodorus Cananites
+3         POW*WLTH*ADV*~PROF*~COURT  Thrasea Paetus,Helvidius Priscus; Rutilius Rufus,Cato the Younger,Marcus Aurelius
+4  ~POW*WLTH*ADV*~TEACH*PROF*~COURT  Musonius Rufus
+------------------------------------------ 
+5       ~POW*~ADV*TEACH*PROF*~COURT  Chrysippus,Diogenes of Babylon; Panaetius
+6       WLTH*~ADV*TEACH*PROF*~COURT  Panaetius; Posidonius
+------------------------------------------ 
+
+
+---- Model B: parsimonious solution (uses remainders) ----
+
+M1: WLTH*~COURT + TEACH*PROF -> CONS 
+M2: ~ADV*TEACH + ADV*~COURT -> CONS 
+M3: ADV*~COURT + TEACH*PROF -> CONS 
+
+                                     -------------------------- 
+                inclS   PRI   covS   covU   (M1)   (M2)   (M3)  
+--------------------------------------------------------------- 
+1  WLTH*~COURT  0.871  0.826  0.527  0.000  0.317               
+2   ~ADV*TEACH  0.780  0.641  0.368  0.026         0.238        
+3   ADV*~COURT  0.928  0.920  0.684  0.130         0.554  0.447 
+4   TEACH*PROF  0.706  0.639  0.501  0.052  0.291         0.264 
+--------------------------------------------------------------- 
+            M1  0.758  0.717  0.818 
+            M2  0.876  0.850  0.922 
+            M3  0.819  0.791  0.948 
+
+                cases 
+--------------------- 
+1  WLTH*~COURT  Panaetius; Musonius Rufus; Posidonius; Thrasea Paetus,Helvidius Priscus;
+                Rutilius Rufus,Cato the Younger,Marcus Aurelius
+2   ~ADV*TEACH  Chrysippus,Diogenes of Babylon; Panaetius; Posidonius; Athenodorus Cananites
+3   ADV*~COURT  Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus; Musonius Rufus;
+                Thrasea Paetus,Helvidius Priscus; Rutilius Rufus,Cato the Younger,Marcus Aurelius
+4   TEACH*PROF  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus;
+                Panaetius; Posidonius; Athenodorus Cananites
+--------------------- 
+
+
+
+==== Model B for ~CONS (inconsistency) ====
+
+  OUT: output value
+    n: number of cases in configuration
+ incl: sufficiency inclusion score
+  PRI: proportional reduction in inconsistency
+
+     POW WLTH ADV TEACH PROF COURT   OUT    n  incl  PRI  
+ 3    0   0    0    0    1     0      1     1  1.000 1.000
+62    1   1    1    1    0     1      1     2  1.000 1.000
+55    1   1    0    1    1     0      0     1  0.795 0.000
+23    0   1    0    1    1     0      0     1  0.747 0.330
+ 7    0   0    0    1    1     0      0     2  0.596 0.198
+56    1   1    0    1    1     1      0     1  0.493 0.000
+15    0   0    1    1    1     0      0     4  0.362 0.223
+61    1   1    1    1    0     0      0     3  0.124 0.000
+27    0   1    1    0    1     0      0     1  0.000 0.000
+57    1   1    1    0    0     0      0     2  0.000 0.000
+     cases                                                    
+ 3   Egnatius Celer                                           
+62   Persaeus,Seneca                                          
+55   Posidonius                                               
+23   Panaetius                                                
+ 7   Chrysippus,Diogenes of Babylon                           
+56   Athenodorus Cananites                                    
+15   Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus
+61   Rutilius Rufus,Cato the Younger,Marcus Aurelius          
+27   Musonius Rufus                                           
+57   Thrasea Paetus,Helvidius Priscus                         
+
+
+M1: ~WLTH*~TEACH + ADV*COURT -> ~CONS 
+M2: ~WLTH*~TEACH + ~PROF*COURT -> ~CONS 
+M3: ~ADV*~TEACH + ADV*COURT -> ~CONS 
+M4: ~ADV*~TEACH + ~PROF*COURT -> ~CONS 
+
+                                      --------------------------------- 
+                 inclS   PRI   covS   covU   (M1)   (M2)   (M3)   (M4)  
+----------------------------------------------------------------------- 
+1  ~WLTH*~TEACH  0.337  0.337  0.126  0.000  0.126  0.126               
+2   ~ADV*~TEACH  1.000  1.000  0.188  0.062                0.188  0.188 
+3     ADV*COURT  0.802  0.673  0.252  0.000  0.252         0.252        
+4   ~PROF*COURT  0.670  0.507  0.252  0.000         0.252         0.252 
+----------------------------------------------------------------------- 
+             M1  0.549  0.450  0.378 
+             M2  0.504  0.405  0.378 
+             M3  0.876  0.836  0.440 
+             M4  0.780  0.718  0.440 
+
+                 cases 
+---------------------- 
+1  ~WLTH*~TEACH  Egnatius Celer
+2   ~ADV*~TEACH  Egnatius Celer
+3     ADV*COURT  Persaeus,Seneca
+4   ~PROF*COURT  Persaeus,Seneca
+---------------------- 
+
+
+
+==== Fit of the hypothesized paths ====
+
+                      inclS   PRI   covS   covU  
+------------------------------------------------ 
+1         TEACH_PROF  0.706  0.639  0.501  0.501 
+2  POW_WLTH_ADV_notP  0.855  0.816  0.316  0.052 
+3  POW_ADV_notC_notP  1.000  1.000  0.316  0.052 
+------------------------------------------------ 
+
+
+
+==== Robustness: Model B at incl.cut = 0.75 ====
+
+M1: WLTH*~COURT + TEACH*PROF -> CONS 
+M2: ~ADV*TEACH + ADV*~COURT -> CONS 
+M3: ADV*~COURT + TEACH*PROF -> CONS 
+
+                                     -------------------------- 
+                inclS   PRI   covS   covU   (M1)   (M2)   (M3)  
+--------------------------------------------------------------- 
+1  WLTH*~COURT  0.871  0.826  0.527  0.000  0.317               
+2   ~ADV*TEACH  0.780  0.641  0.368  0.026         0.238        
+3   ADV*~COURT  0.928  0.920  0.684  0.130         0.554  0.447 
+4   TEACH*PROF  0.706  0.639  0.501  0.052  0.291         0.264 
+--------------------------------------------------------------- 
+            M1  0.758  0.717  0.818 
+            M2  0.876  0.850  0.922 
+            M3  0.819  0.791  0.948 
+
+
+
+==== Robustness: Model B at incl.cut = 0.85 ====
+
+M1: WLTH*~COURT + ~ADV*TEACH -> CONS
+
+                inclS   PRI   covS   covU  
+------------------------------------------ 
+1  WLTH*~COURT  0.871  0.826  0.527  0.291 
+2   ~ADV*TEACH  0.780  0.641  0.368  0.132 
+------------------------------------------ 
+            M1  0.809  0.753  0.659 
+
+
+
+==== Robustness: Model B without Thrasea and Helvidius ====
+
+M1: WLTH*PROF + TEACH*~COURT -> CONS 
+M2: WLTH*~COURT + TEACH*PROF -> CONS 
+M3: ~ADV*TEACH + ADV*~COURT -> CONS 
+M4: ADV*~COURT + TEACH*PROF -> CONS 
+
+                                      --------------------------------- 
+                 inclS   PRI   covS   covU   (M1)   (M2)   (M3)   (M4)  
+----------------------------------------------------------------------- 
+1     WLTH*PROF  0.848  0.754  0.344  0.000  0.095                      
+2   WLTH*~COURT  0.844  0.772  0.500  0.000         0.251               
+3    ~ADV*TEACH  0.780  0.641  0.437  0.031                0.283        
+4    ADV*~COURT  0.909  0.894  0.625  0.062                0.470  0.344 
+5    TEACH*PROF  0.706  0.639  0.595  0.000         0.346         0.314 
+6  TEACH*~COURT  0.759  0.706  0.782  0.000  0.533                      
+----------------------------------------------------------------------- 
+             M1  0.759  0.712  0.876 
+             M2  0.732  0.681  0.846 
+             M3  0.854  0.816  0.907 
+             M4  0.791  0.752  0.938 
+
+                 cases 
+---------------------- 
+1     WLTH*PROF  Panaetius; Musonius Rufus; Posidonius; Athenodorus Cananites
+2   WLTH*~COURT  Panaetius; Musonius Rufus; Posidonius; Rutilius Rufus,Cato the Younger,Marcus Aurelius
+3    ~ADV*TEACH  Chrysippus,Diogenes of Babylon; Panaetius; Posidonius; Athenodorus Cananites
+4    ADV*~COURT  Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus; Musonius Rufus;
+                 Rutilius Rufus,Cato the Younger,Marcus Aurelius
+5    TEACH*PROF  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus;
+                 Panaetius; Posidonius; Athenodorus Cananites
+6  TEACH*~COURT  Chrysippus,Diogenes of Babylon; Zeno of Citium,Cleanthes,Dionysius the Renegade,Epictetus;
+                 Panaetius; Posidonius; Rutilius Rufus,Cato the Younger,Marcus Aurelius
+---------------------- 
+
+
+
+==== Observability: ADV as sufficient for CONS, all vs. tested cases ====
+
+        inclS   PRI   covS   covU  
+---------------------------------- 
+1  ADV  0.847  0.821  0.736    -   
+---------------------------------- 
+
+
+                inclS   PRI   covS   covU  
+------------------------------------------ 
+1  ADV[tested]  0.843  0.821  0.843    -   
+------------------------------------------ 
+
