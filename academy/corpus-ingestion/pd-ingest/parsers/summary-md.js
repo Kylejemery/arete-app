@@ -20,7 +20,8 @@ const { nfc, countWords } = require('../lib');
 const HEADING = /^##\s+(.+?)\s*\(pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\)\s*$/;
 
 function parse(text) {
-  const src = nfc(text);
+  // A Windows checkout may carry CRLF; chunk text never does.
+  const src = nfc(text).replace(/\r\n?/g, '\n');
   const sections = [];
   const reasons = [];
   let cur = null;

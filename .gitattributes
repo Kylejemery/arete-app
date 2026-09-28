@@ -3,3 +3,8 @@
 # (core.autocrlf) rewrites the committed text with CRLF line endings and
 # stage.js refuses the file as altered.
 data/raw/** -text
+
+# Summaries staged through pd-ingest are hashed at staging too, so they must
+# reach every checkout byte for byte (brehier-chrysippe-1910.md was staged
+# with CRLF from a Windows checkout on 2026-09-28).
+docs/corpus/summaries/** -text
