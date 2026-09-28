@@ -3,15 +3,19 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getUserSettings, getUserCabinet, getIsPremium, upsertUserSettings } from '@/lib/db';
-import { COUNSELOR_MODEL_OPTIONS, DEFAULT_COUNSELOR_MODEL, counselorModelKey } from '@/lib/llmModels';
+import { getUserSettings, getUserCabinet, getSubscriptionTier, upsertUserSettings, type SubscriptionTier } from '@/lib/db';
+import { modelOptionsForTier, effectiveModelForTier, counselorModelKey } from '@/lib/llmModels';
 import type { Counselor } from '@/lib/types';
 import { upgradeHref } from '@/lib/paywall';
 
 export default function CabinetMindsPage() {
   const router = useRouter();
   const [cabinet, setCabinet] = useState<Counselor[]>([]);
-  const [isPremium, setIsPremium] = useState(false);
+  // The picker offers only what the server runs for this tier (retention plan
+  // R12 g): premium chooses Sonnet or Haiku, pro chooses any model.
+  const [tier, setTier] = useState<SubscriptionTier>('free');
+  const isPremium = tier !== 'free';
+  const options = modelOptionsForTier(tier);
   const [counselorModels, setCounselorModels] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -22,9 +26,9 @@ export default function CabinetMindsPage() {
       const settings = await getUserSettings();
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
-      const [members, premium] = await Promise.all([getUserCabinet(), getIsPremium()]);
+      const [members, memberTier] = await Promise.all([getUserCabinet(), getSubscriptionTier()]);
       setCabinet(members);
-      setIsPremium(premium);
+      setTier(memberTier);
       setCounselorModels(settings?.counselor_models ?? {});
       setLoading(false);
     }
@@ -40,7 +44,9 @@ export default function CabinetMindsPage() {
   };
 
   const renderModelPicker = (modelKey: string) => {
-    const current = counselorModels[modelKey] ?? DEFAULT_COUNSELOR_MODEL;
+    if (options.length < 2) return null;
+    // A stored choice this tier cannot use shows as the model that really runs.
+    const current = effectiveModelForTier(tier, counselorModels[modelKey]);
     return (
       <div className="flex flex-wrap items-center gap-1.5 mt-3">
         <span
@@ -49,7 +55,7 @@ export default function CabinetMindsPage() {
         >
           Mind
         </span>
-        {COUNSELOR_MODEL_OPTIONS.map(option => {
+        {options.map(option => {
           const selected = current === option.id;
           return (
             <button
@@ -126,6 +132,15 @@ export default function CabinetMindsPage() {
             </p>
           </div>
         </div>
+
+        {tier === 'premium' && (
+          <p className="text-[13px] mb-4" style={{ color: '#9aa0a6' }}>
+            Premium runs each counselor on Claude Sonnet, or Claude Haiku for quicker replies.{' '}
+            <button onClick={() => router.push(upgradeHref('cabinet_minds'))} className="underline" style={{ color: '#c9a84c' }}>
+              Pro opens every model.
+            </button>
+          </p>
+        )}
 
         {/* Future Self — always present */}
         <div

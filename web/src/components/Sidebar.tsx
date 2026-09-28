@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { GARDEN_TITLE } from '@/lib/exhibits';
 import { hasUnseenInferredFacts } from '@/lib/profileFields';
+import { showsAppChrome } from '@/lib/appChrome';
 
 interface NavItem {
   href: string;
@@ -102,6 +103,7 @@ export default function Sidebar() {
   const [ktDot, setKtDot] = useState(false);
   useEffect(() => {
     let cancelled = false;
+    if (!showsAppChrome(pathname)) return;
     hasUnseenInferredFacts().then(v => { if (!cancelled) setKtDot(v); }).catch(() => {});
     return () => { cancelled = true; };
   }, [pathname]);
@@ -121,6 +123,9 @@ export default function Sidebar() {
     await supabase.auth.signOut();
     router.replace('/login');
   };
+
+  // No app navigation on the sign in pages (retention plan R12 j).
+  if (!showsAppChrome(pathname)) return null;
 
   return (
     <>

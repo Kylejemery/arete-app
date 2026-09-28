@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
+import AppMain from '@/components/AppMain';
 import ConstellationBg from '@/components/ConstellationBg';
 import PendingInviteToast from '@/components/PendingInviteToast';
 import AppOpenedLogger from '@/components/AppOpenedLogger';
@@ -56,9 +57,9 @@ export default function RootLayout({
         {/* Desktop: offset for 220px sidebar. Mobile: pb-24 clears the floating pill nav.
             h-full + overflow-y-auto is the scroll container; chat pages rely on this
             bounded height to make flex-1 work correctly. */}
-        <main className="md:ml-[220px] pb-24 md:pb-0 h-full overflow-y-auto relative z-10">
+        <AppMain>
           {children}
-        </main>
+        </AppMain>
       </body>
     </html>
   );

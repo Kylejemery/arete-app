@@ -57,6 +57,7 @@ export default function ProgressPage() {
   const [tab, setTab] = useState<Tab>('overview');
 
   const [streak, setStreak] = useState(0);
+  const [morningOnlyToday, setMorningOnlyToday] = useState(false);
   const [calendarData, setCalendarData] = useState<CalendarData>({});
   const [journalCount, setJournalCount] = useState(0);
   const [quoteCount, setQuoteCount] = useState(0);
@@ -86,6 +87,7 @@ export default function ProgressPage() {
       if (!settings?.user_name) { router.replace('/setup'); return; }
 
       setStreak(streakVal);
+      setMorningOnlyToday(!!morningDoneToday && !eveningDoneToday);
 
       setJournalCount(journalEntries.length);
       setQuoteCount(journalEntries.filter(e => e.type === 'quote').length);
@@ -168,6 +170,12 @@ export default function ProgressPage() {
             <p className="text-arete-muted text-sm mb-1">Current Streak</p>
             <p className="text-6xl font-bold text-arete-gold">{streak}</p>
             <p className="text-arete-text mt-1">days</p>
+            {/* Morning alone does not extend the chain (decision D3, R12 a). */}
+            {morningOnlyToday && (
+              <p className="text-arete-gold text-sm mt-2">
+                Morning done. Close the day tonight to extend your chain.
+              </p>
+            )}
             {milestone && <p className="text-arete-gold font-semibold mt-2">{milestone}</p>}
 
             {/* Next milestone */}

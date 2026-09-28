@@ -12,8 +12,9 @@ import {
   View,
 } from 'react-native';
 import CounselorCard from '@/components/CounselorCard';
-import { getUserCabinet, getIsPremium, getUserSettings, upsertUserSettings } from '@/lib/db';
-import { COUNSELOR_MODEL_OPTIONS, DEFAULT_COUNSELOR_MODEL } from '@/lib/llmModels';
+import { getUserCabinet, getSubscriptionTier, getUserSettings, upsertUserSettings } from '@/lib/db';
+import { modelOptionsForTier, effectiveModelForTier } from '@/lib/llmModels';
+import type { SubscriptionTier } from '@/lib/types';
 import { normalizeCounselorId } from '../../services/threadService';
 import type { Counselor } from '@/lib/types';
 import { paywallRoute } from '@/lib/paywall';
@@ -28,7 +29,8 @@ function modelKeyForSlug(slug: string): string {
 export default function CabinetIndexScreen() {
   const router = useRouter();
   const [cabinet, setCabinet] = useState<Counselor[]>([]);
-  const [isPremium, setIsPremium] = useState(false);
+  const [tier, setTier] = useState<SubscriptionTier>('free');
+  const isPremium = tier !== 'free';
   const [loading, setLoading] = useState(true);
   const [showPaywall, setShowPaywall] = useState(false);
   const [counselorModels, setCounselorModels] = useState<Record<string, string>>({});
@@ -38,14 +40,14 @@ export default function CabinetIndexScreen() {
       let active = true;
       (async () => {
         setLoading(true);
-        const [members, premium, settings] = await Promise.all([
+        const [members, memberTier, settings] = await Promise.all([
           getUserCabinet(),
-          getIsPremium(),
+          getSubscriptionTier(),
           getUserSettings(),
         ]);
         if (active) {
           setCabinet(members);
-          setIsPremium(premium);
+          setTier(memberTier);
           setCounselorModels(settings?.counselor_models ?? {});
           setLoading(false);
         }
@@ -62,12 +64,17 @@ export default function CabinetIndexScreen() {
     );
   };
 
+  // The picker offers only what the server runs for this tier (retention plan
+  // R12 g): free sees no picker (every reply runs on Haiku), premium chooses
+  // Sonnet or Haiku, pro chooses any model.
   const renderModelPicker = (modelKey: string) => {
-    const current = counselorModels[modelKey] ?? DEFAULT_COUNSELOR_MODEL;
+    const options = modelOptionsForTier(tier);
+    if (options.length < 2) return null;
+    const current = effectiveModelForTier(tier, counselorModels[modelKey]);
     return (
       <View style={styles.modelRow}>
         <Text style={styles.modelRowLabel}>Mind</Text>
-        {COUNSELOR_MODEL_OPTIONS.map(option => {
+        {options.map(option => {
           const selected = current === option.id;
           return (
             <TouchableOpacity

@@ -96,8 +96,12 @@ export default function AgoraScreen() {
                     <Ionicons name="arrow-back" size={22} color={GOLD} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>The Agora</Text>
-                <TouchableOpacity onPress={write} style={styles.headerBtn} hitSlop={8}>
+                <TouchableOpacity onPress={write} style={styles.headerBtn} hitSlop={8} accessibilityLabel={viewer && !viewer.canWrite ? 'Write an essay, Premium' : 'Write an essay'}>
                     <Ionicons name="add" size={26} color={GOLD} />
+                    {/* Submitting is for subscribers: show it before the tap (R12 i, audit gate 20). */}
+                    {viewer && !viewer.canWrite && (
+                        <Ionicons name="lock-closed" size={10} color={GOLD} style={styles.gateLock} />
+                    )}
                 </TouchableOpacity>
             </View>
 
@@ -180,6 +184,7 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1, borderBottomColor: '#c9a84c22',
     },
     headerBtn: { padding: 4, width: 40, alignItems: 'center' },
+    gateLock: { position: 'absolute', right: 4, bottom: 2 },
     headerTitle: { color: '#fff', fontSize: 16, fontWeight: '700', flex: 1, textAlign: 'center' },
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 32 },
     errorText: { color: '#888', fontSize: 15, textAlign: 'center', lineHeight: 22 },

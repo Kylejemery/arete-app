@@ -60,7 +60,10 @@ function AgoraIndex() {
           Reading is free. Commenting is not.
         </p>
         <div style={{ display: 'flex', gap: 22, alignItems: 'center', flexWrap: 'wrap' }}>
-          <AcademyButton variant="outline" onClick={submit}>Submit an essay</AcademyButton>
+          {/* Submitting is for subscribers: show it before the click (R12 i, audit gate 20). */}
+          <AcademyButton variant="outline" onClick={submit}>
+            {viewer && !viewer.canWrite ? '🔒 Submit an essay · Premium' : 'Submit an essay'}
+          </AcademyButton>
           <TextLink onClick={() => router.push('/agora/mine')}>Your essays</TextLink>
           {viewer?.isEditor && (
             <TextLink onClick={() => router.push('/agora/review')}>

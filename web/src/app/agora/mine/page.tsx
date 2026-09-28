@@ -43,7 +43,7 @@ export default function MyEssaysPage() {
       <GoldRule />
       <div style={{ marginBottom: 32 }}>
         <AcademyButton variant="outline" onClick={() => router.push(viewer?.canWrite ? '/agora/submit' : upgradeHref('agora_submit'))}>
-          Write a new essay
+          {viewer && !viewer.canWrite ? '🔒 Write a new essay · Premium' : 'Write a new essay'}
         </AcademyButton>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

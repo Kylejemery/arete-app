@@ -638,7 +638,8 @@ export default function CabinetPage() {
                 background: 'rgba(201,168,76,0.06)',
               }}
             >
-              + Invite
+              {/* Shared sessions are Premium: show it before the click (R12 i, audit gate 8). */}
+              {!subLoading && !isPremium ? '🔒 Invite' : '+ Invite'}
             </button>
             <Link
               href="/cabinet/minds"

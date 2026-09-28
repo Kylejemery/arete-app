@@ -323,7 +323,11 @@ export default function HomePage() {
             className="italic text-[13px] mt-1"
             style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#9aa0a6' }}
           >
-            &ldquo;The chain is heavier than it looks.&rdquo;
+            {/* Morning alone does not extend the chain (decision D3); say so
+                rather than leave a count that did not move (R12 a). */}
+            {morningDone && !eveningDone
+              ? 'Morning done. Close the day tonight to extend your chain.'
+              : <>&ldquo;The chain is heavier than it looks.&rdquo;</>}
           </div>
         </div>
       </div>

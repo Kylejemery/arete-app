@@ -595,7 +595,9 @@ export default function SettingsScreen() {
           </Text>
 
           <View style={styles.cardHeader}>
-            <Text style={styles.attendToggleLabel}>Block distractions during Focus</Text>
+            <Text style={styles.attendToggleLabel}>
+              Block distractions during Focus{tier === 'free' ? <Text style={styles.premiumTag}>  PREMIUM</Text> : null}
+            </Text>
             <Switch
               value={focusBlockEnabled}
               onValueChange={async (val) => {
@@ -664,7 +666,9 @@ export default function SettingsScreen() {
             }}
             activeOpacity={0.8}
           >
-            <Text style={styles.attendBlocklistText}>Block a website…</Text>
+            <Text style={styles.attendBlocklistText}>
+              Block a website…{tier === 'free' ? <Text style={styles.premiumTag}>  PREMIUM</Text> : null}
+            </Text>
           </TouchableOpacity>
 
           {/* Watchlists — named app groups the Cabinet can call out by name */}
@@ -697,7 +701,9 @@ export default function SettingsScreen() {
             </View>
           ))}
           <TouchableOpacity style={styles.attendBlocklistButton} onPress={promptAddWatchlist} activeOpacity={0.8}>
-            <Text style={styles.attendBlocklistText}>Add a watchlist…</Text>
+            <Text style={styles.attendBlocklistText}>
+              Add a watchlist…{tier === 'free' ? <Text style={styles.premiumTag}>  PREMIUM</Text> : null}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

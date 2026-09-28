@@ -24,14 +24,36 @@ interface WhatsNewContent {
 const WHATS_NEW: Record<string, WhatsNewContent> = {
   '1.4.0': {
     title: 'The Cabinet Sees More',
-    intro: 'Your counselors can now speak to the day you actually lived — each one only if you choose to show them.',
+    intro: 'Your counselors can now speak to the day you actually lived, each one only if you choose to show them.',
     rows: [
-      { icon: '👁', title: 'Screen time, held to your limit', body: 'Ask "how\'s my screen time?" and get a straight answer — including late nights past 11pm.' },
+      { icon: '👁', title: 'Screen time, held to your limit', body: 'Ask "how\'s my screen time?" and get a straight answer, including late nights past 11pm.' },
       { icon: '❤️', title: 'Sleep and movement', body: 'Last night\'s sleep, today\'s steps and training, from Apple Health. Read-only.' },
       { icon: '🗓️', title: 'The shape of your day', body: 'Today\'s calendar and tomorrow\'s first event, held beside what you said matters.' },
     ],
   },
 };
+
+// Numeric compare of dotted versions ('1.4.3' vs '1.4.0'); missing parts are 0.
+function compareVersions(a: string, b: string): number {
+  const pa = a.split('.').map(n => parseInt(n, 10) || 0);
+  const pb = b.split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
+// The announcement this build carries: the newest WHATS_NEW entry at or below
+// the running version (retention plan R12 c). Keying on the exact version
+// meant the 1.4.0 note never showed once the build moved to 1.4.3; now a
+// patch release keeps showing its minor release's note to anyone who has not
+// seen it, and each note still shows only once.
+export function announcementVersionFor(version: string): string | null {
+  const eligible = Object.keys(WHATS_NEW).filter(v => compareVersions(v, version) <= 0);
+  if (eligible.length === 0) return null;
+  return eligible.sort(compareVersions)[eligible.length - 1];
+}
 
 export default function WhatsNewModal() {
   const router = useRouter();
@@ -39,21 +61,22 @@ export default function WhatsNewModal() {
   const [content, setContent] = useState<WhatsNewContent | null>(null);
 
   const version = Constants.expoConfig?.version ?? '';
+  const announced = announcementVersionFor(version);
 
   useEffect(() => {
     (async () => {
       try {
-        if (!WHATS_NEW[version]) return;
+        if (!announced) return;
         const seen = await AsyncStorage.getItem(SEEN_KEY);
-        if (seen === version) return;
-        setContent(WHATS_NEW[version]);
+        if (seen === announced) return;
+        setContent(WHATS_NEW[announced]);
       } catch { /* stay hidden */ }
     })();
-  }, [version]);
+  }, [announced]);
 
   const dismiss = async (then?: () => void) => {
     setContent(null);
-    try { await AsyncStorage.setItem(SEEN_KEY, version); } catch { /* best effort */ }
+    try { if (announced) await AsyncStorage.setItem(SEEN_KEY, announced); } catch { /* best effort */ }
     then?.();
   };
 

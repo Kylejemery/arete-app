@@ -603,9 +603,39 @@ export async function getIsPremium(): Promise<boolean> {
     .eq('id', user.id)
     .single();
   if (error) return false;
-  const tier: string = data?.tier ?? 'free';
-  const isPrem: boolean = data?.is_premium ?? false;
-  return isPrem || tier === 'premium' || tier === 'pro' || tier === 'scholar';
+  return normalizeTier(data?.tier, data?.is_premium) !== 'free';
+}
+
+export type SubscriptionTier = 'free' | 'premium' | 'pro';
+
+/**
+ * Collapse a raw profiles.tier value into the canonical vocabulary. Mirror of
+ * normalizeTier in lib/db.ts (mobile) and the server's normalizeTier, so the
+ * three agree (retention plan R12 f): 'arete' and 'scholar' are legacy
+ * spellings of premium, and anything unrecognized is free so an unknown
+ * value can never unlock a paid tier.
+ */
+export function normalizeTier(raw: unknown, isPremium?: boolean | null): SubscriptionTier {
+  const value = typeof raw === 'string' ? raw.toLowerCase() : '';
+  if (value === 'pro') return 'pro';
+  if (value === 'premium' || value === 'arete' || value === 'scholar') return 'premium';
+  return isPremium ? 'premium' : 'free';
+}
+
+// The signed in member's canonical tier, honouring the dev override the same
+// way getIsPremium does (override true reads as premium, false as free).
+export async function getSubscriptionTier(): Promise<SubscriptionTier> {
+  const devOverride = getDevPremiumOverride();
+  if (devOverride !== null) return devOverride ? 'premium' : 'free';
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 'free';
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('is_premium, tier')
+    .eq('id', user.id)
+    .single();
+  if (error) return 'free';
+  return normalizeTier(data?.tier, data?.is_premium);
 }
 
 // ----------------------------------------------------------------
