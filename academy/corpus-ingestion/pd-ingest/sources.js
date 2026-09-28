@@ -308,7 +308,31 @@ const SOURCES = [
     registrations: [
       { question_id: 'Q03', role: 'states', position: 'Reads the comprehensive impression (phantasia kataleptike) as passive, against Brochard\'s active reading: certainty lies in the impression itself, with assent following it.' },
       { question_id: 'Q07', role: 'states', position: 'Chrysippus\'s reconciliation of fate and responsibility (De fato 12–13 read with Diogenianus): the co-fated (confatalia) and the distinction of principal from concurrent causes, so that an event is necessary only through the antecedents it implies.' },
-      { question_id: 'Q05', role: 'states', position: 'The passion as a sickness of the soul: a judgment of reason gone excessive, not a separate irrational part, and its therapy by correcting the judgment.' },
+      { question_id: 'Q05', role: 'states', position: 'For Chrysippus the passion is a judgment, but not the opinion that something is good or evil: it is the further judgment that it is fitting to be agitated by it, a weak supposition that shows the soul\'s failure to resist rather than ignorance. The soul is one reason with no irrational part, so the passion is in our power and is cured by correcting that judgment.' }, // corrected by 20260928201705
+    ],
+  },
+
+  // ---- English summaries of sources English retrieval cannot reach ------
+  {
+    slug: 'brehier-chrysippe-1910-en-summary', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'Émile Bréhier', work: 'Chrysippe (English summary)',
+    language: 'english', translator: 'original',
+    edition: 'English summary, section by section, of Chrysippe (Les Grands Philosophes. Paris: Félix Alcan)',
+    edition_year: 1910,
+    text_type: 'paper_summary', quotable_on_air: false, license_status: PD_US,
+    urls: [], repoFiles: ['docs/corpus/summaries/brehier-chrysippe-1910.md'],
+    sourceUrl: 'https://archive.org/details/chrysippe00br',
+    parser: 'summary-md',
+    licenseEvidence: 'A summary in our own words of Émile Bréhier, Chrysippe (Paris: Félix Alcan, 1910), published abroad before 1931 and so public domain in the United States. Written from the French text staged as brehier-chrysippe-1910; no sentence of the original is translated whole.',
+    cleaningNote: 'Written 2026-09-28 so that Bréhier\'s positions answer English retrieval; the French rows (brehier-chrysippe-1910) answer French retrieval only. Each ## section is one chunk and carries the page range it summarises.',
+    // Same work and positions as the French source; registered under this
+    // work too, since registrations key on (author, work).
+    registrations: [
+      { question_id: 'Q03', role: 'states', position: 'Reads the comprehensive impression (phantasia kataleptike) as a wholly passive image whose clarity is immanent in it, against the active readings of Brochard, Stein, Ganter and Hirzel: certainty lies in the impression, and assent and comprehension follow it.' },
+      { question_id: 'Q05', role: 'states', position: 'For Chrysippus the passion is a judgment, but not the opinion that something is good or evil: it is the further judgment that it is fitting to be agitated by it, a weak supposition that shows the soul\'s failure to resist rather than ignorance. The soul is one reason with no irrational part, so the passion is in our power and is cured by correcting that judgment.' },
+      { question_id: 'Q07', role: 'states', position: 'Chrysippus reconciles fate and responsibility through the co-fated (confatalia) and the cylinder: every event has antecedent causes, but the auxiliary cause acts only through the principal cause in the agent\'s own nature, so assent depends on the impression yet is the work of reason. Bréhier counts the principle of antecedent causes among Chrysippus\'s glories but judges his treatment of future contingents dialectical juggling.' },
+      { question_id: 'Q08', role: 'complicates', position: 'Denies that the Old Stoa was pantheist: for Chrysippus the individual soul is not a fragment of the world-soul, the generated world is not itself a god, and the world stands to the individual as parent to offspring. The fragment doctrine belongs to Posidonius and Seneca.' },
+      { question_id: 'Q01', role: 'states', position: 'Chrysippean providence without dualism: fate, providence, necessity and Zeus are one, so evils that come as by-products of goods are willed together with the whole, not imposed by a necessity above the divine will (a dualism Bréhier allows only for Cleanthes).' },
     ],
   },
 ];

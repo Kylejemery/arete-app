@@ -280,3 +280,37 @@ test('garble estimate: quotes, footnote stars and hyphenated compounds are not g
   assert.equal(isGarbled("l'âme", 'french'), false);
   assert.equal(isGarbled('M£{i.îy.9«t', 'french'), true);
 });
+
+// An English summary written in the repo: one `## ` section, one chunk.
+const summarySource = {
+  slug: 'test-summary', tier: 2, author: 'A', work: 'W (English summary)', language: 'english', translator: 'original',
+  edition_year: 1910, text_type: 'paper_summary', license_status: 'public_domain_us', urls: [], parser: 'summary-md',
+  licenseEvidence: 'Our own summary of a public domain work.',
+};
+
+test('summary: each section is one chunk, labelled with its heading and page range; front matter is not staged', () => {
+  const md = [
+    '# Front matter, never staged', 'About this summary.', '',
+    `## Dialectic (pp. 59–68)`, words(30, 'alpha'), '',
+    `## The criterion (pp. 80–98)`, words(30, 'beta'), '',
+    `## A single page (p. 187)`, words(300, 'gamma'),
+  ].join('\n');
+  const r = build(summarySource, [file(md)]);
+  assert.equal(r.ok, true, r.reasons && r.reasons.join('; '));
+  const body = r.chunks.filter((c) => c.kind === 'body');
+  assert.equal(body.length, 3, 'short sections are not merged');
+  assert.deepEqual(body.map((c) => c.section_label), ['Dialectic (pp. 59–68)', 'The criterion (pp. 80–98)', 'A single page (pp. 187)']);
+  assert.deepEqual(body.map((c) => c.printed_pages), ['59–68', '80–98', '187']);
+  assert.ok(body.every((c) => c.locator === null));
+  assert.doesNotMatch(body.map((c) => c.chunk_text).join(' '), /Front matter|About this summary/);
+  assert.equal(r.licenseEvidence, 'Our own summary of a public domain work.');
+});
+
+test('summary: a heading without a page range or an overlong section is refused', () => {
+  const noRange = build(summarySource, [file(`## Dialectic\n${words(40)}`)]);
+  assert.equal(noRange.ok, false);
+  assert.match(noRange.reasons.join(' '), /without a page range/);
+  const long = build(summarySource, [file(`## Physics (pp. 109–214)\n${words(750)}`)]);
+  assert.equal(long.ok, false);
+  assert.match(long.reasons.join(' '), /750 words/);
+});

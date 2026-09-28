@@ -143,6 +143,17 @@ function getLocal(slug, name) {
   return { url: entry.url, file, body: buf, sha256: origin, retrieved_at: entry.retrieved_at, cached: true };
 }
 
+// A file written in the repo rather than fetched or extracted: an English
+// summary under docs/corpus/summaries/. Its hash is recorded at staging, so
+// what is promoted is what was reviewed.
+const REPO_ROOT = path.resolve(__dirname, '../../..');
+function getRepoFile(relPath) {
+  const file = path.join(REPO_ROOT, relPath);
+  if (!fs.existsSync(file)) throw new Error(`${relPath}: not found in the repo`);
+  const buf = fs.readFileSync(file);
+  return { url: null, file, body: buf, sha256: sha256(buf), retrieved_at: null, cached: true };
+}
+
 // One hash for a source built from several files: the hash of the ordered
 // per-file hashes, so any changed page changes it.
 function combinedSha256(fetched) {
@@ -150,6 +161,6 @@ function combinedSha256(fetched) {
 }
 
 module.exports = {
-  getCached, getLocal, combinedSha256, robotsDisallows, fileNameFor,
+  getCached, getLocal, getRepoFile, combinedSha256, robotsDisallows, fileNameFor,
   FetchRefused, NetworkUnavailable, HOSTS, RAW_ROOT, USER_AGENT,
 };
