@@ -85,7 +85,7 @@ The appendix on pragmatism and humanism (pp. 255–266) is left out: it occupies
 **A.C. Pearson, *The Fragments of Zeno and Cleanthes* (1891).** This is already in `rag_corpus` as 321 live rows (author "A.C. Pearson", `text_type` primary). A second ingest would duplicate it.
 
 - `edition_year` was null. It was set to 1891 on 2026-09-28 (migration `20260928190800_pearson_fragments_edition_year`).
-- Still open: `source_url` is null, and the rows carry no evidence of which scan they came from.
+- `source_url` was null. It was set to https://archive.org/details/thefragmentsofze00zenouoft on 2026-09-28 by Kyle's decision (migration `20260928194250_pearson_fragments_source_url`). The rows do not record which copy they were ingested from; this is the only public-domain edition.
 - Still open: whether Pearson's introduction and notes should be `scholarship` rather than `primary`.
 
 ## Rejected
