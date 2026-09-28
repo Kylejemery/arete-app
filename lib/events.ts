@@ -34,7 +34,17 @@ export type ProductEvent =
   | 'checkin_continue_tapped'
   | 'module_limit_upgrade_click'
   | 'onboarding_step_viewed'
-  | 'onboarding_committed';
+  | 'onboarding_committed'
+  // Purchase funnel (retention plan R11). checkout_started, trial_started,
+  // subscription_activated and subscription_cancelled are written server
+  // side by the web checkout route and the Stripe webhook.
+  | 'paywall_plan_tapped'
+  | 'checkout_opened'
+  | 'checkout_started'
+  | 'checkout_cancelled'
+  | 'trial_started'
+  | 'subscription_activated'
+  | 'subscription_cancelled';
 
 export type EventProps = Record<string, string | number | boolean | null | undefined>;
 

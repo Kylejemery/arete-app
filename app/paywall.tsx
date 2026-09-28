@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase';
 import { getSubscriptionTier } from '@/lib/db';
 import { logEvent } from '@/lib/events';
 import { isPaywallSource } from '@/lib/paywall';
+import { headerCopyForSource, LIMIT_SOURCES, PREMIUM_BENEFITS } from '@/lib/paywallCopy';
 import { refreshTier } from '@/lib/useSubscription';
 import { openWebSignedIn } from '@/lib/webHandoff';
 
@@ -91,53 +92,9 @@ const FEATURES = [
   { label: 'The corpus writes in the margins', free: '—', arete: '✓', pro: '✓' },
 ];
 
-// Source-specific headline copy: whoever arrives from a tease lands on a
-// paywall that speaks to the exact thing they just reached for. Sources not
-// listed fall back to the generic header.
-const LIMIT_SOURCES = new Set(['cabinet_daily_limit', 'cabinet_limit_card', 'counselor_daily_limit']);
-
-const SOURCE_COPY: Record<string, { title: string; subtitle: string }> = {
-  module_limit: {
-    title: 'Keep Every Practice',
-    subtitle: 'Free keeps one practice on Home at a time.\nPremium keeps all you choose, each tuned your way.',
-  },
-  attend_cabinet_sight: {
-    title: 'Let Them See Your Hours',
-    subtitle: 'Your counselors see your screen-time signals —\nand hold you to the limit you set yourself.',
-  },
-  attend_context_tease: {
-    title: 'They Could See This',
-    subtitle: 'Your counselors see your screen-time signals —\nand hold you to the limit you set yourself.',
-  },
-  attend_watchlists: {
-    title: 'Name Your Distractions',
-    subtitle: 'Watchlists let the Cabinet call it out by name:\n"your Instagram list crossed two hours today."',
-  },
-  attend_focus_block: {
-    title: 'The Cabinet Holds the Door',
-    subtitle: 'Your chosen apps and websites stay shielded\nfor the length of every focus session.',
-  },
-  health_cabinet_sight: {
-    title: 'Let Them See Your Nights',
-    subtitle: 'Sleep, steps, and training — your counselors\nspeak to the day you actually lived.',
-  },
-  calendar_cabinet_sight: {
-    title: 'Let Them See Your Day',
-    subtitle: "Your counselors read today's calendar and hold it\nbeside the things you said matter.",
-  },
-  agora_comment: {
-    title: 'Write in the Agora',
-    subtitle: 'Reading the Agora is free. Commenting on an essay,\nand submitting your own, is for subscribers.',
-  },
-  agora_submit: {
-    title: 'Write for the Agora',
-    subtitle: 'Subscribers submit essays. An editor reads every one\nbefore it appears, open to argument.',
-  },
-  whats_new_cabinet_sight: {
-    title: 'The Cabinet Sees More',
-    subtitle: 'Screen time, sleep, and your calendar —\ncounselors who speak to the day you actually lived.',
-  },
-};
+// Source-specific headline copy lives in lib/paywallCopy.ts (retention plan
+// R11), shared with the web /upgrade page: whoever arrives from a tease
+// lands on a paywall that speaks to the exact thing they just reached for.
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -148,13 +105,9 @@ export default function PaywallScreen() {
   const { isTeen } = useAgeStatus();
   // A daily limit mid-conversation (activation 7.1): speak to that exact
   // conversation, name the counselor, and say it is kept where it stopped.
-  const limitCopy = LIMIT_SOURCES.has(String(params.src ?? ''))
-    ? {
-        title: `Keep talking with ${params.counselor ? String(params.counselor).slice(0, 40) : 'your Cabinet'}`,
-        subtitle: 'Your conversation is saved exactly where you left off,\nyour unsent message included. Premium picks it up from there.',
-      }
-    : null;
-  const headerCopy = limitCopy ?? SOURCE_COPY[String(params.src ?? '')] ?? null;
+  const isLimitSource = LIMIT_SOURCES.has(String(params.src ?? ''));
+  const headerCopy = headerCopyForSource(params.src, params.counselor);
+  const source: string = isPaywallSource(params.src) ? params.src : 'unknown';
   const loggedRef = useRef(false);
 
   // Funnel telemetry: one row per view, labeled with what triggered it, so we
@@ -184,12 +137,20 @@ export default function PaywallScreen() {
   // SFSafariViewController never backgrounds the app, so the AppState
   // foreground refresh does not fire — re-read entitlement here so a user who
   // just paid comes back to an unlocked app instead of the same locks.
-  const openWebCheckout = async () => {
-    await openWebSignedIn(UPGRADE_PATH);
+  // The web page receives the same src, so the paywall_viewed there, the
+  // checkout metadata, and the subscription_events row all carry the gate
+  // that produced the trial (retention plan R11).
+  const openWebCheckout = async (plan?: string) => {
+    if (plan) logEvent('paywall_plan_tapped', { plan, source, surface: 'mobile_paywall' });
+    logEvent('checkout_opened', { plan: plan ?? null, source, surface: 'mobile_paywall' });
+    const path = isPaywallSource(params.src)
+      ? `${UPGRADE_PATH}?src=${encodeURIComponent(params.src)}`
+      : UPGRADE_PATH;
+    await openWebSignedIn(path);
     refreshTier();
     // Back to the conversation the limit interrupted, which resumes with the
     // unsent message in the composer.
-    if (limitCopy) {
+    if (isLimitSource) {
       const tierNow = await getSubscriptionTier().catch(() => 'free' as const);
       if (tierNow !== 'free' && router.canGoBack()) router.back();
     }
@@ -239,6 +200,16 @@ export default function PaywallScreen() {
           )}
         </View>
 
+        {/* What Premium is, in outcomes (retention plan R11) */}
+        <View style={styles.benefits}>
+          {PREMIUM_BENEFITS.map(line => (
+            <View key={line} style={styles.benefitRow}>
+              <Text style={styles.benefitBullet}>◆</Text>
+              <Text style={styles.benefitText}>{line}</Text>
+            </View>
+          ))}
+        </View>
+
         {/* Feature comparison table */}
         <View style={styles.tableContainer}>
           <View style={styles.tableHeader}>
@@ -270,7 +241,7 @@ export default function PaywallScreen() {
             <TouchableOpacity
               key={plan.identifier}
               style={[styles.planCard, plan.highlighted && styles.planCardHighlighted]}
-              onPress={openWebCheckout}
+              onPress={() => openWebCheckout(plan.identifier)}
               activeOpacity={0.8}
             >
               {plan.badge && (
@@ -295,7 +266,7 @@ export default function PaywallScreen() {
         </View>
 
         {/* CTA — opens the web checkout */}
-        <TouchableOpacity style={styles.subscribeButton} onPress={openWebCheckout} activeOpacity={0.85}>
+        <TouchableOpacity style={styles.subscribeButton} onPress={() => openWebCheckout()} activeOpacity={0.85}>
           <Text style={styles.subscribeButtonText}>Subscribe on the Web</Text>
         </TouchableOpacity>
 
@@ -379,6 +350,28 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 10,
+  },
+
+  // Benefits
+  benefits: {
+    marginBottom: 22,
+    gap: 8,
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  benefitBullet: {
+    color: GOLD,
+    fontSize: 9,
+    marginTop: 5,
+  },
+  benefitText: {
+    flex: 1,
+    color: TEXT,
+    fontSize: 14,
+    lineHeight: 20,
   },
 
   // Table

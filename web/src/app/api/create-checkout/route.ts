@@ -5,6 +5,7 @@ import {
   createSupabaseAdminClient,
   requireEnv,
 } from '@/lib/supabaseServer'
+import { isPaywallSource } from '@/lib/paywall'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,6 +38,13 @@ export async function POST(req: NextRequest) {
     if (!resolvedPriceId) {
       return NextResponse.json({ error: 'Invalid plan or priceId' }, { status: 400 })
     }
+    // Source attribution (retention plan R11): the paywall gate that sent the
+    // member here, validated against the closed PaywallSource list, and the
+    // plan key. Both ride into Stripe metadata on the session and the
+    // subscription, and the webhook copies source into subscription_events.
+    const source: string = isPaywallSource(body.source) ? body.source : 'unknown'
+    const planKey: string =
+      Object.entries(planPrices).find(([, price]) => price === resolvedPriceId)?.[0] ?? 'unknown'
 
     const stripe = getStripe()
     const admin = createSupabaseAdminClient()
@@ -106,18 +114,27 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       customer: customerId,
       line_items: [{ price: resolvedPriceId, quantity: 1 }],
-      success_url: `${appUrl}/upgrade?status=success`,
-      cancel_url: `${appUrl}/upgrade?status=cancelled`,
+      success_url: `${appUrl}/upgrade?status=success&src=${encodeURIComponent(source)}`,
+      cancel_url: `${appUrl}/upgrade?status=cancelled&src=${encodeURIComponent(source)}`,
       client_reference_id: user.id,
       // Stamp the user id on both the session and the subscription so the
       // webhook can resolve the user without a customer lookup
-      metadata: { supabase_user_id: user.id },
+      metadata: { supabase_user_id: user.id, source, plan: planKey },
       subscription_data: {
-        metadata: { supabase_user_id: user.id },
+        metadata: { supabase_user_id: user.id, source, plan: planKey },
         ...(trialEligible ? { trial_period_days: 7 } : {}),
       },
     },
     { idempotencyKey })
+
+    // Funnel telemetry (R11). Best effort: never fails the checkout.
+    const { error: eventError } = await admin.from('product_events').insert({
+      user_id: user.id,
+      event: 'checkout_started',
+      props: { plan: planKey, source, trial_eligible: trialEligible },
+      platform: 'web',
+    })
+    if (eventError) console.error('[/api/create-checkout] checkout_started insert failed:', eventError.message)
 
     return NextResponse.json({ url: session.url })
   } catch (error) {

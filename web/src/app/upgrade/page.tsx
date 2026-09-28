@@ -5,8 +5,9 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSubscription } from '@/lib/useSubscription';
 import { supabase } from '@/lib/supabase';
-import { logEvent } from '@/lib/events';
+import { logEvent, logEventNow } from '@/lib/events';
 import { isPaywallSource } from '@/lib/paywall';
+import { headerCopyForSource, PREMIUM_BENEFITS } from '@/lib/paywallCopy';
 import { takeLimitReturn } from '@/lib/limitDraft';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
@@ -33,7 +34,7 @@ const PLANS: {
     name: 'Premium Yearly',
     price: '$79.99',
     cadence: '/year',
-    blurb: 'Everything in Premium, two months free.',
+    blurb: 'Everything in Premium. Save 33%, about four months free.',
     bestValue: true,
   },
   {
@@ -56,6 +57,10 @@ function UpgradeContent() {
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
   const srcParam = searchParams.get('src');
+  const source: string = isPaywallSource(srcParam) ? srcParam : 'unknown';
+  // The gate that sent the member here speaks first (retention plan R11):
+  // the same copy the mobile paywall shows for this source.
+  const headerCopy = headerCopyForSource(srcParam, searchParams.get('counselor'));
   const { tier, isPremium, loading } = useSubscription();
   const { isTeen } = useAgeStatus();
   const [busyPlan, setBusyPlan] = useState<PlanKey | 'portal' | null>(null);
@@ -80,6 +85,13 @@ function UpgradeContent() {
       tier_at_view: tier ?? 'free',
     });
   }, [loading, status, srcParam, tier]);
+  // A return from Stripe without buying, once per visit (R11).
+  const cancelLoggedRef = useRef(false);
+  useEffect(() => {
+    if (status !== 'cancelled' || cancelLoggedRef.current) return;
+    cancelLoggedRef.current = true;
+    logEvent('checkout_cancelled', { source });
+  }, [status, source]);
   // How the current plan is billed. Only a plan bought through Stripe has a
   // customer for the billing portal; plans granted by Arete (admin roster,
   // grandfathered accounts) have nothing to manage here.
@@ -108,14 +120,19 @@ function UpgradeContent() {
   const startCheckout = async (plan: PlanKey) => {
     setError(null);
     setBusyPlan(plan);
+    logEvent('paywall_plan_tapped', { plan, source, surface: 'upgrade_page' });
     try {
+      // source rides into the Stripe session and subscription metadata, so
+      // the trial can be traced back to the gate that produced it (R11).
       const res = await fetch('/api/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, source }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) throw new Error(data.error ?? 'Checkout failed');
+      // Awaited: the full page navigation to Stripe would cancel a pending insert.
+      await logEventNow('checkout_opened', { plan, source, surface: 'upgrade_page' });
       window.location.assign(data.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Checkout failed. Please try again.');
@@ -183,7 +200,7 @@ function UpgradeContent() {
             <p className="text-arete-gold font-semibold mb-1">Welcome to Arete Premium.</p>
             <p className="text-arete-muted text-sm">
               Your subscription is active. It may take a few seconds for your account to
-              reflect the change — refresh if you don&apos;t see it yet.
+              reflect the change. Refresh if you don&apos;t see it yet.
             </p>
             {limitReturn && (
               <Link href={limitReturn} className="inline-block mt-4 font-semibold text-arete-gold hover:underline">
@@ -228,13 +245,32 @@ function UpgradeContent() {
                   {busyPlan === 'portal' ? 'Opening…' : 'Manage subscription'}
                 </button>
                 <p className="text-arete-muted text-xs mt-4">
-                  Change plan, update payment method, or cancel — all from the billing portal.
+                  Change plan, update payment method, or cancel, all from the billing portal.
                 </p>
               </>
             )}
           </div>
         ) : (
           <>
+          {headerCopy && (
+            <div className="mb-6 max-w-2xl">
+              <h2 className="font-serif text-2xl text-arete-text leading-tight mb-2">{headerCopy.title}</h2>
+              <p className="text-arete-muted text-sm leading-relaxed">{headerCopy.subtitle}</p>
+            </div>
+          )}
+          <div className="mb-8 max-w-2xl rounded-xl border border-arete-border bg-arete-surface p-6">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-arete-muted mb-3">
+              What Premium is
+            </p>
+            <ul className="space-y-2">
+              {PREMIUM_BENEFITS.map(line => (
+                <li key={line} className="flex items-start gap-3 text-arete-text text-sm leading-relaxed">
+                  <span className="text-arete-gold text-[9px] mt-[7px]" aria-hidden>◆</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <div className="grid md:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
               <div
