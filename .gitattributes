@@ -1,0 +1,5 @@
+# The pd-ingest raw cache is checked by sha256 against its manifest, so it
+# must reach every checkout byte for byte. Without this, git on Windows
+# (core.autocrlf) rewrites the committed text with CRLF line endings and
+# stage.js refuses the file as altered.
+data/raw/** -text
