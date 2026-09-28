@@ -625,10 +625,11 @@ Kyle supplied the archive.org copy of the CCEL edition. It is suite entry S020,
 "if p, q; if p, not q; therefore not p", with verdict `valid` and kind
 `derived`.
 
-- **Status.** The passage was verified as an exact substring (whitespace
-  collapsed) of the archive.org text. It is cited through `research_ref`, and
-  the guardrail 1 check against `research_sources` waits for the volume to be
-  stored. The `source_id` then replaces the `PENDING` marker.
+- **Status.** Cited through `research_ref`. Guardrail 1 is met: both
+  quotations pass `research_source_contains` against `research_sources`
+  `4339bf26-71fa-4245-abe1-fbce3f35ea04`, the complete volume. A first upload
+  was truncated (it ended in Tertullian, before Origen) and is deprecated
+  (`c20ccbce-…`), not deleted.
 - **Confidence: medium.** Origen reports the form as Stoic, but he is a later,
   non-Stoic witness. The general schema sentence in this copy is scrambled
   by OCR, and it rests on an editorial emendation (note 4701). The Stoic

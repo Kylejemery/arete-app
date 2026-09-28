@@ -4,8 +4,6 @@
 
 - None of the 39 ledger entries has yet been signed off by Kyle (guardrail
   3), so every result below is provisional on the ledger as it stands.
-- The newest entry, S020, still waits for its guardrail 1 check against the
-  stored text.
 
 ## 1. The question
 
@@ -168,7 +166,6 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
   - In this copy the OCR scrambles the general schema sentence, and that
     sentence rests on an editorial emendation (the translators' note 4701).
   - The Stoic example itself is clear.
-  - Its guardrail 1 check against the stored text is pending.
 - **Encoding choices matter.**
   - S018 is run as a three-link Sorites.
   - S014 and S015 are one form, with the conditional as background theory.
@@ -221,11 +218,9 @@ The questions we most need answered:
 
 ## 8. Before anything goes public
 
-1. The Origen volume is stored in `research_sources`, and S020 passes its
-   guardrail 1 check.
-2. Kyle signs off the ledger entries (guardrail 3), or amends them. The
+1. Kyle signs off the ledger entries (guardrail 3), or amends them. The
    matrix then needs regenerating (`lake exe harness`).
-3. A specialist in Stoic logic reviews this file, the ledger and the encoding
+2. A specialist in Stoic logic reviews this file, the ledger and the encoding
    (guardrail 5).
-4. The remaining ancient texts named in gaps.md are stored: Sextus M VIII,
+3. The remaining ancient texts named in gaps.md are stored: Sextus M VIII,
    Galen, Alexander.
