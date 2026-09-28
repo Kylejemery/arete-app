@@ -37,6 +37,7 @@ Constraints that make this logic unlike the classical logic built into Lean:
 ## Guardrails
 
 1. Every entry in the evidence ledger must cite a passage actually retrieved from the Arete corpus, either through the read only MCP server or by read only SELECTs against `rag_corpus`. Every passage must be verified, by query, as an exact substring (whitespace collapsed) of a live chunk, meaning `deprecated = false`, whose id is recorded as `corpus_ref`. No citations from model recall alone. *(Amended 2026-09-27; see NOTES.md.)*
+   A passage from a text the corpus cannot hold verbatim may instead be cited from `research_sources`, the private store of full texts: record the source's id and a locator (for example `M VIII 223`), and quote only as much as the entry needs. The quotation must pass `research_source_contains(id, passage)` by query, which fails for a deprecated source or one whose licence is still `unconfirmed`. Where the corpus holds a Mode 2 summary of the same section, record its chunk id as `corpus_ref` as well. *(Amended 2026-09-28; see NOTES.md.)*
 2. Every scholarly reconstruction encoded in Phase 3 must come from a retrieved text, with the source recorded.
 3. Kyle signs off on each ledger entry before it enters the test suite.
 4. Distinguish "not derivable within search depth N" from "proven underivable." Never report the first as the second.

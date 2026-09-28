@@ -243,3 +243,31 @@ is the only method, Phase 4 must report "not found within depth N", never
 Phase 3: no themata are defined, and `R = []` throughout. The ledger's open
 items still stand for Phase 3: T04 (pending Kyle), no Bobzien module, and the
 two Mates readings of the third thema (rules T03, T06).
+
+## Research sources (2026-09-28)
+
+The ledger's largest gaps (Sextus M VIII, Bobzien 1996) are texts the corpus
+cannot hold verbatim, and a Mode 2 summary drops exactly what the project
+needs: the argument forms, word for word. Guardrail 1 now allows a second
+kind of citation, from `research_sources`:
+
+- **The store.** `research_sources` (migration `20260928190000`) holds full
+  texts with author, edition, translator, how the copy was obtained, licence
+  status and a locator scheme. RLS is on with no policies, and anon and
+  authenticated have no grants, so only the service role can read it. There
+  is no embedding column. Nothing in it is retrievable by any agent, and no
+  part of it is committed to git.
+- **Adding a text.** `scripts/research-sources/add.mjs` (usage at its top),
+  run by Kyle with the service-role key. It refuses a text already stored
+  (same sha256).
+- **Citing.** An entry records the source id, a locator, and the shortest
+  quotation that carries the form. The quotation is verified with
+  `research_source_contains(id, passage)`, the same whitespace-collapsed
+  substring test used for `rag_corpus`. The function returns false for a
+  deprecated source or one whose licence is `unconfirmed`, so registering a
+  text does not by itself make it citable.
+- **Witness strength.** A stored translation counts as its row in the witness
+  table above (an ancient text in a modern translation is a primary witness,
+  `high` at most), not as a Mode 2 summary.
+- **Public claims.** Guardrail 5 still applies, and quotations from stored
+  texts stay short enough to be quotation, not reproduction.
