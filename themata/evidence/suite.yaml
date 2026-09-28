@@ -575,7 +575,7 @@
     conclusion is—“you do not know that you are dead.”
   corpus_ref: null
   research_ref:
-    source_id: "PENDING: set when the volume is stored in research_sources"
+    source_id: "4339bf26-71fa-4245-abe1-fbce3f35ea04"
     locator: "VII.15"
   notes: |
     The "two conditionals" argument, the argument whose analysis the Phase 4
@@ -595,8 +595,10 @@
     emendation of the Greek. The Stoic example does not depend on it.
     Origen reports the form as Stoic; he is a hostile-neutral later witness,
     not a Stoic, which caps confidence below the DL entries.
-    Verification: both quotations were checked as exact substrings
-    (whitespace collapsed) of the archive.org CCEL text on 2026-09-28. The
-    guardrail 1 check against research_sources is pending the upload.
+    Verification (guardrail 1, 2026-09-28): both quotations pass
+    research_source_contains against research_sources
+    4339bf26-71fa-4245-abe1-fbce3f35ea04, the complete archive.org CCEL text
+    (3,743,531 characters, licence public_domain). An earlier, truncated
+    upload (c20ccbce-12a1-4f09-8746-9fcfd12fec34) is deprecated.
   confidence: medium
   verified_by_kyle: false

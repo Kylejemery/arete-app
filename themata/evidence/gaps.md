@@ -108,5 +108,5 @@ Recorded so their absence from `suite.yaml` is a decision, not an oversight.
 - **Resolved (2026-09-28): the two conditionals argument is sourced.**
   Origen, *Against Celsus* VII.15 (tr. Crombie, Ante-Nicene Fathers IV, 1885)
   gives it as a Stoic form with the Stoics' own example. It is now suite
-  entry S020, pending storage of the volume in `research_sources` for the
-  guardrail 1 check. Sextus M VIII remains absent.
+  entry S020, verified against the volume stored in `research_sources`.
+  Sextus M VIII remains absent.
