@@ -369,3 +369,127 @@ These are checks of the encoding, not findings:
   instances over three atoms and a negated atom, is valid by the criterion
   under the Philonian reading, for both readings of the contradictory
   (7,536 outputs). A rule that dropped a premise fails this check.
+
+## Phase 4 (2026-09-28)
+
+The harness is `lake exe harness` (`lean/Stoic/Harness/`). It writes
+`results/matrix.md`, with a summary and tables, and `results/matrix.csv`,
+with every cell. `harness/check_suite.py` confirms that the encoded suite
+matches `evidence/suite.yaml`. Nothing below has been reviewed by a
+specialist (guardrail 5).
+
+### What is run
+
+- **Candidates**: all 66 from Phase 3.
+- **Settings**: 12. Derivability depends only on the single-premise policy,
+  the contradictory and the premise view (2 × 2 × 3). `Derives` never reads
+  the conditional reading or the redundancy reading, so those two enter only
+  the semantic table, which checks every item under each reading.
+- **Items**: the 17 formal items. S017 and S019 are `non_formal` and are not
+  run.
+  - S014 and S015 are run with "if p, q" as background theory.
+  - S018 is run as a three-link Sorites of the same shape as the ledger's
+    ten-link chain.
+- **Expectations**: `valid` must be derived, and `invalid` must not.
+  `valid_nonsyllogistic` must not be derived. `disputed` (S014, S015) follows
+  the single-premise policy: derived under Antipater, not under Chrysippus.
+
+### Search and its bounds
+
+The search runs forward from the base cases with the candidates' own
+`Rule.step`, to depth 8. The bounds are:
+
+- formulas stay within each item's subformulas and their contradictories;
+- premises are at most one more than the item has;
+- the search holds at most 20,000 arguments.
+
+No run hit the size bound. The matrix is identical, cell for cell, at
+depths 4, 6 and 8. Every search-bounded rejection (1,532 cells, `·s`)
+*saturated*: nothing new was derivable within the bounds. That is still only "not found within depth 8". The bounds are not
+proved complete, and the matrix never reports a failed search as a proof.
+
+### Proven underivable: three routes (`lean/Stoic/Soundness.lean`)
+
+1. **Countermodel** (`underivable_of_countermodel`, cell `■cm`). Every base
+   case and every rule shape preserves truth under the Philonian reading,
+   relative to the background theory. This is proved for the shapes, and then
+   for all 66 candidates (`candidates_sound`). An item with a Philonian
+   countermodel is therefore underivable by every candidate under every
+   setting. Covers S006 and S007.
+2. **Two premises** (`underivable_single_premise`, cell `■2p`). Under
+   Chrysippus's policy with the `list` or `multiset` view, every derivable
+   argument has at least two premises. Covers S014 and S015 there.
+3. **Relevance** (`underivable_lone_atom`, cell `■rel`). For an atom, count
+   the premises it occurs in, plus one for the conclusion. No base case gives
+   any atom a count of exactly 1. Contraposition keeps every count, and plain
+   cut cannot produce 1, so no candidate without the merging cut derives an
+   argument with such an atom. This holds under the `list` or `multiset` view,
+   with Chrysippus's policy or an empty theory. It covers S016, whose idle
+   premise r has a count of 1. This is Phase 2's `redundant_not_derivable`
+   carried from the base cases to every non-merging candidate.
+
+A fourth route, `■base`, covers the control (no themata). There,
+`Derives.base_only` makes derivability a finite check, and the base cases are
+enumerated exhaustively.
+
+The proofs use the standard axioms `propext`, `Quot.sound` and
+`Classical.choice` (the last through `by_cases` and `simp`). None uses
+`sorry` or `native_decide`.
+
+### Results (search-bounded where marked `·`)
+
+1. **188 of 792 candidate-settings fit**: no overgeneration, no
+   undergeneration. 59 of 66 candidates fit under at least one setting. The 7
+   that never fit are the ones with no third thema. Without cut, S010–S013
+   (except S010, which is a base case) and S018 are not derived.
+2. **No fit is proven.** Every fit rests on search-bounded rejections of
+   S008 and S016, and 59 fits also on S014 and S015. No overgeneration was
+   found anywhere: no candidate derives S006, S007, S008 or S016 within the
+   bounds, and none derives S014 or S015 under Chrysippus.
+3. **Every fit uses contraction.** S011 ("either p or q; p; therefore p")
+   and S012 ("if p, (if p, q); p; therefore q") are reached by chaining two
+   indemonstrables that share a premise. The shared premise then appears
+   twice, so they are derived only where a repeated premise collapses: under
+   the `set` view (60 fits), or with the merging cut (the rest). Under the
+   `list` and `multiset` views without the merging cut they are undergenerated
+   (`UNDER`). S011 is the indifferently concluding argument of finding F1. The
+   themata derive it only by contraction, which bears on Bobzien's reported
+   "does not satisfy contraction" (R03) once her paper can be read.
+4. **Contraction is also exactly what the redundancy proof cannot
+   handle.** The relevance invariant fails for the merging cut and is not
+   claimed under the `set` view. So in every setting where a candidate fits,
+   the rejection of S016 is search-bounded, not proven. Whether contraction
+   lets a system with themata manufacture a redundant argument is the open
+   question at the centre of the brief. The search found no case within the
+   bounds, but this is not proved.
+5. **Every fit needs the `toggle` contradictory.** Under `negate` the
+   Sorites (S018) is never derived. Chaining its third indemonstrables needs
+   the contradictory of "not p" to be "p", not "not not p". The ledger's
+   acceptance of the Sorites *form* as valid therefore commits to double
+   negation dissolving in the contradictory (rules C06).
+6. **The first thema changes little on this suite.** `Attested` (third
+   thema only) and `Mates` (first and third) agree on every cell. A generated
+   first thema changes whether a candidate fits only under the `list` view,
+   where contraposition of any arity can reorder premises. The suite has no
+   item that needs contraposition, which points to a gap in the ledger
+   (gaps.md): no attested argument whose analysis needs the first thema.
+7. **The suite does not separate Chrysippus from Antipater.** A candidate
+   fits under one policy exactly when it fits under the other. This is by
+   design (S014 and S015 are `disputed`, and their expectation follows the
+   parameter).
+8. **Semantic table.** S016 is valid by the criterion under every reading
+   and redundant under both. So its rejection comes only from redundancy,
+   because the criterion is monotonic (rules C08). S009 and S011 are redundant
+   under `strict` and not under `narrow`, so under `strict` the ledger's
+   "valid" for them conflicts with the semantics. This is finding F1, seen from
+   the harness side. The Diodorean reading has no complete procedure (`?`).
+
+### What would strengthen this
+
+- A proof for S008. It is never derived, but no invariant yet covers
+  "asserted falsity is not negation" beyond the base cases.
+- A relevance-style invariant that survives contraction, or a
+  counterexample. Either would settle result 4.
+- Items that need the first thema, to test it at all (result 6).
+- The ten-link Sorites and more composite arguments, once Sextus M VIII is in
+  `research_sources`.

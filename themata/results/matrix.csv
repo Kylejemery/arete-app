@@ -1,0 +1,793 @@
+candidate,provenance,setting,S001,S002,S003,S004,S005,S006,S007,S008,S009,S010,S011,S012,S013,S014,S015,S016,S018,fits,proven_fit
+"Attested",attested,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Attested",attested,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"Attested",attested,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"Attested",attested,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Attested",attested,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Attested",attested,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"Attested",attested,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Attested",attested,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"Attested",attested,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"Attested",attested,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Attested",attested,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Attested",attested,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"Mates",reconstruction,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Mates",reconstruction,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"Mates",reconstruction,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"Mates",reconstruction,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Mates",reconstruction,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"Mates",reconstruction,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"Mates",reconstruction,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Mates",reconstruction,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"Mates",reconstruction,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"Mates",reconstruction,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Mates",reconstruction,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"Mates",reconstruction,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"Mates + dialectical theorem",reconstruction,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"Mates + dialectical theorem",reconstruction,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"Mates + dialectical theorem",reconstruction,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"Mates + dialectical theorem",reconstruction,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"Mates + dialectical theorem",reconstruction,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"no first + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"no first + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■base,■base,■base,UNDER,false,false
+"no first + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"no first + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"no first + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,■base,■base,■base,UNDER,false,false
+"no first + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"no first + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"no first + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■base,UNDER,false,false
+"no first + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"no first + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"no first + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,■base,D0,D0,UNDER,UNDER,UNDER,D0,D0,■base,UNDER,false,false
+"no first + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"no first + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"no first + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"no first + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"no first + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"no first + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"no first + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"no first + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"no first + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"no first + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"no first + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"no first + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"no first + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"no first + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"no first + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"no first + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"no first + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"no first + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D2,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D2,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D2,false,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D2,false,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,D4,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,D4,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D4,false,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D4,false,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D2,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D2,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D2,false,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D2,false,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,D4,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,D4,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D4,false,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D4,false,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,any] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[either,two] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D2,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D2,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D2,false,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D2,false,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D2,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D2,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D2,false,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D2,false,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,any] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[minor,two] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,any] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + no third",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,UNDER,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[any,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,any]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,D1,true,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,■2p,■2p,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D3,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first,merge]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,D1,false,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,D1,true,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,■2p,■2p,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,·s,·s,·s,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,D1,false,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,D1,true,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,UNDER,UNDER,D1,D0,D0,■rel,UNDER,false,false
+"contrapose[major,two] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,·s,D0,D0,D1,D1,D1,D0,D0,·s,UNDER,false,false

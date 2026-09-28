@@ -9,3 +9,8 @@ import Stoic.Themata.Attested
 import Stoic.Themata.Mates
 import Stoic.Themata.Generated
 import Stoic.Themata.Tests
+import Stoic.Soundness
+import Stoic.Harness.Suite
+import Stoic.Harness.Search
+import Stoic.Harness.Matrix
+import Stoic.Harness.Tests

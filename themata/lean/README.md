@@ -1,4 +1,4 @@
-# Stoic: Lean 4 base system and candidate themata (Themata Project, Phases 2–3)
+# Stoic: base system, candidate themata and harness (Themata Project, Phases 2–4)
 
 Lean 4.22.0, no dependencies (no Mathlib).
 
@@ -22,10 +22,22 @@ and every `#guard` evaluated to true. A failing guard fails the build.
 | `Stoic/Themata/Generated.lean` | the 63 generated variants and the full `candidates` list |
 | `Stoic/Themata/Tests.lean` | one-step checks of each rule, and soundness of every shape on the base cases |
 | `Stoic/Themata/Log.lean` | prints `../results/candidates.md` (not part of the build) |
+| `Stoic/Soundness.lean` | the proofs the harness cites for "proven underivable": soundness (Philonian countermodels), the two-premise invariant, the relevance invariant |
+| `Stoic/Harness/Suite.lean` | the formal suite as the harness runs it |
+| `Stoic/Harness/Search.lean` | bounded forward proof search, and countermodel search |
+| `Stoic/Harness/Matrix.lean` | candidates × settings × items, and the rendering of `../results/matrix.md` |
+| `Stoic/Harness/Tests.lean` | the search and the proof routes against the Phase 2–3 results |
+| `Harness.lean` | `lake exe harness` |
 
 After changing a candidate, regenerate the log:
 
     lake env lean Stoic/Themata/Log.lean > ../results/candidates.md
+
+Run the harness (Phase 4), which writes `../results/matrix.md` and
+`../results/matrix.csv`, and check that it runs the ledger's suite:
+
+    lake exe harness               # depth 8 by default; --depth N to change
+    python3 ../harness/check_suite.py
 
 If `elan` cannot reach `release.lean-lang.org`, install the toolchain from
 the GitHub release (`lean-4.22.0-linux.zip`), then run `elan toolchain link
