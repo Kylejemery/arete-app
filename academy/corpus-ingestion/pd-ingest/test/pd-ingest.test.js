@@ -314,3 +314,10 @@ test('summary: a heading without a page range or an overlong section is refused'
   assert.equal(long.ok, false);
   assert.match(long.reasons.join(' '), /750 words/);
 });
+
+test('summary: CRLF line endings never reach chunk text', () => {
+  const r = build(summarySource, [file(`## Dialectic (pp. 59–68)\r\n${words(30, 'alpha')}\r\n\r\n${words(30, 'beta')}\r\n`)]);
+  assert.equal(r.ok, true, r.reasons && r.reasons.join('; '));
+  assert.ok(r.chunks.every((c) => !c.chunk_text.includes('\r')));
+  assert.equal(r.chunks[0].section_label, 'Dialectic (pp. 59–68)');
+});
