@@ -106,6 +106,19 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Close the hand →</span>
         </Link>
 
+        {/* Unreleased (not in RELEASED_PLAYGROUND): a draft for specialist
+            review, visible to the owner only. See /playground/themata. */}
+        <Link className="pg-card" href="/playground/themata">
+          <p className="pg-card-kicker">The Themata Project · Draft</p>
+          <h2>Chrysippus&apos;s themata, machine checked</h2>
+          <p>
+            Which reconstructions of the Stoic reduction rules derive exactly
+            what the sources accept? The Phase 5 findings, for specialist
+            review. Not released.
+          </p>
+          <span className="pg-card-go">Read the findings →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>

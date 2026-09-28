@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Themata Findings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column in the Arete Library register, ink and gold, near square corners, tables scroll inside their own frames. */
+:root {
+  color-scheme: dark;
+  --ink: #0a1628;
+  --card: #111d30;
+  --gold: #c9a84c;
+  --gold-light: #e3c77a;
+  --text: #e0e0e0;
+  --warm: #e0d5b5;
+  --muted: #8a93a3;
+  --faint: #5a6475;
+  --hair: rgba(201, 168, 76, 0.2);
+  --hair-soft: rgba(201, 168, 76, 0.12);
+  --tint: rgba(201, 168, 76, 0.08);
+  --ok: #7fb58a;
+  --no: #c98a7a;
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.65;
+  padding-inline: 16px;
+  padding-block: 40px 72px;
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 760px; margin: 0 auto; display: grid; gap: 56px; }
+section { display: grid; gap: 18px; min-width: 0; }
+.kicker {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+h1, h2, h3 { font-family: var(--serif); color: #fff; text-wrap: balance; margin: 0; font-weight: 600; }
+h1 { font-size: clamp(34px, 6vw, 50px); line-height: 1.08; letter-spacing: 0.2px; }
+h2 { font-size: 28px; line-height: 1.2; }
+h3 { font-size: 21px; line-height: 1.25; }
+p { margin: 0; max-width: 65ch; }
+.lede { font-family: var(--serif); font-size: 21px; line-height: 1.5; color: var(--warm); }
+.greek { font-family: var(--serif); font-style: italic; color: var(--gold-light); }
+em { color: var(--warm); }
+code, .mono { font-family: var(--mono); font-size: 0.86em; color: var(--gold-light); }
+
+header { display: grid; gap: 16px; }
+.status {
+  display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+  border: 1px solid var(--hair); background: var(--tint);
+  border-radius: 2px; padding: 12px 16px; font-size: 13.5px; color: var(--warm);
+}
+.status strong { color: var(--gold); font-family: var(--mono); font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase; }
+
+.question {
+  border-left: 3px solid var(--gold);
+  padding: 4px 0 4px 20px;
+  font-family: var(--serif); font-style: italic; font-size: 23px; line-height: 1.45; color: var(--warm);
+  max-width: 62ch;
+}
+
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.figure { border: 1px solid var(--hair-soft); background: var(--card); border-radius: 2px; padding: 18px 18px 16px; display: grid; gap: 6px; align-content: start; }
+.figure .num { font-family: var(--serif); font-size: 44px; line-height: 1; color: var(--gold); font-weight: 600; font-variant-numeric: tabular-nums; }
+.figure .of { font-family: var(--mono); font-size: 13px; color: var(--muted); margin-left: 4px; }
+.figure .what { font-size: 13.5px; color: var(--text); line-height: 1.45; }
+
+.findings { display: grid; gap: 14px; }
+.finding { border-left: 3px solid var(--gold); padding: 2px 0 2px 18px; display: grid; gap: 6px; }
+.finding h3 { font-size: 20px; }
+.finding p { color: var(--text); }
+
+.frame { overflow-x: auto; border: 1px solid var(--hair-soft); border-radius: 2px; background: var(--card); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--hair-soft); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--gold); white-space: nowrap; }
+td.c { text-align: center; }
+.fit { color: var(--ok); font-family: var(--mono); font-size: 12.5px; }
+.nofit { color: var(--faint); font-family: var(--mono); font-size: 12.5px; }
+.cell { font-family: var(--mono); font-size: 12.5px; color: var(--gold-light); white-space: nowrap; }
+
+ul.plain, ol.plain { margin: 0; padding-left: 20px; display: grid; gap: 10px; max-width: 65ch; }
+ul.plain li::marker { color: var(--gold); }
+ol.plain li::marker { color: var(--gold); font-family: var(--mono); font-size: 12px; }
+.note { font-size: 13.5px; color: var(--muted); max-width: 65ch; }
+
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.panel { border: 1px solid var(--hair-soft); background: var(--card); border-radius: 2px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel h3 { font-size: 19px; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; }
+.panel li::marker { color: var(--gold); }
+
+.files { display: flex; flex-wrap: wrap; gap: 8px; }
+.files span { font-family: var(--mono); font-size: 12.5px; color: var(--warm); border: 1px solid var(--hair); border-radius: 2px; padding: 4px 10px; }
+
+footer { border-top: 1px solid var(--hair-soft); padding-top: 20px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+a { color: var(--gold); }
+a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<main class="page">
+
+  <header>
+    <div class="kicker">The Themata Project · Phase 5 draft</div>
+    <h1>Chrysippus's themata, machine checked</h1>
+    <p class="lede">Which of Chrysippus's reduction rules, the <span class="greek">θέματα</span>, under which readings of the Stoic connectives, derive exactly the arguments the ancient sources accept and none of the ones they reject?</p>
+    <div class="status"><strong>Not for publication</strong> Draft for specialist review. None of the 38 ledger entries has been signed off yet, so every result here is provisional.</div>
+  </header>
+
+  <section aria-labelledby="q">
+    <div class="kicker" id="q">The question</div>
+    <p class="question">Chrysippus held that every syllogistic argument is one of five indemonstrables, or reduces to them by four meta rules. Some of those rules survive in the sources. The rest are modern reconstructions.</p>
+    <p>The brief allowed three outcomes: one reconstruction fits uniquely, several fit, or none fit. Every candidate was run against a ledger of argument forms quoted from sources in the Arete corpus, and each verdict was checked in Lean 4.</p>
+  </section>
+
+  <section aria-labelledby="a">
+    <div class="kicker" id="a">The answer</div>
+    <h2>Several fit, so the evidence underdetermines the themata. It still constrains the logic around them.</h2>
+    <div class="figures">
+      <div class="figure"><div><span class="num">188</span><span class="of">of 792</span></div><div class="what">candidate-settings fit the ledger. Every one is proven: each derivation found, each rejection covered by a theorem.</div></div>
+      <div class="figure"><div><span class="num">59</span><span class="of">of 66</span></div><div class="what">candidate rule sets fit under at least one setting. The seven that never fit have no third thema.</div></div>
+      <div class="figure"><div><span class="num">544</span><span class="of">of 604</span></div><div class="what">non-fits are proven not to fit. The other 60 fail only on bounded search, so 188 is a proven lower bound.</div></div>
+    </div>
+
+    <div class="findings">
+      <div class="finding">
+        <h3>Contraction is needed, and weakening never happens</h3>
+        <p>Every fit lets a repeated premise count once, through the set view or the merging cut. Without that, the indifferently concluding argument and the duplicated conditional cannot be derived. No candidate under any setting derives the redundant argument (S016). A relevance semantics, where contraction holds and weakening fails, proves it.</p>
+      </div>
+      <div class="finding">
+        <h3>The contradictory must cancel a negation</h3>
+        <p>Every fit reads the contradictory of "not p" as p. Read it as "not not p" and the Sorites chain (S018) is provably underivable, in a Gödel logic where double negation does not collapse.</p>
+      </div>
+      <div class="finding">
+        <h3>The attested rule alone fits, and cannot be told from Mates</h3>
+        <p>The third thema as Simplicius describes it fits, and so does Mates's reconstruction. The two agree on every cell, because no attested argument in the corpus needs the first thema. That is a limit of the surviving evidence as the corpus holds it, not a result about the Stoics.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="n">
+    <div class="kicker" id="n">The named candidates</div>
+    <p>Where each fits, under the toggle contradictory. Every fit is the same under Chrysippus's and Antipater's single premise policy, so the suite does not separate them.</p>
+    <div class="frame">
+      <table>
+        <thead><tr><th>Candidate</th><th>Rules</th><th>List</th><th>Multiset</th><th>Set</th></tr></thead>
+        <tbody>
+          <tr><td>Attested</td><td>Third thema (Simplicius)</td><td class="c nofit">no</td><td class="c nofit">no</td><td class="c fit">fits</td></tr>
+          <tr><td>Mates</td><td>First and third themata</td><td class="c nofit">no</td><td class="c nofit">no</td><td class="c fit">fits</td></tr>
+          <tr><td>Mates + dialectical theorem</td><td>First, merging cut, third</td><td class="c nofit">no</td><td class="c fit">fits</td><td class="c fit">fits</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Premise views say how an argument's premises are compared: in order (list), with repeats counted (multiset), or as a set.</p>
+  </section>
+
+  <section aria-labelledby="p">
+    <div class="kicker" id="p">How "underivable" is established</div>
+    <p>Searching and not finding proves nothing. A rejection counts as proven only when a Lean theorem covers it. There are five routes, and none uses <code>sorry</code>.</p>
+    <div class="frame">
+      <table>
+        <thead><tr><th>Cell</th><th>Route</th><th>Covers</th></tr></thead>
+        <tbody>
+          <tr><td class="cell">■cm</td><td>Every rule preserves classical truth, so a classical countermodel rules an argument out.</td><td>S006, S007; S014 and S015 under Chrysippus</td></tr>
+          <tr><td class="cell">■rm</td><td>Every rule preserves validity in the relevance logic RM (Sugihara model), where premises fuse and weakening fails.</td><td>S016, S008, under every setting</td></tr>
+          <tr><td class="cell">■g3</td><td>Under the "not not p" reading, every rule is sound in three valued Gödel logic.</td><td>The Sorites under that reading</td></tr>
+          <tr><td class="cell">■2</td><td>Without cut, contraposition keeps two premises.</td><td>Three premise items, for cut free candidates</td></tr>
+          <tr><td class="cell">■rel</td><td>Without the merging cut, no atom can stand in exactly one place.</td><td>S011, for non merging candidates</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The relevance semantics is a proof device. It is not a claim that the Stoics held a relevance logic.</p>
+  </section>
+
+  <section aria-labelledby="r">
+    <div class="kicker" id="r">Results in detail</div>
+    <ul class="plain">
+      <li><strong>No overgeneration anywhere.</strong> No candidate under any setting derives what the ledger rejects, and every such cell is proven.</li>
+      <li><strong>Fits by view.</strong> 118 fits use the set view. The other 70 use the merging cut, 58 under multiset and 12 under list. All 188 use the toggle contradictory.</li>
+      <li><strong>Redundancy.</strong> S016 is valid by the Stoic validity criterion (Diogenes Laertius 7.77) under every reading of the conditional, so its rejection rests on redundancy alone. S009 and S011 are redundant under the strict reading and not under the narrow one. The ledger is consistent only if indifferently concluding arguments were exempt.</li>
+      <li><strong>Asserted falsity is not negation.</strong> S008, "'p and q' is false; p; therefore not q", which Diogenes calls conclusive but not syllogistic, is proven underivable by every candidate, as the ledger requires.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="o">
+    <div class="kicker" id="o">Open, negative and underdetermined</div>
+    <div class="split">
+      <div class="panel">
+        <h3>What the evidence cannot yet decide</h3>
+        <ul>
+          <li>Which themata: most generated variants fit somewhere.</li>
+          <li>The first thema: no attested argument in the corpus needs it. The strongest lead is the "two conditionals" argument, if p, q; if p, not q; therefore not p. From recall, it is discussed in Sextus and in Origen, neither yet in the corpus.</li>
+          <li>Chrysippus against Antipater on single premise arguments, by how those items were ruled.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>The pointed question</h3>
+        <ul>
+          <li>A summary of Bobzien's reconstruction reports it as monotonic and without contraction. Every fit here needs contraction and none has weakening. Whether that conflict is real waits on her paper, which is not in the corpus.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="l">
+    <div class="kicker" id="l">Limits</div>
+    <ul class="plain">
+      <li>The ledger is small, 17 formal items, and unsigned. The main ancient sources for the themata, Sextus <em>Against the Logicians</em>, Galen, Alexander and Origen, are not in the corpus.</li>
+      <li>Mates is represented by a summary, not his text. Reading the dialectical theorem as a merging cut is our own interpretation.</li>
+      <li>The Sorites runs as a three link chain. Under the list view, results depend on the order in which the ledger lists premises.</li>
+      <li>Derivations shown by the harness are evaluations of the same rules the proofs are about, not kernel checked certificates, except two proved in Lean.</li>
+      <li>The search runs to depth 8 over each item's own formulas. Results are identical at depths 4, 6 and 8. Only the 60 unproven non-fits depend on these bounds.</li>
+      <li>The reading of Alexander on the synthetic theorem (T04) is our own reading of untranslated Greek and is pending review.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="v">
+    <div class="kicker" id="v">For the reviewer</div>
+    <h2>Seven questions</h2>
+    <ol class="plain">
+      <li>Are the ledger verdicts right, especially S011 (valid), S016 (invalid, reported only through Mates), S008 (conclusive but not syllogistic) and the Sorites form taken as valid?</li>
+      <li>Every fit needs a repeated premise to count once. Is that consistent with Stoic analysis, and does it conflict with Bobzien's reconstruction?</li>
+      <li>Is reading the contradictory of "not p" as p the standard view, given Diogenes Laertius 7.69 on double negation?</li>
+      <li>Is our encoding of Simplicius's third thema, a cut with the conclusion first and one further premise, fair to the Greek?</li>
+      <li>Is reading the dialectical theorem as a merging cut defensible, or should it be a separate rule?</li>
+      <li>Did Alexander say the Stoics made their second, third and fourth themata from the synthetic theorem?</li>
+      <li>Which texts would give attested arguments that need the first thema?</li>
+    </ol>
+    <p class="note">The materials, in the Arete repository under <code>themata/</code>:</p>
+    <div class="files"><span>FINDINGS.md</span><span>evidence/</span><span>NOTES.md</span><span>lean/</span><span>results/matrix.md</span></div>
+  </section>
+
+  <section aria-labelledby="b">
+    <div class="kicker" id="b">Before anything is public</div>
+    <ol class="plain">
+      <li>Kyle signs off the ledger entries, or amends them, and the matrix is regenerated.</li>
+      <li>A specialist in Stoic logic reviews the findings, the ledger and the encoding.</li>
+      <li>The ancient texts named in the gaps are stored, so the first thema can be tested.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <div>Lean 4.22.0 · 66 candidates · 12 settings · 17 formal items · search depth 8</div>
+    <div>Status as of 28 September 2026. Figures checked against the matrix.</div>
+  </footer>
+
+</main>
+</body>
+</html>
