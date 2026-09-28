@@ -614,3 +614,48 @@ also lists the questions a reviewer is asked to answer. It adds no new
 interpretive decision. Two steps remain before anything is public: Kyle's
 sign-off on the ledger (guardrail 3), which may change the matrix, and the
 specialist review (guardrail 5).
+
+## S020: the first thema tested (2026-09-28)
+
+Origen, *Against Celsus* VII.15 (tr. Crombie, Ante-Nicene Fathers IV, 1885)
+gives "the theorem of two propositions" and the Stoics' example: "If you
+know that you are dead, you are dead; 2d, if you know that you are dead, you
+are not dead. And the conclusion is—“you do not know that you are dead.”"
+Kyle supplied the archive.org copy of the CCEL edition. It is suite entry S020,
+"if p, q; if p, not q; therefore not p", with verdict `valid` and kind
+`derived`.
+
+- **Status.** The passage was verified as an exact substring (whitespace
+  collapsed) of the archive.org text. It is cited through `research_ref`, and
+  the guardrail 1 check against `research_sources` waits for the volume to be
+  stored. The `source_id` then replaces the `PENDING` marker.
+- **Confidence: medium.** Origen reports the form as Stoic, but he is a later,
+  non-Stoic witness. The general schema sentence in this copy is scrambled
+  by OCR, and it rests on an editorial emendation (note 4701). The Stoic
+  example does not.
+
+### What it changes
+
+- **Fits: 158 of 792 candidate-settings, across 50 of 66 candidates.** It
+  was 188 across 59.
+- **Every fit has a first thema.** `S020_needs_first_thema`
+  (`lean/Stoic/FirstThema.lean`) proves that no candidate whose rules are all
+  cuts derives S020, under any setting.
+  - The proof uses *closed valuations*: truth assignments constrained only
+    by the base cases.
+  - Cut preserves truth in all of them. Contraposition does not, which is
+    why the first thema matters.
+  - The countermodel makes only S020's two conditionals true.
+- **Attested (the third thema alone) no longer fits anywhere.** Mates (first
+  and third) fits under `set`. Mates + dialectical theorem fits under `set`
+  and `multiset`. The two named reconstructions now differ from the attested
+  core, and the evidence decides against the attested core alone.
+- **Unchanged:**
+  - every fit uses the `toggle` contradictory and contraction;
+  - there is no overgeneration;
+  - all fits are proven.
+- **Non-fits:** 580 of 634 are proven. The other 54 are search-bounded,
+  mostly the Sorites and S020 under `list`, and cut-free candidates under
+  `set`.
+- **Which premise the first thema contraposes** (either, minor, major) does
+  not matter on this suite. Each variant fits with some cut.

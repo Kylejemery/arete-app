@@ -67,7 +67,8 @@ def suite : List Item :=
     { id := "S017", verdict := .invalid, nonFormal := true, arg := ⟨[disj p₀ p₁, neg p₀], p₁⟩ },
     { id := "S018", verdict := .valid,
       arg := ⟨[neg (conj p₀ (neg p₁)), neg (conj p₁ (neg p₂)), p₀], p₂⟩ },
-    { id := "S019", verdict := .invalid, nonFormal := true, arg := ⟨[cond p₀ (neg p₁), p₀], neg p₂⟩ } ]
+    { id := "S019", verdict := .invalid, nonFormal := true, arg := ⟨[cond p₀ (neg p₁), p₀], neg p₂⟩ },
+    { id := "S020", verdict := .valid, arg := ⟨[cond p₀ p₁, cond p₀ (neg p₁)], neg p₀⟩ } ]
 
 def formalSuite : List Item := suite.filter (!·.nonFormal)
 

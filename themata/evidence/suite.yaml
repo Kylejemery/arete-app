@@ -32,6 +32,11 @@
 #   flags: optional list. `non_formal` keeps the entry in the ledger but out of
 #     the formal suite: its verdict turns on something propositional form
 #     cannot see (material truth of a premise, equivocation).
+#   research_ref: {source_id, locator}, for a passage cited from the private
+#     research_sources store instead of rag_corpus (guardrail 1, amended
+#     2026-09-28). corpus_ref is then null, or a Mode 2 summary chunk of the
+#     same section. The passage must pass research_source_contains(source_id,
+#     passage). First used by S020.
 #
 # verified_by_kyle is false on every entry. Nothing enters the harness until
 # Kyle signs off.
@@ -555,5 +560,43 @@
     ledger flagged non_formal. Its fault is equivocation on the indefinite
     ("anyone" / "some one"), which propositional form cannot see.
   flags: [non_formal]
+  confidence: medium
+  verified_by_kyle: false
+
+- id: S020
+  schema: "if p, q; if p, not q; therefore not p"
+  verdict: valid
+  kind: derived
+  source: "Origen, Against Celsus VII.15 (tr. F. Crombie, Ante-Nicene Fathers IV, 1885), reporting the Stoics"
+  passage: |
+    The concrete example which the Stoics give to illustrate this form of
+    argument is the following: 1st, If you know that you are dead, you are
+    dead; 2d, if you know that you are dead, you are not dead. And the
+    conclusion is—“you do not know that you are dead.”
+  corpus_ref: null
+  research_ref:
+    source_id: "PENDING: set when the volume is stored in research_sources"
+    locator: "VII.15"
+  notes: |
+    The "two conditionals" argument, the argument whose analysis the Phase 4
+    probes showed separates the candidates. Origen names the form just before
+    the example: "When, then, we find two processes of reasoning in both of
+    which the major premiss is the same, leading to two contradictory
+    conclusions, we use the form of argument called “the theorem of two
+    propositions,”". His Greek is in the translators' note 4700, which the
+    OCR of this copy garbles; it is the theorem "through two conditionals".
+    Two cautions. (1) The general schema sentence ("Of two things, if the
+    first is true, the second is true; 2d, if the first is true, the second
+    is not true, therefore the first is not true") is scrambled in this copy
+    by the OCR around note 4701, so it is not quoted; the schema above is
+    Crombie's sentence as it reads once the lines are put back in order.
+    (2) Note 4701: "We follow Bouhéreau and Valesius, who expunge the
+    negative particle in this clause." The printed schema rests on an
+    emendation of the Greek. The Stoic example does not depend on it.
+    Origen reports the form as Stoic; he is a hostile-neutral later witness,
+    not a Stoic, which caps confidence below the DL entries.
+    Verification: both quotations were checked as exact substrings
+    (whitespace collapsed) of the archive.org CCEL text on 2026-09-28. The
+    guardrail 1 check against research_sources is pending the upload.
   confidence: medium
   verified_by_kyle: false

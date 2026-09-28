@@ -54,4 +54,10 @@ def contraposeOnly : Candidate :=
   (generated.filter (fun (c : Candidate) => c.name == "contrapose[either,two] + no third")).headD attested
 #guard underProof contraposeOnly {} (item "S013") == some "2"
 
+-- S020 (Origen VII.15): a candidate with no first thema provably fails it;
+-- Mates + dialectical theorem derives it.
+#guard underProof attested {} (item "S020") == some "cl"
+#guard underProof mates {} (item "S020") == none
+#guard (search {} [] matesDT.rules (item "S020").arg {}) matches .derived _
+
 end Stoic.Harness.Tests

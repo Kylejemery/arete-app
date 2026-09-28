@@ -19,6 +19,7 @@ conditional reading and the two redundancy readings meet the ledger.
 | `D0`, `D2`, … | derived at that depth, as the ledger requires |
 | `OVER` + depth | derived, but the ledger rejects it: overgeneration |
 | `UNDER` | not found within depth N, but the ledger requires it: undergeneration (search-bounded) |
+| `UNDER■cl` | undergeneration, proven: S020 for a candidate with no first thema (`S020_needs_first_thema`, a closed-valuation countermodel) |
 | `UNDER■g3`, `UNDER■2`, `UNDER■rel` | undergeneration, proven: a Gödel G₃ countermodel under `negate` (`underivable_of_goedel`), a candidate without cut facing an item that does not have two premises (`underivable_no_cut`), or an atom in one place with no merging cut (`underivable_lone_atom`) |
 | `■cm` | not derived, and proven underivable: a Philonian countermodel (`underivable_of_countermodel`; under Chrysippus's policy the theory is dropped, `underivable_of_countermodel_chrysippus`) |
 | `■rm` | not derived, and proven: a countermodel in the Sugihara model of the relevance logic RM (`underivable_of_sugihara`, and its Chrysippus form). Covers every candidate and view, merging cut included |
@@ -248,7 +249,7 @@ def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   out := out.push ""
   out := out.push "## Probes (not evidence)"
   out := out.push ""
-  out := out.push "These arguments are **not** in the ledger and count toward nothing above. No item in the suite needs the first thema (gaps.md), so these show which kind of attested argument would separate the candidates if a source for it is found. Setting: Chrysippus, toggle."
+  out := out.push "These arguments are **not** in the ledger and count toward nothing above. The first probe, the two conditionals argument, has since been sourced (Origen, VII.15) and entered the suite as S020; it stays here so its row can be compared with the others. Setting: Chrysippus, toggle."
   out := out.push ""
   out := out.push ("| Probe | " ++ " | ".intercalate (named.flatMap fun c => [PremiseView.list, .multiset, .set].map fun v => s!"{c.name} ({viewLabel v})") ++ " |")
   out := out.push ("| --- | " ++ " | ".intercalate (named.flatMap fun _ => [1, 2, 3].map fun _ => "---") ++ " |")

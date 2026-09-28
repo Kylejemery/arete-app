@@ -16,3 +16,4 @@ import Stoic.Harness.Matrix
 import Stoic.Harness.Tests
 import Stoic.Sugihara
 import Stoic.Undergeneration
+import Stoic.FirstThema

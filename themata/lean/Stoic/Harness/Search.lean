@@ -1,5 +1,5 @@
 import Std.Data.HashSet
-import Stoic.Undergeneration
+import Stoic.FirstThema
 import Stoic.Harness.Suite
 
 /-!
@@ -196,6 +196,8 @@ def underProof (c : Candidate) (P : Params) (i : Item) : Option String :=
       T.all (fun t => gv v t == 2) &&
         decide (gv v i.arg.conclusion < meetL (i.arg.premises.map (gv v)))) then
     some "g3"
+  else if (P.single == .chrysippus || i.theory.isEmpty) && c.rules.all (·.isCut) &&
+      i.arg == ⟨[.cond p₀ p₁, .cond p₀ (.neg p₁)], .neg p₀⟩ then some "cl"
   else if lean && c.rules.all (!·.isCut) && i.arg.premises.length != 2 then some "2"
   else if lean && c.rules.all (!·.merging) && (itemAtoms i).any (slots i.arg · == 1) then some "rel"
   else none
