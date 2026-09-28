@@ -112,6 +112,18 @@ export default function EnchiridionCard() {
   const payable = active && PAYABLE_STATUSES.includes(active.status);
   const chosen = offer.formats[format] ?? { label: 'Hardcover', price_cents: offer.price_cents };
 
+  // Hold the offer until the member qualifies (retention plan R12 b): a price
+  // list for a book there is not yet enough writing to fill reads as a sales
+  // pitch. One quiet line says it exists and how far along they are.
+  if (!active && !offer.eligible) {
+    return (
+      <p className="text-arete-muted text-xs mt-4">
+        Your Enchiridion, a handbook in print compiled from your own writing, opens after{' '}
+        {offer.min_entries} entries and conversations. {offer.written} so far.
+      </p>
+    );
+  }
+
   return (
     <div className="bg-arete-surface rounded-lg border border-arete-gold/40 p-6 mt-4">
       <p className="font-mono text-[11px] uppercase tracking-widest text-arete-gold mb-2">

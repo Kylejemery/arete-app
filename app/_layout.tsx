@@ -10,7 +10,7 @@ import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, Platform, View } from 'react-native';
+import { ActivityIndicator, AppState, Platform, View } from 'react-native';
 import { seedFromNotification, seedMissedCounselorLines } from '@/lib/counselorLines';
 import { logEvent } from '@/lib/events';
 import { fetchUpdateInBackground } from '@/lib/otaUpdates';
@@ -172,36 +172,59 @@ export default function RootLayout() {
     });
   }, []);
 
+  // Resolve the stored session before routing. A slow network used to hit a
+  // 3 second timeout that forced session = null, which sent a signed in
+  // member to the login screen (retention plan R12 e). Now the timeout
+  // retries once, with a longer allowance, while the loading screen shows a
+  // spinner; only a second failure counts as signed out.
+  const [sessionSlow, setSessionSlow] = useState(false);
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setSession(null);
-    }, 3000);
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const settle = (s: Session | null) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      setSession(s);
+      if (s) logEvent('app_opened', { via: 'launch' });
+    };
+    const attempt = (onFail: () => void) => {
+      supabase.auth.getSession()
+        .then(({ data: { session } }) => settle(session))
+        .catch(onFail);
+    };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      clearTimeout(timeout);
-      setSession(session);
-      if (session) logEvent('app_opened', { via: 'launch' });
-    }).catch(() => {
-      clearTimeout(timeout);
-      setSession(null);
-    });
+    const retry = () => {
+      if (settled) return;
+      setSessionSlow(true);
+      attempt(() => settle(null));
+      timer = setTimeout(() => settle(null), 8000);
+    };
+    attempt(retry);
+    timer = setTimeout(retry, 3000);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+      // The first auth event can land before getSession resolves; it settles
+      // the launch the same way (and logs app_opened), later ones just update.
+      if (!settled) settle(session);
+      else setSession(session);
     });
 
     return () => {
-      clearTimeout(timeout);
+      settled = true;
+      if (timer) clearTimeout(timer);
       subscription.unsubscribe();
     };
   }, []);
 
  useEffect(() => {
-  if (session !== undefined) {
-    breadcrumb('session resolved, hiding splash');
+  // A slow session lookup lifts the splash too, so the retry spinner under it
+  // is visible instead of a frozen launch screen (R12 e).
+  if (session !== undefined || sessionSlow) {
+    breadcrumb(session !== undefined ? 'session resolved, hiding splash' : 'session slow, showing spinner');
     SplashScreen.hideAsync().catch(() => {});
   }
-}, [session]);
+}, [session, sessionSlow]);
 
   // Register for daily-dispatch push notifications and save the device timezone
   // once per authenticated user. Best-effort and fully guarded inside the helper
@@ -221,7 +244,9 @@ export default function RootLayout() {
     return (
       <ErrorBoundary>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <View style={{ flex: 1, backgroundColor: '#1a1a2e' }} />
+          <View style={{ flex: 1, backgroundColor: '#1a1a2e', alignItems: 'center', justifyContent: 'center' }}>
+            {sessionSlow && <ActivityIndicator size="large" color="#c9a84c" />}
+          </View>
         </GestureHandlerRootView>
       </ErrorBoundary>
     );

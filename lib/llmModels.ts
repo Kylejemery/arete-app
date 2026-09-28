@@ -33,3 +33,31 @@ export function modelForCounselor(
   const chosen = counselorModels?.[counselorModelKey(counselorId)];
   return COUNSELOR_MODEL_OPTIONS.some(o => o.id === chosen) ? (chosen as string) : DEFAULT_COUNSELOR_MODEL;
 }
+
+// ─── What each tier may choose (retention plan R12 g) ────────────────────
+// Mirrors resolveModelForTier in server/index.js, so the picker only offers
+// what the server will actually run: free runs Haiku with no choice, premium
+// runs Sonnet with Haiku selectable, pro gets every model. The web copy in
+// web/src/lib/llmModels.ts carries the same two functions.
+export type ModelTier = 'free' | 'premium' | 'pro';
+
+const PREMIUM_MODEL_IDS = ['claude-sonnet-4-6', 'claude-haiku-4-5'];
+
+export function modelOptionsForTier(tier: ModelTier | string): CounselorModelOption[] {
+  if (tier === 'pro') return COUNSELOR_MODEL_OPTIONS;
+  if (tier === 'premium') return COUNSELOR_MODEL_OPTIONS.filter(o => PREMIUM_MODEL_IDS.includes(o.id));
+  return [];
+}
+
+export function defaultModelForTier(tier: ModelTier | string): string {
+  if (tier === 'pro') return DEFAULT_COUNSELOR_MODEL;
+  if (tier === 'premium') return 'claude-sonnet-4-6';
+  return 'claude-haiku-4-5';
+}
+
+// The model a counselor will really run on for this tier: the stored choice
+// when the tier may use it, otherwise the tier default.
+export function effectiveModelForTier(tier: ModelTier | string, stored: string | null | undefined): string {
+  const allowed = modelOptionsForTier(tier);
+  return stored && allowed.some(o => o.id === stored) ? stored : defaultModelForTier(tier);
+}

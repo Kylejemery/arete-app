@@ -23,6 +23,7 @@ import {
     askCorpus, deleteComment, foldText, getViewer, loadComments, postComment, relativeTime, saveHandle, threadsFor,
 } from '../../lib/libraryComments';
 import { paywallRoute } from '@/lib/paywall';
+import { useSubscription } from '@/lib/useSubscription';
 
 interface ReaderPage {
     author: string;
@@ -655,6 +656,10 @@ function ThreadSheet(props: {
     const [err, setErr] = useState<string | null>(null);
     const [gated, setGated] = useState(false);
     const [handleDraft, setHandleDraft] = useState('');
+    // The margin note is Premium; say so on the button before the tap rather
+    // than after a 403 (retention plan R12 i, audit gate 18).
+    const { tier } = useSubscription();
+    const askLocked = tier === 'free';
 
     const excerpt = paraText.length > 200 ? paraText.slice(0, 200).replace(/\s+\S*$/, '') + '…' : paraText;
     const canDelete = (c: LibComment) => !!viewer && (c.user_id === viewer.userId || (c.is_corpus && c.requested_by === viewer.userId));
@@ -705,7 +710,7 @@ function ThreadSheet(props: {
                     <Text style={styles.passageLabel}>The passage</Text>
                     <Text style={styles.passageText}>{excerpt}</Text>
                     <TouchableOpacity style={[styles.askCorpus, asking && { opacity: 0.6 }]} onPress={ask} disabled={asking}>
-                        <Text style={styles.askCorpusText}>{asking ? '✶  The corpus is reading…' : '✶  Ask the corpus'}</Text>
+                        <Text style={styles.askCorpusText}>{asking ? '✶  The corpus is reading…' : askLocked ? '🔒  Ask the corpus · Premium' : '✶  Ask the corpus'}</Text>
                     </TouchableOpacity>
                     <Text style={styles.askHint}>the whole tradition weighs in, citing its shelves</Text>
                     {gated && (

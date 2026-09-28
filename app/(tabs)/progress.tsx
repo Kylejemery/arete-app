@@ -96,6 +96,7 @@ export default function ProgressScreen() {
   const swipeHandlers = useSwipeNavigation('/progress');
   const [activeTab, setActiveTab] = useState<'overview' | 'reading'>('overview');
   const [streak, setStreak] = useState(0);
+  const [morningOnlyToday, setMorningOnlyToday] = useState(false);
   const [journalCount, setJournalCount] = useState(0);
   const [quoteCount, setQuoteCount] = useState(0);
   const [weekData, setWeekData] = useState<any[]>([]);
@@ -375,6 +376,7 @@ export default function ProgressScreen() {
   const updateTodayCalendar = async (existingData: any) => {
     const todayDate = new Date().toISOString().split('T')[0];
     const checkin = await getTodayCheckin();
+    setMorningOnlyToday(!!checkin?.morning_done && !checkin?.evening_done);
     const updated = {
       ...existingData,
       [todayDate]: { morning: checkin?.morning_done ?? false, evening: checkin?.evening_done ?? false }
@@ -525,6 +527,10 @@ export default function ProgressScreen() {
               <Text style={styles.streakIcon}>🔥</Text>
               <Text style={styles.streakNumber}>{streak}</Text>
               <Text style={styles.streakLabel}>Day Streak</Text>
+              {/* Morning alone does not extend the chain (decision D3, R12 a). */}
+              {morningOnlyToday && (
+                <Text style={styles.streakNote}>Morning done. Close the day tonight to extend your chain.</Text>
+              )}
             </View>
 
             {/* Stats */}
@@ -1042,6 +1048,7 @@ const styles = StyleSheet.create({
   streakIcon: { fontSize: 40, marginBottom: 5 },
   streakNumber: { fontSize: 64, fontWeight: 'bold', color: '#c9a84c', lineHeight: 70 },
   streakLabel: { color: '#fff', fontSize: 18, marginTop: 5 },
+  streakNote: { color: '#c9a84c', fontSize: 13, marginTop: 8, textAlign: 'center', lineHeight: 18 },
   booksHeroCard: {
     backgroundColor: '#16213e',
     borderRadius: 20,

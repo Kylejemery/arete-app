@@ -872,6 +872,10 @@ export default function CabinetScreen() {
                 }}
               >
                 <Ionicons name="person-add-outline" size={20} color="#c9a84c" />
+                {/* Shared sessions are Premium: show it before the tap (R12 i, audit gate 8). */}
+                {tier === 'free' && (
+                  <Ionicons name="lock-closed" size={10} color="#c9a84c" style={styles.gateLock} accessibilityLabel="Premium" />
+                )}
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -1472,6 +1476,11 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: '#c9a84c33',
+  },
+  gateLock: {
+    position: 'absolute',
+    right: 3,
+    bottom: 3,
   },
   // Tab bar
   tabBar: {

@@ -334,7 +334,12 @@ export default function HomeScreen() {
           <Text style={styles.streakCount}>{streak}</Text>
           <View style={styles.streakMeta}>
             <Text style={styles.streakLabel}>Days of Discipline</Text>
-            <Text style={styles.streakSub}>Keep the chain unbroken.</Text>
+            {/* Morning alone does not extend the chain (decision D3, R12 a). */}
+            <Text style={styles.streakSub}>
+              {morningDone && !eveningDone
+                ? 'Morning done. Close the day tonight to extend your chain.'
+                : 'Keep the chain unbroken.'}
+            </Text>
           </View>
           <Ionicons name="flame" size={32} color="#c9a84c" />
         </View>

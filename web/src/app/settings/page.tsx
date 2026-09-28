@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { getDevPremiumOverride, setDevPremiumOverride } from '@/lib/devMode';
 import PageHeader from '@/components/PageHeader';
 import { upgradeHref } from '@/lib/paywall';
+import { getIsPremium } from '@/lib/db';
 
 export default function SettingsPage() {
   // Run B, Part B5: no upgrade or subscription prompts for teens.
@@ -25,6 +26,12 @@ export default function SettingsPage() {
   // every kind of Arete email. null until the profile has loaded.
   const [emailOn, setEmailOn] = useState<boolean | null>(null);
   const [emailSaving, setEmailSaving] = useState(false);
+  // The subscription entry names what it does for this member (retention plan
+  // R12 h): free members upgrade, subscribers manage. null until known.
+  const [isSubscriber, setIsSubscriber] = useState<boolean | null>(null);
+  useEffect(() => {
+    getIsPremium().then(setIsSubscriber).catch(() => setIsSubscriber(false));
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -148,7 +155,7 @@ export default function SettingsPage() {
             href={upgradeHref('settings_upgrade')}
             className="block w-full text-center bg-arete-bg border border-arete-border text-arete-text rounded-lg px-4 py-2 text-sm hover:border-arete-gold transition-colors"
           >
-            Manage Subscription
+            {isSubscriber === null ? 'Plans' : isSubscriber ? 'Manage Subscription' : 'Upgrade to Premium'}
           </Link>
         </div>
         )}
