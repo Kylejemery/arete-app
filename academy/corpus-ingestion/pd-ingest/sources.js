@@ -311,6 +311,28 @@ const SOURCES = [
       { question_id: 'Q05', role: 'states', position: 'The passion as a sickness of the soul: a judgment of reason gone excessive, not a separate irrational part, and its therapy by correcting the judgment.' },
     ],
   },
+
+  // ---- English summaries of sources English retrieval cannot reach ------
+  {
+    slug: 'brehier-chrysippe-1910-en-summary', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'Émile Bréhier', work: 'Chrysippe (English summary)',
+    language: 'english', translator: 'original',
+    edition: 'English summary, section by section, of Chrysippe (Les Grands Philosophes. Paris: Félix Alcan)',
+    edition_year: 1910,
+    text_type: 'paper_summary', quotable_on_air: false, license_status: PD_US,
+    urls: [], repoFiles: ['docs/corpus/summaries/brehier-chrysippe-1910.md'],
+    sourceUrl: 'https://archive.org/details/chrysippe00br',
+    parser: 'summary-md',
+    licenseEvidence: 'A summary in our own words of Émile Bréhier, Chrysippe (Paris: Félix Alcan, 1910), published abroad before 1931 and so public domain in the United States. Written from the French text staged as brehier-chrysippe-1910; no sentence of the original is translated whole.',
+    cleaningNote: 'Written 2026-09-28 so that Bréhier\'s positions answer English retrieval; the French rows (brehier-chrysippe-1910) answer French retrieval only. Each ## section is one chunk and carries the page range it summarises.',
+    // Same work and positions as the French source; registered under this
+    // work too, since registrations key on (author, work).
+    registrations: [
+      { question_id: 'Q03', role: 'states', position: 'Reads the comprehensive impression (phantasia kataleptike) as passive, against Brochard\'s active reading: certainty lies in the impression itself, with assent following it.' },
+      { question_id: 'Q07', role: 'states', position: 'Chrysippus\'s reconciliation of fate and responsibility (De fato 12–13 read with Diogenianus): the co-fated (confatalia) and the distinction of principal from concurrent causes, so that an event is necessary only through the antecedents it implies.' },
+      { question_id: 'Q05', role: 'states', position: 'The passion as a sickness of the soul: a judgment of reason gone excessive, not a separate irrational part, and its therapy by correcting the judgment.' },
+    ],
+  },
 ];
 
 module.exports = { BATCH, SOURCES, dl6Life };

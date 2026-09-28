@@ -11,6 +11,7 @@ const PARSERS = {
   lacuscurtius: require('./parsers/lacuscurtius'),
   numbered: require('./parsers/numbered'),
   'ia-ocr': require('./parsers/ia-ocr'),
+  'summary-md': require('./parsers/summary-md'),
 };
 
 function parseFiles(source, files) {
@@ -66,7 +67,8 @@ function rangeOf(locator) {
 // to) switches chunking to alignment.
 function build(source, files, { translationChunks = null } = {}) {
   const parsed = parseFiles(source, files);
-  const structure = source.parser === 'ia-ocr'
+  // Page-unit and summary sources have no canonical citations to order.
+  const structure = ['ia-ocr', 'summary-md'].includes(source.parser)
     ? { ok: parsed.reasons.length === 0 && parsed.sections.length > 0, reasons: parsed.reasons.length ? parsed.reasons : (parsed.sections.length ? [] : ['no pages recovered']), bodyWords: parsed.sections.reduce((n, s) => n + countWords(s.text), 0), frontWords: 0 }
     : checkStructure({ sections: parsed.sections, front: parsed.front, rawText: parsed.rawText, order: compareCites });
   const expectMissing = (source.expect || []).filter((e) => !parsed.rawText.includes(e));
@@ -84,7 +86,8 @@ function build(source, files, { translationChunks = null } = {}) {
       // Tier 2 has no canonical citation: the page is carried in printed_pages
       // and the label, and locator stays null (ACQUISITION_PLAN Part 5, rule 3).
       locator: source.tier === 2 ? null : c.locator,
-      section_label: source.tier === 2 ? (c.printed_pages ? `pp. ${c.printed_pages}` : c.section_label) : c.section_label,
+      // A summary section keeps its heading; a Tier 2 page chunk is labelled by page.
+      section_label: source.tier === 2 && source.parser !== 'summary-md' ? (c.printed_pages ? `pp. ${c.printed_pages}` : c.section_label) : c.section_label,
       chunk_text: c.chunk_text,
       word_count: c.word_count,
       printed_pages: c.printed_pages,
@@ -116,7 +119,7 @@ function build(source, files, { translationChunks = null } = {}) {
     reasons: [],
     chunks: rows,
     warnings,
-    licenseEvidence: parsed.licenseEvidence.length ? parsed.licenseEvidence.join('\n') : fallbackEvidence(source),
+    licenseEvidence: parsed.licenseEvidence.length ? parsed.licenseEvidence.join('\n') : (source.licenseEvidence || fallbackEvidence(source)),
     ocr: parsed.ocr,
     stats: {
       words: rows.filter((r) => r.kind === 'body').reduce((n, r) => n + r.word_count, 0),

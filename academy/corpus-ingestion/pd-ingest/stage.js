@@ -24,7 +24,7 @@
 // about the source and must not be logged as a skip.
 
 const { BATCH, SOURCES } = require('./sources');
-const { getCached, getLocal, combinedSha256, FetchRefused, NetworkUnavailable } = require('./fetch');
+const { getCached, getLocal, getRepoFile, combinedSha256, FetchRefused, NetworkUnavailable } = require('./fetch');
 const { build, PARSERS } = require('./build');
 
 const args = process.argv.slice(2);
@@ -46,7 +46,7 @@ function sourceRow(source, extra) {
 
 function pendingReason(source) {
   if (source.pending) return source.pending;
-  if (!source.urls.length && !source.localFiles) return `not located yet: ${source.discover || 'no URL'}`;
+  if (!source.urls.length && !source.localFiles && !source.repoFiles) return `not located yet: ${source.discover || 'no URL'}`;
   if (!PARSERS[source.parser]) return `parser "${source.parser}" not written`;
   if (source.parse && source.parse.patterns && source.parse.patterns.citeId === null) {
     return 'citation pattern not yet read off a real page: run --inspect and set parse.patterns.citeId';
@@ -58,6 +58,7 @@ function pendingReason(source) {
 
 async function fetchAll(source) {
   if (source.localFiles) return source.localFiles.map((name) => getLocal(source.slug, name));
+  if (source.repoFiles) return source.repoFiles.map((p) => getRepoFile(p));
   const files = [];
   for (const url of source.urls) files.push(await getCached(source.slug, url));
   return files;
@@ -73,7 +74,7 @@ async function writeStaging(source, result, files) {
   await must(db().from('corpus_staging_sources').upsert(sourceRow(source, {
     status: 'staged', skip_reason: null,
     license_evidence: result.licenseEvidence,
-    retrieved_at: files.map((f) => f.retrieved_at).sort()[0],
+    retrieved_at: files.map((f) => f.retrieved_at).filter(Boolean).sort()[0] || null,
     raw_sha256: combinedSha256(files),
     ocr_quality: result.ocr ? result.ocr.quality : null,
     ocr_garble_rate: result.ocr ? result.ocr.rate : null,
