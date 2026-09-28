@@ -105,3 +105,8 @@ Recorded so their absence from `suite.yaml` is a decision, not an oversight.
   Origen, *Against Celsus* VII.15. The Phase 4 probes show that it separates
   the candidates (`results/matrix.md`, Probes). Store one of those texts in
   `research_sources` and it can become a ledger entry.
+- **Resolved (2026-09-28): the two conditionals argument is sourced.**
+  Origen, *Against Celsus* VII.15 (tr. Crombie, Ante-Nicene Fathers IV, 1885)
+  gives it as a Stoic form with the Stoics' own example. It is now suite
+  entry S020, pending storage of the volume in `research_sources` for the
+  guardrail 1 check. Sextus M VIII remains absent.

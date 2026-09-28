@@ -124,38 +124,44 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
     <div class="kicker">The Themata Project · Phase 5 draft</div>
     <h1>Chrysippus's themata, machine checked</h1>
     <p class="lede">Which of Chrysippus's reduction rules, the <span class="greek">θέματα</span>, under which readings of the Stoic connectives, derive exactly the arguments the ancient sources accept and none of the ones they reject?</p>
-    <div class="status"><strong>Not for publication</strong> Draft for specialist review. None of the 38 ledger entries has been signed off yet, so every result here is provisional.</div>
+    <div class="status"><strong>Not for publication</strong> Draft for specialist review. None of the 39 ledger entries has been signed off yet, and the newest, S020, still waits for its check against the stored text. Every result here is provisional.</div>
   </header>
 
   <section aria-labelledby="q">
     <div class="kicker" id="q">The question</div>
     <p class="question">Chrysippus held that every syllogistic argument is one of five indemonstrables, or reduces to them by four meta rules. Some of those rules survive in the sources. The rest are modern reconstructions.</p>
-    <p>The brief allowed three outcomes: one reconstruction fits uniquely, several fit, or none fit. Every candidate was run against a ledger of argument forms quoted from sources in the Arete corpus, and each verdict was checked in Lean 4.</p>
+    <p>The brief allowed three outcomes: one reconstruction fits uniquely, several fit, or none fit. Every candidate was run against a ledger of argument forms quoted from verified sources, and each verdict was checked in Lean 4.</p>
   </section>
 
   <section aria-labelledby="a">
     <div class="kicker" id="a">The answer</div>
-    <h2>Several fit, so the evidence underdetermines the themata. It still constrains the logic around them.</h2>
+    <h2>Several fit, so the evidence underdetermines the themata. It still fixes three features of the logic.</h2>
     <div class="figures">
-      <div class="figure"><div><span class="num">188</span><span class="of">of 792</span></div><div class="what">candidate-settings fit the ledger. Every one is proven: each derivation found, each rejection covered by a theorem.</div></div>
-      <div class="figure"><div><span class="num">59</span><span class="of">of 66</span></div><div class="what">candidate rule sets fit under at least one setting. The seven that never fit have no third thema.</div></div>
-      <div class="figure"><div><span class="num">544</span><span class="of">of 604</span></div><div class="what">non-fits are proven not to fit. The other 60 fail only on bounded search, so 188 is a proven lower bound.</div></div>
+      <div class="figure"><div><span class="num">158</span><span class="of">of 792</span></div><div class="what">candidate-settings fit the ledger. Every one is proven: each derivation found, each rejection covered by a theorem.</div></div>
+      <div class="figure"><div><span class="num">50</span><span class="of">of 66</span></div><div class="what">candidate rule sets fit under at least one setting. Every one of them has a first thema.</div></div>
+      <div class="figure"><div><span class="num">580</span><span class="of">of 634</span></div><div class="what">non-fits are proven not to fit. The other 54 fail only on bounded search, so 158 is a proven lower bound.</div></div>
     </div>
 
     <div class="findings">
       <div class="finding">
+        <h3>The first thema is required</h3>
+        <p>Origen reports the "two conditionals" argument as a Stoic form, with the Stoics' own example: if you know that you are dead, you are dead; if you know that you are dead, you are not dead; therefore you do not know that you are dead. No candidate without a first thema derives it, and that is proved. So the attested third thema alone does not fit.</p>
+      </div>
+      <div class="finding">
         <h3>Contraction is needed, and weakening never happens</h3>
-        <p>Every fit lets a repeated premise count once, through the set view or the merging cut. Without that, the indifferently concluding argument and the duplicated conditional cannot be derived. No candidate under any setting derives the redundant argument (S016). A relevance semantics, where contraction holds and weakening fails, proves it.</p>
+        <p>Every fit lets a repeated premise count once, through the set view or the merging cut. No candidate under any setting derives the redundant argument (S016). A relevance semantics, where contraction holds and weakening fails, proves it.</p>
       </div>
       <div class="finding">
         <h3>The contradictory must cancel a negation</h3>
         <p>Every fit reads the contradictory of "not p" as p. Read it as "not not p" and the Sorites chain (S018) is provably underivable, in a Gödel logic where double negation does not collapse.</p>
       </div>
-      <div class="finding">
-        <h3>The attested rule alone fits, and cannot be told from Mates</h3>
-        <p>The third thema as Simplicius describes it fits, and so does Mates's reconstruction. The two agree on every cell, because no attested argument in the corpus needs the first thema. That is a limit of the surviving evidence as the corpus holds it, not a result about the Stoics.</p>
-      </div>
     </div>
+  </section>
+
+  <section aria-labelledby="w">
+    <div class="kicker" id="w">The new witness</div>
+    <p class="question">"The concrete example which the Stoics give to illustrate this form of argument is the following: 1st, If you know that you are dead, you are dead; 2d, if you know that you are dead, you are not dead. And the conclusion is, 'you do not know that you are dead.'"</p>
+    <p class="note">Origen, <em>Against Celsus</em> VII.15, translated by Frederick Crombie, Ante-Nicene Fathers IV (1885). Origen calls the form "the theorem of two propositions". The general schema sentence rests on an editorial emendation (the translators' note 4701); the Stoic example does not.</p>
   </section>
 
   <section aria-labelledby="n">
@@ -165,7 +171,7 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
       <table>
         <thead><tr><th>Candidate</th><th>Rules</th><th>List</th><th>Multiset</th><th>Set</th></tr></thead>
         <tbody>
-          <tr><td>Attested</td><td>Third thema (Simplicius)</td><td class="c nofit">no</td><td class="c nofit">no</td><td class="c fit">fits</td></tr>
+          <tr><td>Attested</td><td>Third thema (Simplicius)</td><td class="c nofit">no</td><td class="c nofit">no</td><td class="c nofit">no</td></tr>
           <tr><td>Mates</td><td>First and third themata</td><td class="c nofit">no</td><td class="c nofit">no</td><td class="c fit">fits</td></tr>
           <tr><td>Mates + dialectical theorem</td><td>First, merging cut, third</td><td class="c nofit">no</td><td class="c fit">fits</td><td class="c fit">fits</td></tr>
         </tbody>
@@ -176,40 +182,42 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
 
   <section aria-labelledby="p">
     <div class="kicker" id="p">How "underivable" is established</div>
-    <p>Searching and not finding proves nothing. A rejection counts as proven only when a Lean theorem covers it. There are five routes, and none uses <code>sorry</code>.</p>
+    <p>Searching and not finding proves nothing. A failure counts as proven only when a Lean theorem covers it, and none of these uses <code>sorry</code>.</p>
     <div class="frame">
       <table>
         <thead><tr><th>Cell</th><th>Route</th><th>Covers</th></tr></thead>
         <tbody>
           <tr><td class="cell">■cm</td><td>Every rule preserves classical truth, so a classical countermodel rules an argument out.</td><td>S006, S007; S014 and S015 under Chrysippus</td></tr>
           <tr><td class="cell">■rm</td><td>Every rule preserves validity in the relevance logic RM (Sugihara model), where premises fuse and weakening fails.</td><td>S016, S008, under every setting</td></tr>
+          <tr><td class="cell">■cl</td><td>Cut preserves truth under any assignment closed under the base cases. Contraposition does not.</td><td>S020, for every candidate without a first thema</td></tr>
           <tr><td class="cell">■g3</td><td>Under the "not not p" reading, every rule is sound in three valued Gödel logic.</td><td>The Sorites under that reading</td></tr>
           <tr><td class="cell">■2</td><td>Without cut, contraposition keeps two premises.</td><td>Three premise items, for cut free candidates</td></tr>
           <tr><td class="cell">■rel</td><td>Without the merging cut, no atom can stand in exactly one place.</td><td>S011, for non merging candidates</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="note">The relevance semantics is a proof device. It is not a claim that the Stoics held a relevance logic.</p>
+    <p class="note">The relevance semantics and the closed valuations are proof devices. They are not claims about the logic the Stoics held.</p>
   </section>
 
   <section aria-labelledby="r">
     <div class="kicker" id="r">Results in detail</div>
     <ul class="plain">
       <li><strong>No overgeneration anywhere.</strong> No candidate under any setting derives what the ledger rejects, and every such cell is proven.</li>
-      <li><strong>Fits by view.</strong> 118 fits use the set view. The other 70 use the merging cut, 58 under multiset and 12 under list. All 188 use the toggle contradictory.</li>
+      <li><strong>Fits by view.</strong> 100 fits use the set view. The other 58 use the merging cut, 50 under multiset and 8 under list. All 158 use the toggle contradictory.</li>
+      <li><strong>Sixteen candidates never fit.</strong> Seven lack a third thema, which the composite arguments need. Nine lack a first thema, which S020 needs.</li>
       <li><strong>Redundancy.</strong> S016 is valid by the Stoic validity criterion (Diogenes Laertius 7.77) under every reading of the conditional, so its rejection rests on redundancy alone. S009 and S011 are redundant under the strict reading and not under the narrow one. The ledger is consistent only if indifferently concluding arguments were exempt.</li>
       <li><strong>Asserted falsity is not negation.</strong> S008, "'p and q' is false; p; therefore not q", which Diogenes calls conclusive but not syllogistic, is proven underivable by every candidate, as the ledger requires.</li>
     </ul>
   </section>
 
   <section aria-labelledby="o">
-    <div class="kicker" id="o">Open, negative and underdetermined</div>
+    <div class="kicker" id="o">Open and underdetermined</div>
     <div class="split">
       <div class="panel">
         <h3>What the evidence cannot yet decide</h3>
         <ul>
-          <li>Which themata: most generated variants fit somewhere.</li>
-          <li>The first thema: no attested argument in the corpus needs it. The strongest lead is the "two conditionals" argument, if p, q; if p, not q; therefore not p. From recall, it is discussed in Sextus and in Origen, neither yet in the corpus.</li>
+          <li>The shape of the first thema, which premise it contraposes, and the shape of the cut: every variant fits somewhere.</li>
+          <li>A separate second or fourth thema: no attested argument in the ledger needs one beyond contraposition and cut.</li>
           <li>Chrysippus against Antipater on single premise arguments, by how those items were ruled.</li>
         </ul>
       </div>
@@ -225,11 +233,12 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
   <section aria-labelledby="l">
     <div class="kicker" id="l">Limits</div>
     <ul class="plain">
-      <li>The ledger is small, 17 formal items, and unsigned. The main ancient sources for the themata, Sextus <em>Against the Logicians</em>, Galen, Alexander and Origen, are not in the corpus.</li>
+      <li>The ledger is small, 18 formal items, and unsigned. Sextus <em>Against the Logicians</em>, Galen and Alexander, the main ancient sources for the themata, are not yet available.</li>
+      <li>S020 rests on Origen, a later witness who is not a Stoic, and its check against the stored text is pending.</li>
       <li>Mates is represented by a summary, not his text. Reading the dialectical theorem as a merging cut is our own interpretation.</li>
       <li>The Sorites runs as a three link chain. Under the list view, results depend on the order in which the ledger lists premises.</li>
       <li>Derivations shown by the harness are evaluations of the same rules the proofs are about, not kernel checked certificates, except two proved in Lean.</li>
-      <li>The search runs to depth 8 over each item's own formulas. Results are identical at depths 4, 6 and 8. Only the 60 unproven non-fits depend on these bounds.</li>
+      <li>The search runs to depth 8 over each item's own formulas. Only the 54 unproven non-fits depend on these bounds.</li>
       <li>The reading of Alexander on the synthetic theorem (T04) is our own reading of untranslated Greek and is pending review.</li>
     </ul>
   </section>
@@ -238,13 +247,13 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
     <div class="kicker" id="v">For the reviewer</div>
     <h2>Seven questions</h2>
     <ol class="plain">
-      <li>Are the ledger verdicts right, especially S011 (valid), S016 (invalid, reported only through Mates), S008 (conclusive but not syllogistic) and the Sorites form taken as valid?</li>
+      <li>Are the ledger verdicts right, especially S011 (valid), S016 (invalid, reported only through Mates), S008 (conclusive but not syllogistic), the Sorites form taken as valid, and S020 from Origen?</li>
+      <li>Is Origen's report of "the theorem of two propositions" good evidence that the Stoics treated the form as reducible by the themata, and does the emendation in note 4701 affect that?</li>
       <li>Every fit needs a repeated premise to count once. Is that consistent with Stoic analysis, and does it conflict with Bobzien's reconstruction?</li>
       <li>Is reading the contradictory of "not p" as p the standard view, given Diogenes Laertius 7.69 on double negation?</li>
       <li>Is our encoding of Simplicius's third thema, a cut with the conclusion first and one further premise, fair to the Greek?</li>
-      <li>Is reading the dialectical theorem as a merging cut defensible, or should it be a separate rule?</li>
+      <li>Is reading the dialectical theorem as a merging cut defensible?</li>
       <li>Did Alexander say the Stoics made their second, third and fourth themata from the synthetic theorem?</li>
-      <li>Which texts would give attested arguments that need the first thema?</li>
     </ol>
     <p class="note">The materials, in the Arete repository under <code>themata/</code>:</p>
     <div class="files"><span>FINDINGS.md</span><span>evidence/</span><span>NOTES.md</span><span>lean/</span><span>results/matrix.md</span></div>
@@ -253,14 +262,15 @@ a:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 2px; }
   <section aria-labelledby="b">
     <div class="kicker" id="b">Before anything is public</div>
     <ol class="plain">
+      <li>The Origen volume is stored, and S020 passes its check against it.</li>
       <li>Kyle signs off the ledger entries, or amends them, and the matrix is regenerated.</li>
       <li>A specialist in Stoic logic reviews the findings, the ledger and the encoding.</li>
-      <li>The ancient texts named in the gaps are stored, so the first thema can be tested.</li>
+      <li>The remaining ancient texts named in the gaps are stored.</li>
     </ol>
   </section>
 
   <footer>
-    <div>Lean 4.22.0 · 66 candidates · 12 settings · 17 formal items · search depth 8</div>
+    <div>Lean 4.22.0 · 66 candidates · 12 settings · 18 formal items · search depth 8</div>
     <div>Status as of 28 September 2026. Figures checked against the matrix.</div>
   </footer>
 
