@@ -82,7 +82,7 @@ The appendix on pragmatism and humanism (pp. 255–266) is left out: it occupies
 
 ## Not re-ingested
 
-**A.C. Pearson, *The Fragments of Zeno and Cleanthes* (1891).** This is already in `rag_corpus` as 321 live rows (author "A.C. Pearson", `text_type` primary). A second ingest would duplicate it.
+**A.C. Pearson, *The Fragments of Zeno and Cleanthes* (1891).** This entered `rag_corpus` as 321 rows on 2026-09-28 (18:34–18:36 UTC), by a local run over `source_texts/` that preceded this review (author "A.C. Pearson", `text_type` primary). A second ingest would duplicate it.
 
 - `edition_year` was null. It was set to 1891 on 2026-09-28 (migration `20260928190800_pearson_fragments_edition_year`).
 - `source_url` was null. It was set to https://archive.org/details/thefragmentsofze00zenouoft on 2026-09-28 by Kyle's decision (migration `20260928194250_pearson_fragments_source_url`). The rows do not record which copy they were ingested from; this is the only public-domain edition.
@@ -94,5 +94,7 @@ The appendix on pragmatism and humanism (pp. 255–266) is left out: it occupies
 ## Rejected
 
 **The Daughter of a Stoic** and **The Stoic, or Memoirs of Eurysthenes the Athenian** (Google Books scans). They fail at test 5 before anything else: the PDFs have no text layer, just 496 words of Google boilerplate across 200 and 129 pages. Both appear to be nineteenth-century novels about Stoics, which would also fail test 2 (fiction does not argue a case that could fail) and test 3. Revisit only if one proves to be something other than fiction.
+
+The same local run ingested *The Daughter of a Stoic* (2026-09-28, 18:24 UTC): two chunks, both Google's usage-guidelines boilerplate. They were deprecated the same day (migration `20260928202503_deprecate_daughter_of_a_stoic`).
 
 **Journal of Speculative Philosophy, p. 106** (JSTOR Early Journal Content, c. 1882). This is one page: the tail of a previous article, two short poems by J. Albee ("The Stoic", "Anti-Stoic"), and the start of a book notice of Jackson's *Seneca and Kant* that breaks off mid-sentence. It fails test 2 (no argument on the page) and test 5 (a fragment). Its subject, Jackson's book, is admitted above in full.
