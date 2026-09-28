@@ -82,11 +82,11 @@ The appendix on pragmatism and humanism (pp. 255–266) is left out: it occupies
 
 ## Not re-ingested
 
-**A.C. Pearson, *The Fragments of Zeno and Cleanthes* (1891).** This is already in `rag_corpus` as 321 live rows (author "A.C. Pearson", `text_type` primary, `edition_year` null). A second ingest would duplicate it.
+**A.C. Pearson, *The Fragments of Zeno and Cleanthes* (1891).** This is already in `rag_corpus` as 321 live rows (author "A.C. Pearson", `text_type` primary). A second ingest would duplicate it.
 
-Two corrections are proposed but not made here:
-- set `edition_year = 1891`;
-- decide whether Pearson's introduction and notes should be `scholarship` rather than `primary`.
+- `edition_year` was null. It was set to 1891 on 2026-09-28 (migration `20260928190800_pearson_fragments_edition_year`).
+- Still open: `source_url` is null, and the rows carry no evidence of which scan they came from.
+- Still open: whether Pearson's introduction and notes should be `scholarship` rather than `primary`.
 
 ## Rejected
 
