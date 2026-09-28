@@ -19,7 +19,9 @@ conditional reading and the two redundancy readings meet the ledger.
 | `D0`, `D2`, … | derived at that depth, as the ledger requires |
 | `OVER` + depth | derived, but the ledger rejects it: overgeneration |
 | `UNDER` | not found within depth N, but the ledger requires it: undergeneration (search-bounded) |
-| `■cm` | not derived, and proven underivable: a Philonian countermodel (`underivable_of_countermodel`) |
+| `UNDER■g3`, `UNDER■2`, `UNDER■rel` | undergeneration, proven: a Gödel G₃ countermodel under `negate` (`underivable_of_goedel`), a candidate without cut facing an item that does not have two premises (`underivable_no_cut`), or an atom in one place with no merging cut (`underivable_lone_atom`) |
+| `■cm` | not derived, and proven underivable: a Philonian countermodel (`underivable_of_countermodel`; under Chrysippus's policy the theory is dropped, `underivable_of_countermodel_chrysippus`) |
+| `■rm` | not derived, and proven: a countermodel in the Sugihara model of the relevance logic RM (`underivable_of_sugihara`, and its Chrysippus form). Covers every candidate and view, merging cut included |
 | `■2p` | not derived, and proven: under Chrysippus's policy and the `list` or `multiset` view no candidate derives an argument with fewer than two premises (`underivable_single_premise`) |
 | `■rel` | not derived, and proven: some atom occurs in exactly one place, and the candidate has no merging cut; under the `list` or `multiset` view, with Chrysippus's policy or no background theory, no such candidate derives it (`underivable_lone_atom`) |
 | `■base` | not derived, and proven: the candidate has no themata, so derivability is base-only (`Derives.base_only`) and the base cases were enumerated exhaustively |
@@ -59,8 +61,9 @@ def defaultSetting : Setting := ⟨.chrysippus, .toggle, .multiset⟩
 inductive Cell where
   | ok (d : Nat)
   | over (d : Nat)
-  | under (saturated truncated : Bool)
+  | under (proof : Option String) (saturated truncated : Bool)
   | provenCountermodel
+  | provenRelevanceModel
   | provenTwo
   | provenRelevance
   | provenBase
@@ -70,9 +73,11 @@ inductive Cell where
 def Cell.label : Cell → String
   | .ok d => s!"D{d}"
   | .over d => s!"OVER{d}"
-  | .under _ true => "UNDER(t)"
-  | .under _ _ => "UNDER"
+  | .under (some p) _ _ => s!"UNDER■{p}"
+  | .under none _ true => "UNDER(t)"
+  | .under none _ _ => "UNDER"
   | .provenCountermodel => "■cm"
+  | .provenRelevanceModel => "■rm"
   | .provenTwo => "■2p"
   | .provenRelevance => "■rel"
   | .provenBase => "■base"
@@ -81,11 +86,12 @@ def Cell.label : Cell → String
   | .bounded _ _ => "·"
 
 def Cell.bad : Cell → Bool
-  | .over _ | .under _ _ => true
+  | .over _ | .under _ _ _ => true
   | _ => false
 
 def Cell.proven : Cell → Bool
-  | .ok _ | .provenCountermodel | .provenTwo | .provenRelevance | .provenBase => true
+  | .ok _ | .provenCountermodel | .provenRelevanceModel | .provenTwo | .provenRelevance
+  | .provenBase => true
   | _ => false
 
 def cell (c : Candidate) (s : Setting) (i : Item) (b : Bounds) : Cell :=
@@ -94,9 +100,10 @@ def cell (c : Candidate) (s : Setting) (i : Item) (b : Bounds) : Cell :=
   match outcome, i.shouldDerive P with
   | .derived d, true => .ok d
   | .derived d, false => .over d
-  | .notFound _ sat tr, true => .under sat tr
+  | .notFound _ sat tr, true => .under (underProof c P i) sat tr
   | .notFound _ sat tr, false =>
-    if (countermodel? i).isSome then .provenCountermodel
+    if (countermodel? P i).isSome then .provenCountermodel
+    else if sugiharaCountermodel P i then .provenRelevanceModel
     else if P.single == .chrysippus && P.view != .set && i.arg.premises.length < 2 then .provenTwo
     else if P.view != .set && (P.single == .chrysippus || i.theory.isEmpty) &&
         c.rules.all (!·.merging) && i.arg.atoms.any (slots i.arg · == 1) then .provenRelevance
@@ -110,6 +117,13 @@ structure Row where
 
 def Row.fits (r : Row) : Bool := !r.cells.any (·.2.bad)
 def Row.provenFit (r : Row) : Bool := r.fits && r.cells.all (·.2.proven)
+
+/-- Proven not to fit: some cell is an exhibited overgeneration or a proven
+undergeneration. -/
+def Row.provenNonFit (r : Row) : Bool :=
+  r.cells.any fun (_, c) => match c with
+    | .over _ | .under (some _) _ _ => true
+    | _ => false
 
 def runAll (b : Bounds) : List Row :=
   candidates.flatMap fun c => settings.map fun s =>
@@ -159,6 +173,16 @@ def csv (rows : List Row) : String :=
     s!"{esc r.candidate.name},{r.candidate.provenance.label},{r.setting.label}," ++
       ",".intercalate (r.cells.map (·.2.label)) ++ s!",{r.fits},{r.provenFit}"
 
+def viewLabel : PremiseView → String
+  | .list => "list" | .multiset => "multiset" | .set => "set"
+
+open Formula in
+/-- Probe arguments, not evidence (see the Probes section of the matrix). -/
+def probes : List (String × Argument) :=
+  [ ("if p, q; if p, not q; therefore not p", ⟨[cond p₀ p₁, cond p₀ (neg p₁)], neg p₀⟩),
+    ("p; not q; therefore not (if p, q)", ⟨[p₀, neg p₁], neg (cond p₀ p₁)⟩),
+    ("if p, q; if q, r; not r; therefore not p", ⟨[cond p₀ p₁, cond p₁ p₂, neg p₂], neg p₀⟩) ]
+
 def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   let named := [attested, mates, matesDT]
   let fits := rows.filter (·.fits)
@@ -171,12 +195,14 @@ def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   out := out.push ""
   out := out.push s!"{candidates.length} candidates × {settings.length} derivation settings × {formalSuite.length} formal items ({rows.length} candidate-settings). S017 and S019 are `non_formal` and not run."
   out := out.push ""
-  out := out.push "Cells: `D`n derived at depth n as required · `OVER`n derived but rejected by the ledger · `UNDER` required but not found within the depth · `■cm` proven underivable by a Philonian countermodel · `■2p` proven underivable, fewer than two premises under Chrysippus's policy · `■rel` proven underivable, an atom in exactly one place and no merging cut · `■base` proven underivable, base cases only · `·` rejected as required but only not found within the depth (`s`: search saturated, `t`: truncated)."
+  out := out.push "Cells: `D`n derived at depth n as required · `OVER`n derived but rejected by the ledger · `UNDER` required but not found within the depth · `■cm` proven underivable by a Philonian countermodel · `■rm` proven underivable by a Sugihara (relevance) countermodel · `■2p` proven underivable, fewer than two premises under Chrysippus's policy · `■rel` proven underivable, an atom in exactly one place and no merging cut · `■base` proven underivable, base cases only · `·` rejected as required but only not found within the depth (`s`: search saturated, `t`: truncated)."
   out := out.push ""
   out := out.push "## Summary"
   out := out.push ""
   out := out.push s!"- Candidate-settings that fit (no `OVER`, no `UNDER`): **{fits.length}** of {rows.length}."
   out := out.push s!"- Of those, fits with every rejection proven: **{(fits.filter (·.provenFit)).length}**."
+  let nonfits := rows.filter (!·.fits)
+  out := out.push s!"- Candidate-settings that do not fit: {nonfits.length}. Proven not to fit (an exhibited `OVER` or a proven `UNDER■`): **{(nonfits.filter (·.provenNonFit)).length}**. The rest fail only on search-bounded `UNDER` cells."
   let fitNames := (fits.map (·.candidate.name)).eraseDups
   out := out.push s!"- Candidates that fit under at least one setting: **{fitNames.length}** of {candidates.length}."
   out := out.push ""
@@ -198,7 +224,7 @@ def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   for i in formalSuite do
     let cs := rows.map fun r => (r.cells.find? (·.1.id == i.id)).map (·.2)
     let over := (cs.filter fun c => match c with | some (Cell.over _) => true | _ => false).length
-    let under := (cs.filter fun c => match c with | some (Cell.under _ _) => true | _ => false).length
+    let under := (cs.filter fun c => match c with | some (Cell.under _ _ _) => true | _ => false).length
     out := out.push s!"| {i.id} | {i.verdict.label} | {over} | {under} |"
   out := out.push ""
   out := out.push s!"## Named candidates, all settings"
@@ -219,6 +245,20 @@ def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   let ds := rows.filter (·.setting == defaultSetting)
   for (r, k) in ds.zipIdx do
     out := out.push (rowLine (k + 1) r)
+  out := out.push ""
+  out := out.push "## Probes (not evidence)"
+  out := out.push ""
+  out := out.push "These arguments are **not** in the ledger and count toward nothing above. No item in the suite needs the first thema (gaps.md), so these show which kind of attested argument would separate the candidates if a source for it is found. Setting: Chrysippus, toggle."
+  out := out.push ""
+  out := out.push ("| Probe | " ++ " | ".intercalate (named.flatMap fun c => [PremiseView.list, .multiset, .set].map fun v => s!"{c.name} ({viewLabel v})") ++ " |")
+  out := out.push ("| --- | " ++ " | ".intercalate (named.flatMap fun _ => [1, 2, 3].map fun _ => "---") ++ " |")
+  for (label, a) in probes do
+    let cells := named.flatMap fun c => [PremiseView.list, .multiset, .set].map fun v =>
+      match search { view := v } [] c.rules a b with
+      | .derived d => s!"D{d}"
+      | .notFound _ true _ => "·s"
+      | .notFound _ _ _ => "·"
+    out := out.push (s!"| {label} | " ++ " | ".intercalate cells ++ " |")
   out := out.push ""
   out := out.push "## Semantic table"
   out := out.push ""

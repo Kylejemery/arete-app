@@ -99,3 +99,9 @@ Recorded so their absence from `suite.yaml` is a decision, not an oversight.
   setting. The ledger holds no attested argument whose analysis requires
   contraposition, so the suite cannot test the first thema. Sextus M VIII and
   Alexander's worked analyses are the likely sources.
+- **Lead for the first thema (recall, not a source).** The "two
+  conditionals" argument, "if p, q; if p, not q; therefore not p", is
+  reported, as far as we recall, in Sextus Empiricus (M VIII, PH II) and
+  Origen, *Against Celsus* VII.15. The Phase 4 probes show that it separates
+  the candidates (`results/matrix.md`, Probes). Store one of those texts in
+  `research_sources` and it can become a ledger entry.

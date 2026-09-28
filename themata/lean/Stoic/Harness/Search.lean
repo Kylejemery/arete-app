@@ -1,5 +1,5 @@
 import Std.Data.HashSet
-import Stoic.Soundness
+import Stoic.Undergeneration
 import Stoic.Harness.Suite
 
 /-!
@@ -146,12 +146,58 @@ def valuations : List Nat → List (Nat → Bool)
   | n :: ns => (valuations ns).flatMap fun v =>
       [fun k => if k = n then true else v k, fun k => if k = n then false else v k]
 
-/-- A Philonian countermodel that makes the theory and premises true and the
-conclusion false. By `underivable_of_countermodel`, no Phase 3 candidate
-derives the item under any setting. -/
-def countermodel? (i : Item) : Option (Nat → Bool) :=
-  let as := ((i.arg.conclusion :: i.arg.premises) ++ i.theory).flatMap Formula.atoms |>.eraseDups
-  (valuations as).find? fun v =>
-    i.theory.all (ev v) && i.arg.premises.all (ev v) && !ev v i.arg.conclusion
+/-- The theory a countermodel must respect. Under Chrysippus's policy the
+theory is idle and dropped (`Derives.drop_theory`). -/
+def effectiveTheory (P : Params) (i : Item) : Theory :=
+  if P.single == .chrysippus then [] else i.theory
+
+def itemAtoms (i : Item) : List Nat :=
+  ((i.arg.conclusion :: i.arg.premises) ++ i.theory).flatMap Formula.atoms |>.eraseDups
+
+/-- A Philonian countermodel: theory and premises true, conclusion false.
+By `underivable_of_countermodel` (or its Chrysippus form), no Phase 3
+candidate derives the item under the setting. -/
+def countermodel? (P : Params) (i : Item) : Option (Nat → Bool) :=
+  let T := effectiveTheory P i
+  (valuations (itemAtoms i)).find? fun v =>
+    T.all (ev v) && i.arg.premises.all (ev v) && !ev v i.arg.conclusion
+
+/-- Sugihara valuations of the given atoms over `-2 … 2` (others 0). -/
+def intValuations : List Nat → List (Nat → Int)
+  | [] => [fun _ => 0]
+  | n :: ns => (intValuations ns).flatMap fun v =>
+      [-2, -1, 0, 1, 2].map fun (x : Int) => fun k => if k = n then x else v k
+
+/-- The interpretations of asserted falsity tried: negation and identity. -/
+def sigmas : List (Int → Int) := [fun x => -x, id]
+
+/-- A Sugihara countermodel: theory designated, fusion of the premises above
+the conclusion. By `underivable_of_sugihara` (or its Chrysippus form), no
+Phase 3 candidate derives the item under the setting. -/
+def sugiharaCountermodel (P : Params) (i : Item) : Bool :=
+  let T := effectiveTheory P i
+  sigmas.any fun σ => (intValuations (itemAtoms i)).any fun v =>
+    T.all (fun t => decide (0 ≤ sv σ v t)) &&
+      decide (sv σ v i.arg.conclusion < fusL (i.arg.premises.map (sv σ v)))
+
+/-! ## Proofs of undergeneration the harness may cite -/
+
+def natValuations : List Nat → List (Nat → Nat)
+  | [] => [fun _ => 0]
+  | n :: ns => (natValuations ns).flatMap fun v =>
+      [0, 1, 2].map fun (x : Nat) => fun k => if k = n then x else v k
+
+/-- Why a required item is provably not derived by this candidate under this
+setting, if one of the undergeneration theorems applies. -/
+def underProof (c : Candidate) (P : Params) (i : Item) : Option String :=
+  let T := effectiveTheory P i
+  let lean := P.view != .set && (P.single == .chrysippus || i.theory.isEmpty)
+  if P.contra == .negate && (natValuations (itemAtoms i)).any (fun v =>
+      T.all (fun t => gv v t == 2) &&
+        decide (gv v i.arg.conclusion < meetL (i.arg.premises.map (gv v)))) then
+    some "g3"
+  else if lean && c.rules.all (!·.isCut) && i.arg.premises.length != 2 then some "2"
+  else if lean && c.rules.all (!·.merging) && (itemAtoms i).any (slots i.arg · == 1) then some "rel"
+  else none
 
 end Stoic.Harness

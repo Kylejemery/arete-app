@@ -48,6 +48,8 @@ structure Rule where
   contract, so the relevance invariant in `Soundness.lean` is not claimed for
   them. -/
   merging : Bool := false
+  /-- The rule is a cut, the only shape that can raise the premise count. -/
+  isCut : Bool := false
 
 /-- The thema a rule defines: `b` is licensed if some output of the step has
 `b`'s conclusion and, under the premise view, `b`'s premises. -/
@@ -166,7 +168,7 @@ theorem cutStep_params (userAr : Arity) (pos : Position) (merge : Bool) (P : Par
 
 def cut (userAr : Arity) (pos : Position) (merge : Bool) : Rule :=
   let shape := s!"cut[{userAr.label},{pos.label}{if merge then ",merge" else ""}]"
-  { name := shape, shape, step := cutStep userAr pos merge, merging := merge }
+  { name := shape, shape, step := cutStep userAr pos merge, merging := merge, isCut := true }
 
 /-! ## Candidates -/
 

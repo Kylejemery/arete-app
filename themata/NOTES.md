@@ -443,7 +443,8 @@ The proofs use the standard axioms `propext`, `Quot.sound` and
    that never fit are the ones with no third thema. Without cut, S010–S013
    (except S010, which is a base case) and S018 are not derived.
 2. **No fit is proven.** Every fit rests on search-bounded rejections of
-   S008 and S016, and 59 fits also on S014 and S015. No overgeneration was
+   S008 and S016, and 59 fits also on S014 and S015. *(Superseded: all 188
+   fits are now proven. See "Closing the gaps" below.)* No overgeneration was
    found anywhere: no candidate derives S006, S007, S008 or S016 within the
    bounds, and none derives S014 or S015 under Chrysippus.
 3. **Every fit uses contraction.** S011 ("either p or q; p; therefore p")
@@ -461,7 +462,8 @@ The proofs use the standard axioms `propext`, `Quot.sound` and
    the rejection of S016 is search-bounded, not proven. Whether contraction
    lets a system with themata manufacture a redundant argument is the open
    question at the centre of the brief. The search found no case within the
-   bounds, but this is not proved.
+   bounds, but this is not proved. *(Superseded: proved. No candidate
+   manufactures S016 under any setting. See "Closing the gaps" below.)*
 5. **Every fit needs the `toggle` contradictory.** Under `negate` the
    Sorites (S018) is never derived. Chaining its third indemonstrables needs
    the contradictory of "not p" to be "p", not "not not p". The ledger's
@@ -486,6 +488,9 @@ The proofs use the standard axioms `propext`, `Quot.sound` and
 
 ### What would strengthen this
 
+*(Written before the gaps were closed; see the next section for what was
+done.)*
+
 - A proof for S008. It is never derived, but no invariant yet covers
   "asserted falsity is not negation" beyond the base cases.
 - A relevance-style invariant that survives contraction, or a
@@ -493,3 +498,110 @@ The proofs use the standard axioms `propext`, `Quot.sound` and
 - Items that need the first thema, to test it at all (result 6).
 - The ten-link Sorites and more composite arguments, once Sextus M VIII is in
   `research_sources`.
+
+## Closing the gaps (2026-09-28)
+
+After Phase 4 there were three gaps. Every fit rested on search-bounded
+rejections of S008 and S016, S016 could not be proven under contraction, and
+no item tested the first thema. Two are closed by proof, and the third is
+narrowed to a sourcing task.
+
+### S016 and S008: a relevance semantics (`lean/Stoic/Sugihara.lean`)
+
+Classical semantics cannot reject S016, because it is monotonic. The Stoic
+rules as encoded, however, are also sound in the Sugihara model of the
+relevance logic RM:
+
+- values are integers, and a value is designated when it is at least 0;
+- premises are combined by fusion, which is commutative, associative and
+  idempotent, but not monotonic;
+- conjunction is fusion, "not both" is `p → not q`, and disjunction is
+  `(not p → q) ∧ (q → not p)`.
+
+Every base case holds in this model. Contraposition and cut, merging or not,
+preserve holding under every premise view (`candidates_soundS`, for all 66
+candidates).
+
+- **S016** has a countermodel (p = q = 0, r = 1). So **no candidate derives
+  S016 under any setting, with contraction or without.** This answers
+  result 4 above: the themata as encoded never add a premise from nowhere, and
+  the merging cut and the `set` view do not change that.
+- **S008**: the rules never look inside "'p' is false", so the model may
+  interpret it freely. With the identity, S008 has a countermodel
+  (p = q = 1). This matches DL: "'p and q' is false" is not the negated
+  conjunction the third indemonstrable needs.
+- **S014, S015 under Chrysippus's policy**: that policy never reads the
+  background theory (`Derives.drop_theory`), so a countermodel that ignores
+  it suffices, in every view.
+
+The model is a device for proving underivability. It is **not** a claim that
+the Stoics held a relevance logic. The notable fact for the write-up is the
+fit itself: the base cases and the themata as reconstructed are sound in a
+logic that has contraction but not weakening. That is the profile the
+redundancy doctrine suggests. It is the *opposite* of the profile the Mode 2
+summary reports for Bobzien's reconstruction (R03): monotonicity, and no
+contraction. Here every fit needs contraction (result 3) and none has
+weakening. Whether the conflict is real, or an artefact of the summary, has
+to wait for her paper.
+
+**Result: all 188 fits are proven.** In each, every derivation was exhibited
+by the search and every rejection is covered by a theorem. The exhibited
+derivations are evaluations, using the same `Rule.step` the proofs are about,
+not kernel-checked certificates. Two are also proved in Lean (`S013_attested`,
+`S012_matesDT`).
+
+### Proving that candidates fail (`lean/Stoic/Undergeneration.lean`)
+
+A candidate-setting that does not fit fails on some `UNDER`. Three theorems
+now prove many of those failures:
+
+- **Gödel G₃ under `negate`** (`underivable_of_goedel`). When the
+  contradictory always adds a negation, the rules are sound in three-valued
+  Gödel logic, where "not not p" is not p. The Sorites (S018) has a G₃
+  countermodel, so under `negate` it is underivable by every candidate.
+- **No cut** (`underivable_no_cut`). Contraposition keeps two premises, so a
+  candidate without cut cannot reach S013 or S018 under `list` or
+  `multiset`.
+- **Lone atom** (`underivable_lone_atom`, from Phase 4). This rules out S011
+  for non-merging candidates under `list` or `multiset`.
+
+**Result: 544 of the 604 non-fits are proven.** The other 60 fail only on
+search-bounded `UNDER` cells:
+
+- 46 are the `list` view with the Sorites (and sometimes S011). The Sorites
+  under `list` depends on the order in which the ledger happens to list its
+  premises.
+- 14 are candidates without cut under the `set` view.
+
+So the fit count, 188, is proven as a lower bound. It is exact unless one of
+those 60 hides a derivation deeper than the search goes.
+
+### The first thema: narrowed to a sourcing task
+
+No text in the corpus or in `research_sources` gives an argument whose
+analysis needs contraposition. The only corpus hits are modern summaries
+saying that Bobzien assigns contraposition to the first thema. Guardrail 1
+forbids adding an unsourced item, so the suite is unchanged.
+
+The matrix now has a **Probes** section, of arguments that are explicitly
+*not* evidence. It shows what kind of source would separate the candidates:
+
+- "p; not q; therefore not (if p, q)" is derived only by candidates with a
+  first thema.
+- "if p, q; if p, not q; therefore not p" is never derived by `Attested`.
+  `Mates` derives it only under the `set` view, and `Mates + dialectical
+  theorem` under every view.
+
+The second probe is the "two conditionals" argument. As far as we recall, it
+is discussed in Sextus Empiricus (M VIII and PH II) and in Origen, *Against
+Celsus* VII.15. That is recall, not a retrieved text. If a text giving it is
+stored in `research_sources`, it becomes a ledger entry (guardrail 1), and
+the harness will test the first thema directly.
+
+### Axioms
+
+`underivable_of_sugihara`, `underivable_of_countermodel_chrysippus` and
+`underivable_of_sugihara_chrysippus` use `propext`, `Quot.sound` and
+`Classical.choice`. `underivable_of_goedel_chrysippus` and
+`underivable_no_cut` use `propext` and `Quot.sound`. Nothing uses `sorry` or
+`native_decide`.

@@ -29,4 +29,5 @@ def main (args : List String) : IO Unit := do
   IO.FS.writeFile "../results/matrix.md" (matrixMd rows b)
   IO.FS.writeFile "../results/matrix.csv" (csv rows ++ "\n")
   let fits := rows.filter (·.fits)
-  IO.println s!"{rows.length} candidate-settings, {fits.length} fit, {(fits.filter (·.provenFit)).length} proven fits"
+  let nonfits := rows.filter (!·.fits)
+  IO.println s!"{rows.length} candidate-settings, {fits.length} fit, {(fits.filter (·.provenFit)).length} proven fits, {(nonfits.filter (·.provenNonFit)).length} of {nonfits.length} non-fits proven"

@@ -23,18 +23,35 @@ def item (id : String) : Item :=
 #guard search { view := .set } [] attested.rules (item "S012").arg {} == .derived 1
 -- The proof routes: S006 and S007 have countermodels, S016 does not
 -- (it is valid by the criterion) but its idle atom r has one slot.
-#guard (countermodel? (item "S006")).isSome
-#guard (countermodel? (item "S007")).isSome
-#guard (countermodel? (item "S016")).isNone
+#guard (countermodel? {} (item "S006")).isSome
+#guard (countermodel? {} (item "S007")).isSome
+#guard (countermodel? {} (item "S016")).isNone
+-- S016 and S008 have Sugihara countermodels; S001 and the Sorites do not.
+#guard sugiharaCountermodel {} (item "S016")
+#guard sugiharaCountermodel {} (item "S008")
+#guard !sugiharaCountermodel {} (item "S001")
+#guard !sugiharaCountermodel {} (item "S018")
+-- S014 has a countermodel once Chrysippus's policy drops its theory, and
+-- none under Antipater's.
+#guard (countermodel? {} (item "S014")).isSome
+#guard (countermodel? { single := .antipater } (item "S014")).isNone
 #guard slots (item "S016").arg 2 == 1
 -- S014 with its conditional as background theory: derived under Antipater
 -- (a base case), with no countermodel.
 #guard search { single := .antipater } (item "S014").theory [] (item "S014").arg {} == .derived 0
-#guard (countermodel? (item "S014")).isNone
 -- The cells.
-#guard cell attested defaultSetting (item "S016") {} == .provenRelevance
-#guard cell matesDT defaultSetting (item "S016") {} != .provenRelevance
-#guard cell attested defaultSetting (item "S014") {} == .provenTwo
+#guard cell attested defaultSetting (item "S016") {} == .provenRelevanceModel
+#guard cell matesDT ⟨.chrysippus, .toggle, .set⟩ (item "S016") {} == .provenRelevanceModel
+#guard cell attested defaultSetting (item "S014") {} == .provenCountermodel
 #guard cell attested defaultSetting (item "S006") {} == .provenCountermodel
+
+-- Proven undergeneration: the Sorites under `negate` (Gödel), S011 for a
+-- non-merging candidate (lone atom), S013 for a candidate without cut.
+#guard underProof attested { contra := .negate } (item "S018") == some "g3"
+#guard underProof attested {} (item "S011") == some "rel"
+#guard underProof matesDT {} (item "S011") == none
+def contraposeOnly : Candidate :=
+  (generated.filter (fun (c : Candidate) => c.name == "contrapose[either,two] + no third")).headD attested
+#guard underProof contraposeOnly {} (item "S013") == some "2"
 
 end Stoic.Harness.Tests
