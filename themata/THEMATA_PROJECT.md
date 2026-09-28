@@ -114,6 +114,7 @@ themata/
   harness/
   results/matrix.md
   NOTES.md          # every interpretive decision, with reasons
+  FINDINGS.md       # Phase 5 write-up, for specialist review
 ```
 
 (Phase 1 also added `evidence/rules.yaml` for themata, connectives and

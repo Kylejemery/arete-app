@@ -605,3 +605,12 @@ the harness will test the first thema directly.
 `Classical.choice`. `underivable_of_goedel_chrysippus` and
 `underivable_no_cut` use `propext` and `Quot.sound`. Nothing uses `sorry` or
 `native_decide`.
+
+## Phase 5 (2026-09-28)
+
+The write-up is `FINDINGS.md`, a draft for specialist review. It restates the
+results of Phase 4 and of "Closing the gaps", together with their limits. It
+also lists the questions a reviewer is asked to answer. It adds no new
+interpretive decision. Two steps remain before anything is public: Kyle's
+sign-off on the ledger (guardrail 3), which may change the matrix, and the
+specialist review (guardrail 5).
