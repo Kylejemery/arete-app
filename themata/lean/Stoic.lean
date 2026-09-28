@@ -4,3 +4,8 @@ import Stoic.Params
 import Stoic.Semantics
 import Stoic.Indemonstrables
 import Stoic.Tests
+import Stoic.Themata.Rules
+import Stoic.Themata.Attested
+import Stoic.Themata.Mates
+import Stoic.Themata.Generated
+import Stoic.Themata.Tests
