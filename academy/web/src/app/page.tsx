@@ -1,4 +1,18 @@
-﻿import Link from 'next/link'
+﻿import type { Metadata } from 'next'
+import Link from 'next/link'
+
+const TITLE = 'Arete Academy · A Complete Formation in Stoic Philosophy'
+const DESCRIPTION =
+  'An AI-proctored school of Stoic philosophy: seminars in the primary texts with a Socratic proctor, Ancient Greek and Latin, and Stoic logic. Begin free with PHIL 701.'
+
+// Link previews for the landing page. LinkedIn ignores <title> without these
+// and picks a heading off the page instead.
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: { type: 'website', siteName: 'Arete Academy', url: '/', title: TITLE, description: DESCRIPTION },
+  twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION },
+}
 
 const CURRICULUM = [
   { code: 'PHIL 701', title: 'The Art of Living — Foundations',                 year: 'Year I'   },
