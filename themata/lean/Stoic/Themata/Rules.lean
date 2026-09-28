@@ -44,6 +44,10 @@ structure Rule where
   /-- Returns the arguments licensed by the given, already derived, arguments,
   in the order the rule reads them. Wrong shapes return `[]`. -/
   step : Params → List Argument → List Argument
+  /-- The rule states shared premises once (the merging cut). Such rules can
+  contract, so the relevance invariant in `Soundness.lean` is not claimed for
+  them. -/
+  merging : Bool := false
 
 /-- The thema a rule defines: `b` is licensed if some output of the step has
 `b`'s conclusion and, under the premise view, `b`'s premises. -/
@@ -162,7 +166,7 @@ theorem cutStep_params (userAr : Arity) (pos : Position) (merge : Bool) (P : Par
 
 def cut (userAr : Arity) (pos : Position) (merge : Bool) : Rule :=
   let shape := s!"cut[{userAr.label},{pos.label}{if merge then ",merge" else ""}]"
-  { name := shape, shape, step := cutStep userAr pos merge }
+  { name := shape, shape, step := cutStep userAr pos merge, merging := merge }
 
 /-! ## Candidates -/
 

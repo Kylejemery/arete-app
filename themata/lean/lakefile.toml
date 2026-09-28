@@ -3,3 +3,7 @@ defaultTargets = ["Stoic"]
 
 [[lean_lib]]
 name = "Stoic"
+
+[[lean_exe]]
+name = "harness"
+root = "Harness"

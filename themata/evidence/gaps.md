@@ -91,3 +91,11 @@ Recorded so their absence from `suite.yaml` is a decision, not an oversight.
 - **Arguments with changing premises** (μεταπίπτοντες). Epictetus, *Discourses* 1.7 (chunks `9284eb0a-c323-4b0d-8c3c-fbd5d1c04159`, `9cd234b8-a6ac-43ad-9f6b-620d1ab02c06`) and Zeller n.221 on conditionals that become false in time. These need time-indexed truth.
 - **Categorical and unmethodically concluding arguments.** Zeno's categorical syllogisms (Arnold, *Roman Stoicism* §83, chunk `f595350a-4842-4688-a065-bb762d4d8b1b`). The ἀμεθόδως περαίνοντες "A = B, B = C, ∴ A = C" (Zeller n.232, chunk `8075662c-a785-469e-8d7b-31e8a2d1dad2`), which the Stoics held to be valid but not syllogistic. The latter has the same test-suite role as S008 (valid, must not be derivable) but needs predicate structure.
 - **Sophisms with quantifier or term structure**: the Nobody (kept as S019 with a warning), the Veiled and Horned arguments, and the arguments at DL 7.186–187 (chunk `d105f03c-736e-4b41-9996-e66565c01686`).
+
+## Found by the Phase 4 harness (2026-09-28)
+
+- **No item needs the first thema.** `Attested` (third thema only) and
+  `Mates` (first and third) give identical results on every item under every
+  setting. The ledger holds no attested argument whose analysis requires
+  contraposition, so the suite cannot test the first thema. Sextus M VIII and
+  Alexander's worked analyses are the likely sources.

@@ -34,7 +34,7 @@ inductive Formula where
   | disj (p q : Formula)
   | cond (p q : Formula)
   | saidFalse (p : Formula)
-  deriving DecidableEq, Repr, Inhabited
+  deriving DecidableEq, Repr, Inhabited, Hashable
 
 namespace Formula
 

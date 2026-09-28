@@ -1,0 +1,157 @@
+import Std.Data.HashSet
+import Stoic.Soundness
+import Stoic.Harness.Suite
+
+/-!
+# Bounded proof search (Phase 4)
+
+Forward search for a derivation of one item, by one candidate, under one
+setting. It uses the candidates' own `Rule.step` functions, so it searches the
+system the proofs are about.
+
+**Bounds.** A search that fails proves nothing, and the matrix says so. The
+bounds are:
+
+* **Formulas**: every formula in a searched argument lies in the item's
+  *universe*: the subformulas of its premises, its conclusion and its
+  background theory, and their contradictories. A derivation that passes
+  through any other formula is not explored.
+* **Premises**: at most one more than the item has. Contraposition keeps the
+  premise count and plain cut never lowers it, so for candidates without the
+  merging cut this bound loses nothing. The merging cut can lower it, hence
+  the one spare.
+* **Depth**: rounds of rule application after the base cases.
+* **Size**: the search stops if it holds more than `maxSize` arguments, and
+  the result is marked truncated.
+
+**Premise views.** A derived argument stands for its whole view class, so the
+search stores each argument with its variants: all orderings under
+`multiset`, and all orderings of the premises without repeats under `set`
+(so intermediate arguments never carry a repeated premise under `set`; the
+goal is still matched with repeats allowed). The goal is matched under the
+view, exactly as `Derives.base` does.
+
+If the frontier empties before the depth runs out, the search `saturated`:
+nothing more is derivable within the formula and premise bounds. That is
+still not a proof of underivability, because the bounds are not proved
+complete.
+-/
+
+namespace Stoic.Harness
+
+open Formula
+
+def subformulas : Formula → List Formula
+  | f@(.atom _) => [f]
+  | f@(.neg p) | f@(.saidFalse p) => f :: subformulas p
+  | f@(.conj p q) | f@(.disj p q) | f@(.cond p q) => f :: (subformulas p ++ subformulas q)
+
+def formulaUniverse (m : Contradictory) (g : Argument) (T : Theory) : List Formula :=
+  let s := ((g.conclusion :: g.premises) ++ T).flatMap subformulas |>.eraseDups
+  (s ++ s.map (contradictory m)).eraseDups
+
+/-- Base instances whose major premise is in the universe, and Antipater's
+single-premise arguments from the theory when the policy admits them. -/
+def baseInstances (P : Params) (T : Theory) (W : List Formula) : List Argument :=
+  let m := P.contra
+  let ind := W.flatMap fun p => W.flatMap fun q =>
+    (if W.contains (cond p q) then
+      [⟨[cond p q, p], q⟩, ⟨[cond p q, contradictory m q], contradictory m p⟩] else []) ++
+    (if W.contains (neg (conj p q)) then
+      [⟨[neg (conj p q), p], contradictory m q⟩, ⟨[neg (conj p q), q], contradictory m p⟩] else []) ++
+    (if W.contains (disj p q) then
+      [⟨[disj p q, p], contradictory m q⟩, ⟨[disj p q, q], contradictory m p⟩,
+       ⟨[disj p q, contradictory m p], q⟩, ⟨[disj p q, contradictory m q], p⟩] else [])
+  let mono := if P.single == .antipater then
+      T.filterMap fun t => match t with
+        | .cond p q => some ⟨[p], q⟩
+        | _ => none
+    else []
+  ind ++ mono
+
+partial def perms : List Formula → List (List Formula)
+  | [] => [[]]
+  | xs => xs.eraseDups.flatMap fun x => (perms (xs.erase x)).map (x :: ·)
+
+def variants (v : PremiseView) (a : Argument) : List Argument :=
+  match v with
+  | .list => [a]
+  | .multiset => (perms a.premises).map (⟨·, a.conclusion⟩)
+  | .set => (perms a.premises.eraseDups).map (⟨·, a.conclusion⟩)
+
+def viewEq : PremiseView → List Formula → List Formula → Bool
+  | .list, xs, ys => xs == ys
+  | .multiset, xs, ys => xs.isPerm ys
+  | .set, xs, ys => xs.all ys.contains && ys.all xs.contains
+
+def goalMatches (P : Params) (g b : Argument) : Bool :=
+  b.conclusion == g.conclusion && viewEq P.view b.premises g.premises
+
+structure Bounds where
+  depth : Nat := 4
+  maxSize : Nat := 20000
+  deriving Repr
+
+inductive Outcome where
+  /-- Derived, at this depth (0: a base case). -/
+  | derived (depth : Nat)
+  /-- Not found. `saturated`: the frontier emptied within the bounds;
+  `truncated`: the size bound was hit. -/
+  | notFound (depth : Nat) (saturated truncated : Bool)
+  deriving Repr, BEq
+
+def search (P : Params) (T : Theory) (rules : List Rule) (g : Argument) (b : Bounds) : Outcome := Id.run do
+  let W := formulaUniverse P.contra g T
+  let Wset : Std.HashSet Formula := Std.HashSet.ofList W
+  let cap := g.premises.length + 1
+  let ok := fun (a : Argument) =>
+    a.premises.length ≤ cap && !a.premises.isEmpty &&
+      Wset.contains a.conclusion && a.premises.all Wset.contains
+  let mut known : Std.HashSet Argument := {}
+  let mut all : Array Argument := #[]
+  let mut frontier : Array Argument := #[]
+  for a in baseInstances P T W do
+    for x in variants P.view a do
+      if ok x && !known.contains x then
+        known := known.insert x
+        all := all.push x
+        frontier := frontier.push x
+  if all.any (goalMatches P g) then return .derived 0
+  for d in [1:b.depth + 1] do
+    let mut next : Array Argument := #[]
+    for r in rules do
+      let mut outs : Array Argument := #[]
+      for a in frontier do
+        outs := outs ++ (r.step P [a]).toArray
+        for c in all do
+          outs := outs ++ (r.step P [a, c]).toArray
+          outs := outs ++ (r.step P [c, a]).toArray
+      for o in outs do
+        for x in variants P.view o do
+          if ok x && !known.contains x then
+            known := known.insert x
+            next := next.push x
+    if next.any (goalMatches P g) then return .derived d
+    if next.isEmpty then return .notFound d true false
+    all := all ++ next
+    frontier := next
+    if all.size > b.maxSize then return .notFound d false true
+  return .notFound b.depth false false
+
+/-! ## Proofs of underivability the harness may cite -/
+
+/-- All valuations of the given atoms (others false), for `ev`. -/
+def valuations : List Nat → List (Nat → Bool)
+  | [] => [fun _ => false]
+  | n :: ns => (valuations ns).flatMap fun v =>
+      [fun k => if k = n then true else v k, fun k => if k = n then false else v k]
+
+/-- A Philonian countermodel that makes the theory and premises true and the
+conclusion false. By `underivable_of_countermodel`, no Phase 3 candidate
+derives the item under any setting. -/
+def countermodel? (i : Item) : Option (Nat → Bool) :=
+  let as := ((i.arg.conclusion :: i.arg.premises) ++ i.theory).flatMap Formula.atoms |>.eraseDups
+  (valuations as).find? fun v =>
+    i.theory.all (ev v) && i.arg.premises.all (ev v) && !ev v i.arg.conclusion
+
+end Stoic.Harness

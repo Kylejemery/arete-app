@@ -15,7 +15,7 @@ namespace Stoic
 structure Argument where
   premises : List Formula
   conclusion : Formula
-  deriving DecidableEq, Repr
+  deriving DecidableEq, Repr, Hashable
 
 /-- Premise lists that count as the same under a view. -/
 def PremiseView.Equiv : PremiseView → List Formula → List Formula → Prop
