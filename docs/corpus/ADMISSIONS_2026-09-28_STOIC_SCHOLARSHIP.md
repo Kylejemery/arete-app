@@ -88,7 +88,7 @@ The appendix on pragmatism and humanism (pp. 255–266) is left out: it occupies
 - `source_url` was null. It was set to https://archive.org/details/thefragmentsofze00zenouoft on 2026-09-28 by Kyle's decision (migration `20260928194250_pearson_fragments_source_url`). The rows do not record which copy they were ingested from; this is the only public-domain edition.
 - `text_type` was `primary`. All 321 rows were relabelled `scholarship` on 2026-09-28 (migration `20260928194836_pearson_fragments_scholarship_and_back_matter`). The ingest was a flat 400-word window, so Pearson's notes share chunks with the fragments they annotate. The English in those chunks is his commentary, and the Greek is untranslated.
 - The index (chunks 292–306) and Cambridge University Press's book catalogue (307–320) were deprecated in the same migration.
-- Still open: Pearson has no question-map registrations (Part 5, rule 4).
+- Question map: Pearson had no registrations. Three were added on 2026-09-28 (migration `20260928195417_pearson_fragments_question_map`): Q03 *states*, Q05 *complicates* (for Zeno the passions supervene on judgments rather than being judgments) and Q01 *states* (Cleanthes on providence).
 - Still open: a re-chunk that separates each fragment from its note would let the fragments be held as `primary` again.
 
 ## Rejected
