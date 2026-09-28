@@ -145,7 +145,7 @@ async function main() {
   for (const r of source.registrations || []) {
     await must(db().from('corpus_question_registrations').upsert({
       question_id: r.question_id, author: staged.author, work: staged.work, position: r.position, role: r.role,
-      note: `Registered at promotion of ${slug} (Long 2002, ch. 2 batch).`, source: 'manual',
+      note: `Registered at promotion of ${slug} (${staged.batch} batch).`, source: 'manual',
     }, { onConflict: 'question_id,author,work' }), 'register question');
   }
 

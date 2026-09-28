@@ -1,0 +1,17 @@
+{
+  "files": {
+    "stoicandepicurea002438mbp.txt": {
+      "url": "https://archive.org/details/stoicandepicurea002438mbp",
+      "retrieved_at": "2026-09-28T18:50:47+00:00",
+      "sha256": "fb977c6bce528eaf3c528788cb8bffa6952ff6f3bc94e80bb676819fca02e8da",
+      "bytes": 749605,
+      "extracted_from": {
+        "pdf": "stoicandepicurea002438mbp.pdf",
+        "sha256": "00dac8b99c0c6bf6d43b46eea19db9051ae4c3d5fc8c3af73e75a44296675229",
+        "bytes": 19835868,
+        "leaves": 444,
+        "tool": "pypdf 6.19.0"
+      }
+    }
+  }
+}

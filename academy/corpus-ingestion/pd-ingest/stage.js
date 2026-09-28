@@ -4,6 +4,7 @@
 //
 //   node pd-ingest/stage.js                     every source in the batch
 //   node pd-ingest/stage.js --slug <slug>       one source
+//   node pd-ingest/stage.js --batch <batch>     one batch (default: all)
 //   node pd-ingest/stage.js --dry-run           fetch and build, write nothing
 //   node pd-ingest/stage.js --inspect <slug>    fetch and print the page's
 //                                               markers (ids, classes, number
@@ -23,7 +24,7 @@
 // about the source and must not be logged as a skip.
 
 const { BATCH, SOURCES } = require('./sources');
-const { getCached, combinedSha256, FetchRefused, NetworkUnavailable } = require('./fetch');
+const { getCached, getLocal, combinedSha256, FetchRefused, NetworkUnavailable } = require('./fetch');
 const { build, PARSERS } = require('./build');
 
 const args = process.argv.slice(2);
@@ -32,11 +33,12 @@ const opt = (f) => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : nu
 
 function sourceRow(source, extra) {
   return {
-    slug: source.slug, batch: BATCH, tier: source.tier, author: source.author, work: source.work,
+    slug: source.slug, batch: source.batch || BATCH, tier: source.tier, author: source.author, work: source.work,
     language: source.language, translator: source.translator, edition: source.edition || null,
     edition_year: source.edition_year, text_type: source.text_type,
     license_status: source.license_status, quotable_on_air: !!source.quotable_on_air,
     source_url: source.sourceUrl || source.urls[0],
+    ...(source.citedBy ? { cited_by: source.citedBy } : {}),
     cleaning_notes: source.cleaningNote || null,
     ...extra,
   };
@@ -44,7 +46,7 @@ function sourceRow(source, extra) {
 
 function pendingReason(source) {
   if (source.pending) return source.pending;
-  if (!source.urls.length) return `not located yet: ${source.discover || 'no URL'}`;
+  if (!source.urls.length && !source.localFiles) return `not located yet: ${source.discover || 'no URL'}`;
   if (!PARSERS[source.parser]) return `parser "${source.parser}" not written`;
   if (source.parse && source.parse.patterns && source.parse.patterns.citeId === null) {
     return 'citation pattern not yet read off a real page: run --inspect and set parse.patterns.citeId';
@@ -55,6 +57,7 @@ function pendingReason(source) {
 }
 
 async function fetchAll(source) {
+  if (source.localFiles) return source.localFiles.map((name) => getLocal(source.slug, name));
   const files = [];
   for (const url of source.urls) files.push(await getCached(source.slug, url));
   return files;
@@ -113,8 +116,9 @@ function printInspect(source, files) {
 async function main() {
   const inspectSlug = opt('--inspect');
   const only = inspectSlug || opt('--slug');
+  const batch = opt('--batch');
   const dryRun = flag('--dry-run');
-  const selected = SOURCES.filter((s) => !only || s.slug === only);
+  const selected = SOURCES.filter((s) => (!only || s.slug === only) && (!batch || (s.batch || BATCH) === batch));
   if (!selected.length) throw new Error(`no source "${only}"`);
   // Translations before the originals aligned to them.
   selected.sort((a, b) => (a.parallelOf ? 1 : 0) - (b.parallelOf ? 1 : 0));

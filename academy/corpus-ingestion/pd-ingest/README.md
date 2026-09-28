@@ -72,3 +72,23 @@ ready (Plutarch ×2, DL Book VI), a citation pattern to read off the page with
 `--inspect` first (Gellius), not located yet (the archive.org scans), or a
 parser still to write (Oldfather's facing-page Loeb, the Academica
 chapter-to-section aligner).
+
+## Stoic scholarship batch (2026-09-28)
+
+`stoic-scholarship-2026-09`: Jackson 1881, Hicks 1910, Davidson 1907 and
+Bréhier 1910 (French), all Tier 2 scholarship from PDFs Kyle uploaded. This
+container cannot reach archive.org, so `extract-pdf.py` wrote each PDF's
+text layer to `data/raw/<slug>/`, which is committed; the PDF is kept by
+hash in the manifest, and sources read it through `localFiles` rather than
+`urls`. The scans open each page with a running head, so the ia-ocr parser
+strips it (`stripRunningHeads`), takes the printed page from the leaf
+number (`pageOffset`, checked against every legible head), and keeps chunks
+inside a chapter (`chapterBreak`). Admission tests:
+`docs/corpus/ADMISSIONS_2026-09-28_STOIC_SCHOLARSHIP.md`.
+
+```
+python3 pd-ingest/extract-pdf.py <slug> <pdf> <archive.org url>   # once per scan (pypdf)
+node pd-ingest/stage.js --batch stoic-scholarship-2026-09
+node pd-ingest/report.js --batch stoic-scholarship-2026-09
+```
+

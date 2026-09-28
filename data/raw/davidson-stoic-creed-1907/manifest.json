@@ -1,0 +1,17 @@
+{
+  "files": {
+    "thestoiccreed00daviuoft.txt": {
+      "url": "https://archive.org/details/thestoiccreed00daviuoft",
+      "retrieved_at": "2026-09-28T18:51:31+00:00",
+      "sha256": "ab61d6f87bbe50c04a8a66aaa239a98f4cd60b364f9a196a76efe66fc8aedf0b",
+      "bytes": 588392,
+      "extracted_from": {
+        "pdf": "thestoiccreed00daviuoft.pdf",
+        "sha256": "4be18fecddba5dbe519d0e2fad712b616cb73112ab08860eca6c8f7584244f31",
+        "bytes": 19174444,
+        "leaves": 312,
+        "tool": "pypdf 6.19.0"
+      }
+    }
+  }
+}

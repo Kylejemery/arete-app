@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // pd-ingest/report.js — the review report Kyle approves from.
 //
-//   node pd-ingest/report.js     writes docs/corpus/staging/long2002-ch2.md
+//   node pd-ingest/report.js                  writes docs/corpus/staging/long2002-ch2.md
+//   node pd-ingest/report.js --batch <batch>  writes docs/corpus/staging/<batch>.md
 //
 // Per staged source: word count, chunk count, three chunks chosen at random
 // (seeded by the slug, so the same three on every run of the same data),
@@ -16,7 +17,9 @@ const { BATCH, SOURCES } = require('./sources');
 const { pendingReason } = require('./stage');
 const { sample } = require('./lib');
 
-const OUT = path.resolve(__dirname, '../../../docs/corpus/staging/long2002-ch2.md');
+const args = process.argv.slice(2);
+const REPORT_BATCH = args.includes('--batch') ? args[args.indexOf('--batch') + 1] : BATCH;
+const OUT = path.resolve(__dirname, `../../../docs/corpus/staging/${REPORT_BATCH}.md`);
 
 function renderSource(src, def, chunks) {
   const body = chunks.filter((c) => c.kind === 'body');
@@ -51,10 +54,10 @@ function renderSource(src, def, chunks) {
 
 async function main() {
   const { db, must } = require('./db');
-  const staged = await must(db().from('corpus_staging_sources').select('*').eq('batch', BATCH).order('tier').order('slug'), 'read staging sources');
+  const staged = await must(db().from('corpus_staging_sources').select('*').eq('batch', REPORT_BATCH).order('tier').order('slug'), 'read staging sources');
   const bySlug = new Map(staged.map((s) => [s.slug, s]));
   const parts = [
-    `# Staging review: ${BATCH}`,
+    `# Staging review: ${REPORT_BATCH}`,
     '',
     `Generated ${new Date().toISOString()} by \`academy/corpus-ingestion/pd-ingest/report.js\`. Approve a source by setting its`,
     '`corpus_staging_sources.status` to `approved`; `node pd-ingest/promote.js --slug <slug>` then moves it into `rag_corpus`.',
@@ -74,7 +77,7 @@ async function main() {
   parts.push(...(skipped.length ? skipped.map((s) => `| \`${s.slug}\` | ${s.skip_reason} |`) : ['| — | none |']), '');
 
   parts.push('## Not yet attempted', '', '| Source | Why |', '| --- | --- |');
-  const pending = SOURCES.filter((d) => !bySlug.has(d.slug)).map((d) => [d.slug, pendingReason(d) || 'ready to stage: run stage.js']);
+  const pending = SOURCES.filter((d) => (d.batch || BATCH) === REPORT_BATCH && !bySlug.has(d.slug)).map((d) => [d.slug, pendingReason(d) || 'ready to stage: run stage.js']);
   parts.push(...(pending.length ? pending.map(([slug, why]) => `| \`${slug}\` | ${why} |`) : ['| — | none |']), '');
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true });

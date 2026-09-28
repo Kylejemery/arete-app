@@ -213,4 +213,70 @@ test('sources that cannot run yet say why', () => {
   assert.match(why('bonhoeffer-epictet-und-die-stoa-1890'), /not located/);
   assert.match(why('cicero-academica-yonge'), /Aligner not written/);
   assert.match(why('epictetus-discourses-oldfather-vol2-1928'), /facing-page/);
+  // A scan staged from a PDF's text layer has no URL to fetch and needs none.
+  assert.equal(why('hicks-stoic-and-epicurean-1910'), null);
+});
+
+// A scan whose pages open with a running head, as a PDF's text layer gives it.
+const scanSource = {
+  slug: 'test-scan', tier: 2, author: 'A', work: 'W', language: 'english', translator: 'original',
+  edition_year: 1900, text_type: 'scholarship', license_status: 'public_domain_us', urls: [],
+  parser: 'ia-ocr',
+  parse: { language: 'english', stripRunningHeads: true, pageOffset: 2, chapterBreak: /^CHAPTER [IVXL]+\.?$/ },
+};
+const scan = (leaves) => [file(leaves.join('\f'))];
+
+test('running heads come off, pages come from the leaf offset, OCR-mangled numbers do not matter', () => {
+  const r = build(scanSource, scan([
+    'TITLE PAGE',
+    '',
+    `CHAPTER I\nThe first page ${words(100, 'virtue')}`,
+    `2 STOIC AND EPICUREAN\nsecond page ${words(100, 'nature')}\n1`,
+    `EARLIER STOICS 3\nthird page ${words(100, 'reason')}`,
+    `i\n4 STOIC AND EPICUREAN\nfourth page ${words(100, 'logos')}\nCHRYSIPPE. 10`,
+    `EARLIER STOICS 5\nfifth page ${words(100, 'fate')}`,
+    `6 STOIC AND EPICUREAN\nsixth page ${words(100, 'pneuma')}`,
+    `EARLIER STOICS 7\nseventh page ${words(100, 'cosmos')}`,
+    `8 STOIC AND EPICUREAN\neighth page ${words(100, 'sage')}`,
+    `EARLIER STOICS 9\nninth page ${words(100, 'assent')}`,
+    `lo STOIC AND EPICUREAN\ntenth page ${words(100, 'impression')}`,
+  ]));
+  assert.equal(r.ok, true, r.reasons && r.reasons.join('; '));
+  const text = r.chunks.map((c) => c.chunk_text).join(' ');
+  assert.doesNotMatch(text, /STOIC AND EPICUREAN|EARLIER STOICS|CHRYSIPPE\. 10/);
+  assert.match(text, /CHAPTER I The first page/, 'a chapter heading is text, not a running head');
+  assert.doesNotMatch(text, /TITLE PAGE/, 'a leaf of under five words is a title leaf, not a page');
+  assert.equal(r.chunks[0].printed_pages.split('–')[0], '1');
+  assert.ok(r.chunks.some((c) => /tenth page/.test(c.chunk_text) && /10$/.test(c.printed_pages)), 'the misread "lo" is page 10 by offset');
+  assert.match(r.warnings.join(' '), /8 of 8 legible running-head numbers agree/);
+});
+
+test('a page offset the running heads contradict is refused', () => {
+  const leaves = Array.from({ length: 12 }, (_, i) => `HEAD ${i + 50}\npage ${words(80, 'text')}`);
+  const r = build(scanSource, scan(leaves));
+  assert.equal(r.ok, false);
+  assert.match(r.reasons.join(' '), /page offset 2 disagrees/);
+});
+
+test('page chunks never run from one chapter into the next', () => {
+  const r = build(scanSource, scan([
+    '', '',
+    `CHAPTER I\n${words(200, 'alpha')}`,
+    `2 HEAD\nend of the first chapter ${words(40, 'beta')}`,
+    `CHAPTER II\n${words(200, 'gamma')}`,
+  ]));
+  assert.equal(r.ok, true, r.reasons && r.reasons.join('; '));
+  const body = r.chunks.filter((c) => c.kind === 'body');
+  assert.ok(body.every((c) => !(/beta/.test(c.chunk_text) && /gamma/.test(c.chunk_text))));
+  assert.ok(body.some((c) => /alpha/.test(c.chunk_text) && /beta/.test(c.chunk_text)), 'a short chapter tail joins its own chapter');
+});
+
+test('garble estimate: quotes, footnote stars and hyphenated compounds are not garble; French has its own script', () => {
+  assert.equal(isGarbled('gods,"', 'english'), false);
+  assert.equal(isGarbled('being."*', 'english'), false);
+  assert.equal(isGarbled('self-seeking', 'english'), false);
+  assert.equal(isGarbled('se1f-seeking', 'english'), true);
+  assert.equal(isGarbled('représentation', 'french'), false);
+  assert.equal(isGarbled("l'âme", 'french'), false);
+  assert.equal(isGarbled('M£{i.îy.9«t', 'french'), true);
 });

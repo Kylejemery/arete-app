@@ -1,0 +1,17 @@
+{
+  "files": {
+    "SenecaAndKant.txt": {
+      "url": "https://archive.org/details/cu31924031229622",
+      "retrieved_at": "2026-09-28T18:50:40+00:00",
+      "sha256": "8b4422c66fb27716064dff521eeb340a76ddcebe0c728be04e9f231518170306",
+      "bytes": 102295,
+      "extracted_from": {
+        "pdf": "SenecaAndKant.pdf",
+        "sha256": "de02021d36268633d2ab5ebae749afeb7857349423e01364017e432df1eb4733",
+        "bytes": 1572174,
+        "leaves": 124,
+        "tool": "pypdf 6.19.0"
+      }
+    }
+  }
+}
