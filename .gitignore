@@ -65,3 +65,6 @@ academy/corpus-ingestion/source_texts/*.txt
 
 # Per-machine Claude Code local settings (may contain tokens) — never track
 .claude/settings.local.json
+
+# pd-ingest raw cache: HTML and text are committed, PDFs are kept by hash only
+data/raw/**/*.pdf
