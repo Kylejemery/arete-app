@@ -311,3 +311,14 @@
 .gridStacked .convo { height: 60vh; }
 .gridStacked .draftCol { height: 85vh; }
 .gridStacked .sidebar { max-height: 40vh; }
+
+/* A chapter Scribe proposed. Nothing is added until Kyle confirms here. */
+.proposal {
+  border: 0.5px dashed #afa9ec;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  background: #faf9ff;
+}
+.proposalActions { display: flex; gap: 8px; margin-top: 8px; }

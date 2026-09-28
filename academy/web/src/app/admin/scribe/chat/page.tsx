@@ -14,7 +14,7 @@ import type { BookInfo, DiffBase, Draft, Entry, Finding, Message, Review, Source
 import { withAttribution } from '@/lib/scribe/attribution'
 import { describeScopedTurn } from '@/lib/scribe/scoped-turns'
 import { countEditBlocks, stripEdits } from '@/lib/scribe/edits'
-import { describeCommandTurn, parseCommand, stripFindingsBlock } from '@/lib/scribe/book-draft'
+import { describeCommandTurn, parseCommand, stripFindingsBlock, type ChapterProposal } from '@/lib/scribe/book-draft'
 import type { Highlight } from '@/lib/scribe/prose'
 import type { DraftState } from '@/lib/scribe/provenance'
 import type { QuoteFinding } from './types'
@@ -118,6 +118,16 @@ export default function ScribeChatPage() {
   // The book this entry is a chapter of, or null for a standalone essay.
   const [book, setBook] = useState<BookInfo | null>(null)
   const [findings, setFindings] = useState<Finding[]>([])
+  // Chapters Scribe proposed this session, waiting on Kyle's confirmation.
+  // Not persisted: a reload drops them, and he can ask again.
+  const [proposals, setProposals] = useState<ChapterProposal[]>([])
+  const [addingProposal, setAddingProposal] = useState<number | null>(null)
+  // "Add to book": make the open conversation a chapter.
+  const [showAddToBook, setShowAddToBook] = useState(false)
+  const [bookChoices, setBookChoices] = useState<{ id: string; title: string; chapter_count: number }[] | null>(null)
+  const [pickBookId, setPickBookId] = useState('')
+  const [pickTitle, setPickTitle] = useState('')
+  const [attaching, setAttaching] = useState(false)
   const [checkingFacts, setCheckingFacts] = useState(false)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
@@ -257,6 +267,8 @@ export default function ScribeChatPage() {
     window.addEventListener('pointerup', onUp)
   }
   useEffect(() => { if (selectedId) loadEntry(selectedId) }, [selectedId, loadEntry])
+  // Proposals and the add panel belong to the conversation they were made in.
+  useEffect(() => { setProposals([]); setShowAddToBook(false) }, [selectedId])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -330,6 +342,9 @@ export default function ScribeChatPage() {
             setFindings(prev => [...v, ...prev.map(f => (f.status === 'open' && f.kind !== 'fact' ? { ...f, status: 'superseded' as const } : f))])
             if (v.length) setRightTab('findings')
             showToast(v.length ? `${v.length} finding${v.length === 1 ? '' : 's'} in the Findings tab` : 'No gaps found; the argument holds as far as Scribe can see')
+          } else if (ev.t === 'proposal') {
+            const v = ev.v as ChapterProposal
+            setProposals(prev => [...prev, v])
           } else if (ev.t === 'book') {
             const v = ev.v as { reindexed: boolean; summarized: boolean }
             if (v.summarized) showToast('Chapter summary and book index updated')
@@ -355,6 +370,61 @@ export default function ScribeChatPage() {
       setLiveDraft(null)
     }
   }, [loadEntry, loadEntries])
+
+  // Add a conversation (or a blank chapter) to a book, then reload so the
+  // chapter list and book mode pick it up.
+  async function addToBook(bookId: string, body: { entry_id?: string; title?: string }): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/admin/scribe/books/${bookId}/chapters`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(json.error || `Add failed (${res.status})`)
+      const c = json.chapter as { position: number; title: string } | undefined
+      showToast(c ? `Added as chapter ${c.position}, “${c.title}”` : 'Added to the book')
+      if (selectedId) await loadEntry(selectedId)
+      return true
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Add failed')
+      return false
+    }
+  }
+
+  async function openAddToBook() {
+    if (showAddToBook) { setShowAddToBook(false); return }
+    setShowAddToBook(true)
+    setPickTitle(entry?.title ?? '')
+    try {
+      const res = await fetch('/api/admin/scribe/books', { cache: 'no-store' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Failed to load books')
+      const list = (json.books ?? []) as { id: string; title: string; chapter_count: number }[]
+      setBookChoices(list)
+      setPickBookId(list[0]?.id ?? '')
+    } catch (e) {
+      setBookChoices([])
+      showToast(e instanceof Error ? e.message : 'Failed to load books')
+    }
+  }
+
+  async function attachToBook() {
+    if (!selectedId || !pickBookId) return
+    setAttaching(true)
+    const ok = await addToBook(pickBookId, { entry_id: selectedId, title: pickTitle.trim() || undefined })
+    setAttaching(false)
+    if (ok) setShowAddToBook(false)
+  }
+
+  async function confirmProposal(i: number) {
+    const p = proposals[i]
+    if (!p) return
+    setAddingProposal(i)
+    const ok = await addToBook(p.book_id, p.kind === 'attach' ? { entry_id: p.entry_id ?? undefined, title: p.title } : { title: p.title })
+    setAddingProposal(null)
+    if (ok) setProposals(prev => prev.filter((_, j) => j !== i))
+  }
 
   async function createEntry() {
     if (!newText.trim()) { showToast('Paste the journal fragment first'); return }
@@ -937,6 +1007,18 @@ export default function ScribeChatPage() {
             {book && chapterIndex >= 0
               ? `Chapter ${book.chapters[chapterIndex].position} of ${book.chapters.length}`
               : 'Conversation'}
+            {!book && selectedId && (
+              <span className={styles.headBtns}>
+                <button
+                  className={admin.ghostBtn}
+                  onClick={openAddToBook}
+                  disabled={streaming}
+                  title="Make this conversation, with its draft and history, the next chapter of a book"
+                >
+                  {showAddToBook ? 'Cancel' : 'Add to book'}
+                </button>
+              </span>
+            )}
             {book && (
               <span className={styles.headBtns}>
                 <button className={styles.railBtn} onClick={() => prevChapter && setSelectedId(prevChapter.entry_id)} disabled={!prevChapter || streaming} title={prevChapter ? `Previous: ${prevChapter.title}` : 'First chapter'}>‹</button>
@@ -944,6 +1026,40 @@ export default function ScribeChatPage() {
               </span>
             )}
           </div>
+          {showAddToBook && !book && (
+            <div className={styles.newEntry}>
+              {bookChoices === null ? (
+                <p className={styles.draftEmpty}>Loading books…</p>
+              ) : bookChoices.length === 0 ? (
+                <p className={styles.draftEmpty}>
+                  No books yet. Create one on the Book tab first.
+                </p>
+              ) : (
+                <>
+                  <select
+                    className={styles.newEntryTitle}
+                    value={pickBookId}
+                    onChange={e => setPickBookId(e.target.value)}
+                  >
+                    {bookChoices.map(b => (
+                      <option key={b.id} value={b.id}>
+                        {b.title} · {b.chapter_count} chapter{b.chapter_count === 1 ? '' : 's'}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className={styles.newEntryTitle}
+                    placeholder="Chapter title"
+                    value={pickTitle}
+                    onChange={e => setPickTitle(e.target.value)}
+                  />
+                  <button className={admin.primaryBtn} onClick={attachToBook} disabled={attaching || !pickBookId}>
+                    {attaching ? 'Adding…' : 'Add as the next chapter'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
           <div className={styles.paneBody} ref={threadRef}>
             {!selectedId && <p className={styles.draftEmpty}>Pick an entry or start a new one.</p>}
             <div className={styles.thread}>
@@ -979,6 +1095,22 @@ export default function ScribeChatPage() {
               {searchingQuery && (
                 <div className={styles.searchNote}>searching: “{searchingQuery}”</div>
               )}
+              {proposals.map((p, i) => (
+                <div key={`${p.book_id}:${p.kind}:${p.title}:${i}`} className={styles.proposal}>
+                  <div className={styles.msgRole}>Scribe proposes</div>
+                  {p.kind === 'attach'
+                    ? <>Add this conversation to <strong>{p.book_title}</strong> as chapter {p.position}, “{p.title}”.</>
+                    : <>Add a new blank chapter to <strong>{p.book_title}</strong>: chapter {p.position}, “{p.title}”.</>}
+                  <div className={styles.proposalActions}>
+                    <button className={admin.primaryBtn} onClick={() => confirmProposal(i)} disabled={addingProposal !== null || streaming}>
+                      {addingProposal === i ? 'Adding…' : 'Add chapter'}
+                    </button>
+                    <button className={admin.ghostBtn} onClick={() => setProposals(prev => prev.filter((_, j) => j !== i))} disabled={addingProposal === i}>
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              ))}
               {needsOpening && (
                 <button className={admin.ghostBtn} onClick={() => runTurn(selectedId!)}>
                   Scribe hasn&apos;t answered this turn — run it

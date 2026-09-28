@@ -16,6 +16,7 @@ import {
   afterChapterDraftChanged,
   bookTurnContext,
   historyForTurn,
+  proposeChapter,
   storeGapFindings,
 } from '@/lib/scribe/book-store'
 
@@ -58,6 +59,7 @@ async function fetchThread(admin: ReturnType<typeof createAdminClient>, entryId:
 //
 // Streams NDJSON events: {t:'text',v} | {t:'searching',v} | {t:'sources',v}
 // | {t:'draft',v} | {t:'findings',v} | {t:'book',v} | {t:'budget',v}
+// | {t:'proposal',v} (a chapter Scribe proposes; Kyle confirms it on a card)
 // | {t:'done',v:{messageId,snapshot}} | {t:'error',v}. The scribe message
 // (with this turn's sources_used) is persisted before 'done' fires, and a
 // conversational save intent (<snapshot stage="..."/>) snapshots to
@@ -196,6 +198,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             onText: v => emit('text', v),
             onSearching: v => emit('searching', v),
             onSources: (v: TurnSource[]) => emit('sources', v),
+            onProposal: v => emit('proposal', v),
           },
           voice,
           cabinetUserId,
@@ -203,6 +206,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           entryRow.gaps_mode === true,
           {
             book: book?.context ?? null,
+            proposeChapter: input => proposeChapter(admin, id, input),
             maxTokens: command?.name === 'rewrite' ? REWRITE_MAX_TOKENS : MAX_TOKENS,
           }
         )
