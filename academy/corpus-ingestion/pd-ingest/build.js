@@ -16,20 +16,22 @@ const PARSERS = {
 function parseFiles(source, files) {
   const parser = PARSERS[source.parser];
   if (!parser) throw new Error(`no parser "${source.parser}"`);
-  const out = { front: '', sections: [], notes: [], licenseEvidence: [], rawText: '', reasons: [], ocr: null };
+  const out = { front: '', sections: [], notes: [], licenseEvidence: [], rawText: '', reasons: [], warnings: [], ocr: null };
   for (const f of files) {
     const text = f.body.toString('utf8');
-    let r = parser.parse(text, source.parse || {});
-    if (source.leafRange && source.parser === 'ia-ocr') {
-      const [a, b] = source.leafRange;
-      r = { ...r, sections: r.sections.filter((s, i) => i + 1 >= a && i + 1 <= b) };
-    }
+    // leafRange counts scan leaves, blanks included, so the parser applies it
+    // before empty leaves drop out.
+    const options = source.parser === 'ia-ocr' && source.leafRange
+      ? { ...(source.parse || {}), leafRange: source.leafRange }
+      : (source.parse || {});
+    const r = parser.parse(text, options);
     out.front += r.front ? `${r.front}\n\n` : '';
     out.sections.push(...r.sections);
     out.notes.push(...(r.notes || []));
     out.licenseEvidence.push(...(r.licenseEvidence || []));
     out.rawText += `${r.rawText}\n`;
     out.reasons.push(...(r.reasons || []));
+    out.warnings.push(...(r.warnings || []));
     if (r.ocr) out.ocr = r.ocr;
   }
   out.licenseEvidence = [...new Set(out.licenseEvidence)];
@@ -72,12 +74,12 @@ function build(source, files, { translationChunks = null } = {}) {
   if (reasons.length) return { ok: false, reasons, parsed };
 
   let chunks;
-  let warnings = [];
+  let warnings = [...parsed.warnings];
   if (translationChunks) {
     chunks = groupByRanges(parsed.sections, translationChunks.map(rangeOf));
   } else {
     const r = chunkSections(parsed.sections);
-    warnings = r.warnings;
+    warnings.push(...r.warnings);
     chunks = r.chunks.map((c) => ({
       // Tier 2 has no canonical citation: the page is carried in printed_pages
       // and the label, and locator stays null (ACQUISITION_PLAN Part 5, rule 3).

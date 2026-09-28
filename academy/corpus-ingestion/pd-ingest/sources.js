@@ -26,6 +26,8 @@
 
 const BATCH = 'long2002-ch2';
 const PD_US = 'public_domain_us';
+const SCHOLARSHIP_BATCH = 'stoic-scholarship-2026-09';
+const SCHOLARSHIP_CITED_BY = ['Uploaded by Kyle, 2026-09-28'];
 
 const LC = 'https://penelope.uchicago.edu/Thayer';
 const moraliaCite = { citeId: /^\d{1,4}[A-F]$/ }; // Stephanus-style page+letter, never a bare note number
@@ -226,6 +228,88 @@ const SOURCES = [
     parser: 'ia-ocr', parse: { language: 'latin' },
     leafRange: null,
     cleaningNote: 'Textual scholarship; occupies no cell in the question map (admission test 3). Staged for Kyle\'s translation work; promotion is his call.',
+  },
+
+  // ---- Stoic scholarship, 1881–1910: from PDFs Kyle uploaded -------------
+  // Staged 2026-09-28 from archive.org scans pushed to the corpus-pdfs branch
+  // (this container cannot reach archive.org). extract-pdf.py wrote each
+  // PDF's text layer to data/raw/<slug>/; the PDF itself is kept by hash in
+  // the manifest. Admission tests: docs/corpus/ADMISSIONS_2026-09-28_STOIC_SCHOLARSHIP.md.
+  {
+    slug: 'jackson-seneca-and-kant-1881', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'W.T. Jackson', work: 'Seneca and Kant',
+    language: 'english', translator: 'original',
+    edition: 'Seneca and Kant; or, an Exposition of Stoic and Rationalistic Ethics, with a Comparison of the Two Systems. Dayton, Ohio: United Brethren Publishing House',
+    edition_year: 1881,
+    text_type: 'scholarship', quotable_on_air: false, license_status: PD_US,
+    urls: [], localFiles: ['SenecaAndKant.txt'],
+    sourceUrl: 'https://archive.org/details/cu31924031229622',
+    parser: 'ia-ocr',
+    parse: { language: 'english', stripRunningHeads: true, pageOffset: 8, chapterBreak: /^CHAPTER [IVXL]+\.?$/, runningHead: /^(\S{1,5} )?Sen\S{0,3} (and|una) \S{1,6}( \S{1,5})?$/ },
+    leafRange: [17, 111], // chapter I to the last page; preface, contents and index out
+    expect: ['Seneca and Kant'],
+    cleaningNote: 'Carries a Christian apologetic frame (admission test 7): the conclusion (pp. 101–103) judges Stoicism "in its inmost essence a system of selfishness" and "far below" the Gospel. Held as a critic, never as agreement.',
+    registrations: [
+      { question_id: 'Q04', role: 'attacks', position: 'Stoic and Kantian ethics agree that virtue is sought for itself and not for happiness, but the Stoic sage\'s self-sufficiency is pride: a system with no forgiveness, repentance or need of grace, and its licence of suicide concedes that virtue does not master every circumstance.' },
+      { question_id: 'Q06', role: 'complicates', position: 'Seneca grounds duty in life according to nature; Kant grounds it in the autonomous rational will and refuses any natural end as its source. Setting the two side by side shows the Stoic ought depending on a providential nature that Kant will not grant.' },
+    ],
+  },
+  {
+    slug: 'hicks-stoic-and-epicurean-1910', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'R.D. Hicks', work: 'Stoic and Epicurean',
+    language: 'english', translator: 'original',
+    edition: 'The Epochs of Philosophy, ed. J.G. Hibben. New York: Charles Scribner\'s Sons',
+    edition_year: 1910,
+    text_type: 'scholarship', quotable_on_air: false, license_status: PD_US,
+    urls: [], localFiles: ['stoicandepicurea002438mbp.txt'],
+    sourceUrl: 'https://archive.org/details/stoicandepicurea002438mbp',
+    parser: 'ia-ocr',
+    parse: { language: 'english', stripRunningHeads: true, pageOffset: 28, chapterBreak: /^CHAPTER [IVXL]+\.?$/, runningHead: /^STOIC AND EPICUREAN$/ },
+    leafRange: [31, 427], // chapter I (p. 3) to the end of the text; half-title, bibliography and index out
+    expect: ['Hicks'],
+    registrations: [
+      { question_id: 'Q01', role: 'states', position: 'Sets Stoic pantheism and providence, a rational fiery pneuma pervading one living cosmos, against Epicurean atomism, in which the world arises from the chance swerve of atoms and the gods take no part.' },
+      { question_id: 'Q03', role: 'complicates', position: 'Expounds the Stoic criterion, the apprehensive presentation, and then the Academic (Arcesilaus, Carneades) and Pyrrhonist attacks on it, so that the Stoic claim to certainty is read against its strongest ancient opponents.' },
+    ],
+  },
+  {
+    slug: 'davidson-stoic-creed-1907', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'W.L. Davidson', work: 'The Stoic Creed',
+    language: 'english', translator: 'original',
+    edition: 'Religion in Literature and Life. Edinburgh: T. & T. Clark',
+    edition_year: 1907,
+    text_type: 'scholarship', quotable_on_air: false, license_status: PD_US,
+    urls: [], localFiles: ['thestoiccreed00daviuoft.txt'],
+    sourceUrl: 'https://archive.org/details/thestoiccreed00daviuoft',
+    parser: 'ia-ocr',
+    parse: { language: 'english', stripRunningHeads: true, pageOffset: 28, chapterBreak: /^CHAPTER [IVXL]+\.?$/, runningHead: /^(\S(1, 4) )?THE STOIC CREED( \S{1,4})?$/ },
+    leafRange: [29, 282], // body, pp. 1–254; the appendix on pragmatism, index and publisher's lists out
+    expect: ['DAVIDSON'],
+    cleaningNote: 'Published in a religious series (T. & T. Clark, "Religion in Literature and Life"); the theology chapters read Stoicism with an eye to Christian theism (admission test 7). The appendix on pragmatism and humanism (pp. 255–266) is left out as off the question map.',
+    registrations: [
+      { question_id: 'Q04', role: 'states', position: 'A systematic exposition of Stoic ethics, living according to nature, virtue the sole good, externals indifferent, set against the Epicurean contrast and assessed for its present-day value.' },
+      { question_id: 'Q01', role: 'states', position: 'Stoic theology and religion: a providential, rational God immanent in the cosmos, with the Stoic treatment of divination, prayer and the problem of evil.' },
+    ],
+  },
+  {
+    slug: 'brehier-chrysippe-1910', batch: SCHOLARSHIP_BATCH, citedBy: SCHOLARSHIP_CITED_BY,
+    tier: 2, author: 'Émile Bréhier', work: 'Chrysippe',
+    language: 'french', translator: 'original',
+    edition: 'Les Grands Philosophes. Paris: Félix Alcan',
+    edition_year: 1910,
+    text_type: 'scholarship', quotable_on_air: false, license_status: PD_US,
+    urls: [], localFiles: ['chrysippe00br.txt'],
+    sourceUrl: 'https://archive.org/details/chrysippe00br',
+    parser: 'ia-ocr',
+    parse: { language: 'french', stripRunningHeads: true, pageOffset: 14, chapterBreak: /^(CHAPITRE [IVXLA-Z]+|CONCLUSION)\.?$/ },
+    leafRange: [15, 294], // introduction to conclusion; the index and table of contents out
+    expect: ['CHRYSIPPE'],
+    cleaningNote: 'In French and untranslated: it answers French-language retrieval only, and English queries filtered to english will not reach it. Greek quotations are OCR-garbled throughout (Latin-script renderings of Greek type).',
+    registrations: [
+      { question_id: 'Q03', role: 'states', position: 'Reads the comprehensive impression (phantasia kataleptike) as passive, against Brochard\'s active reading: certainty lies in the impression itself, with assent following it.' },
+      { question_id: 'Q07', role: 'states', position: 'Chrysippus\'s reconciliation of fate and responsibility (De fato 12–13 read with Diogenianus): the co-fated (confatalia) and the distinction of principal from concurrent causes, so that an event is necessary only through the antecedents it implies.' },
+      { question_id: 'Q05', role: 'states', position: 'The passion as a sickness of the soul: a judgment of reason gone excessive, not a separate irrational part, and its therapy by correcting the judgment.' },
+    ],
   },
 ];
 

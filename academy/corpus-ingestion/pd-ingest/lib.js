@@ -76,20 +76,26 @@ const SCRIPTS = {
   german: /^[A-Za-zÄÖÜäöüßſ]+$/,
   latin: /^[A-Za-zÆæŒœëïüāēīōūĀĒĪŌŪ]+$/,
   english: /^[A-Za-z]+$/,
+  french: /^[A-Za-zÀÂÆÇÉÈÊËÎÏÔŒÙÛÜŸàâæçéèêëîïôœùûüÿ'’]+$/,
   ancient_greek: /^[Ͱ-Ͽἀ-῿̀-ͯ’ʼ']+$/,
 };
 const VOWELS = {
   german: /[aeiouyäöü]/i,
   latin: /[aeiouyæœ]/i,
   english: /[aeiouy]/i,
+  french: /[aeiouyàâæéèêëîïôœùûüÿ]/i,
   ancient_greek: /[αεηιουωάέήίόύώὰὲὴὶὸὺὼᾶῆῖῦῶἀἐἠἰὀὐὠἁἑἡἱὁὑὡ]/i,
 };
 
 function isGarbled(token, language) {
-  const w = token.replace(/^[„“”"'‘’«»([{]+|[.,;:!?·’'”“»)\]}\-–—]+$/g, '');
+  // Quotation marks and footnote asterisks either side are punctuation, not
+  // OCR damage.
+  const w = token.replace(/^[„“”"'‘’«»([{]+|[.,;:!?·’'”“"»)\]}*\-–—]+$/g, '');
   if (w.length < 2) return false;
   if (/^\d+$/.test(w)) return false;
   const script = SCRIPTS[language] || SCRIPTS.english;
+  // A hyphenated compound ("self-seeking") is judged part by part.
+  if (w.includes('-') && !/^-|-$|--/.test(w)) return w.split('-').some((part) => isGarbled(part, language));
   if (!script.test(w)) return true;
   if (w.length > 3 && !(VOWELS[language] || VOWELS.english).test(w)) return true;
   if (/(.)\1\1/.test(w)) return true;

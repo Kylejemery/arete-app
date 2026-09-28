@@ -1,0 +1,17 @@
+{
+  "files": {
+    "chrysippe00br.txt": {
+      "url": "https://archive.org/details/chrysippe00br",
+      "retrieved_at": "2026-09-28T18:52:16+00:00",
+      "sha256": "63c0667473a42b6593382277fb35ef9b2f2aeaf71c52580b6a11dd59019252b9",
+      "bytes": 550612,
+      "extracted_from": {
+        "pdf": "chrysippe00br.pdf",
+        "sha256": "49122ccb3686b3a2dff8a46a8e53d0c434abe6d06c261310a3b7017d315c2b4b",
+        "bytes": 14832680,
+        "leaves": 316,
+        "tool": "pypdf 6.19.0"
+      }
+    }
+  }
+}

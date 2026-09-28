@@ -127,6 +127,22 @@ async function getCached(slug, url) {
   return { url, file, body: buf, sha256: hash, retrieved_at, cached: false };
 }
 
+// A file already in the raw cache that was not fetched: a PDF's text layer
+// written by extract-pdf.py, for a scan that reached us as a file. Read and
+// hash-checked like any cached fetch; the source hash is the PDF's, recorded
+// in the manifest, since the PDF is what a later check would compare.
+function getLocal(slug, name) {
+  const dir = path.join(RAW_ROOT, slug);
+  const entry = readManifest(dir).files[name];
+  const file = path.join(dir, name);
+  if (!entry || !fs.existsSync(file)) throw new Error(`${file}: not in the raw cache; run pd-ingest/extract-pdf.py first`);
+  const buf = fs.readFileSync(file);
+  const hash = sha256(buf);
+  if (hash !== entry.sha256) throw new Error(`${file}: sha256 ${hash} does not match manifest ${entry.sha256}`);
+  const origin = entry.extracted_from ? entry.extracted_from.sha256 : hash;
+  return { url: entry.url, file, body: buf, sha256: origin, retrieved_at: entry.retrieved_at, cached: true };
+}
+
 // One hash for a source built from several files: the hash of the ordered
 // per-file hashes, so any changed page changes it.
 function combinedSha256(fetched) {
@@ -134,6 +150,6 @@ function combinedSha256(fetched) {
 }
 
 module.exports = {
-  getCached, combinedSha256, robotsDisallows, fileNameFor,
+  getCached, getLocal, combinedSha256, robotsDisallows, fileNameFor,
   FetchRefused, NetworkUnavailable, HOSTS, RAW_ROOT, USER_AGENT,
 };
