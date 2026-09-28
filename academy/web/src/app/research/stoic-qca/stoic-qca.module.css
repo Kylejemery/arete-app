@@ -1,0 +1,69 @@
+/* Self-contained styles on the academy palette (tailwind.config.ts: navy,
+ * cream, gold). The academy is dark in every color scheme, so there is no
+ * light variant; color-scheme keeps the native selects dark to match. */
+.page {
+  --qca-fg: #F5EDD6;
+  --qca-muted: #7A8FA6;
+  --qca-bg: #0A1628;
+  --qca-surface: #111D30;
+  --qca-border: #1E3258;
+  --qca-accent: #C9A84C;
+  --qca-good: #7cc58a;
+  --qca-weak: #e3907d;
+  color-scheme: dark;
+  color: var(--qca-fg);
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 3rem 1.25rem 5rem;
+}
+.header { margin-bottom: 2.5rem; max-width: 42rem; }
+.kicker { text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.75rem; color: var(--qca-accent); margin: 0 0 0.75rem; }
+.header h1 { font-family: var(--font-playfair), Georgia, serif; font-weight: 400; font-size: clamp(2rem, 5vw, 3rem); line-height: 1.1; margin: 0 0 0.75rem; }
+.dek { font-size: 1.15rem; color: var(--qca-muted); margin: 0; }
+.prose { max-width: 42rem; line-height: 1.7; font-size: 1.05rem; }
+.prose h2, .lab h2 { font-family: var(--font-playfair), Georgia, serif; font-weight: 400; color: var(--qca-accent); font-size: 1.5rem; margin: 2.5rem 0 0.75rem; }
+.prose p { margin: 0 0 1rem; }
+.anchors { margin: 0 0 1.5rem; }
+.anchors > div { padding: 0.75rem 0; border-bottom: 1px solid var(--qca-border); }
+.anchors dt { font-weight: 600; }
+.anchors dt code { font-size: 0.85em; background: var(--qca-surface); padding: 0.1em 0.4em; border-radius: 4px; margin-right: 0.35em; }
+.anchors dd { margin: 0.25rem 0 0; color: var(--qca-muted); font-size: 0.95rem; }
+.lab { margin: 1rem 0 2rem; }
+.help { color: var(--qca-muted); font-size: 0.9rem; line-height: 1.5; margin: 0.25rem 0 0.75rem; }
+.editedNote { background: var(--qca-surface); border-left: 3px solid var(--qca-accent); padding: 0.5rem 0.75rem; font-size: 0.9rem; }
+.linkButton { background: none; border: none; color: var(--qca-accent); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }
+.scroll { overflow-x: auto; border: 1px solid var(--qca-border); border-radius: 8px; }
+.table { border-collapse: collapse; width: 100%; font-size: 0.9rem; }
+.table th, .table td { padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--qca-border); text-align: left; vertical-align: top; }
+.table thead th { background: var(--qca-surface); font-size: 0.75rem; letter-spacing: 0.06em; white-space: nowrap; }
+.sticky { position: sticky; left: 0; background: var(--qca-bg); z-index: 1; min-width: 10rem; }
+.table thead .sticky { background: var(--qca-surface); }
+.outcomeCol { background: color-mix(in srgb, var(--qca-accent) 8%, transparent); }
+.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.caseList { min-width: 14rem; }
+.caseButton { background: none; border: none; padding: 0; font: inherit; font-weight: 600; color: var(--qca-fg); cursor: pointer; text-align: left; text-decoration: underline dotted; text-underline-offset: 3px; }
+.period { color: var(--qca-muted); font-size: 0.75rem; font-weight: 400; }
+.scoreSelect { font: inherit; font-variant-numeric: tabular-nums; background: transparent; color: var(--qca-fg); border: 1px solid var(--qca-border); border-radius: 4px; padding: 0.15rem 0.2rem; }
+.changed { border-color: var(--qca-accent); box-shadow: 0 0 0 1px var(--qca-accent); }
+.detailRow td { background: var(--qca-surface); font-size: 0.9rem; line-height: 1.55; }
+.detailRow p { margin: 0 0 0.5rem; max-width: 48rem; }
+.flags { color: var(--qca-muted); font-size: 0.85rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.95rem; }
+.controls select { font: inherit; margin-left: 0.25rem; }
+.toggle { display: inline-flex; gap: 0.4rem; align-items: center; }
+.rowOut td { color: var(--qca-muted); }
+.good { color: var(--qca-good); font-weight: 600; }
+.weak { color: var(--qca-weak); }
+.files { padding-left: 1.1rem; }
+.files a { color: var(--qca-accent); }
+.fileKind { font-size: 0.75rem; color: var(--qca-muted); border: 1px solid var(--qca-border); border-radius: 999px; padding: 0.05rem 0.5rem; margin-left: 0.35rem; }
+.plotWrap { max-width: 26rem; }
+.plot { width: 100%; height: auto; display: block; }
+.plotFrame { fill: none; stroke: var(--qca-border); }
+.plotBelow { fill: color-mix(in srgb, var(--qca-weak) 10%, transparent); }
+.plotDiag { stroke: var(--qca-muted); stroke-dasharray: 4 4; }
+.plotTick { font-size: 10px; fill: var(--qca-muted); }
+.plotAxis { font-size: 11px; fill: var(--qca-fg); font-weight: 600; }
+.dot { fill: var(--qca-accent); fill-opacity: 0.85; cursor: pointer; }
+.dotBreak { fill: var(--qca-weak); cursor: pointer; }
+.plotCaption { font-size: 0.85rem; color: var(--qca-muted); min-height: 1.4em; margin: 0.25rem 0 0; }

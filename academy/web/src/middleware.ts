@@ -16,12 +16,15 @@ import type { NextRequest } from 'next/server'
 // The Playground (/playground/*) is public for the same reason — an open
 // workshop of essays and the situations game — and its discussion API
 // (/api/playground/*) writes only via the service role, server-side.
+// Research (/research/*) is public working papers: the page and its
+// downloadable data files under public/research/, which the matcher below
+// would otherwise send to /login.
 // Password-reset surfaces are public: /forgot-password requests the email,
 // /auth/callback exchanges the emailed ?code= for a recovery session (PKCE),
 // /auth/confirm covers the token_hash variant, and /reset-password lets the
 // user set a new password (guarded by that session).
 const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
-const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/api/playground/']
+const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/api/playground/', '/research/']
 
 // The Playground opens one piece at a time. Only the slugs below are
 // reachable; every other /playground path — the index included — 404s, so an
