@@ -17,6 +17,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { spokenCitation } = require('../lib/spoken-citation');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ const TOOLS = [
   {
     name: 'search_corpus',
     description:
-      'Semantic search over the Arete corpus: Stoic primary texts (Epictetus, Marcus Aurelius, Seneca, Musonius Rufus and others) plus related sources. Returns the most relevant passages with author, work, section, and chunk id (the rag_corpus row id) for citation. Query with a philosophical idea or question, not keywords.',
+      'Semantic search over the Arete corpus: Stoic primary texts (Epictetus, Marcus Aurelius, Seneca, Musonius Rufus and others) plus related sources. Returns the most relevant passages with author, work, section, translator, chunk id (the rag_corpus row id), a spoken citation, and quotable_on_air (true only for public-domain primary text that may be quoted verbatim on air). Query with a philosophical idea or question, not keywords.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -87,10 +88,40 @@ async function searchCorpus({ query, author, k }) {
   });
   if (error) throw new Error(`retrieval failed: ${error.message}`);
   if (!data || !data.length) return 'No relevant passages found in the corpus for this query.';
-  return data
+  return formatResults(data, await provenanceById(data.map((r) => r.id)));
+}
+
+// match_rag_corpus returns a fixed column set tuned for its HNSW routing, so
+// the provenance an external agent needs (above all quotable_on_air, which
+// the Examiner quotes by) is read in a second query by id rather than by
+// widening the RPC. A failed lookup degrades to quotable_on_air: false.
+async function provenanceById(ids) {
+  const { data, error } = await db()
+    .from('rag_corpus')
+    .select('id, locator, translator, edition_year, quotable_on_air')
+    .in('id', ids);
+  if (error) {
+    console.error('[corpus-mcp] provenance lookup failed:', error.message);
+    return new Map();
+  }
+  return new Map((data || []).map((r) => [r.id, r]));
+}
+
+function formatResults(rows, provenance) {
+  return rows
     .map((row, i) => {
-      const where = [row.work, row.section_label].filter(Boolean).join(', ');
-      return `[${i + 1}] ${row.author}${where ? ` — ${where}` : ''} (similarity ${row.similarity.toFixed(2)}; chunk ${row.id})\n${row.chunk_text}`;
+      const p = provenance.get(row.id) || {};
+      const where = [row.work, p.locator || row.section_label].filter(Boolean).join(', ');
+      const tr = p.translator && p.translator !== 'original'
+        ? ` (tr. ${p.translator}${p.edition_year ? `, ${p.edition_year}` : ''})`
+        : '';
+      const spoken = spokenCitation({ author: row.author, work: row.work, locator: p.locator });
+      return [
+        `[${i + 1}] ${row.author}${where ? ` — ${where}` : ''}${tr} (similarity ${row.similarity.toFixed(2)}; chunk ${row.id})`,
+        `quotable_on_air: ${p.quotable_on_air === true}`,
+        `spoken: "${spoken}"`,
+        row.chunk_text,
+      ].join('\n');
     })
     .join('\n\n');
 }
@@ -182,4 +213,4 @@ router.post('/mcp/corpus', async (req, res) => {
 // SSE stream to refuse GET with 405.
 router.get('/mcp/corpus', (_req, res) => res.status(405).end());
 
-module.exports = { router };
+module.exports = { router, formatResults };

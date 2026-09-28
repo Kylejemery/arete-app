@@ -1,0 +1,74 @@
+# pd-ingest: public domain sources through staging
+
+The path for verbatim public domain texts that carry licensing metadata and
+must be reviewed before they reach the corpus. Built for the Long 2002, ch. 2
+batch (`docs/corpus/PUBLIC_DOMAIN_INGESTION_PROPOSAL.md`). It writes to
+`corpus_staging_sources` / `corpus_staging_chunks` and only `promote.js`
+writes `rag_corpus`, one approved source at a time. It does not replace the
+nightly agent, which stays the path for queued Gutenberg texts that need no
+review gate.
+
+```
+fetch (once, cached)  →  parse  →  structure check  →  chunk by citation  →  staging
+                                                                               │
+                              review report  ←─────────────────────────────────┘
+                                   │  Kyle sets status = 'approved'
+                                   ▼
+                     promote: embed → rag_corpus → pair → deprecate superseded
+                              → question map → retrievability probe
+```
+
+## Commands
+
+Run from `academy/corpus-ingestion/`, with `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` and (for promotion) `OPENAI_API_KEY` in `.env`.
+
+```
+node pd-ingest/stage.js --inspect <slug>   # fetch and print the page's markers
+node pd-ingest/stage.js --dry-run          # fetch, parse and chunk; write nothing
+node pd-ingest/stage.js [--slug <slug>]    # stage (never writes rag_corpus)
+node pd-ingest/report.js                   # docs/corpus/staging/long2002-ch2.md
+node pd-ingest/promote.js --slug <slug>    # approved → rag_corpus
+node pd-ingest/acceptance.js               # the spec's two retrieval tests
+node --test pd-ingest/test/*.test.js       # offline tests
+```
+
+## Rules it enforces
+
+- **Fetch once.** `data/raw/<slug>/` holds every fetched file and a
+  `manifest.json` of url, time and sha256; a re-run reads the cache and
+  checks the hash. HTML and text are committed so a fresh container does not
+  refetch; PDFs are gitignored and kept by hash only.
+- **Politeness.** Host allowlist (LacusCurtius, archive.org, Wikisource,
+  Perseus, Gutenberg, The Latin Library; nothing behind a login), robots.txt
+  obeyed, a descriptive user agent, four seconds between LacusCurtius
+  requests.
+- **Structure before rows.** A parse that recognises no citations, leaves
+  more than 5% of the words before the first citation, repeats or disorders
+  citations, averages too many words per citation, or does not name the
+  expected translator is refused with its reasons and the page's markers.
+  The fix is the parser configuration in `sources.js`, never an ingest to
+  deprecate later.
+- **Citation chunks.** Whole sections grouped to about 350 words, never split,
+  never across a discourse, essay, chapter or life. Tier 2 is chunked by
+  printed page with `locator` null.
+- **Notes.** A translator's note leaves the body and is staged as its own
+  chunk linked to the passage that calls it; promoted as author = translator,
+  work "Notes to …", `scholarship`, never quotable, `parent_chunks` = passage.
+- **Parallels.** An original is chunked to its translation's ranges and
+  paired through `paired_chunk_id`. Originals carry a "(Latin)" / "(Greek)"
+  work suffix because the unique key is (author, work, program, chunk_index).
+- **Supersession.** The superseded rows are deprecated after the new rows are
+  in, never before, and never deleted.
+- **Poor OCR stays out.** A source with `ocr_quality = 'poor'` cannot be
+  promoted until it is reviewed and its quality re-recorded.
+
+## State of the batch (2026-09-28)
+
+Nothing has been fetched: the session that wrote this had no route to any
+source host. The parsers are therefore untested against real markup, and
+their fixtures are synthetic. `stage.js` reports each source as one of:
+ready (Plutarch ×2, DL Book VI), a citation pattern to read off the page with
+`--inspect` first (Gellius), not located yet (the archive.org scans), or a
+parser still to write (Oldfather's facing-page Loeb, the Academica
+chapter-to-section aligner).

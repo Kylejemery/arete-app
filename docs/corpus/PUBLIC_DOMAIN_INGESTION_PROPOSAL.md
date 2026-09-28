@@ -2,18 +2,24 @@
 
 Date: 2026-09-26. Branch `claude/arete-public-domain-ingestion-dixemk`.
 
-**Status: stopped for approval. Nothing is applied, fetched, or ingested.**
+**Status (2026-09-28): approved by Kyle 2026-09-26; schema applied; fetching
+blocked by the session network.** This document was the proposal. What was
+done with it:
 
-The spec says that if the schema has no fields for its required metadata, the
-migration is proposed and work stops until Kyle approves it. The schema has no
-such fields, so this document is that proposal. It follows the pattern of
-`MODERN_LAYER_PROPOSAL.md`: the SQL below is not in `supabase/migrations/`
-yet, because a committed file with no applied migration beside it is exactly
-the drift that `repo.migration_drift` reports. On approval, the SQL is copied
-into a timestamped migration, applied with the migration tool, and checked by
-query, all in one session.
+| Step | State |
+| --- | --- |
+| Migration in §3 | Applied as written: `20260926183311_public_domain_provenance_and_staging.sql`. Verified: 9 columns, 4 constraints, 3 tables. |
+| Decision 7, Hicks Book VII backfill | Applied: `20260928143558_dl_book7_hicks_licensing_backfill.sql`. 87 live rows `public_domain_us`, `quotable_on_air` true; 7.121 is in `7.121–7.123`. `license_evidence` is the edition reasoning until Wikisource's own notice can be read. |
+| Tier 3 bibliography | Applied: `20260928143957_long2002_ch2_bibliography.sql`. 31 records, author and year; titles only for the three Tier 2 works (from the spec). The rest is blank for Kyle to fill. |
+| MCP exposure (§5) | `server/routes/corpus-mcp.js` prints translator, locator, `quotable_on_air` and a spoken citation (`server/lib/spoken-citation.js`). |
+| Pipeline (§4) | `academy/corpus-ingestion/pd-ingest/`. Decisions 2 to 6 are encoded in `sources.js`. Untested against live markup: see its README. |
+| Fetch, stage, review, promote | Not started. No route to any source host from this session. |
 
-Section 7 lists the decisions I need from you.
+Decisions of 2026-09-26: (1) migration approved; (2) `Discourses (tr.
+Oldfather)`; (3) Schenkl's Greek not quotable on air; (4) *On the Education
+of Children* credited to Plutarch; (5) re-chunk the *Academica* with
+locators and deprecate the current rows; (6) deprecate Yonge's Book VI once
+Hicks's is in; (7) backfill Hicks Book VII.
 
 ---
 
@@ -104,7 +110,7 @@ unchanged.
 
 ---
 
-## 3. Proposed migration (not applied)
+## 3. Migration (applied 2026-09-26 as `20260926183311_public_domain_provenance_and_staging.sql`)
 
 ```sql
 -- supabase/migrations/<ts>_public_domain_provenance_and_staging.sql
