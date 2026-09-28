@@ -257,9 +257,11 @@ kind of citation, from `research_sources`:
   authenticated have no grants, so only the service role can read it. There
   is no embedding column. Nothing in it is retrievable by any agent, and no
   part of it is committed to git.
-- **Adding a text.** `scripts/research-sources/add.mjs` (usage at its top),
-  run by Kyle with the service-role key. It refuses a text already stored
-  (same sha256).
+- **Adding a text.** The academy admin page `/admin/research` (plain text up
+  to 4 MB), or `scripts/research-sources/add.mjs` (usage at its top) run
+  with the service-role key for anything larger. Both normalise the text the
+  same way and refuse a text already stored (same sha256). The page also
+  settles a source's licence, deprecates it, and verifies a quotation.
 - **Citing.** An entry records the source id, a locator, and the shortest
   quotation that carries the form. The quotation is verified with
   `research_source_contains(id, passage)`, the same whitespace-collapsed

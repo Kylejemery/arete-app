@@ -31,6 +31,7 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
       { href: '/admin/corpus-agent', label: 'Corpus Agent' },
       { href: '/admin/corpus', label: 'Ingestion' },
       { href: '/admin/papers', label: 'Papers' },
+      { href: '/admin/research', label: 'Research' },
       { href: '/admin/gap-agent', label: 'Coverage Gap' },
     ],
   },
