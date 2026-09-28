@@ -33,6 +33,7 @@ export const MAX_TOKENS = 16000
 // Search iterations per turn. Enough for a support + counterposition pass and
 // a follow-up; a runaway loop stops here.
 const MAX_TOOL_ROUNDS = 6
+const HOUR_CACHE = { type: 'ephemeral', ttl: '1h' } as const
 const SEARCH_K = 6
 const SIMILARITY_FLOOR = 0.25
 
@@ -493,20 +494,34 @@ export async function runScribeTurn(
   gapsMode = false,
   opts: TurnOptions = {}
 ): Promise<{ text: string; sources: TurnSource[] }> {
+  // Every message goes out as a text block, so a message renders the same
+  // whether or not it carries this turn's cache breakpoint.
   const messages: Anthropic.MessageParam[] = history.map((m, i) => ({
     role: m.role === 'scribe' ? 'assistant' : 'user',
-    content:
-      i === history.length - 1 && m.role === 'user' ? withWorkingDraft(m.content, workingDraft) : m.content,
+    content: [{
+      type: 'text',
+      text: i === history.length - 1 && m.role === 'user' ? withWorkingDraft(m.content, workingDraft) : m.content,
+    }],
   }))
+  // The conversation before Kyle's latest message is byte-stable from turn to
+  // turn (the working draft rides only on the latest message), so it gets a
+  // breakpoint of its own and the next turn reads it back. Turns are often
+  // more than five minutes apart, hence the hour.
+  const priorTurn = messages[messages.length - 2]
+  if (priorTurn && Array.isArray(priorTurn.content)) {
+    const block = priorTurn.content[priorTurn.content.length - 1] as Anthropic.TextBlockParam
+    block.cache_control = HOUR_CACHE
+  }
 
   const book = opts.book ?? null
   // The system prompt is stable across a session and the book brief across
   // turns until a summary changes, so each is its own cache breakpoint. The
-  // history and the working draft follow and are what varies.
+  // history and the working draft follow and are what varies. An hour, like
+  // the history breakpoint: a longer TTL may not follow a shorter one.
   const system: Anthropic.TextBlockParam[] = [
-    { type: 'text', text: buildSystem(voice, gapsMode, !!book), cache_control: { type: 'ephemeral' } },
+    { type: 'text', text: buildSystem(voice, gapsMode, !!book), cache_control: HOUR_CACHE },
   ]
-  if (book) system.push({ type: 'text', text: book.brief, cache_control: { type: 'ephemeral' } })
+  if (book) system.push({ type: 'text', text: book.brief, cache_control: HOUR_CACHE })
   const tools: Anthropic.Tool[] = [SEARCH_TOOL, JOURNAL_TOOL]
   if (cabinetUserId) tools.push(CABINET_TOOL)
   if (book) tools.push(SEARCH_BOOK_TOOL, READ_CHAPTER_TOOL)
@@ -523,6 +538,9 @@ export async function runScribeTurn(
       output_config: { effort: CHAT_EFFORT },
       system,
       messages,
+      // Automatic breakpoint on the last block: each search round reads the
+      // round before it, so the thread is not re-billed per round.
+      cache_control: { type: 'ephemeral' },
       // On the final permitted round withhold the tools so the model must
       // finish the turn with what it has retrieved.
       ...(lastRound ? {} : { tools }),
@@ -534,6 +552,11 @@ export async function runScribeTurn(
     })
 
     const response = await stream.finalMessage()
+    const u = response.usage
+    console.log(
+      `[scribe] round ${round}: ${u.input_tokens} in, ${u.cache_read_input_tokens ?? 0} cache read, ` +
+        `${u.cache_creation_input_tokens ?? 0} cache write, ${u.output_tokens} out`
+    )
 
     if (response.stop_reason !== 'tool_use') {
       return { text: fullText, sources: turnSources }
