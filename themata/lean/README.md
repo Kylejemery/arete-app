@@ -23,6 +23,8 @@ and every `#guard` evaluated to true. A failing guard fails the build.
 | `Stoic/Themata/Tests.lean` | one-step checks of each rule, and soundness of every shape on the base cases |
 | `Stoic/Themata/Log.lean` | prints `../results/candidates.md` (not part of the build) |
 | `Stoic/Soundness.lean` | the proofs the harness cites for "proven underivable": soundness (Philonian countermodels), the two-premise invariant, the relevance invariant |
+| `Stoic/Sugihara.lean` | soundness in the Sugihara model of the relevance logic RM: proves S008 and S016 underivable under every setting; Chrysippus's policy drops the theory |
+| `Stoic/Undergeneration.lean` | proofs that some candidates fail on valid items: Gödel G₃ semantics under `negate`, and the two-premise invariant without cut |
 | `Stoic/Harness/Suite.lean` | the formal suite as the harness runs it |
 | `Stoic/Harness/Search.lean` | bounded forward proof search, and countermodel search |
 | `Stoic/Harness/Matrix.lean` | candidates × settings × items, and the rendering of `../results/matrix.md` |

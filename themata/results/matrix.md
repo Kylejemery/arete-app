@@ -6,75 +6,76 @@ Search bounds: depth 8, at most 20000 arguments, formulas within each item's sub
 
 66 candidates × 12 derivation settings × 17 formal items (792 candidate-settings). S017 and S019 are `non_formal` and not run.
 
-Cells: `D`n derived at depth n as required · `OVER`n derived but rejected by the ledger · `UNDER` required but not found within the depth · `■cm` proven underivable by a Philonian countermodel · `■2p` proven underivable, fewer than two premises under Chrysippus's policy · `■rel` proven underivable, an atom in exactly one place and no merging cut · `■base` proven underivable, base cases only · `·` rejected as required but only not found within the depth (`s`: search saturated, `t`: truncated).
+Cells: `D`n derived at depth n as required · `OVER`n derived but rejected by the ledger · `UNDER` required but not found within the depth · `■cm` proven underivable by a Philonian countermodel · `■rm` proven underivable by a Sugihara (relevance) countermodel · `■2p` proven underivable, fewer than two premises under Chrysippus's policy · `■rel` proven underivable, an atom in exactly one place and no merging cut · `■base` proven underivable, base cases only · `·` rejected as required but only not found within the depth (`s`: search saturated, `t`: truncated).
 
 ## Summary
 
 - Candidate-settings that fit (no `OVER`, no `UNDER`): **188** of 792.
-- Of those, fits with every rejection proven: **0**.
+- Of those, fits with every rejection proven: **188**.
+- Candidate-settings that do not fit: 604. Proven not to fit (an exhibited `OVER` or a proven `UNDER■`): **544**. The rest fail only on search-bounded `UNDER` cells.
 - Candidates that fit under at least one setting: **59** of 66.
 
 | Candidate | Settings where it fits | Proven fits |
 | --- | --- | --- |
-| Attested | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| Mates | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| Mates + dialectical theorem | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| no first + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| no first + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| no first + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| no first + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| no first + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| no first + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| no first + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| no first + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[any,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[any,first,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[two,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[two,first,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[either,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[any,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[two,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[minor,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 0 |
-| contrapose[major,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 0 |
+| Attested | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| Mates | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| Mates + dialectical theorem | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| no first + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| no first + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| no first + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| no first + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| no first + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| no first + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| no first + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| no first + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,any] + cut[any,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[either,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,any] + cut[any,first,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[either,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,any] + cut[two,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[either,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,any] + cut[two,first,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[either,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[either,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[either,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[either,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[either,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[either,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,any] + cut[any,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[minor,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,any] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,any] + cut[two,any,merge] | chrysippus/toggle/list, chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/list, antipater/toggle/multiset, antipater/toggle/set | 6 |
+| contrapose[minor,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,any] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[minor,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[minor,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,any] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,any] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,any] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,any] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,any] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,any] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,any] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,any] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,two] + cut[any,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,two] + cut[any,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,two] + cut[any,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,two] + cut[any,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,two] + cut[two,any,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,two] + cut[two,any] | chrysippus/toggle/set, antipater/toggle/set | 2 |
+| contrapose[major,two] + cut[two,first,merge] | chrysippus/toggle/multiset, chrysippus/toggle/set, antipater/toggle/multiset, antipater/toggle/set | 4 |
+| contrapose[major,two] + cut[two,first] | chrysippus/toggle/set, antipater/toggle/set | 2 |
 
 ## Where each item fails
 
@@ -106,123 +107,133 @@ Candidate-settings with an `OVER` or `UNDER` on the item, out of all candidate-s
 
 | # | Setting | S001 | S002 | S003 | S004 | S005 | S006 | S007 | S008 | S009 | S010 | S011 | S012 | S013 | S014 | S015 | S016 | S018 | Fits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 | no |
-| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | D1 | yes |
-| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | UNDER | no |
-| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | D1 | no |
-| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | D1 | yes |
-| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
+| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER | no |
+| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 | no |
+| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 | yes |
+| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER | no |
+| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | D1 | no |
+| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | D1 | yes |
+| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
 
 ### Mates
 
 | # | Setting | S001 | S002 | S003 | S004 | S005 | S006 | S007 | S008 | S009 | S010 | S011 | S012 | S013 | S014 | S015 | S016 | S018 | Fits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 | no |
-| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | D1 | yes |
-| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | UNDER | no |
-| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | UNDER | no |
-| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | D1 | no |
-| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | D1 | yes |
-| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | D0 | D0 | ■rel | UNDER | no |
-| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
+| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER | no |
+| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 | no |
+| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 | yes |
+| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER | no |
+| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | D1 | no |
+| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | D1 | yes |
+| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
 
 ### Mates + dialectical theorem
 
 | # | Setting | S001 | S002 | S003 | S004 | S005 | S006 | S007 | S008 | S009 | S010 | S011 | S012 | S013 | S014 | S015 | S016 | S018 | Fits |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | UNDER | no |
-| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 | yes |
-| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | D1 | yes |
-| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | UNDER | no |
-| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | UNDER | no |
-| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ·s | ·s | ·s | UNDER | no |
-| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
-| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | D1 | yes |
-| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | D1 | yes |
-| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
-| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
-| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ·s | UNDER | no |
+| 1 | chrysippus/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER | no |
+| 2 | chrysippus/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 | yes |
+| 3 | chrysippus/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 | yes |
+| 4 | chrysippus/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 5 | chrysippus/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 6 | chrysippus/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | UNDER■g3 | no |
+| 7 | antipater/toggle/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER | no |
+| 8 | antipater/toggle/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | D1 | yes |
+| 9 | antipater/toggle/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | D1 | yes |
+| 10 | antipater/negate/list | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 11 | antipater/negate/multiset | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
+| 12 | antipater/negate/set | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | D0 | D0 | ■rm | UNDER■g3 | no |
 
 ## All candidates at the default setting (chrysippus/toggle/multiset)
 
 | # | Candidate | S001 | S002 | S003 | S004 | S005 | S006 | S007 | S008 | S009 | S010 | S011 | S012 | S013 | S014 | S015 | S016 | S018 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Attested | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 2 | Mates | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 3 | Mates + dialectical theorem | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 4 | no first + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■base | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 5 | no first + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 6 | no first + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 7 | no first + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 8 | no first + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 9 | no first + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 10 | no first + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 11 | no first + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 12 | no first + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 13 | contrapose[either,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 14 | contrapose[either,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 15 | contrapose[either,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 16 | contrapose[either,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 17 | contrapose[either,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 18 | contrapose[either,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 19 | contrapose[either,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 20 | contrapose[either,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 21 | contrapose[either,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 22 | contrapose[either,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 23 | contrapose[either,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 24 | contrapose[either,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 25 | contrapose[either,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 26 | contrapose[either,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 27 | contrapose[either,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 28 | contrapose[either,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 29 | contrapose[either,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 30 | contrapose[either,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 31 | contrapose[minor,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 32 | contrapose[minor,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 33 | contrapose[minor,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 34 | contrapose[minor,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 35 | contrapose[minor,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 36 | contrapose[minor,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 37 | contrapose[minor,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 38 | contrapose[minor,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 39 | contrapose[minor,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 40 | contrapose[minor,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 41 | contrapose[minor,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 42 | contrapose[minor,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 43 | contrapose[minor,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 44 | contrapose[minor,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 45 | contrapose[minor,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 46 | contrapose[minor,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 47 | contrapose[minor,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 48 | contrapose[minor,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 49 | contrapose[major,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 50 | contrapose[major,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 51 | contrapose[major,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 52 | contrapose[major,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 53 | contrapose[major,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 54 | contrapose[major,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 55 | contrapose[major,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 56 | contrapose[major,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 57 | contrapose[major,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 58 | contrapose[major,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | UNDER | ■2p | ■2p | ■rel | UNDER |
-| 59 | contrapose[major,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 60 | contrapose[major,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 61 | contrapose[major,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 62 | contrapose[major,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 63 | contrapose[major,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 64 | contrapose[major,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
-| 65 | contrapose[major,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | D1 | D1 | D1 | ■2p | ■2p | ·s | D1 |
-| 66 | contrapose[major,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ·s | D0 | D0 | UNDER | UNDER | D1 | ■2p | ■2p | ■rel | D1 |
+| 1 | Attested | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 2 | Mates | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 3 | Mates + dialectical theorem | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 4 | no first + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 5 | no first + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 6 | no first + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 7 | no first + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 8 | no first + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 9 | no first + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 10 | no first + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 11 | no first + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 12 | no first + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 13 | contrapose[either,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 14 | contrapose[either,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 15 | contrapose[either,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 16 | contrapose[either,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 17 | contrapose[either,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 18 | contrapose[either,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 19 | contrapose[either,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 20 | contrapose[either,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 21 | contrapose[either,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 22 | contrapose[either,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 23 | contrapose[either,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 24 | contrapose[either,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 25 | contrapose[either,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 26 | contrapose[either,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 27 | contrapose[either,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 28 | contrapose[either,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 29 | contrapose[either,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 30 | contrapose[either,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 31 | contrapose[minor,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 32 | contrapose[minor,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 33 | contrapose[minor,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 34 | contrapose[minor,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 35 | contrapose[minor,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 36 | contrapose[minor,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 37 | contrapose[minor,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 38 | contrapose[minor,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 39 | contrapose[minor,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 40 | contrapose[minor,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 41 | contrapose[minor,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 42 | contrapose[minor,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 43 | contrapose[minor,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 44 | contrapose[minor,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 45 | contrapose[minor,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 46 | contrapose[minor,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 47 | contrapose[minor,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 48 | contrapose[minor,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 49 | contrapose[major,any] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 50 | contrapose[major,any] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 51 | contrapose[major,any] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 52 | contrapose[major,any] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 53 | contrapose[major,any] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 54 | contrapose[major,any] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 55 | contrapose[major,any] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 56 | contrapose[major,any] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 57 | contrapose[major,any] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 58 | contrapose[major,two] + no third | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | UNDER■2 | ■cm | ■cm | ■rm | UNDER■2 |
+| 59 | contrapose[major,two] + cut[any,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 60 | contrapose[major,two] + cut[any,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 61 | contrapose[major,two] + cut[any,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 62 | contrapose[major,two] + cut[any,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 63 | contrapose[major,two] + cut[two,any,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 64 | contrapose[major,two] + cut[two,any] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+| 65 | contrapose[major,two] + cut[two,first,merge] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | D1 | D1 | D1 | ■cm | ■cm | ■rm | D1 |
+| 66 | contrapose[major,two] + cut[two,first] | D0 | D0 | D0 | D0 | D0 | ■cm | ■cm | ■rm | D0 | D0 | UNDER■rel | UNDER | D1 | ■cm | ■cm | ■rm | D1 |
+
+## Probes (not evidence)
+
+These arguments are **not** in the ledger and count toward nothing above. No item in the suite needs the first thema (gaps.md), so these show which kind of attested argument would separate the candidates if a source for it is found. Setting: Chrysippus, toggle.
+
+| Probe | Attested (list) | Attested (multiset) | Attested (set) | Mates (list) | Mates (multiset) | Mates (set) | Mates + dialectical theorem (list) | Mates + dialectical theorem (multiset) | Mates + dialectical theorem (set) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| if p, q; if p, not q; therefore not p | ·s | ·s | ·s | ·s | ·s | D3 | D3 | D3 | D3 |
+| p; not q; therefore not (if p, q) | ·s | ·s | ·s | D1 | D1 | D1 | D1 | D1 | D1 |
+| if p, q; if q, r; not r; therefore not p | ·s | D1 | D1 | D1 | D1 | D1 | D1 | D1 | D1 |
 
 ## Semantic table
 
