@@ -21,6 +21,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor, SYNTHESIS_AUTHORS_IN_LIST } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const { logRetrieval } = require('./lib/retrieval-log');
 
@@ -36,7 +37,6 @@ const DAY = 24 * 60 * 60 * 1000;
 // Generated syntheses are authored under this fixed name. The agent must never
 // ground a new synthesis on its own prior syntheses — that creates an echo
 // chamber where the corpus rewrites its own earlier output.
-const SYNTHESIS_AUTHOR = 'Arete Synthesis';
 // Cosine similarity at/above which two concept phrasings count as the same
 // concept (so near-paraphrases don't produce duplicate documents).
 const CONCEPT_DEDUP_THRESHOLD = 0.86;
@@ -214,7 +214,7 @@ async function getSourcePassages(concept) {
     .select('chunk_id, author, work, chunk_text, similarity_score')
     .eq('concept', concept)
     .eq('approved', true)
-    .neq('author', SYNTHESIS_AUTHOR)
+    .not('author', 'in', SYNTHESIS_AUTHORS_IN_LIST)
     .order('similarity_score', { ascending: false })
     .limit(12);
 
@@ -241,13 +241,14 @@ async function getSourcePassages(concept) {
   const { data: retrieved } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: 18,
+    ...researchRetrievalParams(),
   });
 
   // Deduplicate by author — avoid 8 chunks from Seneca and nothing else — and
   // drop the corpus's own syntheses so grounding stays on primary texts.
   const byAuthor = {};
   for (const chunk of retrieved || []) {
-    if (chunk.author === SYNTHESIS_AUTHOR) continue;
+    if (isSynthesisAuthor(chunk.author)) continue;
     if (!byAuthor[chunk.author]) byAuthor[chunk.author] = [];
     if (byAuthor[chunk.author].length < 3) byAuthor[chunk.author].push(chunk);
   }

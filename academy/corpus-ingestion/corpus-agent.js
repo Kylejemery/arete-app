@@ -21,7 +21,10 @@
 // Each run also syncs the editorial concordances in concordance/*.md into
 // rag_corpus (ingest-concordance.js: one entry, one chunk, embedded whole)
 // before draining the queue, so an edit to a concordance lands the next
-// night with no manual step.
+// night with no manual step. It then syncs the AI-assisted synthesis
+// documents in synthesis/*.vN.md (ingest-synthesis.js): registers new
+// versions, makes the newest version of each document the live one, and
+// embeds live chunks that have no embedding yet.
 //
 // Queue rows may carry provenance the chunks inherit (translator, text_type)
 // and body markers that cut a translator's front matter (see applyBodyMarkers).
@@ -34,6 +37,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { chunkText, ingestChunks, ingestChunkRows, maxChunkIndex } = require('./ingest-sources');
 const { chunkRaw, planHeaded, QUEUE_STRATEGIES } = require('./chunker');
 const { syncConcordances, runProbes } = require('./ingest-concordance');
+const { syncSynthesis } = require('./ingest-synthesis');
 
 // Created on first use so verify-queue.js can require the cleaning helpers
 // without credentials.
@@ -339,6 +343,16 @@ async function main() {
     console.error(concordanceLine);
   }
 
+  // Synthesis sync: same terms, best-effort and cheap when nothing changed.
+  let synthesisLine = '';
+  try {
+    const r = await syncSynthesis();
+    synthesisLine = `Synthesis: ${r.documents} document version(s), ${r.embedded} chunks embedded, ${r.errors} errors`;
+  } catch (err) {
+    synthesisLine = `Synthesis sync failed: ${err.message}`;
+    console.error(synthesisLine);
+  }
+
   const { data: pending, error: queueErr } = await supabase()
     .from('corpus_ingestion_queue')
     .select('*')
@@ -427,6 +441,7 @@ async function main() {
   console.log(`Processed: ${sources.length} | Succeeded: ${succeeded} | Failed: ${failed} | Chunks added: ${totalChunks}`);
   for (const f of failures) console.log(`Failed: ${f}`);
   if (concordanceLine) console.log(concordanceLine);
+  if (synthesisLine) console.log(synthesisLine);
   if (excerptLine) console.log(excerptLine);
   console.log(`Corpus now: ${totalCorpusChunks.toLocaleString()} chunks across ${authorCount} authors`);
   if (thinnest.length > 0) console.log(`Thinnest coverage: ${thinnest.join(', ')}`);

@@ -32,6 +32,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor } = require('../lib/corpus-fence');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -44,7 +45,6 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 // The corpus's own syntheses are authored under this name — convergence selects
 // across PRIMARY texts, never the corpus's own conjecture.
-const SYNTHESIS_AUTHOR = 'Arete Synthesis';
 
 // --- Dash sanitizer --------------------------------------------------------
 //
@@ -271,7 +271,7 @@ async function getThemePool(themeText, config) {
   });
   if (error) throw new Error(`convergence_seed_pool failed: ${error.message}`);
   return (data || [])
-    .filter(p => p.author && p.author !== SYNTHESIS_AUTHOR && p.chunk_text)
+    .filter(p => p.author && !isSynthesisAuthor(p.author) && p.chunk_text)
     .map(p => ({
       id: p.id,
       author: p.author,
@@ -522,12 +522,13 @@ async function assessNovelty(conclusionText, config) {
   const { data: matches, error } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: 8,
+    ...researchRetrievalParams(),
   });
   if (error) {
     console.warn(`[convergence-agent] novelty retrieval failed: ${error.message}`);
     return { novelty: null, topSimilarity: null, matches: [] };
   }
-  const top = (matches || []).filter(m => m.author !== SYNTHESIS_AUTHOR);
+  const top = (matches || []).filter(m => !isSynthesisAuthor(m.author));
   const topSimilarity = top.length ? Number(top[0].similarity) : 0;
 
   const judged = await callClaude(config.model, NOVELTY_SYSTEM_PROMPT, buildNoveltyMessage(conclusionText, top.slice(0, 6)), 600);

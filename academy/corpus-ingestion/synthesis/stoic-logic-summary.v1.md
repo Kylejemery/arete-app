@@ -1,0 +1,370 @@
+---
+doc_key: stoic-logic-summary
+title: Stoic Logic: A Summary
+version: 1
+created_at: 2026-09-29
+generated_with: Claude, Claude Docs (claude.ai)
+reviewed_by:
+default_status: corpus_verified
+section_status:
+  - The conditional debate => via_summary
+  - Possible and necessary => via_summary
+  - The Master Argument => via_summary
+  - Signs and proof => via_summary
+  - The five indemonstrables => via_summary
+  - The themata and analysis => via_summary
+  - Worked examples => via_summary
+  - Open disputes => via_summary
+sources_used:
+  - Diogenes Laërtius | Lives of Eminent Philosophers, Book VII
+  - Cicero | Academica
+  - Epictetus | Discourses
+  - Antipater of Tarsus | Testimonies and Fragments
+  - E. Vernon Arnold | Roman Stoicism
+  - A.C. Pearson | Fragments of Zeno and Cleanthes
+  - Benson Mates | Stoic Logic
+  - A.A. Long | Stoic Studies
+  - Susanne Bobzien | Stoic Logic (Cambridge Companion), part 1
+  - Susanne Bobzien | Stoic Logic (Cambridge Companion), part 2
+  - Susanne Bobzien | Stoic Syllogistic
+  - Susanne Bobzien | Chrysippus' Modal Logic and its Relation to Philo and Diodorus
+  - Susanne Bobzien | XII*-CHRYSIPPUS AND THE EPISTEMIC THEORY OF VAGUENESS
+  - Susanne Bobzien | Stoic Logic and Multiple Generality
+regenerate_when:
+  - Sextus Empiricus
+  - Galen
+  - Alexander of Aphrodisias
+  - Bobzien 1996, Stoic Syllogistic (full text)
+  - SVF or Hülser
+---
+
+# Stoic Logic: A Summary
+
+Stoic logic was the first worked-out logic of propositions: it studies how whole statements joined by "if," "and," and "or" support one another, where Aristotle had studied terms like "man" and "mortal." Chrysippus built most of it in the third century BCE, and almost none of his writing survives. What we know comes through later handbooks, critics, and modern reconstruction.
+
+This summary draws on every source in the Arete corpus that treats the subject: Diogenes Laertius, Cicero, Epictetus, the Antipater fragments, and the scholarship of Mates, Bobzien, Long, Arnold, and Pearson. Section references like VII.73 are to Diogenes Laertius, Book VII.
+
+## A short history
+
+Stoic logic grew out of the Megarian school and reached its full form with Chrysippus. The Megarians gave it both its puzzles and its sharpest rivals: the Sorites and the Liar first appear among them, and Diodorus Cronus and Philo set the terms of the debate about "if" (Arnold).
+
+**Zeno** cared little for formal logic. Pearson finds that he valued it mainly for exposing error, and Long argues his dialectic was largely the skill of solving sophisms. His famous image comes from Cicero: an open palm is an impression, slightly curled fingers are assent, a fist is firm grasp, and the fist clasped by the other hand is knowledge, which only the wise possess (_Academica_; Arnold).
+
+**Aristo** rejected logic as useless. **Cleanthes** made dialectic one of six parts of philosophy and wrote on predicates and on the Master Argument (Long).
+
+**Chrysippus** turned dialectic into a full science of language, knowledge, and inference (Long). He wrote over 700 books, many of them on logic: titles in Diogenes include works on the analysis of syllogisms, on redundant arguments, on the Sorites, and on the Veiled Person (VII.180, 189 to 198). The ancient saying went that without Chrysippus there would be no Stoa (VII.183). He also argued so well against the senses that later Stoics complained he had armed Carneades (Cicero, _Academica_).
+
+**Antipater and Archedemus**, the next generation, were called the princes of the dialecticians, and they disagreed with each other on many points (Cicero, _Academica_).
+
+The **Roman Stoics** mostly distrusted formal logic. Seneca mocked syllogisms like "Mouse is a syllable; a mouse eats cheese; so a syllable eats cheese." Marcus Aurelius thanked the gods he never pored over syllogisms. Epictetus, rebuked by his teacher Musonius for undervaluing logic, came to defend it as training for reason, while scolding students who never got past solving puzzles (Arnold; Long).
+
+## Why logic mattered
+
+For the Stoics, logic was a virtue, not a tool. Dialectic is "itself a virtue, embracing other particular virtues under it" (VII.46). Those virtues are habits of assent: not agreeing too quickly, doubting what merely seems likely, and not being argued out of what you know (VII.46 to 47). Hasty assent in argument, Diogenes adds, spills over into careless conduct (VII.48).
+
+The school's images put logic on the outside of everything. It is the bones of the animal, the shell of the egg, the wall around the field (VII.40). Zeno and Chrysippus taught it first (VII.40), and the section ends with the claim that the wise man is the true dialectician (VII.83).
+
+Long explains why only the sage qualifies. The Stoics distinguished "the true," a single true assertible that anyone can utter, from "truth," the ordered body of true beliefs that makes up knowledge. A fool can say true things, but only the sage has truth, so only the sage is a dialectician. Long's example is the sage waking in a dim room, who withholds assent from "it is night" until a quick inference settles it.
+
+Logic had two branches (VII.41 to 42). Rhetoric handles continuous speech and dialectic handles question and answer; Zeno compared them to the open palm and the closed fist (Arnold). Dialectic divides again into what is signified and the language that signifies it (VII.43, 62). The theory of arguments belongs to the first.
+
+## Impressions, assent, and the criterion of truth
+
+The Stoics began logic with perception, because every judgment starts from an impression. Diogenes's source puts it plainly: impression comes first, then thought puts what it received into words (VII.49).
+
+**Impressions.** An impression (_phantasia_) is an imprint on the soul, like a seal in wax (VII.45). Cleanthes took the image literally. Chrysippus called it an "alteration" instead, since many imprints could not occupy one spot at once (VII.50; Arnold). Some impressions come through the senses and some through thought alone; some are rational and some belong to animals (VII.51).
+
+**The cognitive impression.** One kind of impression is the test of reality. The _phantasia katalēptikē_, usually translated "cognitive" or "apprehensive" impression, comes from something real, matches it, and is stamped so that it could not have come from anything unreal (VII.46, 50). Arnold explains its mark as clearness: a true impression carries a vividness that a phantasm, like Orestes's Furies or a dream, cannot.
+
+**Assent.** The impression is not up to us, but assent to it is (Arnold, citing Cicero's _De Fato_). Assent can go wrong in two ways, by rushing ahead of a clear impression or by feebly assenting to the wrong one; either way the result is opinion, which the Stoics called weak assent (Arnold). Short of assent, a person can stay quiet, suspend judgment, or deny. Zeno showed the whole sequence with his hand: open palm for the impression, curled fingers for assent, fist for grasp, and the fist clasped by the other hand for knowledge (Cicero, _Academica_).
+
+**Concepts.** From many grasped impressions come memory, experience, and concepts. Diogenes lists the ways concepts form: by direct contact, resemblance (Socrates from his bust), analogy (the Cyclops by enlargement), transposition, composition (the centaur), contrariety (death), and privation (the man without hands). The notions of justice and goodness come by nature (VII.52 to 53). Concepts are not real things; Zeno held that Plato's Forms were only concepts in our minds (Arnold).
+
+**The criterion.** Most Stoics made the cognitive impression the standard of truth, including Chrysippus, Antipater, and Apollodorus. Chrysippus elsewhere named sensation and preconception; some older Stoics named right reason; Boethus allowed several standards (VII.54).
+
+**The Academic attack.** This was the front line against the Academics. Arcesilaus and Carneades argued that for every true impression there could be a false one just like it, so nothing can be grasped (Cicero, _Academica_). The Stoics conceded hard cases. Admetus received a true impression of Alcestis back from the dead but refused to trust it because he knew she had died, so the later Stoics required that nothing stand in the way of the impression (Arnold). The court joke about Sphaerus shows the pressure: served wax fruit by the king, he said he had assented not to "this is fruit" but to "this is probably fruit" (Arnold). Epictetus, alone among the later Stoics, insisted that certainty is still possible (Arnold).
+
+## Language and grammar
+
+Much of later Greek and Latin grammar started in Stoic dialectic. Most Stoics opened dialectic with voice (VII.55), and Arnold notes there was no clear line in their system between what we call syntax and logic.
+
+**Voice is a body.** Voice is air that has been struck. It is corporeal because it acts on the hearer, and whatever acts is body (VII.55 to 56). Human voice differs from an animal's cry by being articulate and coming from thought; Diogenes of Babylon said it matures at fourteen (VII.55). Chrysippus denied that infants and crows really speak; they produce only something like speech (Arnold).
+
+**Three levels.** Voice can be mere noise. Speech (_lexis_) is articulate but can be meaningless, like the nonsense word _blituri_. A sentence (_logos_) always signifies something (VII.57). The Stoics also separated inner thought from uttered speech, which the one Greek word _logos_ tends to blur; thought is incorporeal, speech is moving air (Arnold).
+
+**Parts of speech.** Diogenes of Babylon and Chrysippus counted five: proper name, common noun, verb, conjunction, and article (VII.58). Chrysippus is credited with separating the proper name from the common noun, and Antipater added a sixth, the "mean," roughly the participle (VII.58; Arnold). The Stoics named the noun's cases, with the nominative as the "upright" case and the others "oblique"; classified verbs as active, passive, neutral, or reflexive; and worked out a system of tenses (VII.64 to 65; Arnold).
+
+**Style.** Good speech has five excellences: correct Greek, clarity, conciseness, appropriateness, and distinction. Its vices include barbarism, a word misused, and solecism, a sentence badly built (VII.59). Ambiguity gets its own entry; Diogenes's example is a Greek phrase that can mean either that a house fell three times or that a dancing girl fell (VII.62).
+
+**Nature, not convention.** Against Aristotle, the Stoics held that correct language exists by nature, its sounds imitating things, so that etymology can recover what words really mean (Arnold).
+
+## Definition and division
+
+The Stoics treated definition and division as tools for fixing what things are. Diogenes gives the vocabulary (VII.60 to 62):
+
+|Term|Meaning|Example|
+|---|---|---|
+|Definition|A statement of what a thing is|Chrysippus: "a rendering back of one's own," i.e. of what is proper to it (Hicks renders the word _horos_ as "term")|
+|Delineation|A simpler outline that leads toward the thing|A sketch short of a full definition|
+|Genus|Many inseparable objects of thought gathered into one|Animal|
+|Species|What falls under a genus|Man, under Animal|
+|Highest genus|A genus with none above it|The real|
+|Lowest species|A species with none below it|Socrates|
+|Division|Cutting a genus into its nearest species|Animals are rational or irrational|
+|Contrary division|Division by a negation|Things are good or not good|
+|Subdivision|Dividing a division|Of the not good, some bad, some indifferent|
+|Partition|Sorting a genus under heads|Of goods, some mental, some bodily|
+
+Arnold adds that the later Stoics came to rely on careful definition more than on syllogisms, as the easier route to stating a doctrine precisely. Antipater even defined definition itself.
+
+## Sayables and assertibles
+
+Stoic logic is about what sentences mean, not about the sentences or the things they describe. Mates frames this as a three-part distinction: the spoken sign, the _lekton_ or "sayable" that the mind grasps when it understands the sign, and the external object. Sounds and objects are bodies; the sayable is incorporeal.
+
+Sayables are either complete or deficient (DL VII.63). "Writes" is deficient, because you ask who. "Socrates writes" is complete. Deficient sayables are predicates; complete ones include questions, commands, oaths, and the one that matters for logic, the _axioma_.
+
+An axioma is a complete sayable that is true or false and can be affirmed or denied on its own (VII.65). Hicks translates it "judgement"; Mates says "proposition"; Bobzien says "assertible." A question like "Is it day?" is complete but neither true nor false (VII.66).
+
+Two points from Mates matter later. Truth belongs to the sayable itself, not to the sentence. And an assertible can change truth value over time: "It is day" is true now and false tonight. That is why the conditional debate turns partly on time.
+
+Sayables are also where logic meets the mind. Every rational impression comes with a sayable that puts it into words, and assent is given to that sayable (Long). So judging well and reasoning well are one activity. Long suggests, tentatively, that Epictetus's "correct use of impressions" may be the choice of which sayable to frame a situation with, as when solitude is described as peace.
+
+## Propositions and connectives
+
+Stoic logic is propositional: its variables stand for whole assertibles, not terms like "man" or "mortal." That is the basic difference from Aristotle, and Mates says missing it is the root error of the older hostile scholarship.
+
+Simple assertibles have no connective. Diogenes lists negative, denial, privative, affirmative, definite, and indefinite types (VII.69 to 70). Negation is formed by putting "not" in front of the whole assertible, so "It is not day." A double negative, "It is not not day," amounts to "It is day" (VII.69).
+
+Non-simple assertibles are built with connectives (VII.71 to 73):
+
+|Connective|Greek name|Example|True when|
+|---|---|---|---|
+|If|_synēmmenon_|If it is day, it is light|Contested; see the next section|
+|Since|_parasynēmmenon_|Since it is day, it is light|The first is true and the second follows from it|
+|And|_sympeplegmenon_|It is day and it is light|Every conjunct is true|
+|Either, or|_diezeugmenon_|Either it is day or it is night|Exactly one disjunct is true|
+|Because|causal|Because it is day, it is light|The second follows from the first, the first is true, and not conversely|
+|Rather … than|comparative|It is rather day than night|Not specified in the sources|
+
+Disjunction is exclusive. Diogenes says the "either" guarantees one of the alternatives is false (VII.72), and Mates reads the other testimony the same way. An inclusive "or" was known but treated as a separate connective.
+
+The conditional also did work in the theory of knowledge. Its antecedent was treated as a sign of its consequent: in "If it is day, it is light," day is a sign of light (Arnold). Stoic proof leans on this, moving from what is evident to what is not (VII.45).
+
+## The conditional debate
+
+The ancients disagreed about when "if p, q" is true, and the quarrel was famous. Cicero uses it as proof that even dialecticians cannot agree: on "If it is day, it is light," Diodorus holds one view, Philo another, and Chrysippus a third (_Academica_; also in the Antipater fragments). Mates, following Sextus, lists four views from weakest to strictest:
+
+|View|A conditional is true when|"If it is day, I am talking"|"If it is day, it is day"|
+|---|---|---|---|
+|Philo|It does not have a true antecedent and false consequent right now|True, if both happen to hold|True|
+|Diodorus|It never has, and never could have, a true antecedent and false consequent at any time|False, since there are daytimes when I am silent|True|
+|Connexion (Chrysippus, tentatively)|The contradictory of the consequent conflicts with the antecedent|False|True|
+|Containment|The consequent is somehow contained in the antecedent|False|False, since nothing contains itself|
+
+Philo's view is the modern material conditional, and Mates notes the sources even list the four truth-value cases in a fixed order, which anticipates the truth table.
+
+Diogenes gives only the connexion view: a conditional is true when the contradictory of its conclusion is incompatible with its premise (VII.73). "If it is day, it is light" passes; "If it is day, Dion is walking" fails. Mates concedes that attributing this view to Chrysippus rests on little direct evidence. Bobzien's Cambridge Companion chapter also names the Chrysippean conditional as a "connection" and distinguishes it from the weaker Philonian and Diodorean ones.
+
+## Possible and necessary
+
+Chrysippus defined possibility by what nothing external prevents, which puts him between Philo and Diodorus. Diogenes gives the definitions (VII.75): an assertible is possible if it admits of being true and nothing outside it prevents that, and necessary if it is true and either cannot be false or is prevented from being false by outside circumstances.
+
+Mates takes this passage as Chrysippus's mature view. The Bobzien summary explains the placement: Philo counted as possible whatever is internally capable of truth, Diodorus only what is or will be true, and Chrysippus kept a version of Philo's test but added that nothing external may block it.
+
+The stakes were not only logical. Arnold notes that Diodorus's views on the possible and the necessary bear directly on free will: if only what will happen is possible, the future is fixed. Chrysippus, a determinist who still wanted room for responsibility, needed things that are possible but never happen. The Bobzien summary adds that this is why he had to refute Diodorus's Master Argument.
+
+## The Master Argument
+
+Diodorus's Master Argument (_ho kyrieuōn logos_) was the most famous argument about possibility in antiquity, and every Stoic had to take a side. Epictetus gives the fullest account in the corpus (_Discourses_ II.19). Three propositions conflict, so that any two rule out the third:
+
+1. Every true proposition about the past is necessary.
+
+2. Something impossible does not follow from something possible.
+
+3. Something is possible which neither is true nor ever will be.
+
+|Who|Keeps|Rejects|Result|
+|---|---|---|---|
+|Diodorus|1 and 2|3|Only what is or will be true is possible|
+|Cleanthes, defended at length by Antipater|2 and 3|1|The past is not necessary|
+|Chrysippus|1 and 3|2|An impossible can follow a possible|
+
+Diodorus's conclusion leaves no room for the unrealized. Cicero joked about it to Varro: if you are coming, your coming is necessary; if not, it is impossible (Pearson). Chrysippus answered with cases like a pearl that is breakable though fate ensures it never breaks, or the oracle about Cypselus, who might never have ruled Corinth (Arnold). To keep those possibilities he gave up premise 2, saying nothing prevents an impossible from following a possible (Alexander, via Pearson).
+
+Mates stresses a puzzle: no ancient source ever questions whether the three propositions really conflict, yet no surviving text explains why they do. He finds Zeller's explanation unconvincing and leaves the reconstruction open. The Bobzien summary shows why the fight mattered to Chrysippus: without possibilities that are never realized, deliberation and responsibility under fate make no sense.
+
+Epictetus used the argument as a warning. A student can recite that Chrysippus, Cleanthes, Archedemus, and Antipater all wrote on it, he says, and still hold no opinion of his own, which makes him no better than a grammarian who knows the names of Hector's brothers.
+
+## Arguments and validity
+
+An argument is valid when the contradictory of its conclusion conflicts with its premises taken together (DL VII.77). It is the same test as the connexion conditional, applied to a whole argument.
+
+Arguments were written in "moods," with ordinal numbers as placeholders for whole assertibles: "If the first, the second; but the first; therefore the second" (VII.76). A mixed form, filling some places with real sentences, saved repeating long premises (VII.77).
+
+The Stoics graded arguments in layers:
+
+1. **Valid**, the conclusion follows.
+
+2. **True**, valid with true premises (VII.79).
+
+3. **Demonstrative**, true, and revealing a conclusion that was not evident (VII.45; Mates).
+
+They also split valid arguments in two (VII.78). **Syllogistic** arguments are the indemonstrables or reduce to them. Arguments that are **valid but not syllogistic** conclude correctly without that reduction. Diogenes's example: "It is false that it is both day and night; it is day; therefore it is not night." Mates reads this as a real distinction between negating an assertible and saying that it is false.
+
+Mates reports four kinds of invalid argument from Sextus: premises with no connection to each other; a **redundant** premise; an invalid form, such as denying the antecedent; and a missing alternative, as in a disjunction that leaves out an option.
+
+## Signs and proof
+
+The Stoics used logic to reach what cannot be seen, and signs were the bridge. Mates reconstructs two kinds from Sextus:
+
+|Kind|How it works|Example|
+|---|---|---|
+|Commemorative|Recalls something seen together with it before|Smoke recalls fire|
+|Indicative|Reveals something that by nature is never seen|Bodily movement reveals the soul|
+
+For the indicative sign, the Stoics said the sign is not a physical thing but a sayable: the true antecedent of a true conditional. Sextus's example is "If she has milk, she has conceived" (Mates). This fits Arnold's point that in "If it is day, it is light," day is a sign of light. Mates notes the sources are not consistent about whether signs are bodies or sayables, and does not settle it.
+
+Proof builds on this. A demonstration is an argument that infers something less clearly grasped from what is more clearly grasped (VII.45). Mates adds the Stoic requirement that the conclusion be genuinely revealed by the reasoning: accepting a conclusion on a god's word may be true, but it is not demonstration. Demonstration is the top grade of argument, above valid and true.
+
+## The five indemonstrables
+
+Chrysippus named five argument forms as needing no proof; every syllogistic argument reduces to them (DL VII.79 to 81). Mates finds them attested in at least eight ancient sources.
+
+|Type|Form|Diogenes's example|
+|---|---|---|
+|1|If p, q; p; therefore q|If the first, the second; the first; therefore the second|
+|2|If p, q; not q; therefore not p|If it is day, it is light; it is night; therefore it is not day|
+|3|Not both p and q; p; therefore not q|Not both Plato is dead and alive; he is dead; therefore he is not alive|
+|4|Either p or q; p; therefore not q|Either A or B; A; therefore not B|
+|5|Either p or q; not p; therefore q|Either it is day or it is night; not night; therefore day|
+
+The descriptions say "contradictory" where the forms need "negation." Mates flags this as the question of whether the Stoics assumed double negation drops out, and leaves it open. In type 2, the minor premise in Diogenes's own example is "it is night," not "it is not light," which shows the looseness.
+
+"Indemonstrable" is itself unclear. Sextus also applies it to derived forms, so Mates rejects the simple reading of "axiom as opposed to theorem" without settling on a replacement. Cicero and Martianus Capella list more than five, and Mates judges their texts less reliable.
+
+From these five, the Stoics claimed, countless arguments could be generated (Cicero, cited by Arnold). Few worked examples survive. The most charming is Chrysippus's dog: chasing prey to a fork of three roads, it sniffs two and runs down the third without sniffing, as if applying the fifth indemonstrable twice (Mates). Arnold reports the other side of the Stoic view: the dog grasps that a scent is a sign of the animal, but cannot put that belief into a syllogism, because only rational beings reason in words.
+
+## The themata and analysis
+
+Only two of the four themata survive with their content. Diogenes never names them; what we know comes mainly from Sextus and Galen, as reconstructed by Mates and Bobzien.
+
+"Analysis" was the procedure of breaking a complex argument into a chain of indemonstrables. The themata are the rules that license each step. Mates reports:
+
+- **First thema.** If two premises yield a conclusion, then either premise together with the contradictory of the conclusion yields the contradictory of the other premise. This is a form of contraposition.
+
+- **Third thema.** If two premises yield a conclusion, and other assertibles yield one of those premises, then those others plus the remaining premise yield the conclusion. Bobzien treats it as a way of chaining arguments together.
+
+- **Second and fourth themata.** Their content is lost.
+
+Sextus also reports a "dialectical theorem": any conclusion reached during analysis can be used as a premise in later steps. Mates thinks it may be one of the lost themata, possibly the second, or a restatement of the third.
+
+Mates gives two worked analyses from Sextus. "If p, then if p then q; p; therefore q" is two uses of type 1. "If p and q, then r; not r; p; therefore not q" is type 2 followed by type 3, with the dialectical theorem carrying the middle conclusion forward.
+
+Another derived form is the "argument from two conditionals": if you know you are dead, you are dead; if you know you are dead, you are not dead; therefore you do not know you are dead (Mates). Showing that it reduces to the indemonstrables takes the themata, which is why it is a useful test case.
+
+The Bobzien 1996 summary adds a caution: the evidence for the themata is thin and conflicting, and her own reconstruction marks which parts are conjecture.
+
+## Worked examples
+
+These four analyses show the machinery in use. The first two are Sextus's own, as Mates reports them; the third applies the first thema as Mates states it; the fourth is Chrysippus's dog.
+
+**1. A doubled conditional.** _If p, then if p then q; p; therefore q._
+
+|Step|Premises|Rule|Conclusion|
+|---|---|---|---|
+|1|If p, then if p then q; p|Indemonstrable 1|If p then q|
+|2|If p then q; p|Indemonstrable 1|q|
+
+Step 2 reuses the premise p alongside the conclusion of step 1. That reuse is what the dialectical theorem permits.
+
+**2. A conditional with a conjunction.** _If p and q, then r; not r; p; therefore not q._
+
+|Step|Premises|Rule|Conclusion|
+|---|---|---|---|
+|1|If p and q, then r; not r|Indemonstrable 2|Not both p and q|
+|2|Not both p and q; p|Indemonstrable 3|Not q|
+
+**3. The first thema at work.** Take indemonstrable 1: _if p, q; p; therefore q._ The first thema says that either premise, with the contradictory of the conclusion, yields the contradictory of the other premise. Keep the conditional and add _not q_: the result is _if p, q; not q; therefore not p_, which is indemonstrable 2. Keep _p_ instead and add _not q_: the result is _p; not q; therefore not (if p, q)_. The thema turns one valid argument into new ones.
+
+**4. Chrysippus's dog.** At a fork of three roads, the dog sniffs two and takes the third (Mates).
+
+|Step|Premises|Rule|Conclusion|
+|---|---|---|---|
+|1|The prey went by A, B, or C; not by A|Indemonstrable 5|By B or C|
+|2|By B or C; not by B|Indemonstrable 5|By C|
+
+Reading a three-way "or" as two nested ones is a reconstruction, but Mates accepts the analysis.
+
+## Open disputes
+
+Four questions were contested in antiquity or remain open now.
+
+|Question|The positions|Status|
+|---|---|---|
+|Single premise arguments|Chrysippus denied they exist; Antipater accepted them, with examples like "You breathe, so you live"|Alexander and Apuleius, in the Antipater fragments, side against him: such arguments just leave a premise unstated|
+|Redundant premises|Sextus counts a superfluous premise as making an argument invalid|Mates notes modern logic would call such arguments valid and suspects Sextus's handbook|
+|Double negation|The sources say "contradictory" where the forms need "negation"|Mates leaves it open; VII.69 implies "not not p" amounts to p|
+|Completeness|Sextus and Diogenes suggest every valid argument reduces to the five|Mates says it cannot be judged until all four themata are known|
+
+The Peripatetics raised a related objection. They rejected "duplicated" arguments, with a repeated premise, and "tautologous" ones, where the conclusion repeats a premise, holding that a syllogism must establish something new (Mates). Alexander, a Peripatetic, is also our main witness against Antipater's single premise arguments.
+
+## Paradoxes
+
+The Stoics catalogued a set of hard arguments, and Chrysippus wrote whole books on them. His book list in Diogenes includes titles on the Sorites, on redundant arguments, and on the Veiled Person (VII.192 to 198).
+
+|Paradox|The puzzle|What survives|
+|---|---|---|
+|Liar|A man says "I am lying"; if he lies he tells the truth, and if he tells the truth he lies|Chrysippus wrote six books on it and argued against several proposed solutions; his own is lost (Mates)|
+|Sorites|If two is few, so is three, and so on to ten; two is few, so ten is few (VII.82)|Chrysippus's answer, below|
+|Nobody|If anyone is here, he is not in Rhodes; someone is here; so nobody is in Rhodes (VII.82)|Bobzien and Shogry take it as evidence the Stoics handled quantifier structure|
+|Veiled, Horned, Mowers|Named at VII.44 and 82|Little beyond the names; Mates calls most of them trivial|
+
+The Sorites was the Academics' favorite weapon, because it blurs the line between a true impression and a false one (Cicero, _Academica_). Chrysippus's defense was to stop answering. Asked step by step whether three is few, then four, he would "rest" a little before reaching "many" (Cicero, _Academica_; Arnold). Carneades answered that he was welcome to rest, or even to snore.
+
+What that silence meant is still argued. The Bobzien 2002 summary rejects Williamson's reading that Chrysippus believed in a sharp but unknowable cutoff, and rereads Cicero's image of a charioteer reining in before a drop.
+
+## How it has been judged
+
+Stoic logic had a bad reputation for two thousand years. Cicero, following Antiochus, treated Stoicism as a mere correction of the Old Academy, and complained that Chrysippus weighed words rather than things (Arnold). In the nineteenth century Prantl and Zeller dismissed Stoic logic as pedantic copying of Aristotle and the Megarians.
+
+The verdict reversed in the twentieth century. In 1927 Łukasiewicz argued that the Stoics had anticipated modern propositional logic, and Mates's _Stoic Logic_ made the case in detail (Mates). Mates shows that the old hostility rested on a basic misreading: taking the Stoic placeholders "the first" and "the second" to stand for terms, when they stand for whole assertibles. Bobzien's work treats the system as coherent and sophisticated while marking where the evidence gives out.
+
+## Where the evidence runs thin
+
+Much of this summary rests on reconstruction. The content of two themata is lost, the connexion conditional is only tentatively Chrysippus's, and the meaning of "indemonstrable" is unsettled. Chrysippus's own solutions to the Liar and the Sorites do not survive.
+
+The main ancient witnesses are Sextus Empiricus, Galen, and Alexander of Aphrodisias, none of whom are yet in the Arete corpus. Diogenes Laertius is the only primary logic text here; everything from Sextus reaches this summary through Mates and Bobzien.
+
+## Glossary
+
+|Greek|Translation|Meaning|
+|---|---|---|
+|_anapodeiktos_|indemonstrable|One of the five basic argument forms that need no proof|
+|_apodeixis_|demonstration|An argument revealing a less evident conclusion from more evident premises|
+|_axiōma_|assertible, proposition|A complete sayable that is true or false|
+|_diezeugmenon_|disjunction|"Either p or q," true when exactly one is true|
+|_enargeia_|clearness|The vividness that marks a true impression|
+|_ennoia_|concept|A general notion formed from impressions|
+|_epistēmē_|knowledge, science|Grasp that argument cannot shake; the sage's alone|
+|_hēgemonikon_|commanding faculty|The ruling, reasoning part of the soul|
+|_hēsychazein_|to keep quiet|Chrysippus's response to the Sorites|
+|_horos_|definition, term|A statement of what a thing is|
+|_katalēpsis_|grasp, apprehension|Assent given to a cognitive impression|
+|_kyrieuōn logos_|Master Argument|Diodorus's argument about possibility|
+|_lekton_|sayable|The incorporeal meaning of an expression|
+|_logos_|argument, reason, speech|Premises and conclusion; also reason and speech|
+|_phantasia_|impression|An imprint or alteration in the soul|
+|_phantasia katalēptikē_|cognitive impression|An impression that could only come from what is real; the criterion|
+|_prolēpsis_|preconception|A natural general notion|
+|_pseudomenos_|the Liar|"I am lying"|
+|_sēmeion_|sign|Something that reveals something else, often the antecedent of a true conditional|
+|_sōreitēs_|the Sorites, the heap|The argument by small steps|
+|_sympeplegmenon_|conjunction|"Both p and q"|
+|_synēmmenon_|conditional|"If p, q"|
+|_synkatathesis_|assent|Accepting an impression as true|
+|_thema_ (pl. _themata_)|rule|A meta-rule for reducing arguments to the indemonstrables|
+|_tropos_|mood|An argument schema using "the first," "the second"|
+
+## Sources
+
+From the Arete corpus: Diogenes Laertius, _Lives of Eminent Philosophers_ VII, trans. R. D. Hicks (1925); Cicero, _Academica_, trans. C. D. Yonge; Epictetus, _Discourses_ II.19, trans. George Long; Antipater of Tarsus, _Testimonies and Fragments_; E. Vernon Arnold, _Roman Stoicism_; A. C. Pearson, _Fragments of Zeno and Cleanthes_; corpus summaries of Benson Mates, _Stoic Logic_; A. A. Long, _Stoic Studies_; and Susanne Bobzien, "Stoic Logic" (Cambridge Companion), "Stoic Syllogistic" (1996), "Chrysippus' Modal Logic and its Relation to Philo and Diodorus," "Chrysippus and the Epistemic Theory of Vagueness" (2002), and with Shogry, "Stoic Logic and Multiple Generality."

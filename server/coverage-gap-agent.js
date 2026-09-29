@@ -19,6 +19,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor, SYNTHESIS_AUTHORS_IN_LIST } = require('./lib/corpus-fence');
 // Canonical concept layer — every journal theme this agent admits into the
 // system is mapped to (or becomes) a canonical concept, so the public
 // Observatory never fragments into near-duplicate stars.
@@ -127,7 +128,7 @@ async function getConceptPassages(concept) {
     .not('approved', 'is', false)
     // Coverage is about primary sources; the corpus's own syntheses must not
     // count as coverage or appear as candidate source passages.
-    .neq('author', 'Arete Synthesis');
+    .not('author', 'in', SYNTHESIS_AUTHORS_IN_LIST);
   return data || [];
 }
 
@@ -180,6 +181,7 @@ async function detectDemandGaps() {
         const { data: retrieved } = await supabase.rpc('match_rag_corpus_ids', {
           query_embedding: embedding,
           match_count: 8,
+          ...researchRetrievalParams(),
         });
         searchedFresh = true;
 
@@ -189,7 +191,7 @@ async function detectDemandGaps() {
           // Never surface the corpus's own syntheses as candidate source
           // passages: they would mask real primary-source gaps, and the
           // synthesis agent ignores synthesis-authored passages anyway.
-          if (chunk.author === 'Arete Synthesis') continue;
+          if (isSynthesisAuthor(chunk.author)) continue;
           const exists = passages.find(p => p.chunk_id === chunk.id);
           if (!exists) {
             await supabase

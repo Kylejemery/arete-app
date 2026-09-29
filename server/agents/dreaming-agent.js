@@ -44,6 +44,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor } = require('../lib/corpus-fence');
 const { traditionFor, getMondayOfCurrentWeek } = require('./inquiry-agent');
 
 const supabase = createClient(
@@ -54,7 +55,6 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
-const SYNTHESIS_AUTHOR = 'Arete Synthesis';
 
 // One of each per weekly run — a fixed distribution, not a quota to game.
 const DREAM_TYPES = ['aphorism', 'thought_experiment', 'proposition', 'meditation'];
@@ -142,7 +142,7 @@ async function fetchChunksByIds(ids) {
     .from('rag_corpus')
     .select('id, chunk_text, author, work')
     .in('id', ids);
-  return (data || []).filter(c => c.author && c.chunk_text && c.author !== SYNTHESIS_AUTHOR);
+  return (data || []).filter(c => c.author && c.chunk_text && !isSynthesisAuthor(c.author));
 }
 
 // Approved tensions not yet dreamed from. The tension/inquiry tables may not
@@ -216,6 +216,7 @@ async function getStrangenessSeed(maxPassages) {
   const { data: neighbors } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: 30,
+    ...researchRetrievalParams(),
   });
 
   // Chunk-id pairs already held together by an approved synthesis.
@@ -241,7 +242,7 @@ async function getStrangenessSeed(maxPassages) {
   for (const requireCrossTradition of [true, false]) {
     for (const n of neighbors || []) {
       if (picked.length >= maxPassages) break;
-      if (!n.author || !n.chunk_text || n.author === SYNTHESIS_AUTHOR) continue;
+      if (!n.author || !n.chunk_text || isSynthesisAuthor(n.author)) continue;
       if (n.id === anchor.id || connected.has(n.id)) continue;
       if (usedAuthors.has(n.author)) continue;
       if (requireCrossTradition && traditionFor(n.author) === anchorTradition) continue;
