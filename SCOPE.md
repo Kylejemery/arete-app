@@ -99,6 +99,15 @@ Produce a static export of harness results so a public explorer page can display
 
 **Report back** the parameter axes and values, total runs, counts by verdict, every mismatch with the ancient verdict, flagged provenance items, and failed runs.
 
+**As delivered** (PR #307 and its follow-up, 2026-09-29):
+
+* **Location.** The export lives in `themata/results/explorer/`, not `data/machine/verdicts.json`. It is split into `index.json`, `harness.json`, `items.json`, `searches.json`, one `runs/cNN.json` per candidate, and `schema.json`. The README there explains how to regenerate it and what every field means.
+* **Counts are distinct searches**, meaning candidate × proof setting (`single`, `contra`, `view`) × item: 14,256 in all. `runs/` keeps eight identical records per search, one for each conditional and redundancy reading. That invariance is checked on every build and recorded in the README.
+* **Accepted exceptions to "do not modify the encoding or the suite":**
+  * `Stoic/Harness/Search.lean`: `search` now records how it reached each argument (`searchTrace`). Outcomes are unchanged, and `matrix.md` and `matrix.csv` regenerate byte-identical.
+  * `Stoic/Harness/Suite.lean`: `Item` gained a `note` field carrying the encoding notes for S014, S015 and S018. No argument changed.
+* **Still open:** the duplicated-premise redundant variant (decided 2026-09-29). Only the fresh-atom variant is in the export.
+
 ## Out of scope
 
 Do not work on, propose, or analyze any of these unless Kyle asks in the current session:
@@ -142,3 +151,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 
 
 * 2026-09-29: Setup done (SCOPE.md, PARKING.md, CLAUDE.md pointer). Milestone 1: no export found on any branch or PR; the export is being produced outside this session, so none was built here.
+* 2026-09-29 (later): Milestone 1. The export arrived as PR #307 in `themata/results/explorer/`. Reviewed it and reproduced it byte for byte with Lean 4.22.0. Follow-up PR: commit hash and encoding version, an explicit empty failed-runs list, a JSON schema for every file, a `non_primary` flag (adds S011 and S014), `searches.json` with 14,256 distinct searches and the invariance check, and counts reported as distinct searches. Not done: the duplicated-premise variant.

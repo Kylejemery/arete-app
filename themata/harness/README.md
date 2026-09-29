@@ -14,7 +14,10 @@ This folder holds the pieces that are not Lean. Neither computes a verdict:
 - `build_export.py` builds the explorer data export in
   `../results/explorer/`. It runs `lake exe harness --export`, joins the
   ledger text (examples chosen in `explorer_inputs.yaml`, checked as
-  quotations), and cross-checks every cell against `matrix.csv`.
+  quotations), cross-checks every cell against `matrix.csv`, checks that the
+  conditional and redundancy readings change no proof result, folds the runs
+  into distinct searches, and validates every file against
+  `../results/explorer/schema.json`. It needs PyYAML and jsonschema.
 
     cd ../lean
     lake exe harness                 # writes ../results/matrix.md and matrix.csv

@@ -2,17 +2,27 @@
 
 Static data for the public Themata explorer page. The page is meant to show
 these files and compute nothing, so every verdict it shows comes from a Lean
-run. Everything here except this README is generated. Don't edit it by hand.
+run. Everything here except this README and `schema.json` is generated. Don't
+edit it by hand.
 
+    pip install pyyaml jsonschema
     cd themata/lean && lake build
-    python3 ../harness/build_export.py      # about two minutes
+    python3 ../harness/build_export.py      # about three and a half minutes
 
 `lake exe harness --export` writes `harness.json` and `runs/`, and
 `build_export.py` joins the ledger into `items.json` and writes `index.json`.
 The script copies ledger text and checks consistency. It computes no verdict.
+It also folds the runs into `searches.json`, one record per distinct search.
 It fails if the harness's items differ from `evidence/suite.yaml`, if an
-example is not quoted from its passage, or if any cell differs from
-`results/matrix.csv`.
+example is not quoted from its passage, if any cell differs from
+`results/matrix.csv`, if the invariance check below fails, or if any file does
+not validate against `schema.json`.
+
+**Counts are distinct searches.** A search is one candidate × one proof
+setting (`single`, `contra`, `view`: 12 of them) × one formal item: 66 × 12 ×
+18 = 14,256. `runs/` holds eight records per search, one per (`cond`,
+`redundancy`), 114,048 in all. Quote the distinct figures (`index.json`
+`counts`); `counts.run_records` is the record total.
 
 **Review status.** No ledger entry is `verified_by_kyle`, and no specialist
 has reviewed the ledger or the formalization. Guardrail 5 of
@@ -33,12 +43,34 @@ Each run is one candidate × one setting × one formal item.
 | `redundancy` | `strict`, `narrow` | 2 |
 | formal item | `evidence/suite.yaml` without the `non_formal` S017, S019 | 18 |
 
-That is 96 settings and 114,048 runs. The parameter names and values are the
-constructor names in `lean/Stoic/Params.lean`, read from Lean's `Repr`.
-Derivability reads only `single`, `contra` and `view`, but every run is still
-made under its full parameter record. `cond` and `redundancy` enter through
-`semantics` and through the S008 criterion check. The cross-check with
-`matrix.csv` confirms that the cells don't vary with them.
+That is 96 settings. The parameter names and values are the constructor
+names in `lean/Stoic/Params.lean`, read from Lean's `Repr`. Derivability
+reads only `single`, `contra` and `view`, so the 96 settings fold into 12
+proof settings and 14,256 distinct searches. The harness still makes every run
+under its full parameter record. `cond` and `redundancy` enter through
+`semantics` and through the S008 criterion check.
+
+## Invariance across `cond` and `redundancy`
+
+The checked claim is that the conditional and redundancy readings change no
+proof result. `lake exe harness --export` runs each search once under each of
+the eight (`cond`, `redundancy`) combinations, and `build_export.py` compares
+the eight records field by field:
+
+- every field except `setting` and `matches_ledger` is identical in all eight
+  records, for all 14,256 searches: `cell`, `status`, `depth`,
+  `within_depth`, `saturated`, `truncated`, `proof`, the reduction, and the
+  redundant variant's result;
+- `matches_ledger` varies in 792 searches, every S008 search, and only with
+  `cond`, never with `redundancy`. S008 is `valid_nonsyllogistic`, so its
+  match also asks the DL 7.77 criterion, which reads `cond`: it is `unknown`
+  under `diodorean` and `yes` under the other three.
+
+The export fails if either statement stops holding. This is an observed check
+over this suite and these candidates, made on Lean's own output. It is not a
+theorem. The result is recorded in `index.json` and `searches.json` as
+`invariance`. Separately, every cell agrees with `results/matrix.csv`, which
+the matrix run of the same harness wrote.
 
 For every run that derives its item, the same candidate and setting also run a
 **redundant variant**: the item with one premise added. The added premise is a
@@ -49,9 +81,54 @@ S016.
 
 ### `index.json`
 
-A manifest listing the files, the search bounds, the axis sizes, totals
-(runs by status, matches, variants), the review status, and the cross-check
-result.
+A manifest listing the files, the search bounds, the axis sizes, totals in
+distinct searches, the invariance check, the review status, and the
+cross-check result. It also records:
+
+- `source.commit`: HEAD of the checkout the export was generated from, and
+  `source.inputs_clean`, false if `themata/lean`, `themata/evidence` or
+  `themata/harness` had uncommitted changes.
+- `source.encoding_version`: a SHA-256 over the paths and contents of every
+  tracked file under `themata/lean/`, with the file count and the Lean
+  toolchain. Two exports with the same digest ran the same Lean code, whatever
+  the commit. `source.ledger_sha256` does the same for `evidence/suite.yaml`.
+- `failed_runs`: runs that errored or timed out. It is always empty, and
+  `failure_policy` says why. The harness has no timeout: every search runs to
+  its depth or size bound, and a search stopped by the size bound is recorded,
+  not failed (`counts.size_bound_hits`, 0 at present). `build_export.py`
+  stops on any error or failed check, and `lake exe harness --export` stops if
+  any reduction fails to replay. An export that has been written therefore has
+  no failed runs.
+
+Because `index.json` records the commit, regenerating it at a later commit
+changes that field even when nothing else changes. Every other file
+regenerates byte for byte.
+
+### `schema.json` (by hand)
+
+A JSON Schema (draft 2020-12) with one definition per file: `index`,
+`harness`, `items`, `searches`, and `runs` for each `runs/cNN.json`.
+`build_export.py` validates every file against it before writing, so a change
+to the export's shape must change the schema as well.
+
+### `searches.json` (folded from Lean's runs)
+
+The compact form, meant for the page's main grid: one record per distinct
+search, with no copies.
+
+```
+{ "unit": "...",
+  "proof_settings": [ { "id": "chrysippus/toggle/list", "single": ..., "contra": ...,
+                        "view": ..., "run_settings": [0, 1, ...] }, ... ],
+  "invariance": { ... },
+  "searches": { "<proof setting id>": { "<candidate index>": { "<item id>": <search> } } } }
+```
+
+A search carries the fields of a run (below) except `item`, `setting` and
+`ancient_verdict`, which its keys and `items.json` give. `reduction` indexes
+the candidate's `runs/cNN.json`. `matches_ledger` is a single value, or a map
+from `cond` to value where it varies with `cond` (S008 only). `run_settings`
+lists the `harness.json` settings folded into each proof setting.
 
 ### `harness.json` (from Lean)
 
@@ -83,7 +160,7 @@ items, which are not run.
 | `encoding_note` | where the encoding departs from the ledger schema (S014, S015, S018) |
 | `semantics` | for each `cond` × `redundancy`: `criterion_valid` (DL 7.77), `redundant`, `stoic_valid`, each `yes`/`no`/`unknown`. `unknown` means no complete procedure exists (Diodorean) |
 | `redundant_variant` | `{encoded, added_premise, semantics}` |
-| `provenance` | `source`, `passage`, `corpus_ref`, `research_ref`, `verified_by_kyle`, `notes`, `witness`, `secondary_summary` |
+| `provenance` | `source`, `passage`, `corpus_ref`, `research_ref`, `verified_by_kyle`, `notes`, `witness`, `secondary_summary`, `non_primary` |
 
 `provenance.witness` is read from the ledger `source`:
 
@@ -97,7 +174,17 @@ source also names another witness (S015). S014 is flagged `partial` from its
 notes: Chrysippus's rejection of single-premise arguments "appears in the
 corpus only through Mates's summary".
 
+`provenance.non_primary` is `{flag, witness, basis}`. It is flagged whenever
+`witness` is not `primary`: a Mode 2 summary, or ancient text quoted in a
+secondary work (Zeller). This is the flag the page should show. It covers
+every Mode 2 item and also S011 and S014, which rest on Zeller's quotation and
+which `secondary_summary` does not flag. Results that touch a flagged item are
+provisional until milestone 4 (`SCOPE.md`).
+
 ### `runs/cNN.json` (from Lean), one per candidate
+
+The full record: eight runs per distinct search, one per (`cond`,
+`redundancy`), and the reductions.
 
 ```
 { "candidate": 2, "name": "...",

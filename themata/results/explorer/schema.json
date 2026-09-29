@@ -1,0 +1,1463 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "themata/results/explorer/schema.json",
+ "title": "Themata explorer export",
+ "description": "One definition per export file: index (index.json), harness (harness.json), items (items.json), searches (searches.json), runs (each runs/cNN.json). Written by hand; build_export.py validates every file against it and fails on any mismatch.",
+ "$defs": {
+  "cond": {
+   "enum": [
+    "philonian",
+    "diodorean",
+    "chrysippean",
+    "containment"
+   ]
+  },
+  "single": {
+   "enum": [
+    "chrysippus",
+    "antipater"
+   ]
+  },
+  "contra": {
+   "enum": [
+    "toggle",
+    "negate"
+   ]
+  },
+  "view": {
+   "enum": [
+    "list",
+    "multiset",
+    "set"
+   ]
+  },
+  "redundancy": {
+   "enum": [
+    "strict",
+    "narrow"
+   ]
+  },
+  "item_id": {
+   "type": "string",
+   "pattern": "^S[0-9]{3}$"
+  },
+  "ancient_verdict": {
+   "enum": [
+    "valid",
+    "invalid",
+    "disputed",
+    "valid_nonsyllogistic"
+   ]
+  },
+  "tri": {
+   "enum": [
+    "yes",
+    "no",
+    "unknown"
+   ]
+  },
+  "sha256": {
+   "type": "string",
+   "pattern": "^[0-9a-f]{64}$"
+  },
+  "status": {
+   "description": "derived; not_found_within_depth (the bounded search found nothing, which proves nothing); proven_underivable (a theorem named in harness.proof_routes covers it). The last two are never merged.",
+   "enum": [
+    "derived",
+    "not_found_within_depth",
+    "proven_underivable"
+   ]
+  },
+  "cell": {
+   "description": "The harness's own verdict, as in results/matrix.md. See harness.cells.",
+   "type": "string",
+   "pattern": "^(D[0-9]+|OVER[0-9]+|UNDER|UNDER\\(t\\)|UNDER■(g3|cl|2|rel)|■(cm|rm|2p|rel|base)|·|·s|·t)$"
+  },
+  "route": {
+   "enum": [
+    "cm",
+    "rm",
+    "2p",
+    "rel",
+    "base",
+    "g3",
+    "2",
+    "cl"
+   ]
+  },
+  "params": {
+   "type": "object",
+   "required": [
+    "cond",
+    "single",
+    "contra",
+    "view",
+    "redundancy"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "cond": {
+     "$ref": "#/$defs/cond"
+    },
+    "single": {
+     "$ref": "#/$defs/single"
+    },
+    "contra": {
+     "$ref": "#/$defs/contra"
+    },
+    "view": {
+     "$ref": "#/$defs/view"
+    },
+    "redundancy": {
+     "$ref": "#/$defs/redundancy"
+    }
+   }
+  },
+  "bounds": {
+   "type": "object",
+   "required": [
+    "depth",
+    "max_size",
+    "formulas",
+    "premises"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "depth": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "max_size": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "formulas": {
+     "type": "string"
+    },
+    "premises": {
+     "type": "string"
+    }
+   }
+  },
+  "encoded_argument": {
+   "type": "object",
+   "required": [
+    "premises",
+    "conclusion",
+    "text"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "premises": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "conclusion": {
+     "type": "string"
+    },
+    "text": {
+     "type": "string"
+    }
+   }
+  },
+  "semantics": {
+   "description": "For each cond x redundancy: valid by the DL 7.77 criterion, redundant, and both together. unknown: no complete procedure (Diodorean).",
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "cond",
+     "redundancy",
+     "criterion_valid",
+     "redundant",
+     "stoic_valid"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "cond": {
+      "$ref": "#/$defs/cond"
+     },
+     "redundancy": {
+      "$ref": "#/$defs/redundancy"
+     },
+     "criterion_valid": {
+      "$ref": "#/$defs/tri"
+     },
+     "redundant": {
+      "$ref": "#/$defs/tri"
+     },
+     "stoic_valid": {
+      "$ref": "#/$defs/tri"
+     }
+    }
+   }
+  },
+  "search_result": {
+   "description": "What one search found. depth when derived; within_depth, saturated and truncated when not; proof when proven underivable.",
+   "type": "object",
+   "required": [
+    "cell",
+    "status"
+   ],
+   "properties": {
+    "cell": {
+     "$ref": "#/$defs/cell"
+    },
+    "status": {
+     "$ref": "#/$defs/status"
+    },
+    "depth": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "within_depth": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "saturated": {
+     "type": "boolean"
+    },
+    "truncated": {
+     "type": "boolean"
+    },
+    "proof": {
+     "$ref": "#/$defs/route"
+    },
+    "reduction": {
+     "type": "integer",
+     "minimum": 0,
+     "description": "Index into the candidate's runs/cNN.json reductions."
+    }
+   },
+   "allOf": [
+    {
+     "if": {
+      "properties": {
+       "status": {
+        "const": "derived"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "depth",
+       "reduction"
+      ],
+      "not": {
+       "anyOf": [
+        {
+         "required": [
+          "within_depth"
+         ]
+        },
+        {
+         "required": [
+          "proof"
+         ]
+        }
+       ]
+      }
+     },
+     "else": {
+      "required": [
+       "within_depth",
+       "saturated",
+       "truncated"
+      ],
+      "not": {
+       "anyOf": [
+        {
+         "required": [
+          "depth"
+         ]
+        },
+        {
+         "required": [
+          "reduction"
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "status": {
+        "const": "proven_underivable"
+       }
+      }
+     },
+     "then": {
+      "required": [
+       "proof"
+      ]
+     }
+    },
+    {
+     "if": {
+      "properties": {
+       "status": {
+        "const": "not_found_within_depth"
+       }
+      }
+     },
+     "then": {
+      "not": {
+       "required": [
+        "proof"
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "redundant_variant_result": {
+   "description": "The same candidate and setting on the item with one fresh atom added as a last premise (S016's shape).",
+   "allOf": [
+    {
+     "$ref": "#/$defs/search_result"
+    },
+    {
+     "type": "object",
+     "required": [
+      "derivation_lost"
+     ],
+     "properties": {
+      "derivation_lost": {
+       "type": "boolean"
+      }
+     }
+    }
+   ],
+   "unevaluatedProperties": false
+  },
+  "run": {
+   "description": "One run: one candidate x one of the 96 settings x one formal item.",
+   "allOf": [
+    {
+     "$ref": "#/$defs/search_result"
+    },
+    {
+     "type": "object",
+     "required": [
+      "item",
+      "setting",
+      "ancient_verdict",
+      "ledger_requires_derivation",
+      "matches_ledger"
+     ],
+     "properties": {
+      "item": {
+       "$ref": "#/$defs/item_id"
+      },
+      "setting": {
+       "type": "integer",
+       "minimum": 0,
+       "description": "Index into harness.settings."
+      },
+      "ancient_verdict": {
+       "$ref": "#/$defs/ancient_verdict"
+      },
+      "ledger_requires_derivation": {
+       "type": "boolean"
+      },
+      "matches_ledger": {
+       "$ref": "#/$defs/tri"
+      },
+      "redundant_variant": {
+       "$ref": "#/$defs/redundant_variant_result"
+      }
+     }
+    }
+   ],
+   "unevaluatedProperties": false
+  },
+  "search": {
+   "description": "One distinct search: the eight runs of a candidate, proof setting and item, folded after the invariance check. matches_ledger is a single value, or a map by cond where it varies with cond (a valid_nonsyllogistic item).",
+   "allOf": [
+    {
+     "$ref": "#/$defs/search_result"
+    },
+    {
+     "type": "object",
+     "required": [
+      "ledger_requires_derivation",
+      "matches_ledger"
+     ],
+     "properties": {
+      "ledger_requires_derivation": {
+       "type": "boolean"
+      },
+      "matches_ledger": {
+       "oneOf": [
+        {
+         "$ref": "#/$defs/tri"
+        },
+        {
+         "type": "object",
+         "required": [
+          "philonian",
+          "diodorean",
+          "chrysippean",
+          "containment"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "philonian": {
+           "$ref": "#/$defs/tri"
+          },
+          "diodorean": {
+           "$ref": "#/$defs/tri"
+          },
+          "chrysippean": {
+           "$ref": "#/$defs/tri"
+          },
+          "containment": {
+           "$ref": "#/$defs/tri"
+          }
+         }
+        }
+       ]
+      },
+      "redundant_variant": {
+       "$ref": "#/$defs/redundant_variant_result"
+      }
+     }
+    }
+   ],
+   "unevaluatedProperties": false
+  },
+  "step": {
+   "type": "object",
+   "required": [
+    "n",
+    "kind",
+    "rule",
+    "from",
+    "premises",
+    "conclusion"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "n": {
+     "type": "integer",
+     "minimum": 1
+    },
+    "kind": {
+     "enum": [
+      "indemonstrable",
+      "monolemmatic",
+      "thema",
+      "view"
+     ]
+    },
+    "rule": {
+     "type": "string",
+     "description": "A base_rules key for a base step, the rule's name for a thema, the view for a reordering."
+    },
+    "shape": {
+     "type": "string",
+     "description": "Thema steps only: the rule's switch settings."
+    },
+    "from": {
+     "type": "array",
+     "items": {
+      "type": "integer",
+      "minimum": 1
+     }
+    },
+    "premises": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "conclusion": {
+     "type": "string"
+    }
+   },
+   "if": {
+    "properties": {
+     "kind": {
+      "const": "thema"
+     }
+    }
+   },
+   "then": {
+    "required": [
+     "shape"
+    ]
+   },
+   "else": {
+    "not": {
+     "required": [
+      "shape"
+     ]
+    }
+   }
+  },
+  "reduction": {
+   "type": "object",
+   "required": [
+    "premises",
+    "conclusion",
+    "replayed",
+    "steps"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "premises": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "conclusion": {
+     "type": "string"
+    },
+    "replayed": {
+     "const": true
+    },
+    "steps": {
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "$ref": "#/$defs/step"
+     }
+    }
+   }
+  },
+  "invariance": {
+   "type": "object",
+   "required": [
+    "method",
+    "searches_checked",
+    "fields_identical",
+    "matches_ledger"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "method": {
+     "type": "string"
+    },
+    "searches_checked": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "fields_identical": {
+     "type": "string"
+    },
+    "matches_ledger": {
+     "type": "object",
+     "required": [
+      "varies_with_cond",
+      "items",
+      "varies_with_redundancy",
+      "why"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "varies_with_cond": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "items": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/item_id"
+       }
+      },
+      "varies_with_redundancy": {
+       "const": 0
+      },
+      "why": {
+       "type": "string"
+      }
+     }
+    }
+   }
+  },
+  "index": {
+   "type": "object",
+   "required": [
+    "title",
+    "files",
+    "generated_by",
+    "bounds",
+    "axes",
+    "source",
+    "counts",
+    "invariance",
+    "failed_runs",
+    "failure_policy",
+    "review_status",
+    "cross_checks"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "title": {
+     "type": "string"
+    },
+    "files": {
+     "type": "object",
+     "required": [
+      "harness",
+      "items",
+      "searches",
+      "schema",
+      "runs"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "harness": {
+       "const": "harness.json"
+      },
+      "items": {
+       "const": "items.json"
+      },
+      "searches": {
+       "const": "searches.json"
+      },
+      "schema": {
+       "const": "schema.json"
+      },
+      "runs": {
+       "type": "array",
+       "items": {
+        "type": "string",
+        "pattern": "^runs/c[0-9]{2,}\\.json$"
+       }
+      }
+     }
+    },
+    "generated_by": {
+     "type": "string"
+    },
+    "bounds": {
+     "$ref": "#/$defs/bounds"
+    },
+    "axes": {
+     "type": "object",
+     "required": [
+      "candidates",
+      "settings",
+      "formal_items",
+      "ledger_items"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "candidates": {
+       "type": "integer"
+      },
+      "settings": {
+       "type": "integer"
+      },
+      "formal_items": {
+       "type": "integer"
+      },
+      "ledger_items": {
+       "type": "integer"
+      }
+     }
+    },
+    "source": {
+     "type": "object",
+     "required": [
+      "commit",
+      "inputs_clean",
+      "inputs",
+      "encoding_version",
+      "ledger_sha256"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "commit": {
+       "type": "string",
+       "pattern": "^[0-9a-f]{40}$",
+       "description": "HEAD of the checkout the export was generated from."
+      },
+      "inputs_clean": {
+       "type": "boolean",
+       "description": "No uncommitted changes under the inputs when the export ran."
+      },
+      "inputs": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       }
+      },
+      "encoding_version": {
+       "type": "object",
+       "required": [
+        "sha256",
+        "scope",
+        "files",
+        "lean_toolchain"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "sha256": {
+         "$ref": "#/$defs/sha256"
+        },
+        "scope": {
+         "type": "string"
+        },
+        "files": {
+         "type": "integer",
+         "minimum": 1
+        },
+        "lean_toolchain": {
+         "type": "string"
+        }
+       }
+      },
+      "ledger_sha256": {
+       "$ref": "#/$defs/sha256"
+      }
+     }
+    },
+    "counts": {
+     "type": "object",
+     "required": [
+      "unit",
+      "searches",
+      "derived",
+      "not_found_within_depth",
+      "proven_underivable",
+      "size_bound_hits",
+      "matches_ledger",
+      "redundant_variants",
+      "variant_derivation_lost",
+      "variant_loss_proven",
+      "run_records"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "unit": {
+       "type": "string"
+      },
+      "searches": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "derived": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "not_found_within_depth": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "proven_underivable": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "size_bound_hits": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "matches_ledger": {
+       "type": "object",
+       "required": [
+        "yes",
+        "no",
+        "unknown",
+        "varies_with_cond"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "yes": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "no": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "unknown": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "varies_with_cond": {
+         "type": "integer",
+         "minimum": 0
+        }
+       }
+      },
+      "redundant_variants": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "variant_derivation_lost": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "variant_loss_proven": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "run_records": {
+       "type": "integer",
+       "minimum": 0,
+       "description": "Records in runs/, eight per distinct search."
+      }
+     }
+    },
+    "invariance": {
+     "$ref": "#/$defs/invariance"
+    },
+    "failed_runs": {
+     "description": "Runs that errored or timed out. Empty by construction: see failure_policy.",
+     "type": "array",
+     "items": {
+      "type": "object"
+     }
+    },
+    "failure_policy": {
+     "type": "string"
+    },
+    "review_status": {
+     "type": "object",
+     "required": [
+      "ledger_entries_verified_by_kyle",
+      "specialist_review",
+      "caution"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "ledger_entries_verified_by_kyle": {
+       "type": "string"
+      },
+      "specialist_review": {
+       "type": "string"
+      },
+      "caution": {
+       "type": "string"
+      }
+     }
+    },
+    "cross_checks": {
+     "type": "string"
+    }
+   }
+  },
+  "harness": {
+   "type": "object",
+   "required": [
+    "generated_by",
+    "bounds",
+    "parameters",
+    "settings",
+    "candidates",
+    "items",
+    "base_rules",
+    "cells",
+    "proof_routes"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "generated_by": {
+     "type": "string"
+    },
+    "bounds": {
+     "$ref": "#/$defs/bounds"
+    },
+    "parameters": {
+     "type": "object",
+     "required": [
+      "cond",
+      "single",
+      "contra",
+      "view",
+      "redundancy"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "cond": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/cond"
+       }
+      },
+      "single": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/single"
+       }
+      },
+      "contra": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/contra"
+       }
+      },
+      "view": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/view"
+       }
+      },
+      "redundancy": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/redundancy"
+       }
+      }
+     }
+    },
+    "settings": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "params"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "id": {
+        "type": "integer",
+        "minimum": 0
+       },
+       "params": {
+        "$ref": "#/$defs/params"
+       }
+      }
+     }
+    },
+    "candidates": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "index",
+       "file",
+       "name",
+       "provenance",
+       "source",
+       "rules"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "index": {
+        "type": "integer",
+        "minimum": 0
+       },
+       "file": {
+        "type": "string",
+        "pattern": "^runs/c[0-9]{2,}\\.json$"
+       },
+       "name": {
+        "type": "string"
+       },
+       "provenance": {
+        "enum": [
+         "attested",
+         "reconstruction",
+         "generated"
+        ]
+       },
+       "source": {
+        "type": "string"
+       },
+       "rules": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "required": [
+          "name",
+          "shape",
+          "merging",
+          "cut"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "name": {
+           "type": "string"
+          },
+          "shape": {
+           "type": "string"
+          },
+          "merging": {
+           "type": "boolean"
+          },
+          "cut": {
+           "type": "boolean"
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    "items": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "ancient_verdict",
+       "non_formal",
+       "encoded",
+       "theory",
+       "encoding_note",
+       "semantics",
+       "redundant_variant"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "id": {
+        "$ref": "#/$defs/item_id"
+       },
+       "ancient_verdict": {
+        "$ref": "#/$defs/ancient_verdict"
+       },
+       "non_formal": {
+        "type": "boolean"
+       },
+       "encoded": {
+        "$ref": "#/$defs/encoded_argument"
+       },
+       "theory": {
+        "type": "array",
+        "items": {
+         "type": "string"
+        }
+       },
+       "encoding_note": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "semantics": {
+        "oneOf": [
+         {
+          "$ref": "#/$defs/semantics"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "redundant_variant": {
+        "oneOf": [
+         {
+          "$ref": "#/$defs/item_variant"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       }
+      }
+     }
+    },
+    "base_rules": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "string"
+     }
+    },
+    "cells": {
+     "type": "object",
+     "additionalProperties": {
+      "type": "string"
+     }
+    },
+    "proof_routes": {
+     "type": "object",
+     "propertyNames": {
+      "$ref": "#/$defs/route"
+     },
+     "additionalProperties": {
+      "type": "object",
+      "required": [
+       "theorem",
+       "file",
+       "meaning"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "theorem": {
+        "type": "string"
+       },
+       "file": {
+        "type": "string"
+       },
+       "meaning": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   }
+  },
+  "item_variant": {
+   "type": "object",
+   "required": [
+    "encoded",
+    "added_premise",
+    "semantics"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "encoded": {
+     "$ref": "#/$defs/encoded_argument"
+    },
+    "added_premise": {
+     "type": "string"
+    },
+    "semantics": {
+     "$ref": "#/$defs/semantics"
+    }
+   }
+  },
+  "items": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "schema",
+     "kind",
+     "flags",
+     "ancient_verdict",
+     "confidence",
+     "in_formal_suite",
+     "example",
+     "encoded",
+     "theory",
+     "encoding_note",
+     "semantics",
+     "redundant_variant",
+     "provenance"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "$ref": "#/$defs/item_id"
+     },
+     "schema": {
+      "type": "string"
+     },
+     "kind": {
+      "type": "string"
+     },
+     "flags": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "ancient_verdict": {
+      "$ref": "#/$defs/ancient_verdict"
+     },
+     "confidence": {
+      "type": "string"
+     },
+     "in_formal_suite": {
+      "type": "boolean"
+     },
+     "example": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "type": "object",
+        "required": [
+         "text",
+         "language",
+         "note"
+        ],
+        "additionalProperties": false,
+        "properties": {
+         "text": {
+          "type": "string"
+         },
+         "language": {
+          "type": "string"
+         },
+         "note": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        }
+       }
+      ]
+     },
+     "encoded": {
+      "$ref": "#/$defs/encoded_argument"
+     },
+     "theory": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "encoding_note": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "semantics": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/semantics"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "redundant_variant": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/item_variant"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "provenance": {
+      "type": "object",
+      "required": [
+       "source",
+       "passage",
+       "corpus_ref",
+       "research_ref",
+       "verified_by_kyle",
+       "witness",
+       "secondary_summary",
+       "non_primary",
+       "notes"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "source": {
+        "type": "string"
+       },
+       "passage": {
+        "type": "string"
+       },
+       "corpus_ref": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "research_ref": {
+        "description": "A private research_sources entry, where the ledger cites one.",
+        "oneOf": [
+         {
+          "type": "null"
+         },
+         {
+          "type": "object",
+          "required": [
+           "source_id",
+           "locator"
+          ],
+          "additionalProperties": false,
+          "properties": {
+           "source_id": {
+            "type": "string"
+           },
+           "locator": {
+            "type": "string"
+           }
+          }
+         }
+        ]
+       },
+       "verified_by_kyle": {
+        "type": "boolean"
+       },
+       "witness": {
+        "enum": [
+         "primary",
+         "ancient_text_via_secondary_work",
+         "mode2_summary"
+        ]
+       },
+       "secondary_summary": {
+        "type": "object",
+        "required": [
+         "flag",
+         "scope",
+         "basis"
+        ],
+        "additionalProperties": false,
+        "properties": {
+         "flag": {
+          "type": "boolean"
+         },
+         "scope": {
+          "enum": [
+           "whole",
+           "partial",
+           null
+          ]
+         },
+         "basis": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        }
+       },
+       "non_primary": {
+        "description": "Flagged when the witness is not a primary text. Results touching a flagged item are provisional until milestone 4.",
+        "type": "object",
+        "required": [
+         "flag",
+         "witness",
+         "basis"
+        ],
+        "additionalProperties": false,
+        "properties": {
+         "flag": {
+          "type": "boolean"
+         },
+         "witness": {
+          "enum": [
+           "primary",
+           "ancient_text_via_secondary_work",
+           "mode2_summary"
+          ]
+         },
+         "basis": {
+          "type": [
+           "string",
+           "null"
+          ]
+         }
+        }
+       },
+       "notes": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   }
+  },
+  "searches": {
+   "type": "object",
+   "required": [
+    "unit",
+    "proof_settings",
+    "invariance",
+    "searches"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "unit": {
+     "type": "string"
+    },
+    "proof_settings": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "single",
+       "contra",
+       "view",
+       "run_settings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "id": {
+        "type": "string",
+        "pattern": "^(chrysippus|antipater)/(toggle|negate)/(list|multiset|set)$"
+       },
+       "single": {
+        "$ref": "#/$defs/single"
+       },
+       "contra": {
+        "$ref": "#/$defs/contra"
+       },
+       "view": {
+        "$ref": "#/$defs/view"
+       },
+       "run_settings": {
+        "type": "array",
+        "items": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "description": "The harness.settings ids folded into this proof setting, one per cond x redundancy."
+       }
+      }
+     }
+    },
+    "invariance": {
+     "$ref": "#/$defs/invariance"
+    },
+    "searches": {
+     "description": "proof setting id -> candidate index (as a string) -> item id -> search.",
+     "type": "object",
+     "propertyNames": {
+      "pattern": "^(chrysippus|antipater)/(toggle|negate)/(list|multiset|set)$"
+     },
+     "additionalProperties": {
+      "type": "object",
+      "propertyNames": {
+       "pattern": "^[0-9]+$"
+      },
+      "additionalProperties": {
+       "type": "object",
+       "propertyNames": {
+        "$ref": "#/$defs/item_id"
+       },
+       "additionalProperties": {
+        "$ref": "#/$defs/search"
+       }
+      }
+     }
+    }
+   }
+  },
+  "runs": {
+   "type": "object",
+   "required": [
+    "candidate",
+    "name",
+    "reductions",
+    "runs"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "candidate": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "name": {
+     "type": "string"
+    },
+    "reductions": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/reduction"
+     }
+    },
+    "runs": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/run"
+     }
+    }
+   }
+  }
+ }
+}
