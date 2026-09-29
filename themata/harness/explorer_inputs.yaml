@@ -1,0 +1,72 @@
+# Editorial inputs to the explorer export (build_export.py).
+#
+# Nothing here is a verdict. Verdicts come only from the Lean harness
+# (`lake exe harness --export`); the ancient verdicts come only from
+# evidence/suite.yaml.
+#
+# examples: the natural-language example for each item, quoted from that
+#   item's ledger `passage`. build_export.py fails unless each `text` is a
+#   substring of the passage (whitespace collapsed). Items whose passage has
+#   no example are left out: the export gives them `example: null`.
+#   `note` is an editorial caution shown beside the example.
+#
+# secondary_summary: items whose evidence rests partly on a Mode 2 summary
+#   although their `source` field does not name one. `quote` must be a
+#   substring of the item's ledger `notes`. Items whose `source` names a Mode 2
+#   summary are flagged from the ledger directly and need no entry here.
+
+examples:
+  S001:
+    text: "If the first, then the second; but the first is, therefore the second is."
+    language: en
+    note: "DL's schematic example, with ordinals for the propositions."
+  S002:
+    text: "If it is day, it is light; but it is night, therefore it is not day."
+    language: en
+    note: "The minor premise, 'it is night', is not the contradictory of 'it is light', though DL's next sentence says it is (see the ledger notes)."
+  S003:
+    text: "It is not the case that Plato is both dead and alive; but he is dead, therefore Plato is not alive."
+    language: en
+  S004:
+    text: "Either A or B; but A is, therefore B is not."
+    language: en
+  S005:
+    text: "Either it is day or it is night; but it is not night, therefore it is day."
+    language: en
+    note: "The example denies the second disjunct and concludes the first; the schema denies the first."
+  S006:
+    text: "If it is day, it is light; but it is day, therefore Dion walks."
+    language: en
+  S007:
+    text: "If Dion is a horse, he is an animal; but Dion is not a horse, therefore he is not an animal."
+    language: en
+  S008:
+    text: "“It is both day and night” is false: “now it is day; therefore it is not night.”"
+    language: en
+  S009:
+    text: "If it shines, it shines: but it does shine, therefore it does shine?"
+    language: en
+  S010:
+    text: "If you say that the sun shines, and if you speak truth, therefore the sun does shine?"
+    language: en
+    note: "Yonge's English runs the conditional and the minor premise together (see the ledger notes)."
+  S011:
+    text: "It is either day or night; It is day, ∴ It is day."
+    language: en
+  S015:
+    text: "ἀναπνεῖς, ζῇς ἄρα"
+    language: grc
+    note: "'You are breathing; therefore you are living.'"
+  S018:
+    text: "“It cannot be that if two is few, three is not so likewise, nor that if two or three are few, four is not so; and so on up to ten. But two is few, therefore so also is ten.”"
+    language: en
+  S019:
+    text: "“If anyone is here, he is not in Rhodes; but there is some one here, therefore there is not anyone in Rhodes.”"
+    language: en
+  S020:
+    text: "1st, If you know that you are dead, you are dead; 2d, if you know that you are dead, you are not dead. And the conclusion is—“you do not know that you are dead.”"
+    language: en
+
+secondary_summary:
+  S014:
+    quote: "That Chrysippus rejected them appears in the corpus only through Mates's summary"

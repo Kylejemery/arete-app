@@ -29,6 +29,7 @@ and every `#guard` evaluated to true. A failing guard fails the build.
 | `Stoic/Harness/Search.lean` | bounded forward proof search, and countermodel search |
 | `Stoic/Harness/Matrix.lean` | candidates × settings × items, and the rendering of `../results/matrix.md` |
 | `Stoic/Harness/Tests.lean` | the search and the proof routes against the Phase 2–3 results |
+| `Stoic/Harness/Export.lean` | the explorer data export: every item × candidate × all 96 parameter combinations, with reductions and redundant variants |
 | `Harness.lean` | `lake exe harness` |
 
 After changing a candidate, regenerate the log:
@@ -40,6 +41,11 @@ Run the harness (Phase 4), which writes `../results/matrix.md` and
 
     lake exe harness               # depth 8 by default; --depth N to change
     python3 ../harness/check_suite.py
+
+Build the explorer data export (`../results/explorer/`, described in its
+README). This runs `lake exe harness --export` and joins the ledger:
+
+    python3 ../harness/build_export.py
 
 If `elan` cannot reach `release.lean-lang.org`, install the toolchain from
 the GitHub release (`lean-4.22.0-linux.zip`), then run `elan toolchain link

@@ -660,3 +660,48 @@ Kyle supplied the archive.org copy of the CCEL edition. It is suite entry S020,
   `set`.
 - **Which premise the first thema contraposes** (either, minor, major) does
   not matter on this suite. Each variant fits with some cut.
+
+## Explorer data export (2026-09-29)
+
+`results/explorer/` is the static data behind the public explorer page. The
+page computes nothing, so this export is the only bridge between the research
+and the page. The layout is in its README. Built by
+`harness/build_export.py`, which runs `lake exe harness --export`
+(`lean/Stoic/Harness/Export.lean`).
+
+### Decisions
+
+- **Every combination of the five parameters, 96 settings.** Derivability
+  never reads `cond` or `redundancy`, but the export does not rely on that.
+  Every run uses its full parameter record, and every cell matches
+  `matrix.csv` under all eight (cond, redundancy) combinations. That makes
+  114,048 runs.
+- **The search records how it reached each argument** (`searchTrace`), and
+  `search` is that record's outcome. The matrix and the export run the same
+  code. `matrix.md` and `matrix.csv` regenerate byte-identical.
+- **A reduction is the first derivation the breadth-first search found**, so it
+  is a shallowest one. It is not necessarily the one an ancient analysis gives.
+  Each reduction is replayed step by step before it is written.
+- **The redundant variant adds a fresh atom, placed last** (S016's shape). A
+  fresh atom is the one premise that is redundant under every reading, with no
+  appeal to the semantics. Adding a related premise (a copy of an existing
+  premise, or a consequence of one) would test contraction and the view,
+  not redundancy.
+- **`matches_ledger` for S008** also needs the criterion (the brief's
+  `valid_nonsyllogistic` rule). The matrix leaves that to its semantic table.
+  Under `diodorean` it is `unknown`.
+- **Secondary-summary flag.** It is read from the ledger `source`. S014 is
+  also flagged, partially, because its notes say Chrysippus's rejection
+  "appears in the corpus only through Mates's summary". Notes that cite a
+  Mode 2 summary only as corroboration (S003, S006–S009, S011) are not
+  flagged.
+
+### What it shows
+
+- Of 67,072 derived runs, every redundant variant loses derivability, and
+  every loss is proven by a Sugihara countermodel (`■rm`). None is only "not
+  found". The added atom makes the variant fail relevance, and the RM
+  soundness proof covers every candidate and view, the merging cut included.
+- `not_found_within_depth`: 8,128 runs, which are the matrix's 1,016 `UNDER`
+  cells under each of the eight (cond, redundancy) pairs. Every rejection is
+  proven.

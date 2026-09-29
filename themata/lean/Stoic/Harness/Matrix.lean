@@ -95,10 +95,11 @@ def Cell.proven : Cell → Bool
   | .provenBase => true
   | _ => false
 
-def cell (c : Candidate) (s : Setting) (i : Item) (b : Bounds) : Cell :=
-  let P := s.params
-  let outcome := search P i.theory c.rules i.arg b
-  match outcome, i.shouldDerive P with
+/-- Classify a search outcome. `required`: the ledger requires the item to be
+derived under this setting (`Item.shouldDerive`). The proof routes are tried
+in this order when it is not derived. -/
+def classify (c : Candidate) (P : Params) (i : Item) (outcome : Outcome) (required : Bool) : Cell :=
+  match outcome, required with
   | .derived d, true => .ok d
   | .derived d, false => .over d
   | .notFound _ sat tr, true => .under (underProof c P i) sat tr
@@ -110,6 +111,10 @@ def cell (c : Candidate) (s : Setting) (i : Item) (b : Bounds) : Cell :=
         c.rules.all (!·.merging) && i.arg.atoms.any (slots i.arg · == 1) then .provenRelevance
     else if c.rules.isEmpty then .provenBase
     else .bounded sat tr
+
+def cell (c : Candidate) (s : Setting) (i : Item) (b : Bounds) : Cell :=
+  let P := s.params
+  classify c P i (search P i.theory c.rules i.arg b) (i.shouldDerive P)
 
 structure Row where
   candidate : Candidate
