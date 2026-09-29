@@ -1,4 +1,6 @@
 import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
+import { fetch as expoFetch } from 'expo/fetch';
+import { readCabinetResponse, type CabinetStreamEvent } from '../lib/cabinetStream';
 import { pronounsFor } from '../lib/pronouns';
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
@@ -80,12 +82,20 @@ const CHAT_TIMEOUT_MS = 120_000;
  * message against the daily limit in the case where the server did complete
  * the turn and only the response was lost — one attempt, for that reason.
  */
-async function postWithRetry(url: string, init: RequestInit, attempts = 2): Promise<Response> {
+// streaming (retention plan R13): React Native's built-in fetch cannot read a
+// response body as it arrives, so a streaming Cabinet request goes through
+// expo/fetch, which exposes the body as a ReadableStream. The timeout covers
+// only the wait for the response to begin, as before.
+async function postWithRetry(url: string, init: RequestInit, attempts = 2, streaming = false): Promise<Response> {
   let lastError: unknown;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS);
     try {
+      if (streaming) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return (await expoFetch(url, { ...(init as any), signal: controller.signal })) as unknown as Response;
+      }
       return await fetch(url, { ...init, signal: controller.signal });
     } catch (e) {
       lastError = e;
@@ -936,9 +946,13 @@ export interface CabinetReply {
   text: string;
 }
 
+// onStream (retention plan R13): when given, the server streams the reply and
+// each preview event reaches onStream as it is written; the promise still
+// resolves with the finished replies, exactly as without it.
 export async function sendMessageToCabinet(
   messages: ThreadMessage[],
-  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] }
+  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] },
+  onStream?: (ev: CabinetStreamEvent) => void
 ): Promise<CabinetReply[]> {
   const asSingleReply = (text: string): CabinetReply[] => [
     { counselorId: null, counselorName: null, text },
@@ -1007,8 +1021,9 @@ export async function sendMessageToCabinet(
         sessionType,
         sessionId: sessionOptions?.sessionId,
         participantIds,
+        ...(onStream ? { stream: true } : {}),
       }),
-    });
+    }, 2, !!onStream);
 
     if (!response.ok) {
       if (response.status === 403) {
@@ -1022,7 +1037,7 @@ export async function sendMessageToCabinet(
       throw new CabinetUnavailableError(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
 
-    const data = await response.json();
+    const data = await readCabinetResponse(response, onStream);
     noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
@@ -1035,7 +1050,7 @@ export async function sendMessageToCabinet(
       if (replies.length > 0) return replies;
       throw new CabinetUnavailableError('The Cabinet did not respond. Please try again.');
     }
-    const content = data?.content?.[0]?.text;
+    const content = ((data?.content ?? []) as { type?: string; text?: string }[]).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text as string).join(''); // every text block (R13): a reply split by a web search is shown whole
     if (typeof content === 'string' && content.length > 0) {
       return asSingleReply(content);
     }
@@ -1271,9 +1286,11 @@ Their communication style is warm, wise, and unhurried. They do not panic. They 
   return `You are ${counselorName}, speaking privately with ${userName} as their personal counselor.\n\n${await gatherUserProfile()}${memoryBlock}\n\nKey principles:\n- Do NOT be sycophantic. Challenge ${userName}. Push back when warranted. Tell them the truth.\n- Be firm AND compassionate — not a drill sergeant, not a cheerleader. Think: a great coach who believes in them and holds them to a high standard.\n- Use Socratic questioning. Help ${userName} find the answer they already sense but haven't accepted yet.\n\nYou are speaking with ${userName} one-on-one. Respond only as ${counselorName}. Do not speak for other cabinet members in this private session.\n\n---\n\n${counselorProfile}\n\n---\n\nToday's date is ${today}. ${userName} is engaging with you in a private one-on-one session.`;
 }
 
+// onStream (retention plan R13): as for sendMessageToCabinet.
 export async function sendMessageToCounselor(
   counselorId: string,
-  messages: ThreadMessage[]
+  messages: ThreadMessage[],
+  onStream?: (ev: CabinetStreamEvent) => void
 ): Promise<string> {
   try {
     const limitStatus = await checkAndIncrementMessageCount();
@@ -1311,8 +1328,9 @@ export async function sendMessageToCounselor(
         activeCounselorId: counselorId,
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, counselorSettings?.kt_completed_at),
         userId: (await supabase.auth.getSession()).data.session?.user?.id,
+        ...(onStream ? { stream: true } : {}),
       }),
-    });
+    }, 2, !!onStream);
 
     if (!response.ok) {
       let errorText = '';
@@ -1328,9 +1346,9 @@ export async function sendMessageToCounselor(
       throw new CabinetUnavailableError(`Your counselor is temporarily unavailable. (Error ${response.status})`);
     }
 
-    const data = await response.json();
+    const data = await readCabinetResponse(response, onStream);
     noteCabinetOffer(data);
-    const content = data?.content?.[0]?.text;
+    const content = ((data?.content ?? []) as { type?: string; text?: string }[]).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text as string).join(''); // every text block (R13): a reply split by a web search is shown whole
     if (typeof content === 'string' && content.length > 0) {
       // Fire background memory summarization — only if conversation is substantial
       if (messages.length >= 4) {

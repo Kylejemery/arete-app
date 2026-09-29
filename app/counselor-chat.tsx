@@ -27,6 +27,8 @@ import { getUserSettings, getSubscriptionTier, FREE_COUNSELOR_SLUGS } from '@/li
 import { useTierLimits } from '../hooks/useTierLimits';
 import ShareQuoteModal from '../components/ShareQuoteModal';
 import { paywallRoute } from '@/lib/paywall';
+import LiveVoiceBubbles from '../components/LiveVoiceBubbles';
+import { applyStreamEvent, type LiveVoice } from '@/lib/cabinetStream';
 
 const COUNSELOR_META: Record<string, { name: string; role: string }> = {
   marcus: { name: 'Marcus Aurelius', role: 'Emperor & Stoic — Chair' },
@@ -55,6 +57,8 @@ export default function CounselorChatScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // The reply while it is being written (retention plan R13).
+  const [liveVoices, setLiveVoices] = useState<LiveVoice[]>([]);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
   // Run B, Part B5: support card shown at once for a teen in distress.
@@ -159,7 +163,10 @@ export default function CounselorChatScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
 
     try {
-      const reply = await sendMessageToCounselor(counselorId, updatedMessages);
+      // Streamed (R13): the reply appears as it is written.
+      setLiveVoices([]);
+      const reply = await sendMessageToCounselor(counselorId, updatedMessages,
+        ev => setLiveVoices(prev => applyStreamEvent(prev, ev)));
       setPendingOffer(takeCabinetOffer());
       if (takeSupportFlag()) setShowSupport(true);
       const assistantMessage: ThreadMessage = {
@@ -195,6 +202,7 @@ export default function CounselorChatScreen() {
       }
     } finally {
       setIsLoading(false);
+      setLiveVoices([]);
     }
   };
 
@@ -337,7 +345,18 @@ export default function CounselorChatScreen() {
             <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
           )}
 
+          {/* R13: the reply as it is written; "composing" only until the first words arrive. */}
           {isLoading && (
+            <LiveVoiceBubbles
+              voices={liveVoices}
+              fallbackName={counselorName}
+              rowStyle={styles.counselorMessageRow}
+              bubbleStyle={styles.counselorBubble}
+              labelStyle={styles.counselorLabel}
+              textStyle={styles.counselorText}
+            />
+          )}
+          {isLoading && !liveVoices.some(v => v.text.trim()) && (
             <View style={styles.counselorMessageRow}>
               <View style={styles.counselorBubble}>
                 <Text style={styles.counselorLabel}>{counselorName}</Text>

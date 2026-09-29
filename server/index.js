@@ -19,6 +19,7 @@ const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog } = require('./lib/events');
+const { createSseReply, createMarkerGuard, streamAnthropicMessage } = require('./lib/cabinet-stream');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
 
@@ -357,18 +358,33 @@ function repairTruncatedContent(data, label) {
  * the raw fetch convention of this file; gpt/gemini/grok models go through
  * the OpenAI-compatible SDK clients. Missing provider key → default Claude.
  */
-async function callCounselorModel({ model, system, messages, maxTokens }) {
+async function callCounselorModel({ model, system, messages, maxTokens, onDelta }) {
   let effectiveModel = model;
   const route = isNonAnthropicModel(model) ? compatRouteFor(model) : undefined;
 
   if (route) {
     // Cache breakpoints are Anthropic-only; other providers take one string.
+    // Not streamed: the voice's text arrives whole in voice_done.
     const systemText = Array.isArray(system) ? system.map(b => b.text).join('') : system;
     return callOpenAICompat(route, { model, system: systemText, messages, maxTokens });
   }
   if (route === null) {
     console.warn(`[Models] No API key for ${model}; falling back to ${DEFAULT_COUNSELOR_MODEL}`);
     effectiveModel = DEFAULT_COUNSELOR_MODEL;
+  }
+
+  // Streaming Cabinet (retention plan R13): same request, same result shape,
+  // with each text delta handed to onDelta as it arrives.
+  if (typeof onDelta === 'function') {
+    const data = await streamAnthropicMessage({
+      apiKey: CLAUDE_API_KEY,
+      body: { model: effectiveModel, max_tokens: maxTokens, system, messages },
+      onTextDelta: onDelta,
+    });
+    return {
+      text: (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('') || '',
+      stopReason: data.stop_reason ?? null,
+    };
   }
 
   const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1689,7 +1705,25 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
+// Streaming Cabinet (retention plan R13): the route runs the handler below
+// inside a guard, so a throw after a stream has begun ends it with an error
+// event instead of leaving the client waiting (and a throw before it answers
+// 500 rather than an unhandled rejection).
 app.post('/api/chat/counselor', async (req, res) => {
+  try {
+    await handleCabinetChat(req, res);
+  } catch (err) {
+    console.error('[/api/chat/counselor] unhandled failure:', err?.message || err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'The Cabinet failed to answer' });
+    } else if (!res.writableEnded) {
+      res.write(`event: error\ndata: ${JSON.stringify({ status: 500, error: 'The Cabinet failed to answer' })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+async function handleCabinetChat(req, res) {
   if (!CLAUDE_API_KEY) {
     return res.status(500).json({ error: 'Server configuration error: CLAUDE_API_KEY not set' });
   }
@@ -1715,6 +1749,20 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   const { system, messages, max_tokens, model, userProfile, counselorSlug, tzOffsetMinutes, activeCounselorId, userId, checkInContext, priorResponses, counselorModels, cabinetMembers, sessionType, sessionId, participantIds } = req.body;
   const safeCounselorModels = (counselorModels && typeof counselorModels === 'object') ? counselorModels : {};
+
+  // Streaming Cabinet (retention plan R13). A client that sends stream: true
+  // gets Server-Sent Events (protocol in server/lib/cabinet-stream.js); any
+  // other client gets the JSON it always has. Refusals above and below this
+  // point (limits, locks, bad input) are still plain JSON, because the stream
+  // only starts when a reply begins.
+  const sse = req.body?.stream === true ? createSseReply(res) : null;
+  const stripOfferMarkers = (t) => {
+    if (typeof t !== 'string') return t;
+    const g = cabinetOffers.parseGoalMarker(t);
+    const k = cabinetOffers.parseTaskMarker(g.text);
+    const a = proposalRules.parseAdjustMarker(k.text);
+    return featureRequests.parseRequestMarker(a.text).text;
+  };
 
   // Older app builds don't send cabinetMembers — look the selection up
   // server-side so the roster restriction applies to them too.
@@ -1940,11 +1988,38 @@ app.post('/api/chat/counselor', async (req, res) => {
     // with one question rather than a stack of advice from several people.
     const respondingCounselors = isFirstTurn ? selectedCounselors.slice(0, 1) : selectedCounselors;
 
+    // Streaming: announce the voices, then relay each one's text as it is
+    // written. Each voice gets its own marker guard; voice_done carries the
+    // cleaned text that replaces the preview.
+    let streamCallbacks = {};
+    if (sse) {
+      sse.send('meta', {
+        mode: 'parallel',
+        request_id: requestId,
+        voices: respondingCounselors.map(c => ({ counselorId: c.id, counselorName: c.name })),
+      });
+      const guards = new Map();
+      streamCallbacks = {
+        onVoiceStart: (v) => {
+          guards.set(v.counselorId, createMarkerGuard(text => sse.send('delta', { counselorId: v.counselorId, text })));
+          sse.send('voice_start', v);
+        },
+        onVoiceDelta: (counselorId, d) => guards.get(counselorId)?.push(d),
+        onVoiceDone: (r) => sse.send('voice_done', {
+          counselorId: r.counselorId,
+          counselorName: r.counselorName,
+          response: stripOfferMarkers(r.response),
+          error: !!r.error,
+        }),
+      };
+    }
+
     const results = await fireParallelCounselors(question, respondingCounselors, history, contextChunks, checkInContext, priorResponses, safeCounselorModels, cabinetProfileBlock + sharedContext + longitudinalContext + clientAppContext, req.areteTier || 'free', voiceMaxTokens, {
       allVoices: firstReplyBlock,
       // No Know Thyself ask on the first reply: it must end on the one
       // question about the person's own situation.
       lastVoice: isFirstTurn ? '' : personal.askBlock + closingActionsBlock,
+      ...streamCallbacks,
     });
 
     // Offers (Parts 6 and 9): strip any goal marker from every voice; the
@@ -2033,14 +2108,16 @@ app.post('/api/chat/counselor', async (req, res) => {
       }
     }
 
-    return res.json({
+    const parallelPayload = {
       responses: results.map(r => ({ ...r, sources })),
       mode: 'parallel',
       request_id: requestId,
       ...(offer ? { offer } : {}),
       ...(proposal ? { proposal } : {}),
       ...(personal.teenSupport ? { support: true } : {}),
-    });
+    };
+    if (sse) return sse.done(parallelPayload);
+    return res.json(parallelPayload);
   }
 
   // --- Single counselor path (unchanged) ---
@@ -2216,7 +2293,15 @@ app.post('/api/chat/counselor', async (req, res) => {
           request: parsedRequest.request,
           counselorId: singleCounselorId,
         }));
-        return res.json({ content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) });
+        const compatPayload = { content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) };
+        // Other providers are not streamed; a streaming client gets the whole
+        // reply as its one voice, then done.
+        if (sse) {
+          sse.send('meta', { mode: 'single', request_id: requestId, voices: [{ counselorId: singleCounselorId, counselorName: null }] });
+          sse.send('voice_done', { counselorId: singleCounselorId, counselorName: null, response: text, error: false });
+          return sse.done(compatPayload);
+        }
+        return res.json(compatPayload);
       } catch (err) {
         console.error(`${route.provider} error (chat/counselor):`, err.message || err);
         return res.status(502).json({ error: `Failed to reach ${route.provider} API` });
@@ -2228,31 +2313,52 @@ app.post('/api/chat/counselor', async (req, res) => {
 
   try {
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
-    console.log(`[/api/chat/counselor] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | tier: ${req.areteTier} | model: ${model} → ${anthropicModel}`);
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
-      },
-      body: JSON.stringify({
-        model: anthropicModel || HAIKU_MODEL,
-        max_tokens: serverMaxTokens,
-        system: counselorSystemBlocks,
-        messages,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      }),
-    });
+    console.log(`[/api/chat/counselor] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | tier: ${req.areteTier} | model: ${model} → ${anthropicModel}${sse ? ' | streaming' : ''}`);
+    const singleRequestBody = {
+      model: anthropicModel || HAIKU_MODEL,
+      max_tokens: serverMaxTokens,
+      system: counselorSystemBlocks,
+      messages,
+      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+    };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Claude API error (chat/counselor):', response.status, errorText);
-      return res.status(response.status).json({ error: errorText });
+    let data;
+    if (sse) {
+      // Streaming: one voice, relayed as it is written behind a marker guard.
+      sse.send('meta', { mode: 'single', request_id: requestId, voices: [{ counselorId: singleCounselorId, counselorName: null }] });
+      sse.send('voice_start', { counselorId: singleCounselorId, counselorName: null, index: 0 });
+      const guard = createMarkerGuard(text => sse.send('delta', { counselorId: singleCounselorId, text }));
+      try {
+        data = await streamAnthropicMessage({
+          apiKey: CLAUDE_API_KEY,
+          headers: { 'anthropic-beta': 'web-search-2025-03-05' },
+          body: singleRequestBody,
+          onTextDelta: d => guard.push(d),
+        });
+      } catch (err) {
+        console.error('Claude API error (chat/counselor, stream):', err.status, err.body || err.message);
+        return sse.fail(err.status || 502, 'Failed to reach Claude API');
+      }
+    } else {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': CLAUDE_API_KEY,
+          'anthropic-version': '2023-06-01',
+          'anthropic-beta': 'web-search-2025-03-05',
+        },
+        body: JSON.stringify(singleRequestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Claude API error (chat/counselor):', response.status, errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      data = await response.json();
     }
-
-    const data = await response.json();
     if (data.content && Array.isArray(data.content)) {
       const textBlocks = data.content.filter(b => b.type === 'text');
       if (textBlocks.length > 0) data.content = textBlocks;
@@ -2305,12 +2411,17 @@ app.post('/api/chat/counselor', async (req, res) => {
       attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
     }
     data.request_id = requestId;
+    if (sse) {
+      sse.send('voice_done', { counselorId: singleCounselorId, counselorName: null, response: assistantText, error: false });
+      return sse.done(data);
+    }
     return res.json(data);
   } catch (error) {
     console.error('Failed to reach Claude API (chat/counselor):', error);
+    if (sse && sse.started) return sse.fail(502, 'Failed to reach Claude API');
     return res.status(502).json({ error: 'Failed to reach Claude API' });
   }
-});
+}
 
 // ---------------------------------------------------------------------------
 // Shared session invite / join / accept (Arete for Couples)
@@ -5094,12 +5205,17 @@ async function fireParallelCounselors(question, counselors, history, contextChun
 
     const model = resolveModelForTier(tier, counselorModels[counselor.id]);
     const t0 = Date.now();
+    // Streaming (retention plan R13): the handler passes these callbacks when
+    // the client asked for stream: true; without them nothing changes.
+    if (extras.onVoiceStart) extras.onVoiceStart({ counselorId: counselor.id, counselorName: counselor.name, index: voiceIndex });
+    const onDelta = extras.onVoiceDelta ? (d) => extras.onVoiceDelta(counselor.id, d) : undefined;
     try {
       const { text, stopReason } = await callCounselorModel({
         model,
         system: buildSystemBlocks(counselor.systemPrompt + stableBlock, contextBlock + checkInBlock + colleaguesBlock + voiceExtras),
         messages,
         maxTokens: maxTokensPerVoice,
+        onDelta,
       });
       const responseText = finishTruncatedReply(text, stopReason, `Cabinet/${counselor.id}`);
       timings[counselor.id] = `${Date.now() - t0}ms (${model})`;
@@ -5117,6 +5233,7 @@ async function fireParallelCounselors(question, counselors, history, contextChun
         error: err.message,
       });
     }
+    if (extras.onVoiceDone) extras.onVoiceDone(results[results.length - 1]);
   }
 
   const totalMs = Date.now() - startAll;

@@ -22,6 +22,8 @@ import { COUNSELOR_LIST } from '@/lib/counselors';
 import { clockTime, startsNewDay } from '@/lib/messageDates';
 import { DayDivider, MessageTime } from '@/components/MessageDates';
 import CounselorMarkdown from '@/components/CounselorMarkdown';
+import LiveVoiceBubbles from '@/components/LiveVoiceBubbles';
+import { applyStreamEvent, type LiveVoice } from '@/lib/cabinetStream';
 import CheckInChip from '@/components/CheckInChip';
 import { parseCheckInPrompt } from '@/lib/checkinMessage';
 import { upgradeHref } from '@/lib/paywall';
@@ -119,6 +121,10 @@ export default function CabinetPage() {
   const [counselorMessages, setCounselorMessages] = useState<ThreadMessage[]>([]);
   const [counselorInput, setCounselorInput] = useState('');
   const [counselorLoading, setCounselorLoading] = useState(false);
+  // The reply while it is being written (retention plan R13): the Cabinet
+  // thread and the one-on-one chat each show their own live voices.
+  const [liveVoices, setLiveVoices] = useState<LiveVoice[]>([]);
+  const [counselorLiveVoices, setCounselorLiveVoices] = useState<LiveVoice[]>([]);
   const [activeMembers, setActiveMembers] = useState<string[]>([]);
   const [cabinetCounselors, setCabinetCounselors] = useState<{ id: string; name: string; role: string; description: string }[]>([]);
 
@@ -310,6 +316,10 @@ export default function CabinetPage() {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [cabinetMessages]);
   useEffect(() => { counselorEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [counselorMessages]);
+  // Follow a reply as it is written (R13). Not smooth: a smooth scroll per
+  // text delta would queue animations behind the text.
+  useEffect(() => { if (liveVoices.length > 0) messagesEndRef.current?.scrollIntoView({ block: 'end' }); }, [liveVoices]);
+  useEffect(() => { if (counselorLiveVoices.length > 0) counselorEndRef.current?.scrollIntoView({ block: 'end' }); }, [counselorLiveVoices]);
   useEffect(() => { sharedEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sharedMessages]);
 
   const handleSendCabinet = async (starter?: Starter) => {
@@ -328,10 +338,13 @@ export default function CabinetPage() {
     setSendError(null);
     setPendingOffer(null);
     setPendingProposal(null);
+    setLiveVoices([]);
     try {
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
-      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages);
+      // Streamed (R13): each voice appears as it is written.
+      const replies: CabinetReply[] = await sendMessageToCabinet(newMessages, undefined,
+        ev => setLiveVoices(prev => applyStreamEvent(prev, ev)));
       const assistantMsgs: ThreadMessage[] = replies.map(r => ({
         role: 'assistant',
         content: r.text,
@@ -356,6 +369,7 @@ export default function CabinetPage() {
       reportSendFailure(e, 'The Cabinet is temporarily unavailable. Please try again.');
     } finally {
       setIsLoading(false);
+      setLiveVoices([]);
     }
   };
 
@@ -521,8 +535,11 @@ export default function CabinetPage() {
     setCounselorLoading(true);
     setSendError(null);
     setPendingOffer(null);
+    setCounselorLiveVoices([]);
     try {
-      const response = await sendMessageToCounselor(selectedCounselor, newMessages);
+      // Streamed (R13): the reply appears as it is written.
+      const response = await sendMessageToCounselor(selectedCounselor, newMessages,
+        ev => setCounselorLiveVoices(prev => applyStreamEvent(prev, ev)));
       setPendingOffer(takeCabinetOffer());
       if (takeSupportFlag()) setShowSupport(true);
       const assistantMsg: ThreadMessage = { role: 'assistant', content: response, timestamp: Date.now() };
@@ -536,6 +553,7 @@ export default function CabinetPage() {
       reportSendFailure(e, 'Your counselor is temporarily unavailable. Please try again.');
     } finally {
       setCounselorLoading(false);
+      setCounselorLiveVoices([]);
     }
   };
 
@@ -864,7 +882,9 @@ export default function CabinetPage() {
               <ProposalCard key={pendingProposal.id} proposal={pendingProposal} onClose={() => setPendingProposal(null)} />
             )}
 
-            {isLoading && (
+            {/* R13: the reply as it is written; "deliberates" only until the first words arrive. */}
+            {isLoading && <LiveVoiceBubbles voices={liveVoices} />}
+            {isLoading && !liveVoices.some(v => v.text.trim()) && (
               <div className="flex justify-start">
                 <div className="flex gap-3 items-start">
                   <div
@@ -1379,7 +1399,9 @@ export default function CabinetPage() {
                   <OfferCard offer={pendingOffer} onClose={() => setPendingOffer(null)} />
                 )}
 
-                {counselorLoading && (
+                {/* R13: the reply as it is written; "is thinking" only until the first words arrive. */}
+                {counselorLoading && <LiveVoiceBubbles voices={counselorLiveVoices} fallbackName={selectedCounselorMeta?.name ?? 'Your counselor'} />}
+                {counselorLoading && !counselorLiveVoices.some(v => v.text.trim()) && (
                   <div className="flex justify-start">
                     <div className="flex gap-3 items-start">
                       <div
