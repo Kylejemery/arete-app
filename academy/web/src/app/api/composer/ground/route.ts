@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { RESEARCH_EXCLUDED_TEXT_TYPES } from '@/lib/corpus-fence'
 import {
   FIDELITY_SYSTEM,
   QUOTABLE_TYPES,
@@ -16,7 +17,10 @@ import {
 // tradition actually says where their sentence stands. Retrieval is the same
 // cited search Scribe uses (embedding over rag_corpus via
 // match_rag_corpus_cited), returned with provenance and with whether each
-// passage may be quoted verbatim or only paraphrased. With `assess` set, a
+// passage may be quoted verbatim or only paraphrased. It runs on the research
+// profile: Arete's own synthesis documents are excluded in the query, so a
+// sentence is only ever grounded in the texts and scholarship themselves
+// (lib/corpus-fence.ts). With `assess` set, a
 // second, short model pass judges fidelity: does the sentence represent these
 // sources faithfully, or was the corpus silent.
 //
@@ -87,6 +91,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await admin.rpc('match_rag_corpus_cited', {
       query_embedding: embedding,
       match_count: SEARCH_K,
+      exclude_text_types: RESEARCH_EXCLUDED_TEXT_TYPES,
     })
     if (error) throw new Error(error.message)
     passages = ((data ?? []) as RagHit[])

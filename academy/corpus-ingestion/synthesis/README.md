@@ -47,7 +47,7 @@ Two profiles, enforced in the query, not in prompts
 
 | Profile | Synthesis | Used by |
 | --- | --- | --- |
-| research | excluded (`researchRetrievalParams()`) | Themata ledger and harness, the gap finder, the agents that write new derived material (Synthesis, Inquiry, Tension, Dreaming, Convergence), any evidence or citation work |
+| research | excluded (`researchRetrievalParams()`; `RESEARCH_EXCLUDED_TEXT_TYPES` in the academy) | Themata ledger and harness, the gap finder, the Scribe and composer grounding and the stoic drafter (`match_rag_corpus_cited`), the agents that write new derived material (Synthesis, Inquiry, Tension, Dreaming, Convergence), any evidence or citation work |
 | teaching | included, labelled | Socratic Proctor, Cabinet counselors, Scrolls, the Moltbook agent |
 
 The label is part of the chunk. Every chunk's `chunk_text` opens with a header
