@@ -88,7 +88,7 @@
   "ledger_items": 20
  },
  "source": {
-  "commit": "7ee6e1c3b246f2a502e6d5b6cf843b79804b8e5e",
+  "commit": "182c47de6d404ff746f0867fefc1f1c76253eb03",
   "inputs_clean": true,
   "inputs": [
    "themata/lean/",
@@ -96,7 +96,7 @@
    "themata/harness/"
   ],
   "encoding_version": {
-   "sha256": "10d7288598b23eee44052d7b21e233a962f7da1bf81aacd5f76760977c7ec0cb",
+   "sha256": "8e15925bd6281f884691ce8e69b4e3e1daa33c3529a983a343f2b776e00c60df",
    "scope": "every tracked file under themata/lean/, paths and contents",
    "files": 28,
    "lean_toolchain": "leanprover/lean4:v4.22.0"
@@ -119,6 +119,47 @@
   "redundant_variants": 8384,
   "variant_derivation_lost": 8384,
   "variant_loss_proven": 8384,
+  "duplicate_variants": 8384,
+  "duplicate_derivation_lost": 5290,
+  "duplicate_loss_proven": 64,
+  "variants_by_view": {
+   "list": {
+    "redundant_variant": {
+     "derived": 0,
+     "not_found_within_depth": 0,
+     "proven_underivable": 2598
+    },
+    "duplicate_variant": {
+     "derived": 28,
+     "not_found_within_depth": 2538,
+     "proven_underivable": 32
+    }
+   },
+   "multiset": {
+    "redundant_variant": {
+     "derived": 0,
+     "not_found_within_depth": 0,
+     "proven_underivable": 2748
+    },
+    "duplicate_variant": {
+     "derived": 28,
+     "not_found_within_depth": 2688,
+     "proven_underivable": 32
+    }
+   },
+   "set": {
+    "redundant_variant": {
+     "derived": 0,
+     "not_found_within_depth": 0,
+     "proven_underivable": 3038
+    },
+    "duplicate_variant": {
+     "derived": 3038,
+     "not_found_within_depth": 0,
+     "proven_underivable": 0
+    }
+   }
+  },
   "run_records": 114048
  },
  "invariance": {

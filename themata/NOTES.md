@@ -699,6 +699,10 @@ and the page. The layout is in its README. Built by
   appeal to the semantics. Adding a related premise (a copy of an existing
   premise, or a consequence of one) would test contraction and the view,
   not redundancy.
+- **A second variant duplicates the last premise** (added later the same day,
+  on Kyle's decision). It tests exactly that: contraction, and whether the
+  view lets a repeated premise count once. It sits beside the fresh-atom
+  variant as `duplicate_variant` and does not replace it.
 - **`matches_ledger` for S008** also needs the criterion (the brief's
   `valid_nonsyllogistic` rule). The matrix leaves that to its semantic table.
   Under `diodorean` it is `unknown`.
@@ -716,3 +720,20 @@ and the page. The layout is in its README. Built by
   soundness proof covers every candidate and view, the merging cut included.
 - `not_found_within_depth`: 1,016 searches, which are the matrix's 1,016
   `UNDER` cells. Every rejection is proven.
+- **The duplicated premise separates the views.** There are 8,384 derived
+  searches, each with a duplicate variant:
+
+  | View | Still derived | Lost, not found within depth 8 | Lost, proven |
+  | --- | --- | --- | --- |
+  | `set` | 3,038 | 0 | 0 |
+  | `list` | 28 | 2,538 | 32 |
+  | `multiset` | 28 | 2,688 | 32 |
+
+  Under `set` every one is still derived, since the view forgets multiplicity.
+  Under `list` and `multiset` nearly every derivation is lost. Only the
+  no-themata control's losses are proven (`■base`); every other loss is only
+  search-bounded, and no theorem yet covers a repeated premise. 16 of the
+  `list` searches did not saturate (S004, S005, S009 and S011 under
+  `toggle`). The exceptions that stay derived are all S012
+  (`if p, (if p, q); p; therefore q`) under a merging cut, 28 per view. S012's
+  own analysis uses `p` twice, so a second copy of `p` has work to do.
