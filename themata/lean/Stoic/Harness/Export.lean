@@ -21,11 +21,18 @@ files and computes nothing, so every verdict it shows comes from here.
 `Matrix.lean`), but the export does not rely on that: every run is made under
 its full parameter record.
 
-**Redundant variants.** When a run derives its item, the item is run again,
-same candidate and setting, with one premise added: a fresh atom, the next
-one after the item's own atoms, placed last (the shape of S016). The variant
-has no ledger verdict; the export records whether derivability was lost, and
-whether the loss is proven or only not found within the depth.
+**Redundant variants.** When a run derives its item, the item is run twice
+more, same candidate and setting, each time with one premise added:
+
+* `redundant_variant`: a fresh atom, the next one after the item's own atoms,
+  placed last (the shape of S016);
+* `duplicate_variant`: a second copy of the item's last premise, placed last.
+  Whether a repeated premise costs derivability is exactly where the `list`,
+  `multiset` and `set` views differ.
+
+Neither variant has a ledger verdict; the export records whether
+derivability was lost, and whether the loss is proven or only not found
+within the depth.
 
 **Reductions.** For a derived run, the derivation the search found, as ordered
 steps: each base instance (the `Indemonstrable` or `Base` constructor), each
@@ -100,6 +107,12 @@ atoms (theory included), placed last. -/
 def _root_.Stoic.Harness.Item.redundantVariant (i : Item) : Item :=
   let n := (itemAtoms i).foldl max 0 + 1
   { i with id := i.id ++ "+r", arg := ⟨i.arg.premises ++ [.atom n], i.arg.conclusion⟩, note := "" }
+
+/-- The item with its last premise stated twice: a copy placed last. -/
+def _root_.Stoic.Harness.Item.duplicateVariant (i : Item) : Item :=
+  match i.arg.premises.getLast? with
+  | some x => { i with id := i.id ++ "+d", arg := ⟨i.arg.premises ++ [x], i.arg.conclusion⟩, note := "" }
+  | none => i
 
 /-! ## Reductions -/
 
@@ -261,7 +274,12 @@ def itemJson (i : Item) : Json :=
     ("redundant_variant", if i.nonFormal then Json.null else
       Json.mkObj [("encoded", argJson v.arg),
         ("added_premise", render (v.arg.premises.getLastD (.atom 0))),
-        ("semantics", semanticsJson v)])]
+        ("semantics", semanticsJson v)]),
+    ("duplicate_variant", if i.nonFormal then Json.null else
+      let d := i.duplicateVariant
+      Json.mkObj [("encoded", argJson d.arg),
+        ("added_premise", render (d.arg.premises.getLastD (.atom 0))),
+        ("semantics", semanticsJson d)])]
 
 def ruleJson (r : Rule) : Json :=
   Json.mkObj [("name", r.name), ("shape", r.shape), ("merging", Json.bool r.merging),
@@ -362,13 +380,14 @@ def candidateRuns (k : Nat) (c : Candidate) (b : Bounds) : Except String Json :=
         let (reds', ids', n) := intern reds redIds red
         reds := reds'; redIds := ids'
         fields := fields ++ [("reduction", toJson n)]
-        let v ← runOne c P i.redundantVariant b false
-        let mut vf := v.fields ++ [("derivation_lost", Json.bool (v.cell.status != "derived"))]
-        if let some vr := v.reduction then
-          let (reds', ids', m) := intern reds redIds vr
-          reds := reds'; redIds := ids'
-          vf := vf ++ [("reduction", toJson m)]
-        fields := fields ++ [("redundant_variant", Json.mkObj vf)]
+        for (key, vi) in [("redundant_variant", i.redundantVariant), ("duplicate_variant", i.duplicateVariant)] do
+          let v ← runOne c P vi b false
+          let mut vf := v.fields ++ [("derivation_lost", Json.bool (v.cell.status != "derived"))]
+          if let some vr := v.reduction then
+            let (reds', ids', m) := intern reds redIds vr
+            reds := reds'; redIds := ids'
+            vf := vf ++ [("reduction", toJson m)]
+          fields := fields ++ [(key, Json.mkObj vf)]
       runs := runs.push (Json.mkObj fields)
   return Json.mkObj [("candidate", toJson k), ("name", c.name),
     ("reductions", Json.arr reds), ("runs", Json.arr runs)]

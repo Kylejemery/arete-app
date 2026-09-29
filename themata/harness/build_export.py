@@ -168,6 +168,7 @@ for e in ledger:
         "encoding_note": h.get("encoding_note"),
         "semantics": h.get("semantics"),
         "redundant_variant": h.get("redundant_variant"),
+        "duplicate_variant": h.get("duplicate_variant"),
         "provenance": {
             "source": e["source"],
             "passage": collapse(e["passage"]),
@@ -233,6 +234,10 @@ counts = {"unit": "distinct searches: candidate x proof setting (single, contra,
           "size_bound_hits": 0,
           "matches_ledger": {"yes": 0, "no": 0, "unknown": 0, "varies_with_cond": 0},
           "redundant_variants": 0, "variant_derivation_lost": 0, "variant_loss_proven": 0,
+          "duplicate_variants": 0, "duplicate_derivation_lost": 0, "duplicate_loss_proven": 0,
+          "variants_by_view": {v: {k: {"derived": 0, "not_found_within_depth": 0, "proven_underivable": 0}
+                                   for k in ("redundant_variant", "duplicate_variant")}
+                               for v in harness["parameters"]["view"]},
           "run_records": run_records}
 varying = set()
 for (ci, s, m, v, item), rs in sorted(groups.items()):
@@ -265,6 +270,15 @@ for (ci, s, m, v, item), rs in sorted(groups.items()):
         counts["redundant_variants"] += 1
         counts["variant_derivation_lost"] += rv["derivation_lost"]
         counts["variant_loss_proven"] += rv["status"] == "proven_underivable"
+        counts["variants_by_view"][v]["redundant_variant"][rv["status"]] += 1
+    if "duplicate_variant" in rec:
+        dv = rec["duplicate_variant"]
+        counts["duplicate_variants"] += 1
+        counts["duplicate_derivation_lost"] += dv["derivation_lost"]
+        counts["duplicate_loss_proven"] += dv["status"] == "proven_underivable"
+        counts["variants_by_view"][v]["duplicate_variant"][dv["status"]] += 1
+    if ("redundant_variant" in rec) != ("duplicate_variant" in rec):
+        problems.append(f"candidate {ci} {s}/{m}/{v} {item}: one redundant variant without the other")
 invariance = {
     "method": ("lake exe harness --export runs every search once under each of the "
                f"{n_combos} (cond, redundancy) combinations; this script compares the {n_combos} "
@@ -342,6 +356,7 @@ if problems:
 (out / "searches.json").write_text(json.dumps(searches_doc, ensure_ascii=False, separators=(",", ":")) + "\n")
 (out / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=1) + "\n")
 print(f"OK: {counts['searches']} distinct searches ({run_records} run records), "
-      f"{counts['redundant_variants']} redundant variants; {len(items)} items joined; {index['cross_checks']}")
+      f"{counts['redundant_variants']} fresh-atom and {counts['duplicate_variants']} duplicate variants; "
+      f"{len(items)} items joined; {index['cross_checks']}")
 if not source["inputs_clean"]:
     print("warning: themata/lean, evidence or harness has uncommitted changes; index.json records inputs_clean: false")

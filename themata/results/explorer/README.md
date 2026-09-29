@@ -59,8 +59,8 @@ the eight records field by field:
 
 - every field except `setting` and `matches_ledger` is identical in all eight
   records, for all 14,256 searches: `cell`, `status`, `depth`,
-  `within_depth`, `saturated`, `truncated`, `proof`, the reduction, and the
-  redundant variant's result;
+  `within_depth`, `saturated`, `truncated`, `proof`, the reduction, and both
+  redundant variants' results;
 - `matches_ledger` varies in 792 searches, every S008 search, and only with
   `cond`, never with `redundancy`. S008 is `valid_nonsyllogistic`, so its
   match also asks the DL 7.77 criterion, which reads `cond`: it is `unknown`
@@ -72,10 +72,21 @@ theorem. The result is recorded in `index.json` and `searches.json` as
 `invariance`. Separately, every cell agrees with `results/matrix.csv`, which
 the matrix run of the same harness wrote.
 
-For every run that derives its item, the same candidate and setting also run a
-**redundant variant**: the item with one premise added. The added premise is a
-fresh atom, the next after the item's own, placed last, which is the shape of
-S016.
+For every run that derives its item, the same candidate and setting also run
+two **redundant variants**, each the item with one premise added:
+
+- `redundant_variant`: a fresh atom, the next after the item's own, placed
+  last. This is the shape of S016.
+- `duplicate_variant`: a second copy of the item's last premise, placed last.
+  This is where the premise views part company. `set` ignores multiplicity, so
+  the copy costs nothing. `list` and `multiset` count it, so the derivation
+  has to use the premise twice.
+
+Neither variant has a ledger verdict. Each records its own cell and status
+and `derivation_lost`. A loss is `proven_underivable` only where a theorem
+covers it. Otherwise it is `not_found_within_depth`, which proves nothing.
+`index.json` `counts.variants_by_view` tallies both variants by view and
+status.
 
 ## Files
 
@@ -159,7 +170,8 @@ items, which are not run.
 | `theory` | background conditionals held true (S014, S015) |
 | `encoding_note` | where the encoding departs from the ledger schema (S014, S015, S018) |
 | `semantics` | for each `cond` × `redundancy`: `criterion_valid` (DL 7.77), `redundant`, `stoic_valid`, each `yes`/`no`/`unknown`. `unknown` means no complete procedure exists (Diodorean) |
-| `redundant_variant` | `{encoded, added_premise, semantics}` |
+| `redundant_variant` | the fresh-atom variant: `{encoded, added_premise, semantics}` |
+| `duplicate_variant` | the duplicated-premise variant, same fields; `added_premise` is the copy |
 | `provenance` | `source`, `passage`, `corpus_ref`, `research_ref`, `verified_by_kyle`, `notes`, `witness`, `secondary_summary`, `non_primary` |
 
 `provenance.witness` is read from the ledger `source`:
@@ -206,7 +218,8 @@ A run:
 | `proof` | if `proven_underivable`: the route key into `proof_routes` |
 | `matches_ledger` | `yes`/`no`/`unknown` (see below) |
 | `reduction` | if derived: an index into this file's `reductions` |
-| `redundant_variant` | if derived: `{cell, status, within_depth, saturated, truncated, proof, derivation_lost}` for the variant |
+| `redundant_variant` | if derived: `{cell, status, depth or within_depth, saturated, truncated, proof, reduction, derivation_lost}` for the fresh-atom variant |
+| `duplicate_variant` | if derived: the same fields for the duplicated-premise variant |
 
 `matches_ledger` is `no` when the cell is `OVER` or `UNDER`. For a
 `valid_nonsyllogistic` item (S008), it is also `no` when the argument is not

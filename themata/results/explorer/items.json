@@ -150,6 +150,76 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; p; therefore q",
+    "premises": [
+     "if p, q",
+     "p",
+     "p"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
    "passage": "The first kind of indemonstrable statement is that in which the whole argument is constructed of a hypothetical proposition and the clause with which the hypothetical proposition begins, while the final clause is the conclusion; as e.g. “If the first, then the second; but the first is, therefore the second is.”",
@@ -320,6 +390,76 @@
     "conclusion": "not p"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; not q; not q; therefore not p",
+    "premises": [
+     "if p, q",
+     "not q",
+     "not q"
+    ],
+    "conclusion": "not p"
+   },
+   "added_premise": "not q"
   },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
@@ -492,6 +632,76 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "not (p and q); p; p; therefore not q",
+    "premises": [
+     "not (p and q)",
+     "p",
+     "p"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
    "passage": "The third kind of indemonstrable employs a conjunction of negative propositions for major premiss and one of the conjoined propositions for minor premiss, concluding thence the contradictory of the remaining proposition; e.g. “It is not the case that Plato is both dead and alive; but he is dead, therefore Plato is not alive.”",
@@ -662,6 +872,76 @@
     "conclusion": "not q"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; p; p; therefore not q",
+    "premises": [
+     "either p or q",
+     "p",
+     "p"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "p"
   },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)",
@@ -834,6 +1114,76 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; not p; not p; therefore q",
+    "premises": [
+     "either p or q",
+     "not p",
+     "not p"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "not p"
+  },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)",
    "passage": "The fifth kind is that in which the argument as a whole is constructed of a disjunctive proposition and the contradictory of one of the alternatives in the disjunction, its conclusion being the other alternative; e.g. “Either it is day or it is night; but it is not night, therefore it is day.”",
@@ -1004,6 +1354,76 @@
     "conclusion": "r"
    },
    "added_premise": "s"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; p; therefore r",
+    "premises": [
+     "if p, q",
+     "p",
+     "p"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "p"
   },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.77 (tr. R.D. Hicks, 1925)",
@@ -1176,6 +1596,76 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; not p; not p; therefore not q",
+    "premises": [
+     "if p, q",
+     "not p",
+     "not p"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "not p"
+  },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)",
    "passage": "Arguments not syllogistic are those which plausibly resemble syllogistic arguments, but are not cogent proof; e.g. “If Dion is a horse, he is an animal; but Dion is not a horse, therefore he is not an animal.”",
@@ -1346,6 +1836,76 @@
     "conclusion": "not q"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "'p and q' is false; p; p; therefore not q",
+    "premises": [
+     "'p and q' is false",
+     "p",
+     "p"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "p"
   },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)",
@@ -1518,6 +2078,76 @@
    },
    "added_premise": "q"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, p; p; p; therefore p",
+    "premises": [
+     "if p, p",
+     "p",
+     "p"
+    ],
+    "conclusion": "p"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)",
    "passage": "These are the arguments of Chrysippus, which even he himself did not refute. For what could he do with such a conclusion as this,—“If it shines, it shines: but it does shine, therefore it does shine?” He must give in; for the principle of the connexion compels you to grant the last proposition after you have once granted the first.",
@@ -1688,6 +2318,76 @@
     "conclusion": "r"
    },
    "added_premise": "s"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if (p and q), r; p and q; p and q; therefore r",
+    "premises": [
+     "if (p and q), r",
+     "p and q",
+     "p and q"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "p and q"
   },
   "provenance": {
    "source": "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)",
@@ -1860,6 +2560,76 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; p; p; therefore p",
+    "premises": [
+     "either p or q",
+     "p",
+     "p"
+    ],
+    "conclusion": "p"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Alexander of Aphrodisias, in APr., as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V n.239",
    "passage": "[239] Two such cases are distinguished, one in which all three clauses, the other in which the conclusion and minor premiss are identical. The first class are called διφορούμενοι· If it is day, it is day; It is day, ∴ It is day. The second class, ἀδιαφόρως περαίνοντες· It is either day or night; It is day, ∴ It is day. The latter term is, however, applied to both kinds. See Alex. Anal. Pr. 7, a; 53, b; Top. 7; Schol. in Arist. 294, b, 25; Cic. Acad. ii. 30, 96; Prantl, 476, 185.",
@@ -2026,6 +2796,76 @@
     "conclusion": "q"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, (if p, q); p; p; therefore q",
+    "premises": [
+     "if p, (if p, q)",
+     "p",
+     "p"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "p"
   },
   "provenance": {
    "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
@@ -2196,6 +3036,77 @@
    },
    "added_premise": "s"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if (p and q), r; not r; p; p; therefore not q",
+    "premises": [
+     "if (p and q), r",
+     "not r",
+     "p",
+     "p"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
    "passage": "The second shows that an argument of the form \"If (p and q) then r; not-r; p; therefore not-q\" decomposes into a type 2 argument followed by a type 3 argument, with the intermediate conclusion licensed as a usable premise by the dialectical theorema.",
@@ -2362,6 +3273,75 @@
     "conclusion": "q"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "p; p; therefore q",
+    "premises": [
+     "p",
+     "p"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "p"
   },
   "provenance": {
    "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245",
@@ -2534,6 +3514,75 @@
    },
    "added_premise": "r"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "p; p; therefore q",
+    "premises": [
+     "p",
+     "p"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)",
    "passage": "[245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.",
@@ -2703,6 +3752,77 @@
    },
    "added_premise": "s"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; r; r; therefore q",
+    "premises": [
+     "if p, q",
+     "p",
+     "r",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
   "provenance": {
    "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
    "passage": "(2) Redundant arguments (para parhelkon) contain a superfluous premise; Mates notes, pointedly, that by standard logical criteria these would count as valid, and suggests either that Sextus erred or was working from a poor handbook.",
@@ -2746,6 +3866,7 @@
   "encoding_note": null,
   "semantics": null,
   "redundant_variant": null,
+  "duplicate_variant": null,
   "provenance": {
    "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
    "passage": "(4) Deficient arguments (para elleipsin) rest on a premise that is incomplete — the example is a disjunction that omits a third alternative, making the inference structurally unsound.",
@@ -2919,6 +4040,77 @@
    },
    "added_premise": "s"
   },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "not (p and not q); not (q and not r); p; p; therefore r",
+    "premises": [
+     "not (p and not q)",
+     "not (q and not r)",
+     "p",
+     "p"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "p"
+  },
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)",
    "passage": "There are also certain insoluble arguments: the Veiled Men, the Concealed, Sorites, Horned Folk, the Nobodies. The Veiled is as follows: … “It cannot be that if two is few, three is not so likewise, nor that if two or three are few, four is not so; and so on up to ten. But two is few, therefore so also is ten.”",
@@ -2966,6 +4158,7 @@
   "encoding_note": null,
   "semantics": null,
   "redundant_variant": null,
+  "duplicate_variant": null,
   "provenance": {
    "source": "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)",
    "passage": "The Nobody argument is an argument whose major premiss consists of an indefinite and a definite clause, followed by a minor premiss and conclusion; for example, “If anyone is here, he is not in Rhodes; but there is some one here, therefore there is not anyone in Rhodes.”",
@@ -3136,6 +4329,76 @@
     "conclusion": "not p"
    },
    "added_premise": "r"
+  },
+  "duplicate_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; if p, not q; if p, not q; therefore not p",
+    "premises": [
+     "if p, q",
+     "if p, not q",
+     "if p, not q"
+    ],
+    "conclusion": "not p"
+   },
+   "added_premise": "if p, not q"
   },
   "provenance": {
    "source": "Origen, Against Celsus VII.15 (tr. F. Crombie, Ante-Nicene Fathers IV, 1885), reporting the Stoics",

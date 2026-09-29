@@ -106,7 +106,7 @@ Produce a static export of harness results so a public explorer page can display
 * **Accepted exceptions to "do not modify the encoding or the suite":**
   * `Stoic/Harness/Search.lean`: `search` now records how it reached each argument (`searchTrace`). Outcomes are unchanged, and `matrix.md` and `matrix.csv` regenerate byte-identical.
   * `Stoic/Harness/Suite.lean`: `Item` gained a `note` field carrying the encoding notes for S014, S015 and S018. No argument changed.
-* **Still open:** the duplicated-premise redundant variant (decided 2026-09-29). Only the fresh-atom variant is in the export.
+* **Redundant variants:** both are in the export: a fresh atom (`redundant_variant`) and a duplicated last premise (`duplicate_variant`, added in a later PR stacked on #309). `Stoic/Harness/Export.lean` is the export's own code, not the encoding.
 
 ## Out of scope
 
@@ -152,3 +152,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 
 * 2026-09-29: Setup done (SCOPE.md, PARKING.md, CLAUDE.md pointer). Milestone 1: no export found on any branch or PR; the export is being produced outside this session, so none was built here.
 * 2026-09-29 (later): Milestone 1. The export arrived as PR #307 in `themata/results/explorer/`. Reviewed it and reproduced it byte for byte with Lean 4.22.0. Follow-up PR: commit hash and encoding version, an explicit empty failed-runs list, a JSON schema for every file, a `non_primary` flag (adds S011 and S014), `searches.json` with 14,256 distinct searches and the invariance check, and counts reported as distinct searches. Not done: the duplicated-premise variant.
+* 2026-09-29 (later still): Milestone 1. Added the duplicated-premise variant (a copy of the last premise, placed last) beside the fresh atom, in a new PR stacked on #309. Of 8,384 derived searches, the duplicate variant stays derived under `set` in 3,038 of 3,038. Under `list` and `multiset` it stays derived in 28 each (S012 under a merging cut) and is lost elsewhere, but only 32 of those losses per view are proven (the no-themata control). The rest are not found within depth 8. Earlier results are unchanged.
