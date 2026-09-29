@@ -40,6 +40,7 @@ const RELEASED_PLAYGROUND = [
   'chrysippus-cylinder',
   'the-impression',
   'stoic-logic',
+  'stoic-qca',
 ]
 
 /**

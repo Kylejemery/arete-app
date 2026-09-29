@@ -106,6 +106,17 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Close the hand →</span>
         </Link>
 
+        <Link className="pg-card" href="/playground/stoic-qca">
+          <p className="pg-card-kicker">Research · Working paper</p>
+          <h2>Who lived what they taught?</h2>
+          <p>
+            A qualitative comparative analysis of eighteen Stoics, from Zeno to
+            Marcus Aurelius. Every score is editable: rescore a life and watch
+            the truth table and the paths to consistency move.
+          </p>
+          <span className="pg-card-go">Rescore the Stoics →</span>
+        </Link>
+
         {/* Unreleased (not in RELEASED_PLAYGROUND): a draft for specialist
             review, visible to the owner only. See /playground/themata. */}
         <Link className="pg-card" href="/playground/themata">
