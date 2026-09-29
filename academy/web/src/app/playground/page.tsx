@@ -130,6 +130,20 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Read the findings →</span>
         </Link>
 
+        {/* Unreleased (not in RELEASED_PLAYGROUND): the explorer over the
+            harness export, visible to the owner only until the specialist
+            review. See /playground/themata-machine. */}
+        <Link className="pg-card" href="/playground/themata-machine">
+          <p className="pg-card-kicker">The Themata Project · Explorer</p>
+          <h2>The Themata Machine</h2>
+          <p>
+            Every candidate reconstruction against every formal item, under
+            each reading of the connectives, with the derivations the Lean
+            harness found. Not released.
+          </p>
+          <span className="pg-card-go">Open the machine →</span>
+        </Link>
+
         <div className="pg-card pg-card-soon" aria-disabled="true">
           <p className="pg-card-kicker">Coming soon</p>
           <h2>More experiments</h2>
