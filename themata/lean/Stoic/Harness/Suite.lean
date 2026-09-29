@@ -46,6 +46,8 @@ structure Item where
   nonFormal : Bool := false
   arg : Argument
   theory : Theory := []
+  /-- Where the encoding departs from the ledger's schema (see above). -/
+  note : String := ""
 
 def suite : List Item :=
   [ { id := "S001", verdict := .valid, arg := ⟨[cond p₀ p₁, p₀], p₁⟩ },
@@ -61,12 +63,15 @@ def suite : List Item :=
     { id := "S011", verdict := .valid, arg := ⟨[disj p₀ p₁, p₀], p₀⟩ },
     { id := "S012", verdict := .valid, arg := ⟨[cond p₀ (cond p₀ p₁), p₀], p₁⟩ },
     { id := "S013", verdict := .valid, arg := ⟨[cond (conj p₀ p₁) p₂, neg p₂, p₀], neg p₁⟩ },
-    { id := "S014", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁] },
-    { id := "S015", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁] },
+    { id := "S014", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁],
+      note := "The conditional 'if p, q' is background theory, held true, not a premise." },
+    { id := "S015", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁],
+      note := "The conditional 'if p, q' is background theory, held true, not a premise." },
     { id := "S016", verdict := .invalid, arg := ⟨[cond p₀ p₁, p₀, p₂], p₁⟩ },
     { id := "S017", verdict := .invalid, nonFormal := true, arg := ⟨[disj p₀ p₁, neg p₀], p₁⟩ },
     { id := "S018", verdict := .valid,
-      arg := ⟨[neg (conj p₀ (neg p₁)), neg (conj p₁ (neg p₂)), p₀], p₂⟩ },
+      arg := ⟨[neg (conj p₀ (neg p₁)), neg (conj p₁ (neg p₂)), p₀], p₂⟩,
+      note := "A three-link instance of the ledger's ten-link chain, which has the same shape." },
     { id := "S019", verdict := .invalid, nonFormal := true, arg := ⟨[cond p₀ (neg p₁), p₀], neg p₂⟩ },
     { id := "S020", verdict := .valid, arg := ⟨[cond p₀ p₁, cond p₀ (neg p₁)], neg p₀⟩ } ]
 

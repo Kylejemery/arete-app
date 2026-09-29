@@ -1,4 +1,4 @@
-import Stoic.Harness.Matrix
+import Stoic.Harness.Export
 
 /-!
 # `lake exe harness`
@@ -6,6 +6,7 @@ import Stoic.Harness.Matrix
     lake exe harness                 # writes ../results/matrix.md and matrix.csv
     lake exe harness --depth 5       # a different search depth
     lake exe harness --items         # the encoded suite as JSON, for check_suite.py
+    lake exe harness --export DIR    # the explorer data export (see Stoic/Harness/Export.lean)
 -/
 
 open Stoic Stoic.Harness
@@ -20,11 +21,19 @@ def parseDepth : List String → Option Nat
   | _ :: rest => parseDepth rest
   | [] => none
 
+def parseExport : List String → Option String
+  | "--export" :: d :: _ => some d
+  | _ :: rest => parseExport rest
+  | [] => none
+
 def main (args : List String) : IO Unit := do
   if args.contains "--items" then
     IO.println itemsJson
     return
   let b : Bounds := { depth := (parseDepth args).getD 8 }
+  if let some dir := parseExport args then
+    Export.write dir b
+    return
   let rows := runAll b
   IO.FS.writeFile "../results/matrix.md" (matrixMd rows b)
   IO.FS.writeFile "../results/matrix.csv" (csv rows ++ "\n")

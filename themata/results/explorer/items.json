@@ -1,0 +1,3063 @@
+[
+ {
+  "id": "S001",
+  "schema": "if p, q; p; therefore q",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If the first, then the second; but the first is, therefore the second is.",
+   "language": "en",
+   "note": "DL's schematic example, with ordinals for the propositions."
+  },
+  "encoded": {
+   "text": "if p, q; p; therefore q",
+   "premises": [
+    "if p, q",
+    "p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; r; therefore q",
+    "premises": [
+     "if p, q",
+     "p",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
+   "passage": "The first kind of indemonstrable statement is that in which the whole argument is constructed of a hypothetical proposition and the clause with which the hypothetical proposition begins, while the final clause is the conclusion; as e.g. “If the first, then the second; but the first is, therefore the second is.”",
+   "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Same chunk (7.79): \"As to the number of these, authorities differ;\nChrysippus makes them five.\" Concrete instances of the same form, all in\nDL VII Hicks: \"If it is day, it is light; but it is day, therefore it is\nlight\" (7.76, chunk 0b12119b-5019-4600-98b9-20bc2cc1139a); \"If Dion walks,\nthen Dion is in motion; but Dion is walking, therefore Dion is in motion\",\ngiven as the example of a syllogistic argument (7.78, chunk\nf9d254ff-01b0-4b37-b98d-9d71132839a9); \"If virtue does good, vice does\nharm; but virtue does good, therefore vice does harm\", given as a true\nargument (7.79, same chunk). The mixed form \"If Plato is alive, he\nbreathes; but the first is true, therefore the second is true\" (7.77,\nsame chunk) is the logotropos, the same form with numerals in the minor\npremise and conclusion. Also corroborated by Arnold, Roman Stoicism §162\n(scholarship, chunk 35f286cd-cf33-400a-80e0-417dce60038c) and by Cicero,\nAcademica II, who calls it \"the first mood\" (see S010)."
+  }
+ },
+ {
+  "id": "S002",
+  "schema": "if p, q; not q; therefore not p",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If it is day, it is light; but it is night, therefore it is not day.",
+   "language": "en",
+   "note": "The minor premise, 'it is night', is not the contradictory of 'it is light', though DL's next sentence says it is (see the ledger notes)."
+  },
+  "encoded": {
+   "text": "if p, q; not q; therefore not p",
+   "premises": [
+    "if p, q",
+    "not q"
+   ],
+   "conclusion": "not p"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; not q; r; therefore not p",
+    "premises": [
+     "if p, q",
+     "not q",
+     "r"
+    ],
+    "conclusion": "not p"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
+   "passage": "The second is that which employs a hypothetical proposition and the contradictory of the consequent, while the conclusion is the contradictory of the antecedent; e.g. “If it is day, it is light; but it is night, therefore it is not day.” Here the minor premiss is the contradictory of the consequent; the conclusion the contradictory of the antecedent.",
+   "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "In Hicks's example the minor premise is \"it is night\", which is not the\ncontradictory of the consequent \"it is light\", although the next sentence\nsays it is. The schema follows the definition, not the example. The\nexample should be checked against the Greek before this entry is used to\ndecide anything about contradictories versus contraries.\nThe definition uses \"the contradictory\" rather than \"not\". Whether an\nargument like \"if not p, q; not q; therefore p\" (with the double negation\nremoved) counts as a second indemonstrable is a parameter question (see\nrules.yaml C06, and Params.lean in Phase 2)."
+  }
+ },
+ {
+  "id": "S003",
+  "schema": "not (p and q); p; therefore not q",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "It is not the case that Plato is both dead and alive; but he is dead, therefore Plato is not alive.",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "not (p and q); p; therefore not q",
+   "premises": [
+    "not (p and q)",
+    "p"
+   ],
+   "conclusion": "not q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "not (p and q); p; r; therefore not q",
+    "premises": [
+     "not (p and q)",
+     "p",
+     "r"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.80 (tr. R.D. Hicks, 1925)",
+   "passage": "The third kind of indemonstrable employs a conjunction of negative propositions for major premiss and one of the conjoined propositions for minor premiss, concluding thence the contradictory of the remaining proposition; e.g. “It is not the case that Plato is both dead and alive; but he is dead, therefore Plato is not alive.”",
+   "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Hicks says \"a conjunction of negative propositions\", but his own example\nis a negated conjunction (\"It is not the case that Plato is both dead and\nalive\"). The schema follows the example. Zeller n.230 (chunk\n4b20ae16-4914-4fb8-9953-7b8efd451523) likewise reads the premise as \"it is\nnot at the same time A and B\", citing Diog. 80.\nMates (Mode 2 summary, chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e)\nreports that the negated conjunction \"leaves open the possibility that both\nfail\", and that one source (apparently Galen) held that no syllogism from a\nnegated conjunction is useful for demonstration. That is a dispute about\nusefulness, not validity."
+  }
+ },
+ {
+  "id": "S004",
+  "schema": "either p or q; p; therefore not q",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "Either A or B; but A is, therefore B is not.",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "either p or q; p; therefore not q",
+   "premises": [
+    "either p or q",
+    "p"
+   ],
+   "conclusion": "not q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; p; r; therefore not q",
+    "premises": [
+     "either p or q",
+     "p",
+     "r"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)",
+   "passage": "The fourth kind employs a disjunctive proposition and one of the two alternatives in the disjunction as premisses, and its conclusion is the contradictory of the other alternative; e.g. “Either A or B; but A is, therefore B is not.”",
+   "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "This is valid only if \"either ... or\" is exclusive. For the corpus\nevidence on disjunction see rules.yaml C04."
+  }
+ },
+ {
+  "id": "S005",
+  "schema": "either p or q; not p; therefore q",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "Either it is day or it is night; but it is not night, therefore it is day.",
+   "language": "en",
+   "note": "The example denies the second disjunct and concludes the first; the schema denies the first."
+  },
+  "encoded": {
+   "text": "either p or q; not p; therefore q",
+   "premises": [
+    "either p or q",
+    "not p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; not p; r; therefore q",
+    "premises": [
+     "either p or q",
+     "not p",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.81 (tr. R.D. Hicks, 1925)",
+   "passage": "The fifth kind is that in which the argument as a whole is constructed of a disjunctive proposition and the contradictory of one of the alternatives in the disjunction, its conclusion being the other alternative; e.g. “Either it is day or it is night; but it is not night, therefore it is day.”",
+   "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Zeller n.238 (chunk 8e7bb081-9d8b-481f-b3ac-57183751efa5) mentions a\n\"πέμπτος ἀναπόδεικτος διὰ πλειόνων\" (a fifth indemonstrable with more than\ntwo disjuncts). The corpus gives the name only, not the form. See gaps.md."
+  }
+ },
+ {
+  "id": "S006",
+  "schema": "if p, q; p; therefore r",
+  "kind": "other",
+  "flags": [],
+  "ancient_verdict": "invalid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If it is day, it is light; but it is day, therefore Dion walks.",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "if p, q; p; therefore r",
+   "premises": [
+    "if p, q",
+    "p"
+   ],
+   "conclusion": "r"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; s; therefore r",
+    "premises": [
+     "if p, q",
+     "p",
+     "s"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "s"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.77 (tr. R.D. Hicks, 1925)",
+   "passage": "Of arguments some are conclusive, others inconclusive. Inconclusive are such that the contradictory of the conclusion is not incompatible with combination of the premisses, as in the following: “If it is day, it is light; but it is day, therefore Dion walks.”",
+   "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "The conclusion is unconnected to the premises. The same example recurs at\n7.79 as a false argument (\"If it is day, it is light; but it is day,\ntherefore Dion is alive\"), false because it is inconclusive (same chunk).\nMates's summary of Sextus's four kinds of invalidity (chunk\n6dea256b-8bed-46db-9df4-e015a90e5636) lists \"incoherent arguments (para\ndiartesin)\", which fail because \"premises bear no logical connection to\neach other or to the conclusion\". This example may be of that kind, but no\nprimary source in the corpus says so.\nThis passage is also the corpus's statement of the validity criterion:\nsee rules.yaml C08."
+  }
+ },
+ {
+  "id": "S007",
+  "schema": "if p, q; not p; therefore not q",
+  "kind": "other",
+  "flags": [],
+  "ancient_verdict": "invalid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If Dion is a horse, he is an animal; but Dion is not a horse, therefore he is not an animal.",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "if p, q; not p; therefore not q",
+   "premises": [
+    "if p, q",
+    "not p"
+   ],
+   "conclusion": "not q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "no",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "no",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "strict",
+     "criterion_valid": "no",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "no",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; not p; r; therefore not q",
+    "premises": [
+     "if p, q",
+     "not p",
+     "r"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)",
+   "passage": "Arguments not syllogistic are those which plausibly resemble syllogistic arguments, but are not cogent proof; e.g. “If Dion is a horse, he is an animal; but Dion is not a horse, therefore he is not an animal.”",
+   "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Denying the antecedent. Mates's summary (chunk\n6dea256b-8bed-46db-9df4-e015a90e5636) reports Sextus's class of arguments\n\"propounded in an invalid schema (en asustatō schēmati)\" and describes its\nexample as \"affirming the consequent's negation while denying the\nantecedent\". That description is garbled in the summary and cannot be\nmatched to a schema without the Sextus text."
+  }
+ },
+ {
+  "id": "S008",
+  "schema": "'p and q' is false; p; therefore not q",
+  "kind": "other",
+  "flags": [],
+  "ancient_verdict": "valid_nonsyllogistic",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "“It is both day and night” is false: “now it is day; therefore it is not night.”",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "'p and q' is false; p; therefore not q",
+   "premises": [
+    "'p and q' is false",
+    "p"
+   ],
+   "conclusion": "not q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "'p and q' is false; p; r; therefore not q",
+    "premises": [
+     "'p and q' is false",
+     "p",
+     "r"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.78 (tr. R.D. Hicks, 1925)",
+   "passage": "Of conclusive some are denoted by the common name of the whole class, “conclusive proper,” others are called syllogistic. The syllogistic are such as either do not admit of, or are reducible to such as do not admit of, immediate proof in respect of one or more of the premisses; e.g. “If Dion walks, then Dion is in motion; but Dion is walking, therefore Dion is in motion.” Conclusive specifically are those which draw conclusions, but not by syllogism; e.g. the statement “It is both day and night” is false: “now it is day; therefore it is not night.”",
+   "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "An important boundary case. DL calls this argument conclusive (valid) but\nnot syllogistic, so a correct reconstruction of the themata must NOT derive\nit from the indemonstrables. Mates's summary (chunk\n78c91994-ccd2-47ac-9eb9-17201baa0783) reads it the same way: the premise\nsays a conjunction \"is false\" rather than negating it, and \"the Stoics\ndistinguished between the negation of a proposition and the assertion that\na proposition is false\".\nRuling (Kyle, 2026-09-27): verdict valid_nonsyllogistic. The harness must\ncheck both that the argument is valid under the validity criterion and\nthat it is not derivable through the themata.\nPhase 2 represents \"'p' is false\" as its own operator (`saidFalse` in\nSyntax.lean), semantically the negation but syntactically distinct, so no\nindemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is\nvalid under the criterion and not derivable from the base cases."
+  }
+ },
+ {
+  "id": "S009",
+  "schema": "if p, p; p; therefore p",
+  "kind": "other",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "high",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If it shines, it shines: but it does shine, therefore it does shine?",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "if p, p; p; therefore p",
+   "premises": [
+    "if p, p",
+    "p"
+   ],
+   "conclusion": "p"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, p; p; q; therefore p",
+    "premises": [
+     "if p, p",
+     "p",
+     "q"
+    ],
+    "conclusion": "p"
+   },
+   "added_premise": "q"
+  },
+  "provenance": {
+   "source": "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)",
+   "passage": "These are the arguments of Chrysippus, which even he himself did not refute. For what could he do with such a conclusion as this,—“If it shines, it shines: but it does shine, therefore it does shine?” He must give in; for the principle of the connexion compels you to grant the last proposition after you have once granted the first.",
+   "corpus_ref": "df555ec8-e886-440d-9d99-b7376a22b63a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "A duplicated argument (διφορούμενος). Zeller n.239 (chunk\n8e7bb081-9d8b-481f-b3ac-57183751efa5, quoted in Zeller from Alex. Anal. Pr.\nand Cic. Acad. ii. 30, 96): \"Two such cases are distinguished, one in which\nall three clauses, the other in which the conclusion and minor premiss are\nidentical. The first class are called διφορούμενοι· If it is day, it is\nday; It is day, ∴ It is day.\" In the next chunk (\n2ba79887-49fa-4618-8a50-f5c70d5cb00c, ch. XXX) Cicero adds: \"I have learnt that everything which is\nconnected with itself is true\". That is evidence that \"if p, p\" is a true\nconditional (rules.yaml C01).\nThe Peripatetics objected to these arguments. Mates's summary (chunk\n78c91994-ccd2-47ac-9eb9-17201baa0783) says they rejected \"duplicated\narguments\" and \"tautologous inferences\" because a genuine syllogism must\nestablish something not already known. The Stoic verdict is valid. The\nPeripatetic objection is recorded here and does not change the verdict.\nThis form is an instance of S001 with q := p, so any reconstruction that\nhas S001 derives it. It serves as a sanity check, not a discriminator."
+  }
+ },
+ {
+  "id": "S010",
+  "schema": "if (p and q), r; p and q; therefore r",
+  "kind": "indemonstrable",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "medium",
+  "in_formal_suite": true,
+  "example": {
+   "text": "If you say that the sun shines, and if you speak truth, therefore the sun does shine?",
+   "language": "en",
+   "note": "Yonge's English runs the conditional and the minor premise together (see the ledger notes)."
+  },
+  "encoded": {
+   "text": "if (p and q), r; p and q; therefore r",
+   "premises": [
+    "if (p and q), r",
+    "p and q"
+   ],
+   "conclusion": "r"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if (p and q), r; p and q; s; therefore r",
+    "premises": [
+     "if (p and q), r",
+     "p and q",
+     "s"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "s"
+  },
+  "provenance": {
+   "source": "Cicero, Academica II (Lucullus) ch. XXX (tr. C.D. Yonge, 1856)",
+   "passage": "What then do you think of this conclusion,—“If you say that the sun shines, and if you speak truth, therefore the sun does shine?” At all events you approve of the kind of argument, and you say that the conclusion has been most correctly inferred. Therefore, in teaching, you deliver that as the first mood in which to draw conclusions.",
+   "corpus_ref": "df555ec8-e886-440d-9d99-b7376a22b63a",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Yonge's English runs the conditional and the minor premise together. It\nis read here as a first indemonstrable whose antecedent is a conjunction,\nsince Cicero calls it \"the first mood\". The Liar variant follows in the\nsame chunk: \"If you say that you are a liar, and speak the truth, then you\nare a liar. But you do say that you are a liar, and you do speak the truth,\ntherefore you are a liar.\" The form is not disputed there. The dispute is\nwhether the Liar's premises can be assented to.\nThis is a test of whether the object language lets an indemonstrable take\na compound as its antecedent."
+  }
+ },
+ {
+  "id": "S011",
+  "schema": "either p or q; p; therefore p",
+  "kind": "other",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "medium",
+  "in_formal_suite": true,
+  "example": {
+   "text": "It is either day or night; It is day, ∴ It is day.",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "either p or q; p; therefore p",
+   "premises": [
+    "either p or q",
+    "p"
+   ],
+   "conclusion": "p"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "yes",
+     "redundant": "no",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "either p or q; p; r; therefore p",
+    "premises": [
+     "either p or q",
+     "p",
+     "r"
+    ],
+    "conclusion": "p"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Alexander of Aphrodisias, in APr., as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V n.239",
+   "passage": "[239] Two such cases are distinguished, one in which all three clauses, the other in which the conclusion and minor premiss are identical. The first class are called διφορούμενοι· If it is day, it is day; It is day, ∴ It is day. The second class, ἀδιαφόρως περαίνοντες· It is either day or night; It is day, ∴ It is day. The latter term is, however, applied to both kinds. See Alex. Anal. Pr. 7, a; 53, b; Top. 7; Schol. in Arist. 294, b, 25; Cic. Acad. ii. 30, 96; Prantl, 476, 185.",
+   "corpus_ref": "8e7bb081-9d8b-481f-b3ac-57183751efa5",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "ancient_text_via_secondary_work",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "An indifferently concluding argument (ἀδιαφόρως περαίνων). Zeller's main\ntext (chunk 8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca) says that among the\nindemonstrable forms \"importance is attached to some in which the same\nsentence is repeated tautologically in the form of a conclusion\". So the\nStoics accepted these arguments, and the verdict is valid on the Stoic\nside.\nThis entry is in tension with the redundancy rule (S016). The disjunctive\npremise does no work in reaching \"p\", yet the argument is not called\nredundant. Any candidate that invalidates every argument with an idle\npremise will reject this one. That makes it a strong discriminator between\nreadings of \"redundant\", and possibly evidence that redundancy was defined\nrelative to the premises' role rather than to derivability.\nRuling (Kyle, 2026-09-27): the conflict is not resolved. It is recorded\nas finding F1 in NOTES.md, and redundancy becomes a parameter in\nParams.lean. Under `strict` this argument is redundant and so invalid.\nUnder `narrow` indifferently concluding arguments are exempt, so it is\nvalid.\nMates's summary (chunk fcdf4b9c-1f28-4d6b-89a3-936a405e584e) uses\n\"adiaphorōs perainontes\" for the transitivity arguments that Zeller calls\nἀμεθόδως περαίνοντες (n.232). That looks like a conflation in the summary.\nZeller is followed here because he quotes the terms in Greek."
+  }
+ },
+ {
+  "id": "S012",
+  "schema": "if p, (if p, q); p; therefore q",
+  "kind": "derived",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "low",
+  "in_formal_suite": true,
+  "example": null,
+  "encoded": {
+   "text": "if p, (if p, q); p; therefore q",
+   "premises": [
+    "if p, (if p, q)",
+    "p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, (if p, q); p; r; therefore q",
+    "premises": [
+     "if p, (if p, q)",
+     "p",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
+   "passage": "Mates illustrates the procedure with two examples from Sextus. The first shows that an argument of the form \"If p, then (if p then q); p; therefore q\" decomposes into two successive applications of the type 1 undemonstrated argument.",
+   "corpus_ref": "401a8e59-19ef-4e5e-80f0-dbeb990103a0",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "mode2_summary",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "whole",
+    "basis": "the ledger source names a Mode 2 summary"
+   },
+   "notes": "The only derived syllogism in the corpus whose form is explicit, together\nwith S013. Both come through a Mode 2 summary, not through Sextus, who is\nabsent from the corpus (gaps.md). Note that the premise p is used twice,\nwhich makes this a test of how premise multiplicity is handled (Phase 2,\nArgument.lean)."
+  }
+ },
+ {
+  "id": "S013",
+  "schema": "if (p and q), r; not r; p; therefore not q",
+  "kind": "derived",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "low",
+  "in_formal_suite": true,
+  "example": null,
+  "encoded": {
+   "text": "if (p and q), r; not r; p; therefore not q",
+   "premises": [
+    "if (p and q), r",
+    "not r",
+    "p"
+   ],
+   "conclusion": "not q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if (p and q), r; not r; p; s; therefore not q",
+    "premises": [
+     "if (p and q), r",
+     "not r",
+     "p",
+     "s"
+    ],
+    "conclusion": "not q"
+   },
+   "added_premise": "s"
+  },
+  "provenance": {
+   "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
+   "passage": "The second shows that an argument of the form \"If (p and q) then r; not-r; p; therefore not-q\" decomposes into a type 2 argument followed by a type 3 argument, with the intermediate conclusion licensed as a usable premise by the dialectical theorema.",
+   "corpus_ref": "401a8e59-19ef-4e5e-80f0-dbeb990103a0",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "mode2_summary",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "whole",
+    "basis": "the ledger source names a Mode 2 summary"
+   },
+   "notes": "The analysis runs: a second indemonstrable gives not (p and q), then a\nthird indemonstrable with p gives not q. The summary attributes the step\nto the \"dialectical theorem\" (rules.yaml T05), not to a named thema."
+  }
+ },
+ {
+  "id": "S014",
+  "schema": "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light')",
+  "kind": "single_premise",
+  "flags": [],
+  "ancient_verdict": "disputed",
+  "confidence": "medium",
+  "in_formal_suite": true,
+  "example": null,
+  "encoded": {
+   "text": "p; therefore q",
+   "premises": [
+    "p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [
+   "if p, q"
+  ],
+  "encoding_note": "The conditional 'if p, q' is background theory, held true, not a premise.",
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "p; r; therefore q",
+    "premises": [
+     "p",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245",
+   "passage": "With these [(δ) Inference from a single premiss.] composite forms of inference Antipater contrasted other forms having only a single premiss, [245] but it was an addition to the field of logic of very doubtful worth.",
+   "corpus_ref": "8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "ancient_text_via_secondary_work",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "partial",
+    "basis": "ledger notes: That Chrysippus rejected them appears in the corpus only through Mates's summary"
+   },
+   "notes": "Zeller n.245 (chunk 73ca2320-47fc-4eed-b9b0-fc8ad0d060e4) gives the Greek\nname and the examples: \"[245] Called μονολήμματοι συλλογισμοί. Such were\nἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα. See Alex. Top. 6, 274;\nAnal. Pr. 7, a, 8, a: Sext. Pyrrh. ii. 167; Math. viii. 443; Apul. Dogm.\nPlat. iii. 272, Oud.\"\nThat Chrysippus rejected them appears in the corpus only through Mates's\nsummary (chunk 78c91994-ccd2-47ac-9eb9-17201baa0783): \"Chrysippus denied\nthem; Antipater of Tarsus defended them with examples like 'You are\nbreathing, therefore you are living.' Opponents held that such arguments\nare merely abbreviated two-premised arguments (a suppressed conditional\nbeing the missing premise).\"\nVerdict by parameter: valid under Antipater's policy, invalid under\nChrysippus's. Formally it is valid only given the conditional, so under\nChrysippus's policy it becomes S001 with the conditional made explicit.\nHow to represent \"p; therefore q\" without a propositional link is a\nPhase 2 decision (Params.lean)."
+  }
+ },
+ {
+  "id": "S015",
+  "schema": "p; therefore q   (where 'if p, q' is true, e.g. 'You are breathing; therefore you are living')",
+  "kind": "single_premise",
+  "flags": [],
+  "ancient_verdict": "disputed",
+  "confidence": "medium",
+  "in_formal_suite": true,
+  "example": {
+   "text": "ἀναπνεῖς, ζῇς ἄρα",
+   "language": "grc",
+   "note": "'You are breathing; therefore you are living.'"
+  },
+  "encoded": {
+   "text": "p; therefore q",
+   "premises": [
+    "p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [
+   "if p, q"
+  ],
+  "encoding_note": "The conditional 'if p, q' is background theory, held true, not a premise.",
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "p; r; therefore q",
+    "premises": [
+     "p",
+     "r"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)",
+   "passage": "[245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.",
+   "corpus_ref": "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "mode2_summary",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "partial",
+    "basis": "the ledger source names a Mode 2 summary"
+   },
+   "notes": "The second attested example of the same form as S014. It is kept as its\nown entry because the two examples come down separately in the sources.\nKyle may prefer to merge them."
+  }
+ },
+ {
+  "id": "S016",
+  "schema": "if p, q; p; r; therefore q   (r superfluous)",
+  "kind": "redundant",
+  "flags": [],
+  "ancient_verdict": "invalid",
+  "confidence": "low",
+  "in_formal_suite": true,
+  "example": null,
+  "encoded": {
+   "text": "if p, q; p; r; therefore q",
+   "premises": [
+    "if p, q",
+    "p",
+    "r"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "no",
+    "redundant": "yes",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; p; r; s; therefore q",
+    "premises": [
+     "if p, q",
+     "p",
+     "r",
+     "s"
+    ],
+    "conclusion": "q"
+   },
+   "added_premise": "s"
+  },
+  "provenance": {
+   "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
+   "passage": "(2) Redundant arguments (para parhelkon) contain a superfluous premise; Mates notes, pointedly, that by standard logical criteria these would count as valid, and suggests either that Sextus erred or was working from a poor handbook.",
+   "corpus_ref": "6dea256b-8bed-46db-9df4-e015a90e5636",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "mode2_summary",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "whole",
+    "basis": "the ledger source names a Mode 2 summary"
+   },
+   "notes": "This is the non-monotonicity constraint in the project brief, and the\ncorpus supports it only weakly. The schema is a generic\ninstantiation. The corpus holds no ancient example of a redundant\nargument, because Sextus, the source, is absent (gaps.md). Chrysippus's\ncatalogue lists \"Of Redundant Arguments, addressed to Pasylus, two books\"\n(DL VII 7.195, chunk 58bb05d5-174a-40fa-9615-e955c1814514), which shows\nthat the topic was his, not what the rule was.\nMates, as summarised, doubts the doctrine (\"Sextus erred or was working\nfrom a poor handbook\"). See S011 for an accepted argument with an idle\npremise, and see the Bobzien summary's monotonicity claim, which conflicts\nwith this entry (rules.yaml R03).\nDo not promote this entry to high confidence until the Sextus text is in\nthe corpus.\nRedundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see\nNOTES.md finding F1). This entry is invalid under both readings, since r\nis an unrelated atom."
+  }
+ },
+ {
+  "id": "S017",
+  "schema": "either p or q; not p; therefore q   (where a third alternative r exists and was omitted)",
+  "kind": "other",
+  "flags": [
+   "non_formal"
+  ],
+  "ancient_verdict": "invalid",
+  "confidence": "low",
+  "in_formal_suite": false,
+  "example": null,
+  "encoded": {
+   "text": "either p or q; not p; therefore q",
+   "premises": [
+    "either p or q",
+    "not p"
+   ],
+   "conclusion": "q"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": null,
+  "redundant_variant": null,
+  "provenance": {
+   "source": "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)",
+   "passage": "(4) Deficient arguments (para elleipsin) rest on a premise that is incomplete — the example is a disjunction that omits a third alternative, making the inference structurally unsound.",
+   "corpus_ref": "6dea256b-8bed-46db-9df4-e015a90e5636",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "mode2_summary",
+   "secondary_summary": {
+    "flag": true,
+    "scope": "whole",
+    "basis": "the ledger source names a Mode 2 summary"
+   },
+   "notes": "Formally this is S005. The defect lies in the truth of the disjunctive\npremise, not in the form. A purely formal harness cannot tell this\napart from S005 unless the object language has n-ary exclusive\ndisjunction and the \"complete\" disjunction is written out. Kept as\nevidence that the ancient classification of invalid arguments mixes formal\nand material defects. Probably excluded from the formal suite. Kyle to\ndecide.\nRuling (Kyle, 2026-09-27): removed from the formal suite, kept in the\nledger flagged non_formal."
+  }
+ },
+ {
+  "id": "S018",
+  "schema": "not (p1 and not p2); not (p2 and not p3); ... ; not (p9 and not p10); p1; therefore p10",
+  "kind": "sophism",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "low",
+  "in_formal_suite": true,
+  "example": {
+   "text": "“It cannot be that if two is few, three is not so likewise, nor that if two or three are few, four is not so; and so on up to ten. But two is few, therefore so also is ten.”",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "not (p and not q); not (q and not r); p; therefore r",
+   "premises": [
+    "not (p and not q)",
+    "not (q and not r)",
+    "p"
+   ],
+   "conclusion": "r"
+  },
+  "theory": [],
+  "encoding_note": "A three-link instance of the ledger's ten-link chain, which has the same shape.",
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "not (p and not q); not (q and not r); p; s; therefore r",
+    "premises": [
+     "not (p and not q)",
+     "not (q and not r)",
+     "p",
+     "s"
+    ],
+    "conclusion": "r"
+   },
+   "added_premise": "s"
+  },
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)",
+   "passage": "There are also certain insoluble arguments: the Veiled Men, the Concealed, Sorites, Horned Folk, the Nobodies. The Veiled is as follows: … “It cannot be that if two is few, three is not so likewise, nor that if two or three are few, four is not so; and so on up to ten. But two is few, therefore so also is ten.”",
+   "corpus_ref": "e624f24d-83d0-4efd-98d3-19457ace3554",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "The Sorites. The \" … \" is in the chunk text itself. The corpus copy of\n7.82 is abridged, so what DL says about the Veiled argument is lost.\nHicks's \"It cannot be that if two is few, three is not so likewise\" is\nread as \"not (two is few and three is not few)\", a negated conjunction.\nEach step is then a third indemonstrable followed by removal of a double\nnegation, which makes the form a test of the double negation parameter\n(rules.yaml C06).\nChrysippus's response concerns assent, not form. Cicero, Academica II ch.\nXXIX (chunk dc6299a6-98fb-450b-abd5-e19a5d96a49b): \"For Chrysippus’s plan\nis, when he is interrogated step by step (by way of giving an instance),\nwhether there are three, or few, or many, to rest a little before he comes\nto the “many;”\".\nRuling (Kyle, 2026-09-27): the chain form is valid, tagged kind: sophism.\nThe fault of the Sorites lies in its premises, not its form. Under the\nsyntactic reading of \"contradictory\" (C06), each link is a plain third\nindemonstrable, since the contradictory of \"not p2\" is \"p2\". Under the\nnegation reading, each link also needs double-negation elimination."
+  }
+ },
+ {
+  "id": "S019",
+  "schema": "if someone is here, that one is not in Rhodes; someone is here; therefore no one is in Rhodes",
+  "kind": "sophism",
+  "flags": [
+   "non_formal"
+  ],
+  "ancient_verdict": "invalid",
+  "confidence": "medium",
+  "in_formal_suite": false,
+  "example": {
+   "text": "“If anyone is here, he is not in Rhodes; but there is some one here, therefore there is not anyone in Rhodes.”",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "if p, not q; p; therefore not r",
+   "premises": [
+    "if p, not q",
+    "p"
+   ],
+   "conclusion": "not r"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": null,
+  "redundant_variant": null,
+  "provenance": {
+   "source": "Diogenes Laertius, Lives VII 7.82 (tr. R.D. Hicks, 1925)",
+   "passage": "The Nobody argument is an argument whose major premiss consists of an indefinite and a definite clause, followed by a minor premiss and conclusion; for example, “If anyone is here, he is not in Rhodes; but there is some one here, therefore there is not anyone in Rhodes.”",
+   "corpus_ref": "e624f24d-83d0-4efd-98d3-19457ace3554",
+   "research_ref": null,
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "Listed by DL among the \"insoluble arguments\", that is, a sophism, which\nis why the verdict is invalid. It has the surface shape of S001, but it\nturns on indefinite pronouns (\"anyone\", \"some one\"), which a propositional\nobject language cannot represent. It is out of scope for the Phase 2\npropositional encoding and kept as a warning: a string-level matcher would\nwrongly classify it as a first indemonstrable. Chrysippus wrote on it\n(\"Of the 'Nobody' Puzzle, addressed to Menecrates, eight books\", DL VII\n7.198, chunk a0776b89-9bed-4664-850c-7e4db6102c59).\nRuling (Kyle, 2026-09-27): removed from the formal suite, kept in the\nledger flagged non_formal. Its fault is equivocation on the indefinite\n(\"anyone\" / \"some one\"), which propositional form cannot see."
+  }
+ },
+ {
+  "id": "S020",
+  "schema": "if p, q; if p, not q; therefore not p",
+  "kind": "derived",
+  "flags": [],
+  "ancient_verdict": "valid",
+  "confidence": "medium",
+  "in_formal_suite": true,
+  "example": {
+   "text": "1st, If you know that you are dead, you are dead; 2d, if you know that you are dead, you are not dead. And the conclusion is—“you do not know that you are dead.”",
+   "language": "en",
+   "note": null
+  },
+  "encoded": {
+   "text": "if p, q; if p, not q; therefore not p",
+   "premises": [
+    "if p, q",
+    "if p, not q"
+   ],
+   "conclusion": "not p"
+  },
+  "theory": [],
+  "encoding_note": null,
+  "semantics": [
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "philonian"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "strict",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "unknown",
+    "redundant": "unknown",
+    "redundancy": "narrow",
+    "criterion_valid": "unknown",
+    "cond": "diodorean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "chrysippean"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "strict",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   },
+   {
+    "stoic_valid": "yes",
+    "redundant": "no",
+    "redundancy": "narrow",
+    "criterion_valid": "yes",
+    "cond": "containment"
+   }
+  ],
+  "redundant_variant": {
+   "semantics": [
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "philonian"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "strict",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "unknown",
+     "redundant": "unknown",
+     "redundancy": "narrow",
+     "criterion_valid": "unknown",
+     "cond": "diodorean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "chrysippean"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "strict",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    },
+    {
+     "stoic_valid": "no",
+     "redundant": "yes",
+     "redundancy": "narrow",
+     "criterion_valid": "yes",
+     "cond": "containment"
+    }
+   ],
+   "encoded": {
+    "text": "if p, q; if p, not q; r; therefore not p",
+    "premises": [
+     "if p, q",
+     "if p, not q",
+     "r"
+    ],
+    "conclusion": "not p"
+   },
+   "added_premise": "r"
+  },
+  "provenance": {
+   "source": "Origen, Against Celsus VII.15 (tr. F. Crombie, Ante-Nicene Fathers IV, 1885), reporting the Stoics",
+   "passage": "The concrete example which the Stoics give to illustrate this form of argument is the following: 1st, If you know that you are dead, you are dead; 2d, if you know that you are dead, you are not dead. And the conclusion is—“you do not know that you are dead.”",
+   "corpus_ref": null,
+   "research_ref": {
+    "source_id": "4339bf26-71fa-4245-abe1-fbce3f35ea04",
+    "locator": "VII.15"
+   },
+   "verified_by_kyle": false,
+   "witness": "primary",
+   "secondary_summary": {
+    "flag": false,
+    "scope": null,
+    "basis": null
+   },
+   "notes": "The \"two conditionals\" argument, the argument whose analysis the Phase 4\nprobes showed separates the candidates. Origen names the form just before\nthe example: \"When, then, we find two processes of reasoning in both of\nwhich the major premiss is the same, leading to two contradictory\nconclusions, we use the form of argument called “the theorem of two\npropositions,”\". His Greek is in the translators' note 4700, which the\nOCR of this copy garbles; it is the theorem \"through two conditionals\".\nTwo cautions. (1) The general schema sentence (\"Of two things, if the\nfirst is true, the second is true; 2d, if the first is true, the second\nis not true, therefore the first is not true\") is scrambled in this copy\nby the OCR around note 4701, so it is not quoted; the schema above is\nCrombie's sentence as it reads once the lines are put back in order.\n(2) Note 4701: \"We follow Bouhéreau and Valesius, who expunge the\nnegative particle in this clause.\" The printed schema rests on an\nemendation of the Greek. The Stoic example does not depend on it.\nOrigen reports the form as Stoic; he is a hostile-neutral later witness,\nnot a Stoic, which caps confidence below the DL entries.\nVerification (guardrail 1, 2026-09-28): both quotations pass\nresearch_source_contains against research_sources\n4339bf26-71fa-4245-abe1-fbce3f35ea04, the complete archive.org CCEL text\n(3,743,531 characters, licence public_domain). An earlier, truncated\nupload (c20ccbce-12a1-4f09-8746-9fcfd12fec34) is deprecated."
+  }
+ }
+]

@@ -51,23 +51,28 @@ def formulaUniverse (m : Contradictory) (g : Argument) (T : Theory) : List Formu
   (s ++ s.map (contradictory m)).eraseDups
 
 /-- Base instances whose major premise is in the universe, and Antipater's
-single-premise arguments from the theory when the policy admits them. -/
-def baseInstances (P : Params) (T : Theory) (W : List Formula) : List Argument :=
+single-premise arguments from the theory when the policy admits them. Each is
+labelled with the `Indemonstrable` or `Base` constructor it instantiates. -/
+def labeledBaseInstances (P : Params) (T : Theory) (W : List Formula) : List (String × Argument) :=
   let m := P.contra
   let ind := W.flatMap fun p => W.flatMap fun q =>
     (if W.contains (cond p q) then
-      [⟨[cond p q, p], q⟩, ⟨[cond p q, contradictory m q], contradictory m p⟩] else []) ++
+      [("first", ⟨[cond p q, p], q⟩), ("second", ⟨[cond p q, contradictory m q], contradictory m p⟩)] else []) ++
     (if W.contains (neg (conj p q)) then
-      [⟨[neg (conj p q), p], contradictory m q⟩, ⟨[neg (conj p q), q], contradictory m p⟩] else []) ++
+      [("thirdL", ⟨[neg (conj p q), p], contradictory m q⟩),
+       ("thirdR", ⟨[neg (conj p q), q], contradictory m p⟩)] else []) ++
     (if W.contains (disj p q) then
-      [⟨[disj p q, p], contradictory m q⟩, ⟨[disj p q, q], contradictory m p⟩,
-       ⟨[disj p q, contradictory m p], q⟩, ⟨[disj p q, contradictory m q], p⟩] else [])
+      [("fourthL", ⟨[disj p q, p], contradictory m q⟩), ("fourthR", ⟨[disj p q, q], contradictory m p⟩),
+       ("fifthL", ⟨[disj p q, contradictory m p], q⟩), ("fifthR", ⟨[disj p q, contradictory m q], p⟩)] else [])
   let mono := if P.single == .antipater then
       T.filterMap fun t => match t with
-        | .cond p q => some ⟨[p], q⟩
+        | .cond p q => some ("monolemmatic", ⟨[p], q⟩)
         | _ => none
     else []
   ind ++ mono
+
+def baseInstances (P : Params) (T : Theory) (W : List Formula) : List Argument :=
+  (labeledBaseInstances P T W).map (·.2)
 
 partial def perms : List Formula → List (List Formula)
   | [] => [[]]
@@ -100,7 +105,22 @@ inductive Outcome where
   | notFound (depth : Nat) (saturated truncated : Bool)
   deriving Repr, BEq
 
-def search (P : Params) (T : Theory) (rules : List Rule) (g : Argument) (b : Bounds) : Outcome := Id.run do
+/-- How the search first reached an argument. The argument itself is a view
+variant (a reordering, under `multiset` or `set`) of the argument named here,
+or that argument itself. -/
+inductive Origin where
+  /-- A base instance, with the constructor it instantiates. -/
+  | base (label : String) (inst : Argument)
+  /-- The output of a rule applied to arguments already known, in the order
+  the rule read them. -/
+  | rule (name : String) (inputs : List Argument) (out : Argument)
+  deriving Repr
+
+/-- The search, with a record of how each argument was first reached, and the
+argument that matched the goal when it was derived. `search` is this without
+the record, so the matrix and the export run the same code. -/
+def searchTrace (P : Params) (T : Theory) (rules : List Rule) (g : Argument) (b : Bounds) :
+    Outcome × Option Argument × Std.HashMap Argument Origin := Id.run do
   let W := formulaUniverse P.contra g T
   let Wset : Std.HashSet Formula := Std.HashSet.ofList W
   let cap := g.premises.length + 1
@@ -108,35 +128,41 @@ def search (P : Params) (T : Theory) (rules : List Rule) (g : Argument) (b : Bou
     a.premises.length ≤ cap && !a.premises.isEmpty &&
       Wset.contains a.conclusion && a.premises.all Wset.contains
   let mut known : Std.HashSet Argument := {}
+  let mut origin : Std.HashMap Argument Origin := {}
   let mut all : Array Argument := #[]
   let mut frontier : Array Argument := #[]
-  for a in baseInstances P T W do
+  for (lbl, a) in labeledBaseInstances P T W do
     for x in variants P.view a do
       if ok x && !known.contains x then
         known := known.insert x
+        origin := origin.insert x (.base lbl a)
         all := all.push x
         frontier := frontier.push x
-  if all.any (goalMatches P g) then return .derived 0
+  if let some hit := all.find? (goalMatches P g) then return (.derived 0, some hit, origin)
   for d in [1:b.depth + 1] do
     let mut next : Array Argument := #[]
     for r in rules do
-      let mut outs : Array Argument := #[]
+      let mut outs : Array (Argument × List Argument) := #[]
       for a in frontier do
-        outs := outs ++ (r.step P [a]).toArray
+        outs := outs ++ ((r.step P [a]).map (·, [a])).toArray
         for c in all do
-          outs := outs ++ (r.step P [a, c]).toArray
-          outs := outs ++ (r.step P [c, a]).toArray
-      for o in outs do
+          outs := outs ++ ((r.step P [a, c]).map (·, [a, c])).toArray
+          outs := outs ++ ((r.step P [c, a]).map (·, [c, a])).toArray
+      for (o, ins) in outs do
         for x in variants P.view o do
           if ok x && !known.contains x then
             known := known.insert x
+            origin := origin.insert x (.rule r.name ins o)
             next := next.push x
-    if next.any (goalMatches P g) then return .derived d
-    if next.isEmpty then return .notFound d true false
+    if let some hit := next.find? (goalMatches P g) then return (.derived d, some hit, origin)
+    if next.isEmpty then return (.notFound d true false, none, origin)
     all := all ++ next
     frontier := next
-    if all.size > b.maxSize then return .notFound d false true
-  return .notFound b.depth false false
+    if all.size > b.maxSize then return (.notFound d false true, none, origin)
+  return (.notFound b.depth false false, none, origin)
+
+def search (P : Params) (T : Theory) (rules : List Rule) (g : Argument) (b : Bounds) : Outcome :=
+  (searchTrace P T rules g b).1
 
 /-! ## Proofs of underivability the harness may cite -/
 
