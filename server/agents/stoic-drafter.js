@@ -18,6 +18,7 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { loadConfig } = require('./stoic-scout');
+const { researchRetrievalParams } = require('../lib/corpus-fence');
 
 const DRAFT_MODEL = process.env.STOIC_DRAFT_MODEL || 'claude-opus-5';
 const EMBEDDING_MODEL = 'text-embedding-3-small';
@@ -91,6 +92,7 @@ async function retrievePassages(supabase, candidate) {
   const { data, error } = await supabase.rpc('match_rag_corpus_cited', {
     query_embedding: embedding,
     match_count: PASSAGE_COUNT * 8,
+    ...researchRetrievalParams(),
   });
   if (error) throw new Error(`match_rag_corpus_cited: ${error.message}`);
   const allowed = new Set(loadConfig().drafting.stoic_authors);

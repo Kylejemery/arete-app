@@ -27,11 +27,15 @@
 //              and the Moltbook agent (through the corpus MCP server, which it
 //              asks for every layer) are teaching surfaces.
 //   research   evidence and citation work: the Themata ledger and harness,
-//              the gap finder (Coverage Gap agent, admin gap run), and the
-//              agents that write new derived material from the corpus
-//              (Synthesis, Inquiry, Tension, Dreaming, Convergence), so that
-//              no synthesis is ever read back as a source. Synthesis is
-//              excluded in the query: researchRetrievalParams().
+//              the gap finder (Coverage Gap agent, admin gap run), the
+//              citation surfaces (the Scribe's chat, book drafting and claim
+//              pipeline, composer grounding, the stoic drafter, all through
+//              match_rag_corpus_cited), and the agents that write new derived
+//              material from the corpus (Synthesis, Inquiry, Tension,
+//              Dreaming, Convergence), so that no synthesis is ever read back
+//              as a source. Synthesis is excluded in the query:
+//              researchRetrievalParams() here, RESEARCH_EXCLUDED_TEXT_TYPES in
+//              academy/web/src/lib/corpus-fence.ts.
 //
 // The corpus MCP server takes a `layers` parameter (LAYERS below) that
 // defaults to canon only; a caller opts in to synthesis explicitly.
@@ -49,8 +53,8 @@
 //              agent, the Academy seminar and the Socratic Proctor. The
 //              concordance is allowed here; a professor may use apparatus.
 //   research   the research profile above: synthesis excluded.
-//   none       the remaining internal surfaces see everything: the Scribe,
-//              the eval harness, the Observatory.
+//   none       the remaining internal surfaces see everything: the eval
+//              harness, the Observatory.
 //
 // Add a value to the right list and every call site on that fence follows.
 

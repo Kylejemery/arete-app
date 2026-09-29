@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { RESEARCH_EXCLUDED_TEXT_TYPES } from '@/lib/corpus-fence'
 import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 
 // Stage B — Retrieve. For each key claim: embed, query BOTH corpora, and
@@ -79,9 +80,12 @@ export async function retrieveForClaims(claims: string[]): Promise<ClaimBundle[]
     const embedding = await embedChunk(claim)
 
     const [ragRes, scribeRes] = await Promise.all([
+      // Research profile: a claim is supported by texts and scholarship,
+      // never by Arete's own synthesis (lib/corpus-fence.ts).
       admin.rpc('match_rag_corpus_cited', {
         query_embedding: embedding,
         match_count: RAG_K,
+        exclude_text_types: RESEARCH_EXCLUDED_TEXT_TYPES,
       }),
       admin.rpc('match_scribe_source_chunks', {
         query_embedding: embedding,

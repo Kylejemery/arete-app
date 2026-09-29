@@ -10,7 +10,11 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { parseSynthesis, loadAll, listSynthesisFiles, emitSql, INDEX_STRIDE } = require('./ingest-synthesis');
 
-const docs = Object.fromEntries(loadAll(listSynthesisFiles()).map(p => [p.doc.doc_key, p]));
+// Every committed version loads; the tests below check the newest of each,
+// which is the one activate_synthesis_version() makes live.
+const all = loadAll(listSynthesisFiles());
+const docs = {};
+for (const p of all) if (!docs[p.doc.doc_key] || p.doc.version > docs[p.doc.doc_key].doc.version) docs[p.doc.doc_key] = p;
 const statusOf = (key, label) => {
   const cs = docs[key].chunks.filter(c => c.section_label === label);
   assert.ok(cs.length, `${key}: no chunk for "${label}"`);
@@ -19,15 +23,15 @@ const statusOf = (key, label) => {
 
 test('the three documents load with the fields the layer needs', () => {
   assert.deepEqual(Object.keys(docs).sort(), ['fate-providence-up-to-us', 'stoic-logic-summary', 'virtues-of-socrates']);
-  for (const p of Object.values(docs)) {
+  for (const p of all) {
     assert.equal(p.doc.author, 'Arete (AI-assisted)');
-    assert.equal(p.doc.version, 1);
     assert.equal(p.doc.reviewed_by, null);
     assert.ok(p.doc.sources_used.length && p.doc.regenerate_when.length);
     for (const c of p.chunks) {
       assert.ok(c.chunk_text.startsWith('[ARETE SYNTHESIS:'));
       assert.ok(c.chunk_text.includes(`Section: ${c.section_label}.`));
-      assert.ok(c.chunk_index > INDEX_STRIDE && c.chunk_index < 2 * INDEX_STRIDE);
+      assert.ok(c.chunk_index > p.doc.version * INDEX_STRIDE && c.chunk_index < (p.doc.version + 1) * INDEX_STRIDE);
+      assert.ok(c.chunk_text.includes(`(version ${p.doc.version})`));
       assert.ok(!c.embed_input.includes('[ARETE SYNTHESIS'), 'the label is not embedded');
     }
   }
@@ -48,8 +52,15 @@ test('Fate: via_summary on the four named sections, corpus_verified elsewhere', 
   }
 });
 
+test('Virtues: version 2 is the newest, and version 1 stays committed for history', () => {
+  const versions = all.filter(p => p.doc.doc_key === 'virtues-of-socrates').map(p => p.doc.version).sort();
+  assert.deepEqual(versions, [1, 2]);
+  assert.equal(docs['virtues-of-socrates'].chunks.length, 71);
+});
+
 test('Virtues: statuses by section', () => {
   const k = 'virtues-of-socrates';
+  assert.equal(statusOf(k, 'How to read this document'), 'corpus_verified');
   for (const v of ['Courage', 'Self-discipline and temperance', 'Wisdom', 'Justice: how he treated people']) {
     assert.equal(statusOf(k, v), 'corpus_verified');
     assert.equal(statusOf(k, `${v} > Modern examples to strive for`), 'interpretive');

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { RESEARCH_EXCLUDED_TEXT_TYPES, SYNTHESIS_AUTHORS, SYNTHESIS_AUTHORS_IN_LIST } from '@/lib/corpus-fence'
 
 export const dynamic = 'force-dynamic'
 // Demand detection embeds up to 20 themes; give the function room but keep a
@@ -11,11 +12,6 @@ export const maxDuration = 60
 const DAY = 24 * 60 * 60 * 1000
 // Stop starting new demand-theme work after this; structural always completes.
 const DEMAND_BUDGET_MS = 42_000
-
-// Mirrors SYNTHESIS_AUTHORS in server/lib/corpus-fence.js: every author that
-// writes synthesis rows. Quoted for PostgREST because one holds parentheses.
-const SYNTHESIS_AUTHORS = ['Arete Synthesis', 'Arete (AI-assisted)']
-const SYNTHESIS_AUTHORS_IN_LIST = `(${SYNTHESIS_AUTHORS.map(a => `"${a}"`).join(',')})`
 
 // Monday (UTC) of the current week — matches server/coverage-gap-agent.js.
 function mondayUTC(): string {
@@ -125,9 +121,7 @@ async function detectDemandGaps(admin: Admin, startTime: number) {
         const { data: retrieved } = await admin.rpc('match_rag_corpus_ids', {
           query_embedding: embedding,
           match_count: 8,
-          // Research profile: synthesis is excluded in the query
-          // (server/lib/corpus-fence.js researchRetrievalParams).
-          exclude_text_types: ['synthesis'],
+          exclude_text_types: RESEARCH_EXCLUDED_TEXT_TYPES,
         })
         searchedFresh = true
         for (const chunk of (retrieved as { id: string; author: string; work: string; chunk_text: string; similarity: number }[]) || []) {

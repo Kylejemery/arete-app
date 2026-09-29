@@ -47,7 +47,7 @@ Two profiles, enforced in the query, not in prompts
 
 | Profile | Synthesis | Used by |
 | --- | --- | --- |
-| research | excluded (`researchRetrievalParams()`) | Themata ledger and harness, the gap finder, the agents that write new derived material (Synthesis, Inquiry, Tension, Dreaming, Convergence), any evidence or citation work |
+| research | excluded (`researchRetrievalParams()`; `RESEARCH_EXCLUDED_TEXT_TYPES` in the academy) | Themata ledger and harness, the gap finder, the Scribe and composer grounding and the stoic drafter (`match_rag_corpus_cited`), the agents that write new derived material (Synthesis, Inquiry, Tension, Dreaming, Convergence), any evidence or citation work |
 | teaching | included, labelled | Socratic Proctor, Cabinet counselors, Scrolls, the Moltbook agent |
 
 The label is part of the chunk. Every chunk's `chunk_text` opens with a header
@@ -133,7 +133,8 @@ with no embedding cannot be retrieved by any `match_rag_corpus*` function.
 | --- | --- | --- |
 | `stoic-logic-summary.v1.md` | 23 | 15 corpus_verified, 8 via_summary |
 | `fate-providence-up-to-us.v1.md` | 15 | 11 corpus_verified, 4 via_summary |
-| `virtues-of-socrates.v1.md` | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v2.md` (live) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v1.md` (inactive, kept for history) | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
 
 Converted from Kyle's Claude Docs exports (PDF) on 2026-09-29; the Virtues
 document is the updated export of that afternoon, with Diet, Small habits, and
@@ -141,6 +142,12 @@ Rules for living. Running headers, page footers, and the byline were dropped;
 tables split across pages were rejoined; bullets lost at page breaks and rows
 that landed under the wrong heading were restored against the PDF layout. A
 word-level comparison with each PDF shows nothing else missing.
+
+Virtues version 2 is Kyle's final export of the same day. It adds a "How to
+read this document" section (corpus_verified) and Seneca's On a Happy Life and
+Diogenes Laërtius Book VII to `sources_used`, and it revises text throughout.
+It was converted and checked the same way. Loading it made version 2 active
+and deprecated version 1's 66 chunks, which stay in `rag_corpus` for history.
 
 ## Tests
 

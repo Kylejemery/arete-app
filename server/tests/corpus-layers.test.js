@@ -98,3 +98,35 @@ test('a synthesis row prints its layer and verification status', () => {
   const primary = formatResults([{ ...row, text_type: 'primary' }], new Map());
   assert.doesNotMatch(primary, /layer: synthesis/);
 });
+
+// match_rag_corpus_cited serves citation work only, so every call to it runs
+// on the research profile. A new call site that forgets the exclusion would
+// let Arete's own synthesis come back as a source; this catches it.
+test('every match_rag_corpus_cited call passes the research exclusion', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..', '..');
+  const dirs = ['server', 'academy/web/src', 'academy/corpus-ingestion', 'moltbook-agent/src'];
+  const files = [];
+  const walk = d => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (/\.(js|ts|tsx)$/.test(e.name) && !p.includes(`${path.sep}tests${path.sep}`)) files.push(p);
+    }
+  };
+  for (const d of dirs) if (fs.existsSync(path.join(root, d))) walk(path.join(root, d));
+
+  const sites = [];
+  for (const f of files) {
+    const src = fs.readFileSync(f, 'utf8');
+    const re = /rpc\(\s*'match_rag_corpus_cited'\s*,\s*\{([\s\S]*?)\}\s*\)/g;
+    let m;
+    while ((m = re.exec(src))) {
+      sites.push({ file: path.relative(root, f), ok: /exclude_text_types:\s*RESEARCH_EXCLUDED_TEXT_TYPES|researchRetrievalParams\(\)/.test(m[1]) });
+    }
+  }
+  assert.ok(sites.length >= 4, `expected the four known call sites, found ${sites.length}`);
+  assert.deepEqual(sites.filter(s => !s.ok).map(s => s.file), []);
+});

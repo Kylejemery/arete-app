@@ -19,6 +19,8 @@
 --   2  teaching profile returns the chunk, labelled with layer and status
 --   3  MCP with default layers returns no synthesis row
 --   5  loading version 2 deactivates version 1 in both profiles
+--   6  the citation RPC (Scribe, composer grounding, stoic drafter) returns no
+--      synthesis row with the research exclusion, and still does without it
 -- (Test 4, canon unchanged, is a checksum comparison run separately.)
 
 do $$
@@ -63,6 +65,12 @@ begin
   -- 3. MCP default layers
   select count(*) into n from match_rag_corpus(v, 8, null, 'english', mcp_default_ex) m where m.text_type = 'synthesis';
   out := out || format('3 mcp default: %s synthesis rows [%s]; ', n, case when n = 0 then 'PASS' else 'FAIL' end);
+
+  -- 6. citation RPC
+  select count(*) into n from match_rag_corpus_cited(v, 10, 'english', research_ex) m where m.text_type = 'synthesis';
+  out := out || format('6a cited research: %s synthesis rows [%s]; ', n, case when n = 0 then 'PASS' else 'FAIL' end);
+  select * into top from match_rag_corpus_cited(v, 1);
+  out := out || format('6b cited default top is the chunk: %s [%s]; ', top.id = v1_chunk, case when top.id = v1_chunk then 'PASS' else 'FAIL' end);
 
   -- 5. version 2
   insert into corpus_synthesis_documents (doc_key, version, title, created_at, generated_with, sources_used, file_path, content_sha256)

@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/lib/supabase-admin'
 import { embedChunk } from '@/lib/corpus/ingest'
+import { RESEARCH_EXCLUDED_TEXT_TYPES } from '@/lib/corpus-fence'
 import { logRetrieval, newRequestId } from '@/lib/retrieval-log'
 import { MACHINE_TELLS_BLOCK } from '@/lib/machine-tells'
 import { BOOK_APPENDIX } from './book-prompts'
@@ -373,9 +374,12 @@ function getClient(): Anthropic {
 export async function searchCorpus(query: string, k = SEARCH_K): Promise<{ hits: RagHit[]; toolResult: string }> {
   const admin = createAdminClient()
   const embedding = await embedChunk(query)
+  // Research profile: the Scribe cites the corpus, so Arete's own synthesis
+  // documents are excluded in the query (lib/corpus-fence.ts).
   const { data, error } = await admin.rpc('match_rag_corpus_cited', {
     query_embedding: embedding,
     match_count: k,
+    exclude_text_types: RESEARCH_EXCLUDED_TEXT_TYPES,
   })
   if (error) throw new Error(`match_rag_corpus_cited: ${error.message}`)
 

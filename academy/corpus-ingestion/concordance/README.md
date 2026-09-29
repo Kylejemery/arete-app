@@ -54,8 +54,8 @@ Rules that keep the sync safe to re-run:
 - Every row carries `text_type = 'concordance'`. That value is what the
   counselor fence keys on (`server/lib/corpus-fence.js`): no counselor voice,
   Oracle, Cabinet, or reader margin note retrieves it. Synthesis, Inquiry,
-  Tension, Dreaming, Dispatch, and the Scribe do; the corpus MCP tools do
-  when the caller asks for the `apparatus` layer.
+  Tension, Dreaming, Dispatch, the Scribe, and composer grounding do; the
+  corpus MCP tools do when the caller asks for the `apparatus` layer.
 
 ## Probes
 
