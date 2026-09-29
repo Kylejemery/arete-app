@@ -29,6 +29,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor } = require('../lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const { logRetrieval } = require('../lib/retrieval-log');
 
@@ -43,7 +44,6 @@ const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
 // The corpus's own syntheses are authored under this name — inquiry never seeds
 // on them (that would make the corpus interrogate its own conjecture).
-const SYNTHESIS_AUTHOR = 'Arete Synthesis';
 
 // Philosophical-tradition map used to guarantee productive friction: an inquiry
 // seed must span >=2 traditions, not just >=2 authors, so the question sits in a
@@ -345,13 +345,14 @@ async function retrievePursuitPassages(question, config) {
   const { data: retrieved } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: Math.max(wantCount + 6, 18),
+    ...researchRetrievalParams(),
   });
 
   // Dedup by author (max 3 each) so the pursuit hears several voices, and drop
   // the corpus's own syntheses so we pursue across primary texts.
   const byAuthor = {};
   for (const chunk of retrieved || []) {
-    if (chunk.author === SYNTHESIS_AUTHOR) continue;
+    if (isSynthesisAuthor(chunk.author)) continue;
     if (!byAuthor[chunk.author]) byAuthor[chunk.author] = [];
     if (byAuthor[chunk.author].length < 3) byAuthor[chunk.author].push(chunk);
   }

@@ -13,11 +13,20 @@
 // ARETE_MCP_TOKEN is set. Queries arrive from a model reading a public
 // forum, so treat them as untrusted input: they are only ever embedded and
 // matched, never interpolated into SQL.
+//
+// Layers: search_corpus returns canon only unless the caller names more
+// layers, either per call (the `layers` argument) or per connection (a
+// `?layers=canon,scholarship,...` query string on the server URL, which is how
+// the Moltbook agent opts in to the teaching profile). Synthesis is never
+// returned to a caller that did not ask for it. A synthesis row prints its
+// layer and verification_status beside the passage, and its chunk_text opens
+// with the same label (server/lib/corpus-fence.js, LAYERS).
 // ---------------------------------------------------------------------------
 const express = require('express');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { spokenCitation } = require('../lib/spoken-citation');
+const { LAYERS, DEFAULT_MCP_LAYERS, excludeTextTypesForLayers } = require('../lib/corpus-fence');
 
 const router = express.Router();
 
@@ -35,6 +44,15 @@ const TOOLS = [
         query: { type: 'string', description: 'The idea, question, or claim to find passages about.' },
         author: { type: 'string', description: 'Optional exact author filter (as returned by list_authors).' },
         k: { type: 'integer', description: 'Number of passages to return (1-8, default 5).' },
+        layers: {
+          type: 'array',
+          items: { type: 'string', enum: Object.keys(LAYERS) },
+          description:
+            'Which corpus layers to search. Default ["canon"]: the ancient and modern primary texts only. ' +
+            '"scholarship" adds published secondary work and summaries of it; "apparatus" adds editorial concordances; ' +
+            '"synthesis" adds Arete\'s own AI-assisted summaries, which are teaching material, not evidence: each is ' +
+            'labelled with its verification_status, and an unverified or interpretive one must never be presented as what an ancient author said.',
+        },
       },
       required: ['query'],
     },
@@ -76,15 +94,34 @@ async function embedQuery(text) {
   return data.data[0].embedding;
 }
 
-async function searchCorpus({ query, author, k }) {
+// The layers for one call: the call's own `layers` argument, else the
+// connection default, else canon only.
+function resolveLayers(argLayers, connectionLayers) {
+  const pick = Array.isArray(argLayers) && argLayers.length ? argLayers
+    : Array.isArray(connectionLayers) && connectionLayers.length ? connectionLayers
+    : DEFAULT_MCP_LAYERS;
+  const layers = [...new Set(pick.map(l => String(l).trim()).filter(Boolean))];
+  excludeTextTypesForLayers(layers); // throws on an unknown layer
+  return layers;
+}
+
+function connectionLayers(req) {
+  const raw = req && req.query && req.query.layers;
+  if (!raw) return null;
+  return String(raw).split(',').map(s => s.trim()).filter(Boolean);
+}
+
+async function searchCorpus({ query, author, k, layers }, ctx = {}) {
   if (!query || typeof query !== 'string') throw new Error('query (string) is required');
   const count = Math.min(Math.max(Number.isInteger(k) ? k : 5, 1), 8);
+  const exclude = excludeTextTypesForLayers(resolveLayers(layers, ctx.layers));
   const embedding = await embedQuery(query.slice(0, 2000));
   const { data, error } = await db().rpc('match_rag_corpus', {
     query_embedding: embedding,
     match_count: count,
     filter_author: typeof author === 'string' && author.trim() ? author.trim() : null,
     filter_language: 'english',
+    exclude_text_types: exclude,
   });
   if (error) throw new Error(`retrieval failed: ${error.message}`);
   if (!data || !data.length) return 'No relevant passages found in the corpus for this query.';
@@ -98,7 +135,7 @@ async function searchCorpus({ query, author, k }) {
 async function provenanceById(ids) {
   const { data, error } = await db()
     .from('rag_corpus')
-    .select('id, locator, translator, edition_year, quotable_on_air')
+    .select('id, locator, translator, edition_year, quotable_on_air, verification_status')
     .in('id', ids);
   if (error) {
     console.error('[corpus-mcp] provenance lookup failed:', error.message);
@@ -116,8 +153,12 @@ function formatResults(rows, provenance) {
         ? ` (tr. ${p.translator}${p.edition_year ? `, ${p.edition_year}` : ''})`
         : '';
       const spoken = spokenCitation({ author: row.author, work: row.work, locator: p.locator });
+      const synthesis = row.text_type === 'synthesis'
+        ? [`layer: synthesis (AI-assisted, not evidence); verification_status: ${(p.verification_status || []).join(', ') || 'not recorded'}`]
+        : [];
       return [
         `[${i + 1}] ${row.author}${where ? ` — ${where}` : ''}${tr} (similarity ${row.similarity.toFixed(2)}; chunk ${row.id})`,
+        ...synthesis,
         `quotable_on_air: ${p.quotable_on_air === true}`,
         `spoken: "${spoken}"`,
         row.chunk_text,
@@ -145,7 +186,7 @@ async function listAuthors() {
   );
 }
 
-async function handleMessage(msg) {
+async function handleMessage(msg, ctx = {}) {
   const { id, method, params } = msg || {};
   // Notifications (no id) get no JSON-RPC response.
   if (id === undefined || id === null) return null;
@@ -169,7 +210,7 @@ async function handleMessage(msg) {
       const args = params?.arguments || {};
       try {
         let text;
-        if (name === 'search_corpus') text = await searchCorpus(args);
+        if (name === 'search_corpus') text = await searchCorpus(args, ctx);
         else if (name === 'list_authors') text = await listAuthors();
         else return fail(-32602, `Unknown tool: ${name}`);
         return reply({ content: [{ type: 'text', text }] });
@@ -193,11 +234,12 @@ router.post('/mcp/corpus', async (req, res) => {
 
   try {
     const body = req.body;
+    const ctx = { layers: connectionLayers(req) };
     if (Array.isArray(body)) {
-      const replies = (await Promise.all(body.map(handleMessage))).filter(Boolean);
+      const replies = (await Promise.all(body.map(m => handleMessage(m, ctx)))).filter(Boolean);
       return replies.length ? res.json(replies) : res.status(202).end();
     }
-    const reply = await handleMessage(body);
+    const reply = await handleMessage(body, ctx);
     return reply ? res.json(reply) : res.status(202).end();
   } catch (err) {
     console.error('[corpus-mcp] error:', err.message);
@@ -213,4 +255,4 @@ router.post('/mcp/corpus', async (req, res) => {
 // SSE stream to refuse GET with 405.
 router.get('/mcp/corpus', (_req, res) => res.status(405).end());
 
-module.exports = { router, formatResults };
+module.exports = { router, formatResults, resolveLayers, searchCorpus };

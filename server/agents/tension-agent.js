@@ -39,6 +39,7 @@
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { researchRetrievalParams, isSynthesisAuthor } = require('../lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const { logRetrieval } = require('../lib/retrieval-log');
 const { traditionFor, getMondayOfCurrentWeek } = require('./inquiry-agent');
@@ -51,7 +52,6 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
-const SYNTHESIS_AUTHOR = 'Arete Synthesis';
 
 // Concepts where thinkers most often pull against each other. Strategy A picks
 // from the whole list; Strategy B leans on the practical-recommendation
@@ -156,8 +156,9 @@ async function retrieveOnConcept(concept, count) {
   const { data } = await supabase.rpc('match_rag_corpus_ids', {
     query_embedding: embedding,
     match_count: Math.max(count * 5, 40),
+    ...researchRetrievalParams(),
   });
-  const rows = (data || []).filter(c => c.author && c.author !== SYNTHESIS_AUTHOR && c.chunk_text);
+  const rows = (data || []).filter(c => c.author && !isSynthesisAuthor(c.author) && c.chunk_text);
   // Research surfaces log their retrievals (server/lib/retrieval-log.js) so
   // the summaries admitted for them can be shown to earn their place.
   logRetrieval({ requestId: randomUUID(), agent: 'tension', queryText: concept, chunks: rows });

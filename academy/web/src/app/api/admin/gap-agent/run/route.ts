@@ -12,6 +12,11 @@ const DAY = 24 * 60 * 60 * 1000
 // Stop starting new demand-theme work after this; structural always completes.
 const DEMAND_BUDGET_MS = 42_000
 
+// Mirrors SYNTHESIS_AUTHORS in server/lib/corpus-fence.js: every author that
+// writes synthesis rows. Quoted for PostgREST because one holds parentheses.
+const SYNTHESIS_AUTHORS = ['Arete Synthesis', 'Arete (AI-assisted)']
+const SYNTHESIS_AUTHORS_IN_LIST = `(${SYNTHESIS_AUTHORS.map(a => `"${a}"`).join(',')})`
+
 // Monday (UTC) of the current week — matches server/coverage-gap-agent.js.
 function mondayUTC(): string {
   const d = new Date()
@@ -75,7 +80,7 @@ async function getConceptPassages(admin: Admin, concept: string): Promise<CPM[]>
     .not('approved', 'is', false)
     // Coverage is about primary sources; the corpus's own syntheses must not
     // count as coverage or appear as candidate source passages.
-    .neq('author', 'Arete Synthesis')
+    .not('author', 'in', SYNTHESIS_AUTHORS_IN_LIST)
   return (data as CPM[]) || []
 }
 
@@ -120,13 +125,16 @@ async function detectDemandGaps(admin: Admin, startTime: number) {
         const { data: retrieved } = await admin.rpc('match_rag_corpus_ids', {
           query_embedding: embedding,
           match_count: 8,
+          // Research profile: synthesis is excluded in the query
+          // (server/lib/corpus-fence.js researchRetrievalParams).
+          exclude_text_types: ['synthesis'],
         })
         searchedFresh = true
         for (const chunk of (retrieved as { id: string; author: string; work: string; chunk_text: string; similarity: number }[]) || []) {
           // Never surface the corpus's own syntheses as candidate source
           // passages: they would mask real primary-source gaps, and the
           // synthesis agent ignores synthesis-authored passages anyway.
-          if (chunk.author === 'Arete Synthesis') continue
+          if (SYNTHESIS_AUTHORS.includes(chunk.author)) continue
           if (!passages.find(p => p.chunk_id === chunk.id)) {
             await admin.from('concept_passage_map').upsert({
               concept: theme,

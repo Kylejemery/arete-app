@@ -4,6 +4,17 @@ const need = (k) => {
   return v;
 };
 
+// The corpus MCP server returns canon only unless a caller asks for more.
+// Moltbook is a teaching surface, so it asks for every layer, synthesis
+// included; synthesis passages arrive labelled with their verification_status
+// (server/routes/corpus-mcp.js). A layers value already on the URL wins.
+const TEACHING_LAYERS = "canon,scholarship,apparatus,synthesis";
+const withTeachingLayers = (raw) => {
+  const url = new URL(raw);
+  if (!url.searchParams.has("layers")) url.searchParams.set("layers", TEACHING_LAYERS);
+  return url.toString();
+};
+
 export const config = {
   moltbook: {
     base: process.env.MOLTBOOK_BASE || "https://www.moltbook.com/api/v1",
@@ -20,7 +31,7 @@ export const config = {
     // API at a nonexistent MCP server.
     url:
       process.env.ARETE_MCP_URL && !process.env.ARETE_MCP_URL.includes("your-mcp-host")
-        ? process.env.ARETE_MCP_URL
+        ? withTeachingLayers(process.env.ARETE_MCP_URL)
         : null,
     token: process.env.ARETE_MCP_TOKEN || null,
   },
