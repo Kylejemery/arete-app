@@ -68,8 +68,8 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 Work on the current milestone only. Do not start the next one until Kyle marks the current one done.
 
 1. **Machine data export** [DONE 2026-09-29, marked by Kyle]. Delivered in PRs #307, #309 and #310. See the brief below.
-2. **Machine page** [CURRENT] built and published. Kyle asked for it in this repo after all: the source is `themata/machine.html`, and it runs at `/playground/themata-machine` on the academy site, visible to the owner only until the specialist review (guardrail 5). A private copy is also on claude.ai. `node scripts/themata/sync-machine-page.mjs` carries the page and the export into `academy/web/`; rerun it after any new export.
-3. **Sextus and Bobzien 1996 ingested** into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
+2. **Machine page** [DONE 2026-09-29, marked by Kyle; delivered in #314] built and published. Kyle asked for it in this repo after all: the source is `themata/machine.html`, and it runs at `/playground/themata-machine` on the academy site, visible to the owner only until the specialist review (guardrail 5). A private copy is also on claude.ai. `node scripts/themata/sync-machine-page.mjs` carries the page and the export into `academy/web/`; rerun it after any new export.
+3. **Sextus and Bobzien 1996 ingested** [CURRENT] into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
 4. **Ledger rebuilt on primary texts.** Remove secondary summaries as evidence. Kyle signs off every entry.
 5. **Bobzien's reconstruction encoded as a candidate.** Rerun the harness and report results against the existing candidates.
 6. **Review package for a Stoic logic specialist.** Ledger, encoding choices, results, and open questions.
@@ -155,3 +155,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-09-29 (later still): Milestone 1. Added the duplicated-premise variant (a copy of the last premise, placed last) beside the fresh atom, in a new PR stacked on #309. Of 8,384 derived searches, the duplicate variant stays derived under `set` in 3,038 of 3,038. Under `list` and `multiset` it stays derived in 28 each (S012 under a merging cut) and is lost elsewhere, but only 32 of those losses per view are proven (the no-themata control). The rest are not found within depth 8. Earlier results are unchanged.
 * 2026-09-29: Kyle marked milestone 1 done. Milestone 2, the machine page, is now current. It happens outside the repo.
 * 2026-09-29: Milestone 2. Built the Themata Machine page from the export and put it on the academy site at `/playground/themata-machine`, left out of `RELEASED_PLAYGROUND` so everyone but the owner gets a 404, data files included. The sync script copies the export's verdict files byte for byte and keeps only the reductions from `runs/` (5.4 MB instead of 45 MB). Not marked done: that is Kyle's call.
+* 2026-09-29: Kyle marked milestone 2 done. Milestone 3 (Sextus and Bobzien 1996 into the corpus) is now current.
