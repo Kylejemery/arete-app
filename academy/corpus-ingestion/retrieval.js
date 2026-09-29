@@ -115,4 +115,4 @@ function formatChunksForPrompt(chunks) {
   }).join('\n\n');
 }
 
-module.exports = { retrieveAcademyChunks, formatChunksForPrompt };
+module.exports = { retrieveAcademyChunks, formatChunksForPrompt, generateEmbedding, getSupabase };
