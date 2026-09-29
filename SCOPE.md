@@ -67,14 +67,14 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 
 Work on the current milestone only. Do not start the next one until Kyle marks the current one done.
 
-1. **Machine data export** [CURRENT]. See the brief below.
-2. **Machine page** built and published. This happens outside the repo. Wait for it.
+1. **Machine data export** [DONE 2026-09-29, marked by Kyle]. Delivered in PRs #307, #309 and #310. See the brief below.
+2. **Machine page** [CURRENT] built and published. This happens outside the repo. Wait for it.
 3. **Sextus and Bobzien 1996 ingested** into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
 4. **Ledger rebuilt on primary texts.** Remove secondary summaries as evidence. Kyle signs off every entry.
 5. **Bobzien's reconstruction encoded as a candidate.** Rerun the harness and report results against the existing candidates.
 6. **Review package for a Stoic logic specialist.** Ledger, encoding choices, results, and open questions.
 
-## Milestone 1 brief: machine data export
+## Milestone 1 brief: machine data export (done)
 
 Produce a static export of harness results so a public explorer page can display them. The page does no logic of its own. Every verdict it shows must come from a Lean run.
 
@@ -153,3 +153,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-09-29: Setup done (SCOPE.md, PARKING.md, CLAUDE.md pointer). Milestone 1: no export found on any branch or PR; the export is being produced outside this session, so none was built here.
 * 2026-09-29 (later): Milestone 1. The export arrived as PR #307 in `themata/results/explorer/`. Reviewed it and reproduced it byte for byte with Lean 4.22.0. Follow-up PR: commit hash and encoding version, an explicit empty failed-runs list, a JSON schema for every file, a `non_primary` flag (adds S011 and S014), `searches.json` with 14,256 distinct searches and the invariance check, and counts reported as distinct searches. Not done: the duplicated-premise variant.
 * 2026-09-29 (later still): Milestone 1. Added the duplicated-premise variant (a copy of the last premise, placed last) beside the fresh atom, in a new PR stacked on #309. Of 8,384 derived searches, the duplicate variant stays derived under `set` in 3,038 of 3,038. Under `list` and `multiset` it stays derived in 28 each (S012 under a merging cut) and is lost elsewhere, but only 32 of those losses per view are proven (the no-themata control). The rest are not found within depth 8. Earlier results are unchanged.
+* 2026-09-29: Kyle marked milestone 1 done. Milestone 2, the machine page, is now current. It happens outside the repo.
