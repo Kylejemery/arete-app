@@ -4,6 +4,7 @@ import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, 
 import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 import { supabase } from '@/lib/supabase';
+import { readCabinetResponse, type CabinetStreamEvent } from './cabinetStream';
 
 // What a check-in call comes back with. A failure is a value, never a string
 // that looks like a reply: callers must not save anything to check_ins unless
@@ -588,9 +589,13 @@ export interface CabinetReply {
   text: string;
 }
 
+// onStream (retention plan R13): when given, the server streams the reply and
+// each preview event reaches onStream as it is written; the promise still
+// resolves with the finished replies, exactly as without it.
 export async function sendMessageToCabinet(
   messages: ThreadMessage[],
-  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] }
+  sessionOptions?: { sessionType?: 'solo' | 'shared'; sessionId?: string; partnerIds?: string[] },
+  onStream?: (ev: CabinetStreamEvent) => void
 ): Promise<CabinetReply[]> {
   const asSingleReply = (text: string): CabinetReply[] => [
     { counselorId: null, counselorName: null, text },
@@ -647,6 +652,7 @@ export async function sendMessageToCabinet(
         sessionType,
         sessionId: sessionOptions?.sessionId,
         participantIds,
+        ...(onStream ? { stream: true } : {}),
       }),
     });
 
@@ -656,7 +662,7 @@ export async function sendMessageToCabinet(
       throw new CabinetUnavailableError(`The Cabinet is temporarily unavailable. (Error ${response.status})`);
     }
 
-    const data = await response.json();
+    const data = await readCabinetResponse(response, onStream);
     noteCabinetOffer(data);
     if (data.mode === 'parallel' && Array.isArray(data.responses)) {
       const replies = data.responses
@@ -669,7 +675,7 @@ export async function sendMessageToCabinet(
       if (replies.length > 0) return replies;
       throw new CabinetUnavailableError('The Cabinet did not respond. Please try again.');
     }
-    const content = data?.content?.[0]?.text;
+    const content = ((data?.content ?? []) as { type?: string; text?: string }[]).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text as string).join(''); // every text block (R13): a reply split by a web search is shown whole
     if (typeof content === 'string' && content.length > 0) {
       return asSingleReply(content);
     }
@@ -817,9 +823,11 @@ export async function sendCheckInToCabinet(
   }
 }
 
+// onStream (retention plan R13): as for sendMessageToCabinet.
 export async function sendMessageToCounselor(
   counselorId: string,
-  messages: ThreadMessage[]
+  messages: ThreadMessage[],
+  onStream?: (ev: CabinetStreamEvent) => void
 ): Promise<string> {
   try {
     const syntheticThread = { id: counselorId, messages, lastUpdated: Date.now() };
@@ -842,6 +850,7 @@ export async function sendMessageToCounselor(
         activeCounselorId: counselorId,
         ktRepliesSinceComplete: repliesSinceKtComplete(messages, counselorSettings?.kt_completed_at),
         userId: counselorSession?.user?.id,
+        ...(onStream ? { stream: true } : {}),
       }),
     });
 
@@ -851,9 +860,9 @@ export async function sendMessageToCounselor(
       throw new CabinetUnavailableError(`Your counselor is temporarily unavailable. (Error ${response.status})`);
     }
 
-    const data = await response.json();
+    const data = await readCabinetResponse(response, onStream);
     noteCabinetOffer(data);
-    const content = data?.content?.[0]?.text;
+    const content = ((data?.content ?? []) as { type?: string; text?: string }[]).filter(b => b?.type === 'text' && typeof b.text === 'string').map(b => b.text as string).join(''); // every text block (R13): a reply split by a web search is shown whole
     if (typeof content === 'string' && content.length > 0) {
       return content;
     }

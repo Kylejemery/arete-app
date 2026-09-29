@@ -51,6 +51,8 @@ import { paywallRoute } from '@/lib/paywall';
 import { parseCheckInPrompt } from '@/lib/checkinMessage';
 import CheckInChip from '../../components/CheckInChip';
 import CounselorText from '../../components/CounselorText';
+import LiveVoiceBubbles from '../../components/LiveVoiceBubbles';
+import { applyStreamEvent, type LiveVoice } from '@/lib/cabinetStream';
 
 function getTodayDateKey(): string {
   const d = new Date();
@@ -124,6 +126,8 @@ export default function CabinetScreen() {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  // The reply while it is being written (retention plan R13).
+  const [liveVoices, setLiveVoices] = useState<LiveVoice[]>([]);
   // Goal or scroll offer from the last reply (activation Parts 6 and 9).
   const [pendingOffer, setPendingOffer] = useState<CabinetOffer | null>(null);
   // Run C: a practice the closing voice proposed, or one waiting from before.
@@ -592,7 +596,10 @@ export default function CabinetScreen() {
       }
       // The Cabinet tab is always the private solo thread; the shared
       // conversation lives in the Shared tab with its own send path.
-      const replies = await sendMessageToCabinet(updatedMessages);
+      // Streamed (R13): each voice appears as it is written.
+      setLiveVoices([]);
+      const replies = await sendMessageToCabinet(updatedMessages, undefined,
+        ev => setLiveVoices(prev => applyStreamEvent(prev, ev)));
       const assistantMessages = repliesToMessages(replies);
       const finalMessages = [...updatedMessages, ...assistantMessages];
       setMessages(finalMessages);
@@ -627,6 +634,7 @@ export default function CabinetScreen() {
       }
     } finally {
       setIsLoading(false);
+      setLiveVoices([]);
     }
   };
 
@@ -1063,7 +1071,18 @@ export default function CabinetScreen() {
               <ProposalCard key={pendingProposal.id} proposal={pendingProposal} onClose={() => setPendingProposal(null)} />
             )}
 
+            {/* R13: the reply as it is written; "convening" only until the first words arrive. */}
             {isLoading && (
+              <LiveVoiceBubbles
+                voices={liveVoices}
+                fallbackName="The Cabinet"
+                rowStyle={styles.cabinetMessageRow}
+                bubbleStyle={styles.cabinetBubble}
+                labelStyle={styles.cabinetLabel}
+                textStyle={styles.cabinetText}
+              />
+            )}
+            {isLoading && !liveVoices.some(v => v.text.trim()) && (
               <View style={styles.cabinetMessageRow}>
                 <View style={styles.cabinetBubble}>
                   <Text style={styles.cabinetLabel}>The Cabinet</Text>
