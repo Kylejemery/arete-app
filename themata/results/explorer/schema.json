@@ -315,7 +315,7 @@
    ]
   },
   "redundant_variant_result": {
-   "description": "The same candidate and setting on the item with one fresh atom added as a last premise (S016's shape).",
+   "description": "A redundant-premise variant, run with the same candidate and setting: redundant_variant adds a fresh atom as a last premise (S016's shape); duplicate_variant adds a second copy of the last premise, placed last.",
    "allOf": [
     {
      "$ref": "#/$defs/search_result"
@@ -368,6 +368,9 @@
        "$ref": "#/$defs/tri"
       },
       "redundant_variant": {
+       "$ref": "#/$defs/redundant_variant_result"
+      },
+      "duplicate_variant": {
        "$ref": "#/$defs/redundant_variant_result"
       }
      }
@@ -423,6 +426,9 @@
        ]
       },
       "redundant_variant": {
+       "$ref": "#/$defs/redundant_variant_result"
+      },
+      "duplicate_variant": {
        "$ref": "#/$defs/redundant_variant_result"
       }
      }
@@ -732,6 +738,10 @@
       "redundant_variants",
       "variant_derivation_lost",
       "variant_loss_proven",
+      "duplicate_variants",
+      "duplicate_derivation_lost",
+      "duplicate_loss_proven",
+      "variants_by_view",
       "run_records"
      ],
      "additionalProperties": false,
@@ -803,6 +813,198 @@
        "type": "integer",
        "minimum": 0,
        "description": "Records in runs/, eight per distinct search."
+      },
+      "duplicate_variants": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "duplicate_derivation_lost": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "duplicate_loss_proven": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "variants_by_view": {
+       "description": "Distinct searches with each variant, by premise view and the variant's status.",
+       "type": "object",
+       "required": [
+        "list",
+        "multiset",
+        "set"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "list": {
+         "type": "object",
+         "required": [
+          "redundant_variant",
+          "duplicate_variant"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "redundant_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          },
+          "duplicate_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          }
+         }
+        },
+        "multiset": {
+         "type": "object",
+         "required": [
+          "redundant_variant",
+          "duplicate_variant"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "redundant_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          },
+          "duplicate_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          }
+         }
+        },
+        "set": {
+         "type": "object",
+         "required": [
+          "redundant_variant",
+          "duplicate_variant"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "redundant_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          },
+          "duplicate_variant": {
+           "type": "object",
+           "required": [
+            "derived",
+            "not_found_within_depth",
+            "proven_underivable"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "derived": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "not_found_within_depth": {
+             "type": "integer",
+             "minimum": 0
+            },
+            "proven_underivable": {
+             "type": "integer",
+             "minimum": 0
+            }
+           }
+          }
+         }
+        }
+       }
       }
      }
     },
@@ -1005,7 +1207,8 @@
        "theory",
        "encoding_note",
        "semantics",
-       "redundant_variant"
+       "redundant_variant",
+       "duplicate_variant"
       ],
       "additionalProperties": false,
       "properties": {
@@ -1044,6 +1247,16 @@
         ]
        },
        "redundant_variant": {
+        "oneOf": [
+         {
+          "$ref": "#/$defs/item_variant"
+         },
+         {
+          "type": "null"
+         }
+        ]
+       },
+       "duplicate_variant": {
         "oneOf": [
          {
           "$ref": "#/$defs/item_variant"
@@ -1134,7 +1347,8 @@
      "encoding_note",
      "semantics",
      "redundant_variant",
-     "provenance"
+     "provenance",
+     "duplicate_variant"
     ],
     "additionalProperties": false,
     "properties": {
@@ -1347,6 +1561,16 @@
         "type": "string"
        }
       }
+     },
+     "duplicate_variant": {
+      "oneOf": [
+       {
+        "$ref": "#/$defs/item_variant"
+       },
+       {
+        "type": "null"
+       }
+      ]
      }
     }
    }
