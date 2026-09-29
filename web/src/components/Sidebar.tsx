@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { GARDEN_TITLE } from '@/lib/exhibits';
 import { hasUnseenInferredFacts } from '@/lib/profileFields';
 import { showsAppChrome } from '@/lib/appChrome';
+import DevOverrideBadge from './DevOverrideBadge';
 
 interface NavItem {
   href: string;
@@ -129,6 +130,8 @@ export default function Sidebar() {
 
   return (
     <>
+      <DevOverrideBadge />
+
       {/* ── Desktop Sidebar (md and above) ─────────────────────────── */}
       <aside
         className="hidden md:flex flex-col w-[220px] h-screen fixed left-0 top-0 z-30"
