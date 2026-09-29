@@ -2,6 +2,9 @@
 
 Guidance for Claude Code working in this repository.
 
+**Every session: read `SCOPE.md` first.** It names the current milestone of the
+Themata project and the rules for working on it. Park tangents in `PARKING.md`.
+
 > This file is a starting point. It currently covers the corpus only, because
 > that is what it was created for. Build commands, test commands, and
 > architecture notes should be added as they are established.
