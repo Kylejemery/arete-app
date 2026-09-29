@@ -3,6 +3,8 @@
  "files": {
   "harness": "harness.json",
   "items": "items.json",
+  "searches": "searches.json",
+  "schema": "schema.json",
   "runs": [
    "runs/c00.json",
    "runs/c01.json",
@@ -85,20 +87,55 @@
   "formal_items": 18,
   "ledger_items": 20
  },
- "counts": {
-  "runs": 114048,
-  "derived": 67072,
-  "not_found_within_depth": 8128,
-  "proven_underivable": 38848,
-  "matches_ledger": {
-   "yes": 97168,
-   "no": 15296,
-   "unknown": 1584
+ "source": {
+  "commit": "7ee6e1c3b246f2a502e6d5b6cf843b79804b8e5e",
+  "inputs_clean": true,
+  "inputs": [
+   "themata/lean/",
+   "themata/evidence/",
+   "themata/harness/"
+  ],
+  "encoding_version": {
+   "sha256": "10d7288598b23eee44052d7b21e233a962f7da1bf81aacd5f76760977c7ec0cb",
+   "scope": "every tracked file under themata/lean/, paths and contents",
+   "files": 28,
+   "lean_toolchain": "leanprover/lean4:v4.22.0"
   },
-  "redundant_variants": 67072,
-  "variant_derivation_lost": 67072,
-  "variant_loss_proven": 67072
+  "ledger_sha256": "dd37f9b723da3d761cb65a35c1c330f82574596789738ddb5cad0c74634f20cc"
  },
+ "counts": {
+  "unit": "distinct searches: candidate x proof setting (single, contra, view) x formal item",
+  "searches": 14256,
+  "derived": 8384,
+  "not_found_within_depth": 1016,
+  "proven_underivable": 4856,
+  "size_bound_hits": 0,
+  "matches_ledger": {
+   "yes": 11552,
+   "no": 1912,
+   "unknown": 0,
+   "varies_with_cond": 792
+  },
+  "redundant_variants": 8384,
+  "variant_derivation_lost": 8384,
+  "variant_loss_proven": 8384,
+  "run_records": 114048
+ },
+ "invariance": {
+  "method": "lake exe harness --export runs every search once under each of the 8 (cond, redundancy) combinations; this script compares the 8 records field by field. An observed check on this suite and these candidates, not a theorem.",
+  "searches_checked": 14256,
+  "fields_identical": "every field except setting and matches_ledger",
+  "matches_ledger": {
+   "varies_with_cond": 792,
+   "items": [
+    "S008"
+   ],
+   "varies_with_redundancy": 0,
+   "why": "for a valid_nonsyllogistic item matches_ledger also asks the DL 7.77 criterion, which reads cond"
+  }
+ },
+ "failed_runs": [],
+ "failure_policy": "The harness has no timeout: every search runs to its depth or size bound, and a run stopped by the size bound is recorded, not failed (size_bound_hits). build_export.py stops on any error or failed check, and lake exe harness --export stops if any reduction fails to replay, so an export that is written has no failed runs.",
  "review_status": {
   "ledger_entries_verified_by_kyle": "0 of 20",
   "specialist_review": "not yet",

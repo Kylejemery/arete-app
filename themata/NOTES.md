@@ -675,7 +675,19 @@ and the page. The layout is in its README. Built by
   never reads `cond` or `redundancy`, but the export does not rely on that.
   Every run uses its full parameter record, and every cell matches
   `matrix.csv` under all eight (cond, redundancy) combinations. That makes
-  114,048 runs.
+  114,048 run records.
+- **Counts are distinct searches** (follow-up, same day). One candidate × one
+  proof setting (`single`, `contra`, `view`) × one item is one search, 14,256
+  in all. Each has eight identical run records, so counting records inflated
+  every figure eightfold. `searches.json` folds them after checking that the
+  eight agree on every field but `matches_ledger`, which varies only with
+  `cond` and only for S008. From here on, figures are distinct searches.
+- **Provenance and failure fields** (follow-up). `index.json` records the
+  commit, an encoding version (a digest of `themata/lean/`), and an explicit,
+  empty `failed_runs` list, with the reason it is empty. `items.json` flags
+  every item whose witness is not a primary text (`non_primary`), which adds
+  S011 and S014, the items resting on Zeller's quotation. `schema.json` covers
+  every file, and the build validates against it.
 - **The search records how it reached each argument** (`searchTrace`), and
   `search` is that record's outcome. The matrix and the export run the same
   code. `matrix.md` and `matrix.csv` regenerate byte-identical.
@@ -698,10 +710,9 @@ and the page. The layout is in its README. Built by
 
 ### What it shows
 
-- Of 67,072 derived runs, every redundant variant loses derivability, and
+- Of 8,384 derived searches, every redundant variant loses derivability, and
   every loss is proven by a Sugihara countermodel (`■rm`). None is only "not
   found". The added atom makes the variant fail relevance, and the RM
   soundness proof covers every candidate and view, the merging cut included.
-- `not_found_within_depth`: 8,128 runs, which are the matrix's 1,016 `UNDER`
-  cells under each of the eight (cond, redundancy) pairs. Every rejection is
-  proven.
+- `not_found_within_depth`: 1,016 searches, which are the matrix's 1,016
+  `UNDER` cells. Every rejection is proven.
