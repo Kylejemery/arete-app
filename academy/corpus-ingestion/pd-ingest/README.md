@@ -27,6 +27,8 @@ Run from `academy/corpus-ingestion/`, with `SUPABASE_URL`,
 node pd-ingest/stage.js --inspect <slug>   # fetch and print the page's markers
 node pd-ingest/stage.js --dry-run          # fetch, parse and chunk; write nothing
 node pd-ingest/stage.js [--slug <slug>]    # stage (never writes rag_corpus)
+node pd-ingest/stage.js --slug <slug> --sql <file>  # the same staging rows as SQL, to run
+                                           # through the Supabase connector (no key)
 node pd-ingest/report.js                   # docs/corpus/staging/long2002-ch2.md
 node pd-ingest/promote.js --slug <slug>    # approved → rag_corpus
 node pd-ingest/acceptance.js               # the spec's two retrieval tests
@@ -92,3 +94,17 @@ node pd-ingest/stage.js --batch stoic-scholarship-2026-09
 node pd-ingest/report.js --batch stoic-scholarship-2026-09
 ```
 
+## Musonius Rufus, Lutz 1947 (2026-09-29)
+
+`musonius-lectures-lutz-1947`: Lutz's English Lectures I–XXI from the
+archive.org OCR of *Yale Classical Studies* 10, which prints Greek and English
+on facing pages with no leaf breaks. `parsers/facing-ocr.js` keeps the English
+pages (by running head, or by lecture heading on an opening page), drops
+Lutz's notes, stray Greek lines and margin numbers, and cuts long paragraphs at
+sentence ends. Every note continuation, gap in the scan and OCR fix it relies
+on is listed in the source entry, and one that stops matching refuses the
+source. A chunk over lost lines carries its own `ocr_quality`
+(`corpus_staging_chunks.ocr_quality`, which promotion prefers to the
+source's). The license is `unverified` (a 1947 US publication, no renewal
+found), so it is never quotable. Admission record:
+`docs/corpus/ADMISSIONS_2026-09-29_MUSONIUS_LUTZ.md`.
