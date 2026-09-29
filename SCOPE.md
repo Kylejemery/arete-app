@@ -140,3 +140,5 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 
 ## Log
 
+
+* 2026-09-29: Setup done (SCOPE.md, PARKING.md, CLAUDE.md pointer). Milestone 1: no export found on any branch or PR; the export is being produced outside this session, so none was built here.
