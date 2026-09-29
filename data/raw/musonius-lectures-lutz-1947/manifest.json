@@ -1,0 +1,11 @@
+{
+  "files": {
+    "MUSONIUSRUFUSSTOICFRAGMENTS_djvu.txt": {
+      "url": "https://archive.org/details/MUSONIUSRUFUSSTOICFRAGMENTS",
+      "retrieved_at": "2026-09-29T15:11:00+00:00",
+      "sha256": "723f09745288948f305b771ad259214a8fd31899a8f4e6ffac3bb6d92b263b49",
+      "bytes": 333005,
+      "note": "Attached by Kyle on 2026-09-29 with this sha256; the copy here was read from https://archive.org/stream/MUSONIUSRUFUSSTOICFRAGMENTS/MUSONIUSRUFUSSTOICFRAGMENTS_djvu.txt and matches it byte for byte. Its sha1 (15961ff39dd56c97ae2d08fffb0c345816c17dc4) and size match archive.org's own metadata for MUSONIUSRUFUSSTOICFRAGMENTS_djvu.txt."
+    }
+  }
+}

@@ -6,6 +6,10 @@
 //   node pd-ingest/stage.js --slug <slug>       one source
 //   node pd-ingest/stage.js --batch <batch>     one batch (default: all)
 //   node pd-ingest/stage.js --dry-run           fetch and build, write nothing
+//   node pd-ingest/stage.js --slug <s> --sql <file>
+//                                               build and write the staging
+//                                               rows as SQL to run through the
+//                                               Supabase connector (no key)
 //   node pd-ingest/stage.js --inspect <slug>    fetch and print the page's
 //                                               markers (ids, classes, number
 //                                               patterns) to set a parser from
@@ -64,14 +68,11 @@ async function fetchAll(source) {
   return files;
 }
 
-async function writeStaging(source, result, files) {
-  const { db, must } = require('./db');
-  const existing = await must(db().from('corpus_staging_sources').select('status').eq('slug', source.slug).maybeSingle(), 'read staging source');
-  if (existing && ['approved', 'promoted'].includes(existing.status)) {
-    throw new Error(`${source.slug} is ${existing.status}; restaging would overwrite reviewed rows`);
-  }
+// The staging rows for a built source: one corpus_staging_sources row and its
+// chunks. Shared by the database write and --sql.
+function stagingRows(source, result, files) {
   const notes = [source.cleaningNote, ...result.warnings].filter(Boolean).join('\n') || null;
-  await must(db().from('corpus_staging_sources').upsert(sourceRow(source, {
+  const src = sourceRow(source, {
     status: 'staged', skip_reason: null,
     license_evidence: result.licenseEvidence,
     retrieved_at: files.map((f) => f.retrieved_at).filter(Boolean).sort()[0] || null,
@@ -79,12 +80,53 @@ async function writeStaging(source, result, files) {
     ocr_quality: result.ocr ? result.ocr.quality : null,
     ocr_garble_rate: result.ocr ? result.ocr.rate : null,
     cleaning_notes: notes,
-  }), { onConflict: 'slug' }), 'upsert staging source');
-  await must(db().from('corpus_staging_chunks').delete().eq('source_slug', source.slug), 'clear staged chunks');
-  for (let i = 0; i < result.chunks.length; i += 200) {
-    const batch = result.chunks.slice(i, i + 200).map((c) => ({ source_slug: source.slug, ...c }));
-    await must(db().from('corpus_staging_chunks').insert(batch), 'insert staged chunks');
+  });
+  const chunks = result.chunks.map((c) => ({ source_slug: source.slug, ...c }));
+  return { src, chunks };
+}
+
+async function writeStaging(source, result, files) {
+  const { db, must } = require('./db');
+  const existing = await must(db().from('corpus_staging_sources').select('status').eq('slug', source.slug).maybeSingle(), 'read staging source');
+  if (existing && ['approved', 'promoted'].includes(existing.status)) {
+    throw new Error(`${source.slug} is ${existing.status}; restaging would overwrite reviewed rows`);
   }
+  const { src, chunks } = stagingRows(source, result, files);
+  await must(db().from('corpus_staging_sources').upsert(src, { onConflict: 'slug' }), 'upsert staging source');
+  await must(db().from('corpus_staging_chunks').delete().eq('source_slug', source.slug), 'clear staged chunks');
+  for (let i = 0; i < chunks.length; i += 200) {
+    await must(db().from('corpus_staging_chunks').insert(chunks.slice(i, i + 200)), 'insert staged chunks');
+  }
+}
+
+// --sql: the same writes as one SQL transaction, for a session with the
+// Supabase connector but no service-role key. It refuses, as writeStaging
+// does, to restage a source already approved or promoted.
+function sqlLiteral(v) {
+  if (v == null) return 'null';
+  if (Array.isArray(v)) return v.length ? `array[${v.map(sqlLiteral).join(', ')}]::text[]` : 'array[]::text[]';
+  if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+  return `'${String(v).replace(/'/g, "''")}'`;
+}
+
+function stagingSql(source, result, files) {
+  const { src, chunks } = stagingRows(source, result, files);
+  const slug = sqlLiteral(source.slug);
+  const srcCols = Object.keys(src);
+  const chunkCols = [...new Set(chunks.flatMap((c) => Object.keys(c)))];
+  return [
+    `-- Staging for ${source.slug}, written by pd-ingest/stage.js --sql. Never touches rag_corpus.`,
+    'begin;',
+    `do $$ begin if exists (select 1 from public.corpus_staging_sources where slug = ${slug} and status in ('approved', 'promoted')) then raise exception '${source.slug} is approved or promoted; restaging would overwrite reviewed rows'; end if; end $$;`,
+    `insert into public.corpus_staging_sources (${srcCols.join(', ')})`,
+    `values (${srcCols.map((k) => sqlLiteral(src[k])).join(', ')})`,
+    `on conflict (slug) do update set ${srcCols.filter((k) => k !== 'slug').map((k) => `${k} = excluded.${k}`).join(', ')};`,
+    `delete from public.corpus_staging_chunks where source_slug = ${slug};`,
+    `insert into public.corpus_staging_chunks (${chunkCols.join(', ')}) values`,
+    chunks.map((c) => `(${chunkCols.map((k) => sqlLiteral(c[k])).join(', ')})`).join(',\n') + ';',
+    'commit;',
+    '',
+  ].join('\n');
 }
 
 async function recordSkip(source, reason) {
@@ -118,7 +160,9 @@ async function main() {
   const inspectSlug = opt('--inspect');
   const only = inspectSlug || opt('--slug');
   const batch = opt('--batch');
-  const dryRun = flag('--dry-run');
+  const sqlOut = opt('--sql');
+  const dryRun = flag('--dry-run') || !!sqlOut;
+  const sql = [];
   const selected = SOURCES.filter((s) => (!only || s.slug === only) && (!batch || (s.batch || BATCH) === batch));
   if (!selected.length) throw new Error(`no source "${only}"`);
   // Translations before the originals aligned to them.
@@ -155,11 +199,16 @@ async function main() {
       printInspect(source, files.slice(0, 1));
       continue;
     }
-    if (!dryRun) await writeStaging(source, result, files);
-    summary.push([source.slug, dryRun ? 'built (dry run)' : 'staged',
+    if (sqlOut) sql.push(stagingSql(source, result, files));
+    else if (!dryRun) await writeStaging(source, result, files);
+    summary.push([source.slug, sqlOut ? 'built (sql)' : dryRun ? 'built (dry run)' : 'staged',
       `${result.stats.words} words, ${result.stats.bodyChunks} chunks, ${result.stats.noteChunks} notes${result.ocr ? `, OCR ${result.ocr.quality} (${(100 * result.ocr.rate).toFixed(1)}%)` : ''}`]);
   }
 
+  if (sqlOut) {
+    require('fs').writeFileSync(sqlOut, sql.join('\n'));
+    console.log(`staging SQL for ${sql.length} source(s) written to ${sqlOut}`);
+  }
   if (!inspectSlug) {
     console.log('\nsource'.padEnd(48) + 'outcome   detail');
     for (const [slug, outcome, detail] of summary) console.log(`${slug.padEnd(47)} ${outcome.padEnd(9)} ${detail}`);
@@ -170,4 +219,4 @@ if (require.main === module) {
   main().catch((err) => { console.error(err.message); process.exit(1); });
 }
 
-module.exports = { pendingReason, sourceRow };
+module.exports = { pendingReason, sourceRow, stagingRows, stagingSql, sqlLiteral };

@@ -112,6 +112,7 @@ async function main() {
     text_type: staged.text_type, quotable_on_air: staged.quotable_on_air,
     chunk_index: idx++, chunk_text: c.chunk_text, word_count: c.word_count,
     locator: c.locator, section_label: c.section_label, printed_pages: c.printed_pages,
+    ocr_quality: c.ocr_quality || staged.ocr_quality, // a chunk's own reading, where it has one
     embedding: bodyEmb[i].embedding,
   }));
   const bodyIds = await insertRows(bodyRows);

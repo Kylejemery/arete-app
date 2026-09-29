@@ -12,6 +12,7 @@ const PARSERS = {
   numbered: require('./parsers/numbered'),
   'ia-ocr': require('./parsers/ia-ocr'),
   'summary-md': require('./parsers/summary-md'),
+  'facing-ocr': require('./parsers/facing-ocr'),
 };
 
 function parseFiles(source, files) {
@@ -57,6 +58,12 @@ function groupByRanges(sections, ranges) {
   }).filter(Boolean);
 }
 
+function chunkOcrQuality(sections) {
+  if (sections.some((s) => s && s.gap)) return 'poor';
+  if (sections.some((s) => s && s.damaged)) return 'fair';
+  return null;
+}
+
 function rangeOf(locator) {
   const [first, last] = String(locator).split('–');
   return { locator, first, last: last || first };
@@ -68,7 +75,7 @@ function rangeOf(locator) {
 function build(source, files, { translationChunks = null } = {}) {
   const parsed = parseFiles(source, files);
   // Page-unit and summary sources have no canonical citations to order.
-  const structure = ['ia-ocr', 'summary-md'].includes(source.parser)
+  const structure = ['ia-ocr', 'summary-md', 'facing-ocr'].includes(source.parser)
     ? { ok: parsed.reasons.length === 0 && parsed.sections.length > 0, reasons: parsed.reasons.length ? parsed.reasons : (parsed.sections.length ? [] : ['no pages recovered']), bodyWords: parsed.sections.reduce((n, s) => n + countWords(s.text), 0), frontWords: 0 }
     : checkStructure({ sections: parsed.sections, front: parsed.front, rawText: parsed.rawText, order: compareCites });
   const expectMissing = (source.expect || []).filter((e) => !parsed.rawText.includes(e));
@@ -82,16 +89,23 @@ function build(source, files, { translationChunks = null } = {}) {
   } else {
     const r = chunkSections(parsed.sections);
     warnings.push(...r.warnings);
+    const byCite = new Map(parsed.sections.map((s) => [s.cite, s]));
     chunks = r.chunks.map((c) => ({
       // Tier 2 has no canonical citation: the page is carried in printed_pages
       // and the label, and locator stays null (ACQUISITION_PLAN Part 5, rule 3).
-      locator: source.tier === 2 ? null : c.locator,
+      // A source whose sections are not its citations says how to cite a chunk.
+      locator: source.tier === 2 ? null : (source.locatorOf ? source.locatorOf(c) : c.locator),
       // A summary section keeps its heading; a Tier 2 page chunk is labelled by page.
       section_label: source.tier === 2 && source.parser !== 'summary-md' ? (c.printed_pages ? `pp. ${c.printed_pages}` : c.section_label) : c.section_label,
       chunk_text: c.chunk_text,
       word_count: c.word_count,
       printed_pages: c.printed_pages,
-      parallel_locator: source.tier === 1 ? c.locator : null,
+      // Only citation ranges align with an original; a source-made locator does not.
+      parallel_locator: source.tier === 1 && !source.locatorOf ? c.locator : null,
+      // A chunk over lines lost from the scan is poor, one over a clipped
+      // margin fair, whatever the source as a whole reads as; null leaves the
+      // source's value.
+      ocr_quality: chunkOcrQuality(c.cites.map((x) => byCite.get(x))),
       cites: c.cites,
     }));
   }
