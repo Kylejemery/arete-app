@@ -23,16 +23,19 @@ was read:
   title and a one-paragraph summary) and then continues in Greek. These are
   relabelled with the others.
 - Minor Fragments chunk 4 is not Greek. It holds only eulogikon's "License and
-  provenance" note, with no Musonius text. It stays `english`, and it is a
-  candidate for deprecation (Lectures chunk 45, Minor Fragments chunk 3 and
-  Spurious Letters chunk 4 end with the same note after their Greek).
+  provenance" note, with no Musonius text. It stays `english` and, at
+  Kyle's request, is deprecated (migration
+  `20260929160223_deprecate_musonius_license_note.sql`). Lectures chunk 45,
+  Minor Fragments chunk 3 and Spurious Letters chunk 4 end with the same note
+  after their Greek; they stay, since they carry Greek text.
 
 `language` is set to `ancient_greek`, not `greek`, because
 `rag_corpus_language_normalized_check` allows only `ancient_greek`. The
 migration updates only rows that are Musonius, from eulogikon, still `english`,
 and hold Greek letters, and it aborts unless exactly 55 rows match. Text,
 chunking and embeddings are unchanged. Result: Lectures 46, Minor Fragments 4,
-Spurious Letters 5 are `ancient_greek`, and one Minor Fragments row is `english`.
+Spurious Letters 5 are `ancient_greek`, and one Minor Fragments row is `english`
+(now deprecated).
 
 ## The license
 
