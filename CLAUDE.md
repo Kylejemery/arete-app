@@ -122,3 +122,6 @@ anything critical — but the habit is still worth having.
   `profiles.is_internal`. Internal accounts are listed in
   `config/internal-accounts.ts`; `node scripts/sync-internal-accounts.mjs`
   applies the list. The flag never changes product behaviour.
+- Merge your own PRs without waiting for Kyle once checks are green, there is
+  no merge conflict, and no review comment is left unanswered. Kyle can still
+  review after the merge.
