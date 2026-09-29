@@ -602,7 +602,12 @@ export async function getIsPremium(): Promise<boolean> {
     .select('is_premium, tier')
     .eq('id', user.id)
     .single();
-  if (error) return false;
+  if (error) {
+    // Falls back to free, which shows a paying member free-tier limits, so
+    // never let it happen silently.
+    console.error('[getIsPremium] profile read failed, treating as free:', error.message);
+    return false;
+  }
   return normalizeTier(data?.tier, data?.is_premium) !== 'free';
 }
 
@@ -634,7 +639,10 @@ export async function getSubscriptionTier(): Promise<SubscriptionTier> {
     .select('is_premium, tier')
     .eq('id', user.id)
     .single();
-  if (error) return 'free';
+  if (error) {
+    console.error('[getSubscriptionTier] profile read failed, treating as free:', error.message);
+    return 'free';
+  }
   return normalizeTier(data?.tier, data?.is_premium);
 }
 
