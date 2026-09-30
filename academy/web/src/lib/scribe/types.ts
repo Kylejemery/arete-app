@@ -1,4 +1,4 @@
-// Shared Scribe types — mirror the columns in 20260715000000_scribe_tables.sql.
+// Shared Scribe types — mirror the columns in 20260715185414_scribe_tables.sql.
 
 export type ScribeFormat = 'article' | 'paper' | 'substack' | 'social'
 export type ScribeProjectStatus = 'draft' | 'ready' | 'published' | 'archived'

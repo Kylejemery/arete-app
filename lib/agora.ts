@@ -1,7 +1,7 @@
 // The Agora: essays by the editor and by readers, open to argument.
 // Direct supabase-js access; every rule (who may submit, who may publish,
 // whose name goes on a row) is enforced by RLS and triggers in
-// supabase/migrations/20260913000000_agora.sql. This module only shapes
+// supabase/migrations/20260913175958_agora.sql. This module only shapes
 // the calls. Mirrors web/src/lib/agora.ts.
 import { supabase } from '@/lib/supabase';
 import { API_BASE_URL } from '../services/claudeService';

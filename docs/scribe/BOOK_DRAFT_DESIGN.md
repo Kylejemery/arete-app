@@ -155,7 +155,7 @@ scribe_books 1 ── n scribe_chapters 1 ── 1 scribe_entries (unchanged)
 
 ### 4.2 Migration (not applied; Kyle applies)
 
-`supabase/migrations/20260924120000_scribe_book_draft.sql`, all tables RLS
+`supabase/migrations/20260928143601_scribe_book_draft.sql`, all tables RLS
 enabled with no policies, service role only, the standing `scribe_*`
 convention.
 

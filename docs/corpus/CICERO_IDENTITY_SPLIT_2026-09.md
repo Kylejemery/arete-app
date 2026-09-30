@@ -2,7 +2,7 @@
 
 Date: 2026-09-16. Branch `claude/de-finibus-corpus-identity-nuvw4a`.
 Supabase project `zhaarabzemhantyxxckq`.
-Migration `supabase/migrations/20260916200000_cicero_volume_identity_split.sql`.
+Migration `supabase/migrations/20260917010451_cicero_volume_identity_split.sql`.
 
 **Status: written and verified against the live corpus, NOT YET APPLIED.** The
 `apply_migration` call was blocked by the sandbox permission classifier. The
