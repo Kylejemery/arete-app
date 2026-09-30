@@ -21,6 +21,7 @@ const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeou
 const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog, appBuildFromUserAgent } = require('./lib/events');
+const { minIosBuildFromEnv } = require('./lib/min-build');
 const { createSseReply, createMarkerGuard, streamAnthropicMessage } = require('./lib/cabinet-stream');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
@@ -5923,6 +5924,14 @@ app.get('/health', async (req, res) => {
 // are kept in memory, readable via GET /api/crash.
 // ---------------------------------------------------------------------------
 const recentCrashes = [];
+
+// GET /api/app/min-build — the oldest supported iOS build and where to get a
+// newer one. Asked by the app at launch, before sign-in, so it takes no auth.
+// The app fails open: if this cannot be reached it lets the user in.
+app.get('/api/app/min-build', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ ios: { minBuild: minIosBuildFromEnv(process.env.MIN_IOS_BUILD), storeUrl: APP_STORE_URL } });
+});
 
 app.post('/api/crash', (req, res) => {
   const { message, name, stack, isFatal, at, phase, launchId } = req.body || {};
