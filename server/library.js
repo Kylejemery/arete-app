@@ -436,16 +436,23 @@ function outlineUnitName(work, kind) {
   if (kind) return kind.charAt(0) + kind.slice(1).toLowerCase();
   if (/letter/i.test(work)) return 'Letter';
   if (/essay/i.test(work)) return 'Essay';
+  if (/lecture/i.test(work)) return 'Lecture';
   return 'Book';
 }
 
 const ROMAN_RE = /^[IVXLCDM]+$/;
+// A Roman-numeral section label, with the part letter an edition gives a
+// divided unit: Lutz numbers Musonius' Lectures I-XXI and splits two of them
+// into XIIIA/XIIIB and XVIIIA/XVIIIB.
+const ROMAN_LABEL_RE = /^([IVXLCDM]+)([A-Z])?$/;
 
 // A two-level table of contents for one work, from its chunks in order
 // ({ section_label, chunk_text }). Two sources, in order of preference:
 //   1. section_label, when the ingest recorded one per chunk. Labels are chunk
 //      ranges ("4.6–4.14", "15–16", "front matter"); the START of each range
 //      is the unit the chunk opens in, and "book.chapter" splits into levels.
+//      Roman-numeral labels ("III", "XIIIA") work too: the numeral is the
+//      unit, and a part letter is its second level.
 //   2. Otherwise the raw text, scanned for CHAPTER / BOOK / LETTER markers
 //      (Montaigne, Plato, Aristotle carry no labels at all).
 // Each entry: { level, label, page, key, marker? } where page is the reader
@@ -456,7 +463,7 @@ function buildOutline(rows, work, pageChunks) {
   const labels = new Set(rows.map(r => (r.section_label || '').trim()).filter(Boolean));
   // A single label for the whole work ("Jowett", "Stoicism") is a catalogue
   // note, not a section; treat those works as unlabeled.
-  const usableLabels = labels.size > 1 && [...labels].some(l => /^\d/.test(l));
+  const usableLabels = labels.size > 1 && [...labels].some(l => /^\d/.test(l) || ROMAN_LABEL_RE.test(l));
   let source = 'labels';
 
   if (usableLabels) {
@@ -469,10 +476,12 @@ function buildOutline(rows, work, pageChunks) {
         return;
       }
       const start = raw.split(/[–—-]/)[0].trim();          // start of the range
+      const roman = start.match(ROMAN_LABEL_RE);
       const parts = start.split('.');
-      const top = parts[0];
-      const sub = parts.length > 1 ? parts.slice(0, 2).join('.') : null;
-      if (!/^\d+$/.test(top)) return;
+      const top = roman ? roman[1] : parts[0];
+      const sub = roman ? (roman[2] ? start : null)
+        : parts.length > 1 ? parts.slice(0, 2).join('.') : null;
+      if (!roman && !/^\d+$/.test(top)) return;
       // `chunk` is the row's position in the work: with the text endpoint's
       // chunkStarts it lets the reader scroll into the folio rather than only
       // to its head. It is an approximation, though. A label is a range, and
