@@ -68,3 +68,6 @@ academy/corpus-ingestion/source_texts/*.txt
 
 # pd-ingest raw cache: HTML and text are committed, PDFs are kept by hash only
 data/raw/**/*.pdf
+
+# oh-my-claudecode plugin state
+.omc/
