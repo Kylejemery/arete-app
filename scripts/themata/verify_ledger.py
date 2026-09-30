@@ -10,7 +10,9 @@ For each entry:
   * research_ref (one ref, or a list with `passages: [{ref, text}]`): every
     fragment must pass research_source_contains(source_id, fragment), which is
     false for a deprecated source or one whose licence is still 'unconfirmed'.
-Entries with neither are listed, not failed. Exits 1 if any check fails.
+A cited passage with nothing left to check (empty, or only fragments under
+eight characters) fails. Entries with no citation are listed, not failed.
+Exits 1 if any check fails.
 Reads only; it never writes to the database.
 """
 import json, os, re, sys, urllib.request
@@ -63,11 +65,13 @@ for e in yaml.safe_load(open(path)):
             row = rows[0]; text = ws(row["chunk_text"])
             frs = fragments(e.get("passage"))
             miss = [f for f in frs if f not in text]
-            bad = row["deprecated"] or miss
+            bad = row["deprecated"] or miss or not frs
             failed |= bool(bad)
             line.append(f"corpus {row['text_type']} {'DEPRECATED ' if row['deprecated'] else ''}{len(frs) - len(miss)}/{len(frs)}")
             line += [f"  missing: {m[:80]}" for m in miss]
     rc = research_checks(e)
+    if e.get("research_ref") and not rc:
+        line.append("research_ref has no passage to check"); failed = True
     if rc:
         ok = sum(1 for _, v in rc if v)
         failed |= ok < len(rc)
