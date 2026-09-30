@@ -16,6 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
+const { aboveSimilarityFloor } = require('./lib/cabinet-retrieval');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
 const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
@@ -1987,7 +1988,9 @@ async function handleCabinetChat(req, res) {
           retrieve(null, 7),
           ...namedAuthors.map(author => withinTimeout(retrieve(author, 2))),
         ]);
-        if (!general.error) contextChunks = (general.data ?? []);
+        // Below the floor (server/lib/cabinet-retrieval.js) a row is noise
+        // from a turn with nothing to retrieve for; the counselors get none.
+        if (!general.error) contextChunks = aboveSimilarityFloor(general.data);
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
         contextChunks = (await expandCandidates(contextChunks, 7, { fence: isCounselorVisible }))
           .rows.filter(isCounselorVisible);
