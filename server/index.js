@@ -18,6 +18,7 @@ const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
+const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog } = require('./lib/events');
 const { createSseReply, createMarkerGuard, streamAnthropicMessage } = require('./lib/cabinet-stream');
@@ -6674,12 +6675,16 @@ app.get('/api/library/text', async (req, res) => {
 
     // Superseded ingests stay in the table with deprecated = true (the corpus
     // rule is deprecate, never delete); the reader must never show them.
-    const { count, error: cErr } = await supabase
+    // A work that mixes languages is read in the shelf's reading language
+    // (server/lib/library-language.js); the outline and search count the same
+    // rows, so their page numbers agree with these.
+    const language = await readingLanguageFilter(supabase, author, work);
+    const { count, error: cErr } = await withLanguage(supabase
       .from('rag_corpus')
       .select('id', { count: 'exact', head: true })
       .eq('author', author)
       .eq('work', work)
-      .eq('deprecated', false);
+      .eq('deprecated', false), language);
     if (cErr) throw cErr;
 
     const total = count || 0;
@@ -6693,12 +6698,12 @@ app.get('/api/library/text', async (req, res) => {
     // first chunk shown overlaps its tail (RAG overlap window) and stitchChunks
     // needs it as context to trim the duplicate.
     const fetchFrom = page > 0 ? from - 1 : from;
-    const { data: rows, error } = await supabase
+    const { data: rows, error } = await withLanguage(supabase
       .from('rag_corpus')
       .select('chunk_index, chunk_text, section_label, translator, source_url, edition_year, text_type')
       .eq('author', author)
       .eq('work', work)
-      .eq('deprecated', false)
+      .eq('deprecated', false), language)
       .order('chunk_index', { ascending: true })
       .range(fetchFrom, to);
     if (error) throw error;
@@ -6709,12 +6714,12 @@ app.get('/api/library/text', async (req, res) => {
     // one row before it — deprecated or not — purely as trimming context. It
     // is never shown.
     if (page === 0 && data.length && data[0].chunk_index > 0) {
-      const { data: prev } = await supabase
+      const { data: prev } = await withLanguage(supabase
         .from('rag_corpus')
         .select('chunk_text')
         .eq('author', author)
         .eq('work', work)
-        .eq('chunk_index', data[0].chunk_index - 1)
+        .eq('chunk_index', data[0].chunk_index - 1), language)
         .maybeSingle();
       context = (prev && prev.chunk_text) || null;
     }
@@ -6845,15 +6850,17 @@ app.get('/api/library/outline', async (req, res) => {
     const cached = OUTLINE_CACHE.get(cacheKey);
     if (cached && cached.at > Date.now() - OUTLINE_TTL_MS) return res.json(cached.payload);
 
-    // Walk every chunk of the work (PostgREST caps a page at 1000 rows).
+    // Walk every chunk of the work (PostgREST caps a page at 1000 rows), in
+    // the reading language the reader pages through.
+    const language = await readingLanguageFilter(supabase, author, work);
     const rows = [];
     for (let offset = 0; ; offset += 1000) {
-      const { data, error } = await supabase
+      const { data, error } = await withLanguage(supabase
         .from('rag_corpus')
         .select('chunk_index, section_label, chunk_text')
         .eq('author', author)
         .eq('work', work)
-        .eq('deprecated', false)
+        .eq('deprecated', false), language)
         .order('chunk_index', { ascending: true })
         .range(offset, offset + 999);
       if (error) throw error;
@@ -6884,7 +6891,7 @@ app.get('/api/library/search', async (req, res) => {
     const esc = q.replace(/[\\%_]/g, '\\$&');
     let query = supabase
       .from('rag_corpus')
-      .select('author, work, chunk_index, chunk_text, section_label')
+      .select('author, work, chunk_index, chunk_text, section_label, language')
       .ilike('chunk_text', `%${esc}%`)
       .eq('deprecated', false)
       .neq('text_type', 'paper_summary')
@@ -6903,15 +6910,20 @@ app.get('/api/library/search', async (req, res) => {
     // Reader page = how many of the work's chunks precede this one. A few
     // works have gaps in chunk_index, so count rather than divide; the counts
     // are independent, so run them together.
-    const shown = (rows || []).filter(r => !hidden.has(`${r.author}::${r.work}`));
-    const counts = await Promise.all(shown.map(r =>
-      supabase
+    // A hit outside a mixed-language work's reading language has no reader
+    // page, so it is dropped; the count runs over the rows the reader shows.
+    const visible = (rows || []).filter(r => !hidden.has(`${r.author}::${r.work}`));
+    const languages = await Promise.all(visible.map(r => readingLanguageFilter(supabase, r.author, r.work)));
+    const shown = visible.filter((r, i) => !languages[i] || r.language === languages[i]);
+    const shownLanguages = languages.filter((l, i) => !l || visible[i].language === l);
+    const counts = await Promise.all(shown.map((r, i) =>
+      withLanguage(supabase
         .from('rag_corpus')
         .select('id', { count: 'exact', head: true })
         .eq('author', r.author)
         .eq('work', r.work)
         .eq('deprecated', false)
-        .lt('chunk_index', r.chunk_index)
+        .lt('chunk_index', r.chunk_index), shownLanguages[i])
         .then(({ count }) => count || 0)
         .catch(() => 0)
     ));
@@ -7006,12 +7018,14 @@ app.post('/api/library/related', async (req, res) => {
     const { author, work } = req.body || {};
     if (!author || !work) return res.status(400).json({ error: 'author and work are required' });
 
-    const { data: seed } = await supabase
+    // Seed from the text the reader shows, not a mixed work's other language.
+    const language = await readingLanguageFilter(supabase, author, work);
+    const { data: seed } = await withLanguage(supabase
       .from('rag_corpus')
       .select('chunk_text')
       .eq('author', author)
       .eq('work', work)
-      .eq('deprecated', false)
+      .eq('deprecated', false), language)
       .order('chunk_index', { ascending: true })
       .range(0, 60);
 
