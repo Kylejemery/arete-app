@@ -133,7 +133,8 @@ with no embedding cannot be retrieved by any `match_rag_corpus*` function.
 | --- | --- | --- |
 | `stoic-logic-summary.v1.md` | 23 | 15 corpus_verified, 8 via_summary |
 | `fate-providence-up-to-us.v1.md` | 15 | 11 corpus_verified, 4 via_summary |
-| `virtues-of-socrates.v2.md` (live) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v3.md` (live) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v2.md` (inactive, kept for history) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
 | `virtues-of-socrates.v1.md` (inactive, kept for history) | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
 
 Converted from Kyle's Claude Docs exports (PDF) on 2026-09-29; the Virtues
@@ -148,6 +149,17 @@ read this document" section (corpus_verified) and Seneca's On a Happy Life and
 Diogenes Laërtius Book VII to `sources_used`, and it revises text throughout.
 It was converted and checked the same way. Loading it made version 2 active
 and deprecated version 1's 66 chunks, which stay in `rag_corpus` for history.
+
+Virtues version 3 (2026-09-30) checks the Musonius Rufus rules against Cora
+Lutz's translation, which is now in the corpus (85 chunks, cited by lecture).
+Every citation matched its lecture; five sentences were corrected to what
+Lutz says: farming and flocks (XI), the wife's-standard test, which Lutz
+applies to a master and his slave (XII), sandals rather than shoes (XIX),
+furnishings rather than every possession (XX), and the meat passage, which
+falls in gaps in our copy of Lutz rather than on a missing page. Loaded
+through the pipeline's own sync (`node ingest-synthesis.js --file
+virtues-of-socrates.v3.md`), which registered it, activated it, and embedded
+its chunks.
 
 ## Tests
 
