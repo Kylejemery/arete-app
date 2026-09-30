@@ -15,13 +15,14 @@
 # Sources:
 #   f18c0230-bc6e-44be-865e-04e61e22de55  Sextus, Outlines of Pyrrhonism, tr. Mates (1996)
 #     PH II 134-204 proofread by reading; no page images exist.
-#   1349a6e0-dedf-436c-afbb-6fafbc1bfa81  Sextus, Against the Logicians, tr. Bury (Loeb 1935)
-#     pp. 353-363, 385-389, 415-419, 463, 469, 481 proofread against the scan.
+#   ca2d7557-ef76-49c7-a3d7-bee6c0b78b32  Sextus, Against the Logicians, tr. Bury (Loeb 1935)
+#     pp. 353-363, 385-389, 415-419, 463-465, 469-471, 481 proofread against the scan
+#     (version 2; version 1, 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, is deprecated).
 
 - id: S012
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
   source: "Sextus Empiricus, Against the Logicians II (M VIII) 229-233 (tr. R.G. Bury, 1935)"
-  research_ref: {source_id: 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, locator: "M VIII 232"}
+  research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 232"}
   passage: |
     Since, then, we have two premisses,—the major “If it is day, it is light,”
     which begins with the simple proposition “it is day” but ends with the
@@ -41,7 +42,7 @@
 - id: S013
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
   source: "Sextus Empiricus, Against the Logicians II (M VIII) 234-236 (tr. R.G. Bury, 1935)"
-  research_ref: {source_id: 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, locator: "M VIII 235-236"}
+  research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 235-236"}
   passage: |
     For an argument like this is compounded of the second non-demonstrable and
     the third, as one may learn from its analysis; and this will become clearer
@@ -62,7 +63,7 @@
   research_ref:
     - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 167"}
     - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 159"}
-    - {source_id: 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, locator: "M VIII 443"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 443"}
   passages:
     - ref: 0
       text: |
@@ -88,20 +89,20 @@
     single-premised arguments, Antipater did. The example "It is day; therefore
     it is light" is Sextus's own reduction of the first indemonstrable (PH II
     159; also M VIII 440-441, proofread p. 469). The second M VIII quotation is
-    on p. 471, which is not yet proofread; the OCR there is clean but should be
-    checked against the licensed copy. S014 now also covers the former S015.
+    on p. 471, proofread against the scan on 2026-09-30. S014 now also covers
+    the former S015.
   confidence: high
 
 - id: S015
   replaces: "(merged into S014 by Kyle, 2026-09-30; id retired)"
-  proposal: "None. The S014 proposal covers the form; its second example (\"You are breathing, therefore you are living\") has no witness in the Sextus texts."
+  proposal: "None. The S014 proposal covers the form. Its second example (ἀναπνεῖς, ζῇς ἄρα, 'You are breathing, therefore you are living') is in Alex. in APr. 17.10-18.7 (CAG II.1), where Alexander names the μονολήμματοι of 'the moderns'; see also in Top. 8-9 (CAG II.2). Pending storage of Wallies's text."
 
 - id: S016
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
   source: "Sextus Empiricus, Outlines of Pyrrhonism II 146-147 (tr. B. Mates, 1996); Against the Logicians II (M VIII) 431 (tr. R.G. Bury, 1935)"
   research_ref:
     - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 146-147"}
-    - {source_id: 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, locator: "M VIII 431"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 431"}
   passages:
     - ref: 0
       text: |
@@ -130,7 +131,7 @@
   source: "Sextus Empiricus, Outlines of Pyrrhonism II 150 (tr. B. Mates, 1996); Against the Logicians II (M VIII) 434 (tr. R.G. Bury, 1935)"
   research_ref:
     - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 150"}
-    - {source_id: 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, locator: "M VIII 434"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 434"}
   passages:
     - ref: 0
       text: |
@@ -145,20 +146,35 @@
     - ref: 1
       text: |
         And the argument becomes indefinite through deficiency when one of its
-        deductive premisses is deficient.
+        deductive premisses is deficient. For example, “Either wealth is an evil
+        or wealth is a good; but wealth is not an evil; therefore wealth is a
+        good”; for in the disjunctive premiss there is an omission of “wealth is
+        indifferent,”
   notes: |
     Both witnesses make the defect a missing disjunct ("indifferent"), which
-    supports the non_formal flag already on this entry. M VIII 434 is on p. 465,
-    not yet proofread, so only its clean opening sentence is quoted.
+    supports the non_formal flag already on this entry. M VIII 434 is on
+    p. 465, proofread against the scan on 2026-09-30.
   flags: [non_formal]
   confidence: high
 
 - id: S011
   replaces: "Alexander of Aphrodisias, in APr., as reported in Zeller, ch. V n.239"
-  proposal: "No primary witness in the stored texts. Needs a source decision: Alexander's commentary on the Prior Analytics."
+  proposal: "Alexander in Wallies's Greek (Kyle's ruling, 2026-09-30). Not yet stored in research_sources."
+  witnesses:
+    - "Alex. in Top. 10.7-13 (CAG II.2, Wallies 1891): attributed to 'those from the Stoa'; the ἀδιαφόρως περαίνοντες are those 'in which the conclusion is the same as one of the premisses', e.g. ἤτοι ἡμέρα ἐστὶν ἢ φῶς ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· ἡμέρα ἄρα ἐστίν. Checked against the page image. Wallies prints 'or it is light'; Zeller n.239 has 'or night'."
+    - "Alex. in APr. 18.14-18 (CAG II.1, Wallies 1883): names the ἀδιαφόρως περαίνοντες and the διφορούμενοι. Its example as printed is a plain first indemonstrable ('therefore it is light'); the apparatus at 18.16 gives ἡμέρα for φῶς in MSS aB, which would make it indifferently concluding. Checked against the page image."
+    - "Alex. in APr. 20.11 and 164.25-31 (CAG II.1): further mentions (Wallies's index), no disjunctive example."
   notes: |
-    Indifferently concluding arguments (ἀδιαφόρως περαίνοντες) are not
-    discussed in either Sextus text. Sextus does describe a duplicated
-    conditional ("If a sign exists, a sign exists", M VIII 281, proofread
-    p. 385), which is the διφορούμενον premiss Zeller mentions, but not the
-    argument form S011 encodes.
+    The schema "either p or q; p; therefore p" is attested with the disjunct
+    "it is light", not "it is night"; the form is the same.
+  scans:
+    - "CAG II.1: https://archive.org/details/alexandriinaris00berlgoog (also bub_gb_ZMIOAAAAQAAJ)"
+    - "CAG II.2: https://archive.org/details/commentariainar01michgoog"
+
+- id: T04
+  file: rules.yaml
+  replaces: "Alexander of Aphrodisias, in APr. I.25 (42b5), p. 94b, Greek quoted in Zeller, ch. V n.244"
+  proposal: "Alexander in Wallies's Greek (Kyle's ruling, 2026-09-30). Not yet stored in research_sources."
+  witnesses:
+    - "Alex. in APr. 283.12-21 (CAG II.1): the passage Zeller quotes (Aldine 94a in Wallies's margin), τό τε συνθετικόν ἐστι θεώρημα ... οἱ καλούμενοι ὑπὸ τῶν νεωτέρων ἐπιβάλλοντές τε καὶ ἐπιβαλλόμενοι."
+    - "Alex. in APr. 284.19 ff. (CAG II.1, per Wallies's index): the Stoics took the synthetic theorem, divided it, and made from it their second, third and fourth thema. This is the claim T04's schema states; Zeller's quotation stops before it. Page image not yet checked."
