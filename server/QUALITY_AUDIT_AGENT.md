@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Twenty-nine probes across four domains. A probe is a named check that knows one
+Thirty probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -59,7 +59,14 @@ files never applied — the convention nothing could previously enforce),
 `repo.exhibit_release_gate` (a gallery exhibit whose Academy page this checkout
 neither ships nor releases), `repo.checks` (lint and typecheck per workspace),
 `repo.secret_scan` (key-shaped strings in tracked files), `repo.doc_links`
-(committed docs linking to paths that moved), and
+(committed docs linking to paths that moved),
+`repo.themata_ledger` (a Themata ledger passage, in
+`themata/evidence/suite.yaml` or `rules.yaml`, that is no longer verbatim in the
+live `rag_corpus` chunk it cites or no longer passes `research_source_contains`
+for its `research_ref` — guardrail 1 of `themata/THEMATA_PROJECT.md`, which a
+deprecation, a re-chunk or a corrected text can break without anyone touching
+the ledger; one finding per entry, keyed `file:id`;
+`scripts/themata/verify_ledger.py` is the same check by hand), and
 `repo.retrieval_guarantees` (a retrieval path that reaches `rag_corpus`
 without restating what `match_rag_corpus` guarantees in SQL — the graph-boost
 expansion reading without `deprecated = false`, or an `expandCandidates` call
@@ -290,7 +297,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: twenty-nine probes in two languages would be two copies of the
+  TypeScript: thirty probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
