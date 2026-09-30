@@ -2149,7 +2149,7 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-              <button onClick={() => touchStar(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L }}>✶ Touch the star — ask what it holds</button>
+              <button onClick={() => touchStar(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.14)', border: '1px solid rgba(201,168,76,0.4)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD_L }}>✶ Touch the star, ask what it holds</button>
               <button onClick={() => onDebate(active.name)} className="lib-discuss" style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: GOLD }}>Stage a debate on this →</button>
               <button onClick={() => go('reading')} className="lib-related" style={{ background: 'none', border: '1px solid rgba(201,168,76,0.2)', borderRadius: 11, padding: 12, cursor: 'pointer', fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: MUTED }}>Read the sources →</button>
             </div>

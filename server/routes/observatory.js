@@ -539,7 +539,9 @@ router.get('/api/observatory/greeting', async (req, res) => {
 // ---------------------------------------------------------------------------
 const PASSAGE_DAILY_LIMIT = 10;
 const PASSAGE_MATCH_COUNT = 6;
-const PASSAGE_MODEL = process.env.OBSERVATORY_PASSAGE_MODEL || 'claude-opus-5';
+// Same Sonnet the Cabinet's premium tier runs on (PREMIUM_MODEL in index.js):
+// a two-sentence answer and a copied quotation do not need Opus.
+const PASSAGE_MODEL = process.env.OBSERVATORY_PASSAGE_MODEL || 'claude-sonnet-4-6';
 const PASSAGE_CHUNK_CHARS = 2400;   // what each passage is trimmed to before Claude reads it
 const EXCERPT_MAX_CHARS = 620;      // fallback excerpt length
 const QUOTE_MAX_CHARS = 900;        // longest quotation we will show
@@ -554,6 +556,10 @@ function plainProse(text) {
     .replace(/\n{2,}/g, ' ')
     .replace(/\n/g, ' ')
     .replace(/(^|[\s(])[_*]{1,2}([^_*]{1,80}?)[_*]{1,2}(?=[\s.,;:!?)]|$)/g, '$1$2')
+    // Section headings some Gutenberg ingests carry inline (#(2) Physical
+    // courage.#, ## Book II): drop them, they are not the author's prose.
+    .replace(/#[^#\n]{1,80}#/g, ' ')
+    .replace(/(^|\s)#{1,6}\s+/g, '$1')
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\s{2,}/g, ' ')
