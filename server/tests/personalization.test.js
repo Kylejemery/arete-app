@@ -308,11 +308,13 @@ const { spawnSync } = require('child_process');
 // sha256 of both Home screens without the Your practices lines. First taken
 // before run C (commit cf0246a), so stripping run C's lines gave the old Home
 // back byte for byte; recomputed on 2026-09-26 when the Yesterday card began
-// hiding once answered (a deliberate Home change). Recompute the same way
-// whenever Home is changed on purpose.
+// hiding once answered (a deliberate Home change), and again on 2026-09-30
+// for R12 (commit 82d7440), whose streak line on both Homes now says a
+// morning alone does not extend the chain. Recompute the same way whenever
+// Home is changed on purpose.
 const HOME_BEFORE_RUN_C = {
-  'app/(tabs)/index.tsx': 'e659612d5d1e8dc4543f06e1806b0934e89d55ef453acc6d79d8b3c5bd785718',
-  'web/src/app/page.tsx': 'ba37a6a4b52e01e62a396a7bf8087baf86cdb147c04d0d04948442fe9a7c8f86',
+  'app/(tabs)/index.tsx': '38d02bb2b852bf6d872cb06601bf6c02560d443a7adf81212f1fda9394c255f3',
+  'web/src/app/page.tsx': '6861afc38a39a2275c53f49945901aa5e7c8118061ce662dd0c73a7194b2a0c7',
 };
 
 test('Home minus the Your practices lines is byte-for-byte the Home from before run C', () => {
