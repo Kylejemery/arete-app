@@ -53,7 +53,7 @@ examples:
   S011:
     text: "It is either day or night; It is day, ∴ It is day."
     language: en
-  S015:
+  S014:
     text: "ἀναπνεῖς, ζῇς ἄρα"
     language: grc
     note: "'You are breathing; therefore you are living.'"

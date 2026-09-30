@@ -29,7 +29,7 @@ inductive CondReading where
   | containment
   deriving DecidableEq, Repr
 
-/-- Single-premise arguments (suite S014, S015). -/
+/-- Single-premise arguments (suite S014). -/
 inductive SinglePremise where
   /-- No argument has fewer than two premises. -/
   | chrysippus

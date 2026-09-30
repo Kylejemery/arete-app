@@ -737,3 +737,21 @@ and the page. The layout is in its README. Built by
   `toggle`). The exceptions that stay derived are all S012
   (`if p, (if p, q); p; therefore q`) under a merging cut, 28 per view. S012's
   own analysis uses `p` twice, so a second copy of `p` has work to do.
+
+## S015 merged into S014 (2026-09-30)
+
+Kyle's ruling: S014 and S015 were one form ("p; therefore q" with "if p, q"
+held true) kept apart only because their examples come down separately.
+S014 now cites Zeller n.245, which gives both examples (ἡμέρα ἔστι, φῶς ἄρα
+ἔστιν and ἀναπνεῖς, ζῇς ἄρα), and keeps Zeller's main text in its notes. The
+id S015 is retired, not reused. The suite has 19 items, 17 formal.
+
+The harness was rerun with Lean 4.22.0. Dropping S015 removes one column
+from `results/matrix.csv`; every other cell, including every row's fit, is
+unchanged, as it must be, since the two items encoded the same argument.
+Export counts change only by S015's share: 13,464 distinct searches
+(107,712 run records), 7,988 derived. Of the duplicated-premise variants,
+2,906 stay derived under `set`, 28 under `list` and `multiset` each (all
+S012), and 30 losses per view are proven (was 32; the other two were
+S015's). Mentions of S015 above this entry are the record of earlier work
+and are left as they were.

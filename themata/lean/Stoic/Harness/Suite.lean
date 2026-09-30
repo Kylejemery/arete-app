@@ -12,9 +12,9 @@ against the YAML (ids, verdicts, flags), so the two cannot drift silently.
 
 Encoding decisions:
 
-* **S014, S015** have the same form, "p; therefore q" with "if p, q" held
-  true. The conditional is the background theory. They stay two items
-  because the ledger keeps them apart.
+* **S014** is "p; therefore q" with "if p, q" held true. The conditional is
+  the background theory. (S015, the same form with a second example, was
+  merged into S014 on 2026-09-30; its id is retired.)
 * **S018** (the Sorites) is a chain of ten in the ledger. The harness runs a
   three-link instance, which has the same shape. A ten-link chain needs eight
   chained cuts, which is past any search depth the harness can afford, so
@@ -65,8 +65,6 @@ def suite : List Item :=
     { id := "S013", verdict := .valid, arg := ⟨[cond (conj p₀ p₁) p₂, neg p₂, p₀], neg p₁⟩ },
     { id := "S014", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁],
       note := "The conditional 'if p, q' is background theory, held true, not a premise." },
-    { id := "S015", verdict := .disputed, arg := ⟨[p₀], p₁⟩, theory := [cond p₀ p₁],
-      note := "The conditional 'if p, q' is background theory, held true, not a premise." },
     { id := "S016", verdict := .invalid, arg := ⟨[cond p₀ p₁, p₀, p₂], p₁⟩ },
     { id := "S017", verdict := .invalid, nonFormal := true, arg := ⟨[disj p₀ p₁, neg p₀], p₁⟩ },
     { id := "S018", verdict := .valid,
@@ -77,8 +75,8 @@ def suite : List Item :=
 
 def formalSuite : List Item := suite.filter (!·.nonFormal)
 
-/-- What a candidate must do with an item under a setting. `S014`/`S015`
-are disputed: Antipater's policy accepts them, Chrysippus's rejects them.
+/-- What a candidate must do with an item under a setting. `S014` is
+disputed: Antipater's policy accepts it, Chrysippus's rejects it.
 A `valid_nonsyllogistic` item must not be derived; its validity by the
 criterion is checked separately (the semantic table). -/
 def Item.shouldDerive (i : Item) (P : Params) : Bool :=
