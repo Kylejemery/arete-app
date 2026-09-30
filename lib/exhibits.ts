@@ -3,7 +3,7 @@
 // Direct supabase-js access. Every rule about what may be read (gallery
 // rows are public, workshop rows are unlisted and reachable only by exact
 // slug) is enforced by RLS and by the exhibit_by_slug() function in
-// supabase/migrations/20260916140000_exhibits.sql. This module only shapes
+// supabase/migrations/20260916180818_exhibits.sql. This module only shapes
 // the calls, and enforces the one rule the database cannot: that nothing
 // user-derived reaches an exhibit page.
 //

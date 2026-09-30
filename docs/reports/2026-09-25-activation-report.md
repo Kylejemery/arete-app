@@ -105,7 +105,7 @@ All were applied through `apply_migration` in this session and verified by query
 |---|---|---|
 | 20260925153557 | distress_queue_dedupe | 1 |
 | 20260925153659 | enqueue_distress_review | 1 |
-| 20260925153941 | product_events (committed 2026-09-21, never applied until now; file `20260921120000_product_events.sql`) | 2 |
+| 20260925153941 | product_events (committed 2026-09-21, never applied until now; file `20260925153941_product_events.sql`) | 2 |
 | 20260925155436 | activation_instrumentation | 2 |
 | 20260925160005 | user_profile_facts | 3 |
 | 20260925160711 | check_ins_profile_extracted_at | 3 |
@@ -114,10 +114,10 @@ All were applied through `apply_migration` in this session and verified by query
 | 20260925163213 | tier_reconciliation | 8 |
 
 **Still unapplied, and left for Kyle** (D0.3). These are committed migrations from the retention build:
-- `20260922100000_dispatch_read_at.sql`
-- `20260923100000_kt_reflection.sql`
-- `20260924100000_checkin_followup.sql`
-- `20260925100000_email_sends.sql`. Applying this one turns on outbound lifecycle email.
+- `20260925192015_dispatch_read_at.sql`
+- `20260925192032_kt_reflection.sql`
+- `20260925192040_checkin_followup.sql`
+- `20260925190739_email_sends.sql`. Applying this one turns on outbound lifecycle email.
 
 The code for those features is live and failing against the database until they are applied.
 

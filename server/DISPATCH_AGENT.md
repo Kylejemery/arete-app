@@ -29,7 +29,7 @@ blocks (or is blocked by) the once-daily generation:
 Delivery is a push teaser (the dispatch's first sentence) → tap → full dispatch
 in-app (`/dispatch`). No email in v1.
 
-## Data model (migration `20260619000001_daily_dispatch_agent.sql`)
+## Data model (migration `20260619112546_daily_dispatch_agent.sql`)
 
 - `daily_dispatches` — one row per day: `title`, `body`, `teaser`, `practice`,
   `community_themes`, `corpus_context`, generation metadata, and delivery counts.

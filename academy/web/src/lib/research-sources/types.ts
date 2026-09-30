@@ -1,5 +1,5 @@
 // Shared by the /admin/research page and its API routes. Mirrors the
-// research_sources table (supabase/migrations/20260928190000_research_sources.sql).
+// research_sources table (supabase/migrations/20260928181334_research_sources.sql).
 
 export const LICENCE_STATUSES = [
   'public_domain',

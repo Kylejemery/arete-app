@@ -12,12 +12,12 @@ This file records the judgement calls made while carrying out the activation pro
 **D0.2 PowerShell rules.** The container is Linux, so the PowerShell-specific rules (no `&&`, `Select-String`) do not apply. Everything else in the operating rules is followed.
 
 **D0.3 Unapplied retention migrations.** Five committed migrations were never applied to the project (see the recon).
-- **Chosen:** apply only `20260921120000_product_events.sql`.
+- **Chosen:** apply only `20260925153941_product_events.sql`.
   - Part 2 needs an events table, and this one is already the house standard (`logEvent` on three surfaces).
   - It is purely additive: two tables, two nullable columns, and RLS that is insert-own only.
 - **Not applied:**
-  - `20260925100000_email_sends.sql`. Applying it turns on outbound lifecycle email to real users. That is Kyle's call.
-  - `20260922100000_dispatch_read_at.sql`, `20260923100000_kt_reflection.sql` and `20260924100000_checkin_followup.sql`. They are left for Kyle and listed in the report.
+  - `20260925190739_email_sends.sql`. Applying it turns on outbound lifecycle email to real users. That is Kyle's call.
+  - `20260925192015_dispatch_read_at.sql`, `20260925192032_kt_reflection.sql` and `20260925192040_checkin_followup.sql`. They are left for Kyle and listed in the report.
 - **Alternative:** apply all five, or none. Applying none would have meant creating a second events table next to one the code already writes.
 
 ## Part 1

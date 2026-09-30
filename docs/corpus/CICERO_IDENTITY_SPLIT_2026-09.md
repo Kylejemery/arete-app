@@ -2,12 +2,14 @@
 
 Date: 2026-09-16. Branch `claude/de-finibus-corpus-identity-nuvw4a`.
 Supabase project `zhaarabzemhantyxxckq`.
-Migration `supabase/migrations/20260916200000_cicero_volume_identity_split.sql`.
+Migration `supabase/migrations/20260917010451_cicero_volume_identity_split.sql`.
 
-**Status: written and verified against the live corpus, NOT YET APPLIED.** The
-`apply_migration` call was blocked by the sandbox permission classifier. The
-database is unchanged; a verification query after the blocked call confirmed
-the pre-state intact. See "To apply" at the bottom.
+**Status: APPLIED 2026-09-17 and verified by query.** Recorded in the remote
+migration history as version `20260917010451`. The first `apply_migration`
+attempt (2026-09-16) was blocked by the sandbox permission classifier and
+changed nothing; the file was renamed from its original `20260916200000`
+prefix so that filename and recorded version agree, which keeps a future
+`supabase db push` from treating it as unapplied.
 
 ## What was wrong
 
@@ -139,14 +141,9 @@ problem; the identity side was.
   `De Finibus III.22` rather than to a chunk. That is a genuinely valuable
   follow-up and a separate piece of work.
 
-## To apply
+## Verification after applying
 
-The migration is committed and needs only to be run through the Supabase
-migration tool, which records it in the migration history as CLAUDE.md
-requires. It is idempotent-by-guard: if it has already been applied, the
-pre-state guard aborts it rather than corrupting anything.
-
-Verify afterwards with:
+Run on the live project immediately after the migration, 2026-09-17:
 
 ```sql
 select work, deprecated, count(*) n, min(chunk_index) lo, max(chunk_index) hi
@@ -156,5 +153,22 @@ where author = 'Cicero' and program_id = 'stoicism-phd'
 group by 1, 2 order by 1, 2;
 ```
 
-Expected live: Academica 109 (0–108), De Finibus 232 (0–231), Tusculan
-Disputations 220 (0–219).
+| work | deprecated | n | range | translator | edition | null word_count | null embedding |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Academica | false | 109 | 0–108 | C.D. Yonge | 1875 | 0 | 0 |
+| Academica | true | 114 | 900000–900113 | C.D. Yonge | null | 0 | 0 |
+| De Finibus | false | 232 | 0–231 | C.D. Yonge | 1875 | 0 | 0 |
+| De Finibus | true | 61 | 613–910612 | C.D. Yonge | 1875 | 9 | 0 |
+| Tusculan Disputations | false | 220 | 0–219 | C.D. Yonge | 1875 | 0 | 0 |
+| Tusculan Disputations | true | 230 | 900000–900229 | null | null | 230 | 0 |
+
+Exactly the intended post-state: 232 / 109 / 220 live, 405 deprecated, nothing
+stranded in the 800000 band, full provenance on every live row, and no
+embedding lost anywhere. The deprecated standalones keep their own accurate
+provenance rather than inheriting the volume's.
+
+`retrieval_log` re-resolves correctly through the unchanged row ids. The
+most-retrieved chunk under the old label (13 hits, logged as `De Finibus`
+578) now reads `Tusculan Disputations` 202 — 578 − 376, exactly the expected
+offset. The historical mis-attributions are now self-describing rather than
+erased.
