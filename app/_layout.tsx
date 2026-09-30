@@ -1,4 +1,5 @@
 import AgeGate from '../components/AgeGate';
+import UpdateGate from '../components/UpdateGate';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { breadcrumb, startBootDiagnostics } from '@/lib/crashCapture';
 import { markNotificationNavigation } from '@/lib/launchIntent';
@@ -260,6 +261,7 @@ export default function RootLayout() {
           <NotificationTapHandler />
           <Slot />
           <AgeGate userId={session?.user?.id ?? null} />
+          <UpdateGate />
         </SessionContext.Provider>
       </GestureHandlerRootView>
     </ErrorBoundary>
