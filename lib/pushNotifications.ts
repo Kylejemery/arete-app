@@ -82,6 +82,28 @@ export async function savePushToken(token: string, session: Session): Promise<vo
   }
 }
 
+/**
+ * Forgets this account's push token on the server. Called before sign-out so
+ * the phone stops receiving pushes for an account nobody is signed into on
+ * it. Best-effort with a short timeout: sign-out must never hang on it.
+ */
+export async function clearPushToken(session: Session | null): Promise<void> {
+  if (!session?.access_token) return;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    await fetch(`${API_BASE_URL}/api/user/push-token`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      signal: controller.signal,
+    });
+  } catch (e) {
+    console.log('[push] clearPushToken failed:', (e as Error)?.message);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Detects the device IANA timezone and saves it to user_settings. */
 export async function saveTimezone(session: Session): Promise<void> {
   if (!session?.access_token) return;
