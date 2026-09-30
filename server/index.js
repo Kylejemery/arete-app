@@ -2931,6 +2931,12 @@ app.post('/api/email/unsubscribe', express.urlencoded({ extended: false }), hand
 
 // POST /api/user/push-token — save the Expo push token to user_settings.
 // Upsert (not update) so it works even before a settings row exists.
+//
+// A token identifies a device, and a device belongs to whoever is signed in
+// on it. Signing into a second account on the same phone used to leave the
+// token on both rows, so every dispatch and broadcast arrived once per
+// account. The token is released from every other row first, and a partial
+// unique index on user_settings.expo_push_token holds the invariant.
 app.post('/api/user/push-token', async (req, res) => {
   const userId = await getAuthenticatedUserId(req);
   if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -2940,11 +2946,39 @@ app.post('/api/user/push-token', async (req, res) => {
     return res.status(400).json({ error: 'Invalid push token format' });
   }
 
+  const { error: releaseError } = await supabase
+    .from('user_settings')
+    .update({ expo_push_token: null })
+    .eq('expo_push_token', token)
+    .neq('user_id', userId);
+  if (releaseError) {
+    console.error('[/api/user/push-token] release error:', releaseError.message);
+    return res.status(500).json({ error: releaseError.message });
+  }
+
   const { error } = await supabase
     .from('user_settings')
     .upsert({ user_id: userId, expo_push_token: token }, { onConflict: 'user_id' });
   if (error) {
     console.error('[/api/user/push-token] error:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+  return res.json({ success: true });
+});
+
+// DELETE /api/user/push-token — forget this account's push token. Called by
+// the app before sign-out so the device stops receiving pushes for an account
+// nobody is signed into on it. Idempotent: no row or no token is still success.
+app.delete('/api/user/push-token', async (req, res) => {
+  const userId = await getAuthenticatedUserId(req);
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+  const { error } = await supabase
+    .from('user_settings')
+    .update({ expo_push_token: null })
+    .eq('user_id', userId);
+  if (error) {
+    console.error('[DELETE /api/user/push-token] error:', error.message);
     return res.status(500).json({ error: error.message });
   }
   return res.json({ success: true });

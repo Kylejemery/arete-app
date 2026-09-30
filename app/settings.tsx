@@ -27,6 +27,7 @@ import { hasUnseenInferredFacts } from '@/lib/profileFields';
 import PronounSetting from '../components/PronounSetting';
 import { refreshTier, useSubscription } from '@/lib/useSubscription';
 import { openWebSignedIn } from '@/lib/webHandoff';
+import { clearPushToken } from '@/lib/pushNotifications';
 import { getDevPremiumOverride, setDevPremiumOverride } from '../lib/devMode';
 import {
   attendIsSupported,
@@ -891,6 +892,10 @@ export default function SettingsScreen() {
               text: 'Sign Out',
               style: 'destructive',
               onPress: async () => {
+                // Release the device token first: the next account to sign
+                // in on this phone should be the only one it pushes to.
+                const { data: { session } } = await supabase.auth.getSession();
+                await clearPushToken(session);
                 await supabase.auth.signOut();
                 router.replace('/(auth)/login' as any);
               },
