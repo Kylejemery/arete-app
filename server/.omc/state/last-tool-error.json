@@ -1,7 +1,0 @@
-{
-  "tool_name": "PowerShell",
-  "tool_input_preview": "{\"command\":\"Copy-Item \\\"C:\\\\Users\\\\kjemery\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-kjemery-Arete-Arete\\\\75ace128-19bf-41aa-9adf-59b256b6255d\\\\scratchpad\\\\test-catalog.js\\\" C:\\\\Users\\\\kjemery\\\\Arete\\\\A...",
-  "error": "Exit code 1\nC:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:146\r\n\tif (!trimmedUrl) throw new Error(\"supabaseUrl is required.\");\r\n\t                 ^\r\n\r\nError: supabaseUrl is required.\r\n    at validateSupabaseUrl (C:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:146:25)\r\n    at new SupabaseClient (C:\\Users\\kjemery\\Arete\\Arete\\server\\node_modules\\@supabase\\supabase-js\\dist\\index.cjs:362:19)\r\n    at createClient (C:\\Users\\kj...",
-  "timestamp": "2026-07-02T00:24:39.206Z",
-  "retry_count": 2
-}
