@@ -17,6 +17,7 @@ const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
+const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog } = require('./lib/events');
 const { createSseReply, createMarkerGuard, streamAnthropicMessage } = require('./lib/cabinet-stream');
@@ -1947,21 +1948,39 @@ async function handleCabinetChat(req, res) {
     let contextChunks = [];
     if (process.env.OPENAI_API_KEY) {
       try {
-        const embedding = await embedQuery(question);
+        const [embedding, primaryAuthors] = await Promise.all([
+          embedQuery(question),
+          getPrimaryAuthors(supabase),
+        ]);
         // Counselor path: the fence excludes editorial apparatus
         // (server/lib/corpus-fence.js), and the post-filter keeps graph-boost
         // expansion from reintroducing it.
-        const { data, error } = await supabase.rpc('match_rag_corpus', {
+        const retrieve = (author, count) => supabase.rpc('match_rag_corpus', {
           query_embedding: embedding,
-          match_count: 7,
-          filter_author: null,
+          match_count: count,
+          filter_author: author,
           filter_language: 'english',
           ...counselorRetrievalParams(),
         });
-        if (!error) contextChunks = (data ?? []);
+        // A named author also gets a search of their own, so commentary that
+        // names them cannot crowd out their own words
+        // (server/lib/author-mentions.js).
+        const namedAuthors = detectNamedAuthors(question, primaryAuthors);
+        const [general, ...byAuthor] = await Promise.all([
+          retrieve(null, 7),
+          ...namedAuthors.map(author => withinTimeout(retrieve(author, 2))),
+        ]);
+        if (!general.error) contextChunks = (general.data ?? []);
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
         contextChunks = (await expandCandidates(contextChunks, 7, { fence: isCounselorVisible }))
           .rows.filter(isCounselorVisible);
+        // Last, so graph-boost truncation cannot push the reserved rows out.
+        contextChunks = reserveNamedPrimary(
+          contextChunks,
+          byAuthor.flatMap(r => (r.error ? [] : r.data ?? [])),
+          7,
+          { fence: isCounselorVisible },
+        );
       } catch (err) {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
@@ -4914,6 +4933,8 @@ async function getCabinetRoster() {
 }
 // Warm the cache at boot; never blocks startup.
 setTimeout(() => { getCabinetRoster().catch(() => {}); }, 0);
+// Same for the author list named-author retrieval matches against.
+setTimeout(() => { getPrimaryAuthors(supabase).catch(() => {}); }, 0);
 
 /**
  * Restricts the parallel roster to the user's selected cabinet members.
