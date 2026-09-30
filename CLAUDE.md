@@ -125,3 +125,64 @@ anything critical — but the habit is still worth having.
 - Merge your own PRs without waiting for Kyle once checks are green, there is
   no merge conflict, and no review comment is left unanswered. Kyle can still
   review after the merge.
+
+  ## Scope
+
+At the start of a task, restate the goal in one sentence.
+
+When you finish or propose a next step, label it:
+[In scope] needed to finish the task I gave you.
+[New task] related work I did not ask for.
+
+Do not start [New task] items. List them under "Outside this task"
+at the end of your report, one line each, and I will decide whether
+to open a new session for them.
+
+## Git and branches
+
+Before starting, fetch and rebase onto current main. If the branch is more
+than a day behind, say so before doing anything else.
+Never leave work uncommitted or unpushed when you stop. If a task is not
+finished, push a draft PR and say what is left.
+Once a PR is merged, do not add commits to its branch. Start a new branch
+and PR.
+
+## Database
+
+Every change applied to Supabase must also be committed as a file in
+supabase/migrations/ in the same PR. Never apply a migration that is not
+in the repo.
+When a PR adds migrations, say in the report whether they have been applied
+to production.
+
+## Builds and releases
+
+Before any EAS build, show the version and build number and confirm they
+are higher than the latest build on App Store Connect. Ask me before
+cutting a build or submitting one.
+
+## Cost
+
+Default to Sonnet for new Claude API calls, and Haiku for simple
+extraction or classification. Use Opus only when you can say why, and
+say it in the report.
+When adding a scheduled job or agent, estimate its monthly API cost.
+
+## Secrets
+
+Never print, commit, or paste key values. Refer to keys by variable name.
+If a key fails, report which variable and where, and do not swap in
+another key.
+
+## Destructive actions
+
+Before deleting anything (data, deployments, branches, files outside
+the task), list what will be deleted and wait for my approval.
+
+## Reports
+
+End every session with:
+Done: what changed, with PR or commit links.
+Needs Kyle: anything only I can do.
+Outside this task: related work I did not ask for.
+Branch state: pushed, PR open, or merged.
