@@ -182,7 +182,7 @@ no code change and no deploy.
 ## Worked example: the two pieces already built
 
 Both are registered, in
-`supabase/migrations/20260916170000_exhibits_seed_first_two.sql`. Neither had
+`supabase/migrations/20260916185534_exhibits_seed_first_two.sql`. Neither had
 its internals rewritten: both are `web_embed` rows pointed at the Academy pages
 that already exist and are already in `RELEASED_PLAYGROUND`.
 
@@ -210,7 +210,7 @@ built for the Garden rather than moved into it, and it is the worked example of
 the whole path in this document: piece built on the Academy, slug added to
 `RELEASED_PLAYGROUND`, row inserted as a `web_embed` pointed at it, straight
 into the gallery because it had its citation and passage from the start. See
-`supabase/migrations/20260916210000_exhibit_chrysippus_cylinder.sql`.
+`supabase/migrations/20260916231729_exhibit_chrysippus_cylinder.sql`.
 
 It also shows the branch rule in use. The argument is about fate, which is
 physics, but Chrysippus deploys it to save responsibility, and a piece that
@@ -259,7 +259,7 @@ exhibits.
 | One exhibit | `app/garden/[slug].tsx` | `web/src/app/garden/[slug]/page.tsx` |
 | Explore entry | `components/SideMenu.tsx` | `web/src/components/Sidebar.tsx` |
 
-Schema: `supabase/migrations/20260916140000_exhibits.sql`.
+Schema: `supabase/migrations/20260916180818_exhibits.sql`.
 
 The room's name is one constant, `GARDEN_TITLE` in both `lib/exhibits.ts`
 files. Renaming the Garden means editing those two lines and nothing else.

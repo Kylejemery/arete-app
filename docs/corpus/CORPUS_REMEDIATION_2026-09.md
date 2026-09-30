@@ -12,7 +12,7 @@ assumed.
 
 ## Task 1: identities and labels (verified)
 
-Migration `20260902150000_corpus_identity_remediation.sql`, applied live.
+Migration `20260902141616_corpus_identity_remediation.sql`, applied live.
 
 ```
 select author, work, count(*) filter (where not deprecated) live, count(*) filter (where deprecated) dead
@@ -73,7 +73,7 @@ Not built anywhere. See `EPISTEMIC_BOUNDARY_STATUS.md`.
 
 ## Task 3: Timaeus (queued; ingestion happens on the next nightly run)
 
-- Migration `20260902150100_corpus_queue_provenance_and_timaeus.sql`, applied
+- Migration `20260902141857_corpus_queue_provenance_and_timaeus.sql`, applied
   live: the queue gains `translator`, `text_type`, `body_start_marker`,
   `body_end_marker`; both corpus-agent twins pass them through.
 - Queue row `5750801c-81ba-442c-a766-62466dcd705d`: Plato / Timaeus,
@@ -114,7 +114,7 @@ Recommended follow-up: deprecate the seven Plato works and requeue them with
   76 to 277 words each.
 - `corpus-agent.js` calls the sync at the start of every nightly run and
   prints the probes when anything was embedded.
-- Migration `20260902150200_match_rag_corpus_exclude_text_types.sql`, applied
+- Migration `20260902141904_match_rag_corpus_exclude_text_types.sql`, applied
   live: `match_rag_corpus` gains `exclude_text_types text[] default '{}'`.
 - `server/lib/corpus-fence.js` holds the list (`concordance`);
   `server/index.js` passes it on the three counselor retrievals and filters
@@ -143,8 +143,8 @@ the RPCs and the parameter, not the bridge.
 
 | file | change |
 | --- | --- |
-| `supabase/migrations/20260902150000_corpus_identity_remediation.sql` | `deprecated = false` on `match_rag_corpus_ids`, `match_rag_corpus_cited`, six-argument `match_academy_chunks`, `corpus_work_counts`, `library_shelf`, `observatory_corpus_stats`, `system_reflection_corpus_stats`. |
-| `supabase/migrations/20260902150200_match_rag_corpus_exclude_text_types.sql` | `exclude_text_types` on `match_rag_corpus`. |
+| `supabase/migrations/20260902141616_corpus_identity_remediation.sql` | `deprecated = false` on `match_rag_corpus_ids`, `match_rag_corpus_cited`, six-argument `match_academy_chunks`, `corpus_work_counts`, `library_shelf`, `observatory_corpus_stats`, `system_reflection_corpus_stats`. |
+| `supabase/migrations/20260902141904_match_rag_corpus_exclude_text_types.sql` | `exclude_text_types` on `match_rag_corpus`. |
 | `server/lib/corpus-fence.js` | New. The counselor exclusion list and helpers. |
 | `server/index.js` | Lines 19, 393, 1168 to 1177, 1293 to 1302, 3536 to 3548, 4344: fence on the parallel Cabinet, the single counselor, `getStoicContext`, the counselor catalog, the reader shelf. |
 | `server/library.js` | Identity keys only (no retrieval logic). |
@@ -188,7 +188,7 @@ Kyle approved the Bobzien relabel and asked for task 5 to be built.
 
 ### Bobzien (verified)
 
-Migration `20260902155000_bobzien_identity.sql`, applied live. `rag_corpus`,
+Migration `20260902182515_bobzien_identity.sql`, applied live. `rag_corpus`,
 `corpus_sources`, and `paper_submissions` now carry one author string:
 
 | author | work | chunks |
@@ -205,7 +205,7 @@ relabel the work again, never the author.
 
 ### text_type normalisation (verified)
 
-Migration `20260902160000_text_type_normalisation.sql`, applied live.
+Migration `20260902182527_text_type_normalisation.sql`, applied live.
 
 | text_type | live | deprecated |
 | --- | --- | --- |

@@ -7,11 +7,11 @@ This recon was done before any code changes for the activation plan. Paths are r
 These matter before touching anything else.
 
 - **Five committed migrations were never applied to the project** (`zhaarabzemhantyxxckq`). The remote history ends at `20260921152557`. These files have no applied version:
-  - `20260921120000_product_events.sql`: `product_events`, `subscription_events`, `user_settings.last_active_at` and `kt_completed_at`
-  - `20260922100000_dispatch_read_at.sql`
-  - `20260923100000_kt_reflection.sql`
-  - `20260924100000_checkin_followup.sql`
-  - `20260925100000_email_sends.sql`
+  - `20260925153941_product_events.sql`: `product_events`, `subscription_events`, `user_settings.last_active_at` and `kt_completed_at`
+  - `20260925192015_dispatch_read_at.sql`
+  - `20260925192032_kt_reflection.sql`
+  - `20260925192040_checkin_followup.sql`
+  - `20260925190739_email_sends.sql`
 
   Any code that writes these objects (`logEvent`, the `kt_completed_at` stamp, `/api/kt-reflection` storage, the check-in follow-up, the lifecycle email ledger) is failing against production today.
 - **The journal agent runs twice every morning.** Railway service `coverage-gap-agent` has its config-as-code path set to `/server/railway.agent.json`, which is the journal agent's file. So it runs `node journal-analysis-agent.js` at `0 9 * * *`, and its logs show "=== Journal Analysis Agent ===" daily. The real `journal-analysis-agent` service runs the same job one to two minutes apart. The coverage gap agent itself has not been running.
@@ -23,7 +23,7 @@ These matter before touching anything else.
 - **Selection:** every user with journal or Cabinet activity in the last 7 days is re-analyzed every day.
 - **Store:** `storeAnalysis` upserts on `(user_id, analysis_week)`, where the week starts Monday UTC. So the analysis id is stable all week. Each upsert overwrites `insight_text` and `distress_flagged` and resets `delivered = false`.
 - **Enqueue:** `queueDistressReview` does a plain insert with status `pending` and never checks for an existing row or for errors. A user who stays flagged gets a new pending row each run, and runs are doubled by the second Railway service. An analysis escalated on 9/14 got new pending rows on 9/16 and 9/17 this way.
-- **Queue table:** `distress_review_queue` (migration `20260618000001_journal_analysis.sql`). It has no uniqueness on `analysis_id`. RLS is on with no policies.
+- **Queue table:** `distress_review_queue` (migration `20260618140912_journal_analysis_and_distress_queue.sql`). It has no uniqueness on `analysis_id`. RLS is on with no policies.
 - **State before the fix:** 56 rows over 12 analyses.
 - **Admin surfaces:**
   - `academy/web/src/app/api/admin/distress/route.ts` lists rows and lets the admin set any status, including back to pending.

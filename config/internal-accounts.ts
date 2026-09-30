@@ -25,6 +25,10 @@ export const INTERNAL_ACCOUNT_EMAILS: string[] = [
   // Family
   'aundrea.c.emery@gmail.com',
   'devon.e.emery@gmail.com',
+  'hattie.l.emery@gmail.com',
+  // The login email on this account is chio@ (a typo at signup); the profile
+  // row, which set_internal_accounts matches on, has chip@.
+  'chip@emerybuilding.com',
 ];
 
 // Rules applied in the database as well as the list above: any profile

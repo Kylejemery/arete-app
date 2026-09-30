@@ -26,7 +26,9 @@
 // sentence end breaks one), rejoins words hyphenated across lines and pages
 // (`keepHyphen` lists compounds that keep theirs), marks the listed gaps in
 // the scan (`gaps`, the text each follows) with " […]" so nothing is joined
-// across missing text, cuts a paragraph longer than `maxSectionWords` at
+// across missing text, or, where a gap has a `fill` read off the page image
+// (`fill`, with `from` naming the image), puts those words in its place and
+// joins them like any other line, cuts a paragraph longer than `maxSectionWords` at
 // sentence ends, and applies the listed OCR fixes (`fixes`, each [pattern,
 // replacement, note], counted and reported). A listed fix, gap or
 // continuation that no longer matches refuses the source.
@@ -169,9 +171,18 @@ function parse(text, options = {}) {
       let text = l.text;
       let gap = null;
       // A gap in the scan: the line it follows ends the text, " […]" marks
-      // it, and nothing is rejoined across it.
+      // it, and nothing is rejoined across it. A gap with a `fill` is lines
+      // the OCR lost but the page image shows: the words read off the image
+      // follow the line, joined as the next line would be (a word broken at
+      // the line end is rejoined), and the chunk is not marked damaged.
       const g = (options.gaps || []).find((x) => text.endsWith(x.after));
-      if (g) { text = `${text.replace(/-$/, '')} […]`; gap = g.note; usedGaps.add(g.note); }
+      if (g && g.fill) {
+        const broken = text.match(/(\p{L}+)-$/u);
+        text = broken && /^\p{Ll}/u.test(g.fill) && !(options.keepHyphen || []).includes(broken[1].toLowerCase())
+          ? text.slice(0, -1) + g.fill
+          : `${text} ${g.fill}`;
+        usedGaps.add(g.note);
+      } else if (g) { text = `${text.replace(/-$/, '')} […]`; gap = g.note; usedGaps.add(g.note); }
       stream.push({ text, gap, section: l.section, page: String(p.page) });
     }
     stream.push({ text: '', pageEnd: true, page: String(p.page) });
@@ -247,7 +258,7 @@ function parse(text, options = {}) {
   for (const f of options.fixes || []) if (!counts.has(f[2])) reasons.push(`listed OCR fix never applied: ${f[2]}`);
   for (const c of options.noteContinuations || []) if (!usedContinuations.has(c.start)) reasons.push(`listed note continuation not found: ${c.start}`);
   for (const g of options.gaps || []) {
-    if (usedGaps.has(g.note)) fixLog.push(`gap marked: ${g.note}`);
+    if (usedGaps.has(g.note)) fixLog.push(g.fill ? `gap filled from ${g.from || 'the page image'}: ${g.note}` : `gap marked: ${g.note}`);
     else reasons.push(`listed gap not found: ${g.note}`);
   }
 

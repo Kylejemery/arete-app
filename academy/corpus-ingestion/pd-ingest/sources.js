@@ -336,20 +336,21 @@ const SOURCES = [
     ],
   },
   // ---- Musonius Rufus, Lutz's English (2026-09-29) ------------------------
-  // Asked for by Kyle on 2026-09-29. Verbatim, but license_status
-  // 'unverified' and never quotable: a US publication of 1947 is public
-  // domain only if its copyright was not renewed, and the renewal search
-  // (below) found nothing without being conclusive. Admission record:
+  // Asked for by Kyle on 2026-09-29. Verbatim, license_status
+  // 'public_domain_no_renewal' since 2026-09-30 (was 'unverified'): a US
+  // publication of 1947 is public domain unless its copyright was renewed,
+  // and the renewal search (below) found none. Never quotable on air, which
+  // stays reserved for 'public_domain_us'. Admission record:
   // docs/corpus/ADMISSIONS_2026-09-29_MUSONIUS_LUTZ.md.
   {
     slug: 'musonius-lectures-lutz-1947', batch: 'musonius-lutz-2026-09', citedBy: ['Requested by Kyle, 2026-09-29'],
     tier: 1, author: 'Musonius Rufus', work: 'Lectures',
     language: 'english', translator: 'Cora E. Lutz',
     edition: 'Yale Classical Studies 10', edition_year: 1947,
-    text_type: 'primary', quotable_on_air: false, license_status: 'unverified',
+    text_type: 'primary', quotable_on_air: false, license_status: 'public_domain_no_renewal',
     urls: [], localFiles: ['MUSONIUSRUFUSSTOICFRAGMENTS_djvu.txt'],
     sourceUrl: 'https://archive.org/details/MUSONIUSRUFUSSTOICFRAGMENTS',
-    licenseEvidence: 'Cora E. Lutz, "Musonius Rufus: The Roman Socrates," Yale Classical Studies 10 (New Haven: Yale University Press, 1947). A US publication of 1947 is in the public domain only if its copyright was not renewed in its 28th year (1974 or 1975). Searched 2026-09-29 in the Copyright Office\'s Catalog of Copyright Entries, Third Series (archive.org OCR of the printed volumes): Part 1, Books and Pamphlets, Jan-Jun and Jul-Dec 1974 and 1975, index and registration sections (vols. 28-29), and Part 2, Periodicals, 1974 and 1975, for "Lutz", "Musonius", "Roman Socrates", "Socrates" and "Yale Classical". No renewal found. The only Cora Lutz entry is a new 1975 registration of her Essays on Manuscripts and Rare Books (A652121, 30 Jun 1975), not a renewal. A search of OCR text can miss an entry, and the Stanford renewal database and the Copyright Office records could not be reached from this session, so the finding is recorded as unverified rather than public domain.',
+    licenseEvidence: 'Cora E. Lutz, "Musonius Rufus: The Roman Socrates," Yale Classical Studies 10 (New Haven: Yale University Press, 1947). A US publication of 1947 is in the public domain unless its copyright was renewed in its 28th year (1974-1975). No renewal found. Searched 2026-09-29, and again more widely 2026-09-30, in the Copyright Office\'s Catalog of Copyright Entries, Third Series (archive.org OCR of the printed volumes): Part 1, Books and Pamphlets, Jan-Jun and Jul-Dec of 1974, 1975 and 1976, index and registration sections (vols. 28-30, twelve volumes), and Part 2, Periodicals, 1974, 1975 and 1976. Terms: "Lutz", "Musonius", "Roman Socrates", "Socrates", "Rufus", "Yale Classical", "Classical Studies", and every renewal entry naming Yale, Yale University Press as claimant included, that cites a 1946 or 1947 original (28 entries, read one by one). No entry renews the Musonius or Yale Classical Studies 10. The only Cora Lutz entry is a new 1975 registration of her Essays on Manuscripts and Rare Books (A652121, 30 Jun 1975), not a renewal. Yale University Press did renew other books of 1946-47 in these volumes (The Influence of Sea Power in World War 2, R613520; the Yale Shakespeare, R602998-R602999), so its renewals are present there and the search finds them. Not searched: the Stanford Copyright Renewal Database and the Copyright Office\'s online records, which the searching environment could not reach. Source: every row comes from the scan of the 1947 volume (archive.org MUSONIUSRUFUSSTOICFRAGMENTS, uploaded 2014), which holds the lectures only, with no front matter and nothing from the 2020 reissue.',
     parser: 'facing-ocr',
     // Every list below was read off the file on 2026-09-29, and the parser
     // refuses the source if any entry no longer matches.
@@ -403,20 +404,34 @@ const SOURCES = [
         // lead such a life" (XII, p. 87).
         { start: '16 f., 21f. Elegies 33-36.', lines: 1 },
       ],
-      // Lines lost from the scan: marked "[…]", never reconstructed.
+      // Lines the OCR lost. The scan's page images show every one of them, so
+      // each is filled with the words read off the image (`from` names it:
+      // archive.org MUSONIUSRUFUSSTOICFRAGMENTS, image n, 0-based, a
+      // two-page spread), checked word by word on 2026-09-30. Nothing here is
+      // reconstructed from context.
       gaps: [
-        { after: 'you may understand', note: 'VIII, p. 65: the foot of the page is lost after "you may understand"' },
-        { after: 'besides beneficent, helpful, and', note: 'VIII, p. 67: lines lost after "helpful, and"' },
-        { after: 'better able to govern than such a man? N Ο one,', note: 'VIII, p. 67: lines lost after "No one,"' },
-        { after: 'if he is skilled in horse-', note: 'VIII, p. 67: lines lost after "skilled in horse-"' },
-        { after: 'told him that he was grateful for what he', note: 'VIII, p. 67: a line lost after "grateful for what he"' },
-        { after: 'can nourish man well,', note: 'XVIIIA, p. 113: lines lost after "can nourish man well,"' },
-        { after: 'are not unsuitable, and are all', note: 'XVIIIA, p. 113: lines lost after "and are all" (the text resumes at "clitus when he said")' },
-        { after: 'clitus when he said,', note: 'XVIIIA, p. 113: the quotation of Heraclitus and what follows are lost' },
-        { after: 'much worse than the un-', note: 'XVIIIA, p. 113: lines lost after "than the un-"' },
+        { after: 'you may understand', note: 'VIII, p. 67: the first nine lines of the page, after "you may understand" at the foot of p. 65', from: 'image 17 (pp. 66-67)',
+          fill: 'from this. The attribute of a kingly person is obviously the ability to rule peoples and cities well and to be worthy to govern men. Well, then, who would be a more capable head of a city or more worthy to govern men than the philosopher? For it behooves him (if he is truly a philosopher) to be intelligent, disciplined, noble-minded, a good judge of what is just and of what is seemly, efficient in putting his plans into effect, patient under hardship. In addition to this, he should be courageous, fearless, resolute in the face of things apparently disastrous, and' },
+        { after: 'besides beneficent, helpful, and', note: 'VIII, p. 67: the end of the line after "helpful, and"', from: 'image 17 (pp. 66-67)',
+          fill: 'humane. Could anyone be' },
+        { after: 'better able to govern than such a man? N Ο one,', note: 'VIII, p. 67: two lines after "No one"', from: 'image 17 (pp. 66-67)',
+          fill: 'Even if he does not have many subjects obedient to him, he is not for that reason less kingly, for it is enough to rule one’s' },
+        { after: 'if he is skilled in horse-', note: 'VIII, p. 67: two lines after "skilled in horse-"', from: 'image 17 (pp. 66-67)',
+          fill: 'manship. And so the title of kingly person belongs to the one who has only one or two subjects just as well as to the one who' },
+        { after: 'told him that he was grateful for what he', note: 'VIII, p. 67: the start of the line after "grateful for what he"', from: 'image 17 (pp. 66-67)',
+          fill: 'said and added,' },
+        { after: 'can nourish man well,', note: 'XVIIIA, p. 113: three lines after "can nourish man well,"', from: 'image 40 (pp. 112-113)',
+          fill: 'and also food (other than flesh) from animals which are domesticated. Of these foods the most useful are those which can be used at once without fire, since they are also most easily available; for example fruits in season, some of the green vegetables, milk,' },
+        { after: 'are not unsuitable, and are all', note: 'XVIIIA, p. 113: eleven lines after "and are all", the passage on meat', from: 'image 40 (pp. 112-113)',
+          fill: 'natural food for man. On the other hand he showed that meat was a less civilized kind of food and more appropriate for wild animals. He held that it was a heavy food and an obstacle to thinking and reasoning, since the exhalations rising from it being turbid darkened the soul. For this reason also the people who make larger use of it seem slower in intellect. Furthermore, as man of all creatures on earth is the nearest of kin to the gods, so he should be nourished in a manner most like the gods. Now the vapors rising from the earth and water are sufficient for them, and so, he said, we ought to be nourished on food most like that, the lightest and purest; for thus our souls would be pure and dry, and being so, would be finest and wisest, as it seemed to Hera-' },
+        { after: 'clitus when he said,', note: 'XVIIIA, p. 113: the quotation of Heraclitus', from: 'image 40 (pp. 112-113)',
+          fill: '“The clear dry soul is wisest and best.”' },
+        { after: 'much worse than the un-', note: 'XVIIIA, p. 113: five lines after "than the un-"', from: 'image 40 (pp. 112-113)',
+          fill: 'reasoning brutes. For even if they, driven by appetite as by a lash, fall upon their food, nevertheless they are not guilty of making a fuss about their food and exercising ingenuity about it, but they are satisfied with what comes their way, seeking satiety only, nothing more. But we contrive all kinds of arts and devices to give relish to eating and to make more enticing the act of' },
       ],
-      // OCR fixes: only where one reading is possible. A word the clipped
-      // margin of p. 107 took is "[…]", not a guess. Each is logged with a count.
+      // OCR fixes: only where one reading is possible. The OCR clipped the
+      // right margin of p. 107; the words it took are read off the page image
+      // (image 37, pp. 106-107), which is not clipped. Each is logged with a count.
       fixes: [
         [/that\.there/g,'that there','"that.there" → "that there" (I)'],
         [/not‘an evil/g,'not an evil','"not‘an evil" → "not an evil" (I)'],
@@ -441,7 +456,7 @@ const SOURCES = [
         [/when ‘these qualities/g,'when these qualities','stray "‘" (VIII)'],
         [/how ἃ man may avoid/g,'how a man may avoid','"ἃ man" → "a man" (VIII)'],
         [/a good manpr No/g,'a good man? No','"manpr" → "man?" (VIII)'],
-        [/such a man\? N Ο one,/g,'such a man? No one,','"N Ο one" → "No one" (VIII)'],
+        [/such a man\? N Ο one,/g,'such a man? No one.','"N Ο one," → "No one." (VIII; the page, image 17, has a full stop)'],
         [/deserve the hame of king/g,'deserve the name of king','"hame" → "name" (VIII)'],
         [/because one who\. masters/g,'because one who masters','"who. masters" → "who masters" (VIII)'],
         [/What if we are ‘kept/g,'What if we are kept','stray "‘" (IX)'],
@@ -466,14 +481,14 @@ const SOURCES = [
         [/find than‘a good brother/g,'find than a good brother','"than‘a" → "than a" (XV)'],
         [/choose the philosopher 5\. life/g,'choose the philosopher’s life','"philosopher 5. life" → "philosopher’s life" (XVI, p. 107, clipped right margin)'],
         [/your duty les in/g,'your duty lies in','"les" → "lies" (XVI, p. 107)'],
-        [/your father will \. strain you/g,'your father will […]strain you','"will . strain" → "will […]strain": the start of the word is lost at the margin (XVI, p. 107)'],
+        [/your father will \. strain you/g,'your father will restrain you','"will . strain" → "will restrain": the page prints "re-/strain" (XVI, p. 107, image 37)'],
         [/your study o philosophy/g,'your study of philosophy','"study o" → "study of" (XVI, p. 107)'],
-        [/for we " a study philosophy/g,'for we […] study philosophy','"we \" a study" → "we […] study": words lost at the margin (XVI, p. 107)'],
+        [/for we " a study philosophy/g,'for we do not study philosophy','"we \" a study" → "we do not study" (XVI, p. 107, image 37)'],
         [/any other part o : e body/g,'any other part of the body','"part o : e body" → "part of the body" (XVI, p. 107)'],
-        [/from using τ nor from/g,'from using […] nor from','"using τ" → "using […]": a word lost at the margin (XVI, p. 107)'],
+        [/from using τ nor from/g,'from using it nor from','"using τ" → "using it" (XVI, p. 107, image 37)'],
         [/the good an not liking/g,'the good and not liking','"good an" → "good and" (XVI, p. 107)'],
         [/nor again-from choosing/g,'nor again from choosing','"again-from" → "again from" (XVI, p. 107)'],
-        [/long hair nor in τ from/g,'long hair nor in […] from','"nor in τ from" → "nor in […] from": words lost at the margin (XVI, p. 107)'],
+        [/long hair nor in τ from/g,'long hair nor deviate from','"nor in τ from" → "nor deviate from" (XVI, p. 107, image 37)'],
         [/To be sure, suc! things/g,'To be sure, such things','"suc!" → "such" (XVI, p. 107)'],
         [/but = losophy does/g,'but philosophy does','"= losophy" → "philosophy" (XVI, p. 107)'],
         [/thinking out wha is/g,'thinking out what is','"wha" → "what" (XVI, p. 107)'],
@@ -491,12 +506,20 @@ const SOURCES = [
         [/feet by\. close fitting/g,'feet by close fitting','"by. close" → "by close" (XIX)'],
         [/this our ‘ houses/g,'this our houses','stray "‘" (XIX)'],
         [/and the wie which/g,'and the wine which','"wie" → "wine" (XX)'],
+        // Punctuation the OCR misread, checked on the page images of 2026-09-30.
+        [/the art of music, Likewise/g,'the art of music. Likewise','"music, Likewise" → "music. Likewise" (VIII, p. 67, image 17)'],
+        [/becomes a statesman, When/g,'becomes a statesman. When','"statesman, When" → "statesman. When" (VIII, p. 67, image 17)'],
+        [/benefit yourself,”/g,'benefit yourself.”','"yourself,”" → "yourself.”" (VIII, p. 67, image 17)'],
+        [/meditating upon it\.’/g,'meditating upon it.”','"it.’" → "it.”" (XVI, p. 107, image 37)'],
+        [/eating and drinking, Once,/g,'eating and drinking. Once,','"drinking, Once" → "drinking. Once" (XVIIIA, p. 113, image 40)'],
+        [/But how, he said, we feed/g,'But now, he said, we feed','"But how" → "But now" (XVIIIA, p. 113, image 40)'],
+        [/the act of swallowing, We have/g,'the act of swallowing. We have','"swallowing, We" → "swallowing. We" (XVIIIA, p. 113, image 40)'],
       ],
     },
     // "XVIIIA, p. 113": Lutz's lecture and the printed page.
     locatorOf: (c) => `${c.parent}, ${String(c.printed_pages).includes('–') ? 'pp.' : 'p.'} ${c.printed_pages}`,
     expect: ['CORA E. LUTZ', 'MUSONIUS RUFUS'],
-    cleaningNote: 'English only, from archive.org OCR of the facing-page edition: the Greek pages, Lutz\'s notes and apparatus, running heads and margin line numbers are dropped. The file ends at Lecture XXI; the minor fragments that follow in Lutz are not in it. Lines lost from the scan are marked "[…]": VIII, pp. 65-67 (five places) and XVIIIA, p. 113 (four places; most of the page, on meat and uncooked food, is missing). The right margin of p. 107 (XVI) is clipped; words it took are "[…]". Those chunks carry their own ocr_quality (poor for lost lines, fair for the margin). The Greek of these lectures (eulogikon.org, Hense) is already held under the same author and work with language ancient_greek; its chunks are 400-word windows that cross lectures, so no English chunk is paired to one (paired_chunk_id null).',
+    cleaningNote: 'English only, from archive.org OCR of the facing-page edition: the Greek pages, Lutz\'s notes and apparatus, running heads and margin line numbers are dropped. The file ends at Lecture XXI; the minor fragments that follow in Lutz are not in it. Lines the OCR lost (VIII, p. 67, five places; XVIIIA, p. 113, four, including the passage on meat and the quotation of Heraclitus; XVI, p. 107, four words at a clipped right margin) are filled from the scan\'s own page images, read word by word on 2026-09-30; the `gaps` and `fixes` above name the image for each. No chunk carries "[…]". The Greek of these lectures (eulogikon.org, Hense) is already held under the same author and work with language ancient_greek; its chunks are 400-word windows that cross lectures, so no English chunk is paired to one (paired_chunk_id null).',
     registrations: [
       { question_id: 'Q14', role: 'defends', position: 'Philosophy is practice, not theory: virtue is learned like medicine or music, by training the soul and body to act on what the lessons teach, and practice is the more effective of the two (Lectures V, VI); the philosopher shows his teaching in his life, even working the land beside his pupils (XI).' },
       { question_id: 'Q09', role: 'defends', position: 'Exile takes nothing that is truly good: it leaves water, earth, air and the society of men, gives leisure for virtue, and cannot remove courage, justice or self-control; the misery felt in exile comes from vice, not from exile (Lecture IX).' },

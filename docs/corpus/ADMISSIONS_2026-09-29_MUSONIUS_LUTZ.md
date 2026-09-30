@@ -73,6 +73,142 @@ source means either accepting a non-renewed 1931–1963 US work as public
 domain, or making a one-off exception. It is staged verbatim so that the
 decision is made at approval, not here.
 
+## 2026-09-30: the license settled, the source confirmed, the gaps filled
+
+Kyle asked for four things: close the renewal search, make sure every row
+comes from the 1947 edition and not the 2020 Yale reissue, fill the holes in
+XI, XVI and XVIIIA from the scan, and relabel the license if no renewal
+turned up.
+
+### The renewal search
+
+The Stanford Copyright Renewal Database, the Copyright Office's online
+records (copyright.gov, publicrecords.copyright.gov), the UPenn CCE index and
+NYPL's transcription of the renewals on GitHub were all refused by the
+session's network policy, so the search used the Copyright Office's printed
+*Catalog of Copyright Entries*, Third Series, through archive.org's OCR of the
+scans. A work of 1947 had to be renewed in 1974 or 1975; 1976 was searched
+too, to catch a late entry.
+
+| Volumes | Sections |
+| --- | --- |
+| Part 1, Books and Pamphlets, Jan–Jun and Jul–Dec 1974, 1975, 1976 (vols. 28–30) | index and registration (current and renewal) sections: 12 volumes |
+| Part 2, Periodicals, 1974, 1975, 1976 | 3 volumes |
+
+What was searched, and what came back:
+
+- **"Lutz"**: 174 matching lines, every one read. The only Cora Lutz entry is the 1975
+  index line "Lutz, Cora Elizabeth" and its registration, *Essays on
+  Manuscripts and Rare Books*, A652121, 30 June 1975: a new registration, not
+  a renewal (renewals carry R numbers and cite the original registration).
+  The rest are other people (Giles A. Lutz, John Lutz, Lutz Becker, …).
+- **"Musonius"** (and OCR variants "Mus0ni", "Mouson"), **"Roman Socrates"**,
+  **"Yale Classical"**: no hits.
+- **"Classical Studies"**: 14 hits, all other series (University of
+  Cincinnati, California, Illinois, the American School at Athens).
+- **"Socrat"**: 52 hits, none a renewal of Lutz; **"Rufus"**: 277 hits,
+  of which the ten renewal entries citing a 1946–47 original are other books
+  (Rufus M. Jones, Rufus King, Rufus A. Lyman, …).
+- **Yale**: 913 hits. Split into single renewal entries, 28 mention Yale and
+  cite a 1946 or 1947 original. Each was read. They are Yale University
+  Press's own renewals of other books (Puleston, *The Influence of Sea Power in
+  World War 2*, R613520; the Yale Shakespeare volumes, R602998–R602999 and
+  R603259; Mann's *Secretary of Europe*, R574026; Richter's *Attic Red-Figured
+  Vases*, R579795; …), articles in *The Yale Review* and *Yale Poetry Review*,
+  and the Yale Medical Library's Gibbs volume. None is *Yale Classical
+  Studies* 10 or the Musonius. That Yale University Press's renewals of other
+  1946–47 books are in these volumes and are found by this search is the best
+  check that the search would have found this one.
+
+**No renewal found.** The license is now `public_domain_no_renewal`, a new
+value (migration `20260930182335_musonius_lutz_public_domain_no_renewal.sql`),
+on all 89 Lutz rows and the staging source, with this search in
+`license_evidence`. `public_domain_us` was not used, because the column
+defines it as a work first published in 1930 or earlier. The rows stay
+`quotable_on_air = false`: the constraint allows quoting only for
+`public_domain_us`, and that was not changed.
+
+What the search cannot rule out: an entry the OCR garbled beyond all of the
+terms above, and anything only in the Stanford database or the Copyright
+Office's own card files. A check of either, if the network allows it later,
+would make the finding firmer.
+
+### The source is the 1947 volume
+
+Every Lutz row has `source_url` https://archive.org/details/MUSONIUSRUFUSSTOICFRAGMENTS
+and `edition_year` 1947, and the cached OCR text the rows were parsed from
+matches archive.org's `MUSONIUSRUFUSSTOICFRAGMENTS_djvu.txt` (sha256
+723f0974…). archive.org catalogues the item as "Lutz, Cora E. 'Musonius Rufus,
+the Roman Socrates' Yale Classical Studies 10 (1947): 3-147", uploaded in 2014,
+six years before the reissue. The scan holds the lectures only, from the Greek
+of Lecture I (p. 32) on: no title page, no front matter, no introduction, and
+no date after 1947 anywhere in its text. Its running heads, "CORA E. LUTZ"
+facing "MUSONIUS RUFUS", are the journal's. Nothing in it can come from the
+2020 reissue's introduction.
+
+### The gaps, filled from the page images
+
+The "[…]" gaps were lines the OCR lost, not lines missing from the scan: the
+page images show every one. They were read off the images word by word
+(archive.org BookReader, full resolution), and the pipeline now carries each
+fill with the image it came from (`gaps[].fill` and `gaps[].from` in
+`sources.js`; the parser puts a fill in the gap's place).
+
+- **Lecture XI: nothing to fill.** In the 1947 volume the lecture itself
+  begins "There is also another means of livelihood in no way inferior to
+  this…", where our chunk begins, and Lutz's note 10 says why: "The opening
+  sentence indicates that this excerpt was taken from a larger discourse on the
+  same subject." The start was lost in the ancient transmission, not in our
+  copy.
+- **XVI, p. 107 (image 37).** The OCR clipped the right margin; the image
+  does not. The four "[…]" are "re-strain" (restrain), "do not", "it" and
+  "deviate", and the page's closing quotation mark is double.
+- **XVIIIA, p. 113 (image 40).** The page is skewed on the scan, and the OCR
+  lost every other line. Filled: the foods from domesticated animals other than
+  flesh and the foods usable without fire; the passage on meat ("a less
+  civilized kind of food and more appropriate for wild animals… a heavy food
+  and an obstacle to thinking and reasoning"); the gods' nourishment and the
+  quotation of Heraclitus, "The clear dry soul is wisest and best."; and the
+  unreasoning brutes. The OCR's "But how, he said" is "But now".
+- **VIII, p. 67 (image 17).** Not in Kyle's list, but a hole of the same kind
+  in the same scan, so filled with the others: the first nine lines of the
+  page, the end of the line "…helpful, and humane. Could anyone be", two lines
+  after "No one.", two after "horse-" (horsemanship), and "said and added,".
+  "Intelligent, disciplined" was checked at full resolution: there is no
+  "self-".
+
+Seven punctuation misreadings on the same pages were corrected with them, each
+listed in `sources.js`.
+
+In `rag_corpus` (migration `20260930182106_musonius_lutz_fill_ocr_gaps.sql`)
+the four chunks were corrected in place, as in
+`20260930174718_memorabilia_remove_dakyns_footnotes.sql`: each checked
+against the md5 of its current text, its original kept as a deprecated row
+(chunk_index 131–134, every column copied), then the corrected text checked
+against its md5. Chunk boundaries, ids and locators are unchanged, so VIII
+(482 words) and XVIIIA (537) run over the pipeline's 350-word chunk size. The
+four chunks are now `ocr_quality = 'good'`. Before the migration, each
+corrected chunk was found verbatim in the rebuilt pipeline text of its lecture,
+and the other 81 live chunks were found there unchanged. Only the four changed
+chunks were re-embedded.
+
+Retrieval after: "Musonius on eating meat" (author-filtered) returns XVIIIA
+first and second; "the attribute of a kingly person is the ability to rule"
+returns VIII first and second. A query on the Heraclitus line alone does not
+reach XVIIIA's top ten: one sentence in a 537-word chunk.
+
+### The claim check, re-run
+
+The Musonius rules in *The Virtues of Socrates* were checked again against
+the filled text. The rules citing XVI ("no one can stop you from thinking
+rightly… no worn cloak or long hair") and XVIIIA (self-control at the table;
+cheap, plentiful, natural food; cooked grains and vegetables; Zeno and the
+delicacies) hold, and the XVI rule is now supported word for word. XI has no
+new text. No rule cites VIII. One sentence was now false: the Eating animals
+row said Musonius's "remarks on meat fall in gaps in our copy of Lutz's
+text". Version 4 of the document corrects it to what Lutz prints and is
+active; version 3 is kept inactive.
+
 ## The eight tests (Part 4)
 
 1. **Provenance.** Passes. Cora E. Lutz, Yale Classical Studies 10, Yale
@@ -253,3 +389,8 @@ run the two retrieval checks that could not be run here:
   English license row left as it was). Lutz's English Lectures I–XXI
   extracted and staged as 85 chunks; license unverified (no renewal found in
   the CCE 1974–75). Not embedded: no OpenAI key in the session.
+- 2026-09-30: Renewal search widened to 1976 and to Yale University Press and
+  "Yale Classical Studies"; no renewal. License `public_domain_no_renewal`.
+  Source confirmed as the 1947 volume. The OCR's lost lines in VIII, XVI and
+  XVIIIA filled from the page images (XI needs none) and the four chunks
+  re-embedded. Virtues of Socrates v4 corrects the meat sentence.

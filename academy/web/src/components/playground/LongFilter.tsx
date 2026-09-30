@@ -5,7 +5,6 @@ import Link from 'next/link'
 import {
   ARISING_PER_YEAR,
   CIVILIZATIONS,
-  ERROR_HAZARD_BASE,
   EXTERNAL_HAZARD,
   GAP_MAX,
   GAP_MIN,
@@ -56,11 +55,11 @@ function survival(p: number, years: number, decay: boolean): number {
  * accumulated exponent is p_e0·(e^(dτ) − 1)/d. At d = 0 that is the removable
  * singularity p_e0·τ; far above it the exponent overflows and nothing survives.
  */
-function errorIntegral(gap: number, tau: number): number {
-  if (Math.abs(gap) < 1e-12) return ERROR_HAZARD_BASE * tau
+function errorIntegral(gap: number, tau: number, errorBase: number): number {
+  if (Math.abs(gap) < 1e-12) return errorBase * tau
   const x = gap * tau
   if (x > 700) return Infinity
-  return (ERROR_HAZARD_BASE * (Math.exp(x) - 1)) / gap
+  return (errorBase * (Math.exp(x) - 1)) / gap
 }
 
 /**
@@ -70,21 +69,33 @@ function errorIntegral(gap: number, tau: number): number {
  * is substituted — so that term keeps its closed form. Error and the external
  * hazard are added in the exponent, and the survivors live 1/p_x years each.
  */
-function survivorCount(malice: number, growth: number, gap: number): number {
+function survivorCount(
+  malice: number,
+  growth: number,
+  gap: number,
+  errorBase: number,
+): number {
   const tau = LOG_DISTANCE / growth
   const exponent =
-    malice * (1 - 1 / LOG_DISTANCE) * tau + errorIntegral(gap, tau) + EXTERNAL_HAZARD * tau
+    malice * (1 - 1 / LOG_DISTANCE) * tau +
+    errorIntegral(gap, tau, errorBase) +
+    EXTERNAL_HAZARD * tau
   if (!isFinite(exponent)) return 0
   return (ARISING_PER_YEAR * Math.exp(-exponent)) / EXTERNAL_HAZARD
 }
 
-/** The widest capability gap a transition of `tau` years survives — bisected. */
-function criticalGap(tau: number): number {
-  let lo = -0.02
-  let hi = 0.05
-  for (let i = 0; i < 80; i++) {
+/**
+ * Where the line actually sits: the widest gap d at which the count still
+ * reaches one, bisected. This is the whole count, not the error term alone —
+ * malice has already spent part of the budget before error starts compounding,
+ * so d* tightens as the moral ratio worsens.
+ */
+function criticalGap(malice: number, growth: number, errorBase: number): number {
+  let lo = -0.05
+  let hi = 0.02
+  for (let i = 0; i < 90; i++) {
     const mid = (lo + hi) / 2
-    if (errorIntegral(mid, tau) < Math.LN2) lo = mid
+    if (survivorCount(malice, growth, mid, errorBase) >= 1) lo = mid
     else hi = mid
   }
   return lo
@@ -95,6 +106,9 @@ const rateFromSlider = (v: number) => Math.pow(10, -4 + (v / 100) * 2.5)
 
 /** The capability-gap slider spans the diagram's vertical axis. */
 const gapFromSlider = (v: number) => GAP_MIN + (v / 100) * (GAP_MAX - GAP_MIN)
+
+/** The error-rate dial: 0.0001% to 3.16% a year, the softest number in the model. */
+const errorFromSlider = (v: number) => Math.pow(10, -6 + (v / 100) * 4.5)
 
 const pct = (v: number, places: number) => `${(v * 100).toFixed(places)}%`
 const signedPct = (v: number) => `${v >= 0 ? '+' : ''}${(v * 100).toFixed(3)}%`
@@ -145,18 +159,25 @@ function shade(n: number): string {
 /**
  * The survivable region for one improvement rate.
  *
- * Redrawn only when g changes: moving g deforms the region itself, since a
- * slower transition means more years exposed to compounding capability, while
- * p_m0 and d only move the marker within it. The near-unity contour is painted
- * pale so the boundary reads as a line rather than a colour change.
+ * Redrawn only when g or p_e0 changes: those two deform the region itself,
+ * since a slower transition means more years exposed to compounding
+ * capability, while p_m0 and d only move the marker within it. The near-unity
+ * contour is painted pale so the boundary reads as a line rather than a colour
+ * change.
  */
-function drawField(ctx: CanvasRenderingContext2D, w: number, h: number, growth: number) {
+function drawField(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  growth: number,
+  errorBase: number,
+) {
   for (let x = 0; x < w; x += CELL) {
     const ratio = Math.pow(10, R_LO + ((x + CELL / 2) / w) * (R_HI - R_LO))
     const malice = ratio * growth
     for (let y = 0; y < h; y += CELL) {
       const gap = GAP_MAX - ((y + CELL / 2) / h) * (GAP_MAX - GAP_MIN)
-      const n = survivorCount(malice, growth, gap)
+      const n = survivorCount(malice, growth, gap, errorBase)
       const lg = Math.log10(Math.max(n, 1e-300))
       ctx.fillStyle = Math.abs(lg) < 0.12 ? '#E6EAF2' : shade(n)
       ctx.fillRect(x, y, CELL, CELL)
@@ -176,16 +197,14 @@ function fmtCount(n: number): string {
   return '0'
 }
 
-function phaseVerdict(moralPass: boolean, gapPass: boolean, n: number): string {
-  if (!moralPass && !gapPass)
-    return 'Both conditions missed. Improvement is too slow to outrun the malice, and competence is falling behind capability at the same time. Nothing clears the filter.'
-  if (!moralPass)
-    return 'The moral condition fails. Competence is keeping pace, but the transition takes longer than the dice allow, and the count collapses regardless.'
-  if (!gapPass)
-    return 'The moral condition passes and the competence condition does not. Virtue is outrunning malice, and error is compounding faster than either. This is the failure mode the single-hazard model could not see.'
+function phaseVerdict(n: number, moralPass: boolean): string {
   if (n >= 1000)
-    return 'Both cleared, comfortably. The galaxy holds thousands of transitioned civilizations, which means the filter cannot be what makes the sky quiet. Something else is.'
-  return 'Both cleared, narrowly. A handful exist, scattered across a hundred thousand light years and under no obligation to announce it.'
+    return 'Clear, comfortably. The galaxy holds thousands of transitioned civilizations, which means the filter cannot be what makes the sky quiet. Something else is.'
+  if (n >= 1)
+    return 'Clear, narrowly. A handful exist, scattered across a hundred thousand light years and under no obligation to announce it.'
+  if (moralPass)
+    return 'The moral term clears its threshold and the count still collapses. The error integral is doing the killing. Getting R under 0.70 is necessary and it is not close to sufficient.'
+  return 'Both terms are failing. Improvement is too slow to outrun the malice, and error is compounding on top of it.'
 }
 
 // ── component ────────────────────────────────────────────────────────────────
@@ -200,9 +219,10 @@ export default function LongFilter({
   const [riskStep, setRiskStep] = useState(35)
   const [yearsStep, setYearsStep] = useState(60)
   const [decay, setDecay] = useState(false)
-  const [maliceStep, setMaliceStep] = useState(80)
+  const [maliceStep, setMaliceStep] = useState(59)
   const [growthStep, setGrowthStep] = useState(71)
-  const [gapStep, setGapStep] = useState(50)
+  const [errorStep, setErrorStep] = useState(85.5)
+  const [gapStep, setGapStep] = useState(62.5)
   const plateRef = useRef<HTMLCanvasElement>(null)
   const phaseRef = useRef<HTMLCanvasElement>(null)
 
@@ -239,13 +259,15 @@ export default function LongFilter({
   // the phase diagram
   const malice = rateFromSlider(maliceStep)
   const growth = rateFromSlider(growthStep)
+  const errorBase = errorFromSlider(errorStep)
   const gap = gapFromSlider(gapStep)
   const ratio = malice / growth
   const tau = LOG_DISTANCE / growth
-  const count = survivorCount(malice, growth, gap)
-  const gapLimit = criticalGap(tau)
+  const count = survivorCount(malice, growth, gap, errorBase)
+  const gapLimit = criticalGap(malice, growth, errorBase)
+  const errorLoad = errorIntegral(gap, tau, errorBase)
   const moralPass = ratio < MORAL_THRESHOLD
-  const gapPass = gap < gapLimit
+  const errorSmall = errorLoad < Math.LN2
 
   useEffect(() => {
     const canvas = plateRef.current
@@ -267,8 +289,8 @@ export default function LongFilter({
     const canvas = phaseRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
-    drawField(ctx, canvas.width, canvas.height, growth)
-  }, [growth])
+    drawField(ctx, canvas.width, canvas.height, growth, errorBase)
+  }, [growth, errorBase])
 
   return (
     <main className={styles.page}>
@@ -495,11 +517,33 @@ export default function LongFilter({
               <span className={styles.gov}>governed by nobody</span>
             </div>
           </div>
-          <p className={`${styles.footnote} ${styles.hzNote}`}>
+          <p className={styles.hzNote}>
             The malice decomposition turns out to be exactly equivalent to replacing{' '}
             <span className={styles.mono}>s₀</span> with <span className={styles.mono}>e·s₀</span>,
             so the closed form is preserved and the threshold moves only from 0.667 to{' '}
-            {MORAL_THRESHOLD.toFixed(3)}. The error term has no such courtesy.
+            {MORAL_THRESHOLD.toFixed(3)}.
+          </p>
+          <p>
+            That holds only because malice hazard <em>saturates</em>. Let baseline malice grow with
+            capability instead and the closed form generalizes to a second ratio,{' '}
+            <span className={styles.mono}>Q = c/g</span>, whose threshold collapses by seventy orders
+            of magnitude. The reason it does not is that malice depends on crossing a threshold
+            rather than on magnitude: once a civilization can end itself once, being able to do it
+            forty times over does not multiply the annual odds that someone does. We crossed that
+            line around 1955, so the multiplier has been pinned ever since.
+          </p>
+          <p>
+            <strong>Error gets no such reprieve, and the asymmetry is the point.</strong> Each new
+            kind of capability opens failure channels the previous kinds did not have. Nuclear does
+            not teach you the failure modes of engineered biology, and neither teaches you whatever
+            comes next. Error grows in breadth rather than magnitude, and breadth has no ceiling.
+          </p>
+          <p className={`${styles.footnote} ${styles.hzCaveat}`}>
+            One more correction, and it is uncomfortable. The published catastrophe estimates
+            everyone quotes are totals, and the documented near-misses lean heavily toward false
+            alarms and misjudgment rather than decisions to attack. So most of that number belongs in
+            the error term, not the malice one. Which means the realistic baseline error rate is not
+            the tidy 10⁻⁵ this page originally assumed.
           </p>
         </div>
       </section>
@@ -509,11 +553,13 @@ export default function LongFilter({
         <div className={styles.wrap}>
           <div className={`${styles.secHead} ${styles.col}`}>
             <p className={styles.eyebrow}>IV. The region</p>
-            <h2>Two conditions, not one</h2>
+            <h2>Where the line actually sits</h2>
             <p>
               The horizontal axis is the moral ratio, malice risk over improvement rate. The vertical
               is the capability gap, how far competence trails capability. Blue is where at least one
-              transitioned civilization should exist. Everything else is empty sky.
+              transitioned civilization should exist. Everything else is empty sky. The page opens on
+              the corrected split: a 30 percent malice share of a 1 percent total, which puts the
+              rest in the error term.
             </p>
           </div>
 
@@ -551,6 +597,24 @@ export default function LongFilter({
                 step={0.5}
                 value={growthStep}
                 onChange={(e) => setGrowthStep(Number(e.target.value))}
+              />
+            </div>
+
+            <div className={styles.ctrl}>
+              <div className={styles.ctrlTop}>
+                <label className={styles.ctrlLabel} htmlFor="lf-error">
+                  p<sub>e0</sub> &nbsp;· baseline error rate
+                </label>
+                <span className={styles.ctrlVal}>{pct(errorBase, errorBase < 0.001 ? 3 : 2)}</span>
+              </div>
+              <input
+                type="range"
+                id="lf-error"
+                min={0}
+                max={100}
+                step={0.5}
+                value={errorStep}
+                onChange={(e) => setErrorStep(Number(e.target.value))}
               />
             </div>
 
@@ -618,16 +682,26 @@ export default function LongFilter({
                 <span className={styles.verdictLabel}>sage civilizations in the galaxy</span>
                 <div className={styles.gates}>
                   <div className={styles.gate}>
-                    <span>moral &nbsp; R &lt; {MORAL_THRESHOLD.toFixed(2)}</span>
+                    <span>moral term &nbsp; R</span>
                     <span className={moralPass ? styles.pass : styles.fail}>
-                      R = {ratio.toFixed(2)} &nbsp;{moralPass ? 'pass' : 'fail'}
+                      {ratio.toFixed(2)} &nbsp;
+                      {moralPass
+                        ? `clears ${MORAL_THRESHOLD.toFixed(2)}`
+                        : `over ${MORAL_THRESHOLD.toFixed(2)}`}
                     </span>
                   </div>
                   <div className={styles.gate}>
-                    <span>competence &nbsp; d &lt; d*</span>
-                    <span className={gapPass ? styles.pass : styles.fail}>
-                      d* = {pct(gapLimit, 3)} &nbsp;{gapPass ? 'pass' : 'fail'}
+                    <span>
+                      error integral &nbsp; I<sub>e</sub>
                     </span>
+                    <span className={errorSmall ? styles.pass : styles.fail}>
+                      {isFinite(errorLoad) ? errorLoad.toFixed(2) : '∞'} &nbsp;
+                      {errorSmall ? 'small' : 'dominant'}
+                    </span>
+                  </div>
+                  <div className={styles.gate}>
+                    <span>line sits at &nbsp; d*</span>
+                    <span className={styles.neutral}>{pct(gapLimit, 3)}</span>
                   </div>
                   <div className={styles.gate}>
                     <span>
@@ -639,16 +713,36 @@ export default function LongFilter({
                   </div>
                 </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
-                  {phaseVerdict(moralPass, gapPass, count)}
+                  {phaseVerdict(count, moralPass)}
                 </p>
               </div>
             </div>
 
-            <p className={`${styles.footnote} ${styles.phaseNote}`}>
-              Moving <span className={styles.mono}>g</span> deforms the region itself, because a
-              slower transition means more years exposed to compounding capability. A low improvement
-              rate raises R and tightens d* at the same time. Moral slowness is punished twice, and
-              the two conditions cannot be traded against each other.
+            <p className={styles.phaseNote}>
+              Note what the default already shows. <span className={styles.mono}>R</span> sits at
+              0.50 and clears its threshold with room to spare, and the count is still nine orders of
+              magnitude short of one.{' '}
+              <strong>
+                Getting the moral ratio under {MORAL_THRESHOLD.toFixed(2)} is necessary and nowhere
+                near sufficient.
+              </strong>{' '}
+              Reallocating hazard between the two terms barely moves the answer either, because it is
+              the total that integrates across the window.
+            </p>
+            <p className={styles.phaseBody}>
+              The consequence for <span className={styles.mono}>d</span> is harsher than it first
+              looked. At a realistic baseline error rate, competence has to <em>outpace</em>{' '}
+              capability by something like a fifth of a percent a year, permanently, for the whole
+              length of the transition. Not keep pace. Outpace.
+            </p>
+            <p className={`${styles.footnote} ${styles.phaseCaveat}`}>
+              Moving <span className={styles.mono}>g</span> or{' '}
+              <span className={styles.mono}>
+                p<sub>e0</sub>
+              </span>{' '}
+              redraws the region itself rather than just the marker. A slower transition means more
+              years exposed to compounding capability, so a low improvement rate raises R and pulls
+              d* down at the same time. Moral slowness is punished twice.
             </p>
           </div>
         </div>
@@ -711,9 +805,11 @@ export default function LongFilter({
             </span>
             . It is a ratio of logarithms, so it barely moves when the badly known parameters move:
             sweeping <span className={styles.mono}>s₀</span> across four orders of magnitude keeps it
-            inside 0.47 to 1.04. <strong>The second threshold has no such robustness</strong>,
-            because it depends exponentially on an error rate nobody has measured. That is the
-            softest number in the model and it is worth saying so.
+            inside 0.47 to 1.04. <strong>The error condition has no such robustness</strong>,
+            because it depends exponentially on a baseline rate nobody has measured. That is the
+            softest number in the model, it is the one the slider above exposes rather than hides,
+            and moving it across its plausible range moves the answer by more than any other
+            parameter here.
           </p>
         </div>
       </section>
@@ -726,14 +822,14 @@ export default function LongFilter({
           <p>
             There is no single resolution to the paradox here. The parameters select between two of
             them, and they require completely different explanations of the silence. Note the
-            asymmetry: reaching the left branch requires clearing both conditions, and reaching the
-            right requires missing only one.
+            asymmetry: reaching the left branch requires everything to go right at once, and reaching
+            the right requires only one term to run away.
           </p>
         </div>
         <div className={styles.colWide}>
           <div className={styles.fork}>
             <div className={styles.forkLeft}>
-              <span className={styles.k}>both conditions cleared</span>
+              <span className={styles.k}>the count clears one</span>
               <h3>The galaxy is crowded and quiet</h3>
               <p>
                 Survivors outnumber the doomed by orders of magnitude, because their lifetime is
@@ -744,13 +840,14 @@ export default function LongFilter({
               </p>
             </div>
             <div className={styles.forkRight}>
-              <span className={styles.k}>either condition missed</span>
+              <span className={styles.k}>the count collapses</span>
               <h3>The galaxy is empty</h3>
               <p>
                 Either the transition is too slow to outrun the dice, or capability outpaces
-                competence and the error term swallows everything. Nothing clears it. There is no
-                paradox left to solve and nothing to explain. The sky is quiet because there is
-                nobody in it, and we are early rather than overlooked.
+                competence and the error term swallows everything, and on current numbers it is the
+                second. Nothing clears it. There is no paradox left to solve and nothing to explain.
+                The sky is quiet because there is nobody in it, and we are early rather than
+                overlooked.
               </p>
             </div>
           </div>
@@ -821,8 +918,8 @@ export default function LongFilter({
             that will not beat the odds it has already set running.
           </p>
           <p>
-            Which branch we are on is not written anywhere. It is two ratios, and all four of their
-            terms are ours.
+            Which branch we are on is not written anywhere. It is a handful of rates, and every one
+            of them is ours.
           </p>
           <p className={`${styles.footnote} ${styles.closeNote}`}>
             One hypothesis among several, and the boring ones remain live. Life may be rare,
@@ -835,6 +932,11 @@ export default function LongFilter({
       </section>
 
       <footer className={`${styles.wrap} ${styles.colophon}`}>
+        <p className={`${styles.footnote} ${styles.colophonLink}`}>
+          <Link href="/playground/the-long-filter/formalism">
+            The derivations, the parameter sources, and the eleven ways this could be wrong
+          </Link>
+        </p>
         <p className={`${styles.footnote} ${styles.mono} ${styles.colophonLine}`}>
           Arete &nbsp;·&nbsp; working note &nbsp;·&nbsp; subject to revision
         </p>

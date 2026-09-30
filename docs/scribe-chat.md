@@ -227,7 +227,7 @@ Chat mode now scales to a book. A book (`scribe_books`) is a run of chapters
 (`scribe_chapters`), each owning one ordinary entry, so every chat feature
 keeps working per chapter. Design, budget numbers and the exact prompts:
 `docs/scribe/BOOK_DRAFT_DESIGN.md`. Migration
-`20260924120000_scribe_book_draft.sql` (applied by hand, never by the branch).
+`20260928143601_scribe_book_draft.sql` (applied by hand, never by the branch).
 
 - **Import and shaping.** `/admin/scribe/book/[id]` takes a pasted draft and
   previews the split before storing: Scribe shapes a stream of consciousness

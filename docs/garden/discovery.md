@@ -227,7 +227,7 @@ other in the same product.
    `edition_year` is null on it.
 5. **~~The Hicks Diogenes Laertius row has no `edition_year`.~~ Fixed.** Set to
    1925 for all 87 chunks in
-   `supabase/migrations/20260916190000_dl_hicks_edition_year.sql`. Hicks's Loeb
+   `supabase/migrations/20260916191400_dl_hicks_edition_year.sql`. Hicks's Loeb
    translation was first published in 1925 in two volumes, Book VII in volume
    II; and the row's `source_url` is Wikisource, which can only host the
    public-domain printing, so the year is the first edition rather than a later
