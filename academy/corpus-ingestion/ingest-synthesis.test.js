@@ -52,9 +52,9 @@ test('Fate: via_summary on the four named sections, corpus_verified elsewhere', 
   }
 });
 
-test('Virtues: version 3 is the newest, and earlier versions stay committed for history', () => {
+test('Virtues: version 4 is the newest, and earlier versions stay committed for history', () => {
   const versions = all.filter(p => p.doc.doc_key === 'virtues-of-socrates').map(p => p.doc.version).sort();
-  assert.deepEqual(versions, [1, 2, 3]);
+  assert.deepEqual(versions, [1, 2, 3, 4]);
   assert.equal(docs['virtues-of-socrates'].chunks.length, 71);
 });
 

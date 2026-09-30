@@ -124,12 +124,30 @@ test('Lutz: each test phrase is found once, in the lecture it belongs to', () =>
   }
 });
 
-test('Lutz: the XVIIIA page gap is marked in the text and in the chunk\'s ocr_quality, not reconstructed', () => {
-  const gap = body.find((c) => c.chunk_text.includes('and are all […] clitus when he said'));
-  assert.ok(gap);
-  assert.equal(gap.section_label, 'XVIIIA');
-  assert.equal(gap.ocr_quality, 'poor');
-  assert.equal(gap.locator, 'XVIIIA, pp. 113–115');
+test('Lutz: the lines the OCR lost are filled from the page images, and no chunk is marked damaged', () => {
+  for (const c of body) assert.doesNotMatch(c.chunk_text, /\[…\]/, c.locator);
+  for (const [phrase, lecture] of [
+    // VIII, p. 67 (image 17)
+    ['you may understand from this. The attribute of a kingly person', 'VIII'],
+    ['helpful, and humane. Could anyone be found more fit', 'VIII'],
+    ['such a man? No one. Even if he does not have many subjects', 'VIII'],
+    ['skilled in horsemanship. And so the title of kingly person', 'VIII'],
+    ['grateful for what he said and added, “In return', 'VIII'],
+    // XVI, p. 107 (image 37): the OCR's clipped margin
+    ['your father will restrain you', 'XVI'],
+    ['for we do not study philosophy with our hands', 'XVI'],
+    ['from using it nor from thinking', 'XVI'],
+    ['long hair nor deviate from the ordinary', 'XVI'],
+    // XVIIIA, p. 113 (image 40)
+    ['can nourish man well, and also food (other than flesh)', 'XVIIIA'],
+    ['meat was a less civilized kind of food', 'XVIIIA'],
+    ['as it seemed to Heraclitus when he said, “The clear dry soul is wisest and best.” But now, he said', 'XVIIIA'],
+    ['much worse than the unreasoning brutes', 'XVIIIA'],
+  ]) {
+    assert.deepEqual([...new Set(body.filter((c) => c.chunk_text.includes(phrase)).map((c) => c.section_label))], [lecture], phrase);
+  }
+  // No chunk overrides the source's quality with its own 'poor' or 'fair'.
+  for (const c of body) assert.ok(!['poor', 'fair'].includes(c.ocr_quality), c.locator);
 });
 
 test('Lutz: every chunk is cited by lecture and printed page, and none crosses a lecture', () => {
