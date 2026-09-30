@@ -389,8 +389,8 @@ app.post('/api/resources/fetch', async (req, res) => {
     .join('\n');
 
   try {
-    // Step 1: web search — let Claude find resources freely, no JSON constraint
-    const searchResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    // Single step: Sonnet with web search, returns JSON directly
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -399,74 +399,55 @@ app.post('/api/resources/fetch', async (req, res) => {
         'anthropic-beta': 'web-search-2025-03-05',
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-5',
         max_tokens: 2000,
         tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        system: `You are a research assistant. The user has personal development goals. For each goal, search the web and find 2-3 high-quality resources that are DIRECTLY and SPECIFICALLY about that goal. Every resource must be clearly relevant — do not include tangentially related books or articles. Prioritize: recently published articles (last 3 years), peer-reviewed research, and well-known books with a direct Amazon or Goodreads URL. For books, always use the Amazon product page URL or Goodreads URL — never a generic publisher or bookstore homepage. For articles, only include URLs that go directly to the specific article, not a homepage or category page. Verify each resource is specifically about the goal before including it.`,
-        messages: [
-          { role: 'user', content: `Find resources for these goals:\n${goalsText}` },
-        ],
-      }),
-    });
+        system: `You are a research assistant. Search the web to find high-quality resources for personal development goals.
 
-    if (!searchResponse.ok) {
-      const errorText = await searchResponse.text();
-      console.error('Claude API error (resources/fetch step 1):', searchResponse.status, errorText);
-      return res.status(searchResponse.status).json({ error: errorText });
-    }
+For each goal, find 2 resources — a mix of articles and books. Rules:
+- Only include URLs you have actually retrieved via web search — never invent or guess URLs
+- For books, use Amazon or Goodreads URLs only
+- For articles, only use the exact URL returned by your search
+- Every resource must be directly relevant to the specific goal
 
-    const searchData = await searchResponse.json();
-    const searchText = searchData.content?.find((b) => b.type === 'text')?.text || '';
-
-if (!searchText || searchText.length < 50) {
-  console.error('Step 1 returned no useful content:', searchText)
-  return res.status(500).json({ error: 'Failed to fetch resources' })
-}
-
-    // Step 2: convert findings to strict JSON — no web search, no beta header
-    const formatResponse = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2000,
-        system: `You convert research findings into a strict JSON array. Output ONLY the JSON array — no preamble, no markdown, no backticks, no explanation. Rules: (1) Every URL must point directly to the specific article or book page — never a homepage, category page, or search page. (2) For books use Amazon or Goodreads URLs only. (3) If a resource does not have a direct, specific URL, omit it entirely. (4) If a resource is not clearly relevant to its stated goal, omit it. If a field is unknown use an empty string. Format:
+After searching, respond with ONLY a valid JSON array, no preamble, no markdown, no backticks:
 [
   {
-    "goal": "goal title",
+    "goal": "goal title here",
     "title": "resource title",
-    "url": "https://...",
+    "url": "https://exact-url-from-search",
     "type": "article|book|research",
-    "summary": "1 sentence why relevant"
+    "summary": "one sentence why relevant"
   }
-]`,
+]
+
+If you cannot find a good resource for a goal, omit it rather than inventing a URL.`,
         messages: [
-          {
-            role: 'user',
-            content: `Goals:\n${goalsText}\n\nResearch findings:\n${searchText}\n\nConvert to JSON array.`
-          },
+          { role: 'user', content: `Search for resources for these goals and return JSON:\n${goalsText}` },
         ],
       }),
     });
 
-    if (!formatResponse.ok) {
-      const errorText = await formatResponse.text();
-      console.error('Claude API error (resources/fetch step 2):', formatResponse.status, errorText);
-      return res.status(formatResponse.status).json({ error: errorText });
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Claude API error (resources/fetch):', response.status, errorText);
+      return res.status(response.status).json({ error: errorText });
     }
 
-    const formatData = await formatResponse.json();
-    const rawText = formatData.content?.find((b) => b.type === 'text')?.text || '';
+    const data = await response.json();
+    const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
+
+    if (!rawText || rawText.length < 10) {
+      console.error('Resources fetch returned no text content');
+      return res.json({ resources: [] });
+    }
+
     const clean = rawText.replace(/```json|```/g, '').trim();
 
     try {
       const parsed = JSON.parse(clean);
 
-      // Step 3: validate URLs — drop any that return 404 or fail
+      // Validate URLs — drop 404s and 410s
       const validated = await Promise.allSettled(
         parsed.map(async (r) => {
           if (!r.url || !r.url.startsWith('http')) return null;
@@ -476,11 +457,9 @@ if (!searchText || searchText.length < 50) {
               signal: AbortSignal.timeout(4000),
               headers: { 'User-Agent': 'Mozilla/5.0' },
             });
-            // Accept any 2xx or 3xx — only drop hard 404s and 410s
             if (check.status === 404 || check.status === 410) return null;
             return r;
           } catch {
-            // Timeout or network error — keep it, don't penalise slow servers
             return r;
           }
         })
@@ -490,14 +469,14 @@ if (!searchText || searchText.length < 50) {
         .filter(r => r.status === 'fulfilled' && r.value !== null)
         .map(r => r.value);
 
-      res.json({ resources });
+      return res.json({ resources });
     } catch (parseErr) {
-      console.error('JSON parse failed. Raw response:', clean);
-      res.status(500).json({ error: 'Failed to parse resources response' });
+      console.error('JSON parse failed. Raw response:', rawText.slice(0, 500));
+      return res.json({ resources: [] });
     }
   } catch (err) {
     console.error('Resources fetch error:', err);
-    res.status(500).json({ error: 'Failed to fetch resources' });
+    return res.status(500).json({ error: 'Failed to fetch resources' });
   }
 });
 

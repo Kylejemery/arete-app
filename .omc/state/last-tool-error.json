@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd \\\"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\.claude\\\\worktrees\\\\condescending-keller-49d25c\\\" && git push\",\"description\":\"Push to remote\"}",
+  "error": "Exit code 128\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!\nfatal: The upstream branch of your current branch does not match\nthe name of your current branch.  To push to the upstream branch\non the remote, use\n\n    git push origin HEAD:main\n\nTo push to the branch of the same name on the remote, use\n\n    git push origin HEAD\n\nTo choose either option permanently, see push.default in 'git help config'.\n\nTo avoid...",
+  "timestamp": "2026-04-21T18:12:30.115Z",
+  "retry_count": 1
+}
