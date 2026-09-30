@@ -69,8 +69,8 @@ Work on the current milestone only. Do not start the next one until Kyle marks t
 
 1. **Machine data export** [DONE 2026-09-29, marked by Kyle]. Delivered in PRs #307, #309 and #310. See the brief below.
 2. **Machine page** [DONE 2026-09-29, marked by Kyle; delivered in #314] built and published. Kyle asked for it in this repo after all: the source is `themata/machine.html`, and it runs at `/playground/themata-machine` on the academy site, visible to the owner only until the specialist review (guardrail 5). A private copy is also on claude.ai. `node scripts/themata/sync-machine-page.mjs` carries the page and the export into `academy/web/`; rerun it after any new export.
-3. **Sextus and Bobzien 1996 ingested** [CURRENT] into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
-4. **Ledger rebuilt on primary texts.** Remove secondary summaries as evidence. Kyle signs off every entry.
+3. **Sextus and Bobzien 1996 ingested** [DONE 2026-09-30, marked by Kyle] into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
+4. **Ledger rebuilt on primary texts.** [CURRENT] Remove secondary summaries as evidence. Kyle signs off every entry.
 5. **Bobzien's reconstruction encoded as a candidate.** Rerun the harness and report results against the existing candidates.
 6. **Review package for a Stoic logic specialist.** Ledger, encoding choices, results, and open questions.
 
