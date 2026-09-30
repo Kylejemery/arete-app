@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1783298783210,
-  "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete",
+  "lastScanned": 1790364120193,
+  "projectRoot": "C:\\Users\\kjemery\\Arete\\Arete\\.claude\\worktrees\\nervous-hopper-502218",
   "techStack": {
     "languages": [
       {
@@ -53,7 +53,7 @@
     }
   },
   "conventions": {
-    "namingStyle": "camelCase",
+    "namingStyle": "camelCase/PascalCase",
     "importStyle": "ES modules",
     "testPattern": null,
     "fileOrganization": null
@@ -80,89 +80,72 @@
       "path": "academy",
       "purpose": null,
       "fileCount": 3,
-      "lastAccessed": 1783298782997,
+      "lastAccessed": 1790364119740,
       "keyFiles": [
         "Arete_Academy_Langugage_Logic_Courses_v1.txt",
         "GREK_101_Sessions_2_10.txt"
       ]
     },
-    "android": {
-      "path": "android",
-      "purpose": null,
-      "fileCount": 6,
-      "lastAccessed": 1783298783001,
-      "keyFiles": [
-        "build.gradle",
-        "gradle.properties",
-        "gradlew",
-        "gradlew.bat",
-        "settings.gradle"
-      ]
-    },
     "app": {
       "path": "app",
       "purpose": "Application code",
-      "fileCount": 20,
-      "lastAccessed": 1783298783064,
+      "fileCount": 23,
+      "lastAccessed": 1790364119860,
       "keyFiles": [
+        "academy.tsx",
         "belief-journal.tsx",
         "counselor-chat.tsx",
         "dispatch.tsx",
-        "evening.tsx",
-        "home.tsx"
+        "evening.tsx"
       ]
-    },
-    "app-example": {
-      "path": "app-example",
-      "purpose": null,
-      "fileCount": 0,
-      "lastAccessed": 1783298783067,
-      "keyFiles": []
     },
     "assets": {
       "path": "assets",
       "purpose": "Static assets",
       "fileCount": 0,
-      "lastAccessed": 1783298783067,
+      "lastAccessed": 1790364119861,
       "keyFiles": []
     },
     "components": {
       "path": "components",
       "purpose": "UI components",
-      "fileCount": 8,
-      "lastAccessed": 1783298783068,
+      "fileCount": 17,
+      "lastAccessed": 1790364119862,
       "keyFiles": [
         "CabinetPreview.tsx",
+        "CheckInChip.tsx",
         "CounselorCard.tsx",
-        "ErrorBoundary.tsx",
-        "EveningScreen.js",
-        "HomeScreen.js"
-      ]
-    },
-    "dist": {
-      "path": "dist",
-      "purpose": "Distribution/build output",
-      "fileCount": 1,
-      "lastAccessed": 1783298783069,
-      "keyFiles": [
-        "metadata.json"
+        "CounselorText.tsx",
+        "DayDivider.tsx"
       ]
     },
     "docs": {
       "path": "docs",
       "purpose": "Documentation",
-      "fileCount": 2,
-      "lastAccessed": 1783298783069,
+      "fileCount": 8,
+      "lastAccessed": 1790364119863,
       "keyFiles": [
+        "academy-content-review-2026-09-01.md",
+        "composer.md",
         "index.html",
-        "privacy.html"
+        "long-filter-appendix.md",
+        "machine-tells.md"
+      ]
+    },
+    "exhibits": {
+      "path": "exhibits",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1790364119864,
+      "keyFiles": [
+        "registry.ts"
       ]
     },
     "hooks": {
       "path": "hooks",
       "purpose": null,
       "fileCount": 2,
-      "lastAccessed": 1783298783070,
+      "lastAccessed": 1790364119865,
       "keyFiles": [
         "useSwipeNavigation.ts",
         "useTierLimits.ts"
@@ -171,21 +154,33 @@
     "lib": {
       "path": "lib",
       "purpose": "Library code",
-      "fileCount": 10,
-      "lastAccessed": 1783298783070,
+      "fileCount": 30,
+      "lastAccessed": 1790364119865,
       "keyFiles": [
-        "crashCapture.ts",
-        "db.ts",
-        "devMode.ts",
-        "llmModels.ts",
-        "pushNotifications.ts"
+        "agora.ts",
+        "attend.ts",
+        "broadcasts.ts",
+        "cabinetSignals.ts",
+        "calendar.ts"
+      ]
+    },
+    "moltbook-agent": {
+      "path": "moltbook-agent",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1790364119866,
+      "keyFiles": [
+        "package-lock.json",
+        "package.json",
+        "railway.json",
+        "README.md"
       ]
     },
     "plugins": {
       "path": "plugins",
       "purpose": null,
       "fileCount": 1,
-      "lastAccessed": 1783298783071,
+      "lastAccessed": 1790364119866,
       "keyFiles": [
         "withRCTTurboModulePatch.js"
       ]
@@ -194,14 +189,14 @@
       "path": "pull",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1783298783071,
+      "lastAccessed": 1790364119868,
       "keyFiles": []
     },
     "scripts": {
       "path": "scripts",
       "purpose": "Build/utility scripts",
-      "fileCount": 3,
-      "lastAccessed": 1783298783072,
+      "fileCount": 2,
+      "lastAccessed": 1790364119869,
       "keyFiles": [
         "cabinet_conversations_extracted.md",
         "extract_cabinet_conversations.js"
@@ -210,21 +205,21 @@
     "server": {
       "path": "server",
       "purpose": null,
-      "fileCount": 32,
-      "lastAccessed": 1783298783073,
+      "fileCount": 42,
+      "lastAccessed": 1790364119870,
       "keyFiles": [
+        "broadcast-delivery-agent.js",
         "corpus-agent.js",
         "coverage-gap-agent.js",
         "COVERAGE_GAP_AGENT.md",
-        "dispatch-delivery-agent.js",
-        "dispatch-generation-agent.js"
+        "dispatch-delivery-agent.js"
       ]
     },
     "services": {
       "path": "services",
       "purpose": "Business logic services",
       "fileCount": 2,
-      "lastAccessed": 1783298783074,
+      "lastAccessed": 1790364119870,
       "keyFiles": [
         "claudeService.ts",
         "threadService.ts"
@@ -234,79 +229,63 @@
       "path": "supabase",
       "purpose": null,
       "fileCount": 0,
-      "lastAccessed": 1783298783074,
+      "lastAccessed": 1790364119871,
+      "keyFiles": []
+    },
+    "targets": {
+      "path": "targets",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1790364119872,
       "keyFiles": []
     },
     "web": {
       "path": "web",
       "purpose": null,
-      "fileCount": 14,
-      "lastAccessed": 1783298783075,
+      "fileCount": 11,
+      "lastAccessed": 1790364119873,
       "keyFiles": [
         "eslint.config.mjs",
-        "next-env.d.ts",
         "next.config.ts",
         "package-lock.json",
-        "package.json"
+        "package.json",
+        "postcss.config.js"
       ]
     },
-    "android\\app": {
-      "path": "android\\app",
-      "purpose": "Application code",
-      "fileCount": 3,
-      "lastAccessed": 1783298783076,
-      "keyFiles": [
-        "build.gradle",
-        "debug.keystore",
-        "proguard-rules.pro"
-      ]
-    },
-    "app-example\\app": {
-      "path": "app-example\\app",
-      "purpose": "Application code",
-      "fileCount": 2,
-      "lastAccessed": 1783298783077,
-      "keyFiles": [
-        "modal.tsx",
-        "_layout.tsx"
-      ]
-    },
-    "app-example\\components": {
-      "path": "app-example\\components",
-      "purpose": "UI components",
-      "fileCount": 6,
-      "lastAccessed": 1783298783079,
-      "keyFiles": [
-        "external-link.tsx",
-        "haptic-tab.tsx",
-        "hello-wave.tsx"
-      ]
-    },
-    "app-example\\scripts": {
-      "path": "app-example\\scripts",
+    "moltbook-agent\\scripts": {
+      "path": "moltbook-agent\\scripts",
       "purpose": "Build/utility scripts",
       "fileCount": 1,
-      "lastAccessed": 1783298783079,
+      "lastAccessed": 1790364119877,
       "keyFiles": [
-        "reset-project.js"
+        "register.js"
       ]
     },
-    "dist\\assets": {
-      "path": "dist\\assets",
-      "purpose": "Static assets",
-      "fileCount": 42,
-      "lastAccessed": 1783298783083,
+    "moltbook-agent\\src": {
+      "path": "moltbook-agent\\src",
+      "purpose": "Source code",
+      "fileCount": 6,
+      "lastAccessed": 1790364119878,
       "keyFiles": [
-        "017bc6ba3fc25503e5eb5e53826d48a8",
-        "0747a1317bbe9c6fc340b889ef8ab3ae",
-        "0a328cd9c1afd0afe8e3b1ec5165b1b4"
+        "brain.js",
+        "config.js",
+        "index.js"
+      ]
+    },
+    "server\\config": {
+      "path": "server\\config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1790364119881,
+      "keyFiles": [
+        "stoic-queries.yaml"
       ]
     },
     "server\\data": {
       "path": "server\\data",
       "purpose": "Data files",
       "fileCount": 2,
-      "lastAccessed": 1783298783086,
+      "lastAccessed": 1790364119881,
       "keyFiles": [
         "seed-significance-map.js",
         "significance-map.json"
@@ -315,88 +294,120 @@
     "supabase\\migrations": {
       "path": "supabase\\migrations",
       "purpose": "Database migrations",
-      "fileCount": 54,
-      "lastAccessed": 1783298783087,
+      "fileCount": 139,
+      "lastAccessed": 1790364119883,
       "keyFiles": [
         "001_initial_schema.sql",
         "20260320000000_custom_cabinet.sql",
         "20260320000001_seed_counselors.sql"
       ]
     },
-    "web\\node_modules": {
-      "path": "web\\node_modules",
-      "purpose": "Dependencies",
+    "web\\public": {
+      "path": "web\\public",
+      "purpose": "Public files",
       "fileCount": 1,
-      "lastAccessed": 1783298783089,
-      "keyFiles": []
+      "lastAccessed": 1790364119884,
+      "keyFiles": [
+        "manifest.json"
+      ]
     }
   },
   "hotPaths": [
     {
-      "path": "academy\\web\\src\\app\\library\\page.tsx",
-      "accessCount": 19,
-      "lastAccessed": 1783300727834,
+      "path": "academy\\web\\src\\lib\\scribe\\chat.ts",
+      "accessCount": 11,
+      "lastAccessed": 1790364501314,
       "type": "file"
     },
     {
-      "path": "server\\index.js",
-      "accessCount": 10,
-      "lastAccessed": 1783299860717,
-      "type": "directory"
-    },
-    {
-      "path": "server\\routes\\observatory.js",
-      "accessCount": 8,
-      "lastAccessed": 1783301217444,
+      "path": "academy\\web\\src\\app\\admin\\scribe\\chat\\page.tsx",
+      "accessCount": 7,
+      "lastAccessed": 1790368911366,
       "type": "file"
     },
     {
-      "path": "server",
-      "accessCount": 1,
-      "lastAccessed": 1783298955462,
-      "type": "directory"
-    },
-    {
-      "path": "supabase\\migrations\\20260618000000_corpus_gap_agent_tables.sql",
-      "accessCount": 1,
-      "lastAccessed": 1783299008829,
+      "path": "academy\\web\\src\\app\\admin\\scribe\\chat\\DraftWorkspace.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1790368749225,
       "type": "file"
     },
     {
-      "path": "supabase\\migrations\\20260703000000_observatory_retrieval_events.sql",
-      "accessCount": 1,
-      "lastAccessed": 1783299229550,
+      "path": "academy\\web\\src\\lib\\scribe\\book-store.ts",
+      "accessCount": 4,
+      "lastAccessed": 1790365156874,
       "type": "file"
     },
     {
-      "path": "academy\\web\\src",
-      "accessCount": 1,
-      "lastAccessed": 1783299413285,
-      "type": "directory"
-    },
-    {
-      "path": "supabase\\migrations\\20260705000000_canonical_concepts.sql",
-      "accessCount": 1,
-      "lastAccessed": 1783299593421,
+      "path": "academy\\web\\src\\lib\\scribe\\book.ts",
+      "accessCount": 2,
+      "lastAccessed": 1790365078569,
       "type": "file"
     },
     {
-      "path": "server\\lib\\canonical-concepts.js",
-      "accessCount": 1,
-      "lastAccessed": 1783299689652,
+      "path": "academy\\web\\src\\lib\\scribe\\anthropic.ts",
+      "accessCount": 2,
+      "lastAccessed": 1790365137005,
       "type": "file"
     },
     {
-      "path": "server\\scripts\\consolidate-concepts.js",
+      "path": "supabase\\migrations\\20260924120000_scribe_book_draft.sql",
       "accessCount": 1,
-      "lastAccessed": 1783299721760,
+      "lastAccessed": 1790364802696,
       "type": "file"
     },
     {
-      "path": "academy\\web\\src\\app",
+      "path": "academy\\web\\src\\app\\api\\admin\\scribe\\books\\[id]\\import\\route.ts",
       "accessCount": 1,
-      "lastAccessed": 1783300288149,
-      "type": "directory"
+      "lastAccessed": 1790364858693,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\api\\admin\\scribe\\books\\[id]\\chapters\\[chapterId]\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790364882245,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\api\\admin\\scribe\\findings\\[id]\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790364924846,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\api\\admin\\scribe\\entries\\[id]\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790364932561,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\api\\admin\\scribe\\entries\\[id]\\turn\\route.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790365012240,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\lib\\scribe\\book-prompts.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790365071705,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\app\\admin\\scribe\\book\\[id]\\page.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1790368701424,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\scripts\\scribe-book-smoke.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790368707250,
+      "type": "file"
+    },
+    {
+      "path": "academy\\web\\src\\scripts\\backfill-log-embeddings.ts",
+      "accessCount": 1,
+      "lastAccessed": 1790606257326,
+      "type": "file"
     }
   ],
   "userDirectives": []
