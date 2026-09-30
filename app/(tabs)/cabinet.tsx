@@ -43,6 +43,7 @@ import {
   loadThread,
   loadThreadStrict,
   normalizeCounselorId,
+  sameCounselorLine,
   saveThread,
 } from '../../services/threadService';
 import DayDivider from '../../components/DayDivider';
@@ -243,13 +244,27 @@ export default function CabinetScreen() {
   // A counselor line seeded from a notification (tapped, delivered while
   // open, or recovered on foreground) lands in the stored thread; fold any
   // new lines into the view without disturbing what is already on screen.
+  // A counselor line is matched by the same rule the seeding path uses (same
+  // words, same day), not by exact timestamp: the stored thread can still hold
+  // a second copy of a reminder under another clock, and it must never be
+  // shown twice.
   const absorbNewLines = useCallback(async () => {
     try {
       const thread = await loadThread('cabinet');
       setMessages(prev => {
-        const key = (m: { timestamp: number; content: string }) => `${m.timestamp}:${m.content.slice(0, 48)}`;
+        const key = (m: ThreadMessage) => `${m.role}:${m.timestamp}:${m.content.slice(0, 48)}`;
         const have = new Set(prev.map(key));
-        const fresh = thread.messages.filter(m => !have.has(key(m)));
+        const lines = prev.filter(m => m.role === 'assistant' && m.counselorName);
+        const fresh: ThreadMessage[] = [];
+        for (const m of thread.messages) {
+          if (have.has(key(m))) continue;
+          if (m.role === 'assistant' && m.counselorName) {
+            if (lines.some(l => sameCounselorLine(l, m))) continue;
+            lines.push(m);
+          }
+          have.add(key(m));
+          fresh.push(m);
+        }
         return fresh.length ? [...prev, ...fresh] : prev;
       });
     } catch { /* keep what we have */ }
