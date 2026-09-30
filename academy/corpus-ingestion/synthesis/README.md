@@ -133,7 +133,8 @@ with no embedding cannot be retrieved by any `match_rag_corpus*` function.
 | --- | --- | --- |
 | `stoic-logic-summary.v1.md` | 23 | 15 corpus_verified, 8 via_summary |
 | `fate-providence-up-to-us.v1.md` | 15 | 11 corpus_verified, 4 via_summary |
-| `virtues-of-socrates.v3.md` (live) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v4.md` (live) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
+| `virtues-of-socrates.v3.md` (inactive, kept for history) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
 | `virtues-of-socrates.v2.md` (inactive, kept for history) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
 | `virtues-of-socrates.v1.md` (inactive, kept for history) | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
 
@@ -160,6 +161,15 @@ falls in gaps in our copy of Lutz rather than on a missing page. Loaded
 through the pipeline's own sync (`node ingest-synthesis.js --file
 virtues-of-socrates.v3.md`), which registered it, activated it, and embedded
 its chunks.
+
+Virtues version 4 (2026-09-30) corrects one sentence of version 3. The lines
+of Lutz's Lecture XVIIIA that our OCR had lost were filled from the scan's
+page images (`docs/corpus/ADMISSIONS_2026-09-29_MUSONIUS_LUTZ.md`), and they
+hold the meat passage, so "his remarks on meat fall in gaps in our copy" was
+no longer true. The Eating animals row now says what Lutz prints: meat a less
+civilized food, fitter for wild animals, heavy and an obstacle to thinking.
+The same claim check found every other Musonius rule citing VIII, XI, XVI or
+XVIIIA still true of the filled text.
 
 ## Tests
 

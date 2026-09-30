@@ -103,8 +103,11 @@ pages (by running head, or by lecture heading on an opening page), drops
 Lutz's notes, stray Greek lines and margin numbers, and cuts long paragraphs at
 sentence ends. Every note continuation, gap in the scan and OCR fix it relies
 on is listed in the source entry, and one that stops matching refuses the
-source. A chunk over lost lines carries its own `ocr_quality`
-(`corpus_staging_chunks.ocr_quality`, which promotion prefers to the
-source's). The license is `unverified` (a 1947 US publication, no renewal
-found), so it is never quotable. Admission record:
+source. A gap can carry a `fill`: words the OCR lost, read off the scan's page
+image (`from` names it), which take the gap's place instead of "[…]". Since
+2026-09-30 every Lutz gap is filled. A chunk over lines left unfilled carries
+its own `ocr_quality` (`corpus_staging_chunks.ocr_quality`, which promotion
+prefers to the source's). The license is `public_domain_no_renewal` (a 1947 US
+publication; the renewal search of the 1974–76 catalogs found none), and it is
+never quotable on air. Admission record:
 `docs/corpus/ADMISSIONS_2026-09-29_MUSONIUS_LUTZ.md`.
