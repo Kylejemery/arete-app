@@ -395,21 +395,24 @@
 # ---------------------------------------------------------------------------
 
 - id: S014
-  schema: "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light')"
+  schema: "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light', 'You are breathing; therefore you are living')"
   verdict: disputed
   kind: single_premise
   source: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245"
   passage: |
-    With these [(δ) Inference from a single premiss.] composite forms of
-    inference Antipater contrasted other forms having only a single premiss,
-    [245] but it was an addition to the field of logic of very doubtful worth.
-  corpus_ref: "8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca"
+    [245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα
+    ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.
+  corpus_ref: "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4"
   notes: |
-    Zeller n.245 (chunk 73ca2320-47fc-4eed-b9b0-fc8ad0d060e4) gives the Greek
-    name and the examples: "[245] Called μονολήμματοι συλλογισμοί. Such were
-    ἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα. See Alex. Top. 6, 274;
-    Anal. Pr. 7, a, 8, a: Sext. Pyrrh. ii. 167; Math. viii. 443; Apul. Dogm.
-    Plat. iii. 272, Oud."
+    Merged with the former S015 (Kyle, 2026-09-30). The two entries had the
+    same form and were kept apart only because their examples come down
+    separately. Zeller n.245 gives both; the id S015 is retired, not reused.
+    Zeller's main text (chunk 8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca): "With
+    these [(δ) Inference from a single premiss.] composite forms of inference
+    Antipater contrasted other forms having only a single premiss, [245] but
+    it was an addition to the field of logic of very doubtful worth."
+    The rest of n.245: "See Alex. Top. 6, 274; Anal. Pr. 7, a, 8, a: Sext.
+    Pyrrh. ii. 167; Math. viii. 443; Apul. Dogm. Plat. iii. 272, Oud."
     That Chrysippus rejected them appears in the corpus only through Mates's
     summary (chunk 78c91994-ccd2-47ac-9eb9-17201baa0783): "Chrysippus denied
     them; Antipater of Tarsus defended them with examples like 'You are
@@ -421,22 +424,8 @@
     Chrysippus's policy it becomes S001 with the conditional made explicit.
     How to represent "p; therefore q" without a propositional link is a
     Phase 2 decision (Params.lean).
-  confidence: medium
-  verified_by_kyle: false
-
-- id: S015
-  schema: "p; therefore q   (where 'if p, q' is true, e.g. 'You are breathing; therefore you are living')"
-  verdict: disputed
-  kind: single_premise
-  source: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)"
-  passage: |
-    [245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα
-    ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.
-  corpus_ref: "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4"
-  notes: |
-    The second attested example of the same form as S014. It is kept as its
-    own entry because the two examples come down separately in the sources.
-    Kyle may prefer to merge them.
+    Primary replacement drafted in primary-proposals.yaml (Sextus PH II 159,
+    167; M VIII 443), pending the Sextus licences.
   confidence: medium
   verified_by_kyle: false
 

@@ -89,17 +89,12 @@
     it is light" is Sextus's own reduction of the first indemonstrable (PH II
     159; also M VIII 440-441, proofread p. 469). The second M VIII quotation is
     on p. 471, which is not yet proofread; the OCR there is clean but should be
-    checked against the licensed copy.
+    checked against the licensed copy. S014 now also covers the former S015.
   confidence: high
 
 - id: S015
-  replaces: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)"
-  proposal: "No primary witness in the stored texts. Merge into S014, or keep on Zeller until Alexander is sourced."
-  notes: |
-    The example "You are breathing, therefore you are living" (ἀναπνεῖς, ζῇς
-    ἄρα) is not in either Sextus text; Zeller n.245 cites Alexander (Top.,
-    in APr.) and Apuleius for it. The form is the same as S014. Kyle already
-    raised merging the two.
+  replaces: "(merged into S014 by Kyle, 2026-09-30; id retired)"
+  proposal: "None. The S014 proposal covers the form; its second example (\"You are breathing, therefore you are living\") has no witness in the Sextus texts."
 
 - id: S016
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"

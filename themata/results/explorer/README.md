@@ -20,8 +20,8 @@ not validate against `schema.json`.
 
 **Counts are distinct searches.** A search is one candidate × one proof
 setting (`single`, `contra`, `view`: 12 of them) × one formal item: 66 × 12 ×
-18 = 14,256. `runs/` holds eight records per search, one per (`cond`,
-`redundancy`), 114,048 in all. Quote the distinct figures (`index.json`
+17 = 13,464. `runs/` holds eight records per search, one per (`cond`,
+`redundancy`), 107,712 in all. Quote the distinct figures (`index.json`
 `counts`); `counts.run_records` is the record total.
 
 **Review status.** No ledger entry is `verified_by_kyle`, and no specialist
@@ -46,7 +46,7 @@ Each run is one candidate × one setting × one formal item.
 That is 96 settings. The parameter names and values are the constructor
 names in `lean/Stoic/Params.lean`, read from Lean's `Repr`. Derivability
 reads only `single`, `contra` and `view`, so the 96 settings fold into 12
-proof settings and 14,256 distinct searches. The harness still makes every run
+proof settings and 13,464 distinct searches. The harness still makes every run
 under its full parameter record. `cond` and `redundancy` enter through
 `semantics` and through the S008 criterion check.
 
@@ -58,7 +58,7 @@ the eight (`cond`, `redundancy`) combinations, and `build_export.py` compares
 the eight records field by field:
 
 - every field except `setting` and `matches_ledger` is identical in all eight
-  records, for all 14,256 searches: `cell`, `status`, `depth`,
+  records, for all 13,464 searches: `cell`, `status`, `depth`,
   `within_depth`, `saturated`, `truncated`, `proof`, the reduction, and both
   redundant variants' results;
 - `matches_ledger` varies in 792 searches, every S008 search, and only with
@@ -167,8 +167,8 @@ items, which are not run.
 | `in_formal_suite` | harness |
 | `example` | `{text, language, note}`, quoted from the ledger `passage` (checked). Null when the passage has none. The quotations are chosen in `harness/explorer_inputs.yaml` |
 | `encoded` | the argument the harness runs, `{premises, conclusion, text}` |
-| `theory` | background conditionals held true (S014, S015) |
-| `encoding_note` | where the encoding departs from the ledger schema (S014, S015, S018) |
+| `theory` | background conditionals held true (S014) |
+| `encoding_note` | where the encoding departs from the ledger schema (S014, S018) |
 | `semantics` | for each `cond` × `redundancy`: `criterion_valid` (DL 7.77), `redundant`, `stoic_valid`, each `yes`/`no`/`unknown`. `unknown` means no complete procedure exists (Diodorean) |
 | `redundant_variant` | the fresh-atom variant: `{encoded, added_premise, semantics}` |
 | `duplicate_variant` | the duplicated-premise variant, same fields; `added_premise` is the copy |
@@ -182,7 +182,7 @@ items, which are not run.
 
 `provenance.secondary_summary` is `{flag, scope, basis}`. It is flagged when
 the source names a Mode 2 summary. Its scope is `whole`, or `partial` when the
-source also names another witness (S015). S014 is flagged `partial` from its
+source also names another witness. S014 is flagged `partial` from its
 notes: Chrysippus's rejection of single-premise arguments "appears in the
 corpus only through Mates's summary".
 

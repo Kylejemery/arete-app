@@ -221,7 +221,7 @@ theorem underivable_of_countermodel {c : Candidate} (hc : c ∈ Themata.candidat
 Under Chrysippus's policy no base argument has one premise, contraposition
 keeps the premise count, and cut never drops below the lemma's premises. So
 under the `list` and `multiset` views every derived argument has at least two
-premises, and no candidate derives a single-premise argument (S014, S015).
+premises, and no candidate derives a single-premise argument (S014).
 Under `set` a view can shrink a list, and the invariant is not claimed. -/
 
 /-- A rule keeps every argument at two premises or more. -/

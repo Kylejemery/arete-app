@@ -92,7 +92,7 @@ theorem covers it. None of these uses `sorry`.
 
 | Route | Idea | Covers |
 | --- | --- | --- |
-| Philonian soundness | every rule preserves classical truth, so a classical countermodel rules an argument out | S006, S007; S014/S015 under Chrysippus |
+| Philonian soundness | every rule preserves classical truth, so a classical countermodel rules an argument out | S006, S007; S014 under Chrysippus |
 | Sugihara soundness | every rule preserves validity in the relevance logic RM, where premises fuse and weakening fails | S016, S008 |
 | Closed valuations | cut preserves truth under any assignment closed under the base cases; contraposition does not | S020 for every candidate without a first thema |
 | Gödel G₃ soundness | under `negate`, every rule is sound where "not not p" ≠ p | the Sorites under `negate` |
@@ -156,7 +156,7 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
 ## 6. Limits and caveats
 
 - **The ledger is small and unsigned.**
-  - It holds 18 formal items.
+  - It holds 17 formal items.
   - No entry has Kyle's sign-off.
   - The main ancient sources for the themata are missing from the corpus:
     Sextus M VIII, Galen and Alexander. Origen is available through
@@ -168,7 +168,8 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
   - The Stoic example itself is clear.
 - **Encoding choices matter.**
   - S018 is run as a three-link Sorites.
-  - S014 and S015 are one form, with the conditional as background theory.
+  - S014 is run with the conditional as background theory. (The former S015,
+    the same form, was merged into it on 2026-09-30.)
   - Under the `list` view, results depend on the order in which the ledger
     lists premises.
 - **Mates is represented by a Mode 2 summary.** Our reading of the

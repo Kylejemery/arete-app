@@ -268,7 +268,7 @@ def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
   out := out.push ""
   out := out.push "## Semantic table"
   out := out.push ""
-  out := out.push "Independent of candidates. Each cell: valid by the criterion (DL 7.77) / redundant under `strict` / redundant under `narrow`. `?`: no complete procedure (Diodorean). S014/S015 are checked with their background conditional added as a premise."
+  out := out.push "Independent of candidates. Each cell: valid by the criterion (DL 7.77) / redundant under `strict` / redundant under `narrow`. `?`: no complete procedure (Diodorean). S014 is checked with its background conditional added as a premise."
   out := out.push ""
   out := out.push semanticTable
   return "\n".intercalate out.toList ++ "\n"

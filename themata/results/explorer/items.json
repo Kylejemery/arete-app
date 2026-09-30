@@ -3129,243 +3129,7 @@
  },
  {
   "id": "S014",
-  "schema": "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light')",
-  "kind": "single_premise",
-  "flags": [],
-  "ancient_verdict": "disputed",
-  "confidence": "medium",
-  "in_formal_suite": true,
-  "example": null,
-  "encoded": {
-   "text": "p; therefore q",
-   "premises": [
-    "p"
-   ],
-   "conclusion": "q"
-  },
-  "theory": [
-   "if p, q"
-  ],
-  "encoding_note": "The conditional 'if p, q' is background theory, held true, not a premise.",
-  "semantics": [
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "strict",
-    "criterion_valid": "yes",
-    "cond": "philonian"
-   },
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "narrow",
-    "criterion_valid": "yes",
-    "cond": "philonian"
-   },
-   {
-    "stoic_valid": "unknown",
-    "redundant": "unknown",
-    "redundancy": "strict",
-    "criterion_valid": "unknown",
-    "cond": "diodorean"
-   },
-   {
-    "stoic_valid": "unknown",
-    "redundant": "unknown",
-    "redundancy": "narrow",
-    "criterion_valid": "unknown",
-    "cond": "diodorean"
-   },
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "strict",
-    "criterion_valid": "yes",
-    "cond": "chrysippean"
-   },
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "narrow",
-    "criterion_valid": "yes",
-    "cond": "chrysippean"
-   },
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "strict",
-    "criterion_valid": "yes",
-    "cond": "containment"
-   },
-   {
-    "stoic_valid": "yes",
-    "redundant": "no",
-    "redundancy": "narrow",
-    "criterion_valid": "yes",
-    "cond": "containment"
-   }
-  ],
-  "redundant_variant": {
-   "semantics": [
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "philonian"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "philonian"
-    },
-    {
-     "stoic_valid": "unknown",
-     "redundant": "unknown",
-     "redundancy": "strict",
-     "criterion_valid": "unknown",
-     "cond": "diodorean"
-    },
-    {
-     "stoic_valid": "unknown",
-     "redundant": "unknown",
-     "redundancy": "narrow",
-     "criterion_valid": "unknown",
-     "cond": "diodorean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "chrysippean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "chrysippean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "containment"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "containment"
-    }
-   ],
-   "encoded": {
-    "text": "p; r; therefore q",
-    "premises": [
-     "p",
-     "r"
-    ],
-    "conclusion": "q"
-   },
-   "added_premise": "r"
-  },
-  "duplicate_variant": {
-   "semantics": [
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "philonian"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "philonian"
-    },
-    {
-     "stoic_valid": "unknown",
-     "redundant": "unknown",
-     "redundancy": "strict",
-     "criterion_valid": "unknown",
-     "cond": "diodorean"
-    },
-    {
-     "stoic_valid": "unknown",
-     "redundant": "unknown",
-     "redundancy": "narrow",
-     "criterion_valid": "unknown",
-     "cond": "diodorean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "chrysippean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "chrysippean"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "strict",
-     "criterion_valid": "yes",
-     "cond": "containment"
-    },
-    {
-     "stoic_valid": "no",
-     "redundant": "yes",
-     "redundancy": "narrow",
-     "criterion_valid": "yes",
-     "cond": "containment"
-    }
-   ],
-   "encoded": {
-    "text": "p; p; therefore q",
-    "premises": [
-     "p",
-     "p"
-    ],
-    "conclusion": "q"
-   },
-   "added_premise": "p"
-  },
-  "provenance": {
-   "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245",
-   "passage": "With these [(δ) Inference from a single premiss.] composite forms of inference Antipater contrasted other forms having only a single premiss, [245] but it was an addition to the field of logic of very doubtful worth.",
-   "corpus_ref": "8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca",
-   "research_ref": null,
-   "verified_by_kyle": false,
-   "witness": "ancient_text_via_secondary_work",
-   "secondary_summary": {
-    "flag": true,
-    "scope": "partial",
-    "basis": "ledger notes: That Chrysippus rejected them appears in the corpus only through Mates's summary"
-   },
-   "non_primary": {
-    "flag": true,
-    "witness": "ancient_text_via_secondary_work",
-    "basis": "ancient text quoted in a secondary work, not a primary edition"
-   },
-   "notes": "Zeller n.245 (chunk 73ca2320-47fc-4eed-b9b0-fc8ad0d060e4) gives the Greek\nname and the examples: \"[245] Called μονολήμματοι συλλογισμοί. Such were\nἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα. See Alex. Top. 6, 274;\nAnal. Pr. 7, a, 8, a: Sext. Pyrrh. ii. 167; Math. viii. 443; Apul. Dogm.\nPlat. iii. 272, Oud.\"\nThat Chrysippus rejected them appears in the corpus only through Mates's\nsummary (chunk 78c91994-ccd2-47ac-9eb9-17201baa0783): \"Chrysippus denied\nthem; Antipater of Tarsus defended them with examples like 'You are\nbreathing, therefore you are living.' Opponents held that such arguments\nare merely abbreviated two-premised arguments (a suppressed conditional\nbeing the missing premise).\"\nVerdict by parameter: valid under Antipater's policy, invalid under\nChrysippus's. Formally it is valid only given the conditional, so under\nChrysippus's policy it becomes S001 with the conditional made explicit.\nHow to represent \"p; therefore q\" without a propositional link is a\nPhase 2 decision (Params.lean)."
-  }
- },
- {
-  "id": "S015",
-  "schema": "p; therefore q   (where 'if p, q' is true, e.g. 'You are breathing; therefore you are living')",
+  "schema": "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light', 'You are breathing; therefore you are living')",
   "kind": "single_premise",
   "flags": [],
   "ancient_verdict": "disputed",
@@ -3584,23 +3348,23 @@
    "added_premise": "p"
   },
   "provenance": {
-   "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V n.245; Mates, Stoic Logic (Mode 2 summary)",
+   "source": "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245",
    "passage": "[245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.",
    "corpus_ref": "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4",
    "research_ref": null,
    "verified_by_kyle": false,
-   "witness": "mode2_summary",
+   "witness": "ancient_text_via_secondary_work",
    "secondary_summary": {
     "flag": true,
     "scope": "partial",
-    "basis": "the ledger source names a Mode 2 summary"
+    "basis": "ledger notes: That Chrysippus rejected them appears in the corpus only through Mates's summary"
    },
    "non_primary": {
     "flag": true,
-    "witness": "mode2_summary",
-    "basis": "a Mode 2 summary of a modern book"
+    "witness": "ancient_text_via_secondary_work",
+    "basis": "ancient text quoted in a secondary work, not a primary edition"
    },
-   "notes": "The second attested example of the same form as S014. It is kept as its\nown entry because the two examples come down separately in the sources.\nKyle may prefer to merge them."
+   "notes": "Merged with the former S015 (Kyle, 2026-09-30). The two entries had the\nsame form and were kept apart only because their examples come down\nseparately. Zeller n.245 gives both; the id S015 is retired, not reused.\nZeller's main text (chunk 8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca): \"With\nthese [(δ) Inference from a single premiss.] composite forms of inference\nAntipater contrasted other forms having only a single premiss, [245] but\nit was an addition to the field of logic of very doubtful worth.\"\nThe rest of n.245: \"See Alex. Top. 6, 274; Anal. Pr. 7, a, 8, a: Sext.\nPyrrh. ii. 167; Math. viii. 443; Apul. Dogm. Plat. iii. 272, Oud.\"\nThat Chrysippus rejected them appears in the corpus only through Mates's\nsummary (chunk 78c91994-ccd2-47ac-9eb9-17201baa0783): \"Chrysippus denied\nthem; Antipater of Tarsus defended them with examples like 'You are\nbreathing, therefore you are living.' Opponents held that such arguments\nare merely abbreviated two-premised arguments (a suppressed conditional\nbeing the missing premise).\"\nVerdict by parameter: valid under Antipater's policy, invalid under\nChrysippus's. Formally it is valid only given the conditional, so under\nChrysippus's policy it becomes S001 with the conditional made explicit.\nHow to represent \"p; therefore q\" without a propositional link is a\nPhase 2 decision (Params.lean).\nPrimary replacement drafted in primary-proposals.yaml (Sextus PH II 159,\n167; M VIII 443), pending the Sextus licences."
   }
  },
  {
