@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"cd C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete && git show df9a1fe:app/(tabs)/journal.tsx\"}",
+  "error": "Exit code 2\n/c/Users/kjemery/.bash_profile: line 4: /c/Users/kjemery/anaconda3/Scripts/conda.exe: No such file or directory\n.bash_profile loaded!!\n/usr/bin/bash: eval: line 1: syntax error near unexpected token `('\n/usr/bin/bash: eval: line 1: `cd C:\\Users\\kjemery\\Arete\\Arete && git show df9a1fe:app/(tabs)/journal.tsx'",
+  "timestamp": "2026-04-18T01:37:02.059Z",
+  "retry_count": 1
+}

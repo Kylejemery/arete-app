@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(find /c/Users/Hattie/arete-app -name *.sql -o -name *migrations* -type f)",
-      "Bash(grep -E \"\\\\.\\(sql|md\\)$\")"
+      "Bash(grep -E \"\\\\.\\(sql|md\\)$\")",
+      "Bash(gh pr create --title 'Fix scrolls modal hidden by keyboard on mobile' --body ' *)",
+      "Bash(where gh *)",
+      "Read(//c/Users/kjemery/**)",
+      "Bash(node --check \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\server\\\\index.js\")",
+      "Bash(node --check \"C:\\\\Users\\\\kjemery\\\\Arete\\\\Arete\\\\app\\\\\\(tabs\\)\\\\timer.tsx\")"
     ]
   }
 }

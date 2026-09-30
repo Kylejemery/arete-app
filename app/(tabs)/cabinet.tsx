@@ -86,7 +86,7 @@ export default function CabinetScreen() {
   >([]);
 
   // --- beliefContext deep-link param ---
-  const params = useLocalSearchParams<{ beliefContext?: string }>();
+  const params = useLocalSearchParams<{ beliefContext?: string; refresh?: string }>();
   const consumedBeliefContextRef = useRef(false);
 
   const loadInitialThread = async () => {
@@ -148,6 +148,13 @@ export default function CabinetScreen() {
       })();
     }, [loadCounselorsData])
   );
+
+  // Reload thread when navigated from morning screen via "View in Cabinet"
+  useEffect(() => {
+    if (params.refresh) {
+      loadInitialThread();
+    }
+  }, [params.refresh]);
 
   // Consume beliefContext deep-link param
   useEffect(() => {
