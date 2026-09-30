@@ -24,6 +24,18 @@ import {
   type FocusDurations, type FocusMode,
 } from '@/lib/focusDurations';
 
+// The timer owns exactly one scheduled notification, under this identifier.
+// Every schedule and cancel runs through one queue, in the order the user
+// acted: a pause tapped while the start is still scheduling cancels after it,
+// never before it.
+const TIMER_NOTIFICATION_ID = 'focus-timer-complete';
+let timerNotificationOps: Promise<unknown> = Promise.resolve();
+function queueTimerNotification(op: () => Promise<unknown>): Promise<unknown> {
+  const run = timerNotificationOps.then(op, op).catch(() => {});
+  timerNotificationOps = run;
+  return run;
+}
+
 /** Returns today's date as a local YYYY-MM-DD string (not UTC). */
 function getLocalDateString(): string {
   const d = new Date();
@@ -63,16 +75,15 @@ export default function TimerScreen() {
   const [editStartPage, setEditStartPage] = useState('');
   const [editEndPage, setEditEndPage] = useState('');
   const intervalRef = useRef<any>(null);
-  const timerNotificationId = useRef<string | null>(null);
   // Only ever cancel the timer's own "Timer Complete" notification. This used
   // to call cancelAllScheduledNotificationsAsync(), which also wiped every
   // daily reminder the Settings screen had scheduled (they only came back the
-  // next time Settings was opened).
-  const cancelTimerNotification = () => {
-    const id = timerNotificationId.current;
-    timerNotificationId.current = null;
-    if (id) Notifications.cancelScheduledNotificationAsync(id).catch(() => {});
-  };
+  // next time Settings was opened). It is cancelled by its fixed identifier,
+  // not an id held in a ref: a ref is empty after a remount or relaunch, and
+  // until scheduling resolves, so a pause or reset in either window left the
+  // notification to fire over a stopped timer.
+  const cancelTimerNotification = () =>
+    queueTimerNotification(() => Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID));
 
   const sessionStartTime = useRef<number>(0);
   const backgroundTimeRef = useRef<number | null>(null);
@@ -221,13 +232,15 @@ export default function TimerScreen() {
     return `${m}m`;
   };
 
-  const scheduleTimerNotification = async (durationMs: number, label: string) => {
-    cancelTimerNotification();
-    timerNotificationId.current = await Notifications.scheduleNotificationAsync({
-      content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.floor(durationMs / 1000), repeats: false },
+  const scheduleTimerNotification = (durationMs: number, label: string) =>
+    queueTimerNotification(async () => {
+      await Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => {});
+      await Notifications.scheduleNotificationAsync({
+        identifier: TIMER_NOTIFICATION_ID,
+        content: { title: 'Timer Complete', body: `${label} session finished.`, sound: true },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: Math.floor(durationMs / 1000), repeats: false },
+      });
     });
-  };
 
   const resetPomodoro = () => {
     setPomodoroRunning(false);
