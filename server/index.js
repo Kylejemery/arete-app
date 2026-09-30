@@ -20,7 +20,7 @@ const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesM
 const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
 const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
-const { createEventLog } = require('./lib/events');
+const { createEventLog, appBuildFromUserAgent } = require('./lib/events');
 const { createSseReply, createMarkerGuard, streamAnthropicMessage } = require('./lib/cabinet-stream');
 const { randomUUID } = require('crypto');
 const libraryHelpers = require('./library');
@@ -807,15 +807,30 @@ async function resolveUserTier(req) {
 
 // Strict variant: the caller must present a valid Supabase JWT. No body
 // fallback. Returns the verified user id, or null (after sending 401).
+// Every refusal is logged with its reason and the caller's user agent: the
+// reason used to go only to the client, so a burst of 401s from an old app
+// build (no Authorization header at all) looked the same as expired sessions.
+// The token itself is never logged.
+function logAuthRefusal(req, reason, detail) {
+  const ua = String(req.headers['user-agent'] || '').slice(0, 160);
+  const build = appBuildFromUserAgent(ua);
+  console.warn(
+    `[auth] 401 ${reason} | ${req.method} ${req.path} | build ${build ?? '-'} | ua "${ua}"` +
+    (detail ? ` | ${detail}` : ''),
+  );
+}
+
 async function requireVerifiedUser(req, res) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
   if (!token) {
+    logAuthRefusal(req, 'missing_bearer_token');
     res.status(401).json({ error: 'unauthorized', reason: 'missing_bearer_token' });
     return null;
   }
   const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
+    logAuthRefusal(req, 'invalid_token', error?.message ? String(error.message).slice(0, 200) : null);
     res.status(401).json({ error: 'unauthorized', reason: 'invalid_token' });
     return null;
   }
