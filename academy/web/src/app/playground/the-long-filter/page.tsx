@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function PlaygroundLongFilterPage() {
-  return <LongFilter backHref="/playground" backLabel="← The Playground" />
+  return <LongFilter backHref="/" backLabel="← Arete Academy" />
 }

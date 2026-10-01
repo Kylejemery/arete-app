@@ -43,10 +43,114 @@ export const MORAL_THRESHOLD =
   Math.log(ARISING_PER_YEAR / EXTERNAL_HAZARD) / Math.log(1 / (Math.E * PHOENIX_RATE))
 
 /** Phase-diagram axes: the moral ratio R, log-scaled, and the capability gap d. */
-export const RATIO_MIN = 0.02
-export const RATIO_MAX = 2.5
+export const RATIO_MIN = 0.01
+export const RATIO_MAX = 10
 export const GAP_MIN = -0.005
 export const GAP_MAX = 0.003
+
+/** Who the note is by, and when this revision was written. */
+export const BYLINE = 'Kyle'
+export const REVISED = 'October 2026'
+
+/**
+ * Named settings for the phase diagram, in percent a year. The essay opens on
+ * `realistic`; the others are the parameter sets the formal statement quotes,
+ * so a reader can load each one rather than take the table on trust.
+ */
+export type Preset = {
+  key: string
+  label: string
+  note: string
+  malice: number
+  growth: number
+  errorBase: number
+  gap: number
+}
+
+export const PRESETS: Preset[] = [
+  {
+    key: 'hellman',
+    label: 'Hellman',
+    note: 'p_m0 1%, optimistic error 10⁻⁵',
+    malice: 1,
+    growth: 0.6,
+    errorBase: 0.001,
+    gap: 0,
+  },
+  {
+    key: 'superforecasters',
+    label: 'Superforecasters',
+    note: 'p_m0 0.3%, optimistic error 10⁻⁵',
+    malice: 0.3,
+    growth: 0.6,
+    errorBase: 0.001,
+    gap: 0,
+  },
+  {
+    key: 'realistic',
+    label: 'Realistic error',
+    note: '70% of a 1% total is error',
+    malice: 0.3,
+    growth: 0.6,
+    errorBase: 0.7,
+    gap: 0,
+  },
+  {
+    key: 'outpace',
+    label: 'Competence outpaces',
+    note: 'the same, with d = −0.20%',
+    malice: 0.3,
+    growth: 0.6,
+    errorBase: 0.7,
+    gap: -0.2,
+  },
+]
+
+/** The setting the essay opens on. */
+export const DEFAULT_PRESET = 'realistic'
+
+/**
+ * A link to the essay's phase diagram with a setting loaded, in percent a
+ * year. The formal statement uses it so each row of a table can be tried.
+ */
+export function regionHref(malice: number, growth: number, errorBase: number, gap: number): string {
+  return `/playground/the-long-filter?pm=${malice}&g=${growth}&pe=${errorBase}&d=${gap}#region`
+}
+
+/** Sources, quoted by both pages. */
+export type Reference = { cite: string; href?: string }
+
+export const REFERENCES: Reference[] = [
+  {
+    cite: 'Seneca, Epistulae Morales 42.1, trans. R. M. Gummere (1917–1925).',
+    href: 'https://en.wikisource.org/wiki/Moral_letters_to_Lucilius/Letter_42',
+  },
+  {
+    cite: 'D. Brin, "The Great Silence: the Controversy Concerning Extraterrestrial Intelligent Life", Quarterly Journal of the Royal Astronomical Society 24 (1983), 283–309.',
+    href: 'https://ui.adsabs.harvard.edu/abs/1983QJRAS..24..283B',
+  },
+  {
+    cite: 'R. Hanson, "The Great Filter — Are We Almost Past It?" (1998).',
+    href: 'http://mason.gmu.edu/~rhanson/greatfilter.html',
+  },
+  {
+    cite: 'M. E. Hellman, "Risk Analysis of Nuclear Deterrence", The Bent of Tau Beta Pi (Spring 2008).',
+  },
+  {
+    cite: 'E. Karger et al., Forecasting Existential Risk: Evidence from a Long-Run Forecasting Tournament, Forecasting Research Institute (2023).',
+  },
+  {
+    cite: 'M. Eisner, "Long-Term Historical Trends in Violent Crime", Crime and Justice 30 (2003), 83–142.',
+  },
+  {
+    cite: 'Our World in Data, "Literacy".',
+    href: 'https://ourworldindata.org/literacy',
+  },
+  {
+    cite: 'I. Chalmers and P. Glasziou, "Avoidable waste in the production and reporting of research evidence", The Lancet 374 (2009), 86–89.',
+    href: 'https://doi.org/10.1016/S0140-6736(09)60329-9',
+  },
+]
 
 /** One line of the survivors' ledger — what goes, and what takes its place. */
 export type LedgerRow = {
@@ -57,17 +161,17 @@ export type LedgerRow = {
 export const LEDGER: LedgerRow[] = [
   {
     gone: {
-      title: 'Militaries',
+      title: 'Militaries aimed at each other',
       body: 'Armies answer to hostile states. Hostile states are what wanting looks like when it meets an obstacle.',
     },
     stays: {
-      title: 'Nothing',
-      body: 'Not disarmament, which is a treaty between parties who would rearm if they could. Closer to the way we no longer maintain city walls.',
+      title: 'Defence against what nobody chose',
+      body: 'The capability does not vanish. It turns outward, to the external term: impact, burst, the slow arithmetic of a star. Not disarmament, which is a treaty between parties who would rearm if they could.',
     },
   },
   {
     gone: {
-      title: 'Courts',
+      title: 'Courts as contests',
       body: 'A lawsuit adjudicates between two people who each believe they were wronged and cannot settle it themselves.',
     },
     stays: {
@@ -81,8 +185,8 @@ export const LEDGER: LedgerRow[] = [
       body: 'Most of a legal code is a list of things people would otherwise do for gain.',
     },
     stays: {
-      title: 'Rules that are simply correct',
-      body: 'With no interest to be served, a law about a river or a weapon becomes an empirical question with a findable answer, contested only over the evidence.',
+      title: 'Rules argued on evidence',
+      body: 'With fewer interests to serve, a law about a river or a weapon becomes mostly an empirical question. Still argued, often hard, but argued over the evidence rather than over who benefits.',
     },
   },
   {
@@ -96,10 +200,10 @@ export const LEDGER: LedgerRow[] = [
     },
   },
   {
-    gone: { title: 'Policing', body: 'Deterrence presupposes the deterrable.' },
+    gone: { title: 'Policing as deterrence', body: 'Deterrence presupposes the deterrable, and there are far fewer of them.' },
     stays: {
       title: 'Care',
-      body: 'Someone in crisis is not committing a crime. Someone who cannot look after himself needs a person to come, and that person does not need to be armed.',
+      body: 'Someone in crisis is not committing a crime. Someone who cannot look after themselves needs a person to come, and that person does not need to be armed.',
     },
   },
   {
@@ -110,6 +214,16 @@ export const LEDGER: LedgerRow[] = [
     stays: {
       title: 'Allocation',
       body: 'Bushels stay finite. What ends is rivalry, not scarcity. Markets coordinated between people who did not trust each other, and the coordination problem outlives the mistrust.',
+    },
+  },
+  {
+    gone: {
+      title: 'Secrecy',
+      body: 'Most of what is hidden is hidden for advantage: the result that would cost a grant, the flaw that would cost a sale.',
+    },
+    stays: {
+      title: 'Criticism, everywhere',
+      body: 'The one kind of institution that grows rather than shrinks. Sages still err, which is the whole error term, so open review, audit and a press nobody owns become more central, not less. What changes is that nobody inside them is trying to win.',
     },
   },
   {

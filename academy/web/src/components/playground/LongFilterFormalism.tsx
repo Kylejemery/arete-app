@@ -21,12 +21,14 @@ import {
   THRESHOLD_SWEEP,
   type Table,
 } from '@/content/playground/long-filter-formalism'
+import { BYLINE, REFERENCES, REVISED } from '@/content/playground/long-filter'
 import styles from './LongFilterFormalism.module.css'
 
 /**
  * A table from the companion note. `numeric` sets the whole grid in mono and
  * tabular figures, for the ones meant to be read down a column; the prose
- * tables keep the book face and only mono the key.
+ * tables keep the book face and only mono the key. A table with `links` gets a
+ * last column that opens each row's setting in the essay's phase diagram.
  */
 function Grid({ table, numeric = false }: { table: Table; numeric?: boolean }) {
   return (
@@ -39,6 +41,7 @@ function Grid({ table, numeric = false }: { table: Table; numeric?: boolean }) {
                 {h}
               </th>
             ))}
+            {table.links && <th scope="col" aria-label="Try it" />}
           </tr>
         </thead>
         <tbody>
@@ -47,6 +50,13 @@ function Grid({ table, numeric = false }: { table: Table; numeric?: boolean }) {
               {row.map((cell, j) => (
                 <td key={j}>{cell}</td>
               ))}
+              {table.links && (
+                <td>
+                  <Link href={table.links[i]} className={styles.tryIt}>
+                    try it ↗
+                  </Link>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -100,6 +110,9 @@ export default function LongFilterFormalism({
       <header className={`${styles.wrap} ${styles.hero}`}>
         <p className={styles.eyebrow}>Arete / playground / formal statement</p>
         <h1>The Long Filter: Formal Statement</h1>
+        <p className={styles.byline}>
+          {BYLINE} &nbsp;·&nbsp; {REVISED}
+        </p>
         <p className={styles.standfirst}>
           Companion note to the essay. Everything here is derivation, parameter choice, and
           sensitivity. The philosophical argument lives elsewhere; this document exists so that
@@ -112,6 +125,12 @@ export default function LongFilterFormalism({
             constant across a window in which the sage fraction was assumed to be rising, which was
             incoherent. The decomposition fixes that, preserves the closed form, and exposes a second
             threshold the single-term model could not see.
+          </p>
+          <p>
+            Second revision: the realistic error baseline of §5.7, p_e0 ≈ 0.7%/yr, is now the
+            headline. The original 10⁻⁵ is kept beside it in every table as the optimistic case, and
+            the two give opposite answers, so §8 reports both. Rows marked &ldquo;try it&rdquo; open
+            that setting in the essay&rsquo;s phase diagram.
           </p>
         </div>
       </header>
@@ -354,8 +373,9 @@ R = p_m0 / g`}
 I_e = ∫₀^τ p_e dt = p_e0 (e^(dτ) − 1) / d      (= p_e0·τ when d = 0)`}
           </div>
           <p>
-            This term has no analogue in the single-hazard model, and it can dominate everything. At{' '}
-            <span className={styles.mono}>p_e0 = 10⁻⁵/yr</span> and{' '}
+            This term has no analogue in the single-hazard model, and it can dominate everything. The
+            shape is clearest at the optimistic baseline,{' '}
+            <span className={styles.mono}>p_e0 = 10⁻⁵/yr</span>, and{' '}
             <span className={styles.mono}>τ_v = 3,454 yr</span> (
             <span className={styles.mono}>g</span> = 0.6%/yr):
           </p>
@@ -363,7 +383,9 @@ I_e = ∫₀^τ p_e dt = p_e0 (e^(dτ) − 1) / d      (= p_e0·τ when d = 0)`}
           <p>
             <strong>This is a cliff, not a slope.</strong> Between{' '}
             <span className={styles.mono}>d</span> = 0.10% and 0.20% the survival factor falls by two
-            orders of magnitude.
+            orders of magnitude. At the realistic baseline of §5.7 there is no cliff to approach:{' '}
+            <span className={styles.mono}>I_e</span> is already 24.2 at{' '}
+            <span className={styles.mono}>d = 0</span>.
           </p>
         </Sub>
 
@@ -393,9 +415,13 @@ I_e = ∫₀^τ p_e dt = p_e0 (e^(dτ) − 1) / d      (= p_e0·τ when d = 0)`}
             the window. Reallocating hazard between terms buys nothing.
           </p>
           <p>
-            A consequence worth stating: with a realistic{' '}
-            <span className={styles.mono}>p_e0</span> near 0.7%/yr, the competence condition requires{' '}
-            <span className={styles.mono}>d ≤ −0.18%/yr</span>. Competence must{' '}
+            A consequence worth stating. With a realistic{' '}
+            <span className={styles.mono}>p_e0</span> near 0.7%/yr (and{' '}
+            <span className={styles.mono}>p_m0</span> = 0.3%,{' '}
+            <span className={styles.mono}>g</span> = 0.6%), the count reaches one only if{' '}
+            <span className={styles.mono}>d ≤ d₁ = −0.18%/yr</span>. The stricter half-cost condition
+            of §7.2, <span className={styles.mono}>I_e &lt; ln 2</span>, needs{' '}
+            <span className={styles.mono}>d ≤ d* = −1.01%/yr</span>. Either way competence must{' '}
             <strong>outpace</strong> capability, not merely keep up.
           </p>
         </Sub>
@@ -431,7 +457,7 @@ R = p_m0/g        Q = c/g`}
             <span className={styles.mono}>Q ≤ 0.032</span>, meaning capability may grow no faster
             than 0.019%/yr against moral growth of 0.6%/yr. Our own{' '}
             <span className={styles.mono}>Q</span> is plausibly between 1.7 and 8, giving{' '}
-            <span className={styles.mono}>R*</span> of order 10⁻¹⁴ to 10⁻⁷².
+            <span className={styles.mono}>R*</span> of order 10⁻¹⁴ to 10⁻⁷⁰.
           </p>
           <p>
             <strong>A result that extreme is the model, not the world.</strong> The error is that{' '}
@@ -520,10 +546,25 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
           </p>
           <Grid table={COMPETENCE_THRESHOLD} numeric />
           <p>
+            At the optimistic baseline,{' '}
             <strong>
-              In words: competence must keep pace with capability to within a fraction of a percent
-              per year.
-            </strong>
+              competence must keep pace with capability to within a fraction of a percent per year.
+            </strong>{' '}
+            At the realistic one the condition stops depending on{' '}
+            <span className={styles.mono}>g</span>. As <span className={styles.mono}>d</span> goes
+            negative, <span className={styles.mono}>I_e</span> converges to{' '}
+            <span className={styles.mono}>p_e0/|d|</span> however long the window, so{' '}
+            <span className={styles.mono}>d* ≈ −p_e0/ln 2 = −1.01%/yr</span>.{' '}
+            <strong>Competence must outpace capability by about a percent a year.</strong>
+          </p>
+          <p>
+            The last column is the weaker line <span className={styles.mono}>d₁</span>, where the
+            count merely reaches one. It does depend on <span className={styles.mono}>g</span>, and
+            below <span className={styles.mono}>g</span> = 0.43%/yr it does not exist:{' '}
+            <span className={styles.mono}>R</span> is already over{' '}
+            <span className={styles.mono}>R*</span>, and no value of{' '}
+            <span className={styles.mono}>d</span> rescues the count. The essay&rsquo;s phase
+            diagram draws <span className={styles.mono}>d₁</span>.
           </p>
         </Sub>
 
@@ -532,7 +573,7 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
             <span className={styles.mono}>g</span> appears in both conditions, and this is the most
             consequential structural fact in the revised model. A low{' '}
             <span className={styles.mono}>g</span> raises <span className={styles.mono}>R</span>{' '}
-            <em>and</em> tightens <span className={styles.mono}>d*</span>, because a slower
+            <em>and</em> tightens <span className={styles.mono}>d₁</span>, because a slower
             transition means more years exposed to compounding capability.{' '}
             <strong>Moral slowness is punished twice.</strong> The two conditions are not
             independent, and a civilization cannot trade one against the other.
@@ -548,7 +589,7 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
           </p>
           <Grid table={THRESHOLD_SWEEP} numeric />
           <p>
-            <span className={styles.mono}>R*</span> stays inside [0.47, 1.04] across the entire
+            <span className={styles.mono}>R*</span> stays inside [0.47, 1.07] across the entire
             sweep. <strong>d* has no comparable robustness</strong>, since it depends exponentially
             on <span className={styles.mono}>p_e0</span> and{' '}
             <span className={styles.mono}>τ_v</span>, both poorly known. The second threshold is the
@@ -559,25 +600,39 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
 
       <Section num="8" title="Where we sit">
         <p>
-          Using <span className={styles.mono}>p_m0</span> = 1%/yr (Hellman) and{' '}
-          <span className={styles.mono}>g</span> = 0.6%/yr (the homicide anchor):
+          Two malice estimates: <span className={styles.mono}>p_m0</span> = 1%/yr (Hellman) and
+          0.3%/yr (superforecaster range), both at <span className={styles.mono}>g</span> = 0.6%/yr
+          (the homicide anchor) and <span className={styles.mono}>d</span> = 0.
         </p>
-        <div className={styles.block}>
-          {`R = 1.67        f_v ≈ 5×10⁻¹⁵        N_ℓ ≈ 5×10⁻⁹`}
-        </div>
+        <Sub title="8.1 At the optimistic error baseline, p_e0 = 10⁻⁵">
+          <div className={styles.block}>
+            {`p_m0 = 1%:     R = 1.67        f_v ≈ 5×10⁻¹⁵        N_ℓ ≈ 5×10⁻⁹
+p_m0 = 0.3%:   R = 0.50        f_v ≈ 5×10⁻⁵         N_ℓ ≈ 50`}
+          </div>
+          <p>
+            The two credible parameter sets land on opposite sides of the moral threshold, and the
+            question looks like it turns on <span className={styles.mono}>R</span> alone.
+          </p>
+        </Sub>
+        <Sub title="8.2 At the realistic error baseline, p_e0 = 0.7%">
+          <div className={styles.block}>
+            {`p_m0 = 1%:     R = 1.67        f_v ≈ 2×10⁻²⁵        N_ℓ ≈ 2×10⁻¹⁹
+p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻⁹`}
+          </div>
+          <p>
+            <strong>Neither comes close.</strong> The moral threshold is cleared in the second case
+            and the count is still nine orders of magnitude short, because{' '}
+            <span className={styles.mono}>I_e</span> = 24.2. On current numbers the binding
+            condition is the second one, and what decides it is{' '}
+            <span className={styles.mono}>d</span>: at{' '}
+            <span className={styles.mono}>d</span> = −0.20%/yr the same parameters give{' '}
+            <span className={styles.mono}>N_ℓ ≈ 1.6</span>.
+          </p>
+        </Sub>
         <p>
-          Using <span className={styles.mono}>p_m0</span> = 0.3%/yr (superforecaster range) and the
-          same <span className={styles.mono}>g</span>:
-        </p>
-        <div className={styles.block}>
-          {`R = 0.50        f_v ≈ 5×10⁻⁵         N_ℓ ≈ 50`}
-        </div>
-        <p>
-          <strong>
-            The two credible parameter sets land on opposite sides of the moral threshold.
-          </strong>{' '}
           The model does not tell us which universe we are in. It tells us the question reduces to
-          measurable quantities, and that our best estimates straddle the line.
+          measurable quantities, that <span className={styles.mono}>R</span> is necessary but not
+          sufficient, and that the quantity nobody has measured is the one doing the deciding.
         </p>
         <p>
           Required improvement rates to clear <span className={styles.mono}>R*</span> = 0.700:
@@ -651,6 +706,17 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
           is worse in a different way: it is not wrong so much as unmeasured, and the second
           threshold rests entirely on it.
         </p>
+        <p>
+          <strong>A note on A2 and institutions.</strong> A2 is not a claim that individual
+          saintliness does the work instead of institutions. Error-correcting institutions (open
+          criticism, transparency, reciprocal accountability) are the obvious way a hazard actually
+          falls, and they enter the model as <span className={styles.mono}>e</span>. The claim is
+          about what sustains them. Every such institution can be gamed by the people inside it, and
+          it holds only while most of them will not game it. A sage culture is not an alternative to
+          accountable institutions. It is what builds them, staffs them, and keeps them honest when
+          gaming them would pay. A2 fails if institutions can be made self-enforcing among people who
+          would game them given the chance.
+        </p>
       </Section>
 
       <Section num="12" title="Falsification conditions">
@@ -677,17 +743,36 @@ I_e    = p_e0 (e^(dτ) − 1)/d                   error integral,  d = c − e
 f_v    = (e·s₀)^R · exp(−I_e) · exp(−p_x τ_v)  R = p_m0/g
 N_ℓ    = Ṅ · f_v / p_x                         transitioned civilizations extant
 R*     = log(Ṅ/p_x) / log(1/(e·s₀)) = 0.700    moral threshold
-d*     : I_e(d*, τ_v) = ln 2                   competence threshold`}
+d*     : I_e(d*, τ_v) = ln 2                   competence threshold
+d₁     : N_ℓ(d₁) = 1                           where the count reaches one`}
           </div>
           <p>
             Two conditions, coupled through <span className={styles.mono}>g</span>. Improve fast
-            enough to outrun your own malice, and keep competence within a fraction of a percent per
-            year of capability. Miss either and the count goes to zero.
+            enough to outrun your own malice, and make competence grow faster than capability. Miss
+            either and the count goes to zero. On current numbers it is the second that binds.
           </p>
           <p>
             <strong>Both terms of the first ratio are ours. So is the second.</strong>
           </p>
         </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.wrap}`}>
+        <span className={styles.secNum}>14</span>
+        <h2>References</h2>
+        <ol className={styles.references}>
+          {REFERENCES.map((r) => (
+            <li key={r.cite}>
+              {r.href ? (
+                <a href={r.href} target="_blank" rel="noopener noreferrer">
+                  {r.cite}
+                </a>
+              ) : (
+                r.cite
+              )}
+            </li>
+          ))}
+        </ol>
       </section>
 
       <footer className={`${styles.wrap} ${styles.colophon}`}>
