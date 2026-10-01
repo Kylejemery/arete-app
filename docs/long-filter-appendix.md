@@ -228,7 +228,11 @@ switches off when the transition ends.
 2. **Error.** Accident, misjudgment, a flaw nobody caught. A share φ of it
    comes from conflict (haste, secrecy, racing) and falls as progressors
    spread. The rest is accident that virtue does not prevent; only the gap
-   shrinks it.
+   shrinks it. Castle Bravo (1954) is the clearest case of the conflict
+   share: its yield was calculated honestly, the calculation missed a
+   reaction, and the device came in at 15 megatons instead of 6. The mistake
+   was ordinary; a test of that size, at that pace, existed only because of
+   the arms race (Martin and Rowland, DNA 6035F, 1982).
 3. **External.** An asteroid, a gamma-ray burst, the star ageing. Nobody
    governs it. Once everything else is retired, it sets how long a survivor
    survives.
