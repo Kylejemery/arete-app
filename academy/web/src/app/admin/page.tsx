@@ -156,7 +156,7 @@ const PIPELINE: { when: string; icon: string; name: string; tag: string; text: s
   },
   {
     when: '03:30 Mon', icon: '🌍', name: 'World', tag: 'outward-facing',
-    text: 'The only agent that looks outward. Weekly web search across philosophically relevant categories, picks the dominant signal, and has the corpus respond to it. Purely scientific signals auto-approve; anything political or contested waits for you. Approved weeks inject [WORLD CONTEXT] into the Dispatch and surface in the Observatory.',
+    text: 'The only agent that looks outward. Weekly web search across climate, war, politics and corruption, science, technology, culture and deaths; picks the signal the Stoics answer most directly and has Seneca, Epictetus, Marcus Aurelius and Musonius Rufus respond to it. Purely scientific signals auto-approve; anything political or contested waits for you. Approved weeks inject [WORLD CONTEXT] into the Dispatch and surface in the Observatory.',
   },
   {
     when: '04:00 daily', icon: '📓', name: 'Journal Analysis', tag: 'demand signal',

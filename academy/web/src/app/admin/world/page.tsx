@@ -55,6 +55,8 @@ const STATUS_COLORS: Record<string, { bg: string; fg: string; label: string }> =
 }
 const CATEGORY_COLORS: Record<string, { bg: string; fg: string }> = {
   scientific: { bg: '#E1F5EE', fg: '#0F6E56' },
+  environmental: { bg: '#E8F3DF', fg: '#3F6B1F' },
+  conflict: { bg: '#F6E6DA', fg: '#8A4A1C' },
   cultural: { bg: '#EFE7FA', fg: '#5B3E8E' },
   political: { bg: '#FBE3E3', fg: '#B23535' },
   technological: { bg: '#E3EEFB', fg: '#2C5A9E' },

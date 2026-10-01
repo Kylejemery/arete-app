@@ -39,7 +39,7 @@ const DISCLOSE: Record<Kind, string> = {
   inquiry: 'A question the corpus cannot yet answer, and its own attempt at one. The pursuit is conjecture from the corpus, labelled as such — never a source text.',
   dream: 'A thought from the corpus, not a passage in it: conjecture seeded by the tradition and written in the corpus’s own voice. Never the words of any historical thinker.',
   convergence: 'A conclusion the corpus assembled from far-apart passages — stated in none of them, entailed by several. The corpus discloses what it concluded and how far apart its sources stand.',
-  world: 'The corpus reading the week’s world through the tradition it holds — an answer to what is happening now, grounded in what was written then.',
+  world: 'The corpus reading the week’s world through a Stoic lens — what Seneca, Epictetus, Marcus Aurelius and Musonius Rufus say to what is happening now, grounded in what they wrote then.',
 };
 
 type Piece = Record<string, unknown> & { id: string };
