@@ -292,7 +292,7 @@ export const ASSUMPTIONS: Assumption[] = [
     kind: 'Philosophical',
     loadBearing: true,
     ifItFails:
-      'The whole argument fails; dispersal or constraint suffices. Character here includes the institutions it builds (see the note below)',
+      'The whole argument fails; constraint, or interstellar dispersal before saturation, suffices. Dispersal within one system does not. Character here includes the institutions it builds (see the notes below)',
   },
   {
     id: 'A3',
