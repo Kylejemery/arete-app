@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { situations } from "@/content/playground/situations";
 import SituationsGame from "@/components/playground/SituationsGame";
@@ -10,13 +9,15 @@ export const metadata: Metadata = {
     "Everyday situations, each with the response the tradition would give — then argue the verdict with the corpus.",
 };
 
+// Back to the app rather than the Playground index, which is gated. See the
+// note on the Scale of Happiness page.
 export default function SituationsPage() {
   return (
     <main className="pg">
       <div className="pg-sit">
-        <Link className="pg-back" href="/playground">
-          ← The Playground
-        </Link>
+        <a className="pg-back" href="https://app.pursuearete.com">
+          ← Back to Arete
+        </a>
 
         <header className="pg-sit-intro">
           <p className="pg-eyebrow" style={{ marginBottom: "1rem" }}>

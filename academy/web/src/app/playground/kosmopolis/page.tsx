@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import KosmopolisWorld from "@/components/playground/KosmopolisWorld";
 
@@ -9,13 +8,15 @@ export const metadata: Metadata = {
     "A simulated world built like ours on one different law: here the physics reward virtue. Seed souls, watch them evolve, and spend the Oracle to awaken one to reason.",
 };
 
+// Back to the app rather than the Playground index, which is gated. See the
+// note on the Scale of Happiness page.
 export default function KosmopolisPage() {
   return (
     <main className="pg">
       <div className="pg-sit">
-        <Link className="pg-back" href="/playground">
-          ← The Playground
-        </Link>
+        <a className="pg-back" href="https://app.pursuearete.com">
+          ← Back to Arete
+        </a>
 
         <header className="pg-sit-intro">
           <p className="pg-eyebrow" style={{ marginBottom: "1rem" }}>
