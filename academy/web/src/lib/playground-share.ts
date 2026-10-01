@@ -16,7 +16,23 @@
  * no link is made and none is accepted.
  */
 
-/** Pieces the admin page offers. Any valid piece path can still be signed. */
+/**
+ * Pieces open to everyone, no link needed. middleware.ts gates on this list;
+ * releasing a piece is adding its slug here, and nothing else.
+ */
+export const RELEASED_PLAYGROUND = [
+  'happiness-scale',
+  'zenos-hand',
+  'chrysippus-cylinder',
+  'the-impression',
+  'stoic-logic',
+  'stoic-qca',
+]
+
+/**
+ * Every piece. The admin page offers the ones not yet released; any valid
+ * piece path (a perspectives essay, say) can still be signed by hand.
+ */
 export const PLAYGROUND_PIECES = [
   'chrysippus-cylinder',
   'happiness-scale',
