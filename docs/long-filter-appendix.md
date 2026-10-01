@@ -508,6 +508,19 @@ A reviewer should be able to attack each of these individually.
   g_s at which τ_v = T_s is about 2.5% at 10³ years and 0.025% at 10⁵ years.
   Modelling what dispersal does to N once it arrives, rather than only
   flagging it, is the natural extension.
+- **Malice that needs silent bystanders.** A possible extension, not built
+  into the model. If an attack needs both a malicious person and silence
+  from the people around them, malice falls faster than the non-progressor
+  share, perhaps with its square: p_m = p_m0 (1 − s)² e^(dt). The reason to
+  take it seriously is the Safe School Initiative (US Secret Service and US
+  Department of Education, 2002): before most of the 37 incidents it
+  studied, other people knew of the attacker's idea or plan. Checked by
+  brute-force integration at the defaults, the squared form raises R\* from
+  0.30 to 0.52, because the malice left standing after the transition falls
+  from 1% to 0.01% of p_m0. It barely moves the count where the gap is
+  negative (0.31 to 0.33 at d = −0.06%), because most malice is spent early,
+  while s is near zero and the two forms agree. So it would make the moral
+  threshold easier to clear while barely moving d₁.
 
 ---
 

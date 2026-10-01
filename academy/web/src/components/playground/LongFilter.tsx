@@ -1704,9 +1704,11 @@ export default function LongFilter({
             civilization that is not spending itself on rivalry puts its resources into detection
             and defence, and that is what keeps <span className={styles.mono}>d</span> negative even
             when knowledge cannot be withdrawn. Malice also rarely needs only one malicious person.
-            It usually needs the silence of bystanders: the US Secret Service&rsquo;s studies of
-            attacks on schools found that most attackers had shown warning signs that others
-            noticed. Courage among the many lowers the risk. As a possible extension, not built into
+            It usually needs the silence of bystanders. The US Secret Service and Department of
+            Education studied 37 attacks on schools and found that before most of them, other people
+            knew of the attacker&rsquo;s idea or plan; a later companion study looked at those
+            bystanders and what they did with what they knew. Courage among the many lowers the
+            risk. As a possible extension, not built into
             the model here, this would make malice fall faster than the non-progressor share,
             perhaps with its square, since an attack would need both a malicious person and silent
             people around them.
