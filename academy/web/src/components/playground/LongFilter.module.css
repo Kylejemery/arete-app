@@ -1098,3 +1098,11 @@
     transition: none !important;
   }
 }
+
+/* ── objections and replies ── */
+.page h3.objection {
+  margin: 2.4rem 0 0.9rem;
+}
+.page h3.objection:first-child {
+  margin-top: 0;
+}
