@@ -372,8 +372,9 @@ h(t)   = p_m + p_e + p_x                      for all t ≥ 0`}
               can.
             </strong>{' '}
             With <span className={styles.mono}>d = 0</span> the residue{' '}
-            <span className={styles.mono}>p_e0(1 − φ)</span> stays at 0.21%/yr for good, and
-            survivors last a few centuries.
+            <span className={styles.mono}>p_e0(1 − φ)</span> stays at 0.21%/yr for good, and with
+            the ceiling&rsquo;s share of malice and conflict error the hazard left standing is
+            0.22%/yr: survivors of the transition last about 460 years.
           </p>
         </Sub>
 
@@ -585,8 +586,8 @@ p_m0 = 0.3%, d = −0.20%:   R = 0.50        N ≈ 6,770`}
       <Section num="9" title="The two-population result">
         <Sub title="9.1 The two populations">
           <p>
-            Civilizations that leave a hazard standing live centuries; those that keep the gap
-            negative live about 10⁸ years. The count in §6 is the second population alone.
+            Civilizations that leave a hazard standing live centuries (about 460 years at the
+            realistic defaults with d = 0); those that keep the gap negative live about 10⁸ years. The count in §6 is the second population alone.
           </p>
         </Sub>
 
