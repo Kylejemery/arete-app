@@ -42,6 +42,19 @@ export const EXTERNAL_HAZARD = 1e-8
 export const MORAL_THRESHOLD =
   Math.log(ARISING_PER_YEAR / EXTERNAL_HAZARD) / Math.log(1 / (Math.E * PHOENIX_RATE))
 
+/**
+ * When interstellar settlement arrives, in years from now: a hypothesis, not a
+ * measurement. Settlements around other stars are years or centuries apart, so
+ * they decouple their fates, and a civilization that reached them before
+ * saturating would escape the filter by distance rather than by character. The
+ * model assumes that does not happen in time; this is the date it assumes
+ * against. Ten thousand years by default, adjustable from a thousand to a
+ * million.
+ */
+export const SETTLEMENT_YEARS = 10_000
+export const SETTLEMENT_MIN = 1_000
+export const SETTLEMENT_MAX = 1_000_000
+
 /** Phase-diagram axes: the moral ratio R, log-scaled, and the capability gap d. */
 export const RATIO_MIN = 0.01
 export const RATIO_MAX = 10
