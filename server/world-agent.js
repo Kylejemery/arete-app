@@ -4,20 +4,32 @@
 // Every other agent reads inward: the corpus, the users, the system itself. The
 // World Agent reads the world and brings it back into philosophical conversation.
 //
+// It reads the world through a Stoic lens. The great collective problems —
+// climate, war, politics, corruption — are where people most need a way to
+// think that is neither despair nor denial, and the Stoics (Seneca, Epictetus,
+// Marcus Aurelius, Musonius Rufus) are the best-represented school in the
+// corpus. So every response is built on Stoic passages retrieved author by
+// author, and written from the Stoic frame: what is up to us and what is not,
+// the four virtues, the role one holds, the cosmopolis. Other voices in the
+// corpus appear only as counterpoint.
+//
 // It runs in three passes, once a week:
 //   Pass 1 — World signal gathering. One Anthropic call with the web_search tool
 //            enabled, over a curated set of philosophically-relevant categories.
 //            The agent does not browse news/social — it surfaces only what
 //            genuinely matters philosophically.
-//   Pass 2 — Dominant-signal selection + corpus response. The signal with the
-//            richest connection to the existing corpus is chosen (scored against
-//            real rag_corpus retrieval), 10 passages across ≥3 authors are
-//            retrieved, and Claude (no tools) writes the philosophical response,
-//            the world/corpus tension, and a tight dispatch digest.
+//   Pass 2 — Dominant-signal selection + Stoic response. The signal the Stoic
+//            texts speak to most directly is chosen (scored against real
+//            rag_corpus retrieval, filtered to each Stoic author in turn, with
+//            a bonus for the collective-problem categories), its Stoic passages
+//            plus a few counterpoint passages are retrieved, and Claude (no
+//            tools) writes the Stoic response, the world/Stoa tension, and a
+//            tight dispatch digest.
 //   Pass 3 — Storage. Purely-scientific findings about wellbeing/behavior
 //            auto-approve (low political sensitivity) and flow straight into
-//            that day's Daily Dispatch; political/death/contested signals wait
-//            for Kyle's review before their dispatch_context is used.
+//            that day's Daily Dispatch; environmental, conflict, political,
+//            death and contested signals wait for Kyle's review before their
+//            dispatch_context is used.
 //
 // Runs Mondays 03:30 UTC — before the other agents and the 10:00 UTC dispatch,
 // so an auto-approved observation is available to that morning's generation.
@@ -40,12 +52,18 @@ const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
 const DEFAULT_MODEL = 'claude-sonnet-4-6';
 
-// Authors well-represented in the corpus. A signal that retrieves these is
-// preferred as the dominant one — the tradition has the most to say about it.
-const WELL_REPRESENTED = new Set([
-  'Marcus Aurelius', 'Epictetus', 'Seneca', 'Musonius Rufus',
-  'Confucius', 'Montaigne', 'Plato', 'Aristotle',
+// The lens. Author values exactly as they appear in rag_corpus. Cicero is left
+// out on purpose: he reports Stoic doctrine but argued as an Academic, so he
+// may appear as counterpoint, never as the Stoic voice. Overridable through
+// agent_config (`stoic_authors`).
+const STOIC_AUTHORS = Object.freeze([
+  'Seneca', 'Epictetus', 'Marcus Aurelius', 'Musonius Rufus',
 ]);
+
+// The collective problems the lens exists for. A signal in one of these
+// categories gets a scoring bonus (`collective_problem_bonus`) so the week's
+// observation leans toward them rather than toward the easiest fit.
+const COLLECTIVE_PROBLEM_CATEGORIES = new Set(['environmental', 'conflict', 'political']);
 
 // Monday (UTC) of the current week, as YYYY-MM-DD — matches the other agents.
 function getMondayOfCurrentWeek() {
@@ -76,6 +94,21 @@ async function getAgentConfig() {
     corpus_response_max_words: 600,
     dispatch_context_max_words: 150,
     auto_approve_scientific_signals: true,
+  };
+}
+
+// The Stoic-lens settings postdate the seeded agent_config row, so they are
+// read with code defaults rather than required in the stored config.
+function lensSettings(config) {
+  const authors = Array.isArray(config.stoic_authors) && config.stoic_authors.length
+    ? config.stoic_authors : STOIC_AUTHORS;
+  const counterpoints = config.counterpoint_passages ?? 2;
+  return {
+    authors,
+    perAuthor: config.stoic_passages_per_author
+      ?? Math.max(1, Math.ceil(((config.corpus_retrieval_count || 10) - counterpoints) / authors.length)),
+    counterpoints,
+    problemBonus: config.collective_problem_bonus ?? 0.15,
   };
 }
 
@@ -124,23 +157,25 @@ function extractJson(raw) {
 // --- Pass 1: World signal gathering (web search) ---------------------------
 
 function buildSearchPrompt(signalsPerCategory) {
-  return `Search for recent developments (last 7 days) in the following categories that have philosophical relevance — things that connect to questions of how to live, what matters, what virtue requires, what it means to be human:
+  return `Search for recent developments (last 7 days) that a Stoic philosopher would have something to say about — events that test what is in our control and what is not, what justice, courage, self-control and practical wisdom require, and what we owe the wider human community. Cover these categories:
 
-1. Scientific findings about human behavior, wellbeing, attention, or meaning
-2. Cultural moments that reveal something about what people are collectively struggling with or reaching for
-3. Political or social events that raise questions about justice, courage, or civic virtue
-4. Technological developments that challenge how we think about autonomy, attention, or identity
-5. Deaths of notable thinkers, practitioners, or exemplars
+1. Climate and the environment: extreme weather, climate science, ecological loss, the politics of response
+2. War and armed conflict: wars, ceasefires, displacement, atrocities, acts of courage or restraint
+3. Politics and corruption: elections, abuses of power, corruption scandals, institutional failure or integrity, civic courage
+4. Scientific findings about human behavior, wellbeing, attention, or meaning
+5. Technological developments that challenge how we think about autonomy, attention, or identity
+6. Cultural moments that reveal what people are collectively afraid of, angry about, or reaching for
+7. Deaths of notable thinkers, practitioners, or exemplars
 
-For each category, find 1-${signalsPerCategory} signals. Be selective. Surface only what genuinely matters philosophically — not what is merely trending.
+For each category, find 1-${signalsPerCategory} signals. Be selective. Prefer what shapes many lives over what is merely trending. Report events factually and without partisan framing.
 
 When you are done searching, respond with a single JSON array (and nothing after it) of the signals you found. Each element must be an object with exactly these fields:
 {
   "signal": "what happened — 1-2 factual sentences",
   "source_category": "the category name from the list above",
-  "category": "one of: scientific | cultural | political | technological | death",
-  "philosophical_relevance": "one sentence on why it matters philosophically",
-  "tradition": "the philosophical tradition it speaks to most directly"
+  "category": "one of: environmental | conflict | political | scientific | technological | cultural | death",
+  "philosophical_relevance": "one sentence on what it asks of a person trying to live well",
+  "tradition": "the Stoic theme it tests most directly (e.g. what is up to us, justice, courage, self-control, the cosmopolis, fortune, death)"
 }
 
 Output the JSON array inside a \`\`\`json code block.`;
@@ -203,83 +238,116 @@ async function embed(text) {
   }
 }
 
-// Retrieve the most relevant corpus passages for a query string, deduped so at
-// least `minAuthors` distinct voices are represented, capped at `count`.
-async function retrievePassages(queryText, count, minAuthors = 3) {
+// Retrieve the Stoic passages for a query, author by author, then a few
+// passages from anywhere else in the corpus as counterpoint. A single
+// unfiltered search would let the larger non-Stoic collections crowd the
+// Stoics out; filtering per author guarantees each Stoic voice is heard on
+// its own merits. match_rag_corpus routes a filtered author through the
+// author btree or the planner (CLAUDE.md), so these calls stay cheap.
+//
+// World observations reach the Daily Dispatch, so the modern philosophy of
+// mind layer is fenced on every call (server/lib/corpus-fence.js).
+async function retrievePassages(queryText, config) {
+  const lens = lensSettings(config);
   const embedding = await embed(queryText);
-  if (!embedding) return [];
+  if (!embedding) return { stoic: [], counterpoint: [] };
 
-  // match_rag_corpus_ids(query_embedding, match_count, filter_language DEFAULT 'english',
-  // exclude_text_types DEFAULT '{}') -> { id, chunk_text, author, work, similarity }.
-  // Over-fetch, then diversify. World observations reach the Daily Dispatch,
-  // so the modern philosophy of mind layer is fenced here too
-  // (server/lib/corpus-fence.js).
-  const { data: rows } = await supabase.rpc('match_rag_corpus_ids', {
-    query_embedding: embedding,
-    match_count: Math.max(count * 3, 24),
-    ...modernFenceParams(),
-  });
-  const passages = rows || [];
+  const byAuthor = await Promise.all(lens.authors.map(async author => {
+    const { data, error } = await supabase.rpc('match_rag_corpus', {
+      query_embedding: embedding,
+      match_count: lens.perAuthor,
+      filter_author: author,
+      filter_language: 'english',
+      ...modernFenceParams(),
+    });
+    if (error) console.error(`  retrieval failed for ${author}: ${error.message}`);
+    return data || [];
+  }));
+  const stoic = byAuthor.flat().sort((a, b) => (b.similarity || 0) - (a.similarity || 0));
 
-  // First pass: one per author (breadth). Second pass: fill remaining slots by
-  // similarity. Guarantees ≥ minAuthors voices when the corpus allows it.
-  const seenAuthors = new Set();
-  const picked = [];
-  for (const p of passages) {
-    if (picked.length >= count) break;
-    if (!seenAuthors.has(p.author)) { seenAuthors.add(p.author); picked.push(p); }
+  let counterpoint = [];
+  if (lens.counterpoints > 0) {
+    // match_rag_corpus_ids(query_embedding, match_count, filter_language,
+    // exclude_text_types) -> { id, chunk_text, author, work, similarity }.
+    // Over-fetch, drop the Stoics already heard, one passage per author.
+    const { data: rows } = await supabase.rpc('match_rag_corpus_ids', {
+      query_embedding: embedding,
+      match_count: 24,
+      ...modernFenceParams(),
+    });
+    const stoicSet = new Set(lens.authors);
+    const seen = new Set();
+    for (const p of rows || []) {
+      if (counterpoint.length >= lens.counterpoints) break;
+      if (stoicSet.has(p.author) || seen.has(p.author)) continue;
+      seen.add(p.author);
+      counterpoint.push(p);
+    }
   }
-  for (const p of passages) {
-    if (picked.length >= count) break;
-    if (!picked.includes(p)) picked.push(p);
-  }
-  return { passages: picked, distinctAuthors: seenAuthors.size, minAuthors };
+  return { stoic, counterpoint };
 }
 
-// Score a signal by how richly the corpus can respond to it: distinct voices,
-// a bonus for well-represented authors, and top-match similarity.
-function scoreRetrieval(passages) {
-  if (!passages.length) return -1;
-  const authors = new Set(passages.map(p => p.author));
-  const tierHits = [...authors].filter(a => WELL_REPRESENTED.has(a)).length;
-  const avgSim = passages.slice(0, 5).reduce((s, p) => s + (p.similarity || 0), 0) / Math.min(5, passages.length);
-  return authors.size + tierHits * 1.5 + avgSim;
+// Score a signal by how directly the Stoics speak to it: how many Stoic
+// voices answer it, how closely, and whether it is one of the collective
+// problems the lens is for.
+function scoreRetrieval({ stoic }, signal, config) {
+  if (!stoic.length) return -1;
+  const lens = lensSettings(config);
+  const voices = new Set(stoic.map(p => p.author)).size;
+  const top = stoic.slice(0, 5);
+  const avgSim = top.reduce((s, p) => s + (p.similarity || 0), 0) / top.length;
+  const bonus = COLLECTIVE_PROBLEM_CATEGORIES.has(signal.category) ? lens.problemBonus : 0;
+  return avgSim + voices * 0.02 + bonus;
 }
 
-// --- Pass 2: dominant selection + corpus response --------------------------
+// --- Pass 2: dominant selection + Stoic response ---------------------------
 
-async function selectDominantSignal(signals, retrievalCount) {
+async function selectDominantSignal(signals, config) {
   let best = null;
   for (const signal of signals) {
-    const { passages } = await retrievePassages(signal.signal, retrievalCount);
-    const score = scoreRetrieval(passages);
-    if (!best || score > best.score) best = { signal, passages, score };
+    const retrieved = await retrievePassages(signal.signal, config);
+    const score = scoreRetrieval(retrieved, signal, config);
+    if (!best || score > best.score) best = { signal, ...retrieved, score };
   }
-  return best; // { signal, passages, score } | null
+  return best; // { signal, stoic, counterpoint, score } | null
 }
 
-const RESPONSE_SYSTEM_PROMPT = `You are the philosophical voice of the Arete corpus, responding to what is happening in the world right now.
+const RESPONSE_SYSTEM_PROMPT = `You are the Stoic voice of the Arete corpus, responding to what is happening in the world right now.
 
-Your job is not commentary. It is not analysis. It is philosophical response — what does the tradition have to say about this specific moment? Not in general. Not as abstraction. As a direct response to something that is actually happening.
+You read the world as Seneca, Epictetus, Marcus Aurelius and Musonius Rufus taught their students to read it. Not as commentary or analysis, but as a direct answer to a specific event: what does the Stoa say to someone living through this?
 
-You write with the corpus behind you. Every claim is grounded in specific thinkers and texts. You do not pretend the tradition has easy answers when it does not. You surface tension where it exists between what the world is doing and what philosophy recommends.
+Work from the Stoic frame, using whichever parts the event actually calls for:
+- What is up to us and what is not. Our judgments, choices and actions are ours; outcomes, other people, and the course of events are not. Draw the line precisely for this event.
+- Virtue is the only good. Wisdom, justice, courage and self-control are tested by events like this one; fortune, comfort and reputation are indifferents, though some are rightly preferred.
+- The role one holds. Citizen, parent, worker, official, neighbour: each role carries duties (kathēkonta), and the event asks something of each.
+- The cosmopolis. We are citizens of the world and members of one body. Distant suffering is not a stranger's business.
+- The discipline of the passions. Fear, rage and despair follow from judgments about events, not from the events themselves. Examine the judgment, without pretending the event is unreal.
+- Premeditation and the view from above. Seeing the worst coming, and seeing the event against the whole of time, both bring proportion.
 
-Your tone: serious, warm, direct. You are writing to someone who is trying to live well in the middle of the world as it actually is — not as it should be.`;
+Three things a faithful Stoic reading never does:
+- It never counsels withdrawal or indifference to injustice. "Not up to us" is not "not our concern". Seneca served Rome, Marcus governed it through war and plague, and Musonius was exiled for speaking. The Stoic acts fully on what is in their power and lets go of the outcome, not the effort.
+- It never takes a partisan side. It judges acts by justice, honesty and courage, not by party or nation, and it reports events plainly.
+- It never invents. Every claim about what a Stoic taught is grounded in the passages provided, attributed to the author who wrote it. If the passages do not say it, you do not say they do.
 
-function buildResponseUserMessage(dominantSignal, passages, config) {
-  const passagesText = passages.map(p =>
-    `${p.author} — ${p.work}: "${(p.chunk_text || '').substring(0, 400)}"`
-  ).join('\n\n');
+Be honest where the Stoa strains. Collective problems like climate change, war between states, or systemic corruption are larger than any one person's choices, and the ancient texts were written for individuals within a city and an empire. Name that gap when it matters rather than covering it over. Counterpoint passages from outside the Stoa are there to sharpen this honesty, not to soften the Stoic answer.
+
+Your tone: serious, warm, direct, steady. You are writing to someone who is frightened, angry or tired of the news, and who wants to act well in the world as it is.`;
+
+function buildResponseUserMessage(dominantSignal, stoic, counterpoint, config) {
+  const fmt = p => `${p.author} — ${p.work}: "${(p.chunk_text || '').substring(0, 400)}"`;
+  const counterText = counterpoint.length
+    ? `\n\nCounterpoint passages from outside the Stoa (use only to sharpen the tension, if at all):\n${counterpoint.map(fmt).join('\n\n')}`
+    : '';
 
   return `This week in the world: ${dominantSignal}
 
-Relevant passages from the corpus:
-${passagesText}
+Stoic passages from the corpus:
+${stoic.map(fmt).join('\n\n')}${counterText}
 
 Produce:
-1. corpus_response: 400-${config.corpus_response_max_words || 600} words — what does the philosophical tradition have to say about this? Ground every claim in the passages provided. End with one concrete practice this week in light of what is happening.
-2. world_corpus_tension: 2-3 sentences — where does the world this week push back against or complicate what the corpus teaches? Be honest where the tradition does not have a clean answer.
-3. dispatch_context: 100-${config.dispatch_context_max_words || 150} words — a tight, vivid digest of the dominant signal for use in Daily Dispatch generation. Written as present-tense context: "This week, [what is happening]. Philosophy has something to say about this..."
+1. corpus_response: 400-${config.corpus_response_max_words || 600} words — what do the Stoics say to someone living through this? Say clearly what in this situation is up to the reader and what is not, which virtue it calls for, and what their roles ask of them. Ground every claim in the Stoic passages provided, naming the author. End with one concrete Stoic practice for this week in light of what is happening.
+2. world_corpus_tension: 2-3 sentences — where does this event push back against or complicate the Stoic teaching? Be honest where the Stoa does not have a clean answer.
+3. dispatch_context: 100-${config.dispatch_context_max_words || 150} words — a tight, vivid, non-partisan digest of the dominant signal for use in Daily Dispatch generation. Written as present-tense context: "This week, [what is happening]. The Stoics have something to say about this..."
 
 Respond ONLY with valid JSON:
 {
@@ -289,12 +357,12 @@ Respond ONLY with valid JSON:
 }`;
 }
 
-async function generateCorpusResponse(dominantSignal, passages, config) {
+async function generateCorpusResponse(dominantSignal, stoic, counterpoint, config) {
   const data = await anthropic({
     model: config.model || DEFAULT_MODEL,
     max_tokens: 3000,
     system: RESPONSE_SYSTEM_PROMPT,
-    messages: [{ role: 'user', content: buildResponseUserMessage(dominantSignal, passages, config) }],
+    messages: [{ role: 'user', content: buildResponseUserMessage(dominantSignal, stoic, counterpoint, config) }],
   });
   const parsed = extractJson(textOf(data.content));
   if (!parsed || !parsed.corpus_response) {
@@ -344,28 +412,31 @@ async function runWorldAgent() {
     return { skipped: 'no_signals' };
   }
 
-  // Pass 2 — pick the dominant signal (richest corpus connection) + respond.
-  const dominant = await selectDominantSignal(signals, config.corpus_retrieval_count || 10);
-  if (!dominant || !dominant.passages.length) {
-    console.error('[world-agent] No corpus grounding for any signal — cannot respond. Exiting.');
+  // Pass 2 — pick the dominant signal (the one the Stoics answer most
+  // directly) + respond.
+  const dominant = await selectDominantSignal(signals, config);
+  if (!dominant || !dominant.stoic.length) {
+    console.error('[world-agent] No Stoic grounding for any signal — cannot respond. Exiting.');
     return { skipped: 'no_grounding' };
   }
   const dom = dominant.signal;
   console.log(`[world-agent] Dominant signal selected: ${dom.signal.slice(0, 90)}`);
 
-  const relevantAuthors = [...new Set(dominant.passages.map(p => p.author))].slice(0, 6);
-  const relevantPassages = dominant.passages.map(p => ({
+  const passages = [...dominant.stoic, ...dominant.counterpoint];
+  const relevantAuthors = [...new Set(passages.map(p => p.author))].slice(0, 6);
+  const relevantPassages = passages.map(p => ({
     id: p.id, author: p.author, work: p.work,
     text: (p.chunk_text || '').substring(0, 400), similarity: p.similarity,
   }));
 
-  const generated = await generateCorpusResponse(dom.signal, dominant.passages, config);
+  const generated = await generateCorpusResponse(dom.signal, dominant.stoic, dominant.counterpoint, config);
   const wordCount = generated.corpus_response.split(/\s+/).filter(Boolean).length;
   console.log(`[world-agent] Corpus response generated | Authors: ${relevantAuthors.join(', ')} | ${wordCount} words`);
 
   // Pass 3 — status. Purely-scientific wellbeing/behavior findings auto-approve
-  // (low political sensitivity) and reach the dispatch immediately. Political,
-  // death, and contested cultural signals wait for Kyle's review.
+  // (low political sensitivity) and reach the dispatch immediately.
+  // Environmental, conflict, political, death, and contested cultural signals
+  // wait for Kyle's review.
   const autoApprove = !!config.auto_approve_scientific_signals && dom.category === 'scientific';
   const status = autoApprove ? 'auto_approved' : 'pending_review';
   if (autoApprove) {
@@ -412,6 +483,9 @@ async function runWorldAgent() {
 }
 
 module.exports = {
+  STOIC_AUTHORS,
+  lensSettings,
+  scoreRetrieval,
   getMondayOfCurrentWeek,
   getAgentConfig,
   gatherWorldSignals,

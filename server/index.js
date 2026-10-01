@@ -136,9 +136,10 @@ const { runInterlocutorProfile } = require('./interlocutor-profile');
 
 // World Agent
 // Railway cron: 30 3 * * 1 (Mondays 03:30 UTC)
-// The only outward-facing agent: weekly web search across philosophically
-// relevant categories, picks the dominant signal by real corpus retrieval, and
-// has the corpus respond to it (server/world-agent.js). Purely-scientific
+// The only outward-facing agent: weekly web search across climate, war,
+// politics and corruption and the other categories, picks the signal the
+// Stoics answer most directly by real per-author corpus retrieval, and has the
+// corpus respond through a Stoic lens (server/world-agent.js). Purely-scientific
 // signals auto-approve; political/contested ones wait for Kyle. Runs as its
 // own Railway cron service (`node world-agent.js`); Kyle adds the cron
 // manually. This require also backs the on-demand admin trigger below.
