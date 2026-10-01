@@ -21,6 +21,9 @@ import {
   REVISED,
   SCATTER_SEED,
   type Preset,
+  SETTLEMENT_MAX,
+  SETTLEMENT_MIN,
+  SETTLEMENT_YEARS,
 } from '@/content/playground/long-filter'
 import styles from './LongFilter.module.css'
 
@@ -127,6 +130,13 @@ const clampStep = (v: number) => Math.min(100, Math.max(0, v))
 const sliderFromRate = (r: number) => clampStep(((Math.log10(r) + 4) / 2.5) * 100)
 const sliderFromError = (r: number) => clampStep(((Math.log10(r) + 6) / 4.5) * 100)
 const sliderFromGap = (d: number) => clampStep(((d - GAP_MIN) / (GAP_MAX - GAP_MIN)) * 100)
+
+/** The settlement dial: a thousand years to a million, log-scaled. */
+const SETTLE_LO = Math.log10(SETTLEMENT_MIN)
+const SETTLE_HI = Math.log10(SETTLEMENT_MAX)
+const settleFromSlider = (v: number) => Math.pow(10, SETTLE_LO + (v / 100) * (SETTLE_HI - SETTLE_LO))
+const sliderFromSettle = (t: number) =>
+  clampStep(((Math.log10(t) - SETTLE_LO) / (SETTLE_HI - SETTLE_LO)) * 100)
 
 /** A rate as the percent a link or a preset carries, to three figures. */
 const asPercent = (v: number) => Number((v * 100).toPrecision(3))
@@ -255,6 +265,19 @@ function gapNote(d: number, e: number): string {
 }
 
 // ── the plate ────────────────────────────────────────────────────────────────
+
+/**
+ * IV. Interstellar settlement against the transition. The model treats a
+ * civilization as one target until it saturates; settlement around other stars
+ * before then would decouple its fate and escape the filter by distance.
+ */
+function settleNote(t: number, g: number): string {
+  const tau = LOG_DISTANCE / g
+  const crossing = LOG_DISTANCE / t
+  if (tau < t)
+    return `The transition finishes in ${fmtYears(tau)} years, ${fmtYears(t - tau)} years before settlement arrives, so the single-target assumption holds and the count stands. It would stop holding below ${pct(crossing, 2)} a year.`
+  return `Settlement arrives ${fmtYears(tau - t)} years before the transition finishes. A civilization spread across stars by then could escape by distance rather than character, and the count no longer describes it. The transition wins only above ${pct(crossing, 2)} a year.`
+}
 
 type Mark = { x: number; y: number; r: number }
 
@@ -431,6 +454,7 @@ export default function LongFilter({
   const [growthStep, setGrowthStep] = useState(() => sliderFromRate(OPENING.growth))
   const [errorStep, setErrorStep] = useState(() => sliderFromError(OPENING.errorBase))
   const [gapStep, setGapStep] = useState(() => sliderFromGap(OPENING.gap))
+  const [settleStep, setSettleStep] = useState(() => sliderFromSettle(SETTLEMENT_YEARS))
   const [hover, setHover] = useState<Hover | null>(null)
   const [copied, setCopied] = useState(false)
   const plateRef = useRef<HTMLCanvasElement>(null)
@@ -462,6 +486,8 @@ export default function LongFilter({
       errorBase: read('pe', true),
       gap: read('d', false),
     })
+    const ts = Number(q.get('ts'))
+    if (q.get('ts') !== null && Number.isFinite(ts) && ts > 0) setSettleStep(sliderFromSettle(ts))
   }, [apply])
 
   // the plate
@@ -499,12 +525,14 @@ export default function LongFilter({
   const growth = rateFromSlider(growthStep)
   const errorBase = errorFromSlider(errorStep)
   const gap = gapFromSlider(gapStep)
+  const settle = settleFromSlider(settleStep)
   const ratio = malice / growth
   const tau = LOG_DISTANCE / growth
+  const transitionFirst = tau < settle
   const count = survivorCount(malice, growth, gap, errorBase)
   const gapLimit = criticalGap(malice, growth, errorBase)
   const setting: Setting = { malice, growth, errorBase, gap }
-  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}`
+  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}&ts=${Number(settle.toPrecision(3))}`
   const rawLeft = ((Math.log10(ratio) - R_LO) / (R_HI - R_LO)) * 100
   const offChart = rawLeft < 0 || rawLeft > 100
   const errorLoad = errorIntegral(gap, tau, errorBase)
@@ -925,8 +953,10 @@ export default function LongFilter({
             a different case. Years or centuries of separation decouple their fates, and a
             civilization that reached them before the transition finished would escape the filter
             by distance rather than by character. The model assumes that does not happen in time.
-            At 0.6 percent a year the transition runs about 3,450 years, long enough that this is an
-            open question, and the slower the moral improvement, the longer the window stays open.
+            The diagram below takes a date for it as a hypothesis, ten thousand years from now
+            unless you move it. At 0.6 percent a year the transition runs about 3,450 years and
+            finishes first. Below about 0.2 percent a year it does not, and the slower the moral
+            improvement, the wider that window opens.
           </p>
           <p className={`${styles.footnote} ${styles.hzCaveat}`}>
             One more correction, and it is uncomfortable. The published catastrophe estimates
@@ -1071,6 +1101,30 @@ export default function LongFilter({
               </p>
             </div>
 
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-settle">
+                    T<sub>s</sub> &nbsp;· interstellar settlement, a hypothesis
+                  </label>
+                  <span className={styles.ctrlVal}>{fmtYears(settle)} yr</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-settle"
+                  aria-describedby="lf-settle-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={settleStep}
+                  onChange={(e) => touch(setSettleStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-settle-note">
+                {settleNote(settle, growth)}
+              </p>
+            </div>
+
             <div className={styles.phaseWrap}>
               <div>
                 <div className={styles.chart}>
@@ -1183,6 +1237,20 @@ export default function LongFilter({
                     <span className={styles.neutral}>
                       {Math.round(tau).toLocaleString('en-US')} yr
                     </span>
+                  </div>
+                  <div className={styles.gate}>
+                    <span>
+                      settlement &nbsp; T<sub>s</sub>
+                    </span>
+                    <span className={transitionFirst ? styles.pass : styles.fail}>
+                      {fmtYears(settle)} yr &nbsp; {transitionFirst ? 'after' : 'before'} τ<sub>v</sub>
+                    </span>
+                  </div>
+                  <div className={styles.gate}>
+                    <span>
+                      g where τ<sub>v</sub> = T<sub>s</sub>
+                    </span>
+                    <span className={styles.neutral}>{pct(LOG_DISTANCE / settle, 2)}</span>
                   </div>
                 </div>
                 <div className={styles.load}>
