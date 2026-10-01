@@ -292,7 +292,7 @@ export const ASSUMPTIONS: Assumption[] = [
     kind: 'Philosophical',
     loadBearing: true,
     ifItFails:
-      'The whole argument fails; constraint, or interstellar dispersal before saturation, suffices. Dispersal within one system does not. Character here includes the institutions it builds (see the notes below)',
+      'The whole argument fails; constraint, or interstellar dispersal before saturation (A12), suffices. Dispersal within one system does not. Character here includes the institutions it builds (see the notes below)',
   },
   {
     id: 'A3',
@@ -362,6 +362,14 @@ export const ASSUMPTIONS: Assumption[] = [
     ifItFails:
       '§5.7. The model double-counts as written, though §5.7 also shows the count is nearly invariant to the split',
   },
+  {
+    id: 'A12',
+    claim: 'Interstellar settlement arrives after saturation, T_s > τ_v, with T_s ≈ 10⁴ years taken as a hypothesis',
+    kind: 'Speculative',
+    loadBearing: true,
+    ifItFails:
+      'A civilization spread across stars before saturating escapes by distance, and N no longer describes it. The assumption holds only while g > K/T_s ≈ 0.21% a year (see the note on A2 and dispersal)',
+  },
 ]
 
 /** §12 — what would settle it. */
@@ -385,5 +393,9 @@ export const FALSIFIERS: { lead: string; body: string }[] = [
   {
     lead: 'Evidence that moral diffusion is logistic with a ceiling below unity',
     body: 'falsifies A4 and converts the result from rare to never.',
+  },
+  {
+    lead: 'A credible route to interstellar settlement within τ_v',
+    body: 'falsifies A12 at that g, and with it the single-target framing: below g = K/T_s the filter can be escaped by distance.',
   },
 ]
