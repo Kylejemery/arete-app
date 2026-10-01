@@ -3,8 +3,10 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import styles from '../admin.module.css'
 
-type Anomaly = { severity: 'warning' | 'critical'; domain: string; message: string }
-type Action = { priority: 'high' | 'medium' | 'low'; action: string; rationale: string }
+// fix_prompt: a prompt to paste into a fresh Claude Code session on the repo.
+// Reports written before the agent produced them have none.
+type Anomaly = { severity: 'warning' | 'critical'; domain: string; message: string; fix_prompt?: string }
+type Action = { priority: 'high' | 'medium' | 'low'; action: string; rationale: string; fix_prompt?: string }
 type AgentStat = { fired: boolean; failures: number; last_run: string | null }
 type TierGap = { author: string; work: string; tier: number; actual_chunks: number; threshold: number; deficit: number }
 
@@ -85,6 +87,48 @@ function Badge({ text, colors }: { text: string; colors: { bg: string; fg: strin
   )
 }
 
+// A collapsed fix prompt with a copy button. Collapsed by default so the
+// lists stay scannable; the prompt is long by design (it must stand alone).
+function FixPrompt({ prompt }: { prompt?: string }) {
+  const [open, setOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
+  if (!prompt) return null
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setOpen(true) // clipboard blocked: show it so it can be selected by hand
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className={styles.ghostBtn} onClick={() => setOpen(o => !o)} aria-expanded={open}>
+          {open ? 'Hide fix prompt' : 'Fix prompt'}
+        </button>
+        <button className={styles.ghostBtn} onClick={copy} title="Copy a prompt for a new Claude Code session">
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
+      {open && (
+        <pre
+          style={{
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: 13,
+            lineHeight: 1.6, margin: '8px 0 0', padding: '10px 12px', borderRadius: 6,
+            background: 'rgba(127, 127, 127, 0.08)', color: 'inherit',
+          }}
+        >
+          {prompt}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 function AnomalyList({ anomalies }: { anomalies: Anomaly[] }) {
   if (!anomalies.length) {
     return <p className={styles.muted}>No anomalies detected this week.</p>
@@ -92,12 +136,15 @@ function AnomalyList({ anomalies }: { anomalies: Anomaly[] }) {
   return (
     <>
       {anomalies.map((a, i) => (
-        <div key={i} className={styles.rowItem}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Badge text={a.severity} colors={SEVERITY_COLORS[a.severity] ?? SEVERITY_COLORS.warning} />
-            <span className={styles.muted} style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.06em' }}>{a.domain}</span>
-          </span>
-          <span style={{ flex: 1, textAlign: 'right' }}>{a.message}</span>
+        <div key={i} className={styles.gapRow}>
+          <div className={styles.rowItem} style={{ borderBottom: 'none', padding: 0 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Badge text={a.severity} colors={SEVERITY_COLORS[a.severity] ?? SEVERITY_COLORS.warning} />
+              <span className={styles.muted} style={{ textTransform: 'uppercase', fontSize: 11, letterSpacing: '0.06em' }}>{a.domain}</span>
+            </span>
+            <span style={{ flex: 1, textAlign: 'right' }}>{a.message}</span>
+          </div>
+          <FixPrompt prompt={a.fix_prompt} />
         </div>
       ))}
     </>
@@ -120,6 +167,7 @@ function ReportBody({ r }: { r: Reflection }) {
                 <span className={styles.gapTitle}>{act.action}</span>
               </div>
               <div className={styles.gapMeta}>{act.rationale}</div>
+              <FixPrompt prompt={act.fix_prompt} />
             </div>
           ))}
         </>
