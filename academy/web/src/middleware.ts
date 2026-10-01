@@ -1,7 +1,7 @@
 ﻿import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { SHARE_PARAM, shareCookieName, verifyShareToken } from '@/lib/playground-share'
+import { RELEASED_PLAYGROUND, SHARE_PARAM, shareCookieName, verifyShareToken } from '@/lib/playground-share'
 
 // /api/cron/post-due authenticates itself with CRON_SECRET (called by Railway,
 // no user session), so it must bypass the session-redirect middleware.
@@ -27,10 +27,11 @@ import { SHARE_PARAM, shareCookieName, verifyShareToken } from '@/lib/playground
 const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
 const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/api/playground/', '/research/']
 
-// The Playground opens one piece at a time. Only the slugs below are
-// reachable; every other /playground path — the index included — 404s, so an
-// unreleased piece cannot be reached by guessing a URL or by a stray link.
-// Releasing a piece is adding its slug to this list, and nothing else.
+// The Playground opens one piece at a time. Only the slugs in
+// RELEASED_PLAYGROUND (lib/playground-share.ts) are reachable; every other
+// /playground path — the index included — 404s, so an unreleased piece cannot
+// be reached by guessing a URL or by a stray link. Releasing a piece is adding
+// its slug to that list, and nothing else.
 //
 // The owner is the exception. Gating the index locked the author out of their
 // own workshop, which is not the point: what is gated is users reaching it,
@@ -39,15 +40,6 @@ const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', 
 // A share link is the other exception: the owner signs a link for one piece
 // (admin → Share Links) and whoever holds it can open that piece, and only
 // that piece, until it expires. See lib/playground-share.ts.
-const RELEASED_PLAYGROUND = [
-  'happiness-scale',
-  'zenos-hand',
-  'chrysippus-cylinder',
-  'the-impression',
-  'stoic-logic',
-  'stoic-qca',
-]
-
 /**
  * Is this request the owner's? Read only to answer that question: no refreshed
  * cookies are propagated, because the only outcomes here are 404 or straight
