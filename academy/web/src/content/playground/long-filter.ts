@@ -17,35 +17,14 @@ export const HALVING_YEARS = 1000
 export const SCATTER_SEED = 20260825
 
 /**
- * The phoenix rate: the baseline incidence of sagehood before anyone was
- * cultivating it deliberately. One in a billion, read off Seneca's remark in
- * the forty-second letter that the good man appears about once in five hundred
- * years — an empire of ~50 million living ~25 years each is ~10⁹ lives.
- *
- * The model's growing population is moral progressors (prokoptontes), not
- * sages, and progressors are far more common than sages. So this is used as a
- * conservative floor for their starting share s₀, not as an estimate of it.
+ * The model's own constants (s₀, Ṅ, p_x) live with the model, in
+ * components/playground/long-filter-model.ts. s₀ is Seneca's phoenix rate,
+ * one in a billion, read off the forty-second letter (the good man appears
+ * about once in five hundred years; an empire of ~50 million living ~25 years
+ * each is ~10⁹ lives). The model's growing population is moral progressors
+ * (prokoptontes), far more common than sages, so it is used as a conservative
+ * floor for their starting share, not as an estimate of it.
  */
-export const PHOENIX_RATE = 1e-9
-
-/** K = ln(1/s₀) ≈ 20.72. The log distance a species has to cross. */
-export const LOG_DISTANCE = Math.log(1 / PHOENIX_RATE)
-
-/** Technological civilizations arising per year in the galaxy (Ṅ). */
-export const ARISING_PER_YEAR = 0.01
-
-/** Irreducible external hazard (p_x). Its reciprocal is L_ℓ. */
-export const EXTERNAL_HAZARD = 1e-8
-
-/**
- * The closed-form moral threshold of the earlier model, R* = log(Ṅ/p_x) /
- * log(1/(e·s₀)) ≈ 0.700, which assumed exponential growth to s = 1 and no
- * hazard after the transition. The live threshold is now computed numerically
- * (long-filter-model.ts, moralThreshold) and depends on g and s_max; this
- * constant survives only for prose that has not yet been revised.
- */
-export const MORAL_THRESHOLD =
-  Math.log(ARISING_PER_YEAR / EXTERNAL_HAZARD) / Math.log(1 / (Math.E * PHOENIX_RATE))
 
 /**
  * When interstellar settlement arrives, in years from now: a hypothesis, not a
@@ -132,8 +111,19 @@ export const PRESETS: Preset[] = [
     conflict: CONFLICT_DEFAULT,
   },
   {
-    key: 'outpace',
-    label: 'Competence outpaces',
+    key: 'just-enough',
+    label: 'Just enough',
+    note: 'the same, with d = −0.07%',
+    malice: 0.3,
+    growth: 0.6,
+    errorBase: 0.7,
+    gap: -0.07,
+    ceiling: CEILING_DEFAULT,
+    conflict: CONFLICT_DEFAULT,
+  },
+  {
+    key: 'well-ahead',
+    label: 'Competence well ahead',
     note: 'the same, with d = −0.20%',
     malice: 0.3,
     growth: 0.6,
@@ -179,6 +169,30 @@ export const REFERENCES: Reference[] = [
   },
   {
     cite: 'M. Eisner, "Long-Term Historical Trends in Violent Crime", Crime and Justice 30 (2003), 83–142.',
+  },
+  {
+    cite: 'Diogenes Laertius, Lives of Eminent Philosophers 7.89, trans. R. D. Hicks (1925).',
+  },
+  {
+    cite: 'Cicero, De Finibus Bonorum et Malorum 3.48, trans. H. Rackham (1914).',
+  },
+  {
+    cite: 'Epictetus, Discourses 1.1.23, trans. W. A. Oldfather (1925).',
+  },
+  {
+    cite: 'P. Cirillo and N. N. Taleb, "On the statistical properties and tail risk of violent conflicts", Physica A 452 (2016), 29–45.',
+    href: 'https://doi.org/10.1016/j.physa.2016.01.050',
+  },
+  {
+    cite: 'P. Lewis, H. Williams, B. Pelopidas and S. Aghlani, Too Close for Comfort: Cases of Near Nuclear Use and Options for Policy, Chatham House (2014).',
+  },
+  {
+    cite: 'H. M. Kristensen and M. Korda, "Status of World Nuclear Forces", Federation of American Scientists (updated annually).',
+    href: 'https://fas.org/initiative/status-world-nuclear-forces/',
+  },
+  {
+    cite: 'N. Bostrom, "The Vulnerable World Hypothesis", Global Policy 10 (2019), 455–476.',
+    href: 'https://doi.org/10.1111/1758-5899.12718',
   },
   {
     cite: 'Our World in Data, "Literacy".',
@@ -234,7 +248,7 @@ export const LEDGER: LedgerRow[] = [
     },
     stays: {
       title: 'The state as an instrument of judgment',
-      body: 'Sages agree about virtue and hold the facts without judgment, taking them as they come until better evidence arrives. What stays open is the pathway: two of them reading the same models will weigh the same evidence differently, and neither is failing at anything. Politics survives, and gets to be about the question rather than the players.',
+      body: 'Progressors agree about what matters and hold the facts without judgment, taking them as they come until better evidence arrives. What stays open is the pathway: two of them reading the same models will weigh the same evidence differently, and neither is failing at anything. Politics survives, and gets to be about the question rather than the players.',
     },
   },
   {
@@ -261,7 +275,7 @@ export const LEDGER: LedgerRow[] = [
     },
     stays: {
       title: 'Criticism, everywhere',
-      body: 'The one kind of institution that grows rather than shrinks. Sages still err, which is the whole error term, so open review, audit and a press nobody owns become more central, not less. What changes is that nobody inside them is trying to win.',
+      body: 'The one kind of institution that grows rather than shrinks. Progressors still err, which is the whole error term, so open review, audit and a press nobody owns become more central, not less. What changes is that nobody inside them is trying to win.',
     },
   },
   {

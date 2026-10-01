@@ -24,21 +24,21 @@ export const NOTATION: Table = {
     ['n', 'Years elapsed since acquiring the capability', 'yr'],
     ['S(n)', 'Probability of surviving n years', '—'],
     ['H', 'Halving time of the hazard rate, in the declining-hazard model', 'yr'],
-    ['s₀', 'Baseline per-capita incidence of sagehood before deliberate cultivation', '—'],
-    ['K', 'ln(1/s₀), the log distance from baseline to saturation', '—'],
-    ['g', 'Annual growth rate of the sage fraction of a population', 'yr⁻¹'],
+    ['s', 'Share of moral progressors (prokoptontes) in the population', '—'],
+    ['s₀', 'Starting share, floored at the phoenix rate of sagehood', '—'],
+    ['s_max', 'Ceiling on the progressor share: those who ever move', '—'],
+    ['g', 'Growth rate of the progressor share', 'yr⁻¹'],
     ['c', 'Annual growth rate of destructive capability', 'yr⁻¹'],
     ['e', 'Annual growth rate of competence per unit capability', 'yr⁻¹'],
-    ['d', 'c − e, the capability gap', 'yr⁻¹'],
-    ['τ_v', 'Time from capability acquisition to moral saturation', 'yr'],
-    ['f_v', 'Fraction of civilizations reaching saturation before destroying themselves', '—'],
+    ['d', 'c − e, the capability gap, driving malice and error alike', 'yr⁻¹'],
+    ['φ', 'Share of error that depends on conflict, and so falls with s', '—'],
+    ['τ_v', 'End of the transition: the year s reaches 99% of s_max', 'yr'],
     ['Ṅ', 'Rate at which technological civilizations arise in the galaxy', 'yr⁻¹'],
-    ['L_s, L_ℓ', 'Mean lifetime of the non-transitioned and transitioned populations', 'yr'],
-    ['f_c,s, f_c,ℓ', 'Detectability of each population', '—'],
+    ['N', 'Civilizations past their transition, expected in the galaxy: Ṅ ∫_τ^∞ S dt', '—'],
     ['R', 'The moral ratio, p_m0/g', '—'],
-    ['R*', 'Threshold value of R above which expected survivors fall below one', '—'],
-    ['d*', 'Threshold value of d above which the error integral costs more than half of f_v', 'yr⁻¹'],
-    ['d₁', 'Threshold value of d above which expected survivors fall below one', 'yr⁻¹'],
+    ['R*', 'Malice alone at d = 0: the R at which N reaches one', '—'],
+    ['d₁', 'The gap at which N reaches one, all hazards included', 'yr⁻¹'],
+    ['T_s', 'Date of interstellar settlement, a hypothesis', 'yr'],
   ],
 }
 
@@ -73,70 +73,86 @@ export const PHOENIX_FRAMES: Table = {
   ],
 }
 
-/** §4.2 — saturation time against the improvement rate. */
-export const SATURATION_TIME: Table = {
-  head: ['g', 'τ_v'],
+/** §4.2 — the transition against the improvement rate, at s_max = 0.99. */
+export const TRANSITION_TIME: Table = {
+  head: ['g', 'Midpoint, s = s_max/2', 'τ_v, s = 0.99 s_max'],
   rows: [
-    ['0.1%/yr', '20,723 yr'],
-    ['0.3%/yr', '6,908 yr'],
-    ['0.6%/yr', '3,454 yr'],
-    ['1.0%/yr', '2,072 yr'],
-    ['2.0%/yr', '1,036 yr'],
+    ['0.1%/yr', '20,713 yr', '25,308 yr'],
+    ['0.3%/yr', '6,904 yr', '8,436 yr'],
+    ['0.6%/yr', '3,452 yr', '4,218 yr'],
+    ['1.0%/yr', '2,071 yr', '2,531 yr'],
+    ['2.0%/yr', '1,036 yr', '1,265 yr'],
   ],
 }
 
-/** §5.3 — why draining malice as virtue rises buys so little. */
-export const SAGE_SHARE: Table = {
-  head: ['Sage fraction exceeds', 'Only in the final'],
+/** §5.3 — why virtue's protection arrives late. */
+export const PROGRESSOR_SHARE: Table = {
+  head: ['Progressor share exceeds', 'Only in the final'],
   rows: [
-    ['10⁻⁶', '66.7% of the window'],
-    ['10⁻⁴', '44.4%'],
-    ['10⁻²', '22.2%'],
-    ['10⁻¹', '11.1%'],
-    ['0.5', '3.3%'],
+    ['10⁻⁶', '72.7% of the transition'],
+    ['10⁻⁴', '54.5%'],
+    ['10⁻²', '36.3%'],
+    ['10⁻¹', '26.8%'],
+    ['0.5', '18.1%'],
   ],
 }
 
-/** §5.6 — the error cliff, at the optimistic p_e0 = 10⁻⁵/yr and τ_v = 3,454 yr. */
-export const ERROR_CLIFF: Table = {
-  head: ['d', 'I_e', 'f_v factor'],
+/** §5.6 — the gap at the realistic baseline (p_m0 0.3%, p_e0 0.7%, g 0.6%). */
+export const GAP_CLIFF: Table = {
+  head: ['d', 'Malice, whole transition', 'Error, whole transition', 'N'],
   rows: [
-    ['−0.10%/yr', '0.010', '0.990'],
-    ['0', '0.035', '0.966'],
-    ['+0.05%/yr', '0.092', '0.912'],
-    ['+0.10%/yr', '0.306', '0.736'],
-    ['+0.15%/yr', '1.179', '0.308'],
-    ['+0.20%/yr', '4.995', '0.007'],
-    ['+0.30%/yr', '105.4', '10⁻⁴⁶'],
+    ['+0.05%/yr', '28.2', '76.5', '2×10⁻⁴⁶'],
+    ['0', '10.4', '25.8', '9×10⁻¹⁶'],
+    ['−0.03%/yr', '6.44', '15.6', '4×10⁻⁵'],
+    ['−0.05%/yr', '4.92', '11.7', '0.03'],
+    ['−0.067%/yr = d₁', '4.04', '9.57', '1'],
+    ['−0.10%/yr', '2.90', '6.81', '59'],
+    ['−0.20%/yr', '1.50', '3.50', '6,770'],
+  ],
+  links: [
+    regionHref(0.3, 0.6, 0.7, 0.05),
+    regionHref(0.3, 0.6, 0.7, 0),
+    regionHref(0.3, 0.6, 0.7, -0.03),
+    regionHref(0.3, 0.6, 0.7, -0.05),
+    regionHref(0.3, 0.6, 0.7, -0.067),
+    regionHref(0.3, 0.6, 0.7, -0.1),
+    regionHref(0.3, 0.6, 0.7, -0.2),
   ],
 }
 
-/** §5.7 — splitting a 1% total between the two terms barely moves the count. */
+/** §5.7 — splitting a 1% total between the two terms, at g = 0.6%/yr. */
 export const MALICE_SPLIT: Table = {
-  head: ['Malice share', 'R', 'I_e', 'N_ℓ'],
+  head: ['Malice share', 'R', 'N at d = 0', 'N at d = −0.07%', 'd₁'],
   rows: [
-    ['100%', '1.67', '0', '5×10⁻⁹'],
-    ['60%', '1.00', '13.8', '3×10⁻⁹'],
-    ['30%', '0.50', '24.2', '2×10⁻⁹'],
-    ['10%', '0.17', '31.1', '1×10⁻⁹'],
+    ['100%', '1.67', '9×10⁻¹⁴', '2.3', '−0.065%'],
+    ['60%', '1.00', '3×10⁻¹⁵', '2.0', '−0.066%'],
+    ['30%', '0.50', '9×10⁻¹⁶', '1.7', '−0.067%'],
+    ['10%', '0.17', '4×10⁻¹⁶', '1.6', '−0.067%'],
+  ],
+  links: [
+    regionHref(1, 0.6, 0.001, -0.07),
+    regionHref(0.6, 0.6, 0.4, -0.07),
+    regionHref(0.3, 0.6, 0.7, -0.07),
+    regionHref(0.1, 0.6, 0.9, -0.07),
+  ],
+}
+
+/** §5.8 — malice carries the gap too: Hellman's 1%, optimistic error, g = 0.6%/yr. */
+export const MALICE_GAP: Table = {
+  head: ['d', 'N'],
+  rows: [
+    ['0', '9×10⁻¹⁴'],
+    ['−0.03%/yr', '4×10⁻⁴'],
+    ['−0.06%/yr', '0.47'],
+    ['−0.10%/yr', '62'],
+    ['−0.20%/yr', '6,740'],
   ],
   links: [
     regionHref(1, 0.6, 0.001, 0),
-    regionHref(0.6, 0.6, 0.4, 0),
-    regionHref(0.3, 0.6, 0.7, 0),
-    regionHref(0.1, 0.6, 0.9, 0),
-  ],
-}
-
-/** §5.8 — what happens to R* if baseline malice grows with capability. */
-export const CAPABILITY_SCALING: Table = {
-  head: ['Q', 'Φ(Q)', 'R* = ln(10⁶)/Φ'],
-  rows: [
-    ['0', '19.7', '0.700'],
-    ['0.05', '33.7', '0.410'],
-    ['0.20', '258', '0.054'],
-    ['0.50', '4.2×10⁴', '3.3×10⁻⁴'],
-    ['1.00', '5.0×10⁸', '2.8×10⁻⁸'],
+    regionHref(1, 0.6, 0.001, -0.03),
+    regionHref(1, 0.6, 0.001, -0.06),
+    regionHref(1, 0.6, 0.001, -0.1),
+    regionHref(1, 0.6, 0.001, -0.2),
   ],
 }
 
@@ -145,75 +161,91 @@ export const PARAMETERS: Table = {
   head: ['Parameter', 'Value', 'Basis'],
   rows: [
     ['Ṅ', '10⁻² yr⁻¹', 'One technological civilization per century'],
-    ['s₀', '10⁻⁹', '§3'],
-    ['p_x', '10⁻⁸ yr⁻¹', 'Gives L_ℓ = 10⁸ yr'],
+    ['s₀', '10⁻⁹', '§3. A floor: it counts sages, and progressors are far more common'],
+    ['s_max', '0.99 (dial 0.90 to 1.00)', 'Assumed. The share that never moves is set by culture, §5.9'],
+    ['φ', '0.7 (dial 0 to 1)', 'Assumed. Haste, secrecy and racing as a share of error'],
+    ['p_x', '10⁻⁸ yr⁻¹', 'Sets a survivor’s lifetime once everything else is retired'],
     [
       'p_e0',
       '7×10⁻³ yr⁻¹ (realistic), 10⁻⁵ yr⁻¹ (optimistic)',
       'Realistic: the 70% of a 1% total that §5.7 assigns to error. Optimistic: the original assumption, kept for comparison. Both weakly constrained. See §11, A8',
     ],
-    ['L_s', '~3×10² yr', 'Equals 1/p at p = 3×10⁻³'],
+    ['τ_v', 's(τ_v) = 0.99 s_max', 'Where the count starts. 50%, 90% or 99% give the same N to three figures when d < 0'],
   ],
 }
 
 /** §6.4 — the expected count across the credible parameter box, at both error baselines. */
 export const EXPECTED_COUNT: Table = {
-  head: ['p_m0', 'g', 'd', 'R', 'N_ℓ, p_e0 = 0.7%', 'N_ℓ, p_e0 = 10⁻⁵'],
+  head: ['p_m0', 'g', 'd', 'R', 'N, p_e0 = 0.7%', 'N, p_e0 = 10⁻⁵'],
   rows: [
-    ['1.00%', '0.60%', '0', '1.67', '2×10⁻¹⁹', '5×10⁻⁹'],
-    ['1.00%', '0.60%', '+0.10%', '1.67', '4×10⁻¹⁰²', '4×10⁻⁹'],
-    ['0.30%', '0.60%', '0', '0.50', '2×10⁻⁹', '50'],
-    ['0.30%', '0.60%', '+0.10%', '0.50', '4×10⁻⁹²', '38'],
-    ['0.30%', '0.60%', '+0.15%', '0.50', '< 10⁻³⁰⁰', '16'],
-    ['0.30%', '1.00%', '+0.10%', '0.30', '2×10⁻¹⁸', '2,513'],
-    ['0.10%', '0.60%', '0', '0.17', '1×10⁻⁶', '36,000'],
-    ['0.30%', '0.60%', '−0.20%', '0.50', '1.6', '52'],
+    ['1.00%', '0.60%', '0', '1.67', '3×10⁻²⁶', '9×10⁻¹⁴'],
+    ['1.00%', '0.60%', '+0.10%', '1.67', '< 10⁻³⁰⁰', '4×10⁻¹⁴¹'],
+    ['0.30%', '0.60%', '0', '0.50', '9×10⁻¹⁶', '0.009'],
+    ['0.30%', '0.60%', '+0.10%', '0.50', '< 10⁻³⁰⁰', '2×10⁻⁴²'],
+    ['0.30%', '1.00%', '+0.10%', '0.30', '4×10⁻³⁶', '5×10⁻⁹'],
+    ['0.10%', '0.60%', '0', '0.17', '9×10⁻¹³', '23'],
+    ['0.30%', '0.60%', '−0.07%', '0.50', '1.7', '20,000'],
+    ['0.30%', '0.60%', '−0.20%', '0.50', '6,770', '2×10⁵'],
+    ['1.00%', '0.60%', '−0.10%', '1.67', '0.07', '62'],
   ],
   links: [
     regionHref(1, 0.6, 0.7, 0),
     regionHref(1, 0.6, 0.7, 0.1),
     regionHref(0.3, 0.6, 0.7, 0),
     regionHref(0.3, 0.6, 0.7, 0.1),
-    regionHref(0.3, 0.6, 0.7, 0.15),
     regionHref(0.3, 1, 0.7, 0.1),
     regionHref(0.1, 0.6, 0.7, 0),
+    regionHref(0.3, 0.6, 0.7, -0.07),
     regionHref(0.3, 0.6, 0.7, -0.2),
+    regionHref(1, 0.6, 0.7, -0.1),
   ],
 }
 
-/**
- * §7.2 — the competence threshold at both baselines, and the weaker line d₁
- * where the count merely reaches one (p_m0 = 0.3%, p_e0 = 0.7%). "None" means
- * R is already over R*, so no value of d brings the count to one.
- */
+/** §7.2 — the competence threshold d₁ at both baselines (p_m0 = 0.3%, s_max 0.99, φ 0.7). */
 export const COMPETENCE_THRESHOLD: Table = {
-  head: ['g', 'τ_v', 'd*, p_e0 = 10⁻⁵', 'd*, p_e0 = 0.7%', 'd₁, p_e0 = 0.7%'],
+  head: ['g', 'τ_v', 'd₁, p_e0 = 10⁻⁵', 'd₁, p_e0 = 0.7%'],
   rows: [
-    ['0.1%/yr', '20,723 yr', '+0.010%/yr', '−1.01%/yr', 'none'],
-    ['0.3%/yr', '6,908 yr', '+0.052%/yr', '−1.01%/yr', 'none'],
-    ['0.6%/yr', '3,454 yr', '+0.131%/yr', '−1.01%/yr', '−0.18%/yr'],
-    ['1.0%/yr', '2,072 yr', '+0.249%/yr', '−1.01%/yr', '−0.07%/yr'],
-    ['2.0%/yr', '1,036 yr', '+0.579%/yr', '−1.01%/yr', '+0.07%/yr'],
+    ['0.1%/yr', '25,308 yr', '−0.022%/yr', '−0.072%/yr'],
+    ['0.3%/yr', '8,436 yr', '−0.013%/yr', '−0.072%/yr'],
+    ['0.6%/yr', '4,218 yr', '−0.001%/yr', '−0.067%/yr'],
+    ['1.0%/yr', '2,531 yr', '−0.000%/yr', '−0.054%/yr'],
+    ['2.0%/yr', '1,265 yr', '+0.038%/yr', '−0.032%/yr'],
   ],
 }
 
-/** §7.4 — R* across four orders of s₀ and two of Ṅ/p_x. */
+/** §7.4 — d₁ against the baseline error rate (p_m0 0.3%, g 0.6%). */
+export const ERROR_SWEEP: Table = {
+  head: ['p_e0', 'd₁'],
+  rows: [
+    ['10⁻⁵ yr⁻¹', '−0.001%/yr'],
+    ['10⁻⁴', '−0.002%/yr'],
+    ['10⁻³', '−0.011%/yr'],
+    ['3×10⁻³', '−0.031%/yr'],
+    ['7×10⁻³', '−0.067%/yr'],
+    ['10⁻²', '−0.091%/yr'],
+    ['2×10⁻²', '−0.166%/yr'],
+  ],
+}
+
+/** §7.1 — R* across the ceiling and the improvement rate. */
 export const THRESHOLD_SWEEP: Table = {
-  head: ['', 'Ṅ/p_x = 10⁵', '10⁶', '10⁷'],
+  head: ['', 'g = 0.3%', '0.6%', '1.0%'],
   rows: [
-    ['s₀ = 10⁻⁷', '0.76', '0.91', '1.07'],
-    ['s₀ = 10⁻⁹', '0.58', '0.70', '0.82'],
-    ['s₀ = 10⁻¹¹', '0.47', '0.57', '0.66'],
+    ['s_max = 0.90', '0.235', '0.208', '0.188'],
+    ['0.95', '0.265', '0.237', '0.217'],
+    ['0.99', '0.333', '0.304', '0.283'],
+    ['0.999', '0.432', '0.402', '0.380'],
+    ['1.00', '0.667', '0.667', '0.667'],
   ],
 }
 
-/** §8 — the improvement rate each malice estimate demands. */
+/** §8 — the improvement rate malice alone would demand, with no lead in competence. */
 export const REQUIRED_GROWTH: Table = {
-  head: ['p_m0', 'Required g', 'Doubling time of the sage fraction'],
+  head: ['p_m0', 'Required g at d = 0', 'Doubling time of the progressor share'],
   rows: [
-    ['1%/yr', '≥ 1.43%/yr', '49 yr'],
-    ['0.3%/yr', '≥ 0.43%/yr', '162 yr'],
-    ['0.1%/yr', '≥ 0.14%/yr', '485 yr'],
+    ['1%/yr', '≥ 4.5%/yr', '15 yr'],
+    ['0.3%/yr', '≥ 1.07%/yr', '65 yr'],
+    ['0.1%/yr', '≥ 0.30%/yr', '231 yr'],
   ],
 }
 
@@ -222,34 +254,37 @@ export const FORK: Table = {
   head: ['Regime', 'Prediction', 'What explains the silence'],
   rows: [
     [
-      'Both thresholds cleared',
-      'Galaxy crowded with ancient civilizations',
-      'Requires f_c,ℓ ≈ 0, argued from restraint',
+      'Gap kept below d₁, through the transition and after',
+      'Galaxy holds civilizations that live for epochs',
+      'Requires near-zero detectability, argued from restraint (§9.4)',
     ],
-    ['Either threshold missed', 'Expected survivors below one', 'Nothing to explain; we are early'],
+    ['Any hazard left standing', 'Expected survivors below one', 'Nothing to explain; we are early'],
   ],
 }
 
-/** §10 — what the decomposition bought, and what it cost. */
+/** §10 — what the revision bought, and what it cost. */
 export const GAINS: Table = {
   head: ['Gain', 'Detail'],
   rows: [
     [
       'Coherence',
-      'The single-hazard model held p fixed while s(t) rose. Contradiction removed.',
+      'Hazards no longer switch off at an arbitrary moment. Every term runs for all time, and a survivor is one whose hazards keep shrinking.',
     ],
-    ['One fewer free parameter', 'L_ℓ is now 1/p_x rather than a chosen number.'],
     [
-      'A visible second failure mode',
-      'The error cliff has no analogue in the single-hazard model and can dominate everything.',
+      'One mechanism, two hazards',
+      'A single gap d drives malice and error. The danger in a capability is the distance between having it and understanding it.',
+    ],
+    [
+      'A realistic population',
+      'Progressors rather than sages, growing logistically to a ceiling set by culture rather than by human nature.',
     ],
     [
       'Contact with the philosophy',
-      'The essay (VI and VIII) argues chosen virtue beats architectural virtue, and the reason it gives is that chosen virtue re-derives against novelty. That is an argument about e. Foreclosed minds have lower e because they cannot reason about unanticipated threats. This is the first formal counterpart the claim has had.',
+      'Kathēkonta (appropriate actions) are what progressors do more reliably, and they are what move risk. The Stoic paradox that all non-sages are equally far from virtue (Cicero, De Finibus 3.48) is about states; the model is about actions.',
     ],
     [
       'A second coupling to honesty',
-      'Sages affect e through honesty rather than goodness: no fraud, no selective reporting, no secrecy. Honesty is what lets the institutions of error correction work (open criticism, replication, audit, a free press), and those institutions are where e is actually made. The Chalmers and Glasziou estimate that roughly 85% of biomedical research investment is avoidably wasted is a rough upper bound on the recoverable share.',
+      'Progressors affect e through honesty: no fraud, no selective reporting, no secrecy. Honesty is what lets the institutions of error correction work, and those institutions are where e is actually made. The Chalmers and Glasziou estimate that roughly 85% of biomedical research investment is avoidably wasted is a rough upper bound on the recoverable share.',
     ],
   ],
 }
@@ -257,14 +292,18 @@ export const GAINS: Table = {
 export const COSTS: Table = {
   head: ['Cost', 'Detail'],
   rows: [
-    ['Two conditions instead of one', 'R < R* is necessary but no longer sufficient.'],
+    ['No closed form', 'N, R* and d₁ come from numerical integration and bisection.'],
+    [
+      'R* is no longer necessary',
+      'A lead in competence shrinks malice too, so a civilization over R* can still survive on d alone (§5.8).',
+    ],
     [
       'A weakly constrained parameter',
-      'p_e0 is close to unmeasurable and d* depends on it exponentially.',
+      'p_e0 is close to unmeasurable, and d₁ is roughly proportional to it (§7.4).',
     ],
     [
       'Less quotable',
-      '"One ratio decides it" becomes "two ratios decide it, and they are coupled through g."',
+      '"One ratio decides it" becomes "a lead in competence decides it, and nobody has measured the lead."',
     ],
   ],
 }
@@ -292,22 +331,22 @@ export const ASSUMPTIONS: Assumption[] = [
     kind: 'Philosophical',
     loadBearing: true,
     ifItFails:
-      'The whole argument fails; constraint, or interstellar dispersal before saturation (A12), suffices. Dispersal within one system does not. Character here includes the institutions it builds (see the notes below)',
+      'The whole argument fails if some other route keeps d negative indefinitely. Coercion does not (§11 note): it concentrates malice in the controllers. Interstellar dispersal before the transition ends (A12) would. Dispersal within one system does not. Character here includes the institutions it builds',
   },
   {
     id: 'A3',
     claim: "Seneca's phoenix line reports a rate rather than rhetoric",
     kind: 'Interpretive',
     loadBearing: false,
-    ifItFails: 's₀ moves; §7.4 shows R* barely moves',
+    ifItFails: 's₀ moves; it is only a floor, and a higher start shortens the transition',
   },
   {
     id: 'A4',
-    claim: 'Sage fraction grows exponentially, not logistically',
+    claim: 'Progressors grow logistically to a ceiling s_max, and the ceiling is cultural',
     kind: 'Modeling',
-    loadBearing: true,
+    loadBearing: false,
     ifItFails:
-      'A logistic ceiling below 1 means saturation is unreachable at any g, converting the result from rare to never',
+      'A lower ceiling leaves more malice and conflict error standing for good. It moves R* a great deal and d₁ hardly at all, so the gap still decides',
   },
   {
     id: 'A5',
@@ -318,57 +357,65 @@ export const ASSUMPTIONS: Assumption[] = [
   },
   {
     id: 'A6',
-    claim: 'Malice scales linearly with the non-sage fraction',
+    claim: 'Malice and conflict error scale linearly with the non-progressor share',
     kind: 'Modeling',
     loadBearing: false,
     ifItFails:
-      '§5.3 shows the mechanism contributes only 4.8%, so the model is nearly insensitive to this',
+      '§5.3 shows the share stays near zero for most of the transition, so the form matters only near the end',
   },
   {
     id: 'A7',
-    claim: 'Saturation is the relevant threshold',
-    kind: 'Modeling',
-    loadBearing: false,
-    ifItFails: '§4.3 shows this barely matters',
+    claim: 'Progressors are identified by checkable criteria that do not mention risk',
+    kind: 'Philosophical',
+    loadBearing: true,
+    ifItFails:
+      'If the only test of progress is lower risk, the argument is circular. The criteria used are treating externals as indifferent and acting from reason rather than passion',
   },
   {
     id: 'A8',
-    claim: 'p_e0 lies between 10⁻⁵ and about 7×10⁻³, and error compounds exponentially in d',
+    claim: 'p_e0 lies between 10⁻⁵ and about 7×10⁻³, and the gap acts exponentially',
     kind: 'Modeling, weakly constrained',
     loadBearing: true,
     ifItFails:
-      'd* moves by orders of magnitude, and at the realistic end the count collapses at d = 0. This is the softest number in the model',
+      'd₁ is roughly proportional to p_e0 (§7.4). This is the softest number in the model',
   },
   {
     id: 'A9',
     claim: 'p_x constant across 10⁸ years',
     kind: 'Modeling',
     loadBearing: false,
-    ifItFails: 'The galactic environment is not uniform in time; would modulate L_ℓ',
+    ifItFails: 'The galactic environment is not uniform in time; would modulate a survivor’s lifetime',
   },
   {
     id: 'A10',
-    claim: 'Malice hazard saturates at the extinction threshold, so Q = 0',
+    claim: 'One gap drives malice and error, and keeps its value after the transition',
     kind: 'Modeling',
     loadBearing: true,
     ifItFails:
-      'If malice scales with capability without a ceiling, §5.8 shows R* collapses by orders of magnitude and the argument fails outright',
+      'If malice ignores the gap, R* becomes necessary again and the Hellman estimate cannot be survived. If d drifts back to zero after τ_v, the error virtue does not touch returns and survivors do not last',
   },
   {
     id: 'A11',
     claim: 'p_m0 is malice-specific, not borrowed from total-catastrophe estimates',
     kind: 'Empirical, currently violated',
-    loadBearing: true,
-    ifItFails:
-      '§5.7. The model double-counts as written, though §5.7 also shows the count is nearly invariant to the split',
+    loadBearing: false,
+    ifItFails: '§5.7. The model double-counts as written, but d₁ is nearly invariant to the split',
   },
   {
     id: 'A12',
-    claim: 'Interstellar settlement arrives after saturation, T_s > τ_v, with T_s ≈ 10⁴ years taken as a hypothesis',
+    claim: 'Interstellar settlement arrives after the transition, T_s > τ_v, with T_s ≈ 10⁴ years taken as a hypothesis',
     kind: 'Speculative',
     loadBearing: true,
     ifItFails:
-      'A civilization spread across stars before saturating escapes by distance, and N no longer describes it. The assumption holds only while g > K/T_s ≈ 0.21% a year (see the note on A2 and dispersal)',
+      'A civilization spread across stars before τ_v escapes by distance, and N no longer describes it. The assumption holds only while g exceeds about 0.25% a year (see the note on A2 and dispersal)',
+  },
+  {
+    id: 'A13',
+    claim: 'Reason (logos) is the same in every species, and people are born with starting points toward virtue (aphormai), not the virtues',
+    kind: 'Philosophical premise',
+    loadBearing: true,
+    ifItFails:
+      'Only the explanation of the silence (§9.4) depends on it. Without it, survivors need not converge on restraint, and the crowded branch needs another reason or fails',
   },
 ]
 
@@ -376,26 +423,22 @@ export const ASSUMPTIONS: Assumption[] = [
 export const FALSIFIERS: { lead: string; body: string }[] = [
   {
     lead: 'Detection of any non-transitioned technological civilization',
-    body: 'bounds Ṅ·f_c,s·L_s and constrains p directly.',
-  },
-  {
-    lead: 'A measured g',
-    body: 'from any long-run series tracking something closer to virtue than homicide. This is the most tractable empirical program the argument suggests.',
+    body: 'bounds the short-lived population and constrains p directly.',
   },
   {
     lead: 'A measured d',
-    body: 'from the history of accident rates per unit of destructive capability. Harder, but industrial and nuclear safety records over the last century are the obvious starting corpus.',
+    body: 'from the history of near misses and accidents per unit of destructive capability. The nuclear record is the obvious starting corpus, and §8 shows how coarse it is. This is the measurement the argument most needs.',
   },
   {
-    lead: 'Any demonstrated route to a declining hazard rate requiring no character',
+    lead: 'A measured g',
+    body: 'from any long-run series tracking something closer to virtue than homicide.',
+  },
+  {
+    lead: 'Any demonstrated route to a hazard that keeps falling without character',
     body: 'falsifies A2 and therefore the necessity claim, which is the claim the essay actually makes.',
   },
   {
-    lead: 'Evidence that moral diffusion is logistic with a ceiling below unity',
-    body: 'falsifies A4 and converts the result from rare to never.',
-  },
-  {
     lead: 'A credible route to interstellar settlement within τ_v',
-    body: 'falsifies A12 at that g, and with it the single-target framing: below g = K/T_s the filter can be escaped by distance.',
+    body: 'falsifies A12 at that g, and with it the single-target framing: below g ≈ 0.25% a year the filter can be escaped by distance.',
   },
 ]

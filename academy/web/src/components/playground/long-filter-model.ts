@@ -38,8 +38,8 @@ export const S0 = 1e-9
 export const NDOT = 0.01
 export const PX = 1e-8
 
-/** Where the transition is said to end: the progressor share reaches 90% of its ceiling. */
-export const TAU_FRACTION = 0.9
+/** Where the transition is said to end: the progressor share reaches 99% of its ceiling. */
+export const TAU_FRACTION = 0.99
 
 /** Logistic margin, in units of 1/g, beyond which s is taken as 0 or s_max. */
 const EDGE = 12
@@ -71,7 +71,7 @@ export function timeToFraction(f: number, growth: number, ceiling: number): numb
   return (Math.log(ceiling / S0 - 1) + Math.log(f / (1 - f))) / growth
 }
 
-/** The transition length τ: the share reaches 90% of its ceiling. */
+/** The transition length τ: the share reaches 99% of its ceiling. */
 export const transitionYears = (growth: number, ceiling: number) =>
   timeToFraction(TAU_FRACTION, growth, ceiling)
 
