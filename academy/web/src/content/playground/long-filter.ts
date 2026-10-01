@@ -183,14 +183,17 @@ export const REFERENCES: Reference[] = [
     cite: 'Marcus Aurelius, Meditations 6.54, trans. C. R. Haines (1916).',
   },
   {
-    cite: 'B. Vossekuil, R. A. Fein, M. Reddy, R. Borum and W. Modzeleski, The Final Report and Findings of the Safe School Initiative, US Secret Service and US Department of Education (2002).',
+    cite: 'B. Vossekuil, R. A. Fein, M. Reddy, R. Borum and W. Modzeleski, The Final Report and Findings of the Safe School Initiative, US Secret Service and US Department of Education (May 2002).',
+  },
+  {
+    cite: 'W. S. Pollack, W. Modzeleski and G. Rooney, Prior Knowledge of Potential School-Based Violence: Information Students Learn May Prevent a Targeted Attack, US Secret Service and US Department of Education (2008).',
   },
   {
     cite: 'M. J. Molina and F. S. Rowland, "Stratospheric sink for chlorofluoromethanes: chlorine atom-catalysed destruction of ozone", Nature 249 (1974), 810–812.',
     href: 'https://doi.org/10.1038/249810a0',
   },
   {
-    cite: 'Defense Nuclear Agency, Castle Series 1954, DNA 6035F (1982).',
+    cite: 'Martin and Rowland, Castle Series, 1954, Defense Nuclear Agency report DNA 6035F, Nuclear Test Personnel Review (1 April 1982).',
   },
   {
     cite: 'P. Cirillo and N. N. Taleb, "On the statistical properties and tail risk of violent conflicts", Physica A 452 (2016), 29–45.',
