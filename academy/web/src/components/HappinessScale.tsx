@@ -216,6 +216,8 @@ function ScaleBar({ activeZone, onZoneClick }: { activeZone: number; onZoneClick
             style={{ '--zone-color': z.color } as React.CSSProperties}
             onClick={() => onZoneClick(i)}
             aria-label={z.label}
+            aria-pressed={activeZone === i}
+            aria-describedby="hs-scale-note"
           >
             <span className={styles.scaleGreek}>{z.greek}</span>
           </button>
@@ -228,6 +230,8 @@ function ScaleBar({ activeZone, onZoneClick }: { activeZone: number; onZoneClick
             className={`${styles.scaleLabel} ${activeZone === i ? styles.scaleLabelActive : ''}`}
             style={{ '--zone-color': z.color } as React.CSSProperties}
             onClick={() => onZoneClick(i)}
+            aria-pressed={activeZone === i}
+            aria-describedby="hs-scale-note"
           >
             {z.label}
           </button>
@@ -237,6 +241,17 @@ function ScaleBar({ activeZone, onZoneClick }: { activeZone: number; onZoneClick
         <span style={{ color: '#c9a84c' }}>← Εὐδαιμονία increases</span>
         <span style={{ color: '#8b2020' }}>Suffering increases →</span>
       </div>
+      <p
+        className={styles.scaleNote}
+        id="hs-scale-note"
+        aria-live="polite"
+        style={{ '--zone-color': ZONES[activeZone].color } as React.CSSProperties}
+      >
+        <span className={styles.scaleNoteHead}>
+          {activeZone + 1} of {ZONES.length} · {ZONES[activeZone].label}, {ZONES[activeZone].sub.toLowerCase()}.
+        </span>{' '}
+        {ZONES[activeZone].howItFeels}
+      </p>
     </div>
   )
 }

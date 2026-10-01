@@ -228,6 +228,14 @@
   color: var(--bone-dim);
 }
 
+.sentNote {
+  margin: 1.4rem 0 0;
+  max-width: 40rem;
+  font-family: var(--util);
+  font-size: 0.9rem;
+  color: var(--bone-dim);
+}
+.sentNote:empty { margin: 0; }
 .note {
   margin: 1.8rem 0 0;
   max-width: 40rem;

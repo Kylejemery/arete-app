@@ -309,6 +309,22 @@ function Propositions() {
   )
 }
 
+/**
+ * What the current setting of the two switches does to the three connectives,
+ * in the words the glosses above already use: the conjunction needs both, the
+ * Stoic “either” needs exactly one, and Philo’s conditional fails in one case
+ * only, front half true and back half false.
+ */
+function rowNote(p: boolean, q: boolean): string {
+  if (p && q)
+    return 'Both true. The conjunction holds. The disjunction fails, because the Stoic “either” wants exactly one half true, not both. Philo’s conditional holds.'
+  if (p && !q)
+    return 'The first true, the second false. The conjunction fails and the disjunction holds, exactly one half being true. This is the one case Philo’s conditional is false: front half true, back half false.'
+  if (!p && q)
+    return 'The first false, the second true. The conjunction fails and the disjunction holds. Philo’s conditional holds too, because with the front half false its one failing case cannot arise.'
+  return 'Both false. The conjunction fails, and so does the disjunction, because the Stoic “either” still needs one half true. Philo’s conditional holds, since its front half is false.'
+}
+
 /** The truth table, which the Stoics did not draw but did specify. */
 function Connectives() {
   const [p, setP] = useState(true)
@@ -331,15 +347,17 @@ function Connectives() {
       </p>
 
       <div className={styles.switches}>
-        <button type="button" className={styles.switch} onClick={() => setP(v => !v)} aria-pressed={p}>
+        <button type="button" className={styles.switch} onClick={() => setP(v => !v)} aria-pressed={p} aria-describedby="sl-row-note">
           <span className={styles.switchLabel}>the first</span>
           <span className={p ? styles.on : styles.off}>{p ? 'true' : 'false'}</span>
         </button>
-        <button type="button" className={styles.switch} onClick={() => setQ(v => !v)} aria-pressed={q}>
+        <button type="button" className={styles.switch} onClick={() => setQ(v => !v)} aria-pressed={q} aria-describedby="sl-row-note">
           <span className={styles.switchLabel}>the second</span>
           <span className={q ? styles.on : styles.off}>{q ? 'true' : 'false'}</span>
         </button>
       </div>
+
+      <p className={styles.switchNote} id="sl-row-note">{rowNote(p, q)}</p>
 
       <div className={styles.table}>
         {connectives.map(c => {

@@ -90,6 +90,208 @@ function inEvery(x: number): string {
   return `1 in ${sci(n)}`
 }
 
+// ── the explainers ───────────────────────────────────────────────────────────
+//
+// Each dial carries a line of prose that changes with where it sits: first the
+// value against something a reader already has a sense of (a span of history,
+// a preset, a quantity elsewhere on the page), then what that value does in
+// the model, in the model’s own numbers.
+
+/** A span of years for prose, rounded the way the readouts round it. */
+function fmtYears(y: number): string {
+  if (y >= 1e9) return `${(y / 1e9).toFixed(y >= 1e10 ? 0 : 1).replace(/\.0$/, '')} billion years`
+  if (y >= 1e6) return `${(y / 1e6).toFixed(y >= 1e7 ? 0 : 1).replace(/\.0$/, '')} million years`
+  if (y >= 1e4) return `${(Math.round(y / 1000) * 1000).toLocaleString('en-US')} years`
+  const n = Math.max(1, Math.round(y))
+  return n === 1 ? '1 year' : `${n.toLocaleString('en-US')} years`
+}
+
+/** The same, from the model’s centuries. */
+const fmtCenturies = (c: number) => fmtYears(c * 100)
+
+/** A span of years against the human record, and against the page’s own horizon. */
+function spanAnchor(y: number): string {
+  if (y < 80) return 'less than a human lifetime'
+  if (y < 5000) return 'less than recorded history, which is about 5,000 years'
+  if (y < 12000) return 'about the time since the first farms'
+  if (y < 300000) return 'less than our species has existed'
+  if (y < 6.6e7) return 'longer than our species has existed, though less than the time since the dinosaurs died'
+  if (y < 1e9) return 'longer than the time since the dinosaurs died, though short of the billion years this page asks for'
+  return 'longer than the billion years this page asks for'
+}
+
+/** A head count out of the eight billion alive now. */
+function people(fraction: number): string {
+  const n = fraction * 8e9
+  if (n < 1.5) return 'about one person'
+  if (n < 100) return `about ${Math.round(n)} people`
+  const mag = Math.pow(10, Math.floor(Math.log10(n)) - 1)
+  const r = Math.round(n / mag) * mag
+  if (r >= 1e6) return `about ${(r / 1e6).toFixed(r >= 1e7 ? 0 : 1).replace(/\.0$/, '')} million people`
+  return `about ${r.toLocaleString('en-US')} people`
+}
+
+/** A multiple, to one decimal, without a trailing “.0”. */
+const times = (x: number) => x.toFixed(1).replace(/\.0$/, '')
+
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+
+/** The net early growth rate of cultivation, per century: r = g − δ. */
+const netRate = (d: Dials) => d.cultivation * (1 - d.forgetting)
+
+/** Where we start: against the phoenix rate and the eras, then what a tenfold head start buys. */
+function startNote(d: Dials, ceiling: number): string {
+  const s0 = d.start
+  const era = [...ERAS].reverse().find((e) => s0 >= e.at * (1 - 1e-9)) ?? ERAS[0]
+  const band =
+    s0 < PHOENIX_RATE * 1.2
+      ? 'The phoenix rate, Seneca’s good man about once in five hundred years: as if no one had ever cultivated this on purpose.'
+      : `${era.key === 'adolescence' ? 'Still' : 'Already'} in ${era.name.replace(/^The /, 'the ')}: ${lowerFirst(era.gloss)}.`
+  const head = `That is ${people(s0)} of the eight billion alive now.`
+  const r = netRate(d)
+  const tail =
+    r <= 0 || ceiling <= s0
+      ? ' At this forgetting rate the fraction only falls from here.'
+      : ceiling < 10 * s0
+        ? ` The ceiling is only ${pct(ceiling)}, so there is little room left to grow.`
+        : ` Each tenfold step further along here takes about ${fmtCenturies(Math.LN10 / r)} off the crossing.`
+  return `${band} ${head}${tail}`
+}
+
+/** Hazard now: against the usual estimate, then how long it leaves a civilization on its own. */
+function hazardNote(lam: number): string {
+  const band =
+    lam >= 0.3
+      ? 'Well above the usual estimate for our own century, about one in six.'
+      : lam >= 0.12
+        ? 'About the usual estimate for our own century, one in six.'
+        : lam >= 0.02
+          ? 'Below the usual estimate for our own century, which is about one in six.'
+          : 'Far below the usual estimate for our own century, which is about one in six.'
+  const half = (Math.LN2 / lam) * 100
+  return `${band} Held there, half of civilizations would be gone in ${fmtYears(half)}, ${spanAnchor(half)}. It sits ${Math.log10(lam / BILLION_YEAR_HAZARD).toFixed(1)} orders above the billion-year line.`
+}
+
+/** Capability multiplier: against the presets, then the hazard it leads to before cultivation helps. */
+function capMultNote(d: Dials): string {
+  const m = d.capMult
+  const preset = PRESETS[0].dials.capMult
+  const full = d.hazard * m
+  const half = fmtYears((Math.LN2 / full) * 100)
+  if (m < 1.05)
+    return `Capability adds no danger of its own: the hazard stays at its starting rate, and held there half of civilizations would be gone in ${half}.`
+  const band =
+    m < preset * 0.85
+      ? `Below the × ${times(preset)} every preset uses.`
+      : m <= preset * 1.15
+        ? `About the × ${times(preset)} every preset uses.`
+        : m < 10
+          ? `Above the × ${times(preset)} every preset uses.`
+          : 'An order of magnitude or more over the starting hazard.'
+  return `${band} At full capability the hazard is ${times(m)} times its starting rate, ${sci(full)} a century, and held there half of civilizations would be gone in ${half}.`
+}
+
+/** Capability doubling: against a life, then the race against cultivation. */
+function capDoubleNote(d: Dials, halfway: number | null): string {
+  const t = d.capDouble * 100
+  const band =
+    t < 30
+      ? 'Capability reaches half its ceiling within a single generation.'
+      : t < 80
+        ? 'Capability reaches half its ceiling within a human lifetime.'
+        : 'Capability takes longer than a human lifetime to reach half its ceiling.'
+  const nine = d.capDouble * Math.log2(10)
+  const race =
+    halfway === null
+      ? 'cultivation never reaches half the population at this forgetting rate'
+      : `cultivation reaches half the population in ${fmtCenturies(halfway)}${halfway > nine ? ', so the instruments arrive before the judgment' : ', so the judgment keeps pace'}`
+  return `${band} It is at nine tenths in ${fmtCenturies(nine)}; ${race}.`
+}
+
+/** Cultivation rate: against the tradition’s own pace, then the doubling time, and the ceiling it cannot move. */
+function cultivationNote(d: Dials, ceiling: number, crossingEnd: number): string {
+  const g = d.cultivation
+  const base = PRESETS[0].dials.cultivation
+  const band =
+    g < base * 0.75
+      ? `Slower than the rate the tradition has actually managed, which the presets put at ${base} a century.`
+      : g <= base * 1.3
+        ? 'About the rate the tradition has actually managed.'
+        : `${times(g / base)} times the rate the tradition has actually managed.`
+  if (ceiling <= d.start)
+    return `${band} Forgetting holds the ceiling at ${pct(ceiling)}, below where it starts, so the fraction falls however fast it is taught.`
+  const r = netRate(d)
+  const crossing =
+    crossingEnd >= T_MAX * 0.999 ? 'the crossing does not finish inside a billion years' : `the crossing takes ${fmtCenturies(crossingEnd)}`
+  return `${band} Early on the cultivated fraction doubles every ${fmtCenturies(Math.LN2 / r)}, and ${crossing}. The ceiling stays at ${pct(ceiling)} whatever this dial says.`
+}
+
+/** Forgetting: against the presets, then the ceiling and how far down the ledger it lets a civilization get. */
+function forgettingNote(f: number, ceiling: number, reached: string | null): string {
+  const band =
+    f >= 1
+      ? 'Forgetting matches or outruns cultivation: each generation loses at least what it was taught, and the fraction only falls from where it starts.'
+      : f >= 0.3
+        ? 'Above the rate a civilization forgets when every generation relearns from the start.'
+        : f >= 0.06
+          ? 'Near the rate a civilization forgets when every generation relearns from the start.'
+          : f >= 0.01
+            ? 'Between relearning from the start and a corpus that holds.'
+            : 'Near what it would mean for accumulated judgment to be retrievable rather than re-derived.'
+  const ceil = f >= 1 ? '' : ` The ceiling is ${pct(ceiling)}, leaving ${inEvery(f)} outside.`
+  const ledger =
+    reached === null
+      ? ' Not one row of the ledger is ever crossed.'
+      : reached === LEDGER[LEDGER.length - 1].gone
+        ? ` The ledger runs all the way to its last row, ${lowerFirst(reached)}.`
+        : ` The furthest the ledger gets is ${lowerFirst(reached)}.`
+  return `${band}${ceil}${ledger}`
+}
+
+/** Independent conditions: against the usual three, then how hard cultivation bites. */
+function conditionsNote(k: number, remainderAllowed: number): string {
+  const band =
+    k < 2.5
+      ? 'Fewer than the usual three things that must coincide for a catastrophe.'
+      : k <= 3.5
+        ? 'About the usual three: capability, opportunity and will.'
+        : 'More than the usual three things that must coincide for a catastrophe.'
+  return `${band} Cultivating half the population cuts the hazard to about ${pct(Math.pow(0.5, k))} of its starting level, and the billion-year line permits ${inEvery(remainderAllowed)} outside.`
+}
+
+/** Lock-in pressure: against the two presets that set it, then how fast it freezes. */
+function lockinNote(phi: number, deep: { frozen: number; ended: number }): string {
+  if (phi < 1e-6)
+    return 'No reach for control at all, so no civilization freezes: every outcome is either still moving or ended.'
+  const calm = PRESETS[0].dials.lockin
+  const band =
+    phi < calm * 0.5
+      ? 'Less pressure toward control than the “As we are” setting.'
+      : phi <= calm * 2.5
+        ? 'Near the “As we are” setting.'
+        : phi < 0.25
+          ? 'Well above the “As we are” setting.'
+          : 'In the range of “The frightened century”, a civilization that answers its own hazard with control.'
+  const deepTime =
+    deep.frozen >= 0.001
+      ? `At a billion years the model has ${pct(deep.frozen)} of them frozen.`
+      : deep.ended > 0.99
+        ? 'At a billion years almost none are frozen, because almost all have ended first.'
+        : 'At a billion years almost none are frozen.'
+  return `${band} At the starting hazard, half of civilizations would freeze within ${fmtCenturies(Math.LN2 / phi)} if nothing ended them first. ${deepTime}`
+}
+
+/** IV. The scrubbed moment against the human record, and how far the crossing has got. */
+function scrubNote(p: Point, capMult: number): string {
+  const y = p.t * 100
+  const span = `${fmtYears(y).replace(/^./, (c) => c.toUpperCase())} from now is ${spanAnchor(y)}.`
+  // With no multiplier there is no ceiling to be part of the way to.
+  if (capMult < 1.05) return span
+  return p.cap >= 0.995
+    ? `${span} By then capability is effectively at its ceiling.`
+    : `${span} By then capability is at ${pct(p.cap)} of its ceiling.`
+}
+
 // ── chart geometry ───────────────────────────────────────────────────────────
 
 const W = 1000
@@ -454,6 +656,9 @@ export default function ThePassage({
     [model],
   )
 
+  /** The furthest row of the ledger the dials ever reach, for the forgetting note. */
+  const lastCrossed = [...crossings].reverse().find((c) => c.at !== null)?.row.gone ?? null
+
   const floor = REACH[dials.reach].floor
   const clearsLine = model.floorReached <= BILLION_YEAR_HAZARD
   // Two things can hold the hazard up, and which one is binding is the whole
@@ -591,50 +796,58 @@ export default function ThePassage({
 
           <div className={styles.dialGrid}>
             <div className={styles.dials}>
-              <Dial label="Where we start" hint={`cultivated fraction today — the dial bottoms out at the phoenix rate, ${inEvery(PHOENIX_RATE)}`}
+              <Dial label="Where we start" hint="s₀ — cultivated fraction today"
+                note={startNote(dials, model.ceiling)}
                 value={inEvery(dials.start)} scale={SCALES.start} v={dials.start}
                 onChange={(x) => set('start', x)} />
-              <Dial label="Hazard now" hint="per century, before capability"
+              <Dial label="Hazard now" hint="λ₀ — per century, before capability"
+                note={hazardNote(dials.hazard)}
                 value={`${sci(dials.hazard)} · ${inEvery(dials.hazard)} a century`}
                 scale={SCALES.hazard} v={dials.hazard} onChange={(x) => set('hazard', x)} />
-              <Dial label="Capability multiplier" hint="hazard at full capability"
+              <Dial label="Capability multiplier" note={capMultNote(dials)}
                 value={`× ${dials.capMult.toFixed(1)}`} scale={SCALES.capMult} v={dials.capMult}
                 onChange={(x) => set('capMult', x)} />
-              <Dial label="Capability doubling" hint="how fast it gets there"
+              <Dial label="Capability doubling" note={capDoubleNote(dials, model.halfway)}
                 value={years(dials.capDouble)} scale={SCALES.capDouble} v={dials.capDouble}
                 onChange={(x) => set('capDouble', x)} />
             </div>
             <div className={styles.dials}>
               <Dial label="Cultivation rate" hint="g, per century"
+                note={cultivationNote(dials, model.ceiling, model.crossingEnd)}
                 value={dials.cultivation.toFixed(2)} scale={SCALES.cultivation} v={dials.cultivation}
                 onChange={(x) => set('cultivation', x)} />
-              <Dial label="Forgetting" hint="δ/g — the ceiling is 1 minus this"
+              <Dial label="Forgetting" hint="δ/g — forgetting over cultivation"
+                note={forgettingNote(dials.forgetting, model.ceiling, lastCrossed)}
                 value={`${sci(dials.forgetting)} of cultivation`} scale={SCALES.forgetting}
                 v={dials.forgetting} onChange={(x) => set('forgetting', x)} />
               <Dial label="Independent conditions" hint="k — what must coincide"
+                note={conditionsNote(dials.conditions, model.remainderAllowed)}
                 value={dials.conditions.toFixed(1)} scale={SCALES.conditions} v={dials.conditions}
                 onChange={(x) => set('conditions', x)} />
               <Dial label="Lock-in pressure" hint="φ₀ — reaching for control"
+                note={lockinNote(dials.lockin, model.deep)}
                 value={`${sci(dials.lockin)} a century`} scale={SCALES.lockin} v={dials.lockin}
                 onChange={(x) => set('lockin', x)} />
-              <div className={styles.ctrl}>
-                <div className={styles.ctrlTop}>
-                  <span className={styles.ctrlLabel}>Reach</span>
-                  <span className={styles.ctrlVal}>floor {sci(floor)}</span>
+              <div className={styles.ctrlRow}>
+                <div className={styles.ctrl}>
+                  <div className={styles.ctrlTop}>
+                    <span className={styles.ctrlLabel} id="pg-reach-label">Reach</span>
+                    <span className={styles.ctrlVal}>floor {sci(floor)}</span>
+                  </div>
+                  <div className={styles.segmented} role="group" aria-labelledby="pg-reach-label"
+                    aria-describedby="pg-reach-note">
+                    {(Object.keys(REACH) as Reach[]).map((r) => (
+                      <button key={r} onClick={() => set('reach', r)} aria-pressed={dials.reach === r}
+                        className={dials.reach === r ? styles.segOn : undefined}>
+                        {REACH[r].label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className={styles.segmented}>
-                  {(Object.keys(REACH) as Reach[]).map((r) => (
-                    <button key={r} onClick={() => set('reach', r)} aria-pressed={dials.reach === r}
-                      className={dials.reach === r ? styles.segOn : undefined}>
-                      {REACH[r].label}
-                    </button>
-                  ))}
-                </div>
+                <p className={styles.ctrlNote} id="pg-reach-note">{REACH[dials.reach].note}</p>
               </div>
             </div>
           </div>
-
-          <p className={`${styles.reachNote} ${styles.col}`}>{REACH[dials.reach].note}</p>
 
           <div className={styles.wrap}>
             <div className={styles.gates}>
@@ -718,12 +931,14 @@ export default function ThePassage({
 
           <div className={styles.scrubWrap}>
             <input type="range" min={0} max={1000} value={scrub} className={styles.scrub}
-              aria-label="Years from now" onChange={(e) => setScrub(Number(e.target.value))} />
+              aria-label="Years from now" aria-describedby="pg-scrub-note"
+              onChange={(e) => setScrub(Number(e.target.value))} />
             <div className={styles.scrubRead}>
               <span className={styles.scrubYear}>{years(now.t)}</span>
               <span className={styles.scrubMeta}>from now</span>
             </div>
           </div>
+          <p className={styles.scrubNote} id="pg-scrub-note">{scrubNote(now, dials.capMult)}</p>
 
           <div className={styles.momentGrid}>
             <div className={styles.moment}>
@@ -956,17 +1171,23 @@ export default function ThePassage({
   )
 }
 
-/** One labelled dial on a log or linear track. */
+/**
+ * One labelled dial on a log or linear track, with a note beside it that
+ * changes with where it sits. The static hint is kept only where it names the
+ * symbol the formulas use.
+ */
 function Dial({
   label,
   hint,
+  note,
   value,
   scale,
   v,
   onChange,
 }: {
   label: string
-  hint: string
+  hint?: string
+  note: string
   value: string
   scale: { from: (n: number) => number; to: (n: number) => number }
   v: number
@@ -974,16 +1195,21 @@ function Dial({
 }) {
   const id = `pg-${label.replace(/\s+/g, '-').toLowerCase()}`
   return (
-    <div className={styles.ctrl}>
-      <div className={styles.ctrlTop}>
-        <label className={styles.ctrlLabel} htmlFor={id}>
-          {label}
-        </label>
-        <span className={styles.ctrlVal}>{value}</span>
+    <div className={styles.ctrlRow}>
+      <div className={styles.ctrl}>
+        <div className={styles.ctrlTop}>
+          <label className={styles.ctrlLabel} htmlFor={id}>
+            {label}
+          </label>
+          <span className={styles.ctrlVal}>{value}</span>
+        </div>
+        <input type="range" id={id} aria-describedby={`${id}-note`} min={0} max={100} step={0.5}
+          value={scale.to(v)} onChange={(e) => onChange(scale.from(Number(e.target.value)))} />
+        {hint && <span className={styles.ctrlHint}>{hint}</span>}
       </div>
-      <input type="range" id={id} min={0} max={100} step={0.5} value={scale.to(v)}
-        onChange={(e) => onChange(scale.from(Number(e.target.value)))} />
-      <span className={styles.ctrlHint}>{hint}</span>
+      <p className={styles.ctrlNote} id={`${id}-note`}>
+        {note}
+      </p>
     </div>
   )
 }

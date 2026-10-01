@@ -29,6 +29,7 @@
 .anchors dt code { font-size: 0.85em; background: var(--qca-surface); padding: 0.1em 0.4em; border-radius: 4px; margin-right: 0.35em; }
 .anchors dd { margin: 0.25rem 0 0; color: var(--qca-muted); font-size: 0.95rem; }
 .lab { margin: 1rem 0 2rem; }
+.liveNote { font-size: 0.95rem; line-height: 1.5; margin: 0.75rem 0; padding-left: 0.75rem; border-left: 3px solid var(--qca-accent); }
 .help { color: var(--qca-muted); font-size: 0.9rem; line-height: 1.5; margin: 0.25rem 0 0.75rem; }
 .editedNote { background: var(--qca-surface); border-left: 3px solid var(--qca-accent); padding: 0.5rem 0.75rem; font-size: 0.9rem; }
 .linkButton { background: none; border: none; color: var(--qca-accent); text-decoration: underline; cursor: pointer; font: inherit; padding: 0; }

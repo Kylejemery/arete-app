@@ -482,6 +482,40 @@
   font-size: 0.66rem;
   color: var(--bone-dim);
 }
+/* A slider with its explainer beside it; stacked below 900px. */
+.ctrlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 17rem);
+  gap: 1.6rem;
+  align-items: start;
+  margin: 0 0 2rem;
+}
+.ctrlRow > .ageBox,
+.ctrlRow > .ppControls {
+  margin: 0;
+}
+.ctrlRow > .slider {
+  margin: 0.7rem 0 0;
+}
+.ctrlNote {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--tape-rule);
+  font-family: var(--book);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--bone);
+  min-height: 3.9rem;
+}
+@media (max-width: 900px) {
+  .ctrlRow {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+  .ctrlNote {
+    min-height: 0;
+  }
+}
 .seg {
   display: inline-flex;
   gap: 0;

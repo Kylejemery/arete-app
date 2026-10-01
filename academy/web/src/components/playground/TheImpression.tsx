@@ -141,6 +141,20 @@ function TensionPanel({ sent }: { sent: string[] }) {
   )
 }
 
+/**
+ * What the two panels are showing after this many impressions, as the rule
+ * above draws it: in the wax the newest is whole, the one before it half gone,
+ * anything older flattened; the tension keeps every one.
+ */
+function sentNote(n: number): string | null {
+  if (n === 0) return null
+  if (n === 1)
+    return 'One impression, one seal. The wax holds it whole and so does the tension, so with only one sent the two souls cannot yet be told apart.'
+  if (n === 2)
+    return 'The second seal was pressed where the first was, so in the wax the first is half gone. The tension carries both, each as its own alteration.'
+  return `In the wax only the newest is whole, the one before it is half gone, and the other ${n - 2} ${n - 2 === 1 ? 'has' : 'have'} been flattened to make room. The tension still carries all ${n}.`
+}
+
 // ── the piece ────────────────────────────────────────────────────────────────
 
 export default function TheImpression({
@@ -226,6 +240,10 @@ export default function TheImpression({
               </div>
             ))}
           </div>
+
+          <p className={styles.sentNote} aria-live="polite">
+            {sentNote(sent.length)}
+          </p>
 
           {last ? <p className={styles.note}>{last.note}</p> : null}
 

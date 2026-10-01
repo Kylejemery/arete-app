@@ -329,6 +329,8 @@ function Gesture() {
               setIdx(Number(e.target.value))
             }}
             aria-label="Close the hand"
+            aria-valuetext={`${stage.index + 1} of 4: ${stage.name}, ${stage.hand.toLowerCase()}`}
+            aria-describedby="zh-stage-gloss"
           />
           <div className={styles.sliderScale}>
             <span>Open</span>
@@ -357,7 +359,9 @@ function StageCard({ stage }: { stage: Stage }) {
         {stage.cicero}
         <cite>Cicero, Academica 2.145</cite>
       </blockquote>
-      <p className={styles.gloss}>{stage.gloss}</p>
+      <p className={styles.gloss} id="zh-stage-gloss">
+        {stage.gloss}
+      </p>
     </article>
   )
 }

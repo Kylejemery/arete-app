@@ -10,6 +10,57 @@ const WITH_COURT: Condition[] = [...BASE, "COURT"];
 const COLUMNS: SetName[] = [...WITH_COURT, "CONS"];
 
 const fmt = (x: number) => x.toFixed(2);
+
+/** The conventional cutoff for calling a row or path sufficient. */
+const CONVENTION = 0.8;
+
+/**
+ * What the chosen threshold does to the truth table: where it sits against
+ * the 0.80 convention, how many observed rows clear it, and which row is the
+ * closest call, so a reader sees what moving it would flip.
+ */
+function thresholdNote(cut: number, rows: { consistency: number; out: 0 | 1; cases: StoicCase[] }[]): string {
+  const band =
+    cut < CONVENTION
+      ? `At ${cut.toFixed(2)}, more lenient than the conventional ${CONVENTION.toFixed(2)}.`
+      : cut === CONVENTION
+        ? `At ${cut.toFixed(2)}, the conventional cutoff.`
+        : `At ${cut.toFixed(2)}, stricter than the conventional ${CONVENTION.toFixed(2)}.`;
+  const passing = rows.filter((r) => r.out === 1).length;
+  const count =
+    passing === 0
+      ? "No observed row is consistent enough to count as sufficient for CONS."
+      : `${passing} of ${rows.length} observed ${rows.length === 1 ? "row clears" : "rows clear"} it and ${passing === 1 ? "counts" : "count"} as sufficient for CONS.`;
+  if (rows.length === 0) return `${band} ${count}`;
+  const closest = rows.reduce((a, b) => (Math.abs(b.consistency - cut) < Math.abs(a.consistency - cut) ? b : a));
+  const who = closest.cases.map((c) => c.name).join(", ");
+  const side = closest.out === 1 ? "just clears it" : "just misses it";
+  return `${band} ${count} The closest call is the row holding ${who}, at ${fmt(closest.consistency)}, which ${side}.`;
+}
+
+/**
+ * What the plotted path shows: its fit against the convention, and which
+ * Stoics fall below the diagonal, the cases that break the rule.
+ */
+function pathNote(
+  label: string,
+  consistency: number,
+  coverage: number,
+  breakers: string[],
+  negated: boolean
+): string {
+  const outcome = negated ? "inconsistency" : "consistency";
+  const fitText =
+    consistency >= CONVENTION
+      ? `consistency ${fmt(consistency)}, enough to call it sufficient at the conventional ${CONVENTION.toFixed(2)}`
+      : `consistency ${fmt(consistency)}, short of the conventional ${CONVENTION.toFixed(2)}`;
+  const cover = `It accounts for about ${Math.round(coverage * 100)}% of the ${outcome} in the cases.`;
+  const below =
+    breakers.length === 0
+      ? "No dot sits below the diagonal, so no case contradicts it."
+      : `${breakers.length === 1 ? "One case sits" : `${breakers.length} cases sit`} below the diagonal and contradict it: ${breakers.join(", ")}.`;
+  return `${label.replace(" → inconsistency", "")}: ${fitText}. ${cover} ${below}`;
+}
 const clone = (cs: StoicCase[]) => cs.map((c) => ({ ...c, scores: { ...c.scores } }));
 
 export default function StoicQCA() {
@@ -35,6 +86,18 @@ export default function StoicQCA() {
       return { ...p, ...fit(xs, p.id === "adv-court" ? notY : y) };
     });
   }, [cases]);
+
+  // The plotted path's fit, and the Stoics below its diagonal: membership in
+  // the path above membership in the outcome, the same dots the plot shades.
+  const plotted = pathFits.find((p) => p.id === plotPath);
+  const plottedBreakers = plotted
+    ? cases
+        .filter((c) => {
+          const y = plotted.id === "adv-court" ? neg(c.scores.CONS) : c.scores.CONS;
+          return plotted.membership(c) - y > 0.005;
+        })
+        .map((c) => c.name)
+    : [];
 
   const setScore = (i: number, k: SetName, v: number) =>
     setCases((prev) => prev.map((c, j) => (j === i ? { ...c, scores: { ...c.scores, [k]: v } } : c)));
@@ -90,13 +153,20 @@ export default function StoicQCA() {
           </label>
           <label>
             Consistency threshold{" "}
-            <select value={inclCut} onChange={(e) => setInclCut(Number(e.target.value))}>
+            <select
+              value={inclCut}
+              onChange={(e) => setInclCut(Number(e.target.value))}
+              aria-describedby="qca-threshold-note"
+            >
               {[0.75, 0.8, 0.85, 0.9].map((v) => (
                 <option key={v} value={v}>{v.toFixed(2)}</option>
               ))}
             </select>
           </label>
         </div>
+        <p className={styles.liveNote} id="qca-threshold-note" aria-live="polite">
+          {thresholdNote(inclCut, rows)}
+        </p>
         <p className={styles.help}>
           Each row is a combination of conditions that at least one Stoic actually lived. A case sits in the
           row where his scores are above 0.5. Consistency is the fuzzy measure: how far membership in the row
@@ -172,13 +242,21 @@ export default function StoicQCA() {
         <div className={styles.controls}>
           <label>
             Path{" "}
-            <select value={plotPath} onChange={(e) => setPlotPath(e.target.value)}>
+            <select
+              value={plotPath}
+              onChange={(e) => setPlotPath(e.target.value)}
+              aria-describedby="qca-path-note"
+            >
               {PATHS.map((p) => (
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </label>
         </div>
+        <p className={styles.liveNote} id="qca-path-note" aria-live="polite">
+          {plotted &&
+            pathNote(plotted.label, plotted.consistency, plotted.coverage, plottedBreakers, plotted.id === "adv-court")}
+        </p>
         <XYPlot cases={cases} pathId={plotPath} />
       </section>
     </div>

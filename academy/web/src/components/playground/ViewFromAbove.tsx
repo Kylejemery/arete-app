@@ -101,6 +101,144 @@ function intWithCommas(n: number): string {
   return Math.round(n).toLocaleString('en-US')
 }
 
+// ── the explainers ───────────────────────────────────────────────────────────
+//
+// Each slider carries a line of prose that changes with where it sits: first
+// the value against something the reader already has a sense of (a life of
+// eighty years, recorded history, the distance to the Moon, their own body),
+// then what that value means in the instrument, with its live numbers.
+
+const yearsWord = (n: number) => (n === 1 ? '1 year' : `${intWithCommas(n)} years`)
+
+/** Minutes of clock time, phrased for humans. */
+function clockSpan(minutes: number): string {
+  if (minutes < 60) return `${minutes} minutes`
+  const h = +(minutes / 60).toFixed(1)
+  return h === 1 ? '1 hour' : `${h} hours`
+}
+
+/** A Life, as a Single Day — where the hand stands, and what is left of the day. */
+function lifeNote(age: number): string {
+  if (age === 0) return 'Midnight, and the whole day ahead. Each year of life moves the hand eighteen minutes.'
+  if (age === LIFE_YEARS)
+    return 'Midnight. The eighty years this day is drawn for are complete; any day from here is one the clock does not hold.'
+  if (age > LIFE_YEARS)
+    return `${yearsWord(age - LIFE_YEARS)} past the eighty this day is drawn for, so the hand rests at midnight. These years are added to the day, not taken from it.`
+  const part =
+    age < 18
+      ? 'Before dawn.'
+      : age < 40
+        ? 'Morning.'
+        : age === 40
+          ? 'Noon, exactly halfway.'
+          : age < 68
+            ? 'Afternoon.'
+            : 'Evening.'
+  const left = LIFE_YEARS - age
+  return `${part} ${yearsWord(age)} behind you; ${yearsWord(left)} of the eighty ${left === 1 ? 'remains' : 'remain'}, ${clockSpan(left * 18)} on this clock.`
+}
+
+/** A beat count, rounded to what the eye can hold. */
+function beatsWord(n: number): string {
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)} billion`
+  return `${Math.round(n / 1e6)} million`
+}
+
+/** The Heartbeat Budget — how much of the allowance the age has spent. */
+function heartNote(age: number, bpm: number): string {
+  const perDay = intWithCommas(bpm * 60 * 24)
+  const perYear = bpm * 60 * 24 * 365.25
+  if (age === 0)
+    return `At birth the whole budget is ahead: about ${beatsWord(LIFE_YEARS * perYear)} beats over eighty years, some ${perDay} each day.`
+  if (age === LIFE_YEARS)
+    return `Eighty years: the budget this piece draws is spent. Each day from here costs about ${perDay} beats more.`
+  if (age > LIFE_YEARS)
+    return `${yearsWord(age - LIFE_YEARS)} past the eighty this budget is drawn for. Each further day spends about ${perDay} beats beyond it.`
+  return `${yearsWord(age)} is ${Math.max(1, Math.round((age / LIFE_YEARS) * 100))}% of the eighty-year life this budget is drawn for. About ${beatsWord(age * perYear)} beats are spent, at some ${perDay} a day.`
+}
+
+/** The Relay of Generations — the span against a life and recorded history, then the line of people. */
+function generationsNote(gen: number, yearsPerGen: number): string {
+  const years = gen * yearsPerGen
+  const y = intWithCommas(years)
+  const span =
+    years <= LIFE_YEARS
+      ? `${y} years is inside one eighty-year life; people alive today remember it.`
+      : years < 2 * LIFE_YEARS
+        ? `${y} years is less than two eighty-year lives laid end to end.`
+        : years < 4800
+          ? `${y} years is about ${Math.round(years / LIFE_YEARS)} eighty-year lives laid end to end, all inside recorded history, which is about 5,000 years.`
+          : years <= 5300
+            ? `${y} years is about the length of recorded history, back to the first writing.`
+            : years < 12000
+              ? `${y} years is longer than recorded history, which is about 5,000 years, though not yet back to the first farms.`
+              : `${y} years reaches the first farms: the whole of settled human life.`
+  const line =
+    gen === 1
+      ? 'A single hand-off reaches that year: a parent to you.'
+      : gen < 20
+        ? `${gen} hand-offs reach that year, parent to child.`
+        : `${gen} hand-offs reach that year, parent to child. Stood in a line, those ${gen} people would fit in ${gen <= 40 ? 'one room' : 'one hall'}.`
+  return `${span} ${line}`
+}
+
+const AU_KM = 149.6e6
+const MOON_KM = 384400
+
+/** The Peppercorn Solar System — what one pixel stands for at this zoom. */
+function peppercornNote(pxPerM: number, earthM: number, marsM: number, neptuneM: number): string {
+  const kmPerPx = AU_KM / (earthM * pxPerM)
+  const km =
+    kmPerPx >= 1e6 ? `${(kmPerPx / 1e6).toFixed(1)} million km` : `${intWithCommas(Math.round(kmPerPx / 1000) * 1000)} km`
+  const anchor =
+    kmPerPx >= 1e6
+      ? 'close to the width of the real Sun'
+      : kmPerPx >= 4.6e5
+        ? `${(kmPerPx / MOON_KM).toFixed(1)} times the distance to the Moon`
+        : kmPerPx >= 4.2e5
+          ? 'a little more than the distance to the Moon'
+          : kmPerPx >= 3.5e5
+            ? 'about the distance to the Moon'
+            : 'less than the distance to the Moon, which is about 384,000 km'
+  const earth = intWithCommas(earthM * pxPerM)
+  const neptune = intWithCommas(neptuneM * pxPerM)
+  const mars = intWithCommas(marsM * pxPerM)
+  const spread =
+    pxPerM <= 7
+      ? `, so the four inner planets crowd into the first ${mars} px.`
+      : pxPerM >= 20
+        ? '. The inner planets stand well apart, and Neptune is a long scroll away.'
+        : `; the four inner planets share the first ${mars} px.`
+  return `Each pixel now stands for about ${km}, ${anchor}. Earth sits ${earth} px from the Sun and Neptune ${neptune} px${spread}`
+}
+
+const LARGER: Record<number, string> = { 3: 'a thousand', 6: 'a million', 7: 'ten million', 9: 'a billion', 12: 'a trillion' }
+const SMALLER: Record<number, string> = { 3: 'a thousandth', 6: 'a millionth', 9: 'a billionth', 10: 'a ten-billionth' }
+const factorsWord = (n: number) => (n === 1 ? '1 factor' : `${n} factors`)
+
+/** Powers of Ten — the step against your own size, and how far to either end. */
+function powersNote(exp: number, minExp: number, maxExp: number): string {
+  const down = exp - minExp
+  const up = maxExp - exp
+  if (exp === 0)
+    return `This is you, about a metre: the step every other is measured from. ${factorsWord(down)} of ten lie below, down to the quark, and ${up} above, out to the observable universe.`
+  if (exp > 0) {
+    const w = LARGER[exp]
+    const rest =
+      up > 0
+        ? `${up} more ${up === 1 ? 'factor' : 'factors'} of ten to the edge of the observable universe.`
+        : 'There is no further step: this is everything that can be seen.'
+    return `${factorsWord(exp)} of ten larger than you${w ? `, ${w} times your size` : ''}. ${rest}`
+  }
+  const n = -exp
+  const w = SMALLER[n]
+  const rest =
+    down > 0
+      ? `${down} more ${down === 1 ? 'factor' : 'factors'} of ten down to the quark.`
+      : 'Nothing smaller has yet been pointed to.'
+  return `${factorsWord(n)} of ten smaller than you${w ? `, ${w} of your size` : ''}. ${rest}`
+}
+
 const START_LABEL = {
   calendar: 'Jan 1',
   clock: 'Midnight',
@@ -251,12 +389,14 @@ function AgeControl({
   age,
   setAge,
   readout,
+  note,
 }: {
   age: number
   setAge: (n: number) => void
   readout: React.ReactNode
+  note?: string
 }) {
-  return (
+  const box = (
     <div className={styles.ageBox}>
       <div className={styles.ageTop}>
         <span className={styles.ageLabel}>Set the hand to your age</span>
@@ -270,11 +410,21 @@ function AgeControl({
         value={age}
         onChange={(e) => setAge(Number(e.target.value))}
         aria-label="Your age"
+        aria-describedby={note ? 'vfa-age-note' : undefined}
       />
       <div className={styles.sliderScale}>
         <span>Birth</span>
         <span>{AGE_MAX} yrs</span>
       </div>
+    </div>
+  )
+  if (!note) return box
+  return (
+    <div className={styles.ctrlRow}>
+      {box}
+      <p className={styles.ctrlNote} id="vfa-age-note">
+        {note}
+      </p>
     </div>
   )
 }
@@ -307,6 +457,7 @@ function TimelineBody({
               It is <strong>{stamp(ageFraction, inst, ageFraction >= 1)}</strong> — age {age}
             </>
           }
+          note={lifeNote(age)}
         />
       )}
 
@@ -483,26 +634,32 @@ function GenerationsBody({ inst }: { inst: Kind<'generations'> }) {
 
   return (
     <>
-      <div className={styles.ageBox}>
-        <div className={styles.ageTop}>
-          <span className={styles.ageLabel}>Generations back</span>
-          <span className={styles.ageReadout}>
-            <strong>{gen}</strong> back ≈ {yearLabel(yearAt)}
-          </span>
+      <div className={styles.ctrlRow}>
+        <div className={styles.ageBox}>
+          <div className={styles.ageTop}>
+            <span className={styles.ageLabel}>Generations back</span>
+            <span className={styles.ageReadout}>
+              <strong>{gen}</strong> back ≈ {yearLabel(yearAt)}
+            </span>
+          </div>
+          <input
+            className={styles.slider}
+            type="range"
+            min={1}
+            max={inst.maxGen}
+            value={gen}
+            onChange={(e) => setGen(Number(e.target.value))}
+            aria-label="Generations back"
+            aria-describedby="vfa-gen-note"
+          />
+          <div className={styles.sliderScale}>
+            <span>You</span>
+            <span>{inst.maxGen} generations</span>
+          </div>
         </div>
-        <input
-          className={styles.slider}
-          type="range"
-          min={1}
-          max={inst.maxGen}
-          value={gen}
-          onChange={(e) => setGen(Number(e.target.value))}
-          aria-label="Generations back"
-        />
-        <div className={styles.sliderScale}>
-          <span>You</span>
-          <span>{inst.maxGen} generations</span>
-        </div>
+        <p className={styles.ctrlNote} id="vfa-gen-note">
+          {generationsNote(gen, inst.yearsPerGen)}
+        </p>
       </div>
 
       <div className={styles.lifeStat}>
@@ -621,7 +778,12 @@ function HeartbeatBody({
 
   return (
     <>
-      <AgeControl age={age} setAge={setAge} readout={<><strong>{age}</strong> years lived</>} />
+      <AgeControl
+        age={age}
+        setAge={setAge}
+        readout={<><strong>{age}</strong> years lived</>}
+        note={heartNote(age, inst.bpm)}
+      />
 
       <div className={styles.heartWrap}>
         <svg className={styles.heart} viewBox="0 0 32 29" aria-hidden="true">
@@ -659,26 +821,34 @@ function PeppercornBody({ inst }: { inst: Kind<'peppercorn'> }) {
   const maxM = Math.max(...inst.bodies.map((b) => b.modelMeters))
   const trackWidth = SUN_X + maxM * pxPerM + 160
   const bump = (d: number) => setPxPerM((z) => Math.min(PP_MAX, Math.max(PP_MIN, z + d)))
+  const metersOf = (name: string) => inst.bodies.find((b) => b.name === name)?.modelMeters
+  const note = peppercornNote(pxPerM, metersOf('Earth') ?? 26, metersOf('Mars') ?? 40, metersOf('Neptune') ?? maxM)
 
   return (
     <>
-      <div className={styles.ppControls}>
-        <span className={styles.ppZoomLabel}>Zoom</span>
-        <button className={styles.ppZoomBtn} onClick={() => bump(-2)} aria-label="Zoom out">
-          −
-        </button>
-        <input
-          className={styles.slider}
-          type="range"
-          min={PP_MIN}
-          max={PP_MAX}
-          value={pxPerM}
-          onChange={(e) => setPxPerM(Number(e.target.value))}
-          aria-label="Zoom the solar system"
-        />
-        <button className={styles.ppZoomBtn} onClick={() => bump(2)} aria-label="Zoom in">
-          +
-        </button>
+      <div className={styles.ctrlRow}>
+        <div className={styles.ppControls}>
+          <span className={styles.ppZoomLabel}>Zoom</span>
+          <button className={styles.ppZoomBtn} onClick={() => bump(-2)} aria-label="Zoom out">
+            −
+          </button>
+          <input
+            className={styles.slider}
+            type="range"
+            min={PP_MIN}
+            max={PP_MAX}
+            value={pxPerM}
+            onChange={(e) => setPxPerM(Number(e.target.value))}
+            aria-label="Zoom the solar system"
+            aria-describedby="vfa-pp-note"
+          />
+          <button className={styles.ppZoomBtn} onClick={() => bump(2)} aria-label="Zoom in">
+            +
+          </button>
+        </div>
+        <p className={styles.ctrlNote} id="vfa-pp-note">
+          {note}
+        </p>
       </div>
 
       <div className={styles.ppScroll}>
@@ -750,15 +920,21 @@ function PowersBody({ inst }: { inst: Kind<'powers'> }) {
         <span>{inst.steps[inst.steps.length - 1].label}</span>
       </div>
 
-      <input
-        className={styles.slider}
-        type="range"
-        min={0}
-        max={inst.steps.length - 1}
-        value={i}
-        onChange={(e) => setI(Number(e.target.value))}
-        aria-label="Scale"
-      />
+      <div className={styles.ctrlRow}>
+        <input
+          className={styles.slider}
+          type="range"
+          min={0}
+          max={inst.steps.length - 1}
+          value={i}
+          onChange={(e) => setI(Number(e.target.value))}
+          aria-label="Scale"
+          aria-describedby="vfa-pow-note"
+        />
+        <p className={styles.ctrlNote} id="vfa-pow-note">
+          {powersNote(step.exp, inst.steps[0].exp, inst.steps[inst.steps.length - 1].exp)}
+        </p>
+      </div>
     </>
   )
 }

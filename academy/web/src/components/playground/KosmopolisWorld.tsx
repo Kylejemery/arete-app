@@ -58,6 +58,12 @@ const PORTRAIT_ZOOM = 3.2; // at/above this, souls gain faces, posture, and name
 const STREET_ZOOM = 5.0; // at/above this, a town resolves into a paved street you look down
 const EYE_ZOOM = 7.0; // at/above this, the town stands up into an eye-level street scene
 const ACT_START = (EPOCHS.find((e) => e.act)?.at ?? 260); // the year deeds — and aging — begin
+// Shared with the doctrine explainers, so the notes stay true to the physics.
+const TOWN_R_MIN = 120; // a town's half-width, centre to edge, runs from this…
+const TOWN_R_SPREAD = 60; // …to this much more
+const LIFESPAN_MIN = 70; // no soul's span is shorter (in acting years)
+const FORTUNE_LIFE_MIN = 18; // a visitation of fortune lingers this many years…
+const FORTUNE_LIFE_SPREAD = 22; // …plus up to one less than this
 
 type Virtues = Record<VirtueKey, number>;
 
@@ -334,7 +340,7 @@ function buildGeography(seed: number): Geography {
     const h = heightAt(x, y, seed);
     if (h < 0.54 || h > 0.75) continue; // not water, not mountain
     if (settlements.some((s) => Math.hypot(s.x - x, s.y - y) < R * 0.34)) continue;
-    settlements.push({ x, y, r: 120 + prng() * 60, name: placeName(prng) });
+    settlements.push({ x, y, r: TOWN_R_MIN + prng() * TOWN_R_SPREAD, name: placeName(prng) });
   }
   return { canvas, settlements };
 }
@@ -600,7 +606,7 @@ function makeSoul(world: World, home: number, base?: Virtues): Soul {
     v,
     eud: 0.5,
     born: world.year,
-    lifespan: 70 + ((Math.random() * 55) | 0), // ~70–125 world-years
+    lifespan: LIFESPAN_MIN + ((Math.random() * 55) | 0), // ~70–125 world-years
     awake: false,
     pulse: Math.random() * Math.PI * 2,
     lastDeed: null,
@@ -686,6 +692,88 @@ function circleOf(s: Soul): Circle {
   let stage = a < 0.34 ? 0 : a < 0.5 ? 1 : a < 0.66 ? 2 : a < 0.8 ? 3 : 4;
   if (s.awake) stage = Math.min(4, stage + 1); // reason draws the circles inward
   return { stage, ...CIRCLES[stage] };
+}
+
+// ── the explainers ───────────────────────────────────────────────────────────
+//
+// Each doctrine dial carries a line that changes with where it sits: first
+// against the doctrine's own setting, then what the setting does in this world,
+// in the physics' own numbers (the same ones act, applyFortune, reap and tick use).
+
+/** Where a dial sits against the doctrine, in a short opening sentence. */
+function doctrineBand(key: keyof Dials, v: number, less: string, more: string): string {
+  const meta = DIAL_META.find((m) => m.key === key);
+  const def = DEFAULT_DIALS[key];
+  const eps = (meta?.step ?? 1) / 2;
+  if (Math.abs(v - def) < eps) return "The doctrine’s setting.";
+  const doc = meta ? meta.format(def) : String(def);
+  const edge = meta && (v < def ? v <= meta.min + eps : v >= meta.max - eps) ? " As far as the dial goes." : "";
+  return `${v < def ? less : more} than the doctrine’s ${doc}.${edge}`;
+}
+
+/** Contagion: how far a strong deed carries, by circle of concern. */
+function contagionNote(c: number): string {
+  if (c <= 0) return "Souls stand alone. A deed moves only the one who does it; no act, kind or cruel, reaches a neighbour.";
+  const reach = (stage: number) => Math.round(c * CIRCLES[stage].factor);
+  const town = reach(2);
+  const edge =
+    town < TOWN_R_MIN / 2
+      ? "a small patch of its own town"
+      : town < TOWN_R_MIN
+        ? "short of its town’s edge"
+        : town <= TOWN_R_MIN + TOWN_R_SPREAD
+          ? "about to its town’s edge"
+          : "past its town’s edge";
+  return `${doctrineBand("contagion", c, "Narrower", "Wider")} A strong deed, kind or cruel, by a soul that counts its town its own carries ${town} units, ${edge}. The dashed ring around a chosen soul shows its own reach, from ${reach(0)} for the selfish to ${reach(4)} for one that counts every soul a citizen.`;
+}
+
+/** The sage's shield: how far fortune still moves a soul, as the inspector counts it. */
+function shieldNote(sh: number, meanArete: number | null): string {
+  if (sh <= 0)
+    return "Fortune strikes every soul alike. A sage is moved by plague, plenty, and grief as much as a fool, and hardship tempers only a soul that has rehearsed it.";
+  const mercy = (a: number) => Math.round(Math.max(0.05, 1 - a * sh) * 100);
+  const lead =
+    meanArete != null
+      ? `An unrehearsed soul of this world’s mean virtue, ${Math.round(meanArete * 100)}%, stands ${mercy(meanArete)}% at fortune’s mercy`
+      : `An unrehearsed soul of middling virtue, 50%, stands ${mercy(0.5)}% at fortune’s mercy`;
+  return `${doctrineBand("sageShield", sh, "Weaker", "Stronger")} ${lead}; one at 90%, all but a sage, stands ${mercy(0.9)}%. Plenty, and the grief of a death, are softened the same way.`;
+}
+
+/** Up to two significant figures, without trailing zeros: 0.6, 0.78, 2.6. */
+function sig2(x: number): string {
+  return String(Number(x.toPrecision(2)));
+}
+
+/** Force of habit: how far one act moves a virtue, on the inspector's 100-point scale. */
+function habitNote(h: number, measure: boolean): string {
+  if (h <= 0)
+    return "Acts never become character. Virtue still moves through teachers, schools, hardship met well, and your own counsel, but practice alone changes nothing.";
+  const pts = h * (measure ? 1.3 : 1) * 100;
+  const acts = Math.ceil(10 / pts - 1e-9);
+  return `${doctrineBand("habituation", h, "Slower", "Faster")} Each wholehearted act moves its virtue up to ${sig2(pts)} points of 100, and an indulged vice wears it down the same way${measure ? ", the Law of Measure adding 30%" : ""}. Ten points take at least ${acts} such acts, and a soul acts once a year for a life of at least ${LIFESPAN_MIN} years.`;
+}
+
+/** Reach of fortune: the yearly chance, the quiet between, and the share of time under fortune. */
+function fortuneNote(f: number): string {
+  if (f <= 0)
+    return "Fortune never visits. No soul is tried by hardship or tempered by it, and the sage’s shield is left only the grief of deaths to soften.";
+  const quiet = 1 / f;
+  const linger = FORTUNE_LIFE_MIN + (FORTUNE_LIFE_SPREAD - 1) / 2;
+  const share = Math.round((linger / (quiet + linger)) * 100);
+  return `${doctrineBand("fortuneFreq", f, "Rarer", "More often")} In each year without a visitation fortune has a ${(f * 100).toFixed(1)}% chance to arrive, so the quiet between lasts about ${Math.round(quiet)} years. Each lingers ${FORTUNE_LIFE_MIN} to ${FORTUNE_LIFE_MIN + FORTUNE_LIFE_SPREAD - 1} years, so fortune holds the world about ${share}% of the time, and three visitations in five are plague, famine, or war.`;
+}
+
+function dialNote(key: keyof Dials, v: number, meanArete: number | null, laws: VirtueKey[]): string {
+  switch (key) {
+    case "contagion":
+      return contagionNote(v);
+    case "sageShield":
+      return shieldNote(v, meanArete);
+    case "habituation":
+      return habitNote(v, laws.includes("temperance"));
+    case "fortuneFreq":
+      return fortuneNote(v);
+  }
 }
 
 // The dichotomy of control: what a soul most clings to that is not up to it,
@@ -998,7 +1086,7 @@ function tick(world: World) {
 
   if (e.act && !world.fortune && Math.random() < world.dials.fortuneFreq) {
     const f = pick(FORTUNES);
-    world.fortune = { name: f.name, good: f.good, tint: f.tint, life: 18 + ((Math.random() * 22) | 0) };
+    world.fortune = { name: f.name, good: f.good, tint: f.tint, life: FORTUNE_LIFE_MIN + ((Math.random() * FORTUNE_LIFE_SPREAD) | 0) };
     applyFortune(world, f);
     log(world, `Fortune sent ${f.name} upon the world. Each soul was moved as much as its character allowed.`);
   }
@@ -4497,21 +4585,25 @@ export default function KosmopolisWorld() {
             <h3>Doctrine — argue the model</h3>
             <div className="kp-dials">
               {DIAL_META.map((d) => (
-                <label key={d.key} className="kp-dial">
-                  <span className="kp-dial-top">
+                <div key={d.key} className="kp-dial">
+                  <label className="kp-dial-top" htmlFor={`kp-dial-${d.key}`}>
                     <span className="kp-dial-label">{d.label}</span>
                     <span className="kp-dial-val">{d.format(dials[d.key])}</span>
-                  </span>
+                  </label>
                   <input
                     type="range"
+                    id={`kp-dial-${d.key}`}
+                    aria-describedby={`kp-dial-${d.key}-note`}
                     min={d.min}
                     max={d.max}
                     step={d.step}
                     value={dials[d.key]}
                     onChange={(e) => setDials((prev) => ({ ...prev, [d.key]: Number(e.target.value) }))}
                   />
-                  <span className="kp-dial-note">{d.note}</span>
-                </label>
+                  <p className="kp-dial-note" id={`kp-dial-${d.key}-note`}>
+                    {dialNote(d.key, dials[d.key], ui.arete, laws)}
+                  </p>
+                </div>
               ))}
               <button className="kp-btn kp-wide" onClick={() => setDials({ ...DEFAULT_DIALS })}>
                 Restore the doctrine
