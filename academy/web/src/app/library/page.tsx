@@ -2013,7 +2013,12 @@ function Observatory({ go, onDebate, openWork }: { go: (r: Room) => void; onDeba
         {!active ? (
           <div className="lib-fade" style={{ padding: '20px 18px 24px' }}>
             <div style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.22em', textTransform: 'uppercase', color: GOLD, marginBottom: 4 }}>What the corpus is working through</div>
-            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, color: MUTED, margin: '0 0 14px' }}>Filter by kind, then open one to read it in full.</p>
+            <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 13.5, color: MUTED, margin: '0 0 10px' }}>Filter by kind, then open one to read it in full.</p>
+            {/* The same pieces as a journal: every one, laid out to read, with comments. */}
+            <a href="/observatory" style={{ display: 'block', textDecoration: 'none', border: '1px solid rgba(201,168,76,0.3)', borderRadius: 10, padding: '10px 12px', margin: '0 0 14px', background: 'rgba(201,168,76,0.06)' }}>
+              <span style={{ display: 'block', fontFamily: MONO, fontSize: 9, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>Read the journal →</span>
+              <span style={{ display: 'block', fontFamily: SERIF, fontStyle: 'italic', fontSize: 13, color: MUTED, marginTop: 3 }}>Every piece, laid out to read, open to comment.</span>
+            </a>
 
             {(() => {
               type Feed = { kind: 'inquiry' | 'tension' | 'conclude' | 'imagines' | 'world'; key: string; dot: string; tag: string; line: string; meta: string; onClick?: () => void; cta?: string; pills?: { text: string; hot?: boolean }[] };

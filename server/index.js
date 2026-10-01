@@ -7959,6 +7959,22 @@ app.get('/api/observatory/piece/:kind/:id', async (req, res) => {
   }
 });
 
+// GET /api/observatory/journal — every published Observatory piece as one
+// newest-first list of posts, for the journal page (/observatory). Same
+// visibility rules as the feeds and the piece endpoint
+// (server/lib/observatory-journal.js). Public (no auth).
+const { loadJournal } = require('./lib/observatory-journal');
+app.get('/api/observatory/journal', async (req, res) => {
+  try {
+    const entries = await loadJournal(supabase);
+    res.set('Cache-Control', 'public, max-age=300');
+    return res.json({ entries });
+  } catch (err) {
+    console.error('[/api/observatory/journal] error:', err.message);
+    return res.status(500).json({ error: 'The journal could not be read' });
+  }
+});
+
 // The Agora's counselor-answer pipeline borrows this file's helpers rather
 // than duplicating them. Wired here, after every const it needs is defined.
 agora.init({
