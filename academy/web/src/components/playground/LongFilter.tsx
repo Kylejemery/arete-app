@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ARISING_PER_YEAR,
   BYLINE,
+  CEILING_MAX,
+  CEILING_MIN,
   CIVILIZATIONS,
   DEFAULT_PRESET,
-  EXTERNAL_HAZARD,
   GAP_MAX,
   GAP_MIN,
   HALVING_YEARS,
@@ -26,6 +26,15 @@ import {
   SETTLEMENT_YEARS,
 } from '@/content/playground/long-filter'
 import styles from './LongFilter.module.css'
+import {
+  type Params,
+  countOf,
+  countRow,
+  criticalGap,
+  evaluate,
+  moralThreshold,
+  transitionYears,
+} from './long-filter-model'
 
 // ── the arithmetic ───────────────────────────────────────────────────────────
 
@@ -55,66 +64,11 @@ function survival(p: number, years: number, decay: boolean): number {
   return Math.exp(-integral)
 }
 
-// ── the three-hazard model ───────────────────────────────────────────────────
-
-/**
- * The error integral across a transition of `tau` years.
- *
- * Error hazard starts at p_e0 and compounds at the capability gap d, so the
- * accumulated exponent is p_e0·(e^(dτ) − 1)/d. At d = 0 that is the removable
- * singularity p_e0·τ; far above it the exponent overflows and nothing survives.
- */
-function errorIntegral(gap: number, tau: number, errorBase: number): number {
-  if (Math.abs(gap) < 1e-12) return errorBase * tau
-  const x = gap * tau
-  if (x > 700) return Infinity
-  return (errorBase * (Math.exp(x) - 1)) / gap
-}
-
-/**
- * Transitioned civilizations expected alive right now.
- *
- * Malice contributes p_m0·(1 − 1/K)·τ, which is exactly (e·s₀)^R once τ = K/g
- * is substituted — so that term keeps its closed form. Error and the external
- * hazard are added in the exponent, and the survivors live 1/p_x years each.
- */
-function survivorCount(
-  malice: number,
-  growth: number,
-  gap: number,
-  errorBase: number,
-): number {
-  const tau = LOG_DISTANCE / growth
-  const exponent =
-    malice * (1 - 1 / LOG_DISTANCE) * tau +
-    errorIntegral(gap, tau, errorBase) +
-    EXTERNAL_HAZARD * tau
-  if (!isFinite(exponent)) return 0
-  return (ARISING_PER_YEAR * Math.exp(-exponent)) / EXTERNAL_HAZARD
-}
-
-/**
- * Where the line actually sits: the widest gap d₁ at which the count still
- * reaches one, bisected. This is the whole count, not the error term alone —
- * malice has already spent part of the budget before error starts compounding,
- * so d₁ tightens as the moral ratio worsens. It is not the formal note's d*,
- * which asks only that the error term cost less than half.
- *
- * Null when no gap in the search range brings the count to one (malice alone
- * has already spent the budget), Infinity when every gap does.
- */
-function criticalGap(malice: number, growth: number, errorBase: number): number | null {
-  let lo = -0.05
-  let hi = 0.02
-  if (survivorCount(malice, growth, lo, errorBase) < 1) return null
-  if (survivorCount(malice, growth, hi, errorBase) >= 1) return Infinity
-  for (let i = 0; i < 90; i++) {
-    const mid = (lo + hi) / 2
-    if (survivorCount(malice, growth, mid, errorBase) >= 1) lo = mid
-    else hi = mid
-  }
-  return lo
-}
+// ── the model ────────────────────────────────────────────────────────────────
+//
+// Lives in long-filter-model.ts: progressors growing logistically to s_max, one
+// gap d driving malice and error, no hazard switching off, and the count taken
+// from the expected lifetime past the transition.
 
 /** Both gauge sliders read the same scale: 0.01% to 3.16% a year. */
 const rateFromSlider = (v: number) => Math.pow(10, -4 + (v / 100) * 2.5)
@@ -130,6 +84,13 @@ const clampStep = (v: number) => Math.min(100, Math.max(0, v))
 const sliderFromRate = (r: number) => clampStep(((Math.log10(r) + 4) / 2.5) * 100)
 const sliderFromError = (r: number) => clampStep(((Math.log10(r) + 6) / 4.5) * 100)
 const sliderFromGap = (d: number) => clampStep(((d - GAP_MIN) / (GAP_MAX - GAP_MIN)) * 100)
+
+/** The ceiling dial, s_max, linear from 0.90 to 1.00; the conflict share φ, 0 to 1. */
+const ceilingFromSlider = (v: number) => CEILING_MIN + (v / 100) * (CEILING_MAX - CEILING_MIN)
+const sliderFromCeiling = (c: number) =>
+  clampStep(((c - CEILING_MIN) / (CEILING_MAX - CEILING_MIN)) * 100)
+const conflictFromSlider = (v: number) => v / 100
+const sliderFromConflict = (f: number) => clampStep(f * 100)
 
 /** The settlement dial: a thousand years to a million, log-scaled. */
 const SETTLE_LO = Math.log10(SETTLEMENT_MIN)
@@ -209,7 +170,7 @@ function yearsNote(p: number, years: number, decay: boolean): string {
 }
 
 /** IV. Malice against the published totals it is borrowed from. */
-function maliceNote(m: number): string {
+function maliceNote(m: number, rStar: number): string {
   const band =
     m >= 0.008
       ? 'At Hellman’s figure or above. That total counts accidents too, so as malice alone this is pessimistic.'
@@ -218,12 +179,12 @@ function maliceNote(m: number): string {
         : m >= 5e-4
           ? 'Below the superforecasters. Deliberate destruction would be rare by any published count.'
           : 'Far below any published estimate.'
-  const need = m / MORAL_THRESHOLD
+  const need = m / rStar
   return `${band} To clear the moral threshold, g has to reach ${pct(need, need < 0.001 ? 3 : 2)} a year.`
 }
 
 /** IV. The improvement rate against the two historical anchors. */
-function growthNote(g: number): string {
+function growthNote(g: number, ceiling: number): string {
   const band =
     g < 0.003
       ? 'Slower than either historical anchor.'
@@ -232,11 +193,11 @@ function growthNote(g: number): string {
         : g < 0.03
           ? 'Near the pace at which literacy spread, 2% a year over two centuries.'
           : 'Faster than either historical anchor.'
-  return `${band} The sage fraction doubles every ${fmtYears(Math.LN2 / g)} years and saturates in ${fmtYears(LOG_DISTANCE / g)} years.`
+  return `${band} The sage fraction doubles every ${fmtYears(Math.LN2 / g)} years and saturates in ${fmtYears(transitionYears(g, ceiling))} years.`
 }
 
 /** IV. The baseline error rate, and what it adds up to with no gap at all. */
-function errorNote(e: number, g: number): string {
+function errorNote(e: number, flat: number): string {
   const band =
     e < 4e-6
       ? 'Below even the optimistic baseline this note first assumed.'
@@ -247,7 +208,6 @@ function errorNote(e: number, g: number): string {
         : e < 0.009
           ? 'The realistic range: most of a 1% published total is error rather than malice.'
           : 'Above the realistic range.'
-  const flat = e * (LOG_DISTANCE / g)
   const keep = Math.exp(-flat)
   return `${band} Even with competence keeping exact pace, the error integral comes to ${flat < 10 ? flat.toFixed(2) : flat.toFixed(0)} over the transition, which leaves ${keep >= 0.01 ? `${Math.round(keep * 100)}% of civilizations` : 'almost no civilizations'} standing.`
 }
@@ -266,18 +226,34 @@ function gapNote(d: number, e: number): string {
 
 // ── the plate ────────────────────────────────────────────────────────────────
 
+/** IV. The ceiling, as the hazard progressors leave standing once they stop spreading. */
+function ceilingNote(sm: number, m: number, e: number, phi: number): string {
+  const left = m * (1 - sm) + e * phi * (1 - sm)
+  const holdouts = (1 - sm) * 100
+  return `${holdouts < 0.05 ? 'Almost no one' : `${holdouts.toFixed(holdouts < 1 ? 1 : 0)}% of people`} never become progressors. Their share of malice and conflict error, ${pct(left, left < 1e-4 ? 4 : 3)} a year at today's capability, never goes away; only the gap can shrink it.`
+}
+
+/** IV. The conflict share of error, and the part virtue alone does not touch. */
+function conflictNote(phi: number, e: number): string {
+  const fixed = e * (1 - phi)
+  return `${Math.round(phi * 100)}% of error falls as progressors spread. The other ${Math.round((1 - phi) * 100)}%, ${pct(fixed, fixed < 1e-4 ? 4 : 3)} a year at today's capability, is accident that virtue does not prevent, and only competence outpacing capability shrinks it.`
+}
+
 /**
  * IV. Interstellar settlement against the transition. The model treats a
  * civilization as one target until it saturates; settlement around other stars
  * before then would decouple its fate and escape the filter by distance.
  */
-function settleNote(t: number, g: number): string {
-  const tau = LOG_DISTANCE / g
-  const crossing = LOG_DISTANCE / t
+function settleNote(t: number, g: number, ceiling: number): string {
+  const tau = transitionYears(g, ceiling)
+  const crossing = settleCrossing(t, ceiling)
   if (tau < t)
     return `The transition finishes in ${fmtYears(tau)} years, ${fmtYears(t - tau)} years before settlement arrives, so the single-target assumption holds and the count stands. It would stop holding below ${pct(crossing, 2)} a year.`
   return `Settlement arrives ${fmtYears(tau - t)} years before the transition finishes. A civilization spread across stars by then could escape by distance rather than character, and the count no longer describes it. The transition wins only above ${pct(crossing, 2)} a year.`
 }
+
+/** The improvement rate at which the transition takes exactly T_s years. */
+const settleCrossing = (t: number, ceiling: number) => (transitionYears(1, ceiling)) / t
 
 type Mark = { x: number; y: number; r: number }
 
@@ -357,19 +333,21 @@ function drawField(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  growth: number,
-  errorBase: number,
+  base: Omit<Params, 'malice' | 'gap'>,
   cell: number,
 ) {
+  const malices: number[] = []
   for (let x = 0; x < w; x += cell) {
-    const ratio = Math.pow(10, R_LO + ((x + cell / 2) / w) * (R_HI - R_LO))
-    const malice = ratio * growth
-    for (let y = 0; y < h; y += cell) {
-      const gap = GAP_MAX - ((y + cell / 2) / h) * (GAP_MAX - GAP_MIN)
-      const n = survivorCount(malice, growth, gap, errorBase)
+    malices.push(Math.pow(10, R_LO + ((x + cell / 2) / w) * (R_HI - R_LO)) * base.growth)
+  }
+  for (let y = 0; y < h; y += cell) {
+    const gap = GAP_MAX - ((y + cell / 2) / h) * (GAP_MAX - GAP_MIN)
+    const row = countRow(base, gap, malices)
+    for (let i = 0; i < row.length; i++) {
+      const n = row[i]
       const lg = Math.log10(Math.max(n, 1e-300))
       ctx.fillStyle = Math.abs(lg) < 0.12 ? '#E6EAF2' : shade(n)
-      ctx.fillRect(x, y, cell, cell)
+      ctx.fillRect(i * cell, y, cell, cell)
     }
   }
 }
@@ -377,8 +355,9 @@ function drawField(
 /** Ratio ticks read as plain numbers: 0.01, 0.1, 1, 10. */
 const ratioTick = (t: number) => (t >= 1 ? t.toFixed(0) : String(Number(t.toPrecision(1))))
 
-/** Where the moral threshold falls across the diagram, in percent of its width. */
-const THRESHOLD_LEFT = ((Math.log10(MORAL_THRESHOLD) - R_LO) / (R_HI - R_LO)) * 100
+/** Where a moral threshold falls across the diagram, in percent of its width. */
+const thresholdLeft = (rStar: number) =>
+  Math.min(100, Math.max(0, ((Math.log10(rStar) - R_LO) / (R_HI - R_LO)) * 100))
 
 /** Axis ticks, derived from the bounds the diagram is drawn over. */
 const Y_TICKS = [0, 1, 2, 3, 4].map((i) => GAP_MAX - (i / 4) * (GAP_MAX - GAP_MIN))
@@ -408,13 +387,22 @@ function Tiny({ n }: { n: number }) {
 }
 
 /** The setting the diagram holds, in fractions a year. */
-type Setting = { malice: number; growth: number; errorBase: number; gap: number }
+type Setting = {
+  malice: number
+  growth: number
+  errorBase: number
+  gap: number
+  ceiling: number
+  conflict: number
+}
 
 const fromPreset = (p: Preset): Setting => ({
   malice: p.malice / 100,
   growth: p.growth / 100,
   errorBase: p.errorBase / 100,
   gap: p.gap / 100,
+  ceiling: p.ceiling,
+  conflict: p.conflict,
 })
 
 const OPENING = fromPreset(PRESETS.find((p) => p.key === DEFAULT_PRESET) ?? PRESETS[0])
@@ -424,17 +412,19 @@ const onPreset = (p: Preset, s: Setting) =>
   asPercent(s.malice) === p.malice &&
   asPercent(s.growth) === p.growth &&
   asPercent(s.errorBase) === p.errorBase &&
-  Math.abs(s.gap * 100 - p.gap) < 0.005
+  Math.abs(s.gap * 100 - p.gap) < 0.005 &&
+  Math.abs(s.ceiling - p.ceiling) < 0.0005 &&
+  Math.abs(s.conflict - p.conflict) < 0.005
 
 type Hover = { left: number; top: number; ratio: number; gap: number; n: number }
 
-function phaseVerdict(n: number, moralPass: boolean): string {
+function phaseVerdict(n: number, moralPass: boolean, rStar: number): string {
   if (n >= 1000)
     return 'Clear, comfortably. The galaxy holds thousands of transitioned civilizations, which means the filter cannot be what makes the sky quiet. Something else is.'
   if (n >= 1)
     return 'Clear, narrowly. A handful exist, scattered across a hundred thousand light years and under no obligation to announce it.'
   if (moralPass)
-    return 'The moral term clears its threshold and the count still collapses. The error integral is doing the killing. Getting R under 0.70 is necessary and it is not close to sufficient.'
+    return `The moral term clears its threshold and the count still collapses. The error integral is doing the killing. Getting R under ${rStar.toFixed(2)} is necessary and it is not close to sufficient.`
   return 'Both terms are failing. Improvement is too slow to outrun the malice, and error is compounding on top of it.'
 }
 
@@ -454,6 +444,8 @@ export default function LongFilter({
   const [growthStep, setGrowthStep] = useState(() => sliderFromRate(OPENING.growth))
   const [errorStep, setErrorStep] = useState(() => sliderFromError(OPENING.errorBase))
   const [gapStep, setGapStep] = useState(() => sliderFromGap(OPENING.gap))
+  const [ceilingStep, setCeilingStep] = useState(() => sliderFromCeiling(OPENING.ceiling))
+  const [conflictStep, setConflictStep] = useState(() => sliderFromConflict(OPENING.conflict))
   const [settleStep, setSettleStep] = useState(() => sliderFromSettle(SETTLEMENT_YEARS))
   const [hover, setHover] = useState<Hover | null>(null)
   const [copied, setCopied] = useState(false)
@@ -469,9 +461,12 @@ export default function LongFilter({
     if (s.growth !== undefined) setGrowthStep(sliderFromRate(s.growth))
     if (s.errorBase !== undefined) setErrorStep(sliderFromError(s.errorBase))
     if (s.gap !== undefined) setGapStep(sliderFromGap(s.gap))
+    if (s.ceiling !== undefined) setCeilingStep(sliderFromCeiling(s.ceiling))
+    if (s.conflict !== undefined) setConflictStep(sliderFromConflict(s.conflict))
   }, [])
 
-  // A shared link opens on its setting: ?pm=0.3&g=0.6&pe=0.7&d=0, in percent a year.
+  // A shared link opens on its setting: ?pm=0.3&g=0.6&pe=0.7&d=0, in percent a
+  // year, with sm (s_max) and phi (φ) as fractions.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const read = (key: string, positive: boolean) => {
@@ -486,6 +481,11 @@ export default function LongFilter({
       errorBase: read('pe', true),
       gap: read('d', false),
     })
+    const frac = (key: string, lo: number, hi: number) => {
+      const v = Number(q.get(key))
+      return q.get(key) !== null && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined
+    }
+    apply({ ceiling: frac('sm', CEILING_MIN, CEILING_MAX), conflict: frac('phi', 0, 1) })
     const ts = Number(q.get('ts'))
     if (q.get('ts') !== null && Number.isFinite(ts) && ts > 0) setSettleStep(sliderFromSettle(ts))
   }, [apply])
@@ -526,20 +526,35 @@ export default function LongFilter({
   const errorBase = errorFromSlider(errorStep)
   const gap = gapFromSlider(gapStep)
   const settle = settleFromSlider(settleStep)
+  const ceiling = ceilingFromSlider(ceilingStep)
+  const conflict = conflictFromSlider(conflictStep)
   const ratio = malice / growth
-  const tau = LOG_DISTANCE / growth
+  const params: Params = { malice, growth, errorBase, gap, ceiling, conflict }
+  const outcome = evaluate(params)
+  const tau = outcome.tau
   const transitionFirst = tau < settle
-  const count = survivorCount(malice, growth, gap, errorBase)
-  const gapLimit = criticalGap(malice, growth, errorBase)
-  const setting: Setting = { malice, growth, errorBase, gap }
-  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}&ts=${Number(settle.toPrecision(3))}`
+  const count = outcome.count
+  // The thresholds are bisections over the whole model, so they are kept to
+  // the dials that move them: d₁ ignores d, R* depends only on g and s_max.
+  const gapLimit = useMemo(
+    () => criticalGap({ malice, growth, errorBase, ceiling, conflict }),
+    [malice, growth, errorBase, ceiling, conflict],
+  )
+  const rStar = useMemo(() => moralThreshold(growth, ceiling), [growth, ceiling])
+  const flatError = useMemo(
+    () => evaluate({ malice, growth, errorBase, gap: 0, ceiling, conflict }).errorLoad,
+    [malice, growth, errorBase, ceiling, conflict],
+  )
+  const setting: Setting = { malice, growth, errorBase, gap, ceiling, conflict }
+  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}&sm=${Number(ceiling.toFixed(3))}&phi=${Number(conflict.toFixed(2))}&ts=${Number(settle.toPrecision(3))}`
   const rawLeft = ((Math.log10(ratio) - R_LO) / (R_HI - R_LO)) * 100
   const offChart = rawLeft < 0 || rawLeft > 100
-  const errorLoad = errorIntegral(gap, tau, errorBase)
-  const moralPass = ratio < MORAL_THRESHOLD
-  // What is doing the killing: each hazard's share of the survival exponent.
-  const maliceLoad = malice * (1 - 1 / LOG_DISTANCE) * tau
-  const externalLoad = EXTERNAL_HAZARD * tau
+  const errorLoad = outcome.errorLoad
+  const moralPass = ratio < rStar
+  // What is doing the killing: each hazard's share of the cumulative hazard
+  // across the transition.
+  const maliceLoad = outcome.maliceLoad
+  const externalLoad = outcome.externalLoad
   const totalLoad = maliceLoad + errorLoad + externalLoad
   const shares = isFinite(totalLoad)
     ? { malice: maliceLoad / totalLoad, error: errorLoad / totalLoad, external: externalLoad / totalLoad }
@@ -589,11 +604,11 @@ export default function LongFilter({
       top: fy * 100,
       ratio: r,
       gap: d,
-      n: survivorCount(r * growth, growth, d, errorBase),
+      n: countOf({ ...params, malice: r * growth, gap: d }),
     })
   }
 
-  /** Clicking the diagram moves the marker there, holding g and p_e0. */
+  /** Clicking the diagram moves the marker there, holding g, p_e0, s_max and φ. */
   const onPhaseClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const { ratio: r, gap: d } = pointAt(e)
     touched.current = true
@@ -623,8 +638,8 @@ export default function LongFilter({
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
     ctx.setTransform(phaseScale, 0, 0, phaseScale, 0, 0)
-    drawField(ctx, PHASE_W, PHASE_H, growth, errorBase, phaseScale > 1.5 ? 2 : 4)
-  }, [growth, errorBase, phaseScale])
+    drawField(ctx, PHASE_W, PHASE_H, { errorBase, growth, ceiling, conflict }, phaseScale > 1.5 ? 3 : 4)
+  }, [growth, errorBase, ceiling, conflict, phaseScale])
 
   return (
     <main className={styles.page}>
@@ -1025,7 +1040,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-malice-note">
-                {maliceNote(malice)}
+                {maliceNote(malice, rStar)}
               </p>
             </div>
 
@@ -1049,7 +1064,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-growth-note">
-                {growthNote(growth)}
+                {growthNote(growth, ceiling)}
               </p>
             </div>
 
@@ -1073,7 +1088,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-error-note">
-                {errorNote(errorBase, growth)}
+                {errorNote(errorBase, flatError)}
               </p>
             </div>
 
@@ -1104,6 +1119,54 @@ export default function LongFilter({
             <div className={styles.ctrlRow}>
               <div className={styles.ctrl}>
                 <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-ceiling">
+                    s<sub>max</sub> &nbsp;· ceiling on the progressor share
+                  </label>
+                  <span className={styles.ctrlVal}>{ceiling.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-ceiling"
+                  aria-describedby="lf-ceiling-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={ceilingStep}
+                  onChange={(e) => touch(setCeilingStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-ceiling-note">
+                {ceilingNote(ceiling, malice, errorBase, conflict)}
+              </p>
+            </div>
+
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-conflict">
+                    φ &nbsp;· share of error that depends on conflict
+                  </label>
+                  <span className={styles.ctrlVal}>{Math.round(conflict * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-conflict"
+                  aria-describedby="lf-conflict-note"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={conflictStep}
+                  onChange={(e) => touch(setConflictStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-conflict-note">
+                {conflictNote(conflict, errorBase)}
+              </p>
+            </div>
+
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
                   <label className={styles.ctrlLabel} htmlFor="lf-settle">
                     T<sub>s</sub> &nbsp;· interstellar settlement, a hypothesis
                   </label>
@@ -1121,7 +1184,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-settle-note">
-                {settleNote(settle, growth)}
+                {settleNote(settle, growth, ceiling)}
               </p>
             </div>
 
@@ -1146,15 +1209,15 @@ export default function LongFilter({
                       role="img"
                       aria-label="Phase diagram of survivable parameter combinations, moral ratio across and capability gap up."
                     />
-                    <div className={styles.threshold} style={{ left: `${THRESHOLD_LEFT}%` }}>
+                    <div className={styles.threshold} style={{ left: `${thresholdLeft(rStar).toFixed(3)}%` }}>
                       <span>R*</span>
                     </div>
                     <div
                       className={`${styles.marker} ${offChart ? styles.markerOff : ''}`}
                       title={offChart ? `R = ${ratio.toFixed(3)} is off the chart` : undefined}
                       style={{
-                        left: `${Math.min(100, Math.max(0, rawLeft))}%`,
-                        top: `${Math.min(100, Math.max(0, ((GAP_MAX - gap) / (GAP_MAX - GAP_MIN)) * 100))}%`,
+                        left: `${Math.min(100, Math.max(0, rawLeft)).toFixed(3)}%`,
+                        top: `${Math.min(100, Math.max(0, ((GAP_MAX - gap) / (GAP_MAX - GAP_MIN)) * 100)).toFixed(3)}%`,
                       }}
                     />
                     {hover && (
@@ -1204,9 +1267,7 @@ export default function LongFilter({
                     <span>moral term &nbsp; R</span>
                     <span className={moralPass ? styles.pass : styles.fail}>
                       {ratio.toFixed(2)} &nbsp;
-                      {moralPass
-                        ? `clears ${MORAL_THRESHOLD.toFixed(2)}`
-                        : `over ${MORAL_THRESHOLD.toFixed(2)}`}
+                      {moralPass ? `clears ${rStar.toFixed(2)}` : `over ${rStar.toFixed(2)}`}
                     </span>
                   </div>
                   <div className={styles.gate}>
@@ -1250,15 +1311,15 @@ export default function LongFilter({
                     <span>
                       g where τ<sub>v</sub> = T<sub>s</sub>
                     </span>
-                    <span className={styles.neutral}>{pct(LOG_DISTANCE / settle, 2)}</span>
+                    <span className={styles.neutral}>{pct(settleCrossing(settle, ceiling), 2)}</span>
                   </div>
                 </div>
                 <div className={styles.load}>
                   <span className={styles.loadLabel}>what is doing the killing</span>
                   <div className={styles.loadBar} aria-hidden="true">
-                    <span className={styles.loadMalice} style={{ width: `${shares.malice * 100}%` }} />
-                    <span className={styles.loadError} style={{ width: `${shares.error * 100}%` }} />
-                    <span className={styles.loadExternal} style={{ width: `${shares.external * 100}%` }} />
+                    <span className={styles.loadMalice} style={{ width: `${(shares.malice * 100).toFixed(3)}%` }} />
+                    <span className={styles.loadError} style={{ width: `${(shares.error * 100).toFixed(3)}%` }} />
+                    <span className={styles.loadExternal} style={{ width: `${(shares.external * 100).toFixed(3)}%` }} />
                   </div>
                   <p className={styles.loadKey}>
                     malice {Math.round(shares.malice * 100)}% &nbsp;·&nbsp; error{' '}
@@ -1267,7 +1328,7 @@ export default function LongFilter({
                   </p>
                 </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
-                  {phaseVerdict(count, moralPass)}
+                  {phaseVerdict(count, moralPass, rStar)}
                 </p>
                 <button type="button" className={styles.copyLink} onClick={copyLink}>
                   {copied ? 'Link copied' : 'Copy a link to this setting'}

@@ -21,6 +21,10 @@ export const SCATTER_SEED = 20260825
  * cultivating it deliberately. One in a billion, read off Seneca's remark in
  * the forty-second letter that the good man appears about once in five hundred
  * years — an empire of ~50 million living ~25 years each is ~10⁹ lives.
+ *
+ * The model's growing population is moral progressors (prokoptontes), not
+ * sages, and progressors are far more common than sages. So this is used as a
+ * conservative floor for their starting share s₀, not as an estimate of it.
  */
 export const PHOENIX_RATE = 1e-9
 
@@ -34,10 +38,11 @@ export const ARISING_PER_YEAR = 0.01
 export const EXTERNAL_HAZARD = 1e-8
 
 /**
- * The moral threshold, R* = log(Ṅ/p_x) / log(1/(e·s₀)) ≈ 0.700.
- *
- * Malice decomposes to f_v = (e·s₀)^R, so the count crosses one at a ratio of
- * logarithms — which is why it barely moves when the badly known parameters do.
+ * The closed-form moral threshold of the earlier model, R* = log(Ṅ/p_x) /
+ * log(1/(e·s₀)) ≈ 0.700, which assumed exponential growth to s = 1 and no
+ * hazard after the transition. The live threshold is now computed numerically
+ * (long-filter-model.ts, moralThreshold) and depends on g and s_max; this
+ * constant survives only for prose that has not yet been revised.
  */
 export const MORAL_THRESHOLD =
   Math.log(ARISING_PER_YEAR / EXTERNAL_HAZARD) / Math.log(1 / (Math.E * PHOENIX_RATE))
@@ -61,6 +66,14 @@ export const RATIO_MAX = 10
 export const GAP_MIN = -0.005
 export const GAP_MAX = 0.003
 
+/** The ceiling on the progressor share, s_max: a dial from 0.90 to 1.00. */
+export const CEILING_MIN = 0.9
+export const CEILING_MAX = 1
+export const CEILING_DEFAULT = 0.99
+
+/** φ, the share of error that depends on conflict and so falls as progressors spread. */
+export const CONFLICT_DEFAULT = 0.7
+
 /** Who the note is by, and when this revision was written. */
 export const BYLINE = 'Kyle'
 export const REVISED = 'October 2026'
@@ -78,6 +91,10 @@ export type Preset = {
   growth: number
   errorBase: number
   gap: number
+  /** s_max, as a fraction. */
+  ceiling: number
+  /** φ, as a fraction. */
+  conflict: number
 }
 
 export const PRESETS: Preset[] = [
@@ -89,6 +106,8 @@ export const PRESETS: Preset[] = [
     growth: 0.6,
     errorBase: 0.001,
     gap: 0,
+    ceiling: CEILING_DEFAULT,
+    conflict: CONFLICT_DEFAULT,
   },
   {
     key: 'superforecasters',
@@ -98,6 +117,8 @@ export const PRESETS: Preset[] = [
     growth: 0.6,
     errorBase: 0.001,
     gap: 0,
+    ceiling: CEILING_DEFAULT,
+    conflict: CONFLICT_DEFAULT,
   },
   {
     key: 'realistic',
@@ -107,6 +128,8 @@ export const PRESETS: Preset[] = [
     growth: 0.6,
     errorBase: 0.7,
     gap: 0,
+    ceiling: CEILING_DEFAULT,
+    conflict: CONFLICT_DEFAULT,
   },
   {
     key: 'outpace',
@@ -116,6 +139,8 @@ export const PRESETS: Preset[] = [
     growth: 0.6,
     errorBase: 0.7,
     gap: -0.2,
+    ceiling: CEILING_DEFAULT,
+    conflict: CONFLICT_DEFAULT,
   },
 ]
 

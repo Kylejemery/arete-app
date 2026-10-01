@@ -505,42 +505,96 @@ A reviewer should be able to attack each of these individually.
 
 ## A.11 Reproduction
 
-The page's arithmetic is implemented in
-`academy/web/src/components/playground/LongFilter.tsx`, with the constants in
-`academy/web/src/content/playground/long-filter.ts`. The following is
-sufficient to reproduce every number in this appendix:
+The page's model is implemented in
+`academy/web/src/components/playground/long-filter-model.ts`, used by
+`academy/web/src/components/playground/LongFilter.tsx`, with the constants and
+presets in `academy/web/src/content/playground/long-filter.ts`. The following
+mirrors the model step for step and reproduces its numbers:
 
 ```python
-from math import log, exp, e
+from math import log, exp, expm1, inf
 
-s0, Ndot, px, pe0 = 1e-9, 0.01, 1e-8, 1e-5
-K = log(1 / s0)                                   # 20.72
-R_star = log(Ndot / px) / log(1 / (e * s0))       # 0.700
-T_s = 1e4                                         # settlement, a hypothesis
-g_s = K / T_s                                     # 0.00207, tau_v = T_s here
+s0, Ndot, px = 1e-9, 0.01, 1e-8      # s0: Seneca's phoenix rate, a floor for progressors
+EDGE, TAU_F = 12, 0.9                # logistic margin in 1/g; tau = 90% of the ceiling
 
-def I_e(d, tau):
-    if abs(d) < 1e-12:
-        return pe0 * tau
-    return pe0 * (exp(d * tau) - 1) / d
+def share(t, g, sm):                 # ds/dt = g s (1 - s/sm), s(0) = s0
+    return sm if -g * t < -700 else sm / (1 + (sm / s0 - 1) * exp(-g * t))
 
-def N(pm0, g, d):
-    tau = K / g
-    M = pm0 * (1 - 1 / K) * tau                    # = R (K - 1) = -ln (e s0)^R
-    return Ndot * exp(-(M + I_e(d, tau) + px * tau)) / px
+def t_frac(f, g, sm):
+    return (log(sm / s0 - 1) + log(f / (1 - f))) / g
 
-def d_star(tau, lo=-0.02, hi=0.05):
-    for _ in range(80):
-        mid = (lo + hi) / 2
-        lo, hi = (mid, hi) if I_e(mid, tau) < log(2) else (lo, mid)
+def E1x(c):                          # e^c E1(c)
+    if c < 1:
+        s, term = 0.0, 1.0
+        for k in range(1, 40):
+            term *= -c / k; s += term / k
+        return exp(c) * (-0.5772156649015329 - log(c) - s)
+    b, cc, dd = c + 1, 1e300, 1 / (c + 1); h = dd
+    for i in range(1, 200):
+        a = -i * i; b += 2
+        dd = 1 / (a * dd + b); cc = b + a / cc
+        h *= cc * dd
+        if abs(cc * dd - 1) < 1e-14: break
+    return h
+
+def Einx(c):                         # e^-c Ein(c)
+    if c < 40:
+        s, term = 0.0, 1.0
+        for k in range(1, 200):
+            term *= c / k; s += term / k
+            if term / k < s * 1e-16: break
+        return exp(-c) * s
+    r = 1 / c
+    return r * (1 + r + 2 * r**2 + 6 * r**3 + 24 * r**4)
+
+def tail(c, d):                      # further lifetime once s = s_max
+    if c <= 0: return 1 / px
+    if d == 0: return 1 / (c + px)
+    if d < 0: return exp(-c / -d) / px + Einx(c / -d) / -d
+    j = E1x(c / d) / d
+    return j / (1 + px * j)
+
+def N(pm0, pe0, g, d, sm=0.99, phi=0.7):
+    """Ndot x expected lifetime past the transition; hazards never switch off:
+    p_m = pm0 (1-s) e^(dt),  p_e = pe0 [phi (1-s) + 1 - phi] e^(dt),  + px."""
+    tau = t_frac(TAU_F, g, sm)
+    mid = log(sm / s0 - 1) / g
+    t1, t_end = max(0.0, mid - EDGE / g), mid + EDGE / g
+    H = (pm0 + pe0) * (t1 if abs(d * t1) < 1e-9 else expm1(d * t1) / d) + px * t1
+    if H >= 745: return 0.0
+    steps = min(6000, max(200, int(-(-(t_end - t1) * max(g, abs(d)) // 0.05))))
+    grid = [t1 + i * (t_end - t1) / steps for i in range(steps + 1)]
+    grid = sorted(set(grid + [tau]))
+    h = lambda t: (pm0 * (1 - share(t, g, sm))
+                   + pe0 * (phi * (1 - share(t, g, sm)) + 1 - phi)) * exp(d * t) + px
+    post, prev = 0.0, h(grid[0])
+    for a, b in zip(grid, grid[1:]):
+        cur = h(b); dH = 0.5 * (prev + cur) * (b - a)
+        if a >= tau:
+            post += exp(-H) * (b - a) * (-expm1(-dH) / dH if dH > 1e-12 else 1)
+        H += dH; prev = cur
+        if H >= 745: return 0.0
+    c = (pm0 * (1 - sm) + pe0 * (phi * (1 - sm) + 1 - phi)) * exp(d * grid[-1])
+    return Ndot * (post + exp(-H) * tail(c, d))
+
+def bisect(f, lo, hi, geometric=False):
+    for _ in range(60):
+        m = (lo * hi) ** 0.5 if geometric else (lo + hi) / 2
+        lo, hi = (m, hi) if f(m) >= 1 else (lo, m)
     return lo
 
-print(N(0.004, 0.006, 0.001))   # 1.43
-print(d_star(K / 0.006))        # 0.00131
+d1 = lambda pm0, pe0, g, sm=0.99, phi=0.7: bisect(lambda d: N(pm0, pe0, g, d, sm, phi), -0.05, 0.02)
+R_star = lambda g, sm=0.99: bisect(lambda R: N(R * g, 0, g, 0, sm, 1), 1e-4, 50, True)
+
+print(N(0.003, 0.007, 0.006, 0))         # realistic, d = 0          2.18e-15
+print(N(0.003, 0.007, 0.006, -0.0006))   # realistic, d = -0.06%     0.307
+print(d1(0.003, 0.007, 0.006))           # competence threshold     -0.000666
+print(R_star(0.006))                     # moral threshold           0.304
+print(t_frac(TAU_F, 0.006, 0.99))        # transition length         3,818 yr
 ```
 
 The plate in section A.2 draws 1,000 marks from a fixed linear congruential
 seed so that the field is stable across redraws; only the number lit changes.
 The phase diagram in A.7 evaluates N on a grid of (R, d), log-spaced in R
-from 0.02 to 2.5 and linear in d from −0.2% to +0.4%, and colours cells by
+from 0.01 to 10 and linear in d from −0.5% to +0.3%, and colours cells by
 whether N ≥ 1.
