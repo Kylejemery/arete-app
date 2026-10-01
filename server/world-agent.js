@@ -38,6 +38,10 @@
 // raw fetch to OpenAI (embeddings) and Anthropic (generation + web search), no
 // SDKs. Idempotent — upserts one observation per observation_week.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY, CLAUDE_API_KEY.
+//
+// `node world-agent.js --dry-run` runs all three passes and prints the
+// observation instead of storing it, so the week's row (which may already be
+// approved and feeding the Dispatch) is left alone.
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
@@ -377,7 +381,7 @@ async function generateCorpusResponse(dominantSignal, stoic, counterpoint, confi
 
 // --- Main ------------------------------------------------------------------
 
-async function runWorldAgent() {
+async function runWorldAgent({ dryRun = false } = {}) {
   const startTime = Date.now();
   console.log(`=== World Agent — ${new Date().toISOString()} ===`);
   console.log('[world-agent] Monday 03:30 UTC run started');
@@ -462,6 +466,12 @@ async function runWorldAgent() {
     generation_duration_ms: Date.now() - startTime,
   };
 
+  if (dryRun) {
+    console.log('[world-agent] Dry run — observation not stored.');
+    console.log(JSON.stringify(row, null, 2));
+    return { dryRun: true, row };
+  }
+
   const { data: stored, error } = await supabase
     .from('world_observations')
     .upsert(row, { onConflict: 'observation_week' })
@@ -496,7 +506,7 @@ module.exports = {
 };
 
 if (require.main === module) {
-  runWorldAgent().catch(err => {
+  runWorldAgent({ dryRun: process.argv.includes('--dry-run') }).catch(err => {
     console.error('Fatal error:', err);
     process.exit(1);
   });
