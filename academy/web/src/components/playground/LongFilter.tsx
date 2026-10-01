@@ -1659,10 +1659,103 @@ export default function LongFilter({
         </div>
       </section>
 
-      {/* ── X. the close ── */}
+      {/* ── X. objections and replies ── */}
+      <section className={`${styles.section} ${styles.wrap}`}>
+        <div className={`${styles.secHead} ${styles.col}`}>
+          <p className={styles.eyebrow}>X. Objections and replies</p>
+          <h2>Five ways this could be wrong</h2>
+          <p>
+            Each objection is stated as strongly as it can be, then answered. Where the answer
+            concedes something, it says so.
+          </p>
+        </div>
+        <div className={styles.col}>
+          <h3 className={styles.objection}>1. Marcus chose Commodus</h3>
+          <p>
+            <strong>Objection.</strong> The most philosophical emperor Rome had handed the empire to
+            his son, who was among its worst. If a Stoic at the summit of power could not secure a
+            good succession, the hope that virtue can steer a civilization is naive.
+          </p>
+          <p>
+            <strong>Reply.</strong> One virtuous ruler was never the claim. Marcus was made over
+            decades: Antoninus Pius adopted him and shaped him through more than twenty years at his
+            side. Marcus spent much of Commodus&rsquo;s youth on campaign on the Danube, and the son
+            was formed by the court instead. A ruler over a population that does not share his
+            values cannot make anything last, which is the Stoic point against Plato&rsquo;s
+            philosopher king. The filter is passed by a civilization, not by a leader.
+          </p>
+
+          <h3 className={styles.objection}>2. You cannot retire knowledge</h3>
+          <p>
+            <strong>Objection.</strong> Warheads can be dismantled, but knowledge cannot. As biology
+            gets cheaper, the means to end a civilization will sit within reach of small groups and
+            eventually of individuals. No gap, however negative, retires what anyone can look up.
+          </p>
+          <p>
+            <strong>Reply.</strong> Risk never reaches zero, and the model never says it does. But a
+            civilization that is not spending itself on rivalry puts its resources into detection
+            and defence, and that is what keeps <span className={styles.mono}>d</span> negative even
+            when knowledge cannot be withdrawn. Malice also rarely needs only one malicious person.
+            It usually needs the silence of bystanders: the US Secret Service&rsquo;s studies of
+            attacks on schools found that most attackers had shown warning signs that others
+            noticed. Courage among the many lowers the risk. As a possible extension, not built into
+            the model here, this would make malice fall faster than the non-progressor share,
+            perhaps with its square, since an attack would need both a malicious person and silent
+            people around them.
+          </p>
+
+          <h3 className={styles.objection}>3. Caution has its own risk</h3>
+          <p>
+            <strong>Objection.</strong> A civilization that refuses to build what it does not
+            understand will be defenceless against the external term. The asteroid does not wait for
+            a careful species to finish deliberating.
+          </p>
+          <p>
+            <strong>Reply.</strong> The asteroid does not care how wise you are. But a wise
+            civilization aims everything it has at the asteroid. Ours aims most of what it has at
+            each other. Caution means not building what you do not understand, not building less.
+          </p>
+
+          <h3 className={styles.objection}>4. Indifference to death breeds carelessness</h3>
+          <p>
+            <strong>Objection.</strong> The Stoics call life and death indifferent. A civilization
+            that does not care whether it survives is the last one to trust with survival.
+          </p>
+          <p>
+            <strong>Reply.</strong> Indifferent never meant careless. Life is a preferred
+            indifferent: not a good in itself, but what reason selects when nothing better is at
+            stake. And each person is part of a larger whole. &ldquo;What is not good for the hive
+            is not good for the bee&rdquo; (Marcus Aurelius, <em>Meditations</em> 6.54). The Stoic
+            conditions for a reasonable exit from life lead with service to country and friends
+            (Diogenes Laertius 7.130). They are about serving others, not indifference to them.
+          </p>
+
+          <h3 className={styles.objection}>5. Agreement is a single point of failure</h3>
+          <p>
+            <strong>Objection.</strong> A civilization of people who reason alike, without rivals to
+            check them, loses the friction that catches mistakes. Competition is ugly, but it is
+            redundancy.
+          </p>
+          <p>
+            <strong>Reply.</strong> Dissent is welcome. Rivalry is something else: it values an
+            indifferent, winning, and brings cheating and scheming with it. But the real risk should
+            be conceded, and there are examples. The Stoics themselves reasoned honestly into a
+            physics that was wrong. Chlorofluorocarbons were chosen because everyone agreed they
+            were inert, and that inertness is what carried them into the stratosphere to destroy
+            ozone, which was caught by two dissenters, Molina and Rowland, in 1974. Castle
+            Bravo&rsquo;s yield was calculated honestly, missed a reaction, and came in at 15
+            megatons instead of 6. So a progressor civilization has to cultivate dissent on
+            purpose, through sceptics and red teams, rather than relying on rivals to provide it.
+            The argument about the silence shares this risk: rational beings who converge can
+            converge on the same mistake.
+          </p>
+        </div>
+      </section>
+
+      {/* ── XI. the close ── */}
       <section className={`${styles.section} ${styles.close}`}>
         <div className={`${styles.wrap} ${styles.col}`}>
-          <p className={styles.eyebrow}>X.</p>
+          <p className={styles.eyebrow}>XI.</p>
           <h2>The invitation that cannot be sent</h2>
           <p>
             Fermi asked it over lunch. The galaxy is old and large and ought to be crowded. Where is
@@ -1721,7 +1814,7 @@ export default function LongFilter({
         </div>
         <p className={`${styles.footnote} ${styles.colophonLink}`}>
           <Link href="/playground/the-long-filter/formalism">
-            The derivations, the parameter sources, and the twelve ways this could be wrong
+            The derivations, the parameter sources, and the thirteen ways this could be wrong
           </Link>
         </p>
         <p className={`${styles.footnote} ${styles.mono} ${styles.colophonLine}`}>
