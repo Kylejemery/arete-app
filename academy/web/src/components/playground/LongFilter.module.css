@@ -298,6 +298,7 @@
   font-size: 0.86rem;
   color: var(--oxide);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .page input[type='range'] {
   -webkit-appearance: none;

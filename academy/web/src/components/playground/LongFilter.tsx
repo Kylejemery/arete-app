@@ -750,7 +750,7 @@ export default function LongFilter({
               <div className={styles.ctrl}>
                 <div className={styles.ctrlTop}>
                   <label className={styles.ctrlLabel} htmlFor="lf-years">
-                    Years elapsed
+                    Years exposed at this risk &nbsp;· an illustration
                   </label>
                   <span className={styles.ctrlVal}>{fmtYears(years)} yr</span>
                 </div>
