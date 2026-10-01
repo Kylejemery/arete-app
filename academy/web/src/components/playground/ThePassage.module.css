@@ -312,6 +312,32 @@
   color: var(--ink-faint);
   margin-top: 0.35rem;
 }
+.ctrlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: 2.4rem;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+.ctrlRow .ctrl {
+  margin-bottom: 0;
+}
+.ctrlNote {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 1px solid var(--rule);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  min-height: 3.9rem;
+}
+.scrubNote {
+  max-width: 56rem;
+  margin: -0.8rem auto 1.8rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
 .page input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
@@ -374,18 +400,20 @@
   border-color: var(--ink);
   color: var(--plate);
 }
-.presetNote {
+.page .presetNote {
   font-size: 0.95rem;
   line-height: 1.55;
   color: var(--ink-soft);
   font-style: italic;
   text-align: center;
-  margin-bottom: 2.2rem;
+  margin: 0 auto 2.2rem;
 }
 
+/* One column: each dial carries its note to the right, so two columns of
+   dial-and-note would not fit the measure. */
 .dialGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 0 3rem;
   max-width: 56rem;
   margin: 0 auto 1.5rem;
@@ -416,12 +444,6 @@
 .segOn {
   background: var(--ink);
   color: var(--plate);
-}
-.reachNote {
-  font-size: 0.92rem;
-  line-height: 1.55;
-  color: var(--ink-faint);
-  margin-bottom: 2.6rem;
 }
 
 /* ── gates ── */
@@ -788,5 +810,14 @@
   }
   .table {
     font-size: 0.7rem;
+  }
+}
+@media (max-width: 900px) {
+  .ctrlRow {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+  .ctrlNote {
+    min-height: 0;
   }
 }

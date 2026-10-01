@@ -167,6 +167,7 @@
 /* ── the connectives table ── */
 
 .switches { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.6rem; }
+.switchNote { margin: -0.6rem 0 1.6rem; max-width: 40rem; }
 .switch {
   display: inline-flex; align-items: baseline; gap: 0.7rem;
   background: var(--plate); border: 1px solid var(--tape-rule);

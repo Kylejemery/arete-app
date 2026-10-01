@@ -820,7 +820,7 @@
 .kp-dial-top { display: flex; justify-content: space-between; align-items: baseline; }
 .kp-dial-label { font-size: 0.76rem; color: var(--bone); }
 .kp-dial-val { font-family: var(--mono); font-size: 0.68rem; color: var(--v-wisdom); font-variant-numeric: tabular-nums; }
-.kp-dial-note { font-size: 0.66rem; color: var(--bone-dim); line-height: 1.35; }
+.kp-dial-note { margin: 0; font-size: 0.66rem; color: var(--bone-dim); line-height: 1.4; }
 .kp-dial input[type="range"] { width: 100%; accent-color: var(--pom); cursor: pointer; }
 
 /* ---- laws ---- */
