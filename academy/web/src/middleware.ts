@@ -8,8 +8,8 @@ import { RELEASED_PLAYGROUND, SHARE_PARAM, shareCookieName, verifyShareToken } f
 //
 // The Library of Arete is a public surface: the immersive page, its data
 // proxies (/api/library/*), and the Oracle are reachable without a session.
-// The Observatory proxies (/api/observatory/*) and the share pages
-// (/observatory/<kind>/<id>) are public for the same
+// The Observatory proxies (/api/observatory/*), the journal (/observatory)
+// and its piece pages (/observatory/<kind>/<id>) are public for the same
 // reason — they surface only approved, observatory_visible data and the
 // Railway backend rate-limits the one interactive route (passage).
 //
@@ -24,7 +24,7 @@ import { RELEASED_PLAYGROUND, SHARE_PARAM, shareCookieName, verifyShareToken } f
 // /auth/callback exchanges the emailed ?code= for a recovery session (PKCE),
 // /auth/confirm covers the token_hash variant, and /reset-password lets the
 // user set a new password (guarded by that session).
-const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
+const PUBLIC_ROUTES = ['/', '/waitlist', '/login', '/signup', '/forgot-password', '/reset-password', '/auth/callback', '/auth/confirm', '/library', '/observatory', '/api/oracle', '/api/linkedin-callback', '/api/cron/post-due']
 const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', '/perspectives/', '/api/playground/', '/research/']
 
 // The Playground opens one piece at a time. Only the slugs in
