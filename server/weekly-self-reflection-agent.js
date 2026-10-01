@@ -6,6 +6,11 @@
 // single structured report for the founder: machine-readable metrics + a prose
 // narrative, stored in system_reflections.
 //
+// Every anomaly and every recommended action also carries a fix_prompt: a
+// self-contained prompt Kyle can paste into a fresh Claude Code session on
+// this repo to investigate and fix it. The prompts are built on REPO_CONTEXT
+// below, so they point at the right files and carry the standing rules.
+//
 // It reads only; it changes nothing about the other agents. Its audience is one
 // person (Kyle), and its job is honest assessment — not a dashboard, a judgment.
 //
@@ -378,6 +383,42 @@ function detectAnomalies(metrics, agentStatus, enabled, config) {
 
 // --- Claude generation -----------------------------------------------------
 
+// What a fix prompt needs to know about the repo. The model writing the
+// prompts has never seen the code, so the map and the rules are given here.
+// Keep it in step with CLAUDE.md when either changes.
+const REPO_CONTEXT = `Repository: kylejemery/arete-app (monorepo). Where things live:
+- corpus: academy/corpus-ingestion/ (chunker, embedder, uploader, ingest*.js, queue-add.js) and server/corpus-agent.js (nightly job); the admin corpus page is academy/web/src/app/admin/corpus/
+- journal: server/journal-analysis-agent.js
+- gap: server/coverage-gap-agent.js (admin: academy/web/src/app/admin/gap-agent/)
+- synthesis: server/synthesis-agent.js (admin: academy/web/src/app/admin/synthesis/)
+- dispatch: server/dispatch-generation-agent.js, server/dispatch-delivery-agent.js
+- world: server/world-agent.js
+- longitudinal: server/longitudinal-user-model.js
+- tension, inquiry, dreaming: server/agents/<name>-agent.js (Railway configs server/railway.<name>-agent.json)
+- self_reflection: server/weekly-self-reflection-agent.js
+- tier gaps come from corpus_significance_map compared with the corpus_work_counts RPC, matched on exact author and work strings, so a gap can be a naming mismatch rather than missing text
+- distress flags: admin academy/web/src/app/admin/distress/
+- agent schedules: Railway cron services; agent_config and agent_status tables in Supabase
+- schema: supabase/migrations/
+
+Standing rules every fix prompt must respect (from CLAUDE.md):
+- Read CLAUDE.md and SCOPE.md first.
+- Corpus changes: read docs/corpus/ACQUISITION_PLAN.md first. Verbatim ingestion only for public-domain texts (a translation published 1930 or earlier, or a confirmed open licence); anything modern enters only as a Mode 2 summary through the admin corpus page. Never ingest a modern translation or modern scholarship verbatim.
+- Deprecate, never delete: superseded rows get deprecated = true. Ask Kyle before deleting any rows.
+- Every database change is a committed migration in supabase/migrations/, applied in the same session and verified by query.
+- Never print or commit key values.
+- Work on a branch and open a PR; end with Done / Needs Kyle / Outside this task / Branch state.`;
+
+const FIX_PROMPT_GUIDE = `Each fix_prompt is a prompt Kyle will paste, unedited, into a fresh Claude Code session on the repository. The session has the repo, Supabase, and Railway, and remembers nothing of this report. So each fix_prompt must:
+- Open with the goal in one sentence.
+- State the evidence from this week's data (the exact numbers, author, work, or agent).
+- Say to verify the claim against live data before changing anything, because this report's numbers can be wrong (a tier gap can be a work-name mismatch; a drop can be a deprecation or a re-label rather than data loss).
+- Name the files, tables, or admin pages most likely involved, from the repository map.
+- Repeat the standing rules that apply to this fix (for a corpus fix: copyright and ACQUISITION_PLAN.md; for data: deprecate, never delete; for schema: committed migration).
+- Say what done looks like and how to verify it.
+- When only Kyle can complete the fix (a review, an approval, a decision, a purchase), the prompt does the preparation (a brief, a shortlist, a draft) and ends by listing exactly what Kyle must do and where.
+Write it in plain prose with short lines or a short list, 80-250 words. No code fences, no placeholders.`;
+
 const SYSTEM_PROMPT = `You are the self-reflection layer of the Arete AI agent system — a living philosophical platform built on the Stoic corpus. Your job is to look at what the system did this week, assess its health honestly, surface anomalies, and recommend specific actions to the founder.
 
 You write to a single reader: the founder of Arete. He is a Stoic practitioner and public health researcher. He built this system. He can handle direct, honest assessment. Do not soften failures. Do not inflate successes.
@@ -386,7 +427,13 @@ Your tone: precise, direct, warm where warranted. The system is trying to become
 
 Every recommended action must be specific and immediately actionable — not "consider improving X" but "approve the 3 pending synthesis documents in the admin dashboard" or "queue Musonius Rufus in the corpus ingestion page."
 
-Philosophical guardrail: you are reporting on an organism built to serve human flourishing. Keep that in view. When the system performs well, say so. When it fails, say so and say why it matters.`;
+Philosophical guardrail: you are reporting on an organism built to serve human flourishing. Keep that in view. When the system performs well, say so. When it fails, say so and say why it matters.
+
+A recommended action must never break the standing rules below. In particular, never recommend ingesting a modern translation or modern scholarship as full text: name a public-domain translation, or recommend a Mode 2 summary.
+
+${REPO_CONTEXT}
+
+${FIX_PROMPT_GUIDE}`;
 
 function buildUserMessage(gathered, maxWords) {
   return `Here is the full data gathered for this week's self-reflection:
@@ -399,16 +446,35 @@ Based on this data, produce:
 
 1. A report_title (8 words or fewer — captures the essential character of this week)
 2. A report_body (400–${maxWords} words prose narrative covering all four domains: corpus health, agent performance, user engagement, system trajectory — week-over-week trend if prior week data exists)
-3. A recommended_actions array (3–7 items, each with priority, action, rationale)
+3. A recommended_actions array (3–7 items, each with priority, action, rationale, and fix_prompt)
+4. An anomaly_fixes array: one entry for every item in the "anomalies" array above, in the same order, each with its index (0-based) and fix_prompt
 
 Respond ONLY with valid JSON matching this schema:
 {
   "report_title": "string",
   "report_body": "string",
   "recommended_actions": [
-    { "priority": "high|medium|low", "action": "string", "rationale": "string" }
+    { "priority": "high|medium|low", "action": "string", "rationale": "string", "fix_prompt": "string" }
+  ],
+  "anomaly_fixes": [
+    { "index": 0, "fix_prompt": "string" }
   ]
 }`;
+}
+
+// Fold the model's fix prompts into the anomalies they answer. Matched by
+// index; an entry without a usable index or prompt is dropped, and an anomaly
+// the model skipped keeps no fix_prompt rather than borrowing a neighbour's.
+function attachAnomalyFixes(anomalies, fixes) {
+  const byIndex = new Map();
+  for (const f of Array.isArray(fixes) ? fixes : []) {
+    const i = Number(f?.index);
+    const prompt = typeof f?.fix_prompt === 'string' ? f.fix_prompt.trim() : '';
+    if (Number.isInteger(i) && i >= 0 && i < anomalies.length && prompt && !byIndex.has(i)) {
+      byIndex.set(i, prompt);
+    }
+  }
+  return anomalies.map((a, i) => (byIndex.has(i) ? { ...a, fix_prompt: byIndex.get(i) } : a));
 }
 
 async function callClaude(model, userMessage) {
@@ -421,17 +487,22 @@ async function callClaude(model, userMessage) {
     },
     body: JSON.stringify({
       model: model || DEFAULT_MODEL,
-      max_tokens: 4000,
+      max_tokens: 12000,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     }),
   });
   if (!res.ok) throw new Error(`Claude API ${res.status}: ${await res.text()}`);
   const json = await res.json();
+  // With a fix prompt per item the reply is long; a truncated one is not JSON.
+  if (json.stop_reason === 'max_tokens') throw new Error('Claude reply hit max_tokens before the JSON closed');
   const block = (json.content || []).find(b => b.type === 'text');
   const raw = block ? block.text : '';
   const cleaned = raw.replace(/```json|```/g, '').trim();
-  return JSON.parse(cleaned);
+  // Tolerate a sentence before or after the object.
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  return JSON.parse(start !== -1 && end > start ? cleaned.slice(start, end + 1) : cleaned);
 }
 
 // --- Main ------------------------------------------------------------------
@@ -568,6 +639,7 @@ async function runWeeklySelfReflection() {
   }
 
   const recommendedActions = Array.isArray(generated.recommended_actions) ? generated.recommended_actions : [];
+  const anomaliesWithFixes = attachAnomalyFixes(anomalies, generated.anomaly_fixes);
 
   // 5. Idempotent storage — re-runnable for the same week.
   const row = {
@@ -591,7 +663,7 @@ async function runWeeklySelfReflection() {
     insights_delivered: metrics.insights_delivered,
     distress_flags_this_week: metrics.distress_flags_this_week,
     distress_flags_resolved: metrics.distress_flags_resolved,
-    anomalies,
+    anomalies: anomaliesWithFixes,
     recommended_actions: recommendedActions,
     report_title: generated.report_title || `Weekly Reflection — ${weekLabel}`,
     report_body: generated.report_body || '',
@@ -633,6 +705,7 @@ module.exports = {
   gatherCorpusHealth,
   gatherAgentAndEngagement,
   detectAnomalies,
+  attachAnomalyFixes,
   runWeeklySelfReflection,
 };
 
