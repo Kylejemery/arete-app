@@ -324,6 +324,13 @@ h(t)   = p_m + p_e + p_x                      for all t ≥ 0`}
             (haste, secrecy, racing) and so falls as progressors spread. No term switches off when
             the transition ends, and <span className={styles.mono}>d</span> keeps its value.
           </p>
+          <p>
+            <strong>Conflict error, an example.</strong> Castle Bravo (1954) is the clearest case of
+            the share φ. Its yield was calculated honestly, the calculation missed a reaction, and
+            the device came in at 15 megatons instead of 6. The mistake was ordinary; a test of that
+            size, at that pace, existed only because of the arms race. Honest in its making,
+            dangerous only because of the race around it.
+          </p>
         </Sub>
 
         <Sub title="5.2 Survival">
