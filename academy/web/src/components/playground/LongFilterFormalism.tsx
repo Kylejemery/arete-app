@@ -734,12 +734,19 @@ p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻�
           <span className={styles.mono}>S = 1 − ∏(1 − Sᵢ)</span> over effectively independent
           colonies. That is a genuine escape, and A2 fails if it is reachable within{' '}
           <span className={styles.mono}>τ_v</span>. The model therefore needs interstellar
-          settlement to arrive after saturation or not at all. At{' '}
-          <span className={styles.mono}>g</span> = 0.6% a year{' '}
-          <span className={styles.mono}>τ_v</span> ≈ 3,450 years, long enough that this is an open
-          question, and <span className={styles.mono}>τ_v</span> grows as{' '}
-          <span className={styles.mono}>g</span> falls (≈ 20,700 years at 0.1%), so the escape is
-          most available exactly where the model is bleakest. One observation cuts the other way. A
+          settlement to arrive after saturation or not at all, which is A12. Write{' '}
+          <span className={styles.mono}>T_s</span> for its date. The assumption holds while{' '}
+          <span className={styles.mono}>τ_v &lt; T_s</span>, that is while{' '}
+          <span className={styles.mono}>g &gt; g_s = K/T_s</span>. The working note takes{' '}
+          <span className={styles.mono}>T_s</span> = 10⁴ years as a hypothesis, not an estimate,
+          which puts <span className={styles.mono}>g_s</span> ≈ 0.21% a year. At{' '}
+          <span className={styles.mono}>g</span> = 0.6% the transition takes ≈ 3,450 years and
+          finishes first; at 0.1% it takes ≈ 20,700 years and does not. Because{' '}
+          <span className={styles.mono}>τ_v</span> grows as <span className={styles.mono}>g</span>{' '}
+          falls, the escape is most available exactly where the model is bleakest. The working
+          note&rsquo;s diagram carries <span className={styles.mono}>T_s</span> as a dial; the
+          count does not change with it, it only marks where the count stops applying. One
+          observation cuts the other way. A
           civilization that escaped by dispersal without transitioning would carry its expansion
           with it, and would be the loud population the sky does not show.
         </p>
@@ -765,6 +772,8 @@ S(∞)   = exp(−p₀H / ln 2)  >  0                declining hazard, converges
 p(t)   = p_m(t) + p_e(t) + p_x                 three terms, three masters
 s₀     = 10⁻⁹,  K = ln(1/s₀) = 20.72           phoenix rate
 τ_v    = K / g                                 saturation time
+T_s    = 10⁴ yr                                interstellar settlement, a hypothesis
+g_s    = K / T_s ≈ 0.21%                       τ_v < T_s requires g > g_s
 I_e    = p_e0 (e^(dτ) − 1)/d                   error integral,  d = c − e
 f_v    = (e·s₀)^R · exp(−I_e) · exp(−p_x τ_v)  R = p_m0/g
 N_ℓ    = Ṅ · f_v / p_x                         transitioned civilizations extant

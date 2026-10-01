@@ -1512,7 +1512,7 @@ export default function LongFilter({
         </div>
         <p className={`${styles.footnote} ${styles.colophonLink}`}>
           <Link href="/playground/the-long-filter/formalism">
-            The derivations, the parameter sources, and the eleven ways this could be wrong
+            The derivations, the parameter sources, and the twelve ways this could be wrong
           </Link>
         </p>
         <p className={`${styles.footnote} ${styles.mono} ${styles.colophonLine}`}>
