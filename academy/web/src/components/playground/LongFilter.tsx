@@ -414,15 +414,27 @@ const onPreset = (p: Preset, s: Setting) =>
   Math.abs(s.ceiling - p.ceiling) < 0.0005 &&
   Math.abs(s.conflict - p.conflict) < 0.005
 
+/**
+ * Expected further life once the transition is over and the gap is level: the
+ * reducible hazard the ceiling leaves standing, plus p_x. With d > 0 the real
+ * figure is shorter, since that hazard keeps growing.
+ */
+function residueYears(p: Params): number {
+  const { malice: m, errorBase: e, ceiling: sm, conflict: phi } = p
+  return 1 / (m * (1 - sm) + e * (phi * (1 - sm) + (1 - phi)) + 1e-8)
+}
+
 type Hover = { left: number; top: number; ratio: number; gap: number; n: number }
 
-function phaseVerdict(n: number, gap: number, d1: number | null): string {
+function phaseVerdict(n: number, gap: number, d1: number | null, residueYears: number): string {
   if (n >= 1000)
     return 'Clear, comfortably. Thousands of civilizations past their transition, which means the filter cannot be what makes the sky quiet. Something else is.'
   if (n >= 1)
     return 'Clear, narrowly. A handful past their transition, scattered across a hundred thousand light years and under no obligation to announce it.'
   if (gap >= 0)
-    return 'Holding the gap level is not enough. The error that virtue does not touch never falls, so even the civilizations that get through the transition do not last. The gap has to be negative.'
+    return gap > 0
+      ? `Capability outruns understanding, so every reducible hazard grows. Even a civilization that gets through the transition lasts less than ${fmtYears(residueYears)} more years. The gap has to be negative.`
+      : `Holding the gap level is not enough. The error that virtue does not touch never falls, so a civilization that gets through the transition lasts about ${fmtYears(residueYears)} more years. Finishing the transition buys centuries, not epochs. The gap has to be negative.`
   if (d1 === null)
     return 'Competence leads, but no lead in range is enough at these rates. Something else has to give.'
   return `Competence leads, but not by enough. The count reaches one at d = ${signedPct(d1)}, and the hazards left standing do the rest.`
@@ -1373,7 +1385,12 @@ export default function LongFilter({
                   </p>
                 </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
-                  {phaseVerdict(count, gap, gapLimit === Infinity ? null : gapLimit)}
+                  {phaseVerdict(
+                    count,
+                    gap,
+                    gapLimit === Infinity ? null : gapLimit,
+                    residueYears(params),
+                  )}
                 </p>
                 <button type="button" className={styles.copyLink} onClick={copyLink}>
                   {copied ? 'Link copied' : 'Copy a link to this setting'}
@@ -1430,8 +1447,12 @@ export default function LongFilter({
           <p className={styles.eyebrow}>V. After the transition</p>
           <h2>Retire the hazard</h2>
           <p>
-            No hazard switches off when the transition ends; the model runs every term for all time.
-            What survivors do differently is keep the gap negative: they keep retiring hazards, and
+            No hazard switches off when the transition ends; the model runs every term for all time.{' '}
+            <strong>Finishing the transition buys centuries, not epochs.</strong> At the realistic
+            defaults, with the gap held at zero, the hazard still standing afterwards is about 0.22
+            percent a year, most of it error that virtue does not touch, and a civilization that got
+            through can expect about 460 more years. What survivors do differently is keep the gap
+            negative: they keep retiring hazards, and
             they never build capability ahead of the understanding of it. With{' '}
             <span className={styles.mono}>d</span> below zero every reducible term shrinks year on
             year, and the risk that remains adds up to a finite total instead of growing without
@@ -1459,6 +1480,44 @@ export default function LongFilter({
             civilization-ending power, and that access is denied by retiring hazards, not by
             policing people. A weapon that no longer exists cannot be stolen, and a capability nobody
             built cannot be misused.
+          </p>
+          <p>
+            <strong>The main rival: spreading out.</strong> The strongest alternative to retiring
+            hazards is to outrun them. Picture self-sufficient settlements around other stars, each
+            able to rebuild technological civilization alone, each founding new ones at a rate{' '}
+            <span className={styles.mono}>b</span> and ending at its own total hazard{' '}
+            <span className={styles.mono}>μ</span>. That is a branching process. The lineage
+            survives with positive probability only if{' '}
+            <span className={styles.mono}>b &gt; μ</span>, and then with probability{' '}
+            <span className={styles.mono}>1 − μ/b</span>. Take{' '}
+            <span className={styles.mono}>b</span>, as a hypothesis like the settlement date, to be
+            one daughter settlement every 1,000 to 10,000 years. It cannot replace the transition.
+            Before it the hazard is about 1 percent a year, and the chance of lasting the ten thousand
+            years to the settlement date is about 10⁻⁴⁴: the power to destroy yourself arrives long
+            before the power to leave. After it, dispersal rescues only civilizations whose leftover
+            risk is already small. At the realistic defaults with the gap at zero,{' '}
+            <span className={styles.mono}>μ</span> is about 0.22 percent a year, a life of about 460
+            years. No <span className={styles.mono}>b</span> in the range clears it, and the
+            civilization is very unlikely to be alive when settlement becomes possible. Only where
+            the residue is already down to something like malice alone at the moral threshold, about
+            0.002 percent a year or a life of about 55,000 years, does{' '}
+            <span className={styles.mono}>b</span> clear <span className={styles.mono}>μ</span>,
+            by five to fifty times, and the lineage then survives 82 to 98 percent of the time. So
+            dispersal is a rival to retiring hazards, not to the thesis: it can finish a job that
+            virtue has mostly done. And it is the generous case. Settlements share a culture and
+            designs, so their hazards are correlated, and correlation raises the effective{' '}
+            <span className={styles.mono}>μ</span>. A growing gap defeats it outright: with{' '}
+            <span className={styles.mono}>d &gt; 0</span> every settlement&rsquo;s hazard climbs past{' '}
+            <span className={styles.mono}>b</span> sooner or later.
+          </p>
+          <p>
+            <strong>
+              And it would be seen. A lineage that survives by spreading keeps spreading.
+            </strong>{' '}
+            It has to: it lasts only while each settlement founds others faster than settlements
+            end, so it fills its neighbourhood and then the galaxy. That is the loud population the
+            sky does not show. Retiring hazards is compatible with the silence; surviving by
+            dispersal is not.
           </p>
           <p>
             <strong>Why not control instead.</strong> The obvious alternative is coercion: a

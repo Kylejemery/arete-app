@@ -254,8 +254,11 @@ remainder is A/|d|, where A is the reducible hazard left at that moment.
 Survival has a floor, exactly as in A.3, and a survivor then lives about
 1/p_x = 10⁸ years. **A hazard you keep shrinking cannot eventually catch
 you; only one you leave standing can.** With d = 0 the error virtue does not
-touch, p_e0(1 − φ) = 0.21%/yr at the realistic baseline, stays for good, and
-survivors last a few centuries.
+touch, p_e0(1 − φ) = 0.21%/yr at the realistic baseline, stays for good;
+with the ceiling's share of malice and conflict error the hazard left
+standing is 0.22%/yr, and survivors of the transition last about 460 years.
+Finishing the transition buys centuries, not epochs, unless hazards keep
+being retired.
 
 **Institutions.** What raises e is the machinery of error correction: open
 criticism, replication, audit, a press nobody owns. Those institutions work
@@ -512,6 +515,31 @@ A reviewer should be able to attack each of these individually.
   g_s at which τ_v = T_s is about 2.5% at 10³ years and 0.025% at 10⁵ years.
   Modelling what dispersal does to N once it arrives, rather than only
   flagging it, is the natural extension.
+- **Dispersal as a branching process.** Not built into the model. Treat
+  self-sufficient interstellar settlements as a linear birth–death process:
+  each founds new ones at rate b and ends at its own total hazard μ,
+  independently. The lineage survives with positive probability if and only
+  if b > μ, and then with probability 1 − μ/b (checked by Monte Carlo).
+  Take b, as a hypothesis like T_s, to be one daughter settlement every
+  1,000 to 10,000 years (10⁻³ to 10⁻⁴ a year).
+
+  | Where μ comes from | μ | Lifetime | Lineage survives at b = 10⁻³, 10⁻⁴ |
+  |---|---|---|---|
+  | Before the transition (h₀) | 10⁻² /yr | 100 yr | no, no |
+  | After it, realistic defaults, d = 0 | 2.2 × 10⁻³ /yr | 460 yr | no, no |
+  | After it, malice alone at R\* | 1.8 × 10⁻⁵ /yr | 55,000 yr | 98%, 82% |
+
+  The home civilization must also be alive when settlement becomes possible.
+  At the pre-transition hazard, lasting the ten thousand years to T_s has a
+  chance of about 10⁻⁴⁴. After the transition, the wait is the remaining
+  T_s − τ_v ≈ 5,800 years, survived with probability 3 × 10⁻⁶ when the
+  residue gives a 460-year life and 0.90 when it gives 55,000. So dispersal cannot replace the transition
+  (the ordering argument), and after it rescues only a civilization whose
+  leftover risk is already small: it is a rival to retiring hazards, not to
+  the thesis. It is the generous case: shared culture and designs correlate
+  the settlements' hazards and raise the effective μ, and with d > 0 every
+  μ eventually passes b. A lineage that survives this way must keep
+  spreading, and would be the loud population the sky does not show.
 - **Malice that needs silent bystanders.** A possible extension, not built
   into the model. If an attack needs both a malicious person and silence
   from the people around them, malice falls faster than the non-progressor
