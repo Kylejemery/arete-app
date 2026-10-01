@@ -7,6 +7,8 @@ export const metadata: Metadata = {
     'A model of the crossing from an adolescent civilization to a sage one: how long it takes, what it costs while it happens, and which institutions dissolve at which point along the way. Move the dials and the social history moves with them.',
 }
 
+// Back to the app rather than the Playground index, which is gated. See the
+// note on the Scale of Happiness page.
 export default function PlaygroundThePassagePage() {
-  return <ThePassage backHref="/playground" backLabel="← The Playground" />
+  return <ThePassage backHref="https://app.pursuearete.com" backLabel="← Back to Arete" />
 }
