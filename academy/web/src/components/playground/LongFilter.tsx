@@ -971,6 +971,14 @@ export default function LongFilter({
             the distance between having it and understanding it.
           </p>
           <p>
+            <strong>Conflict error.</strong> Castle Bravo, in 1954, is the clearest case of the
+            share φ. Its yield was calculated honestly, the calculation missed a reaction, and the
+            device came in at 15 megatons instead of 6. The mistake was ordinary; the danger was
+            not. A test of that size, at that pace, existed only because of the arms race, each
+            side building before it understood for fear the other would. That is error that depends
+            on conflict: honest in its making, and dangerous only because of the race around it.
+          </p>
+          <p>
             <strong>Breadth, not magnitude.</strong> Each new kind of capability opens failure
             channels the previous kinds did not have. Nuclear does not teach you the failure modes of
             engineered biology, and neither teaches you whatever comes next. That is why the gap is
@@ -1742,10 +1750,9 @@ export default function LongFilter({
             be conceded, and there are examples. The Stoics themselves reasoned honestly into a
             physics that was wrong. Chlorofluorocarbons were chosen because everyone agreed they
             were inert, and that inertness is what carried them into the stratosphere to destroy
-            ozone, which was caught by two dissenters, Molina and Rowland, in 1974. Castle
-            Bravo&rsquo;s yield was calculated honestly, missed a reaction, and came in at 15
-            megatons instead of 6. So a progressor civilization has to cultivate dissent on
-            purpose, through sceptics and red teams, rather than relying on rivals to provide it.
+            ozone, which was caught by two dissenters, Molina and Rowland, in 1974. Nobody was
+            racing anybody; the agreement itself was the hazard. So a progressor civilization has to
+            cultivate dissent on purpose, through sceptics and red teams, rather than relying on rivals to provide it.
             The argument about the silence shares this risk: rational beings who converge can
             converge on the same mistake.
           </p>
