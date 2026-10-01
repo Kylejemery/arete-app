@@ -325,7 +325,11 @@ function PhilosopherMap() {
           >
             <div className={styles.philDot} />
             <div className={styles.philTick} />
-            <div className={`${styles.philTooltip} ${hovered === i ? styles.philTooltipVisible : ''}`}>
+            <div
+              className={`${styles.philTooltip} ${
+                p.position < 30 ? styles.philTooltipStart : p.position > 70 ? styles.philTooltipEnd : ''
+              } ${hovered === i ? styles.philTooltipVisible : ''}`}
+            >
               <strong>{p.name}</strong>
               <span>{p.desc}</span>
             </div>
