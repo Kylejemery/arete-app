@@ -913,6 +913,21 @@ export default function LongFilter({
             sage culture is not an alternative to them. It is what builds them, staffs them, and
             keeps them honest when gaming them would pay.
           </p>
+          <p>
+            <strong>All three terms rest on one assumption: during the transition, a civilization
+            is a single target.</strong> The arithmetic counts one throw a year, which holds only if
+            one catastrophe ends everyone. The obvious objection is to spread out, and the answer
+            depends on how far. Settlements within one solar system sit days or months apart. That
+            protects against an impact and little else: weapons cross the distance, a pathogen can
+            ride a supply ship, and a flawed technology gets built in every settlement from the same
+            designs. Each settlement also brings its own malice and its own error, so dispersal at
+            that range adds throws faster than it removes them. Settlements around other stars are
+            a different case. Years or centuries of separation decouple their fates, and a
+            civilization that reached them before the transition finished would escape the filter
+            by distance rather than by character. The model assumes that does not happen in time.
+            At 0.6 percent a year the transition runs about 3,450 years, long enough that this is an
+            open question, and the slower the moral improvement, the longer the window stays open.
+          </p>
           <p className={`${styles.footnote} ${styles.hzCaveat}`}>
             One more correction, and it is uncomfortable. The published catastrophe estimates
             everyone quotes are totals, and the documented near-misses lean heavily toward false

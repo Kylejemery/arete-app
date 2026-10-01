@@ -717,6 +717,32 @@ p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻�
           gaming them would pay. A2 fails if institutions can be made self-enforcing among people who
           would game them given the chance.
         </p>
+        <p>
+          <strong>A note on A2 and dispersal.</strong> §1 counts one trial a year, which holds only
+          if one catastrophe is total. Dispersal relaxes that, and it is the most natural route to a
+          declining hazard that needs no character, so it is the strongest challenge to A2. Its
+          force depends on separation. Within one system, settlements are days to months of transit
+          apart. That decorrelates <span className={styles.mono}>p_x</span>, since no single impact
+          reaches every body, but barely touches <span className={styles.mono}>p_m</span> or{' '}
+          <span className={styles.mono}>p_e</span>: weapons and pathogens cross the distance, and
+          every settlement builds from the same designs. Each settlement also carries its own
+          malice and error hazard, so <span className={styles.mono}>n</span> settlements with
+          correlated failure modes face roughly <span className={styles.mono}>n</span> times the
+          exposure while gaining protection only against the term that is already negligible during
+          the transition. Across interstellar distance the separation is years to centuries, the
+          hazards decouple, and the civilization survives if any colony does:{' '}
+          <span className={styles.mono}>S = 1 − ∏(1 − Sᵢ)</span> over effectively independent
+          colonies. That is a genuine escape, and A2 fails if it is reachable within{' '}
+          <span className={styles.mono}>τ_v</span>. The model therefore needs interstellar
+          settlement to arrive after saturation or not at all. At{' '}
+          <span className={styles.mono}>g</span> = 0.6% a year{' '}
+          <span className={styles.mono}>τ_v</span> ≈ 3,450 years, long enough that this is an open
+          question, and <span className={styles.mono}>τ_v</span> grows as{' '}
+          <span className={styles.mono}>g</span> falls (≈ 20,700 years at 0.1%), so the escape is
+          most available exactly where the model is bleakest. One observation cuts the other way. A
+          civilization that escaped by dispersal without transitioning would carry its expansion
+          with it, and would be the loud population the sky does not show.
+        </p>
       </Section>
 
       <Section num="12" title="Falsification conditions">
