@@ -483,11 +483,25 @@
   border: 1px solid var(--phil-color);
   border-radius: 4px;
   padding: 10px 14px;
-  width: 200px;
+  width: min(200px, calc(100vw - 32px));
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
   z-index: 10;
+}
+
+/* Near either end of the bar a centred tooltip would hang past the edge of a
+   phone screen, and even while transparent it widens the page. Open it inward
+   instead: from the marker's left edge near the start, its right near the end. */
+.philTooltipStart {
+  left: -12px;
+  transform: none;
+}
+
+.philTooltipEnd {
+  left: auto;
+  right: -12px;
+  transform: none;
 }
 
 .philTooltipVisible {
