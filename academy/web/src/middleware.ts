@@ -1,6 +1,7 @@
 ﻿import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { SHARE_PARAM, shareCookieName, verifyShareToken } from '@/lib/playground-share'
 
 // /api/cron/post-due authenticates itself with CRON_SECRET (called by Railway,
 // no user session), so it must bypass the session-redirect middleware.
@@ -34,6 +35,10 @@ const PUBLIC_PREFIXES = ['/api/library/', '/api/observatory/', '/observatory/', 
 // The owner is the exception. Gating the index locked the author out of their
 // own workshop, which is not the point: what is gated is users reaching it,
 // not the Playground existing. ADMIN_EMAIL sees everything, as with /admin.
+//
+// A share link is the other exception: the owner signs a link for one piece
+// (admin → Share Links) and whoever holds it can open that piece, and only
+// that piece, until it expires. See lib/playground-share.ts.
 const RELEASED_PLAYGROUND = [
   'happiness-scale',
   'zenos-hand',
@@ -77,9 +82,39 @@ export async function middleware(request: NextRequest) {
   // else is not found. '/playground' and '/playground/' both slice to '',
   // which is never in the list, so the index is gated with the rest.
   if (pathname === '/playground' || pathname.startsWith('/playground/')) {
-    if (RELEASED_PLAYGROUND.includes(pathname.slice('/playground/'.length))) {
+    const piece = pathname.slice('/playground/'.length)
+    if (RELEASED_PLAYGROUND.includes(piece)) {
       return NextResponse.next()
     }
+
+    // First visit through a share link: remember it in a cookie scoped to this
+    // piece's path, then redirect to the clean URL so the token leaves the
+    // address bar (and the Referer of anything the page loads).
+    const token = request.nextUrl.searchParams.get(SHARE_PARAM)
+    if (token) {
+      const expires = await verifyShareToken(piece, token)
+      if (expires) {
+        const clean = request.nextUrl.clone()
+        clean.searchParams.delete(SHARE_PARAM)
+        const response = NextResponse.redirect(clean)
+        response.cookies.set(shareCookieName(piece), token, {
+          path: pathname,
+          expires: new Date(expires * 1000),
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+        })
+        response.headers.set('X-Robots-Tag', 'noindex, nofollow')
+        return response
+      }
+    }
+    // Later visits: the cookie carries the same token, checked the same way.
+    if (await verifyShareToken(piece, request.cookies.get(shareCookieName(piece))?.value)) {
+      const response = NextResponse.next()
+      response.headers.set('X-Robots-Tag', 'noindex, nofollow')
+      return response
+    }
+
     // The session is read only for gated paths, so a released piece stays
     // public and costs no auth round-trip.
     if (await isOwner(request)) return NextResponse.next()
