@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
   ARISING_PER_YEAR,
+  BYLINE,
   CIVILIZATIONS,
+  DEFAULT_PRESET,
   EXTERNAL_HAZARD,
   GAP_MAX,
   GAP_MIN,
@@ -12,9 +14,13 @@ import {
   LEDGER,
   LOG_DISTANCE,
   MORAL_THRESHOLD,
+  PRESETS,
   RATIO_MAX,
   RATIO_MIN,
+  REFERENCES,
+  REVISED,
   SCATTER_SEED,
+  type Preset,
 } from '@/content/playground/long-filter'
 import styles from './LongFilter.module.css'
 
@@ -85,14 +91,20 @@ function survivorCount(
 }
 
 /**
- * Where the line actually sits: the widest gap d at which the count still
+ * Where the line actually sits: the widest gap d₁ at which the count still
  * reaches one, bisected. This is the whole count, not the error term alone —
  * malice has already spent part of the budget before error starts compounding,
- * so d* tightens as the moral ratio worsens.
+ * so d₁ tightens as the moral ratio worsens. It is not the formal note's d*,
+ * which asks only that the error term cost less than half.
+ *
+ * Null when no gap in the search range brings the count to one (malice alone
+ * has already spent the budget), Infinity when every gap does.
  */
-function criticalGap(malice: number, growth: number, errorBase: number): number {
+function criticalGap(malice: number, growth: number, errorBase: number): number | null {
   let lo = -0.05
   let hi = 0.02
+  if (survivorCount(malice, growth, lo, errorBase) < 1) return null
+  if (survivorCount(malice, growth, hi, errorBase) >= 1) return Infinity
   for (let i = 0; i < 90; i++) {
     const mid = (lo + hi) / 2
     if (survivorCount(malice, growth, mid, errorBase) >= 1) lo = mid
@@ -110,11 +122,137 @@ const gapFromSlider = (v: number) => GAP_MIN + (v / 100) * (GAP_MAX - GAP_MIN)
 /** The error-rate dial: 0.0001% to 3.16% a year, the softest number in the model. */
 const errorFromSlider = (v: number) => Math.pow(10, -6 + (v / 100) * 4.5)
 
+/** The inverses, for loading a preset or a shared link. Off-scale values pin to the ends. */
+const clampStep = (v: number) => Math.min(100, Math.max(0, v))
+const sliderFromRate = (r: number) => clampStep(((Math.log10(r) + 4) / 2.5) * 100)
+const sliderFromError = (r: number) => clampStep(((Math.log10(r) + 6) / 4.5) * 100)
+const sliderFromGap = (d: number) => clampStep(((d - GAP_MIN) / (GAP_MAX - GAP_MIN)) * 100)
+
+/** A rate as the percent a link or a preset carries, to three figures. */
+const asPercent = (v: number) => Number((v * 100).toPrecision(3))
+
 const pct = (v: number, places: number) => `${(v * 100).toFixed(places)}%`
 const signedPct = (v: number) => `${v >= 0 ? '+' : ''}${(v * 100).toFixed(3)}%`
 /** Axis ticks are typeset rather than read out: coarser, with a real minus. */
 const axisPct = (v: number) =>
   `${v >= 0 ? '+' : '\u2212'}${Math.abs(v * 100).toFixed(2)}%`
+
+// ── the explainers ───────────────────────────────────────────────────────────
+//
+// Each dial carries a line of prose that changes with where it sits, anchored
+// to something a reader already has a sense of: a span of history, a published
+// estimate, a historical rate. The anchors are the ones the formal note uses.
+
+/** A span of years against the human record. */
+function spanAnchor(y: number): string {
+  if (y < 80) return 'less than a human lifetime'
+  if (y < 5000) return 'less than recorded history, which is about 5,000 years'
+  if (y < 12000) return 'about the time since the first farms'
+  if (y < 300000) return 'less than our species has existed'
+  if (y < 6.6e7) return 'longer than our species has existed, though less than the time since the dinosaurs died'
+  if (y < 4.7e8) return 'longer than the time since the dinosaurs died'
+  return 'longer than there has been life on land'
+}
+
+/** I. Where the annual risk sits against the published estimates. */
+function riskNote(p: number): string {
+  const band =
+    p >= 0.03
+      ? 'Far above any published estimate for nuclear war.'
+      : p >= 0.008
+      ? 'About Hellman’s estimate for nuclear war, near 1 in 100 a year.'
+      : p >= 0.001
+        ? 'Inside the span of published estimates for major nuclear war, 1 in 1,000 to 1 in 100 a year.'
+        : p >= 1e-4
+          ? 'Below the published estimates. Most forecasters would call this optimistic.'
+          : 'Far below any published estimate.'
+  return `${band} At this risk a civilization lasts ${fmtYears(1 / p)} years on average, ${spanAnchor(1 / p)}.`
+}
+
+/**
+ * I. What surviving this long amounts to, as a run of coin flips: a survival
+ * chance S is as likely as log₂(1/S) heads in a row. Computed from ln S so the
+ * deep-time end does not underflow to zero.
+ */
+function yearsNote(p: number, years: number, decay: boolean): string {
+  const lnS = decay
+    ? -((p * HALVING_YEARS) / Math.LN2) * (1 - Math.pow(2, -years / HALVING_YEARS))
+    : years * Math.log1p(-p)
+  const heads = -lnS / Math.LN2
+  const odds =
+    heads < 0.15
+      ? 'Survival is close to certain.'
+      : heads < 1
+        ? 'Survival is better than a coin flip.'
+        : heads < 1e6
+          ? `Surviving it is as likely as flipping ${heads < 10 ? heads.toFixed(1) : Math.round(heads).toLocaleString('en-US')} heads in a row.`
+          : 'Surviving it is less likely than a million heads in a row.'
+  let tail = ''
+  if (decay) {
+    const now = p * Math.pow(2, -years / HALVING_YEARS)
+    tail =
+      now > 1e-15
+        ? ` By then the annual risk has halved ${Math.floor(years / HALVING_YEARS).toLocaleString('en-US')} times, to 1 in ${fmtYears(1 / now)}.`
+        : ' By then the annual risk has halved so often it is effectively zero.'
+  }
+  return `${fmtYears(years)} years is ${spanAnchor(years)}. ${odds}${tail}`
+}
+
+/** IV. Malice against the published totals it is borrowed from. */
+function maliceNote(m: number): string {
+  const band =
+    m >= 0.008
+      ? 'At Hellman’s figure or above. That total counts accidents too, so as malice alone this is pessimistic.'
+      : m >= 0.002
+        ? 'Near the superforecaster range for deliberate catastrophe.'
+        : m >= 5e-4
+          ? 'Below the superforecasters. Deliberate destruction would be rare by any published count.'
+          : 'Far below any published estimate.'
+  const need = m / MORAL_THRESHOLD
+  return `${band} To clear the moral threshold, g has to reach ${pct(need, need < 0.001 ? 3 : 2)} a year.`
+}
+
+/** IV. The improvement rate against the two historical anchors. */
+function growthNote(g: number): string {
+  const band =
+    g < 0.003
+      ? 'Slower than either historical anchor.'
+      : g < 0.01
+        ? 'About the pace at which European homicide fell, 0.6% a year over six centuries.'
+        : g < 0.03
+          ? 'Near the pace at which literacy spread, 2% a year over two centuries.'
+          : 'Faster than either historical anchor.'
+  return `${band} The sage fraction doubles every ${fmtYears(Math.LN2 / g)} years and saturates in ${fmtYears(LOG_DISTANCE / g)} years.`
+}
+
+/** IV. The baseline error rate, and what it adds up to with no gap at all. */
+function errorNote(e: number, g: number): string {
+  const band =
+    e < 4e-6
+      ? 'Below even the optimistic baseline this note first assumed.'
+      : e < 1e-4
+      ? 'Near the tidy baseline this note first assumed, now kept as the optimistic case.'
+      : e < 0.002
+        ? 'Between the optimistic baseline and the realistic one.'
+        : e < 0.009
+          ? 'The realistic range: most of a 1% published total is error rather than malice.'
+          : 'Above the realistic range.'
+  const flat = e * (LOG_DISTANCE / g)
+  const keep = Math.exp(-flat)
+  return `${band} Even with competence keeping exact pace, the error integral comes to ${flat < 10 ? flat.toFixed(2) : flat.toFixed(0)} over the transition, which leaves ${keep >= 0.01 ? `${Math.round(keep * 100)}% of civilizations` : 'almost no civilizations'} standing.`
+}
+
+/** IV. The capability gap, as a doubling or halving time for error. */
+function gapNote(d: number, e: number): string {
+  if (Math.abs(d) < 2.5e-5)
+    return 'Competence keeps exact pace with capability, so the error hazard stays at its baseline for the whole transition.'
+  if (d > 0)
+    return `Capability outruns competence by ${pct(d, 3)} a year, so the error hazard doubles every ${fmtYears(Math.LN2 / d)} years. Each new kind of capability opens failure channels the last kind did not have.`
+  const cap = e / -d
+  const floor = Math.exp(-cap)
+  const capText = cap < 0.01 ? cap.toPrecision(1) : cap < 10 ? cap.toFixed(2) : cap.toFixed(0)
+  return `Competence outpaces capability by ${pct(-d, 3)} a year, so the error hazard halves every ${fmtYears(Math.LN2 / -d)} years. However long the transition, the error integral can never pass ${capText}, ${floor >= 0.995 ? 'so the error term barely touches the count' : floor >= 0.01 ? `so at least ${Math.round(floor * 100)}% of civilizations get through the error term` : 'though that is still enough to stop almost every civilization'}.`
+}
 
 // ── the plate ────────────────────────────────────────────────────────────────
 
@@ -144,7 +282,34 @@ const MARKS: Mark[] = (() => {
 
 const R_LO = Math.log10(RATIO_MIN)
 const R_HI = Math.log10(RATIO_MAX)
-const CELL = 4
+
+/** Logical sizes of the two canvases; the backing store is scaled to the screen. */
+const PLATE_W = 1200
+const PLATE_H = 440
+const PHASE_W = 720
+const PHASE_H = 420
+
+/**
+ * The backing-store scale for a canvas drawn in logical units: its CSS width
+ * times the device pixel ratio, over the logical width. Starts at 1 so the
+ * server render and the first client render agree, then follows resizes.
+ */
+function useCanvasScale(ref: React.RefObject<HTMLCanvasElement | null>, logicalWidth: number) {
+  const [scale, setScale] = useState(1)
+  useEffect(() => {
+    const canvas = ref.current
+    if (!canvas) return
+    const measure = () => {
+      const next = (canvas.clientWidth * (window.devicePixelRatio || 1)) / logicalWidth
+      if (next > 0) setScale((s) => (Math.abs(s - next) > 0.01 ? next : s))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(canvas)
+    return () => ro.disconnect()
+  }, [ref, logicalWidth])
+  return scale
+}
 
 /** Indigo where somebody survives, oxide where nobody does, both ramped by count. */
 function shade(n: number): string {
@@ -171,19 +336,26 @@ function drawField(
   h: number,
   growth: number,
   errorBase: number,
+  cell: number,
 ) {
-  for (let x = 0; x < w; x += CELL) {
-    const ratio = Math.pow(10, R_LO + ((x + CELL / 2) / w) * (R_HI - R_LO))
+  for (let x = 0; x < w; x += cell) {
+    const ratio = Math.pow(10, R_LO + ((x + cell / 2) / w) * (R_HI - R_LO))
     const malice = ratio * growth
-    for (let y = 0; y < h; y += CELL) {
-      const gap = GAP_MAX - ((y + CELL / 2) / h) * (GAP_MAX - GAP_MIN)
+    for (let y = 0; y < h; y += cell) {
+      const gap = GAP_MAX - ((y + cell / 2) / h) * (GAP_MAX - GAP_MIN)
       const n = survivorCount(malice, growth, gap, errorBase)
       const lg = Math.log10(Math.max(n, 1e-300))
       ctx.fillStyle = Math.abs(lg) < 0.12 ? '#E6EAF2' : shade(n)
-      ctx.fillRect(x, y, CELL, CELL)
+      ctx.fillRect(x, y, cell, cell)
     }
   }
 }
+
+/** Ratio ticks read as plain numbers: 0.01, 0.1, 1, 10. */
+const ratioTick = (t: number) => (t >= 1 ? t.toFixed(0) : String(Number(t.toPrecision(1))))
+
+/** Where the moral threshold falls across the diagram, in percent of its width. */
+const THRESHOLD_LEFT = ((Math.log10(MORAL_THRESHOLD) - R_LO) / (R_HI - R_LO)) * 100
 
 /** Axis ticks, derived from the bounds the diagram is drawn over. */
 const Y_TICKS = [0, 1, 2, 3, 4].map((i) => GAP_MAX - (i / 4) * (GAP_MAX - GAP_MIN))
@@ -196,6 +368,42 @@ function fmtCount(n: number): string {
   if (n >= 0.01) return n.toFixed(2)
   return '0'
 }
+
+/**
+ * A count where the interesting values are the tiny ones: below a hundredth it
+ * is set as a power of ten, so "nine orders of magnitude short" can be read off
+ * the page rather than collapsing to zero.
+ */
+function Tiny({ n }: { n: number }) {
+  if (n >= 0.01) return <>{fmtCount(n)}</>
+  if (!(n > 0)) return <>0</>
+  return (
+    <>
+      10<sup>{`\u2212${-Math.floor(Math.log10(n))}`}</sup>
+    </>
+  )
+}
+
+/** The setting the diagram holds, in fractions a year. */
+type Setting = { malice: number; growth: number; errorBase: number; gap: number }
+
+const fromPreset = (p: Preset): Setting => ({
+  malice: p.malice / 100,
+  growth: p.growth / 100,
+  errorBase: p.errorBase / 100,
+  gap: p.gap / 100,
+})
+
+const OPENING = fromPreset(PRESETS.find((p) => p.key === DEFAULT_PRESET) ?? PRESETS[0])
+
+/** A preset is lit when the dials sit on it, to the precision a link carries. */
+const onPreset = (p: Preset, s: Setting) =>
+  asPercent(s.malice) === p.malice &&
+  asPercent(s.growth) === p.growth &&
+  asPercent(s.errorBase) === p.errorBase &&
+  Math.abs(s.gap * 100 - p.gap) < 0.005
+
+type Hover = { left: number; top: number; ratio: number; gap: number; n: number }
 
 function phaseVerdict(n: number, moralPass: boolean): string {
   if (n >= 1000)
@@ -219,12 +427,42 @@ export default function LongFilter({
   const [riskStep, setRiskStep] = useState(35)
   const [yearsStep, setYearsStep] = useState(60)
   const [decay, setDecay] = useState(false)
-  const [maliceStep, setMaliceStep] = useState(59)
-  const [growthStep, setGrowthStep] = useState(71)
-  const [errorStep, setErrorStep] = useState(85.5)
-  const [gapStep, setGapStep] = useState(62.5)
+  const [maliceStep, setMaliceStep] = useState(() => sliderFromRate(OPENING.malice))
+  const [growthStep, setGrowthStep] = useState(() => sliderFromRate(OPENING.growth))
+  const [errorStep, setErrorStep] = useState(() => sliderFromError(OPENING.errorBase))
+  const [gapStep, setGapStep] = useState(() => sliderFromGap(OPENING.gap))
+  const [hover, setHover] = useState<Hover | null>(null)
+  const [copied, setCopied] = useState(false)
   const plateRef = useRef<HTMLCanvasElement>(null)
   const phaseRef = useRef<HTMLCanvasElement>(null)
+  const plateScale = useCanvasScale(plateRef, PLATE_W)
+  const phaseScale = useCanvasScale(phaseRef, PHASE_W)
+  /** Set once the reader moves a dial, so an untouched page leaves the URL clean. */
+  const touched = useRef(false)
+
+  const apply = useCallback((s: Partial<Setting>) => {
+    if (s.malice !== undefined) setMaliceStep(sliderFromRate(s.malice))
+    if (s.growth !== undefined) setGrowthStep(sliderFromRate(s.growth))
+    if (s.errorBase !== undefined) setErrorStep(sliderFromError(s.errorBase))
+    if (s.gap !== undefined) setGapStep(sliderFromGap(s.gap))
+  }, [])
+
+  // A shared link opens on its setting: ?pm=0.3&g=0.6&pe=0.7&d=0, in percent a year.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search)
+    const read = (key: string, positive: boolean) => {
+      const raw = q.get(key)
+      if (raw === null) return undefined
+      const v = Number(raw)
+      return Number.isFinite(v) && (!positive || v > 0) ? v / 100 : undefined
+    }
+    apply({
+      malice: read('pm', true),
+      growth: read('g', true),
+      errorBase: read('pe', true),
+      gap: read('d', false),
+    })
+  }, [apply])
 
   // the plate
   const p = riskFromSlider(riskStep)
@@ -265,15 +503,82 @@ export default function LongFilter({
   const tau = LOG_DISTANCE / growth
   const count = survivorCount(malice, growth, gap, errorBase)
   const gapLimit = criticalGap(malice, growth, errorBase)
+  const setting: Setting = { malice, growth, errorBase, gap }
+  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}`
+  const rawLeft = ((Math.log10(ratio) - R_LO) / (R_HI - R_LO)) * 100
+  const offChart = rawLeft < 0 || rawLeft > 100
   const errorLoad = errorIntegral(gap, tau, errorBase)
   const moralPass = ratio < MORAL_THRESHOLD
+  // What is doing the killing: each hazard's share of the survival exponent.
+  const maliceLoad = malice * (1 - 1 / LOG_DISTANCE) * tau
+  const externalLoad = EXTERNAL_HAZARD * tau
+  const totalLoad = maliceLoad + errorLoad + externalLoad
+  const shares = isFinite(totalLoad)
+    ? { malice: maliceLoad / totalLoad, error: errorLoad / totalLoad, external: externalLoad / totalLoad }
+    : { malice: 0, error: 1, external: 0 }
   const errorSmall = errorLoad < Math.LN2
+
+  // Once the reader has moved a dial, the address bar carries the setting.
+  useEffect(() => {
+    if (!touched.current) return
+    const { pathname, hash } = window.location
+    window.history.replaceState(null, '', `${pathname}?${query}${hash}`)
+  }, [query])
+
+  const touch = <T,>(set: (v: T) => void) => (v: T) => {
+    touched.current = true
+    set(v)
+  }
+
+  const copyLink = () => {
+    const url = `${window.location.origin}${window.location.pathname}?${query}#region`
+    navigator.clipboard?.writeText(url).then(
+      () => {
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1800)
+      },
+      () => {},
+    )
+  }
+
+  /** The diagram point under the pointer, as a ratio and a gap. */
+  const pointAt = (e: React.MouseEvent<HTMLDivElement>) => {
+    const box = e.currentTarget.getBoundingClientRect()
+    const fx = Math.min(1, Math.max(0, (e.clientX - box.left) / box.width))
+    const fy = Math.min(1, Math.max(0, (e.clientY - box.top) / box.height))
+    return {
+      fx,
+      fy,
+      ratio: Math.pow(10, R_LO + fx * (R_HI - R_LO)),
+      gap: GAP_MAX - fy * (GAP_MAX - GAP_MIN),
+    }
+  }
+
+  const onPhaseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const { fx, fy, ratio: r, gap: d } = pointAt(e)
+    setHover({
+      left: fx * 100,
+      top: fy * 100,
+      ratio: r,
+      gap: d,
+      n: survivorCount(r * growth, growth, d, errorBase),
+    })
+  }
+
+  /** Clicking the diagram moves the marker there, holding g and p_e0. */
+  const onPhaseClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const { ratio: r, gap: d } = pointAt(e)
+    touched.current = true
+    apply({ malice: r * growth, gap: d })
+  }
 
   useEffect(() => {
     const canvas = plateRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
-    const { width: w, height: h } = canvas
+    const w = PLATE_W
+    const h = PLATE_H
+    ctx.setTransform(plateScale, 0, 0, plateScale, 0, 0)
     ctx.clearRect(0, 0, w, h)
     for (let i = 0; i < MARKS.length; i++) {
       const m = MARKS[i]
@@ -283,14 +588,15 @@ export default function LongFilter({
       ctx.fillStyle = lit ? `rgba(20,24,21,${0.55 + m.r / 6})` : 'rgba(20,24,21,0.055)'
       ctx.fill()
     }
-  }, [alive])
+  }, [alive, plateScale])
 
   useEffect(() => {
     const canvas = phaseRef.current
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
-    drawField(ctx, canvas.width, canvas.height, growth, errorBase)
-  }, [growth, errorBase])
+    ctx.setTransform(phaseScale, 0, 0, phaseScale, 0, 0)
+    drawField(ctx, PHASE_W, PHASE_H, growth, errorBase, phaseScale > 1.5 ? 2 : 4)
+  }, [growth, errorBase, phaseScale])
 
   return (
     <main className={styles.page}>
@@ -310,12 +616,15 @@ export default function LongFilter({
             across a long enough run becomes a certainty. Follow that through and the Fermi question
             turns into two conditions, both of them measurable, and both of them ours.
           </p>
+          <p className={styles.byline}>
+            {BYLINE} &nbsp;·&nbsp; working note &nbsp;·&nbsp; {REVISED}
+          </p>
         </div>
         <div className={styles.plateFrame}>
           <canvas
             ref={plateRef}
-            width={1200}
-            height={440}
+            width={Math.round(PLATE_W * plateScale)}
+            height={Math.round(PLATE_H * plateScale)}
             role="img"
             aria-label={`A field of one thousand marks representing civilizations. ${alive.toLocaleString('en-US')} still lit, ${(CIVILIZATIONS - alive).toLocaleString('en-US')} faded.`}
           />
@@ -325,6 +634,51 @@ export default function LongFilter({
           <span>exposure {fmtYears(years)} yr</span>
         </div>
       </header>
+
+      {/* ── in brief ── */}
+      <section className={`${styles.wrap} ${styles.brief}`} aria-labelledby="lf-brief">
+        <h2 id="lf-brief" className={styles.briefTitle}>
+          The argument in a minute
+        </h2>
+        <div className={styles.briefGrid}>
+          <div>
+            <h3>The claim</h3>
+            <p>
+              A fixed annual risk of self-destruction, however small, compounds to certainty. A
+              civilization survives deep time only if its risk falls, and this model makes the fall a
+              pair of races: moral improvement against malice, and competence against capability.
+            </p>
+          </div>
+          <div>
+            <h3>What is new</h3>
+            <p>
+              Drake folds lifetime into one average, and Hanson&rsquo;s Great Filter leaves the
+              filter unnamed. Splitting the hazard gives two thresholds in closed form: a moral ratio
+              that barely moves when the badly known numbers move, and an error condition that moves
+              with everything. Error grows with every new <em>kind</em> of capability, and nothing
+              caps it.
+            </p>
+          </div>
+          <div>
+            <h3>Where it lands</h3>
+            <p>
+              On current estimates the moral condition can be met and the error condition is not.
+              The expected count of surviving civilizations is about one in a billion, unless
+              competence outpaces capability by around 0.2% a year. So the galaxy is empty, or
+              someone managed that and is keeping quiet.
+            </p>
+          </div>
+        </div>
+        <p className={styles.briefGloss}>
+          Two words come from Stoic philosophy. A <em>sage</em> is the Stoic ideal: a person whose
+          judgement is reliably right. The <em>phoenix rate</em> is Seneca&rsquo;s estimate of how
+          often one appears unaided, and section II turns it into a number.
+        </p>
+        <p className={styles.briefLinks}>
+          <a href="#region">Go to the diagram ↓</a>
+          <Link href="/playground/the-long-filter/formalism">Read the derivations →</Link>
+        </p>
+      </section>
 
       {/* ── I. the arithmetic ── */}
       <section className={`${styles.section} ${styles.engine}`}>
@@ -356,6 +710,7 @@ export default function LongFilter({
                 <input
                   type="range"
                   id="lf-risk"
+                  aria-describedby="lf-risk-note"
                   min={0}
                   max={70}
                   step={1}
@@ -374,6 +729,7 @@ export default function LongFilter({
                 <input
                   type="range"
                   id="lf-years"
+                  aria-describedby="lf-years-note"
                   min={0}
                   max={90}
                   step={1}
@@ -413,6 +769,15 @@ export default function LongFilter({
                 <span className={styles.readoutLabel}>of 1,000 gone dark</span>
               </div>
               <div className={styles.readout}>
+                <span className={styles.readoutLabel}>reading the dials</span>
+                <p className={styles.note} id="lf-risk-note">
+                  {riskNote(p)}
+                </p>
+                <p className={styles.note} id="lf-years-note">
+                  {yearsNote(p, years, decay)}
+                </p>
+              </div>
+              <div className={styles.readout}>
                 <span className={styles.verdict} aria-live="polite">
                   {verdict}
                 </span>
@@ -428,8 +793,9 @@ export default function LongFilter({
           <p className={styles.eyebrow}>II. The measured input</p>
           <h2>The phoenix rate</h2>
           <p>
-            Seneca writes in the forty-second letter that the good man appears perhaps once in five
-            hundred years, like the phoenix. He meant it as a remark about rarity. Read as a rate, it
+            Seneca writes in the forty-second letter that the good man (the Stoic sage, whose
+            judgement is reliably right) appears perhaps once in five hundred years, like the
+            phoenix. He meant it as a remark about rarity. Read as a rate, it
             is the one empirical number this argument has.
           </p>
         </div>
@@ -538,6 +904,15 @@ export default function LongFilter({
             not teach you the failure modes of engineered biology, and neither teaches you whatever
             comes next. Error grows in breadth rather than magnitude, and breadth has no ceiling.
           </p>
+          <p>
+            What raises <span className={styles.mono}>e</span> is the machinery of error
+            correction: open criticism, replication, audit, a press nobody owns. David Brin&rsquo;s
+            phrase for it is that criticism is the only known antidote to error. This is where the
+            institutional and the moral meet. Those institutions work only while the people inside
+            them will not fake a result, bury an awkward finding, or keep a secret for advantage. A
+            sage culture is not an alternative to them. It is what builds them, staffs them, and
+            keeps them honest when gaming them would pay.
+          </p>
           <p className={`${styles.footnote} ${styles.hzCaveat}`}>
             One more correction, and it is uncomfortable. The published catastrophe estimates
             everyone quotes are totals, and the documented near-misses lean heavily toward false
@@ -549,7 +924,7 @@ export default function LongFilter({
       </section>
 
       {/* ── IV. the region ── */}
-      <div className={styles.phaseBlock}>
+      <div className={styles.phaseBlock} id="region">
         <div className={styles.wrap}>
           <div className={`${styles.secHead} ${styles.col}`}>
             <p className={styles.eyebrow}>IV. The region</p>
@@ -559,81 +934,126 @@ export default function LongFilter({
               is the capability gap, how far competence trails capability. Blue is where at least one
               transitioned civilization should exist. Everything else is empty sky. The page opens on
               the corrected split: a 30 percent malice share of a 1 percent total, which puts the
-              rest in the error term.
+              rest in the error term. Hover the diagram to read any point, or click to move there.
             </p>
           </div>
 
           <div className={styles.colWider}>
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-malice">
-                  p<sub>m0</sub> &nbsp;· annual malice risk
-                </label>
-                <span className={styles.ctrlVal}>{pct(malice, malice < 0.001 ? 3 : 2)}</span>
-              </div>
-              <input
-                type="range"
-                id="lf-malice"
-                min={0}
-                max={100}
-                step={0.5}
-                value={maliceStep}
-                onChange={(e) => setMaliceStep(Number(e.target.value))}
-              />
+            <div className={styles.presets} role="group" aria-label="Load a parameter set">
+              {PRESETS.map((pr) => {
+                const active = onPreset(pr, setting)
+                return (
+                  <button
+                    key={pr.key}
+                    type="button"
+                    className={`${styles.preset} ${active ? styles.presetOn : ''}`}
+                    aria-pressed={active}
+                    onClick={() => {
+                      touched.current = true
+                      apply(fromPreset(pr))
+                    }}
+                  >
+                    <span className={styles.presetLabel}>{pr.label}</span>
+                    <span className={styles.presetNote}>{pr.note}</span>
+                  </button>
+                )
+              })}
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-growth">
-                  g &nbsp;· moral improvement rate
-                </label>
-                <span className={styles.ctrlVal}>{pct(growth, growth < 0.001 ? 3 : 2)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-malice">
+                    p<sub>m0</sub> &nbsp;· annual malice risk
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(malice, malice < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-malice"
+                  aria-describedby="lf-malice-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={maliceStep}
+                  onChange={(e) => touch(setMaliceStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-growth"
-                min={0}
-                max={100}
-                step={0.5}
-                value={growthStep}
-                onChange={(e) => setGrowthStep(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-malice-note">
+                {maliceNote(malice)}
+              </p>
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-error">
-                  p<sub>e0</sub> &nbsp;· baseline error rate
-                </label>
-                <span className={styles.ctrlVal}>{pct(errorBase, errorBase < 0.001 ? 3 : 2)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-growth">
+                    g &nbsp;· moral improvement rate
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(growth, growth < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-growth"
+                  aria-describedby="lf-growth-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={growthStep}
+                  onChange={(e) => touch(setGrowthStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-error"
-                min={0}
-                max={100}
-                step={0.5}
-                value={errorStep}
-                onChange={(e) => setErrorStep(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-growth-note">
+                {growthNote(growth)}
+              </p>
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-gap">
-                  d &nbsp;· capability minus competence
-                </label>
-                <span className={styles.ctrlVal}>{signedPct(gap)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-error">
+                    p<sub>e0</sub> &nbsp;· baseline error rate
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(errorBase, errorBase < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-error"
+                  aria-describedby="lf-error-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={errorStep}
+                  onChange={(e) => touch(setErrorStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-gap"
-                min={0}
-                max={100}
-                step={0.5}
-                value={gapStep}
-                onChange={(e) => setGapStep(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-error-note">
+                {errorNote(errorBase, growth)}
+              </p>
+            </div>
+
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-gap">
+                    d &nbsp;· capability minus competence
+                  </label>
+                  <span className={styles.ctrlVal}>{signedPct(gap)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-gap"
+                  aria-describedby="lf-gap-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={gapStep}
+                  onChange={(e) => touch(setGapStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-gap-note">
+                {gapNote(gap, errorBase)}
+              </p>
             </div>
 
             <div className={styles.phaseWrap}>
@@ -644,31 +1064,61 @@ export default function LongFilter({
                       <span key={t}>{axisPct(t)}</span>
                     ))}
                   </div>
-                  <div className={styles.canvasHolder}>
+                  <div
+                    className={styles.canvasHolder}
+                    onMouseMove={onPhaseMove}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={onPhaseClick}
+                  >
                     <canvas
                       ref={phaseRef}
-                      width={720}
-                      height={420}
+                      width={Math.round(PHASE_W * phaseScale)}
+                      height={Math.round(PHASE_H * phaseScale)}
                       role="img"
                       aria-label="Phase diagram of survivable parameter combinations, moral ratio across and capability gap up."
                     />
+                    <div className={styles.threshold} style={{ left: `${THRESHOLD_LEFT}%` }}>
+                      <span>R*</span>
+                    </div>
                     <div
-                      className={styles.marker}
+                      className={`${styles.marker} ${offChart ? styles.markerOff : ''}`}
+                      title={offChart ? `R = ${ratio.toFixed(3)} is off the chart` : undefined}
                       style={{
-                        left: `${Math.min(100, Math.max(0, ((Math.log10(ratio) - R_LO) / (R_HI - R_LO)) * 100))}%`,
+                        left: `${Math.min(100, Math.max(0, rawLeft))}%`,
                         top: `${Math.min(100, Math.max(0, ((GAP_MAX - gap) / (GAP_MAX - GAP_MIN)) * 100))}%`,
                       }}
                     />
+                    {hover && (
+                      <div
+                        className={`${styles.tip} ${hover.left > 60 ? styles.tipLeft : ''} ${hover.top > 75 ? styles.tipUp : ''}`}
+                        style={{ left: `${hover.left}%`, top: `${hover.top}%` }}
+                        aria-hidden="true"
+                      >
+                        R {hover.ratio < 0.1 ? hover.ratio.toFixed(3) : hover.ratio.toFixed(2)}{' '}
+                        · d {signedPct(hover.gap)}
+                        <br />
+                        <b className={hover.n >= 1 ? styles.tipLive : styles.tipDead}>
+                          <Tiny n={hover.n} />
+                        </b>{' '}
+                        civilizations
+                      </div>
+                    )}
                   </div>
                   <div />
                   <div className={styles.xax}>
                     {X_TICKS.map((t) => (
-                      <span key={t}>{t < 0.1 ? t.toFixed(2) : t.toFixed(1)}</span>
+                      <span key={t}>{ratioTick(t)}</span>
                     ))}
                   </div>
                 </div>
                 <p className={styles.axname}>
                   horizontal: R = p<sub>m0</sub> / g &nbsp;&nbsp;·&nbsp;&nbsp; vertical: d = c − e
+                  {offChart && (
+                    <>
+                      <br />
+                      the marker is pinned: R = {ratio.toFixed(3)} is off the chart
+                    </>
+                  )}
                 </p>
               </div>
 
@@ -677,9 +1127,9 @@ export default function LongFilter({
                   className={styles.verdictNum}
                   style={{ color: count >= 1 ? '#8FB0E8' : '#E0A183' }}
                 >
-                  {fmtCount(count)}
+                  <Tiny n={count} />
                 </span>
-                <span className={styles.verdictLabel}>sage civilizations in the galaxy</span>
+                <span className={styles.verdictLabel}>sage civilizations expected in the galaxy</span>
                 <div className={styles.gates}>
                   <div className={styles.gate}>
                     <span>moral term &nbsp; R</span>
@@ -696,12 +1146,20 @@ export default function LongFilter({
                     </span>
                     <span className={errorSmall ? styles.pass : styles.fail}>
                       {isFinite(errorLoad) ? errorLoad.toFixed(2) : '∞'} &nbsp;
-                      {errorSmall ? 'small' : 'dominant'}
+                      {errorSmall ? 'small' : 'costly'}
                     </span>
                   </div>
                   <div className={styles.gate}>
-                    <span>line sits at &nbsp; d*</span>
-                    <span className={styles.neutral}>{pct(gapLimit, 3)}</span>
+                    <span>
+                      count reaches one at &nbsp; d<sub>1</sub>
+                    </span>
+                    <span className={styles.neutral}>
+                      {gapLimit === null
+                        ? 'none'
+                        : gapLimit === Infinity
+                          ? 'any d'
+                          : signedPct(gapLimit)}
+                    </span>
                   </div>
                   <div className={styles.gate}>
                     <span>
@@ -712,9 +1170,25 @@ export default function LongFilter({
                     </span>
                   </div>
                 </div>
+                <div className={styles.load}>
+                  <span className={styles.loadLabel}>what is doing the killing</span>
+                  <div className={styles.loadBar} aria-hidden="true">
+                    <span className={styles.loadMalice} style={{ width: `${shares.malice * 100}%` }} />
+                    <span className={styles.loadError} style={{ width: `${shares.error * 100}%` }} />
+                    <span className={styles.loadExternal} style={{ width: `${shares.external * 100}%` }} />
+                  </div>
+                  <p className={styles.loadKey}>
+                    malice {Math.round(shares.malice * 100)}% &nbsp;·&nbsp; error{' '}
+                    {Math.round(shares.error * 100)}% &nbsp;·&nbsp; external{' '}
+                    {shares.external < 0.005 ? '<1' : Math.round(shares.external * 100)}%
+                  </p>
+                </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
                   {phaseVerdict(count, moralPass)}
                 </p>
+                <button type="button" className={styles.copyLink} onClick={copyLink}>
+                  {copied ? 'Link copied' : 'Copy a link to this setting'}
+                </button>
               </div>
             </div>
 
@@ -742,7 +1216,9 @@ export default function LongFilter({
               </span>{' '}
               redraws the region itself rather than just the marker. A slower transition means more
               years exposed to compounding capability, so a low improvement rate raises R and pulls
-              d* down at the same time. Moral slowness is punished twice.
+              d<sub>1</sub> down at the same time. Moral slowness is punished twice. The dashed line
+              is the moral threshold R*; d<sub>1</sub> is where the count reaches one, which is
+              looser than the formal note&rsquo;s half-cost line d*.
             </p>
           </div>
         </div>
@@ -755,7 +1231,8 @@ export default function LongFilter({
           <h2>Drake, split in two</h2>
           <p>
             Drake averages the lifetime of a civilization into a single term. That average hides the
-            problem, because there are two populations and they differ by seven orders of magnitude.
+            problem, because there are two populations and their lifetimes differ by a factor of
+            about three hundred thousand.
             Separate them, and separate existing from being detectable.
           </p>
         </div>
@@ -805,7 +1282,7 @@ export default function LongFilter({
             </span>
             . It is a ratio of logarithms, so it barely moves when the badly known parameters move:
             sweeping <span className={styles.mono}>s₀</span> across four orders of magnitude keeps it
-            inside 0.47 to 1.04. <strong>The error condition has no such robustness</strong>,
+            inside 0.47 to 1.07. <strong>The error condition has no such robustness</strong>,
             because it depends exponentially on a baseline rate nobody has measured. That is the
             softest number in the model, it is the one the slider above exposes rather than hides,
             and moving it across its plausible range moves the answer by more than any other
@@ -822,42 +1299,43 @@ export default function LongFilter({
           <p>
             There is no single resolution to the paradox here. The parameters select between two of
             them, and they require completely different explanations of the silence. Note the
-            asymmetry: reaching the left branch requires everything to go right at once, and reaching
-            the right requires only one term to run away.
+            asymmetry: the empty galaxy needs only one term to run away, and the crowded one needs
+            everything to go right at once. On current numbers it is the first.
           </p>
         </div>
         <div className={styles.colWide}>
           <div className={styles.fork}>
-            <div className={styles.forkLeft}>
-              <span className={styles.k}>the count clears one</span>
-              <h3>The galaxy is crowded and quiet</h3>
-              <p>
-                Survivors outnumber the doomed by orders of magnitude, because their lifetime is
-                seven orders longer. Even a filter killing 99.99 percent leaves hundreds alive. So
-                the silence cannot be explained by the filter at all. It rests entirely on
-                detectability, and the reason has to be restraint: virtue that was not chosen is only
-                architecture, and contact would foreclose the choosing.
-              </p>
-            </div>
             <div className={styles.forkRight}>
-              <span className={styles.k}>the count collapses</span>
+              <span className={styles.k}>on current numbers: the count collapses</span>
               <h3>The galaxy is empty</h3>
               <p>
                 Either the transition is too slow to outrun the dice, or capability outpaces
                 competence and the error term swallows everything, and on current numbers it is the
-                second. Nothing clears it. There is no paradox left to solve and nothing to explain.
-                The sky is quiet because there is nobody in it, and we are early rather than
-                overlooked.
+                second. There is no paradox left to solve and nothing to explain. The sky is quiet
+                because there is nobody in it, and we are early rather than overlooked.
+              </p>
+            </div>
+            <div className={styles.forkLeft}>
+              <span className={styles.k}>only if both conditions clear</span>
+              <h3>The galaxy is crowded and quiet</h3>
+              <p>
+                Survivors outnumber the doomed by orders of magnitude, because they live some three
+                hundred thousand times longer. Even a filter killing 99.99 percent leaves about a
+                hundred alive. So the silence cannot be explained by the filter at all. It rests
+                entirely on detectability, and the reason would have to be restraint: virtue that was
+                not chosen is only architecture, and contact would foreclose the choosing.
               </p>
             </div>
           </div>
           <p className={styles.footnote}>
-            The restraint argument on the left has one thing no other zoo hypothesis does. The usual
-            objection is uniformity: it needs every survivor to independently choose silence, and one
-            defector ruins it. If the survivors are sages reasoning from shared premises, the
-            convergence is not a sociological accident, it is what correct reasoning does. Though the
-            value premise is shared and the empirical prediction is not, so some of them may have got
-            it wrong.
+            The restraint branch is a zoo hypothesis, and it inherits the zoo hypothesis&rsquo;s
+            standing problem, which Brin pressed in his 1983 survey of the silence: it needs every
+            survivor to choose silence, and one defector ruins it. The reply available here is that
+            sages reasoning from shared premises converge, so the uniformity is not a sociological
+            accident but what correct reasoning does. That reply is partial. The value premise is
+            shared and the empirical prediction is not, so some of them may have got it wrong, and
+            one who got it wrong is enough. That is one more reason to read the empty branch as the
+            default.
           </p>
         </div>
       </section>
@@ -868,15 +1346,16 @@ export default function LongFilter({
           <p className={styles.eyebrow}>VII. The survivors</p>
           <h2>What is left when nobody wants</h2>
           <p>
-            Most of the description is subtraction. Institutions exist to manage vice, and the ones
-            that manage nothing else do not survive the transition. What remains is smaller, and has
-            a harder job.
+            This is the speculative part, and nothing above depends on it. Much of the description is
+            subtraction: a good deal of what institutions do is manage vice, and that work shrinks.
+            It is a ledger of tendencies, not abolitions. Sages still err, so the institutions that
+            catch error grow rather than shrink.
           </p>
         </div>
         <div className={styles.colWide}>
           <div className={styles.ledger}>
-            <div className={styles.ledgerHead}>Dissolved</div>
-            <div className={`${styles.ledgerHead} ${styles.right}`}>What stands in its place</div>
+            <div className={styles.ledgerHead}>Shrinks</div>
+            <div className={`${styles.ledgerHead} ${styles.right}`}>What grows in its place</div>
 
             {LEDGER.map((row) => (
               <div key={row.gone.title} className={styles.ledgerRow}>
@@ -918,8 +1397,8 @@ export default function LongFilter({
             that will not beat the odds it has already set running.
           </p>
           <p>
-            Which branch we are on is not written anywhere. It is a handful of rates, and every one
-            of them is ours.
+            On current numbers the model points to the second. But which branch we are on is not
+            written anywhere. It is a handful of rates, and every one of them is ours.
           </p>
           <p className={`${styles.footnote} ${styles.closeNote}`}>
             One hypothesis among several, and the boring ones remain live. Life may be rare,
@@ -932,6 +1411,22 @@ export default function LongFilter({
       </section>
 
       <footer className={`${styles.wrap} ${styles.colophon}`}>
+        <div className={styles.sources}>
+          <h2 className={styles.sourcesTitle}>Sources</h2>
+          <ol>
+            {REFERENCES.map((r) => (
+              <li key={r.cite}>
+                {r.href ? (
+                  <a href={r.href} target="_blank" rel="noopener noreferrer">
+                    {r.cite}
+                  </a>
+                ) : (
+                  r.cite
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
         <p className={`${styles.footnote} ${styles.colophonLink}`}>
           <Link href="/playground/the-long-filter/formalism">
             The derivations, the parameter sources, and the eleven ways this could be wrong

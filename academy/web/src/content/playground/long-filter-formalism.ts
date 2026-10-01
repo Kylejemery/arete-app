@@ -8,8 +8,11 @@
  * comes from says so.
  */
 
+import { regionHref } from './long-filter'
+
 export type Row = (string | number)[]
-export type Table = { head: string[]; rows: Row[] }
+/** `links`, when present, holds one essay link per row: that row's setting loaded into the phase diagram. */
+export type Table = { head: string[]; rows: Row[]; links?: string[] }
 
 /** §0 — every symbol the note uses, with units. */
 export const NOTATION: Table = {
@@ -34,7 +37,8 @@ export const NOTATION: Table = {
     ['f_c,s, f_c,ℓ', 'Detectability of each population', '—'],
     ['R', 'The moral ratio, p_m0/g', '—'],
     ['R*', 'Threshold value of R above which expected survivors fall below one', '—'],
-    ['d*', 'Threshold value of d above which the error integral dominates', 'yr⁻¹'],
+    ['d*', 'Threshold value of d above which the error integral costs more than half of f_v', 'yr⁻¹'],
+    ['d₁', 'Threshold value of d above which expected survivors fall below one', 'yr⁻¹'],
   ],
 }
 
@@ -93,7 +97,7 @@ export const SAGE_SHARE: Table = {
   ],
 }
 
-/** §5.6 — the error cliff, at p_e0 = 10⁻⁵/yr and τ_v = 3,454 yr. */
+/** §5.6 — the error cliff, at the optimistic p_e0 = 10⁻⁵/yr and τ_v = 3,454 yr. */
 export const ERROR_CLIFF: Table = {
   head: ['d', 'I_e', 'f_v factor'],
   rows: [
@@ -116,6 +120,12 @@ export const MALICE_SPLIT: Table = {
     ['30%', '0.50', '24.2', '2×10⁻⁹'],
     ['10%', '0.17', '31.1', '1×10⁻⁹'],
   ],
+  links: [
+    regionHref(1, 0.6, 0.001, 0),
+    regionHref(0.6, 0.6, 0.4, 0),
+    regionHref(0.3, 0.6, 0.7, 0),
+    regionHref(0.1, 0.6, 0.9, 0),
+  ],
 }
 
 /** §5.8 — what happens to R* if baseline malice grows with capability. */
@@ -137,34 +147,53 @@ export const PARAMETERS: Table = {
     ['Ṅ', '10⁻² yr⁻¹', 'One technological civilization per century'],
     ['s₀', '10⁻⁹', '§3'],
     ['p_x', '10⁻⁸ yr⁻¹', 'Gives L_ℓ = 10⁸ yr'],
-    ['p_e0', '10⁻⁵ yr⁻¹', 'Weakly constrained. See §11, A8'],
+    [
+      'p_e0',
+      '7×10⁻³ yr⁻¹ (realistic), 10⁻⁵ yr⁻¹ (optimistic)',
+      'Realistic: the 70% of a 1% total that §5.7 assigns to error. Optimistic: the original assumption, kept for comparison. Both weakly constrained. See §11, A8',
+    ],
     ['L_s', '~3×10² yr', 'Equals 1/p at p = 3×10⁻³'],
   ],
 }
 
-/** §6.4 — the expected count across the credible parameter box. */
+/** §6.4 — the expected count across the credible parameter box, at both error baselines. */
 export const EXPECTED_COUNT: Table = {
-  head: ['p_m0', 'g', 'd', 'R', 'N_ℓ'],
+  head: ['p_m0', 'g', 'd', 'R', 'N_ℓ, p_e0 = 0.7%', 'N_ℓ, p_e0 = 10⁻⁵'],
   rows: [
-    ['1.00%', '0.60%', '0', '1.67', '5×10⁻⁹'],
-    ['1.00%', '0.60%', '+0.10%', '1.67', '4×10⁻⁹'],
-    ['0.30%', '0.60%', '0', '0.50', '50'],
-    ['0.30%', '0.60%', '+0.10%', '0.50', '38'],
-    ['0.30%', '0.60%', '+0.15%', '0.50', '16'],
-    ['0.30%', '1.00%', '+0.10%', '0.30', '2,513'],
-    ['0.10%', '0.60%', '0', '0.17', '36,000'],
+    ['1.00%', '0.60%', '0', '1.67', '2×10⁻¹⁹', '5×10⁻⁹'],
+    ['1.00%', '0.60%', '+0.10%', '1.67', '4×10⁻¹⁰²', '4×10⁻⁹'],
+    ['0.30%', '0.60%', '0', '0.50', '2×10⁻⁹', '50'],
+    ['0.30%', '0.60%', '+0.10%', '0.50', '4×10⁻⁹²', '38'],
+    ['0.30%', '0.60%', '+0.15%', '0.50', '< 10⁻³⁰⁰', '16'],
+    ['0.30%', '1.00%', '+0.10%', '0.30', '2×10⁻¹⁸', '2,513'],
+    ['0.10%', '0.60%', '0', '0.17', '1×10⁻⁶', '36,000'],
+    ['0.30%', '0.60%', '−0.20%', '0.50', '1.6', '52'],
+  ],
+  links: [
+    regionHref(1, 0.6, 0.7, 0),
+    regionHref(1, 0.6, 0.7, 0.1),
+    regionHref(0.3, 0.6, 0.7, 0),
+    regionHref(0.3, 0.6, 0.7, 0.1),
+    regionHref(0.3, 0.6, 0.7, 0.15),
+    regionHref(0.3, 1, 0.7, 0.1),
+    regionHref(0.1, 0.6, 0.7, 0),
+    regionHref(0.3, 0.6, 0.7, -0.2),
   ],
 }
 
-/** §7.2 — the competence threshold, where I_e costs half of f_v. */
+/**
+ * §7.2 — the competence threshold at both baselines, and the weaker line d₁
+ * where the count merely reaches one (p_m0 = 0.3%, p_e0 = 0.7%). "None" means
+ * R is already over R*, so no value of d brings the count to one.
+ */
 export const COMPETENCE_THRESHOLD: Table = {
-  head: ['g', 'τ_v', 'd*'],
+  head: ['g', 'τ_v', 'd*, p_e0 = 10⁻⁵', 'd*, p_e0 = 0.7%', 'd₁, p_e0 = 0.7%'],
   rows: [
-    ['0.1%/yr', '20,723 yr', '+0.010%/yr'],
-    ['0.3%/yr', '6,908 yr', '+0.052%/yr'],
-    ['0.6%/yr', '3,454 yr', '+0.131%/yr'],
-    ['1.0%/yr', '2,072 yr', '+0.249%/yr'],
-    ['2.0%/yr', '1,036 yr', '+0.579%/yr'],
+    ['0.1%/yr', '20,723 yr', '+0.010%/yr', '−1.01%/yr', 'none'],
+    ['0.3%/yr', '6,908 yr', '+0.052%/yr', '−1.01%/yr', 'none'],
+    ['0.6%/yr', '3,454 yr', '+0.131%/yr', '−1.01%/yr', '−0.18%/yr'],
+    ['1.0%/yr', '2,072 yr', '+0.249%/yr', '−1.01%/yr', '−0.07%/yr'],
+    ['2.0%/yr', '1,036 yr', '+0.579%/yr', '−1.01%/yr', '+0.07%/yr'],
   ],
 }
 
@@ -172,7 +201,7 @@ export const COMPETENCE_THRESHOLD: Table = {
 export const THRESHOLD_SWEEP: Table = {
   head: ['', 'Ṅ/p_x = 10⁵', '10⁶', '10⁷'],
   rows: [
-    ['s₀ = 10⁻⁷', '0.74', '0.89', '1.04'],
+    ['s₀ = 10⁻⁷', '0.76', '0.91', '1.07'],
     ['s₀ = 10⁻⁹', '0.58', '0.70', '0.82'],
     ['s₀ = 10⁻¹¹', '0.47', '0.57', '0.66'],
   ],
@@ -216,11 +245,11 @@ export const GAINS: Table = {
     ],
     [
       'Contact with the philosophy',
-      '§10 of the essay argues chosen virtue beats architectural virtue because it re-derives against novelty. That is an argument about e. Foreclosed minds have lower e because they cannot reason about unanticipated threats. This is the first formal counterpart the claim has had.',
+      'The essay (VI and VIII) argues chosen virtue beats architectural virtue, and the reason it gives is that chosen virtue re-derives against novelty. That is an argument about e. Foreclosed minds have lower e because they cannot reason about unanticipated threats. This is the first formal counterpart the claim has had.',
     ],
     [
       'A second coupling to honesty',
-      'Sages affect e through honesty rather than goodness: no fraud, no selective reporting, no secrecy. The Chalmers and Glasziou estimate that roughly 85% of biomedical research investment is avoidably wasted is a rough upper bound on the recoverable share.',
+      'Sages affect e through honesty rather than goodness: no fraud, no selective reporting, no secrecy. Honesty is what lets the institutions of error correction work (open criticism, replication, audit, a free press), and those institutions are where e is actually made. The Chalmers and Glasziou estimate that roughly 85% of biomedical research investment is avoidably wasted is a rough upper bound on the recoverable share.',
     ],
   ],
 }
@@ -262,7 +291,8 @@ export const ASSUMPTIONS: Assumption[] = [
     claim: 'Hazard decline achievable only through something like character',
     kind: 'Philosophical',
     loadBearing: true,
-    ifItFails: 'The whole argument fails; dispersal or constraint suffices',
+    ifItFails:
+      'The whole argument fails; dispersal or constraint suffices. Character here includes the institutions it builds (see the note below)',
   },
   {
     id: 'A3',
@@ -303,10 +333,11 @@ export const ASSUMPTIONS: Assumption[] = [
   },
   {
     id: 'A8',
-    claim: 'p_e0 ≈ 10⁻⁵ and error compounds exponentially in d',
+    claim: 'p_e0 lies between 10⁻⁵ and about 7×10⁻³, and error compounds exponentially in d',
     kind: 'Modeling, weakly constrained',
     loadBearing: true,
-    ifItFails: 'd* moves by orders of magnitude. This is now the softest number in the model',
+    ifItFails:
+      'd* moves by orders of magnitude, and at the realistic end the count collapses at d = 0. This is the softest number in the model',
   },
   {
     id: 'A9',
