@@ -243,6 +243,21 @@ Putting the three together:
 3. p_e0 = 10⁻⁵ is a placeholder. No one has measured it. Because I_e is
    exponential in d τ, the *shape* of the competence condition is robust but
    its *location* is not. This is the softest number in the model.
+4. All three terms treat a civilization as a single target until it
+   saturates: one catastrophe ends everyone, so survival multiplies year by
+   year as in A.2. Dispersal is the obvious objection, and its force depends
+   on separation. Settlements within one system are days to months apart.
+   That decorrelates p_x, since no single impact reaches every body, but
+   barely touches p_m or p_e: weapons and pathogens cross the distance, and
+   every settlement builds from the same designs. Each settlement also
+   carries its own malice and error, so n settlements with correlated
+   failure modes face roughly n times the exposure, while gaining protection
+   only against the term that is already negligible during the transition.
+   Across interstellar distance the separation is years to centuries, the
+   hazards decouple, and the civilization survives if any colony does,
+   S = 1 − ∏(1 − Sᵢ) over effectively independent colonies. That is a real
+   escape, by distance rather than character, and the model assumes it does
+   not arrive before saturation (A.9, items 13 and 14).
 
 ---
 
@@ -390,6 +405,21 @@ is in it, and we are early rather than overlooked.
 **The asymmetry.** Reaching the first branch requires clearing *both*
 conditions. Reaching the second requires missing *either*.
 
+**The condition beneath both.** Both branches assume the transition finishes
+before interstellar settlement arrives. Write T_s for that date. The
+transition finishes first while τ_v < T_s, that is while
+
+    g > g_s = K / T_s
+
+Taking T_s = 10⁴ years as a hypothesis gives g_s ≈ 0.21% a year. At
+g = 0.6% the transition takes about 3,450 years and finishes first; at 0.1%
+it takes about 20,700 years and does not, and a civilization spread across
+stars by then could survive by distance whatever R and d are. Because τ_v
+grows as g falls, this escape is most available exactly where the model is
+bleakest. One observation cuts against it: a civilization that dispersed
+without transitioning would carry its expansion with it, and would be the
+loud population the sky does not show.
+
 **What is ours.** R = p_m0/g and d = c − e. All four terms are properties of
 the civilization doing the reasoning, not of the galaxy. Which branch we are
 on is not written anywhere.
@@ -434,6 +464,19 @@ A reviewer should be able to attack each of these individually.
     about distance or reachability.
 12. **The transition ends at saturation** (s = 1) and the hazard afterwards
     is p_x alone. Post-transition malice and error are taken as zero.
+13. **A single target until saturation.** One catastrophe ends the whole
+    civilization, so the hazards integrate over one population. Dispersal
+    within a planetary system does not relax this for p_m or p_e (A.5,
+    note 4). This is the formal counterpart of the working note's claim that
+    hazard decline needs something like character (A2 on the formalism
+    page): constraint, or dispersal that does decouple the hazards, would
+    break it.
+14. **Interstellar settlement arrives after saturation**, T_s > τ_v, with
+    T_s = 10⁴ years taken as a hypothesis rather than an estimate (A12 on
+    the formalism page). Load-bearing: it holds only while g > K/T_s
+    ≈ 0.21% a year. Below that, N no longer describes the civilization. The
+    working note carries T_s as a dial from 10³ to 10⁶ years; the count does
+    not change with it, it only marks where the count stops applying.
 
 ---
 
@@ -451,6 +494,12 @@ A reviewer should be able to attack each of these individually.
 - **Replacing the exponential growth assumption** with a logistic one and
   asking what ceiling on s is compatible with survival. This is the
   extension most likely to change the qualitative conclusion.
+- **Dating interstellar settlement.** T_s is a hypothesis, and the crossing
+  g_s = K/T_s moves with it one for one in log terms: 10³ years gives 2.1%,
+  10⁵ gives 0.021%. A credible route to independent colonies within τ_v
+  would retire item 14 at that g, and with it the single-target framing.
+  Modelling what dispersal does to N once it arrives, rather than only
+  flagging it, is the natural extension.
 
 ---
 
@@ -467,6 +516,8 @@ from math import log, exp, e
 s0, Ndot, px, pe0 = 1e-9, 0.01, 1e-8, 1e-5
 K = log(1 / s0)                                   # 20.72
 R_star = log(Ndot / px) / log(1 / (e * s0))       # 0.700
+T_s = 1e4                                         # settlement, a hypothesis
+g_s = K / T_s                                     # 0.00207, tau_v = T_s here
 
 def I_e(d, tau):
     if abs(d) < 1e-12:
