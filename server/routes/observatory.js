@@ -590,6 +590,24 @@ function sentencesOf(text) {
 function looksLikeSentenceStart(s) {
   return /^["'(]?[A-Z0-9]/.test(s);
 }
+
+// Scanned editions (Arnold's Roman Stoicism among them) carry their
+// footnotes inline at every page break, and the OCR turns the Greek in them
+// into Latin-letter noise: "296. See generally Schmekel, pp. 288-290. 137 Ov.
+// Met. xv 96-142 ... TodToOy, omepyartKdy Abyov". None of it is the author's
+// prose, so a star must never show it. A sentence is apparatus when it opens
+// on a note number, carries encoding debris, has OCR'd Greek (case flipping
+// inside a word), or is mostly page and book references.
+const CITATION_TOKEN = /^(?:\(?\d+[a-z]?\)?|[ivx]{1,6}|pp?|cf|ib|ibid|op|cit|vol|fr|frag|l|ll|n|nn|ch|sect|§)[.,;:)]*$/i;
+function looksLikeApparatus(s) {
+  if (/^["'(\[]?\d{1,4}[.)\]]*(?:\s|$)/.test(s)) return true; // note number
+  if (/[\u00c2\u00c3\u00e2\ufffd]/.test(s)) return true;      // mojibake (â, Ã, Â)
+  const words = s.split(/\s+/).filter(Boolean);
+  const flipped = words.filter(w => /[a-z][A-Z]|^[A-Z]{2,}[a-z]/.test(w.replace(/^\W+|\W+$/g, '')));
+  if (flipped.length >= 2) return true;                        // OCR'd Greek
+  const cites = words.filter(w => CITATION_TOKEN.test(w.replace(/^\W+/, ''))).length;
+  return cites / words.length > 0.2;                          // reference list
+}
 function looksLikeSentenceEnd(s) {
   return /[.!?]["')\]]?$/.test(s);
 }
@@ -597,21 +615,55 @@ function looksLikeSentenceEnd(s) {
 // A window of whole sentences from a chunk: skip a leading fragment (chunk
 // boundaries fall anywhere), keep whole sentences up to maxChars, drop a
 // trailing fragment. Returns '' when the chunk holds no complete sentence.
+const MIN_WINDOW_CHARS = 80;
+
 function sentenceWindow(text, maxChars) {
   const sentences = sentencesOf(plainProse(text));
-  let i = 0;
-  while (i < sentences.length && !looksLikeSentenceStart(sentences[i])) i++;
-  const kept = [];
-  let len = 0;
-  for (; i < sentences.length; i++) {
-    const s = sentences[i];
-    if (!looksLikeSentenceEnd(s)) break;         // trailing fragment
-    if (kept.length && len + s.length + 1 > maxChars) break;
-    kept.push(s);
-    len += s.length + 1;
+  // Try each clean opening in turn: a run that hits a footnote before it is
+  // long enough (often a note's own tail, split on "p." or "Diog.") is
+  // abandoned for the next opening.
+  for (let start = 0; start < sentences.length; start++) {
+    if (!looksLikeSentenceStart(sentences[start]) || looksLikeApparatus(sentences[start])) continue;
+    const kept = [];
+    let len = 0;
+    for (let i = start; i < sentences.length; i++) {
+      const s = sentences[i];
+      if (!looksLikeSentenceEnd(s)) break;         // trailing fragment
+      if (looksLikeApparatus(s)) break;            // footnotes begin
+      if (kept.length && len + s.length + 1 > maxChars) break;
+      kept.push(s);
+      len += s.length + 1;
+    }
+    // A single sentence longer than the cap still shows whole rather than cut.
+    const out = kept.join(' ');
+    if (out.length >= MIN_WINDOW_CHARS) return out;
   }
-  // A single sentence longer than the cap still shows whole rather than cut.
-  return kept.join(' ');
+  return '';
+}
+
+// A quotation is clean when none of its sentences is apparatus.
+function isCleanQuote(quote) {
+  return sentencesOf(quote).every(s => !looksLikeApparatus(s));
+}
+
+// The first complete JSON object in a model reply. The model sometimes
+// follows the object with a second one or a note, which a first-{ to
+// last-} slice turns into invalid JSON.
+function firstJsonObject(text) {
+  const start = text.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === '\\') i++;
+      else if (ch === '"') inString = false;
+    } else if (ch === '"') inString = true;
+    else if (ch === '{') depth++;
+    else if (ch === '}' && --depth === 0) return JSON.parse(text.slice(start, i + 1));
+  }
+  return null;
 }
 
 // Does the model's quotation actually occur in the chunk? Compared with
@@ -678,11 +730,8 @@ async function composeStarAnswer(concept, chunks) {
     const data = await response.json();
     if (data.stop_reason === 'refusal') return null;
     const raw = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('').trim();
-    const body = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-    const start = body.indexOf('{');
-    const end = body.lastIndexOf('}');
-    if (start < 0 || end <= start) return null;
-    const parsed = JSON.parse(body.slice(start, end + 1));
+    const parsed = firstJsonObject(raw);
+    if (!parsed) return null;
     const idx = Number(parsed.passage_index);
     return {
       answer: noDashes(parsed.answer),
@@ -755,6 +804,7 @@ router.post('/api/observatory/passage', async (req, res) => {
       answer = composed.answer;
       if (composed.quote && composed.quote.length <= QUOTE_MAX_CHARS
           && looksLikeSentenceStart(composed.quote) && looksLikeSentenceEnd(composed.quote)
+          && isCleanQuote(composed.quote)
           && quoteOccursIn(composed.quote, chunk.chunk_text)) {
         text = composed.quote;
       }
@@ -779,4 +829,4 @@ router.post('/api/observatory/passage', async (req, res) => {
   }
 });
 
-module.exports = { router, recordRetrieval };
+module.exports = { router, recordRetrieval, _test: { sentenceWindow, looksLikeApparatus, firstJsonObject } };
