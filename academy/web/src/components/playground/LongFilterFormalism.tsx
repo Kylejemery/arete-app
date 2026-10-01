@@ -1,24 +1,25 @@
 import Link from 'next/link'
 import {
   ASSUMPTIONS,
-  CAPABILITY_SCALING,
   COMPETENCE_THRESHOLD,
   COSTS,
   DECLINING_FLOOR,
-  ERROR_CLIFF,
+  ERROR_SWEEP,
   EXPECTED_COUNT,
   FALSIFIERS,
   FIXED_HAZARD,
   FORK,
   GAINS,
+  GAP_CLIFF,
+  MALICE_GAP,
   MALICE_SPLIT,
   NOTATION,
   PARAMETERS,
   PHOENIX_FRAMES,
+  PROGRESSOR_SHARE,
   REQUIRED_GROWTH,
-  SAGE_SHARE,
-  SATURATION_TIME,
   THRESHOLD_SWEEP,
+  TRANSITION_TIME,
   type Table,
 } from '@/content/playground/long-filter-formalism'
 import { BYLINE, REFERENCES, REVISED } from '@/content/playground/long-filter'
@@ -132,6 +133,13 @@ export default function LongFilterFormalism({
             the two give opposite answers, so §8 reports both. Rows marked &ldquo;try it&rdquo; open
             that setting in the essay&rsquo;s phase diagram.
           </p>
+          <p>
+            Third revision: the growing population is moral progressors rather than sages, growing
+            logistically to a ceiling. One gap drives malice and error alike, no hazard switches off
+            after the transition, and the count is taken from the expected lifetime past the
+            transition&rsquo;s end. The closed forms are gone; §5.2 says what replaces them. The
+            strongest claim is still §1.4, and every surviving path below is a conditional.
+          </p>
         </div>
       </header>
 
@@ -241,34 +249,43 @@ s₀ = 1 / Λ_lives`}
 
         <Sub title="3.3 What s₀ measures">
           <p>
-            Incidence of sagehood in a population making no systematic attempt to produce it. A floor
-            on the achievable rate, not a ceiling.
+            Incidence of sagehood in a population making no systematic attempt to produce it. The
+            model follows progressors, who are far more common than sages, and uses s₀ only as a
+            conservative floor for their starting share.
           </p>
         </Sub>
       </Section>
 
-      <Section num="4" title="Saturation time">
+      <Section num="4" title="The transition">
         <Sub title="4.1 Statement">
+          <p>
+            The growing population is moral progressors (<em>prokoptontes</em>), not sages. Their
+            share starts at the phoenix floor and grows logistically to a ceiling:
+          </p>
           <div className={styles.block}>
-            {`s(t) = s₀ · e^(gt)          τ_v = ln(1/s₀) / g = K/g`}
+            {`ds/dt = g s (1 − s/s_max)        s(0) = s₀ = 10⁻⁹
+s(t)  = s_max / (1 + (s_max/s₀ − 1) e^(−gt))
+τ_v   : s(τ_v) = 0.99 s_max   ⇒   τ_v = [ ln(s_max/s₀ − 1) + ln 99 ] / g`}
           </div>
+          <p>
+            The transition is said to end when the share reaches 99% of its ceiling. That is a
+            definition, not a finding, and §6.4 shows the count barely depends on it.
+          </p>
         </Sub>
 
         <Sub title="4.2 Numerical values">
-          <Grid table={SATURATION_TIME} numeric />
+          <Grid table={TRANSITION_TIME} numeric />
         </Sub>
 
-        <Sub title="4.3 The target is nearly irrelevant">
+        <Sub title="4.3 Who counts as a progressor">
           <p>
-            For target fraction <span className={styles.mono}>θ</span>,{' '}
-            <span className={styles.mono}>τ_v(θ) = ln(θ/s₀)/g</span>. At{' '}
-            <span className={styles.mono}>g</span> = 0.6%/yr: reaching 50% takes 3,338 yr, 90% takes
-            3,436 yr, 99% takes 3,452 yr, 100% takes 3,454 yr.{' '}
-            <strong>
-              Whether the required end state is a fully sage civilization or merely a sage-governed
-              one changes nothing material.
-            </strong>{' '}
-            This defuses the standard objection that the Stoic sage is unreachable.
+            The test must be checkable and must not mention risk, or the argument is circular. The
+            Stoic criteria serve: treating externals (health, wealth, reputation, winning) as
+            indifferent rather than as goods, and acting from reason rather than from passion. The
+            Stoics also held that all non-sages are equally far from virtue (Cicero,{' '}
+            <em>De Finibus</em> 3.48). That is a claim about states. Risk responds to actions, and
+            progressors perform the appropriate actions (<em>kathēkonta</em>) more reliably, so
+            every individual&rsquo;s progress moves <span className={styles.mono}>s</span>.
           </p>
         </Sub>
 
@@ -287,105 +304,90 @@ s₀ = 1 / Λ_lives`}
           </div>
           <p>
             So <span className={styles.mono}>g</span> plausibly sits between 0.6% and 2%/yr. Neither
-            series measures sagehood. Both measure something in its vicinity.
+            series measures progress toward virtue. Both measure something in its vicinity, and
+            both are logistic in shape, which is why the model is.
           </p>
         </Sub>
       </Section>
 
       <Section num="5" title="Decomposition of the hazard">
         <Sub title="5.1 Statement">
-          <div className={styles.block}>p(t) = p_m(t) + p_e(t) + p_x</div>
+          <div className={styles.block}>
+            {`p_m(t) = p_m0 (1 − s) e^(dt)
+p_e(t) = p_e0 [φ(1 − s) + (1 − φ)] e^(dt)
+h(t)   = p_m + p_e + p_x                      for all t ≥ 0`}
+          </div>
           <p>
-            Three terms with three different masters. <span className={styles.mono}>p_m</span> is
-            governed by the growth of virtue. <span className={styles.mono}>p_e</span> is governed by
-            competence and by honesty. <span className={styles.mono}>p_x</span> is governed by
-            nobody.
+            One gap <span className={styles.mono}>d = c − e</span> drives both reducible terms: the
+            danger in a capability is the distance between having it and understanding it.{' '}
+            <span className={styles.mono}>φ</span> is the share of error that depends on conflict
+            (haste, secrecy, racing) and so falls as progressors spread. No term switches off when
+            the transition ends, and <span className={styles.mono}>d</span> keeps its value.
           </p>
         </Sub>
 
-        <Sub title="5.2 The malice term">
-          <p>Malice scales with the non-sage fraction of the population:</p>
+        <Sub title="5.2 Survival">
           <div className={styles.block}>
-            {`p_m(t) = p_m0 · (1 − s(t)) = p_m0 · (1 − s₀e^(gt))`}
-          </div>
-          <p>Integrating across the window:</p>
-          <div className={styles.block}>
-            {`∫₀^τ p_m dt = p_m0 [ τ − (1 − s₀)/g ] ≈ p_m0 (K − 1)/g`}
+            {`S(t) = exp( −∫₀ᵗ h(u) du )`}
           </div>
           <p>
-            The effective multiplier is <span className={styles.mono}>1 − 1/K = 0.9517</span>,{' '}
-            <strong>independent of g</strong>.
+            There is no closed form. Before the transition{' '}
+            <span className={styles.mono}>s &lt; s_max·e⁻¹²</span> and the integral is exact; across
+            it the hazard is integrated numerically; after it{' '}
+            <span className={styles.mono}>s = s_max</span> and the remaining lifetime is exact in
+            the exponential integrals. The page and Appendix A.11 implement the same scheme, and
+            agree with brute-force integration to 0.2%.
           </p>
         </Sub>
 
-        <Sub title="5.3 Why the mechanism buys so little">
+        <Sub title="5.3 Why virtue's protection arrives late">
           <p>
-            Draining malice as virtue rises reduces the malice integral by only 4.8 percent, because
-            exponential growth spends almost all its time near zero:
+            Logistic growth from one in a billion spends most of the transition near zero:
           </p>
-          <Grid table={SAGE_SHARE} numeric />
+          <Grid table={PROGRESSOR_SHARE} numeric />
           <p className={styles.caption}>
-            The single-hazard model was accidentally almost right, for a bad reason.
+            At g = 0.6%/yr, progressors pass 1% only in year 2,688 of 4,218, by which time about four
+            fifths of the transition&rsquo;s malice has been spent.
           </p>
         </Sub>
 
-        <Sub title="5.4 The closed form survives">
-          <div className={styles.block}>
-            {`exp( −p_m0 (1 − 1/K) · K/g )  =  exp( −(p_m0/g)(K − 1) )  =  (e·s₀)^(p_m0/g)`}
-          </div>
-          <div className={styles.result}>
-            {`f_v,malice = (e·s₀)^R
-R = p_m0 / g`}
-          </div>
+        <Sub title="5.4 What a negative gap does">
           <p>
+            With <span className={styles.mono}>d &lt; 0</span> every reducible term shrinks
+            geometrically, and its total over all time is finite: once{' '}
+            <span className={styles.mono}>s = s_max</span> the remainder is{' '}
+            <span className={styles.mono}>A/|d|</span>, where{' '}
+            <span className={styles.mono}>A</span> is the reducible hazard left at that moment.
+            Survival then has a floor, exactly as in §2, and a survivor lives about{' '}
+            <span className={styles.mono}>1/p_x = 10⁸</span> years.{' '}
             <strong>
-              The decomposition is exactly equivalent to replacing s₀ with e·s₀ = 2.72×10⁻⁹.
+              A hazard you keep shrinking cannot eventually catch you; only one you leave standing
+              can.
             </strong>{' '}
-            Verified numerically to six significant figures. The single-ratio elegance is preserved.
+            With <span className={styles.mono}>d = 0</span> the residue{' '}
+            <span className={styles.mono}>p_e0(1 − φ)</span> stays at 0.21%/yr for good, and
+            survivors last a few centuries.
           </p>
         </Sub>
 
         <Sub title="5.5 The external term">
           <p>
-            <span className={styles.mono}>p_x</span> was previously laundered as a hand-chosen{' '}
-            <span className={styles.mono}>L_ℓ</span>. It should not be a free parameter, because it
-            sets the lifetime directly:
-          </p>
-          <div className={styles.block}>L_ℓ = 1 / p_x</div>
-          <p>
-            Inside <span className={styles.mono}>f_v</span> it is negligible. At{' '}
-            <span className={styles.mono}>p_x = 10⁻⁸</span> and{' '}
-            <span className={styles.mono}>g</span> = 0.6%/yr,{' '}
-            <span className={styles.mono}>exp(−p_x τ_v) = 0.99997</span>. So{' '}
-            <span className={styles.mono}>p_x</span> does no work during the transition and all its
-            work afterward. One parameter, two roles, made explicit.
+            <span className={styles.mono}>p_x</span> does no work during the transition (
+            <span className={styles.mono}>exp(−p_x τ_v) = 0.99996</span> at g = 0.6%/yr) and all its
+            work afterward, once everything else has been retired. One parameter, two roles.
           </p>
         </Sub>
 
-        <Sub title="5.6 The error term">
+        <Sub title="5.6 The gap">
           <p>
-            Destructive capability grows at <span className={styles.mono}>c</span>. Competence per
-            unit capability grows at <span className={styles.mono}>e</span>. Let{' '}
-            <span className={styles.mono}>d = c − e</span>:
+            At the realistic baseline (<span className={styles.mono}>p_m0</span> 0.3%,{' '}
+            <span className={styles.mono}>p_e0</span> 0.7%, g 0.6%), cumulative hazard through the
+            transition and the count:
           </p>
-          <div className={styles.block}>
-            {`p_e(t) = p_e0 · e^(dt)
-I_e = ∫₀^τ p_e dt = p_e0 (e^(dτ) − 1) / d      (= p_e0·τ when d = 0)`}
-          </div>
+          <Grid table={GAP_CLIFF} numeric />
           <p>
-            This term has no analogue in the single-hazard model, and it can dominate everything. The
-            shape is clearest at the optimistic baseline,{' '}
-            <span className={styles.mono}>p_e0 = 10⁻⁵/yr</span>, and{' '}
-            <span className={styles.mono}>τ_v = 3,454 yr</span> (
-            <span className={styles.mono}>g</span> = 0.6%/yr):
-          </p>
-          <Grid table={ERROR_CLIFF} numeric />
-          <p>
-            <strong>This is a cliff, not a slope.</strong> Between{' '}
-            <span className={styles.mono}>d</span> = 0.10% and 0.20% the survival factor falls by two
-            orders of magnitude. At the realistic baseline of §5.7 there is no cliff to approach:{' '}
-            <span className={styles.mono}>I_e</span> is already 24.2 at{' '}
-            <span className={styles.mono}>d = 0</span>.
+            <strong>This is a cliff, not a slope.</strong> Between d = −0.05% and −0.10% the count
+            moves by more than three orders of magnitude, and at d = 0 it is fifteen orders short.
           </p>
         </Sub>
 
@@ -397,113 +399,64 @@ I_e = ∫₀^τ p_e dt = p_e0 (e^(dτ) − 1) / d      (= p_e0·τ when d = 0)`}
             <span className={styles.mono}>p_e</span>. The same hazard is therefore priced twice.
           </p>
           <p>
-            The historical record leans against the borrowing. The documented near-misses (Petrov
+            The historical record leans against the borrowing. The documented near misses (Petrov
             1983, the NORAD training tape in 1979, Able Archer, B-59 in 1962) were overwhelmingly
             false alarms and misjudgment rather than decisions to attack. If that record is
-            representative, malice is the minority share of the published totals.
-          </p>
-          <p>
-            Splitting a 1 percent total between the two terms, at{' '}
-            <span className={styles.mono}>g</span> = 0.6%/yr and{' '}
-            <span className={styles.mono}>d</span> = 0:
+            representative, malice is the minority share of the published totals. Splitting a 1
+            percent total between the two terms, at g = 0.6%/yr:
           </p>
           <Grid table={MALICE_SPLIT} numeric />
           <p>
-            <strong>The count is nearly invariant to the split.</strong>{' '}
-            <span className={styles.mono}>R</span> clears its threshold comfortably at a 30 percent
-            malice share and the answer does not move, because the total is what integrates across
-            the window. Reallocating hazard between terms buys nothing.
-          </p>
-          <p>
-            A consequence worth stating. With a realistic{' '}
-            <span className={styles.mono}>p_e0</span> near 0.7%/yr (and{' '}
-            <span className={styles.mono}>p_m0</span> = 0.3%,{' '}
-            <span className={styles.mono}>g</span> = 0.6%), the count reaches one only if{' '}
-            <span className={styles.mono}>d ≤ d₁ = −0.18%/yr</span>. The stricter half-cost condition
-            of §7.2, <span className={styles.mono}>I_e &lt; ln 2</span>, needs{' '}
-            <span className={styles.mono}>d ≤ d* = −1.01%/yr</span>. Either way competence must{' '}
-            <strong>outpace</strong> capability, not merely keep up.
+            <strong>d₁ is nearly invariant to the split.</strong> Both hazards carry the same gap,
+            so it is the total that the gap has to shrink.
           </p>
         </Sub>
 
-        <Sub title="5.8 Does baseline malice grow with capability?">
+        <Sub title="5.8 Malice carries the gap too">
           <p>
-            §5.2 assumes <span className={styles.mono}>p_m0</span> is constant. A shrinking minority
-            of non-sages in a world of compounding capability is plausibly more dangerous per head.
-            Test it: let <span className={styles.mono}>p_m(t) = p_m0·e^(ct)·(1 − s(t))</span>.
+            Because malice carries <span className={styles.mono}>e^(dt)</span>, a lead in competence
+            shrinks it as well as error. At Hellman&rsquo;s 1%, far over the moral threshold, with the
+            optimistic error baseline:
           </p>
+          <Grid table={MALICE_GAP} numeric />
           <p>
-            Integrating, and using <span className={styles.mono}>s₀e^(gτ) = 1</span> at saturation:
+            So <span className={styles.mono}>R &lt; R*</span> is no longer necessary. What R* still
+            marks is how far a civilization is leaning on competence rather than character. The
+            older objection that malice should grow with capability is absorbed here: it grows with
+            the <em>gap</em>, which is capability not yet understood, and a negative gap shrinks it.
           </p>
-          <div className={styles.block}>
-            {`I_m = R · Φ(Q)
-Φ(Q) = (s₀^(−Q) − 1)/Q − (s₀^(−Q) − s₀)/(Q + 1)
-R = p_m0/g        Q = c/g`}
-          </div>
+        </Sub>
+
+        <Sub title="5.9 The ceiling and the residue">
           <p>
-            A second dimensionless ratio against the same denominator. The closed form does not
-            break; it generalizes. And <span className={styles.mono}>Φ(0) = K − 1 = 19.7233</span>{' '}
-            exactly, so <span className={styles.mono}>exp(−R·Φ(0)) = (e·s₀)^R</span> recovers §5.4 as
-            the <span className={styles.mono}>Q → 0</span> case. Verified against the exact integral
-            to five significant figures.
-          </p>
-          <p>
-            Since <span className={styles.mono}>e^(cτ) = s₀^(−Q) = 10^(9Q)</span>, the threshold
-            collapses:
-          </p>
-          <Grid table={CAPABILITY_SCALING} numeric />
-          <p>
-            Holding <span className={styles.mono}>R*</span> above 0.50 requires{' '}
-            <span className={styles.mono}>Q ≤ 0.032</span>, meaning capability may grow no faster
-            than 0.019%/yr against moral growth of 0.6%/yr. Our own{' '}
-            <span className={styles.mono}>Q</span> is plausibly between 1.7 and 8, giving{' '}
-            <span className={styles.mono}>R*</span> of order 10⁻¹⁴ to 10⁻⁷⁰.
-          </p>
-          <p>
-            <strong>A result that extreme is the model, not the world.</strong> The error is that{' '}
-            <span className={styles.mono}>e^(ct)</span> has no ceiling, and malice hazard saturates.
-            Once a civilization can cross the extinction threshold once, further capability does not
-            multiply the annual probability that someone crosses it. The hazard is
-            threshold-dependent, not magnitude-dependent.
-          </p>
-          <p>So the correct form is</p>
-          <div className={styles.block}>
-            {`p_m(t) = p_m0 · min(1, e^(ct)/W) · (1 − s(t))`}
-          </div>
-          <p>
-            and for any civilization already past <span className={styles.mono}>W</span> the
-            multiplier is pinned at 1 across the whole window.{' '}
-            <span className={styles.mono}>Q</span> returns to 0, <span className={styles.mono}>Φ</span>{' '}
-            returns to <span className={styles.mono}>K − 1</span>, and{' '}
-            <span className={styles.mono}>R*</span> returns to 0.700.{' '}
-            <strong>§5.4 is right, and now it is right for a reason rather than by assumption.</strong>
-          </p>
-          <p>
-            The asymmetry with §5.6 is substantive rather than convenient. Malice saturates because
-            it requires only one threshold crossed. Error does not, because each new <em>kind</em> of
-            capability opens failure channels the previous kinds did not have, and breadth has no
-            natural ceiling. That is why <span className={styles.mono}>d</span> remains a live cliff
-            while <span className={styles.mono}>Q</span> does not.
+            Chrysippus gave two causes for the distortion of reason: the persuasiveness of external
+            things and the teaching of those around us (Diogenes Laertius 7.89). Culture therefore
+            sets <span className={styles.mono}>g</span> and{' '}
+            <span className={styles.mono}>s_max</span>; the ceiling is not human nature. A ceiling
+            below one leaves <span className={styles.mono}>(1 − s_max)</span> of malice and conflict
+            error standing for good. A civilization does not need everyone, only that the rest never
+            get access to civilization-ending power, and that access is denied by retiring hazards
+            (a negative gap), not by policing people.
           </p>
         </Sub>
       </Section>
 
-      <Section num="6" title="The full model">
-        <Sub title="6.1 Survival to saturation">
-          <div className={styles.block}>
-            {`f_v = exp( − [ p_m0(1 − 1/K)·τ_v  +  I_e  +  p_x·τ_v ] )
-    = (e·s₀)^R  ·  exp(−I_e)  ·  exp(−p_x τ_v)`}
-          </div>
+      <Section num="6" title="The count">
+        <Sub title="6.1 Counting past the transition">
+          <div className={styles.result}>N = Ṅ ∫_τ^∞ S(t) dt</div>
+          <p>
+            The civilizations still alive past the end of their transition, by Little&rsquo;s law.
+            The whole expected lifetime, <span className={styles.mono}>Ṅ ∫₀^∞ S dt</span>, will not
+            do: at a 1% annual hazard the civilizations that die young contribute{' '}
+            <span className={styles.mono}>Ṅ/h₀ ≈ 1</span> on their own, whatever happens later, so it
+            cannot separate a crowded galaxy from an empty one.
+          </p>
         </Sub>
 
-        <Sub title="6.2 The modified Drake equation">
-          <div className={styles.block}>
-            {`N_obs = Ṅ · [ (1 − f_v)·f_c,s·L_s  +  f_v·f_c,ℓ·L_ℓ ]
-L_ℓ = 1/p_x            f_v as in §6.1`}
-          </div>
+        <Sub title="6.2 The first five Drake terms">
           <p>
-            The first five Drake terms are absorbed into <span className={styles.mono}>Ṅ</span>.
-            Nothing is claimed about them here.
+            Absorbed into <span className={styles.mono}>Ṅ</span>. Nothing is claimed about them
+            here. Detectability is left out of N and taken up in §9.
           </p>
         </Sub>
 
@@ -512,171 +465,156 @@ L_ℓ = 1/p_x            f_v as in §6.1`}
         </Sub>
 
         <Sub title="6.4 Expected count">
-          <div className={styles.block}>
-            {`N_ℓ = Ṅ · f_v / p_x = 10⁶ · (e·s₀)^R · exp(−I_e)`}
-          </div>
           <Grid table={EXPECTED_COUNT} numeric />
+          <p className={styles.caption}>
+            Where τ_v is put hardly matters: at d = −0.06% the 50%, 90% and 99% points give N =
+            0.30690, 0.30690 and 0.30690.
+          </p>
         </Sub>
       </Section>
 
       <Section num="7" title="Two thresholds">
         <Sub title="7.1 The moral threshold">
           <p>
-            Setting <span className={styles.mono}>I_e</span> aside and requiring{' '}
-            <span className={styles.mono}>N_ℓ ≥ 1</span>:
+            <span className={styles.mono}>R*</span> is the ratio{' '}
+            <span className={styles.mono}>p_m0/g</span> at which malice alone, with no error and{' '}
+            <span className={styles.mono}>d = 0</span>, brings N to one. It now depends on{' '}
+            <span className={styles.mono}>g</span> and{' '}
+            <span className={styles.mono}>s_max</span>, because a ceiling below one leaves malice
+            standing:
           </p>
-          <div className={styles.result}>R* = log(Ṅ / p_x) / log(1/(e·s₀))</div>
+          <Grid table={THRESHOLD_SWEEP} numeric />
           <p>
-            With <span className={styles.mono}>Ṅ/p_x = 10⁶</span> and{' '}
-            <span className={styles.mono}>e·s₀ = 2.72×10⁻⁹</span>:
-          </p>
-          <div className={styles.block}>R* = 6 / 8.566 = 0.700</div>
-          <p>
-            The single-hazard version gave 0.667. The correction moves it by five percent.{' '}
-            <strong>
-              In words: moral improvement must run at least 1.43 times faster than the malice hazard.
-            </strong>
+            At s_max = 1 it is 0.667 at every g, close to the earlier closed form. At the default
+            0.99 it is 0.304. By §5.8 it is a marker, not a wall.
           </p>
         </Sub>
 
         <Sub title="7.2 The competence threshold">
           <p>
-            Requiring <span className={styles.mono}>I_e &lt; ln 2</span>, so the error term costs
-            less than half of <span className={styles.mono}>f_v</span>:
+            <span className={styles.mono}>d₁</span> is the gap at which N reaches one, every hazard
+            included:
           </p>
           <Grid table={COMPETENCE_THRESHOLD} numeric />
           <p>
-            At the optimistic baseline,{' '}
             <strong>
-              competence must keep pace with capability to within a fraction of a percent per year.
+              At the realistic baseline competence must outpace capability by about 0.07% a year,
             </strong>{' '}
-            At the realistic one the condition stops depending on{' '}
-            <span className={styles.mono}>g</span>. As <span className={styles.mono}>d</span> goes
-            negative, <span className={styles.mono}>I_e</span> converges to{' '}
-            <span className={styles.mono}>p_e0/|d|</span> however long the window, so{' '}
-            <span className={styles.mono}>d* ≈ −p_e0/ln 2 = −1.01%/yr</span>.{' '}
-            <strong>Competence must outpace capability by about a percent a year.</strong>
-          </p>
-          <p>
-            The last column is the weaker line <span className={styles.mono}>d₁</span>, where the
-            count merely reaches one. It does depend on <span className={styles.mono}>g</span>, and
-            below <span className={styles.mono}>g</span> = 0.43%/yr it does not exist:{' '}
-            <span className={styles.mono}>R</span> is already over{' '}
-            <span className={styles.mono}>R*</span>, and no value of{' '}
-            <span className={styles.mono}>d</span> rescues the count. The essay&rsquo;s phase
-            diagram draws <span className={styles.mono}>d₁</span>.
+            through the transition and after it, at any plausible g. At the optimistic baseline a
+            level gap is nearly enough.
           </p>
         </Sub>
 
         <Sub title="7.3 The coupling">
           <p>
-            <span className={styles.mono}>g</span> appears in both conditions, and this is the most
-            consequential structural fact in the revised model. A low{' '}
-            <span className={styles.mono}>g</span> raises <span className={styles.mono}>R</span>{' '}
-            <em>and</em> tightens <span className={styles.mono}>d₁</span>, because a slower
-            transition means more years exposed to compounding capability.{' '}
-            <strong>Moral slowness is punished twice.</strong> The two conditions are not
-            independent, and a civilization cannot trade one against the other.
+            <span className={styles.mono}>g</span> still appears in both conditions. A slower
+            transition means more years exposed before progressors arrive, so a low{' '}
+            <span className={styles.mono}>g</span> tightens <span className={styles.mono}>d₁</span>{' '}
+            slightly as well as raising <span className={styles.mono}>R</span>. But the gap now does
+            most of the work, and <span className={styles.mono}>g</span> moves{' '}
+            <span className={styles.mono}>d₁</span> by less than a factor of three across a twenty-fold
+            range.
           </p>
         </Sub>
 
-        <Sub title="7.4 Robustness of R*">
+        <Sub title="7.4 Sensitivity of d₁">
           <p>
-            <span className={styles.mono}>R*</span> is a ratio of logarithms, so it is insensitive to
-            the parameters that are least known. Sweeping{' '}
-            <span className={styles.mono}>s₀</span> across four orders of magnitude and{' '}
-            <span className={styles.mono}>Ṅ/p_x</span> across two:
+            d₁ barely moves with s_max (−0.0672% to −0.0665% from 0.90 to 1.00) or φ (−0.0645% to
+            −0.0705% from 1 to 0). It is roughly proportional to the baseline error rate:
           </p>
-          <Grid table={THRESHOLD_SWEEP} numeric />
+          <Grid table={ERROR_SWEEP} numeric />
           <p>
-            <span className={styles.mono}>R*</span> stays inside [0.47, 1.07] across the entire
-            sweep. <strong>d* has no comparable robustness</strong>, since it depends exponentially
-            on <span className={styles.mono}>p_e0</span> and{' '}
-            <span className={styles.mono}>τ_v</span>, both poorly known. The second threshold is the
-            weaker of the two.
+            <strong>d₁ has no robustness to p_e0</strong>, and p_e0 is close to unmeasured. That is
+            the honest state of the second threshold.
           </p>
         </Sub>
       </Section>
 
       <Section num="8" title="Where we sit">
         <p>
-          Two malice estimates: <span className={styles.mono}>p_m0</span> = 1%/yr (Hellman) and
-          0.3%/yr (superforecaster range), both at <span className={styles.mono}>g</span> = 0.6%/yr
-          (the homicide anchor) and <span className={styles.mono}>d</span> = 0.
+          <strong>The default path.</strong> Nothing in the record shows the total hazard falling, so
+          §1.4 applies: on the current course self-destruction is close to certain. Every
+          surviving setting below is a conditional.
         </p>
         <Sub title="8.1 At the optimistic error baseline, p_e0 = 10⁻⁵">
           <div className={styles.block}>
-            {`p_m0 = 1%:     R = 1.67        f_v ≈ 5×10⁻¹⁵        N_ℓ ≈ 5×10⁻⁹
-p_m0 = 0.3%:   R = 0.50        f_v ≈ 5×10⁻⁵         N_ℓ ≈ 50`}
+            {`p_m0 = 1%,   d = 0:        R = 1.67        N ≈ 9×10⁻¹⁴
+p_m0 = 0.3%, d = 0:        R = 0.50        N ≈ 0.009
+p_m0 = 0.3%, d = −0.07%:   R = 0.50        N ≈ 20,000`}
           </div>
-          <p>
-            The two credible parameter sets land on opposite sides of the moral threshold, and the
-            question looks like it turns on <span className={styles.mono}>R</span> alone.
-          </p>
         </Sub>
         <Sub title="8.2 At the realistic error baseline, p_e0 = 0.7%">
           <div className={styles.block}>
-            {`p_m0 = 1%:     R = 1.67        f_v ≈ 2×10⁻²⁵        N_ℓ ≈ 2×10⁻¹⁹
-p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻⁹`}
+            {`p_m0 = 0.3%, d = 0:        R = 0.50        N ≈ 9×10⁻¹⁶
+p_m0 = 0.3%, d = −0.07%:   R = 0.50        N ≈ 1.7
+p_m0 = 0.3%, d = −0.20%:   R = 0.50        N ≈ 6,770`}
           </div>
           <p>
-            <strong>Neither comes close.</strong> The moral threshold is cleared in the second case
-            and the count is still nine orders of magnitude short, because{' '}
-            <span className={styles.mono}>I_e</span> = 24.2. On current numbers the binding
-            condition is the second one, and what decides it is{' '}
-            <span className={styles.mono}>d</span>: at{' '}
-            <span className={styles.mono}>d</span> = −0.20%/yr the same parameters give{' '}
-            <span className={styles.mono}>N_ℓ ≈ 1.6</span>.
+            <strong>If competence can outpace capability by about 0.07% a year for the length of
+            the transition, and keep that lead afterwards, the galaxy should hold survivors.</strong>{' '}
+            Otherwise it should not.
           </p>
         </Sub>
-        <p>
-          The model does not tell us which universe we are in. It tells us the question reduces to
-          measurable quantities, that <span className={styles.mono}>R</span> is necessary but not
-          sufficient, and that the quantity nobody has measured is the one doing the deciding.
-        </p>
-        <p>
-          Required improvement rates to clear <span className={styles.mono}>R*</span> = 0.700:
-        </p>
+        <Sub title="8.3 A first, crude estimate of d">
+          <p>
+            The one proxy with any history is near misses per unit of destructive capacity in the
+            nuclear era. The Chatham House catalogue lists thirteen cases of near nuclear use between
+            1962 and 2002, about one every three years, while arsenals peaked near 70,000 warheads in
+            1986 and then fell by more than half. Thirteen events cannot resolve a trend in their rate
+            much finer than a couple of percent a year over forty years, so the proxy rules out a
+            large gap in either direction and cannot tell −0.07% from zero. It is one technology, the
+            catalogue is not a census, and warheads are a poor measure of capability.{' '}
+            <strong>Crude, and labelled so.</strong>
+          </p>
+        </Sub>
+        <p>Malice alone, with no lead in competence, would demand:</p>
         <Grid table={REQUIRED_GROWTH} numeric />
         <p>
-          We have no measurement of <span className={styles.mono}>d</span> at all. That is the honest
-          state of the second condition.
+          Rates far above either historical anchor. With a lead in competence the demand on{' '}
+          <span className={styles.mono}>g</span> falls away (§5.8).
         </p>
       </Section>
 
       <Section num="9" title="The two-population result">
-        <Sub title="9.1 The crossover">
-          <div className={styles.block}>
-            {`N_s = Ṅ (1 − f_v) L_s ≈ 3        N_ℓ = Ṅ f_v L_ℓ`}
-          </div>
+        <Sub title="9.1 The two populations">
           <p>
-            Equal when <span className={styles.mono}>f_v = L_s/L_ℓ = 3×10⁻⁶</span>.
+            Civilizations that leave a hazard standing live centuries; those that keep the gap
+            negative live about 10⁸ years. The count in §6 is the second population alone.
           </p>
         </Sub>
 
         <Sub title="9.2 Consequence">
           <p>
-            Below the threshold, the transitioned population outnumbers the doomed one by up to{' '}
-            <span className={styles.mono}>L_ℓ/L_s ≈ 3×10⁵</span>.{' '}
-            <strong>The filter cannot explain the silence.</strong> It predicts a crowded galaxy, and
-            the whole explanatory burden falls on <span className={styles.mono}>f_c,ℓ</span>, which
-            requires an independent argument about restraint. Above the threshold,{' '}
-            <span className={styles.mono}>f_c,ℓ</span> is irrelevant because there is nobody to
-            detect.
+            Where the gap stays below d₁ the long-lived population can number hundreds or
+            thousands, and <strong>the filter cannot explain the silence</strong>: the explanatory
+            burden falls on detectability, which needs an independent argument about restraint.
+            Where any hazard is left standing there is nobody to detect.
           </p>
         </Sub>
 
         <Sub title="9.3 The fork">
           <Grid table={FORK} />
           <p className={styles.caption}>
-            Note the asymmetry: clearing requires <strong>both</strong> conditions, missing requires{' '}
-            <strong>either</strong>. The revised model is strictly less optimistic than the
-            single-hazard version.
+            Note the asymmetry: the empty branch needs only one hazard left standing, the crowded
+            one needs the gap kept negative indefinitely.
+          </p>
+        </Sub>
+
+        <Sub title="9.4 Restraint, and the premise it needs">
+          <p>
+            The cosmopolitan objection: Stoic sages owe help to all, so why would they not teach?
+            Because virtue must be chosen. Epictetus has Zeus admit that not even he can overpower a
+            person&rsquo;s moral choice (<em>Discourses</em> 1.1.23). Instruction from a vastly
+            superior civilization would land as authority, not as an offer the hearer could freely
+            assess. This rests on a premise from Stoic physics (A13): reason (<em>logos</em>) is
+            universal, so rational survivors of any species reach the same conclusion in different
+            words; and humans are born with starting points toward virtue (<em>aphormai</em>), not
+            the virtues. Accept it or reject it; the crowded branch stands or falls with it.
           </p>
         </Sub>
       </Section>
 
-      <Section num="10" title="What the decomposition bought">
+      <Section num="10" title="What the revision bought">
         <Grid table={GAINS} />
         <Grid table={COSTS} />
       </Section>
@@ -700,11 +638,9 @@ p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻�
           ))}
         </div>
         <p style={{ marginTop: '1.6rem' }}>
-          <strong>A4 and A8 deserve the most attention and receive the least.</strong> Every observed
-          social diffusion process is logistic, not exponential, and a logistic asymptote below 1.0
-          would mean no civilization ever saturates at any <span className={styles.mono}>g</span>. A8
-          is worse in a different way: it is not wrong so much as unmeasured, and the second
-          threshold rests entirely on it.
+          <strong>A8 deserves the most attention and receives the least.</strong> It is not wrong so
+          much as unmeasured, and d₁ is roughly proportional to it. §8.3 is the only attempt at a
+          measurement, and it is crude.
         </p>
         <p>
           <strong>A note on A2 and institutions.</strong> A2 is not a claim that individual
@@ -712,43 +648,35 @@ p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻�
           criticism, transparency, reciprocal accountability) are the obvious way a hazard actually
           falls, and they enter the model as <span className={styles.mono}>e</span>. The claim is
           about what sustains them. Every such institution can be gamed by the people inside it, and
-          it holds only while most of them will not game it. A sage culture is not an alternative to
-          accountable institutions. It is what builds them, staffs them, and keeps them honest when
-          gaming them would pay. A2 fails if institutions can be made self-enforcing among people who
-          would game them given the chance.
+          it holds only while most of them will not game it. Progressors rise into government and
+          business gradually and change institutions from within, which is how a minority lowers
+          risk before it is a majority. A2 fails if institutions can be made self-enforcing among
+          people who would game them given the chance.
+        </p>
+        <p>
+          <strong>A note on A2 and coercion.</strong> The obvious alternative to character is
+          control: a surveillance state of the kind Bostrom describes. It concentrates malice in the
+          controllers rather than removing it. A hazard left standing ends in certain extinction
+          (§1.4), so coercion survives only if the controllers are reliably good, which is A2 again,
+          asked of the few with the most power to abuse.
         </p>
         <p>
           <strong>A note on A2 and dispersal.</strong> §1 counts one trial a year, which holds only
-          if one catastrophe is total. Dispersal relaxes that, and it is the most natural route to a
-          declining hazard that needs no character, so it is the strongest challenge to A2. Its
-          force depends on separation. Within one system, settlements are days to months of transit
-          apart. That decorrelates <span className={styles.mono}>p_x</span>, since no single impact
-          reaches every body, but barely touches <span className={styles.mono}>p_m</span> or{' '}
-          <span className={styles.mono}>p_e</span>: weapons and pathogens cross the distance, and
-          every settlement builds from the same designs. Each settlement also carries its own
-          malice and error hazard, so <span className={styles.mono}>n</span> settlements with
-          correlated failure modes face roughly <span className={styles.mono}>n</span> times the
-          exposure while gaining protection only against the term that is already negligible during
-          the transition. Across interstellar distance the separation is years to centuries, the
-          hazards decouple, and the civilization survives if any colony does:{' '}
-          <span className={styles.mono}>S = 1 − ∏(1 − Sᵢ)</span> over effectively independent
-          colonies. That is a genuine escape, and A2 fails if it is reachable within{' '}
-          <span className={styles.mono}>τ_v</span>. The model therefore needs interstellar
-          settlement to arrive after saturation or not at all, which is A12. Write{' '}
-          <span className={styles.mono}>T_s</span> for its date. The assumption holds while{' '}
-          <span className={styles.mono}>τ_v &lt; T_s</span>, that is while{' '}
-          <span className={styles.mono}>g &gt; g_s = K/T_s</span>. The working note takes{' '}
-          <span className={styles.mono}>T_s</span> = 10⁴ years as a hypothesis, not an estimate,
-          which puts <span className={styles.mono}>g_s</span> ≈ 0.21% a year. At{' '}
-          <span className={styles.mono}>g</span> = 0.6% the transition takes ≈ 3,450 years and
-          finishes first; at 0.1% it takes ≈ 20,700 years and does not. Because{' '}
-          <span className={styles.mono}>τ_v</span> grows as <span className={styles.mono}>g</span>{' '}
-          falls, the escape is most available exactly where the model is bleakest. The working
-          note&rsquo;s diagram carries <span className={styles.mono}>T_s</span> as a dial; the
-          count does not change with it, it only marks where the count stops applying. One
-          observation cuts the other way. A
-          civilization that escaped by dispersal without transitioning would carry its expansion
-          with it, and would be the loud population the sky does not show.
+          if one catastrophe is total. Dispersal relaxes that only for a settlement that could
+          rebuild technological civilization on its own. Within one system, settlements are days to
+          months of transit apart: that decorrelates <span className={styles.mono}>p_x</span> but
+          barely touches <span className={styles.mono}>p_m</span> or{' '}
+          <span className={styles.mono}>p_e</span>, since weapons and pathogens cross the distance
+          and every settlement builds from the same designs, and each brings its own malice and
+          error. Across interstellar distance the hazards decouple and the civilization survives if
+          any colony does, <span className={styles.mono}>S = 1 − ∏(1 − Sᵢ)</span>. But the ordering
+          runs the wrong way: the power to destroy yourself arrives long before the power to leave,
+          so dispersal comes after the filter, not instead of it. A12 makes that a hypothesis: with{' '}
+          <span className={styles.mono}>T_s</span> = 10⁴ years the transition finishes first while{' '}
+          <span className={styles.mono}>g</span> exceeds about 0.25% a year. Because τ_v grows as g
+          falls, the escape is most available exactly where the model is bleakest. A civilization
+          that escaped by dispersal without transitioning would carry its expansion with it, and
+          would be the loud population the sky does not show.
         </p>
       </Section>
 
@@ -767,27 +695,26 @@ p_m0 = 0.3%:   R = 0.50        f_v ≈ 2×10⁻¹⁵        N_ℓ ≈ 2×10⁻�
           <span className={styles.secNum}>13</span>
           <h2>Summary</h2>
           <div className={styles.block}>
-            {`S(n)   = (1 − p)ⁿ                              fixed hazard, always → 0
-S(∞)   = exp(−p₀H / ln 2)  >  0                declining hazard, converges
-p(t)   = p_m(t) + p_e(t) + p_x                 three terms, three masters
-s₀     = 10⁻⁹,  K = ln(1/s₀) = 20.72           phoenix rate
-τ_v    = K / g                                 saturation time
-T_s    = 10⁴ yr                                interstellar settlement, a hypothesis
-g_s    = K / T_s ≈ 0.21%                       τ_v < T_s requires g > g_s
-I_e    = p_e0 (e^(dτ) − 1)/d                   error integral,  d = c − e
-f_v    = (e·s₀)^R · exp(−I_e) · exp(−p_x τ_v)  R = p_m0/g
-N_ℓ    = Ṅ · f_v / p_x                         transitioned civilizations extant
-R*     = log(Ṅ/p_x) / log(1/(e·s₀)) = 0.700    moral threshold
-d*     : I_e(d*, τ_v) = ln 2                   competence threshold
-d₁     : N_ℓ(d₁) = 1                           where the count reaches one`}
+            {`S(n)   = (1 − p)ⁿ                                  fixed hazard, always → 0
+S(∞)   = exp(−p₀H / ln 2)  >  0                    declining hazard, converges
+ds/dt  = g s (1 − s/s_max),  s₀ = 10⁻⁹              progressors, from a phoenix floor
+p_m    = p_m0 (1 − s) e^(dt)                        malice
+p_e    = p_e0 [φ(1 − s) + 1 − φ] e^(dt)             error
+h      = p_m + p_e + p_x                            for all time
+τ_v    : s(τ_v) = 0.99 s_max                        4,218 yr at g = 0.6%
+N      = Ṅ ∫_τ^∞ S dt                               civilizations past the transition
+R*     : N = 1 with p_e0 = 0, d = 0                 0.304 at the defaults
+d₁     : N = 1                                      −0.067%/yr at the realistic baseline
+T_s    = 10⁴ yr, a hypothesis                       τ_v < T_s requires g > 0.25%`}
           </div>
           <p>
-            Two conditions, coupled through <span className={styles.mono}>g</span>. Improve fast
-            enough to outrun your own malice, and make competence grow faster than capability. Miss
-            either and the count goes to zero. On current numbers it is the second that binds.
+            On the current course, a hazard left standing makes self-destruction close to certain.
+            If a civilization were to survive, it would have to look like this: competence kept
+            ahead of capability by about 0.07% a year, through the transition and after it, so
+            that every hazard keeps shrinking.
           </p>
           <p>
-            <strong>Both terms of the first ratio are ours. So is the second.</strong>
+            <strong>Nobody has measured the lead. Every term in it is ours.</strong>
           </p>
         </div>
       </section>

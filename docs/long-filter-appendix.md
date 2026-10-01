@@ -17,26 +17,27 @@ the moral input in section A.4.
 
 | Symbol | Meaning | Value on the page | Status |
 |---|---|---|---|
-| p | Annual probability of self-destruction (a hazard rate) | dial, 10⁻¹ to 10⁻⁵ | free |
+| p | Annual probability of self-destruction (a hazard rate), section I | dial, 10⁻¹ to 10⁻⁵ | free |
 | n, t | Years elapsed | dial, 1 to 10⁹ | free |
 | H | Halving period of the hazard, when it is set to decay | 1,000 yr | assumed |
-| s₀ | The phoenix rate: fraction of people who are sages before anyone cultivates it deliberately | 10⁻⁹ | measured (one source, order of magnitude) |
-| K | ln(1/s₀), the "log distance" to a fully sage population | 20.72 | derived |
-| g | Annual growth rate of the sage fraction | dial, 0.01% to 3.16% | free |
-| τ_v | Duration of the transition, K/g | derived | derived |
+| s | Share of moral progressors (prokoptontes) in the population | derived | derived |
+| s₀ | Starting share, floored at the phoenix rate of sagehood | 10⁻⁹ | a floor (one source, order of magnitude) |
+| s_max | Ceiling on the progressor share | dial, 0.90 to 1.00, default 0.99 | free |
+| g | Growth rate of the progressor share | dial, 0.01% to 3.16% | free |
+| τ_v | End of the transition: the year s reaches 99% of s_max | derived | definition |
 | p_m0 | Annual malice hazard at the start of the transition | dial, 0.01% to 3.16% | free |
 | R | The moral ratio, p_m0 / g | derived | derived |
-| p_e0 | Annual error hazard at the start of the transition | 10⁻⁵ | assumed, unmeasured |
+| p_e0 | Annual error hazard at the start of the transition | dial; 0.7% realistic, 10⁻⁵ optimistic | assumed, unmeasured |
+| φ | Share of error that depends on conflict, and so falls with s | dial, 0 to 1, default 0.7 | free |
 | c, e | Growth rate of capability, and of competence per unit capability | not separately set | free |
-| d | The capability gap, c − e | dial, −0.2% to +0.4% | free |
-| I_e | Accumulated error hazard across the transition | derived | derived |
+| d | The capability gap, c − e, driving malice and error alike | dial, −0.5% to +0.3% | free, the open question |
 | p_x | Irreducible external hazard (impacts, bursts, the star) | 10⁻⁸ | assumed |
-| L_ℓ | Expected lifetime of a transitioned civilization, 1/p_x | 10⁸ yr | derived |
 | Ṅ | Technological civilizations arising in the galaxy per year | 0.01 | assumed |
-| f_v | Fraction of arising civilizations that survive the transition | derived | derived |
-| N | Transitioned civilizations expected to exist in the galaxy now | derived | output |
-| R\* | The moral threshold: the largest R for which N ≥ 1 | 0.700 | derived |
-| d\* | The competence threshold: the gap at which error alone halves the survivors | derived | derived |
+| S(t) | Probability of surviving to year t | derived | derived |
+| N | Civilizations past their transition, expected in the galaxy now | derived | output |
+| R\* | The moral threshold: R at which malice alone, with d = 0, brings N to one | 0.304 at the defaults | derived |
+| d₁ | The competence threshold: the gap at which N reaches one | −0.067% at the realistic defaults | derived |
+| T_s | Date of interstellar settlement | 10⁴ yr | a hypothesis |
 
 "Hazard" throughout means the probability of ending in a given year, given
 that you reached that year. All rates are per year.
@@ -75,6 +76,11 @@ The plate on the page draws a thousand marks and lights S(n) × 1,000 of them.
 The conclusion of this section is simply that for **any** fixed p > 0,
 S(n) → 0 as n grows. There is no value of p small enough. There are only
 values that take longer.
+
+This is the strongest claim in the model, and the one the essay leads with.
+Nothing in the record shows the total hazard falling, so on the course we are
+on self-destruction is close to certain. Everything after A.3 describes what
+survival would have to look like if it were to happen.
 
 *Reviewer's note.* For p ≪ 1, (1 − p)ⁿ ≈ e^(−pn), and the two forms agree to
 better than one part in 10³ at every p the page allows. The page uses the
@@ -120,309 +126,328 @@ The same conclusion follows from any p(t) that decays faster than 1/t.
 
 ---
 
-## A.4 The one measured input: the phoenix rate
+## A.4 Who is growing: progressors, from a phoenix floor
 
-**In plain words.** The model needs a starting point: how rare is a truly
-good person, a sage, before anyone is trying to produce them on purpose?
-Seneca, writing about two thousand years ago, says such a person appears
-about once every five hundred years, "like the phoenix". He meant it as a
-figure of speech about rarity. We read it, deliberately, as a rate. In the
-Roman world of his day roughly fifty million people were alive at a time and
-lived about twenty-five years on average, so about a billion lives were
-lived in five hundred years. One sage per billion lives.
+**In plain words.** The model needs a population whose growth lowers risk.
+Sages, the Stoic ideal, are too rare to be that population; by definition
+almost nobody is one. Moral progressors are: people the Stoics called
+*prokoptontes*, not yet wise but making progress toward it. The model needs
+how many there are at the start, how fast their share grows, and where it
+stops.
+
+For the start it borrows Seneca. He writes that the good man appears about
+once every five hundred years, "like the phoenix". In the Roman world of his
+day roughly fifty million people were alive at a time and lived about
+twenty-five years, so about a billion lives were lived in five hundred
+years: one sage per billion lives. That is the incidence of sages, and
+progressors are far more common, so using it as the starting share of
+progressors is a conservative floor. Any larger start shortens everything
+that follows.
+
+**Who counts.** The test has to be checkable, and it must not mention risk,
+or the argument would be circular. The Stoic criteria serve: a progressor
+treats externals (health, wealth, reputation, winning) as indifferent rather
+than as goods, and acts from reason rather than from passion. Neither says
+anything about catastrophe, and both show in conduct.
+
+**The paradox.** The Stoics also held that all who are not wise are equally
+far from virtue: a man an arm's length under the surface drowns as surely as
+one five hundred fathoms down (Cicero, *De Finibus* 3.48). That is a claim
+about states. Risk responds to actions, and progressors perform appropriate
+actions (*kathēkonta*) more reliably than others. So every individual's
+progress moves s, whether or not anyone arrives.
 
 **The formula.**
 
-    s₀ ≈ 1 sage / (50 × 10⁶ people × 500 yr / 25 yr per life) = 1 / 10⁹ = 10⁻⁹
+    s₀ = 1 / (50 × 10⁶ people × 500 yr / 25 yr per life) = 10⁻⁹
+    ds/dt = g s (1 − s/s_max)
+    s(t)  = s_max / (1 + (s_max/s₀ − 1) e^(−g t))
 
-Now suppose the sage fraction grows exponentially at rate g per year once a
-civilization begins cultivating it:
+The transition is said to end when the share reaches 99% of its ceiling:
 
-    s(t) = s₀ · e^(g t)
+    τ_v = [ ln(s_max/s₀ − 1) + ln 99 ] / g
 
-The transition is finished when s reaches 1, which takes
+| g | Midpoint, s = s_max/2 | τ_v |
+|---|---|---|
+| 0.1% | 20,713 yr | 25,308 yr |
+| 0.3% | 6,904 yr | 8,436 yr |
+| 0.6% | 3,452 yr | 4,218 yr |
+| 1.0% | 2,071 yr | 2,531 yr |
+| 2.0% | 1,036 yr | 1,265 yr |
 
-    τ_v = ln(1/s₀) / g = K / g,     with K = ln(10⁹) = 20.72
+(All at s_max = 0.99.)
 
-**Why the target barely matters.** One would expect that "half the population
-are sages" and "everyone is a sage" are very different goals. In this model
-they are not, because the distance is measured in logarithms. Reaching s =
-0.5 takes ln(0.5/s₀)/g, reaching s = 1 takes ln(1/s₀)/g, and the ratio is
+**Protection arrives late.** Logistic growth from one in a billion spends
+most of the transition near zero. At g = 0.6% the share passes 1% only in
+year 2,688 of 4,218, and by then about four fifths of all the malice the
+transition will see has been spent:
 
-    1 − (ln 2)/K = 0.967
+| Share exceeds | Only in the final |
+|---|---|
+| 10⁻⁶ | 72.7% of the transition |
+| 10⁻⁴ | 54.5% |
+| 10⁻² | 36.3% |
+| 10⁻¹ | 26.8% |
+| 0.5 | 18.1% |
 
-At g = 0.6% a year: 3,338 years to half, 3,454 years to all. Three percent
-more time for double the target. So whether the threshold is "a civilization
-of sages" or "a civilization governed by sages" changes nothing that follows.
+**Why people say no.** Chrysippus gave two causes for the distortion of
+reason: the persuasiveness of external things and the teaching of those
+around us (Diogenes Laertius 7.89). Nature gives starting points (*aphormai*)
+that are uncorrupted; what corrupts them is what is prized and taught. So
+culture sets g and s_max, and the ceiling is not human nature. The target is
+the values, treating externals as goods, not markets as such. European
+homicide fell about 0.6% a year for six centuries (Eisner), the source of the
+default g. The decline of war between states is contested: Cirillo and Taleb
+argue the data cannot tell a falling rate from a quiet stretch under a
+heavy-tailed constant risk. The recent wars fit the model: a quiet stretch
+under constant risk is a lull, not a falling hazard (A.2).
 
 *Reviewer's notes.*
 
 1. s₀ rests on a single literary sentence and two demographic round numbers.
-   It is an order of magnitude, not a measurement with an error bar. Section
-   A.7 shows the results are unusually insensitive to it, which is the only
-   reason it is tolerable as an input.
-2. s₀ is a **floor**: it measures the incidence of sagehood in a population
-   not cultivating it deliberately or at scale. If cultivation has any
-   effect, the true starting point is higher and every transition is shorter.
-3. Exponential growth is an assumption, and the most consequential one in
-   the model. If growth is logistic with a ceiling below 1, the transition
-   never completes, and "rare" becomes "never". See A.10.
+   It is an order of magnitude, used only as a floor.
+2. τ_v is a definition. Put it at the half or the 90% point instead and,
+   wherever d < 0, N changes by less than one part in a thousand (A.7).
+3. Teaching raises g. The essay is a small part of the mechanism it
+   describes, which is worth saying once and not leaning on.
 
 ---
 
-## A.5 Three hazards, and who governs each
+## A.5 Three hazards, one gap
 
-**In plain words.** An earlier version of this model kept the annual risk
-fixed while assuming the sage fraction was rising. Those cannot both be true
-if goodness is what reduces the risk. So the risk has to be split into
-parts, and each part asked: does it fall as the sage fraction rises, or not?
-There turn out to be three parts.
+**In plain words.** The risk is split into three parts, and one quantity
+drives the first two: the gap d between how fast capability grows and how
+fast the understanding of it grows. When capability runs ahead, each new
+power arrives before anyone knows how to hold it, and both the chance that
+someone uses it and the chance that it fails grow with the gap. No part
+switches off when the transition ends.
 
-1. **Malice.** Destruction someone chose, for gain, status or rivalry. This
-   is the part goodness removes. But it removes it far more slowly than you
-   would hope, because exponential growth spends almost all its time near
-   zero: for most of the transition, nearly everyone is still not a sage.
-2. **Error.** Accident, misjudgment, a design flaw nobody caught. Goodness
-   does not fix this. Competence does. If a civilization's *capability*
-   (what it can do) grows faster than its *competence* (how well it
-   understands what it is doing), the error risk **compounds**, like
-   interest on a debt, and it can swamp everything else.
+1. **Malice.** Destruction someone chose, for gain, status or rivalry. It
+   falls as progressors spread and with the gap. With a ceiling below one it
+   never reaches zero by virtue alone.
+2. **Error.** Accident, misjudgment, a flaw nobody caught. A share φ of it
+   comes from conflict (haste, secrecy, racing) and falls as progressors
+   spread. The rest is accident that virtue does not prevent; only the gap
+   shrinks it.
 3. **External.** An asteroid, a gamma-ray burst, the star ageing. Nobody
-   governs this. It is negligible during the transition and, afterwards, it
-   is the only thing left, so it is what sets how long a survivor survives.
+   governs it. Once everything else is retired, it sets how long a survivor
+   survives.
 
-**The formulas.** Survival through the transition is the exponential of the
-total accumulated hazard, and the three hazards add:
+**The formulas.**
 
-    f_v = exp( −[ M + I_e + X ] )
+    p_m(t) = p_m0 (1 − s(t)) e^(d t)
+    p_e(t) = p_e0 [ φ (1 − s(t)) + (1 − φ) ] e^(d t)
+    h(t)   = p_m(t) + p_e(t) + p_x                    for all t ≥ 0
+    S(t)   = exp( −∫₀ᵗ h(u) du )
 
-*Malice.* Let the malice hazard be proportional to the non-sage fraction:
-p_m(t) = p_m0 · (1 − s(t)). Integrating over the transition,
+There is no closed form. Before the transition s < s_max·e⁻¹² and ∫h is
+exact; across it the hazard is integrated numerically; after it s = s_max and
+the remaining lifetime is exact in the exponential integrals (A.11).
 
-    M = p_m0 ∫₀^τ (1 − s₀ e^(g u)) du = p_m0 [ τ − (1 − s₀)/g ] ≈ p_m0 τ (1 − 1/K)
+**What a negative gap does.** With d < 0 every reducible term shrinks
+geometrically, and its total over all time is finite: once s = s_max the
+remainder is A/|d|, where A is the reducible hazard left at that moment.
+Survival has a floor, exactly as in A.3, and a survivor then lives about
+1/p_x = 10⁸ years. **A hazard you keep shrinking cannot eventually catch
+you; only one you leave standing can.** With d = 0 the error virtue does not
+touch, p_e0(1 − φ) = 0.21%/yr at the realistic baseline, stays for good, and
+survivors last a few centuries.
 
-The bracket says that the entire mechanism of moral improvement removes only
-a fraction 1/K = 4.8% of the malice exposure, because s(t) is close to zero
-for almost all of τ. Substituting τ = K/g and writing R = p_m0/g:
-
-    M = R (K − 1)
-    exp(−M) = exp(−R ln(1/s₀) + R) = s₀^R · e^R = (e · s₀)^R
-
-So the malice term keeps a closed form: it is exactly what a fixed hazard
-p_m0 would give over the transition, with s₀ replaced by e·s₀ (e here is
-Euler's number, 2.718…, not the competence rate). The page notes that this
-moves the moral threshold from 0.667 to 0.700 and nothing else.
-
-*Error.* Let the error hazard compound at the capability gap d = c − e:
-p_e(t) = p_e0 · e^(d t). Then
-
-    I_e = p_e0 ∫₀^τ e^(d u) du = p_e0 (e^(d τ) − 1) / d
-
-At d = 0 this is the removable limit p_e0 τ. For d > 0 it grows exponentially
-in d τ, and for d < 0 it saturates at p_e0/|d|.
-
-*External.* Constant p_x, so X = p_x τ. For the page's numbers, p_x τ ≈
-3 × 10⁻⁵, which is negligible. After the transition, p_x is the only hazard
-left, so a survivor's expected lifetime is the mean of an exponential:
-
-    L_ℓ = 1 / p_x = 10⁸ years
-
-Putting the three together:
-
-    f_v = (e · s₀)^R · exp(−I_e) · exp(−p_x τ_v)
+**Institutions.** What raises e is the machinery of error correction: open
+criticism, replication, audit, a press nobody owns. Those institutions work
+only while the people inside them will not game them. Progressors rise into
+government and business gradually and change institutions from within; that
+is how a minority lowers risk before it is a majority, and why the
+transition is a movement of the whole civilization, beginning with
+understanding and then choice.
 
 *Reviewer's notes.*
 
 1. Adding hazards and multiplying survivals is exact for independent
-   competing risks. The model assumes malice, error and external events are
-   independent within a year. Correlated failure (an error that provokes a
-   war) would raise the total hazard above the sum.
-2. The linear form p_m(t) ∝ (1 − s) is the simplest choice. Any form in
-   which malice falls only as the sage fraction rises gives the same
-   qualitative result, because s is near zero for most of τ regardless.
-3. p_e0 = 10⁻⁵ is a placeholder. No one has measured it. Because I_e is
-   exponential in d τ, the *shape* of the competence condition is robust but
-   its *location* is not. This is the softest number in the model.
-4. All three terms treat a civilization as a single target until it
-   saturates: one catastrophe ends everyone, so survival multiplies year by
-   year as in A.2. Dispersal is the obvious objection, and its force depends
-   on separation. Settlements within one system are days to months apart.
-   That decorrelates p_x, since no single impact reaches every body, but
-   barely touches p_m or p_e: weapons and pathogens cross the distance, and
-   every settlement builds from the same designs. Each settlement also
-   carries its own malice and error, so n settlements with correlated
-   failure modes face roughly n times the exposure, while gaining protection
-   only against the term that is already negligible during the transition.
-   Across interstellar distance the separation is years to centuries, the
-   hazards decouple, and the civilization survives if any colony does,
-   S = 1 − ∏(1 − Sᵢ) over effectively independent colonies. That is a real
-   escape, by distance rather than character, and the model assumes it does
-   not arrive before saturation (A.9, items 13 and 14).
+   competing risks. Correlated failure (an error that provokes a war) would
+   raise the total above the sum.
+2. The shared factor e^(dt) is the model's one structural bet. If malice
+   ignored the gap, R\* would again be a necessary condition (A.7).
+3. p_e0 is unmeasured. d₁ is roughly proportional to it (A.7). This is the
+   softest number in the model.
+4. All three terms treat a civilization as a single target until the
+   transition ends. Dispersal counts only for a settlement that could rebuild
+   technological civilization on its own. Within one system, settlements are
+   days to months apart: that decorrelates p_x, but barely touches p_m or
+   p_e, since weapons and pathogens cross the distance, every settlement
+   builds from the same designs, and each brings its own malice and error.
+   Across interstellar distance the hazards decouple, and the civilization
+   survives if any colony does, S = 1 − ∏(1 − Sᵢ). But the power to destroy
+   yourself arrives long before the power to leave, so dispersal comes after
+   the filter, not instead of it (A.9, items 13 and 14).
 
 ---
 
-## A.6 The count: Drake, split in two
+## A.6 The count: Drake, counted past the transition
 
 **In plain words.** The Drake equation multiplies the rate at which
-civilizations appear by how long they last. It uses one average lifetime.
-That average hides the whole problem, because there are two very different
-populations: civilizations that never complete the transition, which last
-maybe a hundred years, and civilizations that do, which last a hundred
-million. Averaging a hundred with a hundred million tells you nothing about
-either. So we split the equation into a doomed branch and a surviving one,
-and separately ask whether a survivor would be *detectable*.
+civilizations appear by how long they last. Almost every civilization dies
+young, and a few, if any, last for epochs, so one average lifetime hides
+everything. The count here is only the civilizations still alive past the
+end of their transition. The whole expected lifetime would not do: at a 1%
+annual hazard the ones that die young contribute about one civilization's
+worth on their own (Ṅ/h₀ = 0.01/0.01), whatever happens later, and would
+drown the signal.
 
-**The formula.** In a galaxy in steady state, the number of civilizations
-present at any moment is arrival rate × fraction surviving × lifetime
-(Little's law). Splitting by branch and multiplying each by its detectability
-f_c:
+**The formula.** In a galaxy in steady state (Little's law):
 
-    N_obs = Ṅ × [ (1 − f_v) · f_c,s · L_s  +  f_v · f_c,ℓ · L_ℓ ]
+    N = Ṅ ∫_τ^∞ S(t) dt
 
-The page's headline number is the second branch, before detectability:
-
-    N = Ṅ · f_v · L_ℓ = Ṅ · f_v / p_x
-
-The first branch has L_s of order 1/p_m0 ≈ 100 years, seven orders of
-magnitude below L_ℓ, and is dropped from the count.
+The hazards run on unchanged across τ_v; τ_v only decides who is counted.
+Detectability is not in N; the silence is taken up in A.8.
 
 *Reviewer's note.* Little's law needs the arrival rate to have been roughly
-steady over at least one lifetime L_ℓ = 10⁸ years. The galaxy is ~10¹⁰ years
-old and has been producing metal-rich stars for most of that, so the
-assumption is reasonable, though Ṅ itself is an unknown that absorbs the
-first five Drake terms. Ṅ = 0.01 per year is an assumption. Section A.7
-shows the threshold depends on it only through a logarithm.
+steady over a survivor's lifetime, about 10⁸ years. The galaxy is ~10¹⁰
+years old, so the assumption is reasonable, though Ṅ itself is an unknown
+that absorbs the first five Drake terms.
 
 ---
 
-## A.7 Two conditions, not one
+## A.7 Two thresholds
 
-**In plain words.** The question "does at least one transitioned
-civilization exist in the galaxy?" is N ≥ 1. Because N is a product of three
-survival factors, it fails if *any one* of them is small enough. Two of them
-depend on us, and they give two separate tests that cannot be traded against
-each other.
+**In plain words.** The question "should the galaxy hold survivors?" is
+N ≥ 1. Two thresholds describe where that line sits.
 
-- The **moral condition**: improvement has to outrun malice. Specifically
-  the ratio R = p_m0 / g has to be below a threshold R\* ≈ 0.70. If your
-  annual malice risk is more than about seven tenths of your annual moral
-  improvement rate, the transition takes too long and the dice win.
-- The **competence condition**: capability cannot outrun competence by more
-  than a small margin d\* for the length of the transition, or the error
-  term compounds and removes everyone regardless of how good they have
-  become.
+- The **moral threshold** R\*: the ratio p_m0/g at which malice alone, with
+  no error and no gap, brings N to one. It is now a marker rather than a
+  wall: malice carries the gap too, so a lead in competence can carry a
+  civilization over R\*.
+- The **competence threshold** d₁: the gap at which N reaches one with every
+  hazard included. **At the realistic baseline it is about −0.07% a year:
+  competence has to outpace capability, not keep pace with it, through the
+  transition and after it.**
 
-**The moral threshold.** Set d = 0 and neglect p_x τ. Then N ≥ 1 becomes
+**The moral threshold.** R\* comes from bisection and depends on g and s_max,
+because a ceiling below one leaves malice standing:
 
-    (e · s₀)^R · Ṅ / p_x ≥ 1
-    R ≤ R* = ln(Ṅ / p_x) / ln(1 / (e · s₀)) = ln(10⁶) / ln(3.68 × 10⁸) = 0.700
-
-R\* is a ratio of two logarithms, which is why it barely moves when the badly
-known inputs move. Sweeping each input over four orders of magnitude while
-holding the other fixed:
-
-| s₀ | R\* | | Ṅ / p_x | R\* |
-|---|---|---|---|---|
-| 10⁻⁷ | 0.914 | | 10⁴ | 0.467 |
-| 10⁻⁸ | 0.793 | | 10⁵ | 0.584 |
-| 10⁻⁹ | **0.700** | | 10⁶ | **0.700** |
-| 10⁻¹⁰ | 0.627 | | 10⁷ | 0.817 |
-| 10⁻¹¹ | 0.568 | | 10⁸ | 0.934 |
-
-Getting s₀ wrong by a factor of ten thousand in either direction, or the
-galaxy's civilization rate wrong by the same factor, changes R\* by less than
-a factor of two. Whatever else is uncertain, "malice must be well under the
-improvement rate" survives.
-
-**The competence threshold.** The page defines d\* as the gap at which the
-error term alone would halve the survivors:
-
-    I_e(d*, τ_v) = ln 2
-
-solved numerically by bisection, since I_e is monotone in d. It is a marker
-on the diagram, not a hard boundary; the coloured region on the page is the
-true joint condition N ≥ 1. The reason for the marker is to show how sharp
-the cliff is. At g = 0.6% a year (τ_v = 3,454 years) and p_e0 = 10⁻⁵:
-
-| d (per year) | e^(d τ) | I_e | exp(−I_e) |
+| | g = 0.3% | 0.6% | 1.0% |
 |---|---|---|---|
-| 0 | 1 | 0.035 | 0.966 |
-| +0.05% | 5.6 | 0.092 | 0.912 |
-| +0.10% | 32 | 0.31 | 0.74 |
-| +0.13% = d\* | 89 | 0.69 | 0.50 |
-| +0.20% | 1,000 | 5.0 | 0.007 |
-| +0.30% | 31,600 | 105 | 10⁻⁴⁶ |
+| s_max = 0.90 | 0.235 | 0.208 | 0.188 |
+| 0.95 | 0.265 | 0.237 | 0.217 |
+| 0.99 | 0.333 | **0.304** | 0.283 |
+| 0.999 | 0.432 | 0.402 | 0.380 |
+| 1.00 | 0.667 | 0.667 | 0.667 |
 
-Doubling the gap from 0.1% to 0.2% costs a factor of a hundred. Tripling it
-costs everything. That is what "exponential in an unmeasured rate" means in
-practice, and it is why the page calls the second threshold soft.
+At s_max = 1 it is 0.667 at every g, close to the earlier closed form.
+At Hellman's 1% (R = 1.67, far over R\*) and the optimistic error baseline,
+N is 9 × 10⁻¹⁴ at d = 0, 0.47 at d = −0.06% and 62 at d = −0.10%.
 
-**The two conditions are coupled.** τ_v = K/g appears inside I_e. A slower
-moral improvement rate lengthens the transition, which means more years
-exposed to compounding capability, which tightens d\*. Halving g from 0.6%
-to 0.3% doubles R (for the same p_m0) *and* shrinks d\* from 0.131% to
-0.052%. Moral slowness is punished twice, and no amount of competence buys
-back a failed moral condition, or vice versa.
+**The competence threshold.** At the realistic baseline (p_m0 0.3%, p_e0 0.7%,
+g 0.6%), the cumulative hazard through the transition and the count:
 
-**Worked examples.** All at p_e0 = 10⁻⁵, p_x = 10⁻⁸, Ṅ = 0.01.
+| d (per year) | Malice to τ | Error to τ | N |
+|---|---|---|---|
+| +0.05% | 28.2 | 76.5 | 2 × 10⁻⁴⁶ |
+| 0 | 10.4 | 25.8 | 9 × 10⁻¹⁶ |
+| −0.03% | 6.44 | 15.6 | 4 × 10⁻⁵ |
+| −0.05% | 4.92 | 11.7 | 0.03 |
+| **−0.067% = d₁** | 4.04 | 9.57 | **1** |
+| −0.10% | 2.90 | 6.81 | 59 |
+| −0.20% | 1.50 | 3.50 | 6,770 |
 
-| p_m0 | g | d | R | τ_v (yr) | moral | competence | N |
+A cliff, not a slope: between −0.05% and −0.10% the count moves by more
+than three orders of magnitude.
+
+d₁ barely moves with s_max (−0.0672% to −0.0665% from 0.90 to 1.00) or φ
+(−0.0645% to −0.0705% from 1 to 0), and by less than a factor of three with
+g across a twenty-fold range (−0.072% at 0.1%, −0.032% at 2%). It is roughly
+proportional to the baseline error rate:
+
+| p_e0 | 10⁻⁵ | 10⁻⁴ | 10⁻³ | 3 × 10⁻³ | 7 × 10⁻³ | 10⁻² | 2 × 10⁻² |
 |---|---|---|---|---|---|---|---|
-| 1.0% | 0.6% | +0.10% | 1.67 | 3,454 | fail | pass | 4 × 10⁻⁹ |
-| 0.4% | 0.6% | +0.10% | 0.67 | 3,454 | pass | pass | 1.4 |
-| 0.4% | 0.6% | 0 | 0.67 | 3,454 | pass | pass | 1.9 |
-| 0.4% | 0.6% | +0.20% | 0.67 | 3,454 | pass | fail | 0.013 |
-| 0.2% | 0.3% | +0.05% | 0.67 | 6,908 | pass | pass | 1.1 |
+| d₁ | −0.001% | −0.002% | −0.011% | −0.031% | **−0.067%** | −0.091% | −0.166% |
 
-The first row is where the page's dials start. The second and fourth differ
-only in d, and the count moves by two orders of magnitude.
+**Where the line sits does not depend on where τ_v is put.** At d = −0.06%,
+counting from the 50%, 90% or 99% point gives N = 0.30690 each time.
+
+**Worked examples.** p_x = 10⁻⁸, Ṅ = 0.01, s_max 0.99, φ 0.7.
+
+| p_m0 | p_e0 | g | d | R | τ_v (yr) | N |
+|---|---|---|---|---|---|---|
+| 1.0% | 10⁻⁵ | 0.6% | 0 | 1.67 | 4,218 | 9 × 10⁻¹⁴ |
+| 0.3% | 10⁻⁵ | 0.6% | 0 | 0.50 | 4,218 | 0.009 |
+| 0.4% | 10⁻⁵ | 0.6% | +0.10% | 0.67 | 4,218 | 1 × 10⁻⁵⁶ |
+| 0.4% | 10⁻⁵ | 0.6% | −0.07% | 0.67 | 4,218 | 5,454 |
+| 0.3% | 0.7% | 0.6% | 0 | 0.50 | 4,218 | 9 × 10⁻¹⁶ |
+| 0.3% | 0.7% | 0.6% | −0.07% | 0.50 | 4,218 | 1.7 |
+| 0.3% | 0.7% | 0.6% | −0.20% | 0.50 | 4,218 | 6,770 |
+| 1.0% | 0.7% | 0.6% | −0.10% | 1.67 | 4,218 | 0.07 |
+
+Every surviving row has a negative gap. None with d ≥ 0 survives at the
+realistic baseline.
+
+**A first, crude estimate of d.** The one proxy with any history is near
+misses per unit of destructive capacity in the nuclear era. The Chatham House
+catalogue lists thirteen cases of near nuclear use between 1962 and 2002,
+about one every three years, while arsenals peaked near 70,000 warheads in
+1986 and then fell by more than half. Thirteen events cannot resolve a trend
+in their rate much finer than a couple of percent a year over forty years,
+so the proxy rules out a large gap in either direction and cannot tell
+−0.07% from zero. It is one technology, the catalogue is not a census, and
+warheads are a poor measure of capability. Crude, and labelled so.
 
 ---
 
 ## A.8 The conclusions
 
-The model does not resolve the Fermi question. It says the question has two
-possible answers and that two measurable ratios pick between them.
+**The negative result comes first.** On the course we are on, a hazard left
+standing, however small, makes self-destruction close to certain (A.2).
+Nothing in the record shows the total hazard falling. This is the strongest
+claim, and it needs the fewest assumptions.
 
-**If both conditions are cleared, the galaxy is crowded and quiet.** Even a
-filter that removes 99.99% of arising civilizations (f_v = 10⁻⁴) leaves
-N = 0.01 × 10⁻⁴ / 10⁻⁸ = 100 transitioned civilizations alive at any time,
-because each survivor lasts a hundred million years. The silence then cannot
-be explained by the filter. It has to be explained by detectability, f_c,ℓ,
-being near zero, and the paper's argument is that the reason is restraint:
-survivors who reason from shared premises would independently conclude that
-contact forecloses the free choosing of virtue, which is the one thing that
-would have made contact worthwhile. This is a zoo hypothesis with one
-property the others lack: the convergence on silence is not a sociological
-coincidence that a single defector could break, but what correct reasoning
-from a shared value premise produces. (The empirical premise is not shared,
-so some survivors may have got it wrong.)
+**The surviving path is a conditional.** If a civilization were to survive,
+it would have to look like this: **if competence can outpace capability by
+about 0.07% a year for the length of the transition, and keep that lead
+afterwards, the galaxy should hold survivors.** d is the open question, and
+A.7 gives the only crude estimate there is.
 
-**If either condition is missed, the galaxy is empty.** Nothing clears the
-filter. There is no paradox left to solve. The sky is quiet because nobody
-is in it, and we are early rather than overlooked.
+**Virtue is chosen for its own sake.** The payoff lies thousands of years
+out, and no instrumental motive survives that discount. The filter spares
+civilizations that stopped treating survival, wealth and winning as goods;
+it does not reward wanting to survive. This appendix, like the essay, is an
+illumination of the default path, not a sales pitch for virtue.
 
-**The asymmetry.** Reaching the first branch requires clearing *both*
-conditions. Reaching the second requires missing *either*.
+**After the transition.** Survivors keep retiring hazards and never build
+capability ahead of understanding, so d stays negative and the remaining
+risk shrinks to a finite total. Nuclear decommissioning (about 70,000
+warheads in 1986, about 12,000 now) is the small example on the record;
+declining to race for superintelligence would be the same move made in
+advance. Races are what force capability ahead of understanding, so virtue is
+what makes caution affordable.
 
-**The condition beneath both.** Both branches assume the transition finishes
-before interstellar settlement arrives. Write T_s for that date. The
-transition finishes first while τ_v < T_s, that is while
+**The residue.** A civilization does not need everyone to choose virtue, only
+enough that the rest never get access to civilization-ending power. That
+access is denied by retiring hazards, not by policing people.
 
-    g > g_s = K / T_s
+**Coercion is not a substitute.** A surveillance state of the kind Bostrom
+describes concentrates malice in the controllers rather than removing it. A
+hazard left standing ends in certain extinction (A.2), so coercion survives
+only if the controllers are reliably good, which is virtue again.
 
-Taking T_s = 10⁴ years as a hypothesis gives g_s ≈ 0.21% a year. At
-g = 0.6% the transition takes about 3,450 years and finishes first; at 0.1%
-it takes about 20,700 years and does not, and a civilization spread across
-stars by then could survive by distance whatever R and d are. Because τ_v
-grows as g falls, this escape is most available exactly where the model is
-bleakest. One observation cuts against it: a civilization that dispersed
-without transitioning would carry its expansion with it, and would be the
-loud population the sky does not show.
+**If the gap stays below d₁, the galaxy is crowded and quiet.** Even a filter
+that removes 99.99% of arising civilizations leaves about a hundred alive,
+because each survivor lasts about 10⁸ years. The silence then cannot be
+explained by the filter, and has to rest on restraint. The cosmopolitan
+objection is that Stoic sages owe help to everyone, so why would they not
+teach? Because virtue must be chosen (Epictetus, *Discourses* 1.1.23), and
+instruction from a vastly superior civilization would land as authority, not
+as an offer the hearer could freely assess. This rests on a premise from
+Stoic physics, named so a reader can accept or reject it: reason (*logos*) is
+universal, so rational survivors of any species reach the same conclusions in
+different words, and humans are born with starting points toward virtue
+(*aphormai*), not the virtues.
 
-**What is ours.** R = p_m0/g and d = c − e. All four terms are properties of
-the civilization doing the reasoning, not of the galaxy. Which branch we are
-on is not written anywhere.
+**If any hazard is left standing, the galaxy is empty.** There is no paradox
+left to solve. The sky is quiet because nobody is in it, and we are early
+rather than overlooked.
+
+**The asymmetry.** The empty branch needs only one hazard left standing. The
+crowded branch needs the gap kept negative indefinitely.
 
 ---
 
@@ -431,73 +456,56 @@ on is not written anywhere.
 A reviewer should be able to attack each of these individually.
 
 1. **Memorylessness.** Each year's hazard is independent of previous years,
-   given the current rates. This is the standard survival-analysis
-   assumption and is what makes the exponential forms exact.
+   given the current rates.
 2. **Additive hazards.** Malice, error and external hazards are independent
-   competing risks, so total hazard is their sum. Correlated failure would
-   make the model optimistic.
-3. **Exponential growth of the sage fraction**, s(t) = s₀ e^(gt), all the
-   way to s = 1. This is the load-bearing assumption. Logistic growth with a
-   ceiling below 1 leaves a permanent non-sage residue, a permanent malice
-   floor, and (by A.2) eventual certain extinction. The model is a best case
-   in this respect.
-4. **Malice proportional to the non-sage fraction.** Linear, with no
-   threshold effects in either direction (a sage minority might suppress
-   malice disproportionately through institutions, or a malicious minority
-   might retain disproportionate destructive capacity).
-5. **Error hazard exponential in the capability gap**, with d constant over
-   the transition. A civilization that noticed the gap and closed it would
-   face a time-varying d; the model has no feedback from error to
-   competence.
-6. **Constant external hazard** p_x = 10⁻⁸ per year, giving L_ℓ = 10⁸ years.
-   This is of the order of the interval between major impact events and
-   nearby gamma-ray bursts in current estimates, but it is a choice.
-7. **Steady state** in the galaxy over ~10⁸ years, so that N = Ṅ f_v L_ℓ.
+   competing risks. Correlated failure would make the model optimistic.
+3. **Logistic growth of the progressor share** to a ceiling s_max set by
+   culture. A lower ceiling moves R\* a great deal and d₁ hardly at all.
+4. **Malice and conflict error proportional to the non-progressor share.**
+   The share is near zero for most of the transition, so the form matters
+   only near the end.
+5. **One gap drives malice and error, and keeps its value afterwards.** The
+   model has no feedback from error to competence and no drift in d after
+   τ_v.
+6. **Constant external hazard** p_x = 10⁻⁸ per year, of the order of the
+   interval between major impacts and nearby gamma-ray bursts.
+7. **Steady state** in the galaxy over ~10⁸ years.
 8. **Ṅ = 0.01 per year.** Absorbs the astrophysical and biological terms of
-   the Drake equation. Enters R\* only through a logarithm.
-9. **s₀ = 10⁻⁹** from one sentence of Seneca and two round demographic
-   numbers. Order-of-magnitude at best; enters R\* only through a logarithm.
-10. **p_e0 = 10⁻⁵ per year.** Unmeasured. Enters the competence condition
-    linearly inside I_e, and thereby sets the *location* of d\*, though not
-    its shape.
+   the Drake equation.
+9. **s₀ = 10⁻⁹** from one sentence of Seneca and two round numbers, used only
+   as a floor.
+10. **p_e0 = 0.7% realistic, 10⁻⁵ optimistic.** Unmeasured. d₁ is roughly
+    proportional to it.
 11. **"Exists" means N ≥ 1**, a galactic expectation value. It says nothing
     about distance or reachability.
-12. **The transition ends at saturation** (s = 1) and the hazard afterwards
-    is p_x alone. Post-transition malice and error are taken as zero.
-13. **A single target until saturation.** One catastrophe ends the whole
-    civilization, so the hazards integrate over one population. Dispersal
-    within a planetary system does not relax this for p_m or p_e (A.5,
-    note 4). This is the formal counterpart of the working note's claim that
-    hazard decline needs something like character (A2 on the formalism
-    page): constraint, or dispersal that does decouple the hazards, would
-    break it.
-14. **Interstellar settlement arrives after saturation**, T_s > τ_v, with
-    T_s = 10⁴ years taken as a hypothesis rather than an estimate (A12 on
-    the formalism page). Load-bearing: it holds only while g > K/T_s
-    ≈ 0.21% a year. Below that, N no longer describes the civilization. The
-    working note carries T_s as a dial from 10³ to 10⁶ years; the count does
-    not change with it, it only marks where the count stops applying.
+12. **Progressors are identified without reference to risk**, by treating
+    externals as indifferent and acting from reason. Otherwise the argument
+    is circular.
+13. **A single target until the transition ends.** One catastrophe ends the
+    whole civilization. Dispersal within a system does not relax this for
+    p_m or p_e (A.5, note 4). This is the formal counterpart of A2 on the
+    formalism page.
+14. **Interstellar settlement arrives after the transition**, T_s > τ_v, with
+    T_s = 10⁴ years taken as a hypothesis (A12 on the formalism page). It
+    holds while g exceeds about 0.25% a year.
+15. **Logos is universal, and people are born with starting points toward
+    virtue.** A premise from Stoic physics. Only the explanation of the
+    silence depends on it (A13 on the formalism page).
 
 ---
 
 ## A.10 What would move the result
 
-- **Measuring g.** Is the fraction of people who meet a defensible standard
-  of sagehood growing at all, and at what rate? Any historical or
-  cross-cultural estimate, however rough, is the single most valuable input
-  the model lacks.
-- **Measuring d.** Rates of capability growth are easier to estimate than
-  competence, but there are proxies: the frequency of near-miss catastrophic
-  errors per unit of destructive capacity over time.
-- **Bounding p_e0.** Even a factor-of-ten bound would fix the location of
-  d\* to within a fraction of a percent per year.
-- **Replacing the exponential growth assumption** with a logistic one and
-  asking what ceiling on s is compatible with survival. This is the
-  extension most likely to change the qualitative conclusion.
-- **Dating interstellar settlement.** T_s is a hypothesis, and the crossing
-  g_s = K/T_s moves with it one for one in log terms: 10³ years gives 2.1%,
-  10⁵ gives 0.021%. A credible route to independent colonies within τ_v
-  would retire item 14 at that g, and with it the single-target framing.
+- **Measuring d.** The near-miss proxy in A.7 is the first attempt and far
+  too coarse. Accident and near-miss records per unit of destructive
+  capacity, across more than one technology, are the single most valuable
+  input the model lacks.
+- **Bounding p_e0.** d₁ is roughly proportional to it; a factor-of-ten bound
+  would fix d₁ to within a factor of ten.
+- **Measuring g and s_max.** Any long-run series closer to the Stoic
+  criteria than homicide would do. The ceiling is cultural, so it can move.
+- **Dating interstellar settlement.** T_s is a hypothesis. The crossing
+  g_s at which τ_v = T_s is about 2.5% at 10³ years and 0.025% at 10⁵ years.
   Modelling what dispersal does to N once it arrives, rather than only
   flagging it, is the natural extension.
 
@@ -505,42 +513,96 @@ A reviewer should be able to attack each of these individually.
 
 ## A.11 Reproduction
 
-The page's arithmetic is implemented in
-`academy/web/src/components/playground/LongFilter.tsx`, with the constants in
-`academy/web/src/content/playground/long-filter.ts`. The following is
-sufficient to reproduce every number in this appendix:
+The page's model is implemented in
+`academy/web/src/components/playground/long-filter-model.ts`, used by
+`academy/web/src/components/playground/LongFilter.tsx`, with the constants and
+presets in `academy/web/src/content/playground/long-filter.ts`. The following
+mirrors the model step for step and reproduces its numbers:
 
 ```python
-from math import log, exp, e
+from math import log, exp, expm1, inf
 
-s0, Ndot, px, pe0 = 1e-9, 0.01, 1e-8, 1e-5
-K = log(1 / s0)                                   # 20.72
-R_star = log(Ndot / px) / log(1 / (e * s0))       # 0.700
-T_s = 1e4                                         # settlement, a hypothesis
-g_s = K / T_s                                     # 0.00207, tau_v = T_s here
+s0, Ndot, px = 1e-9, 0.01, 1e-8      # s0: Seneca's phoenix rate, a floor for progressors
+EDGE, TAU_F = 12, 0.99               # logistic margin in 1/g; tau = 99% of the ceiling
 
-def I_e(d, tau):
-    if abs(d) < 1e-12:
-        return pe0 * tau
-    return pe0 * (exp(d * tau) - 1) / d
+def share(t, g, sm):                 # ds/dt = g s (1 - s/sm), s(0) = s0
+    return sm if -g * t < -700 else sm / (1 + (sm / s0 - 1) * exp(-g * t))
 
-def N(pm0, g, d):
-    tau = K / g
-    M = pm0 * (1 - 1 / K) * tau                    # = R (K - 1) = -ln (e s0)^R
-    return Ndot * exp(-(M + I_e(d, tau) + px * tau)) / px
+def t_frac(f, g, sm):
+    return (log(sm / s0 - 1) + log(f / (1 - f))) / g
 
-def d_star(tau, lo=-0.02, hi=0.05):
-    for _ in range(80):
-        mid = (lo + hi) / 2
-        lo, hi = (mid, hi) if I_e(mid, tau) < log(2) else (lo, mid)
+def E1x(c):                          # e^c E1(c)
+    if c < 1:
+        s, term = 0.0, 1.0
+        for k in range(1, 40):
+            term *= -c / k; s += term / k
+        return exp(c) * (-0.5772156649015329 - log(c) - s)
+    b, cc, dd = c + 1, 1e300, 1 / (c + 1); h = dd
+    for i in range(1, 200):
+        a = -i * i; b += 2
+        dd = 1 / (a * dd + b); cc = b + a / cc
+        h *= cc * dd
+        if abs(cc * dd - 1) < 1e-14: break
+    return h
+
+def Einx(c):                         # e^-c Ein(c)
+    if c < 40:
+        s, term = 0.0, 1.0
+        for k in range(1, 200):
+            term *= c / k; s += term / k
+            if term / k < s * 1e-16: break
+        return exp(-c) * s
+    r = 1 / c
+    return r * (1 + r + 2 * r**2 + 6 * r**3 + 24 * r**4)
+
+def tail(c, d):                      # further lifetime once s = s_max
+    if c <= 0: return 1 / px
+    if d == 0: return 1 / (c + px)
+    if d < 0: return exp(-c / -d) / px + Einx(c / -d) / -d
+    j = E1x(c / d) / d
+    return j / (1 + px * j)
+
+def N(pm0, pe0, g, d, sm=0.99, phi=0.7):
+    """Ndot x expected lifetime past the transition; hazards never switch off:
+    p_m = pm0 (1-s) e^(dt),  p_e = pe0 [phi (1-s) + 1 - phi] e^(dt),  + px."""
+    tau = t_frac(TAU_F, g, sm)
+    mid = log(sm / s0 - 1) / g
+    t1, t_end = max(0.0, mid - EDGE / g), mid + EDGE / g
+    H = (pm0 + pe0) * (t1 if abs(d * t1) < 1e-9 else expm1(d * t1) / d) + px * t1
+    if H >= 745: return 0.0
+    steps = min(6000, max(200, int(-(-(t_end - t1) * max(g, abs(d)) // 0.05))))
+    grid = [t1 + i * (t_end - t1) / steps for i in range(steps + 1)]
+    grid = sorted(set(grid + [tau]))
+    h = lambda t: (pm0 * (1 - share(t, g, sm))
+                   + pe0 * (phi * (1 - share(t, g, sm)) + 1 - phi)) * exp(d * t) + px
+    post, prev = 0.0, h(grid[0])
+    for a, b in zip(grid, grid[1:]):
+        cur = h(b); dH = 0.5 * (prev + cur) * (b - a)
+        if a >= tau:
+            post += exp(-H) * (b - a) * (-expm1(-dH) / dH if dH > 1e-12 else 1)
+        H += dH; prev = cur
+        if H >= 745: return 0.0
+    c = (pm0 * (1 - sm) + pe0 * (phi * (1 - sm) + 1 - phi)) * exp(d * grid[-1])
+    return Ndot * (post + exp(-H) * tail(c, d))
+
+def bisect(f, lo, hi, geometric=False):
+    for _ in range(60):
+        m = (lo * hi) ** 0.5 if geometric else (lo + hi) / 2
+        lo, hi = (m, hi) if f(m) >= 1 else (lo, m)
     return lo
 
-print(N(0.004, 0.006, 0.001))   # 1.43
-print(d_star(K / 0.006))        # 0.00131
+d1 = lambda pm0, pe0, g, sm=0.99, phi=0.7: bisect(lambda d: N(pm0, pe0, g, d, sm, phi), -0.05, 0.02)
+R_star = lambda g, sm=0.99: bisect(lambda R: N(R * g, 0, g, 0, sm, 1), 1e-4, 50, True)
+
+print(N(0.003, 0.007, 0.006, 0))         # realistic, d = 0          8.8e-16
+print(N(0.003, 0.007, 0.006, -0.0006))   # realistic, d = -0.06%     0.307
+print(d1(0.003, 0.007, 0.006))           # competence threshold     -0.000666
+print(R_star(0.006))                     # moral threshold           0.304
+print(t_frac(TAU_F, 0.006, 0.99))        # transition length         4,218 yr
 ```
 
 The plate in section A.2 draws 1,000 marks from a fixed linear congruential
 seed so that the field is stable across redraws; only the number lit changes.
 The phase diagram in A.7 evaluates N on a grid of (R, d), log-spaced in R
-from 0.02 to 2.5 and linear in d from −0.2% to +0.4%, and colours cells by
+from 0.01 to 10 and linear in d from −0.5% to +0.3%, and colours cells by
 whether N ≥ 1.

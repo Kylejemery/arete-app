@@ -1,19 +1,17 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import {
-  ARISING_PER_YEAR,
   BYLINE,
+  CEILING_MAX,
+  CEILING_MIN,
   CIVILIZATIONS,
   DEFAULT_PRESET,
-  EXTERNAL_HAZARD,
   GAP_MAX,
   GAP_MIN,
   HALVING_YEARS,
   LEDGER,
-  LOG_DISTANCE,
-  MORAL_THRESHOLD,
   PRESETS,
   RATIO_MAX,
   RATIO_MIN,
@@ -26,6 +24,15 @@ import {
   SETTLEMENT_YEARS,
 } from '@/content/playground/long-filter'
 import styles from './LongFilter.module.css'
+import {
+  type Params,
+  countOf,
+  countRow,
+  criticalGap,
+  evaluate,
+  moralThreshold,
+  transitionYears,
+} from './long-filter-model'
 
 // ── the arithmetic ───────────────────────────────────────────────────────────
 
@@ -55,66 +62,11 @@ function survival(p: number, years: number, decay: boolean): number {
   return Math.exp(-integral)
 }
 
-// ── the three-hazard model ───────────────────────────────────────────────────
-
-/**
- * The error integral across a transition of `tau` years.
- *
- * Error hazard starts at p_e0 and compounds at the capability gap d, so the
- * accumulated exponent is p_e0·(e^(dτ) − 1)/d. At d = 0 that is the removable
- * singularity p_e0·τ; far above it the exponent overflows and nothing survives.
- */
-function errorIntegral(gap: number, tau: number, errorBase: number): number {
-  if (Math.abs(gap) < 1e-12) return errorBase * tau
-  const x = gap * tau
-  if (x > 700) return Infinity
-  return (errorBase * (Math.exp(x) - 1)) / gap
-}
-
-/**
- * Transitioned civilizations expected alive right now.
- *
- * Malice contributes p_m0·(1 − 1/K)·τ, which is exactly (e·s₀)^R once τ = K/g
- * is substituted — so that term keeps its closed form. Error and the external
- * hazard are added in the exponent, and the survivors live 1/p_x years each.
- */
-function survivorCount(
-  malice: number,
-  growth: number,
-  gap: number,
-  errorBase: number,
-): number {
-  const tau = LOG_DISTANCE / growth
-  const exponent =
-    malice * (1 - 1 / LOG_DISTANCE) * tau +
-    errorIntegral(gap, tau, errorBase) +
-    EXTERNAL_HAZARD * tau
-  if (!isFinite(exponent)) return 0
-  return (ARISING_PER_YEAR * Math.exp(-exponent)) / EXTERNAL_HAZARD
-}
-
-/**
- * Where the line actually sits: the widest gap d₁ at which the count still
- * reaches one, bisected. This is the whole count, not the error term alone —
- * malice has already spent part of the budget before error starts compounding,
- * so d₁ tightens as the moral ratio worsens. It is not the formal note's d*,
- * which asks only that the error term cost less than half.
- *
- * Null when no gap in the search range brings the count to one (malice alone
- * has already spent the budget), Infinity when every gap does.
- */
-function criticalGap(malice: number, growth: number, errorBase: number): number | null {
-  let lo = -0.05
-  let hi = 0.02
-  if (survivorCount(malice, growth, lo, errorBase) < 1) return null
-  if (survivorCount(malice, growth, hi, errorBase) >= 1) return Infinity
-  for (let i = 0; i < 90; i++) {
-    const mid = (lo + hi) / 2
-    if (survivorCount(malice, growth, mid, errorBase) >= 1) lo = mid
-    else hi = mid
-  }
-  return lo
-}
+// ── the model ────────────────────────────────────────────────────────────────
+//
+// Lives in long-filter-model.ts: progressors growing logistically to s_max, one
+// gap d driving malice and error, no hazard switching off, and the count taken
+// from the expected lifetime past the transition.
 
 /** Both gauge sliders read the same scale: 0.01% to 3.16% a year. */
 const rateFromSlider = (v: number) => Math.pow(10, -4 + (v / 100) * 2.5)
@@ -130,6 +82,13 @@ const clampStep = (v: number) => Math.min(100, Math.max(0, v))
 const sliderFromRate = (r: number) => clampStep(((Math.log10(r) + 4) / 2.5) * 100)
 const sliderFromError = (r: number) => clampStep(((Math.log10(r) + 6) / 4.5) * 100)
 const sliderFromGap = (d: number) => clampStep(((d - GAP_MIN) / (GAP_MAX - GAP_MIN)) * 100)
+
+/** The ceiling dial, s_max, linear from 0.90 to 1.00; the conflict share φ, 0 to 1. */
+const ceilingFromSlider = (v: number) => CEILING_MIN + (v / 100) * (CEILING_MAX - CEILING_MIN)
+const sliderFromCeiling = (c: number) =>
+  clampStep(((c - CEILING_MIN) / (CEILING_MAX - CEILING_MIN)) * 100)
+const conflictFromSlider = (v: number) => v / 100
+const sliderFromConflict = (f: number) => clampStep(f * 100)
 
 /** The settlement dial: a thousand years to a million, log-scaled. */
 const SETTLE_LO = Math.log10(SETTLEMENT_MIN)
@@ -209,7 +168,7 @@ function yearsNote(p: number, years: number, decay: boolean): string {
 }
 
 /** IV. Malice against the published totals it is borrowed from. */
-function maliceNote(m: number): string {
+function maliceNote(m: number, rStar: number, g: number): string {
   const band =
     m >= 0.008
       ? 'At Hellman’s figure or above. That total counts accidents too, so as malice alone this is pessimistic.'
@@ -218,12 +177,12 @@ function maliceNote(m: number): string {
         : m >= 5e-4
           ? 'Below the superforecasters. Deliberate destruction would be rare by any published count.'
           : 'Far below any published estimate.'
-  const need = m / MORAL_THRESHOLD
-  return `${band} To clear the moral threshold, g has to reach ${pct(need, need < 0.001 ? 3 : 2)} a year.`
+  const limit = rStar * g
+  return `${band} At this g, malice alone clears the moral threshold only below ${pct(limit, limit < 0.001 ? 3 : 2)} a year; a lead in competence can carry the rest.`
 }
 
 /** IV. The improvement rate against the two historical anchors. */
-function growthNote(g: number): string {
+function growthNote(g: number, ceiling: number): string {
   const band =
     g < 0.003
       ? 'Slower than either historical anchor.'
@@ -232,11 +191,11 @@ function growthNote(g: number): string {
         : g < 0.03
           ? 'Near the pace at which literacy spread, 2% a year over two centuries.'
           : 'Faster than either historical anchor.'
-  return `${band} The sage fraction doubles every ${fmtYears(Math.LN2 / g)} years and saturates in ${fmtYears(LOG_DISTANCE / g)} years.`
+  return `${band} The progressor share doubles every ${fmtYears(Math.LN2 / g)} years at first and reaches 99% of its ceiling in ${fmtYears(transitionYears(g, ceiling))} years.`
 }
 
 /** IV. The baseline error rate, and what it adds up to with no gap at all. */
-function errorNote(e: number, g: number): string {
+function errorNote(e: number, flat: number): string {
   const band =
     e < 4e-6
       ? 'Below even the optimistic baseline this note first assumed.'
@@ -247,7 +206,6 @@ function errorNote(e: number, g: number): string {
         : e < 0.009
           ? 'The realistic range: most of a 1% published total is error rather than malice.'
           : 'Above the realistic range.'
-  const flat = e * (LOG_DISTANCE / g)
   const keep = Math.exp(-flat)
   return `${band} Even with competence keeping exact pace, the error integral comes to ${flat < 10 ? flat.toFixed(2) : flat.toFixed(0)} over the transition, which leaves ${keep >= 0.01 ? `${Math.round(keep * 100)}% of civilizations` : 'almost no civilizations'} standing.`
 }
@@ -266,18 +224,34 @@ function gapNote(d: number, e: number): string {
 
 // ── the plate ────────────────────────────────────────────────────────────────
 
+/** IV. The ceiling, as the hazard progressors leave standing once they stop spreading. */
+function ceilingNote(sm: number, m: number, e: number, phi: number): string {
+  const left = m * (1 - sm) + e * phi * (1 - sm)
+  const holdouts = (1 - sm) * 100
+  return `${holdouts < 0.05 ? 'Almost no one' : `${holdouts.toFixed(holdouts < 1 ? 1 : 0)}% of people`} never become progressors. Their share of malice and conflict error, ${pct(left, left < 1e-4 ? 4 : 3)} a year at today's capability, never goes away; only the gap can shrink it.`
+}
+
+/** IV. The conflict share of error, and the part virtue alone does not touch. */
+function conflictNote(phi: number, e: number): string {
+  const fixed = e * (1 - phi)
+  return `${Math.round(phi * 100)}% of error falls as progressors spread. The other ${Math.round((1 - phi) * 100)}%, ${pct(fixed, fixed < 1e-4 ? 4 : 3)} a year at today's capability, is accident that virtue does not prevent, and only competence outpacing capability shrinks it.`
+}
+
 /**
  * IV. Interstellar settlement against the transition. The model treats a
  * civilization as one target until it saturates; settlement around other stars
  * before then would decouple its fate and escape the filter by distance.
  */
-function settleNote(t: number, g: number): string {
-  const tau = LOG_DISTANCE / g
-  const crossing = LOG_DISTANCE / t
+function settleNote(t: number, g: number, ceiling: number): string {
+  const tau = transitionYears(g, ceiling)
+  const crossing = settleCrossing(t, ceiling)
   if (tau < t)
     return `The transition finishes in ${fmtYears(tau)} years, ${fmtYears(t - tau)} years before settlement arrives, so the single-target assumption holds and the count stands. It would stop holding below ${pct(crossing, 2)} a year.`
   return `Settlement arrives ${fmtYears(tau - t)} years before the transition finishes. A civilization spread across stars by then could escape by distance rather than character, and the count no longer describes it. The transition wins only above ${pct(crossing, 2)} a year.`
 }
+
+/** The improvement rate at which the transition takes exactly T_s years. */
+const settleCrossing = (t: number, ceiling: number) => (transitionYears(1, ceiling)) / t
 
 type Mark = { x: number; y: number; r: number }
 
@@ -357,19 +331,21 @@ function drawField(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  growth: number,
-  errorBase: number,
+  base: Omit<Params, 'malice' | 'gap'>,
   cell: number,
 ) {
+  const malices: number[] = []
   for (let x = 0; x < w; x += cell) {
-    const ratio = Math.pow(10, R_LO + ((x + cell / 2) / w) * (R_HI - R_LO))
-    const malice = ratio * growth
-    for (let y = 0; y < h; y += cell) {
-      const gap = GAP_MAX - ((y + cell / 2) / h) * (GAP_MAX - GAP_MIN)
-      const n = survivorCount(malice, growth, gap, errorBase)
+    malices.push(Math.pow(10, R_LO + ((x + cell / 2) / w) * (R_HI - R_LO)) * base.growth)
+  }
+  for (let y = 0; y < h; y += cell) {
+    const gap = GAP_MAX - ((y + cell / 2) / h) * (GAP_MAX - GAP_MIN)
+    const row = countRow(base, gap, malices)
+    for (let i = 0; i < row.length; i++) {
+      const n = row[i]
       const lg = Math.log10(Math.max(n, 1e-300))
       ctx.fillStyle = Math.abs(lg) < 0.12 ? '#E6EAF2' : shade(n)
-      ctx.fillRect(x, y, cell, cell)
+      ctx.fillRect(i * cell, y, cell, cell)
     }
   }
 }
@@ -377,8 +353,9 @@ function drawField(
 /** Ratio ticks read as plain numbers: 0.01, 0.1, 1, 10. */
 const ratioTick = (t: number) => (t >= 1 ? t.toFixed(0) : String(Number(t.toPrecision(1))))
 
-/** Where the moral threshold falls across the diagram, in percent of its width. */
-const THRESHOLD_LEFT = ((Math.log10(MORAL_THRESHOLD) - R_LO) / (R_HI - R_LO)) * 100
+/** Where a moral threshold falls across the diagram, in percent of its width. */
+const thresholdLeft = (rStar: number) =>
+  Math.min(100, Math.max(0, ((Math.log10(rStar) - R_LO) / (R_HI - R_LO)) * 100))
 
 /** Axis ticks, derived from the bounds the diagram is drawn over. */
 const Y_TICKS = [0, 1, 2, 3, 4].map((i) => GAP_MAX - (i / 4) * (GAP_MAX - GAP_MIN))
@@ -408,13 +385,22 @@ function Tiny({ n }: { n: number }) {
 }
 
 /** The setting the diagram holds, in fractions a year. */
-type Setting = { malice: number; growth: number; errorBase: number; gap: number }
+type Setting = {
+  malice: number
+  growth: number
+  errorBase: number
+  gap: number
+  ceiling: number
+  conflict: number
+}
 
 const fromPreset = (p: Preset): Setting => ({
   malice: p.malice / 100,
   growth: p.growth / 100,
   errorBase: p.errorBase / 100,
   gap: p.gap / 100,
+  ceiling: p.ceiling,
+  conflict: p.conflict,
 })
 
 const OPENING = fromPreset(PRESETS.find((p) => p.key === DEFAULT_PRESET) ?? PRESETS[0])
@@ -424,18 +410,22 @@ const onPreset = (p: Preset, s: Setting) =>
   asPercent(s.malice) === p.malice &&
   asPercent(s.growth) === p.growth &&
   asPercent(s.errorBase) === p.errorBase &&
-  Math.abs(s.gap * 100 - p.gap) < 0.005
+  Math.abs(s.gap * 100 - p.gap) < 0.005 &&
+  Math.abs(s.ceiling - p.ceiling) < 0.0005 &&
+  Math.abs(s.conflict - p.conflict) < 0.005
 
 type Hover = { left: number; top: number; ratio: number; gap: number; n: number }
 
-function phaseVerdict(n: number, moralPass: boolean): string {
+function phaseVerdict(n: number, gap: number, d1: number | null): string {
   if (n >= 1000)
-    return 'Clear, comfortably. The galaxy holds thousands of transitioned civilizations, which means the filter cannot be what makes the sky quiet. Something else is.'
+    return 'Clear, comfortably. Thousands of civilizations past their transition, which means the filter cannot be what makes the sky quiet. Something else is.'
   if (n >= 1)
-    return 'Clear, narrowly. A handful exist, scattered across a hundred thousand light years and under no obligation to announce it.'
-  if (moralPass)
-    return 'The moral term clears its threshold and the count still collapses. The error integral is doing the killing. Getting R under 0.70 is necessary and it is not close to sufficient.'
-  return 'Both terms are failing. Improvement is too slow to outrun the malice, and error is compounding on top of it.'
+    return 'Clear, narrowly. A handful past their transition, scattered across a hundred thousand light years and under no obligation to announce it.'
+  if (gap >= 0)
+    return 'Holding the gap level is not enough. The error that virtue does not touch never falls, so even the civilizations that get through the transition do not last. The gap has to be negative.'
+  if (d1 === null)
+    return 'Competence leads, but no lead in range is enough at these rates. Something else has to give.'
+  return `Competence leads, but not by enough. The count reaches one at d = ${signedPct(d1)}, and the hazards left standing do the rest.`
 }
 
 // ── component ────────────────────────────────────────────────────────────────
@@ -454,6 +444,8 @@ export default function LongFilter({
   const [growthStep, setGrowthStep] = useState(() => sliderFromRate(OPENING.growth))
   const [errorStep, setErrorStep] = useState(() => sliderFromError(OPENING.errorBase))
   const [gapStep, setGapStep] = useState(() => sliderFromGap(OPENING.gap))
+  const [ceilingStep, setCeilingStep] = useState(() => sliderFromCeiling(OPENING.ceiling))
+  const [conflictStep, setConflictStep] = useState(() => sliderFromConflict(OPENING.conflict))
   const [settleStep, setSettleStep] = useState(() => sliderFromSettle(SETTLEMENT_YEARS))
   const [hover, setHover] = useState<Hover | null>(null)
   const [copied, setCopied] = useState(false)
@@ -469,9 +461,12 @@ export default function LongFilter({
     if (s.growth !== undefined) setGrowthStep(sliderFromRate(s.growth))
     if (s.errorBase !== undefined) setErrorStep(sliderFromError(s.errorBase))
     if (s.gap !== undefined) setGapStep(sliderFromGap(s.gap))
+    if (s.ceiling !== undefined) setCeilingStep(sliderFromCeiling(s.ceiling))
+    if (s.conflict !== undefined) setConflictStep(sliderFromConflict(s.conflict))
   }, [])
 
-  // A shared link opens on its setting: ?pm=0.3&g=0.6&pe=0.7&d=0, in percent a year.
+  // A shared link opens on its setting: ?pm=0.3&g=0.6&pe=0.7&d=0, in percent a
+  // year, with sm (s_max) and phi (φ) as fractions.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const read = (key: string, positive: boolean) => {
@@ -486,6 +481,11 @@ export default function LongFilter({
       errorBase: read('pe', true),
       gap: read('d', false),
     })
+    const frac = (key: string, lo: number, hi: number) => {
+      const v = Number(q.get(key))
+      return q.get(key) !== null && Number.isFinite(v) && v >= lo && v <= hi ? v : undefined
+    }
+    apply({ ceiling: frac('sm', CEILING_MIN, CEILING_MAX), conflict: frac('phi', 0, 1) })
     const ts = Number(q.get('ts'))
     if (q.get('ts') !== null && Number.isFinite(ts) && ts > 0) setSettleStep(sliderFromSettle(ts))
   }, [apply])
@@ -526,20 +526,35 @@ export default function LongFilter({
   const errorBase = errorFromSlider(errorStep)
   const gap = gapFromSlider(gapStep)
   const settle = settleFromSlider(settleStep)
+  const ceiling = ceilingFromSlider(ceilingStep)
+  const conflict = conflictFromSlider(conflictStep)
   const ratio = malice / growth
-  const tau = LOG_DISTANCE / growth
+  const params: Params = { malice, growth, errorBase, gap, ceiling, conflict }
+  const outcome = evaluate(params)
+  const tau = outcome.tau
   const transitionFirst = tau < settle
-  const count = survivorCount(malice, growth, gap, errorBase)
-  const gapLimit = criticalGap(malice, growth, errorBase)
-  const setting: Setting = { malice, growth, errorBase, gap }
-  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}&ts=${Number(settle.toPrecision(3))}`
+  const count = outcome.count
+  // The thresholds are bisections over the whole model, so they are kept to
+  // the dials that move them: d₁ ignores d, R* depends only on g and s_max.
+  const gapLimit = useMemo(
+    () => criticalGap({ malice, growth, errorBase, ceiling, conflict }),
+    [malice, growth, errorBase, ceiling, conflict],
+  )
+  const rStar = useMemo(() => moralThreshold(growth, ceiling), [growth, ceiling])
+  const flatError = useMemo(
+    () => evaluate({ malice, growth, errorBase, gap: 0, ceiling, conflict }).errorLoad,
+    [malice, growth, errorBase, ceiling, conflict],
+  )
+  const setting: Setting = { malice, growth, errorBase, gap, ceiling, conflict }
+  const query = `pm=${asPercent(malice)}&g=${asPercent(growth)}&pe=${asPercent(errorBase)}&d=${Number((gap * 100).toFixed(3))}&sm=${Number(ceiling.toFixed(3))}&phi=${Number(conflict.toFixed(2))}&ts=${Number(settle.toPrecision(3))}`
   const rawLeft = ((Math.log10(ratio) - R_LO) / (R_HI - R_LO)) * 100
   const offChart = rawLeft < 0 || rawLeft > 100
-  const errorLoad = errorIntegral(gap, tau, errorBase)
-  const moralPass = ratio < MORAL_THRESHOLD
-  // What is doing the killing: each hazard's share of the survival exponent.
-  const maliceLoad = malice * (1 - 1 / LOG_DISTANCE) * tau
-  const externalLoad = EXTERNAL_HAZARD * tau
+  const errorLoad = outcome.errorLoad
+  const moralPass = ratio < rStar
+  // What is doing the killing: each hazard's share of the cumulative hazard
+  // across the transition.
+  const maliceLoad = outcome.maliceLoad
+  const externalLoad = outcome.externalLoad
   const totalLoad = maliceLoad + errorLoad + externalLoad
   const shares = isFinite(totalLoad)
     ? { malice: maliceLoad / totalLoad, error: errorLoad / totalLoad, external: externalLoad / totalLoad }
@@ -589,11 +604,11 @@ export default function LongFilter({
       top: fy * 100,
       ratio: r,
       gap: d,
-      n: survivorCount(r * growth, growth, d, errorBase),
+      n: countOf({ ...params, malice: r * growth, gap: d }),
     })
   }
 
-  /** Clicking the diagram moves the marker there, holding g and p_e0. */
+  /** Clicking the diagram moves the marker there, holding g, p_e0, s_max and φ. */
   const onPhaseClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const { ratio: r, gap: d } = pointAt(e)
     touched.current = true
@@ -623,8 +638,8 @@ export default function LongFilter({
     const ctx = canvas?.getContext('2d')
     if (!canvas || !ctx) return
     ctx.setTransform(phaseScale, 0, 0, phaseScale, 0, 0)
-    drawField(ctx, PHASE_W, PHASE_H, growth, errorBase, phaseScale > 1.5 ? 2 : 4)
-  }, [growth, errorBase, phaseScale])
+    drawField(ctx, PHASE_W, PHASE_H, { errorBase, growth, ceiling, conflict }, phaseScale > 1.5 ? 3 : 4)
+  }, [growth, errorBase, ceiling, conflict, phaseScale])
 
   return (
     <main className={styles.page}>
@@ -640,9 +655,11 @@ export default function LongFilter({
           <p className={styles.eyebrow}>Arete / playground / working note</p>
           <h1>The Long Filter</h1>
           <p className={styles.lede}>
-            A civilization that can end itself eventually will, because a small annual probability
-            across a long enough run becomes a certainty. Follow that through and the Fermi question
-            turns into two conditions, both of them measurable, and both of them ours.
+            A civilization that can end itself, and keeps a steady chance of doing so, eventually
+            will. A small annual probability over a long enough run becomes a certainty, and on the
+            course we are on that is the expected end. What follows is the one path the arithmetic
+            leaves open, described as a conditional: if a civilization were to survive, this is what
+            its survival would have to look like.
           </p>
           <p className={styles.byline}>
             {BYLINE} &nbsp;·&nbsp; working note &nbsp;·&nbsp; {REVISED}
@@ -672,35 +689,37 @@ export default function LongFilter({
           <div>
             <h3>The claim</h3>
             <p>
-              A fixed annual risk of self-destruction, however small, compounds to certainty. A
-              civilization survives deep time only if its risk falls, and this model makes the fall a
-              pair of races: moral improvement against malice, and competence against capability.
+              A constant annual risk of self-destruction, however small, compounds to near-certain
+              extinction (section I). Nothing in our record shows that risk falling, so the default
+              is not survival. This is the strongest claim on the page, and it needs the fewest
+              assumptions.
             </p>
           </div>
           <div>
-            <h3>What is new</h3>
+            <h3>If it were to be</h3>
             <p>
-              Drake folds lifetime into one average, and Hanson&rsquo;s Great Filter leaves the
-              filter unnamed. Splitting the hazard gives two thresholds in closed form: a moral ratio
-              that barely moves when the badly known numbers move, and an error condition that moves
-              with everything. Error grows with every new <em>kind</em> of capability, and nothing
-              caps it.
+              The risk would have to fall, and keep falling. In this model that means competence
+              outpacing capability, so that hazards are retired faster than new ones are built: by
+              about 0.07% a year, through the transition and after it. If that held, the galaxy
+              should hold survivors. Whether anyone manages it is the open question.
             </p>
           </div>
           <div>
-            <h3>Where it lands</h3>
+            <h3>What it is not</h3>
             <p>
-              On current estimates the moral condition can be met and the error condition is not.
-              The expected count of surviving civilizations is about one in a billion, unless
-              competence outpaces capability by around 0.2% a year. So the galaxy is empty, or
-              someone managed that and is keeping quiet.
+              Not a sales pitch for virtue. The payoff lies thousands of years out, and no motive
+              aimed at the payoff survives that discount. The filter spares civilizations that
+              stopped treating survival, wealth and winning as goods. It does not reward wanting to
+              survive.
             </p>
           </div>
         </div>
         <p className={styles.briefGloss}>
-          Two words come from Stoic philosophy. A <em>sage</em> is the Stoic ideal: a person whose
-          judgement is reliably right. The <em>phoenix rate</em> is Seneca&rsquo;s estimate of how
-          often one appears unaided, and section II turns it into a number.
+          Two words come from Stoic philosophy. A <em>prokoptōn</em> (plural{' '}
+          <em>prokoptontes</em>) is a moral progressor: someone not yet wise who is making progress
+          toward it, and the population this model follows. The <em>phoenix rate</em> is
+          Seneca&rsquo;s estimate of how often a sage, the finished article, appears unaided;
+          section II uses it as a floor.
         </p>
         <p className={styles.briefLinks}>
           <a href="#region">Go to the diagram ↓</a>
@@ -722,7 +741,8 @@ export default function LongFilter({
                 (1 − p)<sup>n</sup>
               </span>
               . The same equation governs radioactive decay, pointed at a species instead of an
-              isotope. Move the dials and watch the plate.
+              isotope. This is the default path, and nothing below softens it: every way out runs
+              through a hazard that falls. Move the dials and watch the plate.
             </p>
           </div>
 
@@ -815,59 +835,86 @@ export default function LongFilter({
         </div>
       </section>
 
-      {/* ── II. the measured input ── */}
+      {/* ── II. who is growing ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>II. The measured input</p>
-          <h2>The phoenix rate</h2>
+          <p className={styles.eyebrow}>II. Who is growing</p>
+          <h2>Progressors, from a phoenix floor</h2>
           <p>
-            Seneca writes in the forty-second letter that the good man (the Stoic sage, whose
-            judgement is reliably right) appears perhaps once in five hundred years, like the
-            phoenix. He meant it as a remark about rarity. Read as a rate, it
-            is the one empirical number this argument has.
+            The population that matters is not sages, who are rare by definition, but moral
+            progressors: the people the Stoics called <em>prokoptontes</em>, making progress without
+            having arrived. The model needs a starting share for them, a rate at which it grows, and
+            a ceiling.
           </p>
         </div>
         <div className={styles.col}>
           <ol className={styles.deriv}>
             <li>
               <b>one sage / 500 years</b>
-              Seneca&rsquo;s frame is an empire of roughly fifty million with a life expectancy near
-              twenty five, so about a billion lives are lived across those five centuries.
+              Seneca writes in the forty-second letter that the good man appears perhaps once in five
+              hundred years, like the phoenix. His frame is an empire of roughly fifty million with a
+              life expectancy near twenty five, so about a billion lives across those five
+              centuries.
             </li>
             <li>
-              <b>s₀ ≈ 10⁻⁹</b>
-              One in a billion. Note what it measures: the incidence of sagehood in a population not
-              cultivating it deliberately or at scale. A floor, not a ceiling.
+              <b>s₀ = 10⁻⁹, a floor</b>
+              One in a billion is the incidence of sages, and progressors are far more common than
+              sages. The model starts the progressor share there anyway. That is conservative: any
+              larger starting share shortens the transition and helps.
             </li>
             <li>
-              <b>
-                τ<sub>v</sub> = ln(1/s₀) / g
-              </b>
-              If the sage fraction grows at annual rate <span className={styles.mono}>g</span>, the
-              time to saturation is the log of the distance over the rate. Write{' '}
-              <span className={styles.mono}>K = ln(1/s₀) = {LOG_DISTANCE.toFixed(2)}</span>.
+              <b>ds/dt = g s (1 − s/s<sub>max</sub>)</b>
+              The share grows at rate <span className={styles.mono}>g</span> and levels off at a
+              ceiling <span className={styles.mono}>s<sub>max</sub></span>, the share that ever
+              moves. The ceiling is a dial below, from 0.90 to 1.00.
             </li>
             <li>
-              <b>the target barely matters</b>
-              At <span className={styles.mono}>g</span> = 0.6% a year, reaching half sages takes
-              3,338 years and reaching all of them takes 3,454. Three percent more time for double
-              the target, because the distance is logarithmic. Whether the threshold is a sage
-              civilization or a sage-governed one changes almost nothing.
+              <b>τ: the year s reaches 99% of s<sub>max</sub></b>
+              This is where the page says the transition ends. At{' '}
+              <span className={styles.mono}>g</span> = 0.6% a year and a ceiling of 0.99 it takes
+              4,218 years. Put the line at the half or the 90% point instead and, wherever the gap is
+              negative, the count moves by less than one part in a thousand.
+            </li>
+            <li>
+              <b>protection arrives late</b>
+              Logistic growth from one in a billion spends most of the transition near zero. At these
+              settings progressors are still under 1% of people in year 2,688 of 4,218, and by then
+              about four fifths of all the malice the transition will see has already been spent.
+              Virtue&rsquo;s protection is real, but it arrives mostly at the end.
             </li>
           </ol>
+          <p>
+            <strong>Who counts as a progressor.</strong> The test has to be checkable, and it must
+            not mention risk, or the argument would be circular. The Stoic criteria serve. A
+            progressor treats externals (health, wealth, reputation, winning) as indifferent rather
+            than as goods, so does not lie, cheat or fight for them; and acts from reason rather than
+            from passion, so that what they do survives being examined. Neither criterion says
+            anything about catastrophe, and both show in what a person does.
+          </p>
+          <p>
+            <strong>The paradox.</strong> The Stoics also held that everyone who is not wise is
+            equally far from virtue: someone an arm&rsquo;s length under the surface drowns as surely
+            as someone five hundred fathoms down (Cicero, <em>De Finibus</em> 3.48). If that were the
+            whole story, progress would count for nothing. But risk does not respond to virtue as a
+            state. It responds to actions, and progressors perform the appropriate actions, the{' '}
+            <em>kathēkonta</em>, more reliably than others. Appropriate actions are what keep a
+            weapon unbuilt and a result honestly reported. So every individual&rsquo;s progress moves{' '}
+            <span className={styles.mono}>s</span>, whether or not anyone arrives.
+          </p>
         </div>
       </section>
 
-      {/* ── III. three hazards ── */}
+      {/* ── III. three hazards, one gap ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>III. Three hazards</p>
+          <p className={styles.eyebrow}>III. Three hazards, one gap</p>
           <h2>What can end you, and who governs it</h2>
           <p>
-            An earlier version of this model held the annual risk fixed while assuming the sage
-            fraction was rising, which cannot both be true if virtue is what suppresses risk.
-            Splitting the hazard fixes that, and it exposes a failure mode the single-term version
-            could not see.
+            Malice and error are driven by the same gap,{' '}
+            <span className={styles.mono}>d = c − e</span>: how fast capability grows, less how fast
+            the understanding of it grows. When capability runs ahead, each new power arrives before
+            anyone knows how to hold it, and both the chance that someone uses it and the chance that
+            it fails grow with the gap. No hazard switches off when the transition ends.
           </p>
         </div>
         <div className={styles.colWide}>
@@ -878,11 +925,14 @@ export default function LongFilter({
               </span>
               <h3>Malice</h3>
               <p>
-                Destruction chosen for gain, status, or rivalry. It drains as the sage fraction
-                rises, though far more slowly than you would hope: exponential growth spends almost
-                all its time near zero, so the whole mechanism buys a 4.8 percent reduction.
+                Destruction chosen for gain, status or rivalry:{' '}
+                <span className={styles.mono}>
+                  p<sub>m0</sub>(1 − s)e<sup>dt</sup>
+                </span>
+                . It falls as progressors spread, and with the gap. With a ceiling below one it never
+                reaches zero by virtue alone.
               </p>
-              <span className={styles.gov}>governed by g</span>
+              <span className={styles.gov}>governed by g, s_max and d</span>
             </div>
             <div>
               <span className={styles.sym}>
@@ -890,13 +940,14 @@ export default function LongFilter({
               </span>
               <h3>Error</h3>
               <p>
-                Accident, misjudgment, a design flaw nobody caught. Capability grows at{' '}
-                <span className={styles.mono}>c</span> and competence per unit of it at{' '}
-                <span className={styles.mono}>e</span>. If the gap{' '}
-                <span className={styles.mono}>d = c − e</span> is positive, error risk compounds, and
-                it can swamp everything else.
+                Accident, misjudgment, a flaw nobody caught:{' '}
+                <span className={styles.mono}>
+                  p<sub>e0</sub>[φ(1 − s) + 1 − φ]e<sup>dt</sup>
+                </span>
+                . The share φ comes from conflict (haste, secrecy, racing) and falls as progressors
+                spread. The rest is accident that virtue does not prevent, and only the gap shrinks it.
               </p>
-              <span className={styles.gov}>governed by d, and by honesty</span>
+              <span className={styles.gov}>governed by d, and partly by g</span>
             </div>
             <div>
               <span className={styles.sym}>
@@ -905,65 +956,62 @@ export default function LongFilter({
               <h3>External</h3>
               <p>
                 Impact, burst, the slow arithmetic of a star. Irreducible, and virtue never touches
-                it. Negligible during the transition, and afterwards it is the only thing left, which
-                makes it the term that sets how long a survivor survives.
+                it. Once everything else has been retired, it is what sets how long a survivor
+                survives.
               </p>
               <span className={styles.gov}>governed by nobody</span>
             </div>
           </div>
           <p className={styles.hzNote}>
-            The malice decomposition turns out to be exactly equivalent to replacing{' '}
-            <span className={styles.mono}>s₀</span> with <span className={styles.mono}>e·s₀</span>,
-            so the closed form is preserved and the threshold moves only from 0.667 to{' '}
-            {MORAL_THRESHOLD.toFixed(3)}.
+            Both reducible hazards carry the same factor{' '}
+            <span className={styles.mono}>
+              e<sup>dt</sup>
+            </span>
+            . That is the model&rsquo;s one structural bet: the danger in a capability lies mostly in
+            the distance between having it and understanding it.
           </p>
           <p>
-            That holds only because malice hazard <em>saturates</em>. Let baseline malice grow with
-            capability instead and the closed form generalizes to a second ratio,{' '}
-            <span className={styles.mono}>Q = c/g</span>, whose threshold collapses by seventy orders
-            of magnitude. The reason it does not is that malice depends on crossing a threshold
-            rather than on magnitude: once a civilization can end itself once, being able to do it
-            forty times over does not multiply the annual odds that someone does. We crossed that
-            line around 1955, so the multiplier has been pinned ever since.
-          </p>
-          <p>
-            <strong>Error gets no such reprieve, and the asymmetry is the point.</strong> Each new
-            kind of capability opens failure channels the previous kinds did not have. Nuclear does
-            not teach you the failure modes of engineered biology, and neither teaches you whatever
-            comes next. Error grows in breadth rather than magnitude, and breadth has no ceiling.
+            <strong>Breadth, not magnitude.</strong> Each new kind of capability opens failure
+            channels the previous kinds did not have. Nuclear does not teach you the failure modes of
+            engineered biology, and neither teaches you whatever comes next. That is why the gap is
+            measured against capability in general, and why keeping it negative is a standing
+            discipline rather than a one-off fix.
           </p>
           <p>
             What raises <span className={styles.mono}>e</span> is the machinery of error
             correction: open criticism, replication, audit, a press nobody owns. David Brin&rsquo;s
-            phrase for it is that criticism is the only known antidote to error. This is where the
-            institutional and the moral meet. Those institutions work only while the people inside
-            them will not fake a result, bury an awkward finding, or keep a secret for advantage. A
-            sage culture is not an alternative to them. It is what builds them, staffs them, and
-            keeps them honest when gaming them would pay.
+            phrase for it is that criticism is the only known antidote to error. Those institutions
+            work only while the people inside them will not fake a result, bury an awkward finding or
+            keep a secret for advantage. That is where progressors matter before they are a majority.
+            They rise into government and business gradually, as anyone does, and change
+            institutions from within: the auditor who will not sign, the engineer who will not ship
+            what nobody understands. That is how a minority lowers risk long before it is a
+            majority, and why the transition is a movement of the whole civilization, beginning with
+            understanding and then choice, rather than a headcount.
           </p>
           <p>
-            <strong>All three terms rest on one assumption: during the transition, a civilization
-            is a single target.</strong> The arithmetic counts one throw a year, which holds only if
-            one catastrophe ends everyone. The obvious objection is to spread out, and the answer
-            depends on how far. Settlements within one solar system sit days or months apart. That
-            protects against an impact and little else: weapons cross the distance, a pathogen can
-            ride a supply ship, and a flawed technology gets built in every settlement from the same
-            designs. Each settlement also brings its own malice and its own error, so dispersal at
-            that range adds throws faster than it removes them. Settlements around other stars are
-            a different case. Years or centuries of separation decouple their fates, and a
-            civilization that reached them before the transition finished would escape the filter
-            by distance rather than by character. The model assumes that does not happen in time.
-            The diagram below takes a date for it as a hypothesis, ten thousand years from now
-            unless you move it. At 0.6 percent a year the transition runs about 3,450 years and
-            finishes first. Below about 0.2 percent a year it does not, and the slower the moral
-            improvement, the wider that window opens.
+            <strong>All three terms rest on one assumption: until the transition ends, a
+            civilization is a single target.</strong> The arithmetic counts one throw a year, which
+            holds only if one catastrophe ends everyone. The obvious objection is to spread out.
+            Dispersal counts only for a settlement that could rebuild technological civilization on
+            its own; an outpost that needs resupply dies with its supplier. Settlements within one
+            solar system sit days or months apart, and protect against an impact and little else:
+            weapons cross the distance, a pathogen can ride a supply ship, a flawed technology is
+            built everywhere from the same designs, and each settlement brings its own malice and
+            error. Settlements around other stars would decouple their fates. But the ordering runs
+            the wrong way. The power to destroy yourself arrives long before the power to leave: we
+            have had the first since about 1955, and have neither the second nor a self-sufficient
+            settlement anywhere. So dispersal comes after the filter, not instead of it. The diagram
+            below takes a date for interstellar settlement as a hypothesis, ten thousand years from
+            now unless you move it. At 0.6 percent a year the transition takes about 4,200 years and
+            finishes first; below about 0.25 percent a year it does not.
           </p>
           <p className={`${styles.footnote} ${styles.hzCaveat}`}>
             One more correction, and it is uncomfortable. The published catastrophe estimates
-            everyone quotes are totals, and the documented near-misses lean heavily toward false
+            everyone quotes are totals, and the documented near misses lean heavily toward false
             alarms and misjudgment rather than decisions to attack. So most of that number belongs in
-            the error term, not the malice one. Which means the realistic baseline error rate is not
-            the tidy 10⁻⁵ this page originally assumed.
+            the error term, not the malice one, and the realistic baseline error rate is not the tidy
+            10⁻⁵ this page originally assumed.
           </p>
         </div>
       </section>
@@ -976,10 +1024,12 @@ export default function LongFilter({
             <h2>Where the line actually sits</h2>
             <p>
               The horizontal axis is the moral ratio, malice risk over improvement rate. The vertical
-              is the capability gap, how far competence trails capability. Blue is where at least one
-              transitioned civilization should exist. Everything else is empty sky. The page opens on
-              the corrected split: a 30 percent malice share of a 1 percent total, which puts the
-              rest in the error term. Hover the diagram to read any point, or click to move there.
+              is the gap <span className={styles.mono}>d</span>, how far capability runs ahead of
+              understanding. Blue is where at least one civilization should be alive past the end of
+              its transition, which this page puts at the year the progressor share reaches 99% of
+              its ceiling. Everything else is empty sky. The page opens on the realistic split: a 30
+              percent malice share of a 1 percent total, the rest in error. Hover the diagram to read
+              any point, or click to move there.
             </p>
           </div>
 
@@ -1025,7 +1075,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-malice-note">
-                {maliceNote(malice)}
+                {maliceNote(malice, rStar, growth)}
               </p>
             </div>
 
@@ -1049,7 +1099,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-growth-note">
-                {growthNote(growth)}
+                {growthNote(growth, ceiling)}
               </p>
             </div>
 
@@ -1073,7 +1123,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-error-note">
-                {errorNote(errorBase, growth)}
+                {errorNote(errorBase, flatError)}
               </p>
             </div>
 
@@ -1104,6 +1154,54 @@ export default function LongFilter({
             <div className={styles.ctrlRow}>
               <div className={styles.ctrl}>
                 <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-ceiling">
+                    s<sub>max</sub> &nbsp;· ceiling on the progressor share
+                  </label>
+                  <span className={styles.ctrlVal}>{ceiling.toFixed(3)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-ceiling"
+                  aria-describedby="lf-ceiling-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={ceilingStep}
+                  onChange={(e) => touch(setCeilingStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-ceiling-note">
+                {ceilingNote(ceiling, malice, errorBase, conflict)}
+              </p>
+            </div>
+
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-conflict">
+                    φ &nbsp;· share of error that depends on conflict
+                  </label>
+                  <span className={styles.ctrlVal}>{Math.round(conflict * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-conflict"
+                  aria-describedby="lf-conflict-note"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={conflictStep}
+                  onChange={(e) => touch(setConflictStep)(Number(e.target.value))}
+                />
+              </div>
+              <p className={styles.ctrlNote} id="lf-conflict-note">
+                {conflictNote(conflict, errorBase)}
+              </p>
+            </div>
+
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
                   <label className={styles.ctrlLabel} htmlFor="lf-settle">
                     T<sub>s</sub> &nbsp;· interstellar settlement, a hypothesis
                   </label>
@@ -1121,7 +1219,7 @@ export default function LongFilter({
                 />
               </div>
               <p className={styles.ctrlNote} id="lf-settle-note">
-                {settleNote(settle, growth)}
+                {settleNote(settle, growth, ceiling)}
               </p>
             </div>
 
@@ -1146,15 +1244,15 @@ export default function LongFilter({
                       role="img"
                       aria-label="Phase diagram of survivable parameter combinations, moral ratio across and capability gap up."
                     />
-                    <div className={styles.threshold} style={{ left: `${THRESHOLD_LEFT}%` }}>
+                    <div className={styles.threshold} style={{ left: `${thresholdLeft(rStar).toFixed(3)}%` }}>
                       <span>R*</span>
                     </div>
                     <div
                       className={`${styles.marker} ${offChart ? styles.markerOff : ''}`}
                       title={offChart ? `R = ${ratio.toFixed(3)} is off the chart` : undefined}
                       style={{
-                        left: `${Math.min(100, Math.max(0, rawLeft))}%`,
-                        top: `${Math.min(100, Math.max(0, ((GAP_MAX - gap) / (GAP_MAX - GAP_MIN)) * 100))}%`,
+                        left: `${Math.min(100, Math.max(0, rawLeft)).toFixed(3)}%`,
+                        top: `${Math.min(100, Math.max(0, ((GAP_MAX - gap) / (GAP_MAX - GAP_MIN)) * 100)).toFixed(3)}%`,
                       }}
                     />
                     {hover && (
@@ -1198,15 +1296,15 @@ export default function LongFilter({
                 >
                   <Tiny n={count} />
                 </span>
-                <span className={styles.verdictLabel}>sage civilizations expected in the galaxy</span>
+                <span className={styles.verdictLabel}>
+                  civilizations past their transition, expected in the galaxy
+                </span>
                 <div className={styles.gates}>
                   <div className={styles.gate}>
                     <span>moral term &nbsp; R</span>
                     <span className={moralPass ? styles.pass : styles.fail}>
                       {ratio.toFixed(2)} &nbsp;
-                      {moralPass
-                        ? `clears ${MORAL_THRESHOLD.toFixed(2)}`
-                        : `over ${MORAL_THRESHOLD.toFixed(2)}`}
+                      {moralPass ? `clears ${rStar.toFixed(2)}` : `over ${rStar.toFixed(2)}`}
                     </span>
                   </div>
                   <div className={styles.gate}>
@@ -1250,15 +1348,15 @@ export default function LongFilter({
                     <span>
                       g where τ<sub>v</sub> = T<sub>s</sub>
                     </span>
-                    <span className={styles.neutral}>{pct(LOG_DISTANCE / settle, 2)}</span>
+                    <span className={styles.neutral}>{pct(settleCrossing(settle, ceiling), 2)}</span>
                   </div>
                 </div>
                 <div className={styles.load}>
                   <span className={styles.loadLabel}>what is doing the killing</span>
                   <div className={styles.loadBar} aria-hidden="true">
-                    <span className={styles.loadMalice} style={{ width: `${shares.malice * 100}%` }} />
-                    <span className={styles.loadError} style={{ width: `${shares.error * 100}%` }} />
-                    <span className={styles.loadExternal} style={{ width: `${shares.external * 100}%` }} />
+                    <span className={styles.loadMalice} style={{ width: `${(shares.malice * 100).toFixed(3)}%` }} />
+                    <span className={styles.loadError} style={{ width: `${(shares.error * 100).toFixed(3)}%` }} />
+                    <span className={styles.loadExternal} style={{ width: `${(shares.external * 100).toFixed(3)}%` }} />
                   </div>
                   <p className={styles.loadKey}>
                     malice {Math.round(shares.malice * 100)}% &nbsp;·&nbsp; error{' '}
@@ -1267,7 +1365,7 @@ export default function LongFilter({
                   </p>
                 </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
-                  {phaseVerdict(count, moralPass)}
+                  {phaseVerdict(count, gap, gapLimit === Infinity ? null : gapLimit)}
                 </p>
                 <button type="button" className={styles.copyLink} onClick={copyLink}>
                   {copied ? 'Link copied' : 'Copy a link to this setting'}
@@ -1276,163 +1374,268 @@ export default function LongFilter({
             </div>
 
             <p className={styles.phaseNote}>
-              Note what the default already shows. <span className={styles.mono}>R</span> sits at
-              0.50 and clears its threshold with room to spare, and the count is still nine orders of
-              magnitude short of one.{' '}
               <strong>
-                Getting the moral ratio under {MORAL_THRESHOLD.toFixed(2)} is necessary and nowhere
-                near sufficient.
+                If competence can outpace capability by about{' '}
+                {gapLimit === null || !isFinite(gapLimit) ? '0.07%' : pct(-gapLimit, 2)} a year for
+                the length of the transition, and keep that lead afterwards, the galaxy should hold
+                survivors.
               </strong>{' '}
-              Reallocating hazard between the two terms barely moves the answer either, because it is
-              the total that integrates across the window.
+              That is the whole positive result, and it is a conditional. At the realistic setting
+              the count climbs fast below the line, to about 59 civilizations at −0.10% and 6,770 at
+              −0.20%. Above it the count collapses: holding the gap at zero leaves less than 10⁻¹⁵,
+              because the error that virtue does not touch never falls.
             </p>
             <p className={styles.phaseBody}>
-              The consequence for <span className={styles.mono}>d</span> is harsher than it first
-              looked. At a realistic baseline error rate, competence has to <em>outpace</em>{' '}
-              capability by something like a fifth of a percent a year, permanently, for the whole
-              length of the transition. Not keep pace. Outpace.
+              <strong>The gap is the open question.</strong> Nobody has measured it. The one proxy
+              with any history is near misses per unit of destructive capacity in the nuclear era.
+              Taken crudely: the Chatham House catalogue lists thirteen cases of near nuclear use
+              between 1962 and 2002, about one every three years, across arsenals that peaked near
+              70,000 warheads in 1986 and then fell by more than half. Thirteen events cannot resolve
+              a trend in their rate much finer than a couple of percent a year over forty years, so
+              the proxy rules out a large gap in either direction and cannot tell −0.07% from zero. It
+              is one technology, the catalogue is not a census, and a warhead count is a poor measure
+              of capability. Read it as a first, crude estimate of how the question could be
+              measured, not as an answer.
             </p>
             <p className={`${styles.footnote} ${styles.phaseCaveat}`}>
-              Moving <span className={styles.mono}>g</span> or{' '}
+              The dashed line R* is where malice alone, with the gap held at zero, would bring the
+              count to one. It is no longer a wall: malice carries the same factor{' '}
+              <span className={styles.mono}>
+                e<sup>dt</sup>
+              </span>{' '}
+              as error, so a lead in competence shrinks it too, and the blue region runs well past the
+              line. What R* still marks is how far a civilization is leaning on competence rather than
+              character. Moving <span className={styles.mono}>g</span>,{' '}
               <span className={styles.mono}>
                 p<sub>e0</sub>
-              </span>{' '}
-              redraws the region itself rather than just the marker. A slower transition means more
-              years exposed to compounding capability, so a low improvement rate raises R and pulls
-              d<sub>1</sub> down at the same time. Moral slowness is punished twice. The dashed line
-              is the moral threshold R*; d<sub>1</sub> is where the count reaches one, which is
-              looser than the formal note&rsquo;s half-cost line d*.
+              </span>
+              , s<sub>max</sub> or φ redraws the region itself; d<sub>1</sub> is where the count
+              reaches one.
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── V. the equation ── */}
+      {/* ── V. after the transition ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>V. The equation</p>
-          <h2>Drake, split in two</h2>
+          <p className={styles.eyebrow}>V. After the transition</p>
+          <h2>Retire the hazard</h2>
           <p>
-            Drake averages the lifetime of a civilization into a single term. That average hides the
-            problem, because there are two populations and their lifetimes differ by a factor of
-            about three hundred thousand.
-            Separate them, and separate existing from being detectable.
+            No hazard switches off when the transition ends; the model runs every term for all time.
+            What survivors do differently is keep the gap negative: they keep retiring hazards, and
+            they never build capability ahead of the understanding of it. With{' '}
+            <span className={styles.mono}>d</span> below zero every reducible term shrinks year on
+            year, and the risk that remains adds up to a finite total instead of growing without
+            limit.{' '}
+            <strong>
+              A hazard you keep shrinking cannot eventually catch you; only one you leave standing
+              can.
+            </strong>
+          </p>
+        </div>
+        <div className={styles.col}>
+          <p>
+            The examples are already on the record, in small. The world&rsquo;s nuclear arsenals
+            fell from about 70,000 warheads in 1986 to about 12,000 now: hazards decommissioned, not
+            merely deterred. Declining to race for superintelligence would be the same move made in
+            advance, not building the capability until it is understood. Races are what force
+            capability ahead of understanding, because each side builds before it understands for
+            fear the other will. Virtue is what makes caution affordable: a civilization that does
+            not treat winning as a good has no race to lose.
+          </p>
+          <p>
+            <strong>The residue.</strong> A ceiling below one means some people never choose
+            virtue, and the model leaves their share of malice standing for good. A civilization
+            does not need everyone. It needs enough that the rest never get access to
+            civilization-ending power, and that access is denied by retiring hazards, not by
+            policing people. A weapon that no longer exists cannot be stolen, and a capability nobody
+            built cannot be misused.
+          </p>
+          <p>
+            <strong>Why not control instead.</strong> The obvious alternative is coercion: a
+            surveillance state of the kind Nick Bostrom has described, watching everyone so that no
+            one can use what exists. It concentrates malice in the controllers; it does not remove
+            it. A hazard left standing, however small, ends in certain extinction (section I), so
+            coercion survives only if the controllers are reliably good. That is virtue again, now
+            asked of the few people with the most power to abuse.
+          </p>
+        </div>
+      </section>
+
+      {/* ── VI. why people say no ── */}
+      <section className={`${styles.section} ${styles.wrap}`}>
+        <div className={`${styles.secHead} ${styles.col}`}>
+          <p className={styles.eyebrow}>VI. Why people say no</p>
+          <h2>Two causes, and a culture</h2>
+          <p>
+            If virtue is what the filter spares, why is it rare? Chrysippus gave two causes for the
+            distortion of reason: the persuasiveness of external things, and the teaching of those
+            around us (Diogenes Laertius 7.89). Nature gives starting points that are uncorrupted;
+            what corrupts them is what we see prized, and what we are taught to prize.
+          </p>
+        </div>
+        <div className={styles.col}>
+          <p>
+            That has a consequence for the model. Culture sets{' '}
+            <span className={styles.mono}>g</span>, how fast people move toward virtue, and{' '}
+            <span className={styles.mono}>
+              s<sub>max</sub>
+            </span>
+            , how many never do. So the ceiling is not human nature; it is the current teaching. The
+            target is the values, treating externals as goods, not markets as such. A market that
+            allocates bushels is a coordination tool. What does the damage is a culture that treats
+            the bushels, and the winning, as what a life is for.
+          </p>
+          <p>
+            The record is mixed in an instructive way. Homicide in Europe fell for centuries, about
+            0.6 percent a year over six hundred years (Eisner), which is where this page&rsquo;s
+            default <span className={styles.mono}>g</span> comes from. The decline of war between
+            states is contested: Cirillo and Taleb argue that the data cannot tell a falling rate
+            from a long quiet stretch under a heavy-tailed, constant risk. The recent wars fit the
+            model. A quiet stretch under constant risk is a lull, not a falling hazard, and the
+            arithmetic of section I treats it as one.
+          </p>
+        </div>
+      </section>
+
+      {/* ── VII. the equation ── */}
+      <section className={`${styles.section} ${styles.wrap}`}>
+        <div className={`${styles.secHead} ${styles.col}`}>
+          <p className={styles.eyebrow}>VII. The equation</p>
+          <h2>Drake, counted past the transition</h2>
+          <p>
+            Drake averages the lifetime of a civilization into one term. That hides the problem,
+            because almost every civilization dies young and a few, if any, live for epochs. So the
+            count here is only those still alive past the end of their transition. The whole expected
+            lifetime would not do: at a 1 percent annual hazard the ones that die young contribute
+            about one civilization&rsquo;s worth on their own, whatever happens later, and drown the
+            signal.
           </p>
         </div>
 
         <div className={styles.col}>
           <div className={styles.formula}>
             <div className={styles.line}>
-              N<sub>obs</sub> = Ṅ × [ (1 − f<sub>v</sub>)·f<sub>c,s</sub>·L<sub>s</sub>{' '}
-              &nbsp;+&nbsp; f<sub>v</sub>·f<sub>c,ℓ</sub>·L<sub>ℓ</sub> ]
+              N = Ṅ ∫<sub>τ</sub>
+              <sup>∞</sup> S(t) dt &nbsp;&nbsp; S(t) = exp(−∫<sub>0</sub>
+              <sup>t</sup> h)
             </div>
             <div className={styles.line}>
-              f<sub>v</sub> = (e·s₀)<sup>R</sup> · exp(−I<sub>e</sub>) · exp(−p<sub>x</sub>τ
-              <sub>v</sub>)
+              h = [p<sub>m0</sub>(1 − s) + p<sub>e0</sub>(φ(1 − s) + 1 − φ)] e<sup>dt</sup> + p
+              <sub>x</sub>
             </div>
             <div className={`${styles.line} ${styles.sub}`}>
-              R = p<sub>m0</sub>/g &nbsp;&nbsp; I<sub>e</sub> = p<sub>e0</sub>(e<sup>dτ</sup> − 1)/d
-              &nbsp;&nbsp; L<sub>ℓ</sub> = 1/p<sub>x</sub>
+              ds/dt = g s (1 − s/s<sub>max</sub>) &nbsp;&nbsp; s(0) = 10⁻⁹ &nbsp;&nbsp; s(τ) =
+              0.99 s<sub>max</sub>
             </div>
           </div>
 
           <dl className={styles.terms}>
             <dt>Ṅ</dt>
             <dd>Technological civilizations arising per year. Absorbs the first five Drake terms.</dd>
-            <dt>R</dt>
-            <dd>The moral ratio. Malice hazard divided by the rate of moral improvement.</dd>
-            <dt>
-              I<sub>e</sub>
-            </dt>
+            <dt>s</dt>
             <dd>
-              The error integral across the transition. Compounds if capability outruns competence.
+              The progressor share, from the phoenix floor toward its ceiling s<sub>max</sub>.
             </dd>
-            <dt>s₀</dt>
-            <dd>The phoenix rate, 10⁻⁹. Baseline incidence before deliberate cultivation.</dd>
-            <dt>
-              f<sub>c,ℓ</sub>
-            </dt>
+            <dt>d</dt>
             <dd>
-              Detectability of the transitioned population. Set this near zero and the crowded branch
-              goes silent.
+              Capability minus competence. Drives malice and error alike, and keeps its value after
+              the transition.
             </dd>
+            <dt>φ</dt>
+            <dd>The share of error that depends on conflict, and so falls as progressors spread.</dd>
+            <dt>τ</dt>
+            <dd>The end of the transition: the year the share reaches 99% of its ceiling.</dd>
           </dl>
 
           <p className={styles.afterTerms}>
-            The first threshold has a closed form,{' '}
-            <span className={styles.mono}>
-              R* = log(Ṅ/p<sub>x</sub>) / log(1/(e·s₀)) = {MORAL_THRESHOLD.toFixed(3)}
-            </span>
-            . It is a ratio of logarithms, so it barely moves when the badly known parameters move:
-            sweeping <span className={styles.mono}>s₀</span> across four orders of magnitude keeps it
-            inside 0.47 to 1.07. <strong>The error condition has no such robustness</strong>,
-            because it depends exponentially on a baseline rate nobody has measured. That is the
-            softest number in the model, it is the one the slider above exposes rather than hides,
-            and moving it across its plausible range moves the answer by more than any other
-            parameter here.
+            There is no closed form now. The page integrates S numerically: exactly before the
+            transition, on a grid across it, and with exponential integrals after it, as the
+            derivations set out. The thresholds come from bisection. R*, malice alone with no gap,
+            is about 0.30 at the default rates and moves with g and s<sub>max</sub>. d<sub>1</sub>{' '}
+            barely moves with s<sub>max</sub> or φ, but it depends on the baseline error rate, which
+            nobody has measured. That is the softest number in the model, and the slider above
+            exposes it rather than hiding it. Detectability is not in the count; the silence is a
+            separate question.
           </p>
         </div>
       </section>
 
-      {/* ── VI. the fork ── */}
+      {/* ── VIII. the silence ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>VI. The fork</p>
+          <p className={styles.eyebrow}>VIII. The silence</p>
           <h2>Two answers, and the conditions pick</h2>
           <p>
-            There is no single resolution to the paradox here. The parameters select between two of
-            them, and they require completely different explanations of the silence. Note the
-            asymmetry: the empty galaxy needs only one term to run away, and the crowded one needs
-            everything to go right at once. On current numbers it is the first.
+            The parameters select between two resolutions of the paradox, and they need different
+            explanations of the silence. The empty galaxy needs only one hazard left standing. The
+            crowded one needs the gap kept negative through the transition and after it. On the
+            default path it is the first.
           </p>
         </div>
         <div className={styles.colWide}>
           <div className={styles.fork}>
             <div className={styles.forkRight}>
-              <span className={styles.k}>on current numbers: the count collapses</span>
+              <span className={styles.k}>on the default path: the count collapses</span>
               <h3>The galaxy is empty</h3>
               <p>
-                Either the transition is too slow to outrun the dice, or capability outpaces
-                competence and the error term swallows everything, and on current numbers it is the
-                second. There is no paradox left to solve and nothing to explain. The sky is quiet
-                because there is nobody in it, and we are early rather than overlooked.
+                Somewhere a hazard is left standing, and the arithmetic does the rest. There is no
+                paradox left to solve and nothing to explain. The sky is quiet because there is nobody
+                in it, and we are early rather than overlooked.
               </p>
             </div>
             <div className={styles.forkLeft}>
-              <span className={styles.k}>only if both conditions clear</span>
+              <span className={styles.k}>only if the gap stays negative</span>
               <h3>The galaxy is crowded and quiet</h3>
               <p>
-                Survivors outnumber the doomed by orders of magnitude, because they live some three
-                hundred thousand times longer. Even a filter killing 99.99 percent leaves about a
-                hundred alive. So the silence cannot be explained by the filter at all. It rests
-                entirely on detectability, and the reason would have to be restraint: virtue that was
-                not chosen is only architecture, and contact would foreclose the choosing.
+                Survivors who keep retiring hazards live for epochs, so even a filter that stops 99.99
+                percent of civilizations leaves about a hundred alive. The silence then cannot be
+                explained by the filter at all. It rests entirely on detectability, and the reason
+                would have to be restraint.
               </p>
             </div>
           </div>
+          <p>
+            <strong>The cosmopolitan objection.</strong> The Stoics were cosmopolitans: the wise
+            person is a citizen of the world and owes help to everyone in it. So why would sages not
+            teach? The answer lies in what would be taught. Virtue has to be chosen. Epictetus has
+            Zeus admit that not even he can overpower a person&rsquo;s moral choice (
+            <em>Discourses</em> 1.1.23). Instruction from a civilization vastly older and stronger
+            would not land as an offer the hearer could freely assess. It would land as authority,
+            and virtue taken on authority is obedience. The help that would be most wanted is the
+            help that cannot be given.
+          </p>
+          <p>
+            <strong>A premise, named.</strong> This rests on something from Stoic physics: reason (
+            <em>logos</em>) is the same everywhere, so the rational survivors of any species reach the
+            same conclusions in different words, this one about restraint included. It also rests on
+            a Stoic account of us: humans are born with starting points toward virtue (
+            <em>aphormai</em>), not with the virtues themselves, so there is something left to
+            choose. Accept both and the silence follows. Reject them and the crowded branch needs
+            another reason, or fails.
+          </p>
           <p className={styles.footnote}>
             The restraint branch is a zoo hypothesis, and it inherits the zoo hypothesis&rsquo;s
             standing problem, which Brin pressed in his 1983 survey of the silence: it needs every
-            survivor to choose silence, and one defector ruins it. The reply available here is that
-            sages reasoning from shared premises converge, so the uniformity is not a sociological
-            accident but what correct reasoning does. That reply is partial. The value premise is
-            shared and the empirical prediction is not, so some of them may have got it wrong, and
-            one who got it wrong is enough. That is one more reason to read the empty branch as the
-            default.
+            survivor to choose silence, and one defector ruins it. The premise above is the reply,
+            and it is partial. The value premise is shared and the empirical prediction is not, so
+            some survivors may have got it wrong, and one who got it wrong is enough. That is one more
+            reason to read the empty branch as the default.
           </p>
         </div>
       </section>
 
-      {/* ── VII. the survivors ── */}
+      {/* ── IX. the survivors ── */}
       <section className={`${styles.section} ${styles.wrap}`}>
         <div className={`${styles.secHead} ${styles.col}`}>
-          <p className={styles.eyebrow}>VII. The survivors</p>
+          <p className={styles.eyebrow}>IX. The survivors</p>
           <h2>What is left when nobody wants</h2>
           <p>
             This is the speculative part, and nothing above depends on it. Much of the description is
             subtraction: a good deal of what institutions do is manage vice, and that work shrinks.
-            It is a ledger of tendencies, not abolitions. Sages still err, so the institutions that
-            catch error grow rather than shrink.
+            It is a ledger of tendencies, not abolitions. Progressors still err, so the institutions
+            that catch error grow rather than shrink.
           </p>
         </div>
         <div className={styles.colWide}>
@@ -1456,10 +1659,10 @@ export default function LongFilter({
         </div>
       </section>
 
-      {/* ── VIII. the close ── */}
+      {/* ── X. the close ── */}
       <section className={`${styles.section} ${styles.close}`}>
         <div className={`${styles.wrap} ${styles.col}`}>
-          <p className={styles.eyebrow}>VIII.</p>
+          <p className={styles.eyebrow}>X.</p>
           <h2>The invitation that cannot be sent</h2>
           <p>
             Fermi asked it over lunch. The galaxy is old and large and ought to be crowded. Where is
@@ -1476,23 +1679,29 @@ export default function LongFilter({
           </p>
           <p>
             On the other branch there is no invitation, no watchers, and nothing withheld. Only a
-            very large room, and a species eighty years into holding a match, improving at a rate
-            that will not beat the odds it has already set running.
+            very large room, and a species eighty years into holding a match, under a risk that has
+            not yet been shown to fall.
           </p>
           <p>
-            On current numbers the model points to the second. But which branch we are on is not
-            written anywhere. It is a handful of rates, and every one of them is ours.
+            The default path leads to the second. This page is an illumination of that path, not a
+            sales pitch for virtue: virtue chosen for what it pays would not survive a discount
+            thousands of years long, and the filter is not fooled by wanting to survive. What it
+            spares is a civilization that has stopped treating survival, wealth and winning as goods,
+            and that begins, as any such movement does, with understanding and then choice. Teaching
+            raises <span className={styles.mono}>g</span>, so an essay like this one is a small part
+            of the mechanism it describes. Which branch we are on is not written anywhere. It is a
+            handful of rates, and every one of them is ours.
           </p>
           <p className={`${styles.footnote} ${styles.closeNote}`}>
             One hypothesis among several, and the boring ones remain live. Life may be rare,
             intelligence rarer, and the distances may simply be doing what distances do. Seneca was
             making a point about rarity, not conducting a census, so s₀ is an order of magnitude at
-            best. Exponential growth in the sage fraction is an assumption and could as easily be
-            logistic, which would put a ceiling below one and convert the result from rare to never.
+            best, which is why the page uses it only as a floor. The ceiling on progressors moves the
+            moral threshold a great deal, from about 0.21 at 0.90 to 0.67 at 1.00, and the
+            competence threshold hardly at all.
           </p>
         </div>
       </section>
-
       <footer className={`${styles.wrap} ${styles.colophon}`}>
         <div className={styles.sources}>
           <h2 className={styles.sourcesTitle}>Sources</h2>
