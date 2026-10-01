@@ -137,6 +137,123 @@ const signedPct = (v: number) => `${v >= 0 ? '+' : ''}${(v * 100).toFixed(3)}%`
 const axisPct = (v: number) =>
   `${v >= 0 ? '+' : '\u2212'}${Math.abs(v * 100).toFixed(2)}%`
 
+// ── the explainers ───────────────────────────────────────────────────────────
+//
+// Each dial carries a line of prose that changes with where it sits, anchored
+// to something a reader already has a sense of: a span of history, a published
+// estimate, a historical rate. The anchors are the ones the formal note uses.
+
+/** A span of years against the human record. */
+function spanAnchor(y: number): string {
+  if (y < 80) return 'less than a human lifetime'
+  if (y < 5000) return 'less than recorded history, which is about 5,000 years'
+  if (y < 12000) return 'about the time since the first farms'
+  if (y < 300000) return 'less than our species has existed'
+  if (y < 6.6e7) return 'longer than our species has existed, though less than the time since the dinosaurs died'
+  if (y < 4.7e8) return 'longer than the time since the dinosaurs died'
+  return 'longer than there has been life on land'
+}
+
+/** I. Where the annual risk sits against the published estimates. */
+function riskNote(p: number): string {
+  const band =
+    p >= 0.03
+      ? 'Far above any published estimate for nuclear war.'
+      : p >= 0.008
+      ? 'About Hellman’s estimate for nuclear war, near 1 in 100 a year.'
+      : p >= 0.001
+        ? 'Inside the span of published estimates for major nuclear war, 1 in 1,000 to 1 in 100 a year.'
+        : p >= 1e-4
+          ? 'Below the published estimates. Most forecasters would call this optimistic.'
+          : 'Far below any published estimate.'
+  return `${band} At this risk a civilization lasts ${fmtYears(1 / p)} years on average, ${spanAnchor(1 / p)}.`
+}
+
+/**
+ * I. What surviving this long amounts to, as a run of coin flips: a survival
+ * chance S is as likely as log₂(1/S) heads in a row. Computed from ln S so the
+ * deep-time end does not underflow to zero.
+ */
+function yearsNote(p: number, years: number, decay: boolean): string {
+  const lnS = decay
+    ? -((p * HALVING_YEARS) / Math.LN2) * (1 - Math.pow(2, -years / HALVING_YEARS))
+    : years * Math.log1p(-p)
+  const heads = -lnS / Math.LN2
+  const odds =
+    heads < 0.15
+      ? 'Survival is close to certain.'
+      : heads < 1
+        ? 'Survival is better than a coin flip.'
+        : heads < 1e6
+          ? `Surviving it is as likely as flipping ${heads < 10 ? heads.toFixed(1) : Math.round(heads).toLocaleString('en-US')} heads in a row.`
+          : 'Surviving it is less likely than a million heads in a row.'
+  let tail = ''
+  if (decay) {
+    const now = p * Math.pow(2, -years / HALVING_YEARS)
+    tail =
+      now > 1e-15
+        ? ` By then the annual risk has halved ${Math.floor(years / HALVING_YEARS).toLocaleString('en-US')} times, to 1 in ${fmtYears(1 / now)}.`
+        : ' By then the annual risk has halved so often it is effectively zero.'
+  }
+  return `${fmtYears(years)} years is ${spanAnchor(years)}. ${odds}${tail}`
+}
+
+/** IV. Malice against the published totals it is borrowed from. */
+function maliceNote(m: number): string {
+  const band =
+    m >= 0.008
+      ? 'At Hellman’s figure or above. That total counts accidents too, so as malice alone this is pessimistic.'
+      : m >= 0.002
+        ? 'Near the superforecaster range for deliberate catastrophe.'
+        : m >= 5e-4
+          ? 'Below the superforecasters. Deliberate destruction would be rare by any published count.'
+          : 'Far below any published estimate.'
+  const need = m / MORAL_THRESHOLD
+  return `${band} To clear the moral threshold, g has to reach ${pct(need, need < 0.001 ? 3 : 2)} a year.`
+}
+
+/** IV. The improvement rate against the two historical anchors. */
+function growthNote(g: number): string {
+  const band =
+    g < 0.003
+      ? 'Slower than either historical anchor.'
+      : g < 0.01
+        ? 'About the pace at which European homicide fell, 0.6% a year over six centuries.'
+        : g < 0.03
+          ? 'Near the pace at which literacy spread, 2% a year over two centuries.'
+          : 'Faster than either historical anchor.'
+  return `${band} The sage fraction doubles every ${fmtYears(Math.LN2 / g)} years and saturates in ${fmtYears(LOG_DISTANCE / g)} years.`
+}
+
+/** IV. The baseline error rate, and what it adds up to with no gap at all. */
+function errorNote(e: number, g: number): string {
+  const band =
+    e < 4e-6
+      ? 'Below even the optimistic baseline this note first assumed.'
+      : e < 1e-4
+      ? 'Near the tidy baseline this note first assumed, now kept as the optimistic case.'
+      : e < 0.002
+        ? 'Between the optimistic baseline and the realistic one.'
+        : e < 0.009
+          ? 'The realistic range: most of a 1% published total is error rather than malice.'
+          : 'Above the realistic range.'
+  const flat = e * (LOG_DISTANCE / g)
+  const keep = Math.exp(-flat)
+  return `${band} Even with competence keeping exact pace, the error integral comes to ${flat < 10 ? flat.toFixed(2) : flat.toFixed(0)} over the transition, which leaves ${keep >= 0.01 ? `${Math.round(keep * 100)}% of civilizations` : 'almost no civilizations'} standing.`
+}
+
+/** IV. The capability gap, as a doubling or halving time for error. */
+function gapNote(d: number, e: number): string {
+  if (Math.abs(d) < 2.5e-5)
+    return 'Competence keeps exact pace with capability, so the error hazard stays at its baseline for the whole transition.'
+  if (d > 0)
+    return `Capability outruns competence by ${pct(d, 3)} a year, so the error hazard doubles every ${fmtYears(Math.LN2 / d)} years. Each new kind of capability opens failure channels the last kind did not have.`
+  const cap = e / -d
+  const floor = Math.exp(-cap)
+  const capText = cap < 0.01 ? cap.toPrecision(1) : cap < 10 ? cap.toFixed(2) : cap.toFixed(0)
+  return `Competence outpaces capability by ${pct(-d, 3)} a year, so the error hazard halves every ${fmtYears(Math.LN2 / -d)} years. However long the transition, the error integral can never pass ${capText}, ${floor >= 0.995 ? 'so the error term barely touches the count' : floor >= 0.01 ? `so at least ${Math.round(floor * 100)}% of civilizations get through the error term` : 'though that is still enough to stop almost every civilization'}.`
+}
+
 // ── the plate ────────────────────────────────────────────────────────────────
 
 type Mark = { x: number; y: number; r: number }
@@ -392,6 +509,13 @@ export default function LongFilter({
   const offChart = rawLeft < 0 || rawLeft > 100
   const errorLoad = errorIntegral(gap, tau, errorBase)
   const moralPass = ratio < MORAL_THRESHOLD
+  // What is doing the killing: each hazard's share of the survival exponent.
+  const maliceLoad = malice * (1 - 1 / LOG_DISTANCE) * tau
+  const externalLoad = EXTERNAL_HAZARD * tau
+  const totalLoad = maliceLoad + errorLoad + externalLoad
+  const shares = isFinite(totalLoad)
+    ? { malice: maliceLoad / totalLoad, error: errorLoad / totalLoad, external: externalLoad / totalLoad }
+    : { malice: 0, error: 1, external: 0 }
   const errorSmall = errorLoad < Math.LN2
 
   // Once the reader has moved a dial, the address bar carries the setting.
@@ -586,6 +710,7 @@ export default function LongFilter({
                 <input
                   type="range"
                   id="lf-risk"
+                  aria-describedby="lf-risk-note"
                   min={0}
                   max={70}
                   step={1}
@@ -604,6 +729,7 @@ export default function LongFilter({
                 <input
                   type="range"
                   id="lf-years"
+                  aria-describedby="lf-years-note"
                   min={0}
                   max={90}
                   step={1}
@@ -641,6 +767,15 @@ export default function LongFilter({
                   {(CIVILIZATIONS - alive).toLocaleString('en-US')}
                 </span>
                 <span className={styles.readoutLabel}>of 1,000 gone dark</span>
+              </div>
+              <div className={styles.readout}>
+                <span className={styles.readoutLabel}>reading the dials</span>
+                <p className={styles.note} id="lf-risk-note">
+                  {riskNote(p)}
+                </p>
+                <p className={styles.note} id="lf-years-note">
+                  {yearsNote(p, years, decay)}
+                </p>
               </div>
               <div className={styles.readout}>
                 <span className={styles.verdict} aria-live="polite">
@@ -825,76 +960,100 @@ export default function LongFilter({
               })}
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-malice">
-                  p<sub>m0</sub> &nbsp;· annual malice risk
-                </label>
-                <span className={styles.ctrlVal}>{pct(malice, malice < 0.001 ? 3 : 2)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-malice">
+                    p<sub>m0</sub> &nbsp;· annual malice risk
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(malice, malice < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-malice"
+                  aria-describedby="lf-malice-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={maliceStep}
+                  onChange={(e) => touch(setMaliceStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-malice"
-                min={0}
-                max={100}
-                step={0.5}
-                value={maliceStep}
-                onChange={(e) => touch(setMaliceStep)(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-malice-note">
+                {maliceNote(malice)}
+              </p>
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-growth">
-                  g &nbsp;· moral improvement rate
-                </label>
-                <span className={styles.ctrlVal}>{pct(growth, growth < 0.001 ? 3 : 2)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-growth">
+                    g &nbsp;· moral improvement rate
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(growth, growth < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-growth"
+                  aria-describedby="lf-growth-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={growthStep}
+                  onChange={(e) => touch(setGrowthStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-growth"
-                min={0}
-                max={100}
-                step={0.5}
-                value={growthStep}
-                onChange={(e) => touch(setGrowthStep)(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-growth-note">
+                {growthNote(growth)}
+              </p>
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-error">
-                  p<sub>e0</sub> &nbsp;· baseline error rate
-                </label>
-                <span className={styles.ctrlVal}>{pct(errorBase, errorBase < 0.001 ? 3 : 2)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-error">
+                    p<sub>e0</sub> &nbsp;· baseline error rate
+                  </label>
+                  <span className={styles.ctrlVal}>{pct(errorBase, errorBase < 0.001 ? 3 : 2)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-error"
+                  aria-describedby="lf-error-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={errorStep}
+                  onChange={(e) => touch(setErrorStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-error"
-                min={0}
-                max={100}
-                step={0.5}
-                value={errorStep}
-                onChange={(e) => touch(setErrorStep)(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-error-note">
+                {errorNote(errorBase, growth)}
+              </p>
             </div>
 
-            <div className={styles.ctrl}>
-              <div className={styles.ctrlTop}>
-                <label className={styles.ctrlLabel} htmlFor="lf-gap">
-                  d &nbsp;· capability minus competence
-                </label>
-                <span className={styles.ctrlVal}>{signedPct(gap)}</span>
+            <div className={styles.ctrlRow}>
+              <div className={styles.ctrl}>
+                <div className={styles.ctrlTop}>
+                  <label className={styles.ctrlLabel} htmlFor="lf-gap">
+                    d &nbsp;· capability minus competence
+                  </label>
+                  <span className={styles.ctrlVal}>{signedPct(gap)}</span>
+                </div>
+                <input
+                  type="range"
+                  id="lf-gap"
+                  aria-describedby="lf-gap-note"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={gapStep}
+                  onChange={(e) => touch(setGapStep)(Number(e.target.value))}
+                />
               </div>
-              <input
-                type="range"
-                id="lf-gap"
-                min={0}
-                max={100}
-                step={0.5}
-                value={gapStep}
-                onChange={(e) => touch(setGapStep)(Number(e.target.value))}
-              />
+              <p className={styles.ctrlNote} id="lf-gap-note">
+                {gapNote(gap, errorBase)}
+              </p>
             </div>
 
             <div className={styles.phaseWrap}>
@@ -987,7 +1146,7 @@ export default function LongFilter({
                     </span>
                     <span className={errorSmall ? styles.pass : styles.fail}>
                       {isFinite(errorLoad) ? errorLoad.toFixed(2) : '∞'} &nbsp;
-                      {errorSmall ? 'small' : 'dominant'}
+                      {errorSmall ? 'small' : 'costly'}
                     </span>
                   </div>
                   <div className={styles.gate}>
@@ -1010,6 +1169,19 @@ export default function LongFilter({
                       {Math.round(tau).toLocaleString('en-US')} yr
                     </span>
                   </div>
+                </div>
+                <div className={styles.load}>
+                  <span className={styles.loadLabel}>what is doing the killing</span>
+                  <div className={styles.loadBar} aria-hidden="true">
+                    <span className={styles.loadMalice} style={{ width: `${shares.malice * 100}%` }} />
+                    <span className={styles.loadError} style={{ width: `${shares.error * 100}%` }} />
+                    <span className={styles.loadExternal} style={{ width: `${shares.external * 100}%` }} />
+                  </div>
+                  <p className={styles.loadKey}>
+                    malice {Math.round(shares.malice * 100)}% &nbsp;·&nbsp; error{' '}
+                    {Math.round(shares.error * 100)}% &nbsp;·&nbsp; external{' '}
+                    {shares.external < 0.005 ? '<1' : Math.round(shares.external * 100)}%
+                  </p>
                 </div>
                 <p className={styles.phaseVerdict} aria-live="polite">
                   {phaseVerdict(count, moralPass)}

@@ -397,6 +397,12 @@
   text-transform: uppercase;
   color: var(--ink-faint);
 }
+.page .note {
+  margin: 0.7rem 0 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
 .verdict {
   font-family: var(--mono);
   font-size: 0.92rem;
@@ -487,6 +493,63 @@
 .phaseBlock input[type='range']::-moz-range-thumb {
   background: #f0f2ea;
   border-color: var(--ink);
+}
+.ctrlRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: 2.4rem;
+  align-items: start;
+  margin-bottom: 1.7rem;
+}
+.ctrlRow .ctrl {
+  margin-bottom: 0;
+}
+.phaseBlock .ctrlNote {
+  margin: 0;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #a9b0a5;
+  min-height: 3.9rem;
+}
+.load {
+  margin-top: 1.5rem;
+}
+.loadLabel {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a9186;
+  margin-bottom: 0.55rem;
+}
+.loadBar {
+  display: flex;
+  height: 0.55rem;
+  background: rgba(255, 255, 255, 0.08);
+}
+.loadBar span {
+  display: block;
+  height: 100%;
+  transition: width 0.15s;
+}
+.loadMalice {
+  background: #d08a63;
+}
+.loadError {
+  background: #8fb0e8;
+}
+.loadExternal {
+  background: #b7bdb2;
+}
+.phaseBlock .loadKey {
+  margin: 0.45rem 0 0;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: #8a9186;
 }
 .phaseWrap {
   display: grid;
@@ -988,6 +1051,7 @@
 @media (max-width: 900px) {
   .engineGrid,
   .phaseWrap,
+  .ctrlRow,
   .briefGrid,
   .ledger,
   .fork,
@@ -996,6 +1060,12 @@
   }
   .presets {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ctrlRow {
+    gap: 0.6rem;
+  }
+  .phaseBlock .ctrlNote {
+    min-height: 0;
   }
   .briefGrid > div + div,
   .hz > div + div,
