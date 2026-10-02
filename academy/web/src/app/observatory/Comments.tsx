@@ -19,6 +19,9 @@ type Row = {
   body: string;
   removed_at: string | null;
   created_at: string;
+  // Set only on the stand-in for a comment Kyle has hidden, which readers
+  // cannot read: its replies stay, under a marker in its place.
+  withheld?: boolean;
 };
 
 type Thread = { root: Row; replies: Row[] };
@@ -40,11 +43,21 @@ function toThreads(rows: Row[]): Thread[] {
   for (const r of rows) if (!r.parent_id) threads.set(r.id, { root: r, replies: [] });
   for (const r of rows) {
     if (!r.parent_id) continue;
-    const t = threads.get(rootOf(r).id);
+    const top = rootOf(r);
+    // A reply whose root is not readable answers a hidden comment. Keep the
+    // reply, under a stand-in for the comment it answers.
+    const key = top.parent_id ?? top.id;
+    if (top.parent_id && !threads.has(key)) {
+      threads.set(key, {
+        root: { id: key, parent_id: null, user_id: '', handle: '', body: '', removed_at: null, created_at: r.created_at, withheld: true },
+        replies: [],
+      });
+    }
+    const t = threads.get(key);
     if (t) t.replies.push(r);
   }
-  // A removed comment with no replies has nothing left to hold its place.
-  return [...threads.values()].filter(t => !t.root.removed_at || t.replies.some(r => !r.removed_at));
+  // A removed or hidden comment with no live replies has nothing left to hold its place.
+  return [...threads.values()].filter(t => (!t.root.removed_at && !t.root.withheld) || t.replies.some(r => !r.removed_at));
 }
 
 export default function Comments({ kind, id }: { kind: string; id: string }) {
@@ -167,8 +180,8 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
         {threads.map(t => (
           <div key={t.root.id}>
-            <CommentRow r={t.root} mine={viewer?.userId === t.root.user_id} onRemove={() => remove(t.root.id)}
-              onReply={viewer?.handle ? () => { setReplyTo(t.root.id); setReplyDraft(''); } : undefined} />
+            <CommentRow r={t.root} mine={!t.root.withheld && viewer?.userId === t.root.user_id} onRemove={() => remove(t.root.id)}
+              onReply={viewer?.handle && !t.root.withheld ? () => { setReplyTo(t.root.id); setReplyDraft(''); } : undefined} />
             {t.replies.length > 0 && (
               <div style={{ marginLeft: 18, paddingLeft: 16, borderLeft: '1px solid rgba(201,168,76,0.18)', marginTop: 14, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {t.replies.map(r => (
@@ -180,7 +193,7 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
             {replyTo === t.root.id && viewer?.handle && (
               <div style={{ marginLeft: 18, paddingLeft: 16, marginTop: 12 }}>
                 <textarea value={replyDraft} onChange={e => setReplyDraft(e.target.value)} rows={3} autoFocus className="obc-input"
-                  placeholder={`Reply to ${t.root.removed_at ? 'this thread' : t.root.handle}…`}
+                  placeholder={`Reply to ${t.root.removed_at || t.root.withheld ? 'this thread' : t.root.handle}…`}
                   onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') post(replyDraft, t.root.id); }} />
                 <div className="obc-row">
                   <button className="obc-ghost" onClick={() => setReplyTo(null)}>Cancel</button>
@@ -196,6 +209,9 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
 }
 
 function CommentRow({ r, mine, onRemove, onReply }: { r: Row; mine: boolean; onRemove: () => void; onReply?: () => void }) {
+  if (r.withheld) {
+    return <p className="obc-quiet" style={{ fontStyle: 'italic', margin: 0 }}>This comment was hidden by the editor.</p>;
+  }
   if (r.removed_at) {
     return <p className="obc-quiet" style={{ fontStyle: 'italic', margin: 0 }}>This comment was removed by its author.</p>;
   }

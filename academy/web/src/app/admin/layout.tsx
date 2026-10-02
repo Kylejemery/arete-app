@@ -67,6 +67,7 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
       { href: '/admin/scheduler', label: 'Scheduler' },
       { href: '/admin/stoic-replies', label: 'Stoic Replies' },
       { href: '/admin/world', label: 'World' },
+      { href: '/admin/comments', label: 'Comments' },
       { href: '/admin/moltbook', label: 'Moltbook' },
     ],
   },
