@@ -14,10 +14,10 @@
 //                     small talk). Haiku names the shared theme or declines;
 //                     a name that repeats five words of any question is
 //                     refused, and no question text is stored.
-//                     Since 2026-09-30 the parallel Cabinet branch drops rows
-//                     under its 0.4 floor before logging, so a turn with
-//                     nothing above the floor leaves no row; this source sees
-//                     the single-counselor path and older Cabinet turns.
+//                     A Cabinet turn the 0.4 floor empties logs one
+//                     below_floor row with its best match
+//                     (lib/cabinet-retrieval.js), so those turns count here.
+//                     Between 2026-09-30 and that change they left no row.
 //   2. primary_text   Passages from Epictetus, Seneca's Letters and Marcus
 //                     that sit farthest from every topic and document title
 //                     so far. Coverage is judged against titles, never
