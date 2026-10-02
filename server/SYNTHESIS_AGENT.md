@@ -154,6 +154,13 @@ sections applying them to the present, and the introduction, are
 `interpretive`, with `review_by` (12 months). The political check flags any
 contemporary political reference not in the approved observation; the draft
 is written once more without it, and a remaining flag is shown to Kyle.
+Every quotation is then checked against the passages with no model call
+(`synthesis/locators.js`): words found in no passage, or cited to the wrong
+author, make their section `unverified`; a section number outside the
+passage's label (the first draft cited Meditations 8.22 for 10.12) or a
+quote introduced under another author's name is flagged on the review page.
+A Haiku pass lists sentences carrying machine tells (`docs/machine-tells.md`)
+as flags; it never rewrites.
 
 **The backlog.** Seeded with nine topics from Kyle's two documents. When
 fewer than `min_approved_topics` (5) approved topics wait, the proposer adds
@@ -170,7 +177,7 @@ counts, world-observation age, review period, backlog sizes, and the
 proposer's thresholds. Missing keys fall back to the defaults in
 `stoic-life.js`.
 
-**Cost.** About $0.10 a draft (one Sonnet call, two Haiku checks), and about
+**Cost.** About $0.11 a draft (one Sonnet call, three Haiku checks), and about
 $0.05 a proposal pass. At four drafts a month, with redrafts and proposals,
 roughly $1-2 a month.
 

@@ -88,4 +88,60 @@ ${text}`;
   }
 }
 
-module.exports = { CHECK_MODEL, checkCitations, checkPolitical, passageBlock };
+// The tells, from docs/machine-tells.md (canonical list:
+// academy/web/src/lib/machine-tells.ts, which the server cannot import).
+const TELLS = Object.freeze([
+  'dash: an em dash, an en dash used as one, or a spaced hyphen used as one',
+  'negation-first frame: denying a reading nobody offered, then correcting it ("This is not X. It is Y.", "not X but Y" used for effect)',
+  'announcing importance instead of showing it ("worth sitting with", "This is the crux", "This is a striking claim", "This is not incidental")',
+  'hyperbole or over-the-top comparison',
+  'signposting ("firstly", "in conclusion", "it is important to note", "in other words")',
+  'thesaurus diction (delve, tapestry, navigate, crucial, pivotal, profound, nuanced, landscape, realm, underscore)',
+  'the hedge stack ("While X is true, it is also worth noting that Y")',
+  'the rhetorical question that answers itself',
+  'the manufactured punchline ("The answer: discipline.")',
+  'the summarizing ending or tidy moral',
+  'talking to the reader about the writing ("Stay with me here")',
+  'the sweeping claim about people ("Most people never ask this")',
+]);
+
+const DASH_RE = /[^\n.!?]*(?:\u2014|\s\u2013\s|\s-\s)[^\n.!?]*[.!?]?/g;
+
+function squash(s) {
+  return String(s || '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+
+/**
+ * @param {string} text  the draft's prose
+ * @returns {Promise<{tell: string, sentence: string}[]>}
+ *   Only sentences that occur in the text. On a failed call, the dash
+ *   findings alone, with an error entry so the review page says so.
+ */
+async function checkTells(text, { model = CHECK_MODEL } = {}) {
+  const found = [];
+  for (const m of String(text || '').match(DASH_RE) || []) {
+    if (m.trim()) found.push({ tell: 'dash', sentence: m.trim() });
+  }
+  const system = `You find machine-writing tells in an essay so a human editor can fix them. The tells:
+${TELLS.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+A philosophical contrast the argument needs ("preferred but not good") is not a tell. Quote each offending sentence exactly as it appears, one entry per sentence, at most 20.
+
+Return only JSON: {"tells": [{"tell": "<short name>", "sentence": "<the exact sentence>"}]}`;
+  try {
+    const data = await callClaude({ model, system, userPrompt: text, maxTokens: 2000 });
+    const parsed = extractJson(textOf(data));
+    const hay = squash(text);
+    for (const t of (parsed && Array.isArray(parsed.tells)) ? parsed.tells : []) {
+      const sentence = String(t.sentence || '').trim();
+      if (!sentence || !hay.includes(squash(sentence))) continue;   // invented or reworded
+      if (found.some(f => squash(f.sentence) === squash(sentence))) continue;
+      found.push({ tell: String(t.tell || 'tell').trim(), sentence });
+    }
+  } catch (err) {
+    found.push({ tell: 'check failed', sentence: err.message });
+  }
+  return found.slice(0, 25);
+}
+
+module.exports = { CHECK_MODEL, TELLS, checkCitations, checkPolitical, checkTells, passageBlock };

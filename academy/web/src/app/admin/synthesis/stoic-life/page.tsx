@@ -30,6 +30,20 @@ type Topic = {
 
 type CitationCheck = { heading: string; supported: boolean; problem: string }
 type PoliticalCheck = { flagged: boolean; items: string[]; error?: string }
+type QuotationFinding = {
+  heading: string
+  quote: string
+  problem: 'not_found' | 'wrong_author' | 'wrong_locator' | 'prose_attribution'
+  detail: string
+}
+type TellFinding = { tell: string; sentence: string }
+
+const QUOTE_PROBLEM_LABEL: Record<QuotationFinding['problem'], string> = {
+  not_found: 'not in the passages',
+  wrong_author: 'wrong author in the citation',
+  wrong_locator: 'wrong section number',
+  prose_attribution: 'introduced under another author',
+}
 
 type Draft = {
   id: string
@@ -40,7 +54,14 @@ type Draft = {
   markdown: string
   word_count: number | null
   status: 'pending_review' | 'edited' | 'approved' | 'rejected' | 'exported' | 'ingested'
-  checks: { citations?: CitationCheck[]; downgraded?: string[]; political?: PoliticalCheck; political_first_pass?: PoliticalCheck }
+  checks: {
+    citations?: CitationCheck[]
+    downgraded?: string[]
+    quotations?: QuotationFinding[]
+    tells?: TellFinding[]
+    political?: PoliticalCheck
+    political_first_pass?: PoliticalCheck
+  }
   follow_ons: { title: string; rationale: string }[]
   world_observation_id: string | null
   review_notes: string | null
@@ -262,6 +283,25 @@ export default function StoicLifePage() {
                   Marked unverified (the citation check could not support them): {downgraded.join('; ')}.
                   {(d.checks?.citations ?? []).filter(c => !c.supported && c.problem).map(c => (
                     <div key={c.heading}>· {c.heading}: {c.problem}</div>
+                  ))}
+                </div>
+              )}
+
+              {(d.checks?.quotations ?? []).length > 0 && (
+                <div style={{ margin: '8px 0' }}>
+                  <div className={styles.sectionLabel}>Quotations to fix (checked against the passages the draft was given)</div>
+                  {(d.checks?.quotations ?? []).map((q, i) => (
+                    <div key={i} className={q.problem === 'not_found' || q.problem === 'wrong_author' ? styles.errText : styles.gapMeta}>
+                      · {q.heading}: &ldquo;{q.quote}&rdquo;: {QUOTE_PROBLEM_LABEL[q.problem]} ({q.detail})
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(d.checks?.tells ?? []).length > 0 && (
+                <div style={{ margin: '8px 0' }}>
+                  <div className={styles.sectionLabel}>Machine tells (docs/machine-tells.md)</div>
+                  {(d.checks?.tells ?? []).map((t, i) => (
+                    <div key={i} className={styles.gapMeta}>· <strong>{t.tell}</strong>: {t.sentence}</div>
                   ))}
                 </div>
               )}
