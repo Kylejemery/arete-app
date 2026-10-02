@@ -32,6 +32,12 @@
 // reference that is not in the approved observation, and the draft is
 // written again once without it.
 //
+// Every quotation is also checked against the passages with no model call
+// (synthesis/locators.js): words in no passage or cited to the wrong author
+// make the section unverified; a wrong section number or a quote introduced
+// under another author's name is flagged for Kyle. A Haiku pass lists the
+// sentences carrying machine tells (docs/machine-tells.md), as flags only.
+//
 // Model: claude-sonnet-4-6 for drafting and proposing (matching the
 // journal-demand mode; Kyle's choice), Haiku for the checks.
 
@@ -42,7 +48,8 @@ const {
 } = require('../../lib/corpus-fence');
 const { renderSynthesisMarkdown } = require('../../lib/synthesis-markdown');
 const { logRetrieval } = require('../../lib/retrieval-log');
-const { checkCitations, checkPolitical } = require('../checks');
+const { checkCitations, checkPolitical, checkTells } = require('../checks');
+const { checkQuotations } = require('../locators');
 const { uniqueDocKey, insertDraft } = require('../drafts');
 const { randomUUID } = require('crypto');
 
@@ -260,15 +267,35 @@ function fullText(draft) {
   return [draft.title, draft.introduction, ...draft.sections.map(s => `${s.heading}\n${s.body}`)].join('\n\n');
 }
 
-// corpus_verified for an ancient section the check supports, unverified for
-// one it does not, interpretive for everything that applies the sources.
-function sectionStatuses(draft, citationChecks) {
+// Quotation problems that make corpus_verified untrue for the section that
+// holds them. A wrong section number or a prose misattribution is flagged
+// for Kyle to fix and leaves the status alone.
+const DOWNGRADING_QUOTE_PROBLEMS = new Set(['not_found', 'wrong_author']);
+
+// corpus_verified for an ancient section the check supports and whose
+// quotations are all in the passages under the right author; unverified
+// otherwise; interpretive for everything that applies the sources.
+// quotationFindings: per section, in draft order (optional).
+function sectionStatuses(draft, citationChecks, quotationFindings = []) {
   let k = 0;
-  return draft.sections.map(s => {
+  return draft.sections.map((s, i) => {
     if (s.kind === 'present') return ['interpretive'];
     const check = citationChecks[k++];
-    return check && check.supported ? ['corpus_verified'] : ['unverified'];
+    const quoteTrouble = (quotationFindings[i] || []).some(f => DOWNGRADING_QUOTE_PROBLEMS.has(f.problem));
+    return check && check.supported && !quoteTrouble ? ['corpus_verified'] : ['unverified'];
   });
+}
+
+// Every quotation, section by section, against the passages
+// (synthesis/locators.js). Returns [findings per section] and a flat list
+// with the heading on each finding for the review page.
+function quotationChecks(draft, passages) {
+  const perSection = draft.sections.map(s => checkQuotations(s.body, passages));
+  const flat = [
+    ...checkQuotations(draft.introduction || '', passages).map(f => ({ heading: 'Introduction', ...f })),
+    ...perSection.flatMap((fs, i) => fs.map(f => ({ heading: draft.sections[i].heading, ...f }))),
+  ];
+  return { perSection, flat };
 }
 
 // The works the piece actually relies on: what the ancient sections cite and
@@ -330,8 +357,12 @@ async function writeDraft(topic, config, log) {
   }
 
   const ancient = draft.sections.filter(s => s.kind === 'ancient');
-  const citations = await checkCitations(ancient, passages, { model: config.check_model });
-  const statuses = sectionStatuses(draft, citations);
+  const [citations, tells] = await Promise.all([
+    checkCitations(ancient, passages, { model: config.check_model }),
+    checkTells(fullText(draft), { model: config.check_model }),
+  ]);
+  const quotations = quotationChecks(draft, passages);
+  const statuses = sectionStatuses(draft, citations, quotations.perSection);
   const today = new Date().toISOString().slice(0, 10);
   const docKey = await uniqueDocKey('stoic-life', topic.title);
 
@@ -357,7 +388,9 @@ async function writeDraft(topic, config, log) {
     markdown,
     checks: {
       citations,
-      downgraded: citations.filter(c => !c.supported).map(c => c.heading),
+      downgraded: draft.sections.filter((sec, i) => sec.kind === 'ancient' && statuses[i][0] === 'unverified').map(sec => sec.heading),
+      quotations: quotations.flat,
+      tells,
       political,
       ...(firstPolitical.flagged ? { political_first_pass: firstPolitical } : {}),
     },
@@ -437,6 +470,7 @@ module.exports = {
   buildUserPrompt,
   validateDraft,
   sectionStatuses,
+  quotationChecks,
   sourcesUsed,
   addMonths,
   draftNext,
