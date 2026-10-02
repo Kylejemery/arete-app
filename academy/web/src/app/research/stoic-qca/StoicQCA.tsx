@@ -49,16 +49,16 @@ function pathNote(
   breakers: string[],
   negated: boolean
 ): string {
-  const outcome = negated ? "inconsistency" : "consistency";
+  const outcome = negated ? "the inconsistent lives" : "the consistent lives";
   const fitText =
     consistency >= CONVENTION
       ? `consistency ${fmt(consistency)}, enough to call it sufficient at the conventional ${CONVENTION.toFixed(2)}`
       : `consistency ${fmt(consistency)}, short of the conventional ${CONVENTION.toFixed(2)}`;
-  const cover = `It accounts for about ${Math.round(coverage * 100)}% of the ${outcome} in the cases.`;
+  const cover = `Its coverage is ${fmt(coverage)}: it accounts for about ${Math.round(coverage * 100)}% of ${outcome} in the sample.`;
   const below =
     breakers.length === 0
       ? "No dot sits below the diagonal, so no case contradicts it."
-      : `${breakers.length === 1 ? "One case sits" : `${breakers.length} cases sit`} below the diagonal and contradict it: ${breakers.join(", ")}.`;
+      : `${breakers.length === 1 ? "One case sits" : `${breakers.length} cases sit`} below the diagonal and ${breakers.length === 1 ? "contradicts" : "contradict"} it: ${breakers.join(", ")}.`;
   return `${label.replace(" → inconsistency", "")}: ${fitText}. ${cover} ${below}`;
 }
 const clone = (cs: StoicCase[]) => cs.map((c) => ({ ...c, scores: { ...c.scores } }));
