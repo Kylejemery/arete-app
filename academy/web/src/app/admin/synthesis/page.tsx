@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import styles from '../admin.module.css'
 
@@ -238,6 +239,10 @@ export default function SynthesisPage() {
       <div className={styles.header}>
         <h1>Synthesis agent</h1>
         <p>Cross-source philosophical synthesis — review, edit, and approve documents for ingestion into the corpus.</p>
+        <p>
+          Stoic Life pieces (topics you approve, drafts as versioned Markdown) are reviewed on their own page:{' '}
+          <Link href="/admin/synthesis/stoic-life">Stoic Life →</Link>
+        </p>
       </div>
 
       {error && (

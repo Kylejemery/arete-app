@@ -21,12 +21,23 @@ const statusOf = (key, label) => {
   return cs[0].verification_status.join(',');
 };
 
-test('the three documents load with the fields the layer needs', () => {
-  assert.deepEqual(Object.keys(docs).sort(), ['fate-providence-up-to-us', 'stoic-logic-summary', 'virtues-of-socrates']);
+// Kyle's three hand-converted documents. Documents the Synthesis Agent drafts
+// (stoic-life-*, exported by export-synthesis-drafts.js) join this directory
+// with reviewed_by set and may have no regenerate_when, so the checks that
+// are about how those three were converted are scoped to them.
+const HAND_CONVERTED = ['fate-providence-up-to-us', 'stoic-logic-summary', 'virtues-of-socrates'];
+
+test('the three hand-converted documents load with the fields the layer needs', () => {
+  for (const key of HAND_CONVERTED) assert.ok(docs[key], `${key} is missing`);
   for (const p of all) {
     assert.equal(p.doc.author, 'Arete (AI-assisted)');
-    assert.equal(p.doc.reviewed_by, null);
-    assert.ok(p.doc.sources_used.length && p.doc.regenerate_when.length);
+    assert.ok(p.doc.sources_used.length);
+    if (HAND_CONVERTED.includes(p.doc.doc_key)) {
+      assert.equal(p.doc.reviewed_by, null);
+      assert.ok(p.doc.regenerate_when.length);
+    } else {
+      assert.equal(p.doc.reviewed_by, 'Kyle', `${p.doc.doc_key}: an agent-drafted document is only committed after Kyle approves it`);
+    }
     for (const c of p.chunks) {
       assert.ok(c.chunk_text.startsWith('[ARETE SYNTHESIS:'));
       assert.ok(c.chunk_text.includes(`Section: ${c.section_label}.`));
@@ -91,4 +102,26 @@ test('--part splits a load and only the last part activates', () => {
   const count = s => (s.match(/^  \(\$q\$stoicism-phd/gm) || []).length;
   assert.equal(parts.map(count).reduce((a, b) => a + b), p[0].chunks.length);
   assert.deepEqual(parts.map(s => s.includes('activate_synthesis_version')), [false, false, true]);
+});
+
+test('review_by: parsed, validated, and stated on interpretive chunks only', () => {
+  const md = [
+    '---', 'doc_key: review-by-check', 'title: Review By Check', 'version: 1', 'created_at: 2026-10-02',
+    'generated_with: test', 'review_by: 2027-10-02', 'default_status: corpus_verified',
+    'section_status:', '  - Today => interpretive', 'sources_used:', '  - Seneca | Letters', '---', '',
+    '# Review By Check', '', 'Intro.', '', '## Then', '', 'Seneca says so.', '', '## Today', '', 'We apply it.', '',
+  ].join('\n');
+  const { doc, chunks } = parseSynthesis(md, 'review-by-check.v1.md');
+  assert.equal(doc.review_by, '2027-10-02');
+  const today = chunks.find(c => c.section_label === 'Today');
+  const then = chunks.find(c => c.section_label === 'Then');
+  assert.match(today.chunk_text, /Review by: 2027-10-02\./);
+  assert.doesNotMatch(then.chunk_text, /Review by/);
+  assert.match(emitSql([{ file: 'review-by-check.v1.md', doc, chunks }]), /review_by, file_path/);
+  assert.throws(() => parseSynthesis(md.replace('review_by: 2027-10-02', 'review_by: next year'), 'x.md'), /review_by must be YYYY-MM-DD/);
+});
+
+test('documents without review_by emit the same SQL columns as before', () => {
+  assert.doesNotMatch(emitSql([docs['stoic-logic-summary']]), /review_by/);
+  assert.equal(docs['stoic-logic-summary'].doc.review_by, null);
 });

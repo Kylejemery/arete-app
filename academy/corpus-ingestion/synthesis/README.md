@@ -100,6 +100,31 @@ Each heading becomes one chunk; a section over 450 words is split at paragraph
 or table-row boundaries into parts with the same heading. A `section_status`
 line that names a heading the document does not have is an error.
 
+### review_by
+
+An optional `review_by: YYYY-MM-DD` in the front matter is stored on the
+document row (`corpus_synthesis_documents.review_by`), and every
+`interpretive` chunk's header gains a line telling the model that the
+application to the present may be out of date after that date. Documents
+without it are unchanged.
+
+## Documents the Synthesis Agent drafts
+
+The agent's Stoic Life mode (`server/SYNTHESIS_AGENT.md`) writes drafts in
+this format into `synthesis_drafts`, where Kyle reviews them at
+`/admin/synthesis/stoic-life`. Approved drafts come into this directory
+through the export, with `reviewed_by: Kyle` set:
+
+```
+node export-synthesis-drafts.js --dry-run    what would be written
+node export-synthesis-drafts.js              mark loaded drafts ingested, then write
+                                             approved drafts here and add their rows below
+```
+
+Commit the files and this README, open a PR, and the nightly sync loads them
+after merge. The export parses each file with the same parser the sync uses
+and refuses a doc_key and version that is already loaded.
+
 ## Versions
 
 A loaded version is a record and is not edited. To change a document, add

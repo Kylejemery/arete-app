@@ -18,12 +18,28 @@
 // after Corpus 03:00, Journal 04:00, Gap 05:00). Mirrors the other agents: raw
 // fetch to OpenAI (embeddings) and Anthropic (generation), no SDKs.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, OPENAI_API_KEY, CLAUDE_API_KEY.
+//
+// Modes. This file is the journal-demand mode. The shared plumbing (model
+// calls, embeddings, the draft queue, the citation and political checks) is in
+// synthesis/, and each further mode is its own module there:
+//
+//   node synthesis-agent.js                    journal demand → synthesis_documents (unchanged)
+//   node synthesis-agent.js --markdown         journal demand → synthesis_drafts, as a
+//                                              versioned <doc_key>.v1.md (synthesis/README)
+//   node synthesis-agent.js --mode stoic-life  one Stoic Life cycle: top up the topic
+//                                              backlog, then draft the oldest approved
+//                                              topic if no draft is in review
+//                                              (synthesis/modes/stoic-life.js)
 
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 const { researchRetrievalParams, isSynthesisAuthor, SYNTHESIS_AUTHORS_IN_LIST } = require('./lib/corpus-fence');
 const { randomUUID } = require('crypto');
 const { logRetrieval } = require('./lib/retrieval-log');
+const shared = require('./synthesis/shared');
+const { renderSynthesisMarkdown } = require('./lib/synthesis-markdown');
+const { checkCitations, checkPolitical } = require('./synthesis/checks');
+const { uniqueDocKey, insertDraft, textTypesFor } = require('./synthesis/drafts');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -32,7 +48,8 @@ const supabase = createClient(
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 
-const DAY = 24 * 60 * 60 * 1000;
+const DAY = shared.DAY;
+const GENERATION_MODEL = 'claude-sonnet-4-6';
 
 // Generated syntheses are authored under this fixed name. The agent must never
 // ground a new synthesis on its own prior syntheses — that creates an echo
@@ -41,41 +58,8 @@ const DAY = 24 * 60 * 60 * 1000;
 // concept (so near-paraphrases don't produce duplicate documents).
 const CONCEPT_DEDUP_THRESHOLD = 0.86;
 
-// Monday (UTC) of the current week, as YYYY-MM-DD — matches the other agents.
-function getMondayOfCurrentWeek() {
-  const d = new Date();
-  const day = d.getUTCDay(); // 0=Sun .. 6=Sat
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setUTCDate(d.getUTCDate() + diff);
-  return d.toISOString().split('T')[0];
-}
-
-// Embed a short string with text-embedding-3-small. Returns the vector or null.
-async function embed(text) {
-  if (!OPENAI_API_KEY) return null;
-  try {
-    const res = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
-      body: JSON.stringify({ model: 'text-embedding-3-small', input: text }),
-    });
-    if (!res.ok) {
-      console.error(`  embedding failed (${res.status}) for "${text}"`);
-      return null;
-    }
-    return (await res.json()).data[0].embedding;
-  } catch (e) {
-    console.error(`  embedding error for "${text}":`, e.message);
-    return null;
-  }
-}
-
-// Cosine similarity between two equal-length embedding vectors.
-function cosineSim(a, b) {
-  let dot = 0, na = 0, nb = 0;
-  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-  return na && nb ? dot / (Math.sqrt(na) * Math.sqrt(nb)) : 0;
-}
+// Shared with the other modes (synthesis/shared.js).
+const { getMondayOfCurrentWeek, embed, cosineSim } = shared;
 
 // --- 2a. Agent config ------------------------------------------------------
 
@@ -310,7 +294,7 @@ const TYPE_INSTRUCTIONS = {
     `Synthesize what these sources collectively recommend about how to engage with "${concept}" in practice. Ground every recommendation in specific sources. Show where practical recommendations converge across thinkers and where they diverge. End with a concrete set of practices the reader can begin immediately.`,
 };
 
-function buildSystemPrompt(targetWordCount) {
+function buildSystemPrompt(targetWordCount, { markdown = false } = {}) {
   return `You are a philosophical synthesist for the Arete Stoic philosophy platform.
 You produce rigorous cross-source analyses that become part of the platform's RAG corpus —
 retrievable by AI counselors when users wrestle with philosophical questions.
@@ -336,7 +320,9 @@ PHILOSOPHICAL DEPTH
 
 FORMAT
 - Target: ${targetWordCount} words
-- Structure: flowing prose with clear internal sections (no headers with # — use bold section titles inline)
+${markdown
+  ? '- Structure: flowing prose under internal sections. Mark each section with a Markdown "## " heading on its own line; use no other heading levels'
+  : '- Structure: flowing prose with clear internal sections (no headers with # — use bold section titles inline)'}
 - Opening: state what the document covers and why it matters for practice
 - Body: the synthesis itself, following the type instructions
 - Closing: what remains unresolved and why that matters — philosophical humility
@@ -348,32 +334,13 @@ WHAT TO NEVER DO
 - Begin with "In this document" or similar meta-preamble`;
 }
 
-async function callClaude(system, userPrompt) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': CLAUDE_API_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-6',
-      // A ~2000-word synthesis runs ~2700-3200 tokens; the old 3000 cap cut
-      // documents off mid-sentence. Give ample headroom so they finish.
-      max_tokens: 8000,
-      system,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
-  });
-  if (!res.ok) throw new Error(`Claude API ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  if (json.stop_reason === 'max_tokens') {
-    console.warn('  ⚠ generation hit max_tokens — document may be truncated');
-  }
-  return json;
+// A ~2000-word synthesis runs ~2700-3200 tokens; the old 3000 cap cut
+// documents off mid-sentence. Give ample headroom so they finish.
+function callClaude(system, userPrompt) {
+  return shared.callClaude({ model: GENERATION_MODEL, system, userPrompt, maxTokens: 8000 });
 }
 
-async function generateSynthesis(concept, passages, synthesisType, config) {
+async function generateSynthesis(concept, passages, synthesisType, config, { markdown = false } = {}) {
   const authorsInvolved = [...new Set(passages.map(p => p.author))];
   const worksInvolved = [...new Set(passages.map(p => p.work))];
 
@@ -395,7 +362,7 @@ Title it thoughtfully — the title should name the concept and the synthesis an
 (e.g. "Anger and the Rational Soul: Seneca, Marcus, and Musonius in Disagreement").
 Put the title on the first line, then the document.`;
 
-  const data = await callClaude(buildSystemPrompt(config.target_word_count), userPrompt);
+  const data = await callClaude(buildSystemPrompt(config.target_word_count, { markdown }), userPrompt);
   const block = (data.content || []).find(b => b.type === 'text');
   const content = block ? block.text : '';
   const wordCount = content.split(/\s+/).filter(Boolean).length;
@@ -414,6 +381,84 @@ Put the title on the first line, then the document.`;
     promptTokens: data.usage?.input_tokens ?? null,
     completionTokens: data.usage?.output_tokens ?? null,
   };
+}
+
+// --- 2e'. Versioned Markdown output (--markdown) ---------------------------
+
+// The generated document, split at its "## " headings. Text before the first
+// heading (after the title line) is the introduction.
+function splitMarkdownSections(content) {
+  const lines = String(content || '').replace(/\r\n/g, '\n').split('\n');
+  const first = lines.findIndex(l => l.trim());
+  const body = first === -1 ? [] : lines.slice(first + 1);   // drop the title line
+  const sections = [];
+  let cur = { heading: null, lines: [] };
+  for (const line of body) {
+    const h = line.match(/^##\s+(.+?)\s*$/);
+    if (h) { sections.push(cur); cur = { heading: h[1], lines: [] }; } else cur.lines.push(line);
+  }
+  sections.push(cur);
+  const intro = sections[0].heading === null ? sections.shift().lines.join('\n').trim() : '';
+  return {
+    introduction: intro,
+    sections: sections.map(s => ({ heading: s.heading, body: s.lines.join('\n').trim() })).filter(s => s.body),
+  };
+}
+
+// Status for a checked section: corpus_verified when the passages support it,
+// via_summary when the passages that support it include a summary of a
+// copyrighted work, unverified when the check failed.
+const SUMMARY_TEXT_TYPES = new Set(['paper_summary', 'modern_summary']);
+function statusForCheck(check, passages, textTypes) {
+  if (!check.supported) return ['unverified'];
+  const used = check.sources.map(n => passages[n - 1]).filter(Boolean);
+  return used.some(p => SUMMARY_TEXT_TYPES.has(textTypes.get(p.id))) ? ['via_summary'] : ['corpus_verified'];
+}
+
+// Render a journal-demand document as <doc_key>.v1.md and queue it in
+// synthesis_drafts. Every section goes through the citation check, which sets
+// its status; the political check records what it finds for Kyle.
+async function storeMarkdownDraft(concept, passages, result) {
+  const { introduction, sections } = splitMarkdownSections(result.content);
+  if (!sections.length) throw new Error('the model returned no "## " sections');
+  const numbered = passages.map((p, i) => ({ ...p, n: i + 1 }));
+  const toCheck = [
+    ...(introduction ? [{ heading: 'Introduction', body: introduction }] : []),
+    ...sections,
+  ];
+  const [checks, textTypes] = await Promise.all([
+    checkCitations(toCheck, numbered),
+    textTypesFor(passages.map(p => p.id)),
+  ]);
+  const statuses = checks.map(c => statusForCheck(c, passages, textTypes));
+  const political = await checkPolitical(result.content, null);
+
+  const docKey = await uniqueDocKey('synthesis', concept);
+  const today = new Date().toISOString().slice(0, 10);
+  const markdown = renderSynthesisMarkdown({
+    doc_key: docKey,
+    version: 1,
+    title: result.title,
+    created_at: today,
+    generated_with: `${GENERATION_MODEL}, Arete Synthesis Agent (journal-demand mode)`,
+    sources_used: [...new Set(passages.map(p => `${p.author} | ${p.work}`))],
+    introduction: introduction ? { body: introduction, status: statuses[0] } : null,
+    sections: sections.map((s, i) => ({ ...s, status: statuses[i + (introduction ? 1 : 0)] })),
+  });
+
+  return insertDraft({
+    mode: 'journal_demand',
+    concept,
+    doc_key: docKey,
+    version: 1,
+    title: result.title,
+    markdown,
+    checks: { citations: checks, political },
+    source_chunk_ids: result.sourceChunkIds,
+    generation_model: GENERATION_MODEL,
+    prompt_tokens: result.promptTokens,
+    completion_tokens: result.completionTokens,
+  });
 }
 
 // --- 2f. Main loop ---------------------------------------------------------
@@ -475,7 +520,16 @@ async function runSynthesisAgent(options = {}) {
       const synthesisType = determineSynthesisType(concept, passages, config);
       console.log(`  Type: ${synthesisType} | Sources: ${[...new Set(passages.map(p => p.author))].join(', ')}`);
 
-      const result = await generateSynthesis(concept, passages, synthesisType, config);
+      const result = await generateSynthesis(concept, passages, synthesisType, config, { markdown: !!options.markdown });
+
+      if (options.markdown) {
+        const draft = await storeMarkdownDraft(concept, passages, result);
+        console.log(`  ✓ Drafted: "${draft.title}" as ${draft.doc_key}.v1.md — pending review`);
+        succeeded++;
+        titles.push(draft.title);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
 
       // Store for admin review — NOT ingested yet.
       const { error } = await supabase.from('synthesis_documents').insert({
@@ -491,7 +545,7 @@ async function runSynthesisAgent(options = {}) {
         demand_rank: demandRank,
         status: 'pending_review',
         generation_week: generationWeek,
-        generation_model: 'claude-sonnet-4-6',
+        generation_model: GENERATION_MODEL,
         prompt_tokens: result.promptTokens,
         completion_tokens: result.completionTokens,
       });
@@ -520,6 +574,8 @@ async function runSynthesisAgent(options = {}) {
 
 // Exported for testing / manual invocation; only auto-runs as a CLI.
 module.exports = {
+  splitMarkdownSections,
+  statusForCheck,
   getAgentConfig,
   selectConceptsForSynthesis,
   getSourcePassages,
@@ -529,7 +585,15 @@ module.exports = {
 };
 
 if (require.main === module) {
-  runSynthesisAgent().catch(err => {
+  const args = process.argv.slice(2);
+  const modeAt = args.indexOf('--mode');
+  const mode = modeAt === -1 ? null : args[modeAt + 1];
+  const run = mode === 'stoic-life'
+    ? () => require('./synthesis/modes/stoic-life').runStoicLifeCycle()
+    : mode
+      ? () => Promise.reject(new Error(`unknown mode "${mode}" (known: stoic-life)`))
+      : () => runSynthesisAgent({ markdown: args.includes('--markdown') });
+  run().then(r => { if (mode) console.log(JSON.stringify(r, null, 2)); }).catch(err => {
     console.error('Fatal error:', err);
     process.exit(1);
   });
