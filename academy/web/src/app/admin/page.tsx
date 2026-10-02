@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import styles from './admin.module.css'
+import { readCommentsSeenAt } from '@/lib/comments-seen'
 
 type Overview = {
   week: string
@@ -87,6 +88,13 @@ type Overview = {
     promoted: number
     approvedToday: number
     lastFetchedAt: string | null
+  } | null
+  comments: {
+    live: number
+    week: number
+    hidden: number
+    newSinceSeen: number | null
+    latestAt: string | null
   } | null
 }
 
@@ -310,7 +318,8 @@ export default function AdminOverviewPage() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/admin/overview', { cache: 'no-store' })
+      const seen = readCommentsSeenAt()
+      const res = await fetch(`/api/admin/overview${seen ? `?commentsSince=${encodeURIComponent(seen)}` : ''}`, { cache: 'no-store' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Failed to load overview')
       setData(json)
@@ -517,6 +526,29 @@ export default function AdminOverviewPage() {
               ? `Last scouted ${timeAgo(data.stoicReplies.lastFetchedAt)} · every 6h · posting is manual`
               : 'No candidates yet · every 6h · posting is manual'}
             href="/admin/stoic-replies"
+          />
+
+          <AgentCard
+            icon="💬"
+            name="Comments"
+            status={!data.comments ? 'no data' : (data.comments.newSinceSeen ?? 0) > 0 ? 'new comments' : data.comments.live > 0 ? 'quiet' : 'none yet'}
+            statusKind={!data.comments ? 'idle' : (data.comments.newSinceSeen ?? 0) > 0 ? 'warn' : data.comments.live > 0 ? 'ok' : 'idle'}
+            metrics={[
+              {
+                label: 'New since you looked',
+                value: data.comments?.newSinceSeen == null
+                  ? '—'
+                  : data.comments.newSinceSeen > 0
+                    ? <span className={styles.redBadge}>{data.comments.newSinceSeen}</span>
+                    : 0,
+              },
+              { label: 'This week', value: data.comments?.week ?? 0 },
+              { label: 'Hidden', value: data.comments?.hidden ?? 0 },
+            ]}
+            footer={data.comments?.latestAt
+              ? `${data.comments.live} on the site · latest ${timeAgo(data.comments.latestAt)}`
+              : 'No reader comments on the Observatory yet'}
+            href="/admin/comments"
           />
 
           <AgentCard

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { createAdminClient } from '@/lib/supabase-admin'
 
@@ -15,7 +15,7 @@ function mondayUTC(): string {
 
 // Unified status feed for the admin Overview cards. Admin-gated; every block is
 // guarded so one missing table can't blank the whole dashboard.
-export async function GET() {
+export async function GET(request: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== process.env.ADMIN_EMAIL) {
@@ -265,6 +265,33 @@ export async function GET() {
     } catch { return null }
   })()
 
+  // --- Observatory comments ---
+  // `commentsSince` is when Kyle last opened the Comments tab (kept in his
+  // browser, src/lib/comments-seen.ts); comments newer than it count as new.
+  const commentsSinceRaw = request.nextUrl.searchParams.get('commentsSince')
+  const commentsSince = commentsSinceRaw && !Number.isNaN(Date.parse(commentsSinceRaw))
+    ? new Date(commentsSinceRaw).toISOString() : null
+  const comments = (async () => {
+    try {
+      const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+      const head = () => admin.from('observatory_comments').select('id', { count: 'exact', head: true })
+      const [{ count: live }, { count: week }, { count: hidden }, fresh, { data: latest }] = await Promise.all([
+        head().eq('hidden', false).is('removed_at', null),
+        head().gte('created_at', weekAgo),
+        head().eq('hidden', true),
+        commentsSince ? head().gt('created_at', commentsSince) : Promise.resolve({ count: null }),
+        admin.from('observatory_comments').select('created_at').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      ])
+      return {
+        live: live ?? 0,
+        week: week ?? 0,
+        hidden: hidden ?? 0,
+        newSinceSeen: fresh.count ?? null,
+        latestAt: latest?.created_at ?? null,
+      }
+    } catch { return null }
+  })()
+
   // --- Stoic reply pipeline ---
   const stoicReplies = (async () => {
     try {
@@ -290,11 +317,11 @@ export async function GET() {
   const [
     corpusData, journalData, gapData, synthesisData, schedulerData, dispatchData, reflectionData,
     tensionData, inquiryData, dreamsData, longitudinalData, worldData, consolidationData,
-    stoicRepliesData,
+    stoicRepliesData, commentsData,
   ] = await Promise.all([
     corpus, journal, gap, synthesis, scheduler, dispatch, reflection,
     tension, inquiry, dreams, longitudinal, world, consolidation,
-    stoicReplies,
+    stoicReplies, comments,
   ])
 
   return NextResponse.json({
@@ -313,5 +340,6 @@ export async function GET() {
     world: worldData,
     consolidation: consolidationData,
     stoicReplies: stoicRepliesData,
+    comments: commentsData,
   })
 }
