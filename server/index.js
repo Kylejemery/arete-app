@@ -16,7 +16,7 @@ const { Resend } = require('resend');
 const { getRelevantChunks } = require('./retrieval');
 const { logRetrieval, attributeUsage } = require('./lib/retrieval-log');
 const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
-const { aboveSimilarityFloor } = require('./lib/cabinet-retrieval');
+const { aboveSimilarityFloor, belowFloorLogRow } = require('./lib/cabinet-retrieval');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
 const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
@@ -1965,6 +1965,9 @@ async function handleCabinetChat(req, res) {
 
     // One corpus retrieval shared across all counselors
     let contextChunks = [];
+    // The unfiltered rows, kept only so a turn the floor empties can still be
+    // logged (belowFloorLogRow below).
+    let generalRows = [];
     if (process.env.OPENAI_API_KEY) {
       try {
         const [embedding, primaryAuthors] = await Promise.all([
@@ -1991,7 +1994,10 @@ async function handleCabinetChat(req, res) {
         ]);
         // Below the floor (server/lib/cabinet-retrieval.js) a row is noise
         // from a turn with nothing to retrieve for; the counselors get none.
-        if (!general.error) contextChunks = aboveSimilarityFloor(general.data);
+        if (!general.error) {
+          generalRows = general.data || [];
+          contextChunks = aboveSimilarityFloor(generalRows);
+        }
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
         contextChunks = (await expandCandidates(contextChunks, 7, { fence: isCounselorVisible }))
           .rows.filter(isCounselorVisible);
@@ -2022,6 +2028,17 @@ async function handleCabinetChat(req, res) {
       chunks: contextChunks,
       mode: retrievalMode(),
     });
+    // A turn the floor emptied writes no row above, so it would vanish from
+    // the log. Record its best match once, marked below_floor, so thin
+    // retrieval stays measurable (the Stoic Life corpus-gap source reads it).
+    // The row has no chunk_id and is never attributed, so nothing that reads
+    // used or retrieved chunks counts it.
+    if (contextChunks.length === 0) {
+      const probe = belowFloorLogRow(generalRows);
+      if (probe) {
+        logRetrieval({ requestId, agent: 'cabinet', studentId: userId, queryText: question, chunks: [probe], mode: 'below_floor' });
+      }
+    }
 
     const selectedCounselors = await selectRespondingCounselors(question, parallelCounselors, history);
     // First reply: one voice, so the opening is one short, specific reply
