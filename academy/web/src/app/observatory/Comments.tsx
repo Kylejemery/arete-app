@@ -10,15 +10,21 @@ import { GOLD, IVORY, MONO, MUTED, SERIF, TEXT } from '@/app/library/theme';
 // a reply files under the same root. The database sets the handle, checks the
 // piece is published, and only ever lets a reader remove their own comment
 // (supabase/migrations/20261001165829_observatory_comments.sql).
+//
+// The corpus answers each top-level comment once, in the thread, right after
+// it is posted (POST /api/observatory/reply on the backend). Its reply is
+// marked as the corpus's own writing and names the passages it drew on.
 
 type Row = {
   id: string;
   parent_id: string | null;
-  user_id: string;
+  user_id: string | null;
   handle: string;
   body: string;
   removed_at: string | null;
   created_at: string;
+  is_corpus?: boolean;
+  sources?: { author: string; work: string; title?: string }[] | null;
   // Set only on the stand-in for a comment Kyle has hidden, which readers
   // cannot read: its replies stay, under a marker in its place.
   withheld?: boolean;
@@ -26,7 +32,7 @@ type Row = {
 
 type Thread = { root: Row; replies: Row[] };
 
-const COLUMNS = 'id, parent_id, user_id, handle, body, removed_at, created_at';
+const COLUMNS = 'id, parent_id, user_id, handle, body, removed_at, created_at, is_corpus, sources';
 
 function toThreads(rows: Row[]): Thread[] {
   const byId = new Map(rows.map(r => [r.id, r]));
@@ -71,6 +77,9 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
   const [posting, setPosting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [signInHref, setSignInHref] = useState('/login');
+  // The comment the corpus is answering right now, and a note if it could not.
+  const [considering, setConsidering] = useState<string | null>(null);
+  const [corpusNote, setCorpusNote] = useState<{ root: string; text: string } | null>(null);
 
   const load = useCallback(async () => {
     const { data, error } = await supabase
@@ -90,7 +99,32 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
   }, [load]);
 
   const threads = useMemo(() => toThreads(rows || []), [rows]);
-  const live = (rows || []).filter(r => !r.removed_at).length;
+  const live = (rows || []).filter(r => !r.removed_at && !r.is_corpus).length;
+
+  // Ask the corpus to answer a top-level comment just posted. The comment is
+  // already saved; if the corpus cannot answer, say so quietly and move on.
+  const askCorpus = async (rootId: string) => {
+    setConsidering(rootId); setCorpusNote(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch('/api/observatory/reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ commentId: rootId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.reply) {
+        setRows(r => (r || []).some(x => x.id === data.reply.id) ? r : [...(r || []), data.reply as Row]);
+      } else if (data.message) {
+        setCorpusNote({ root: rootId, text: data.message });
+      }
+    } catch {
+      setCorpusNote({ root: rootId, text: 'The corpus is silent just now. Your comment is posted.' });
+    } finally {
+      setConsidering(null);
+    }
+  };
 
   const post = async (body: string, parentId: string | null) => {
     const text = body.trim();
@@ -105,7 +139,7 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
     setPosting(false);
     if (error || !data) { setErr('Your comment could not be saved. Try again in a moment.'); return; }
     setRows(r => [...(r || []), data as Row]);
-    if (parentId) { setReplyTo(null); setReplyDraft(''); } else setDraft('');
+    if (parentId) { setReplyTo(null); setReplyDraft(''); } else { setDraft(''); askCorpus((data as Row).id); }
   };
 
   const remove = async (rowId: string) => {
@@ -182,12 +216,18 @@ export default function Comments({ kind, id }: { kind: string; id: string }) {
           <div key={t.root.id}>
             <CommentRow r={t.root} mine={!t.root.withheld && viewer?.userId === t.root.user_id} onRemove={() => remove(t.root.id)}
               onReply={viewer?.handle && !t.root.withheld ? () => { setReplyTo(t.root.id); setReplyDraft(''); } : undefined} />
-            {t.replies.length > 0 && (
+            {(t.replies.length > 0 || considering === t.root.id || corpusNote?.root === t.root.id) && (
               <div style={{ marginLeft: 18, paddingLeft: 16, borderLeft: '1px solid rgba(201,168,76,0.18)', marginTop: 14, display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {t.replies.map(r => (
-                  <CommentRow key={r.id} r={r} mine={viewer?.userId === r.user_id} onRemove={() => remove(r.id)}
-                    onReply={viewer?.handle && !r.removed_at ? () => { setReplyTo(t.root.id); setReplyDraft(`@${r.handle} `); } : undefined} />
+                  <CommentRow key={r.id} r={r} mine={!r.is_corpus && viewer?.userId === r.user_id} onRemove={() => remove(r.id)}
+                    onReply={viewer?.handle && !r.removed_at ? () => { setReplyTo(t.root.id); setReplyDraft(r.is_corpus ? '' : `@${r.handle} `); } : undefined} />
                 ))}
+                {considering === t.root.id && (
+                  <p className="obc-quiet" style={{ fontStyle: 'italic' }}><span style={{ color: GOLD }}>✶</span> The corpus is considering…</p>
+                )}
+                {corpusNote?.root === t.root.id && considering !== t.root.id && (
+                  <p className="obc-quiet" style={{ fontStyle: 'italic' }}>{corpusNote.text}</p>
+                )}
               </div>
             )}
             {replyTo === t.root.id && viewer?.handle && (
@@ -214,6 +254,24 @@ function CommentRow({ r, mine, onRemove, onReply }: { r: Row; mine: boolean; onR
   }
   if (r.removed_at) {
     return <p className="obc-quiet" style={{ fontStyle: 'italic', margin: 0 }}>This comment was removed by its author.</p>;
+  }
+  if (r.is_corpus) {
+    // Anything the corpus says gets the house treatment: a gold rule, a gold
+    // kicker, warm italic, and the passages it drew on.
+    const sources = (r.sources || []).filter(s => s && s.author);
+    return (
+      <div style={{ borderLeft: `3px solid ${GOLD}`, paddingLeft: 14 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+          <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: GOLD }}>✶ The Corpus</span>
+          <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.08em', color: '#666' }}>{relativeTime(r.created_at)}</span>
+        </div>
+        <p style={{ fontFamily: SERIF, fontStyle: 'italic', fontSize: 17, lineHeight: 1.6, color: '#e0d5b5', margin: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.body}</p>
+        <p style={{ fontFamily: MONO, fontSize: 9, letterSpacing: '0.06em', color: MUTED, margin: '8px 0 0' }}>
+          Written by the corpus from its texts{sources.length > 0 ? `, drawing on ${sources.map(s => `${s.author}, ${s.title || s.work}`).join(' · ')}` : ''}
+        </p>
+        {onReply && <div style={{ marginTop: 6 }}><button className="obc-link" onClick={onReply}>reply</button></div>}
+      </div>
+    );
   }
   return (
     <div>

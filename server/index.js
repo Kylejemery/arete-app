@@ -7959,6 +7959,106 @@ app.get('/api/observatory/piece/:kind/:id', async (req, res) => {
   }
 });
 
+// POST /api/observatory/reply — the corpus answers a reader's comment on an
+// Observatory piece, once, as a reply in the thread (observatory_comments,
+// is_corpus). Called by the comment box right after a reader posts a
+// top-level comment; only that comment's author can prompt it. Grounded in
+// the piece, the comment, and counselor-fenced passages
+// (server/lib/observatory-reply.js). Each reader can prompt DAILY_LIMIT
+// replies a day, counted apart from their Oracle allowance. The comment is
+// saved whether or not the corpus answers.
+const observatoryReply = require('./lib/observatory-reply');
+app.post('/api/observatory/reply', async (req, res) => {
+  try {
+    if (!CLAUDE_API_KEY) return res.status(500).json({ error: 'Server not configured' });
+    const userId = await getAuthenticatedUserId(req);
+    if (!userId) return res.status(401).json({ error: 'sign_in', message: 'Sign in to hear from the corpus.' });
+
+    const commentId = String((req.body || {}).commentId || '');
+    if (!OBS_PIECE_ID_RE.test(commentId)) return res.status(400).json({ error: 'commentId is required' });
+
+    const { data: comment } = await supabase
+      .from('observatory_comments')
+      .select('id, piece_kind, piece_id, parent_id, user_id, handle, body, removed_at, hidden, is_corpus')
+      .eq('id', commentId)
+      .maybeSingle();
+    if (!comment || comment.hidden || comment.removed_at || comment.is_corpus || comment.parent_id) {
+      return res.status(404).json({ error: 'not_answerable', message: 'The corpus answers top-level comments only.' });
+    }
+    if (comment.user_id !== userId) return res.status(403).json({ error: 'not_yours' });
+
+    const COLS = 'id, parent_id, user_id, handle, body, removed_at, created_at, is_corpus, sources';
+    const existingReply = async () => (await supabase
+      .from('observatory_comments').select(COLS)
+      .eq('parent_id', commentId).eq('is_corpus', true).maybeSingle()).data;
+    const already = await existingReply();
+    if (already) return res.json({ reply: already, existing: true });
+
+    const piece = await loadObservatoryPiece(comment.piece_kind, comment.piece_id);
+    if (!piece) return res.status(404).json({ error: 'not_published' });
+
+    if (observatoryReply.DAILY_LIMIT > 0) {
+      const { data: count, error: rlErr } = await supabase.rpc('upsert_oracle_rate_limit', { p_ip: `obs-reply:${userId}` });
+      if (!rlErr && count > observatoryReply.DAILY_LIMIT) {
+        return res.status(429).json({
+          error: 'daily_limit',
+          message: `The corpus answers ${observatoryReply.DAILY_LIMIT} of your comments a day. Your comment is posted; it will answer again tomorrow.`,
+        });
+      }
+    } else {
+      return res.status(429).json({ error: 'paused', message: 'The corpus is not answering comments just now. Your comment is posted.' });
+    }
+
+    const query = observatoryReply.retrievalQuery(comment.piece_kind, piece, comment.body);
+    const passages = ((await getStoicContext(query, 6, null).catch(() => [])) || [])
+      .slice(0, 5)
+      .map(c => ({ ...c, title: libraryHelpers.workTitle(c.work) }));
+    const { system, user } = observatoryReply.buildReplyPrompt({
+      kind: comment.piece_kind, piece, commentBody: comment.body, handle: comment.handle, passages,
+    });
+
+    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, system, messages: [{ role: 'user', content: user }] }),
+    });
+    if (!claudeRes.ok) {
+      console.error('[/api/observatory/reply] Claude error:', claudeRes.status, await claudeRes.text());
+      return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Your comment is posted.' });
+    }
+    const claudeData = await claudeRes.json();
+    const body = observatoryReply.cleanReply(claudeData.content?.[0]?.text);
+    if (!body) return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Your comment is posted.' });
+
+    const { data: inserted, error: insErr } = await supabase
+      .from('observatory_comments')
+      .insert({
+        piece_kind: comment.piece_kind,
+        piece_id: comment.piece_id,
+        parent_id: comment.id,
+        handle: observatoryReply.CORPUS_HANDLE,
+        body,
+        is_corpus: true,
+        requested_by: userId,
+        sources: passages.map(c => ({ author: c.author, work: c.work, title: c.title })),
+      })
+      .select(COLS)
+      .single();
+    if (insErr) {
+      // Two requests raced; one corpus reply per comment is enforced by index.
+      if (insErr.code === '23505') {
+        const raced = await existingReply();
+        if (raced) return res.json({ reply: raced, existing: true });
+      }
+      throw insErr;
+    }
+    return res.json({ reply: inserted });
+  } catch (err) {
+    console.error('[/api/observatory/reply] error:', err.message);
+    return res.status(500).json({ error: 'failed', message: 'The corpus could not answer just now. Your comment is posted.' });
+  }
+});
+
 // GET /api/observatory/journal — every published Observatory piece as one
 // newest-first list of posts, for the journal page (/observatory). Same
 // visibility rules as the feeds and the piece endpoint

@@ -16,12 +16,14 @@ type Comment = {
   piece_kind: Kind
   piece_id: string
   parent_id: string | null
-  user_id: string
+  user_id: string | null
   handle: string
   body: string
   removed_at: string | null
   hidden: boolean
   created_at: string
+  is_corpus?: boolean
+  sources?: { author: string; title?: string; work: string }[] | null
   piece_title: string | null
 }
 type Filter = 'all' | 'visible' | 'hidden' | 'removed'
@@ -148,6 +150,7 @@ export default function AdminCommentsPage() {
               <strong>{c.handle}</strong>
               <span className={styles.muted}>{fmtDateTime(c.created_at)}</span>
               {c.parent_id && <span className={styles.muted}>· reply</span>}
+              {c.is_corpus && <span className={styles.pill} style={{ background: '#F4ECD4', color: '#7A5C14' }}>Corpus reply</span>}
               {isNew(c) && <span className={styles.pill} style={{ background: '#FFF4DB', color: '#92600A' }}>New</span>}
               {c.hidden && <span className={styles.pill} style={{ background: '#FBE3E3', color: '#B23535' }}>Hidden</span>}
               {c.removed_at && <span className={styles.pill} style={{ background: '#EDEDED', color: '#444' }}>Removed by author</span>}
