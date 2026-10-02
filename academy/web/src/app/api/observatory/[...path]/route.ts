@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Proxies the Observatory Living Sky endpoints to the Railway backend:
 // GET  → /api/observatory/state, /api/observatory/greeting
-// POST → /api/observatory/passage
+// POST → /api/observatory/passage, /api/observatory/reply (the corpus answers
+//        a reader's comment; the reader's session travels as a bearer token)
 // The specific sibling routes (inquiries, tensions, world, dreams) keep their
 // own files and win over this catch-all; this covers everything newer.
 // Public — no auth, same posture as the other Observatory endpoints.
@@ -46,6 +47,10 @@ export async function POST(
         // The Railway rate limiter keys on x-forwarded-for; pass the real
         // client IP through so limits apply per visitor, not per Vercel node.
         'x-forwarded-for': request.headers.get('x-forwarded-for') || '',
+        // Signed-in routes (reply) identify the reader from their session.
+        ...(request.headers.get('authorization')
+          ? { Authorization: request.headers.get('authorization') as string }
+          : {}),
       },
       body,
     })

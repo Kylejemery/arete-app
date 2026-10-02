@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic'
 
 type Filter = 'all' | 'visible' | 'hidden' | 'removed'
 const FILTERS: Filter[] = ['all', 'visible', 'hidden', 'removed']
-const COLUMNS = 'id, piece_kind, piece_id, parent_id, user_id, handle, body, removed_at, hidden, created_at, updated_at'
+const COLUMNS = 'id, piece_kind, piece_id, parent_id, user_id, handle, body, removed_at, hidden, created_at, updated_at, is_corpus, sources'
 const LIMIT = 200
 
 async function requireAdmin() {
