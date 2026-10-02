@@ -153,7 +153,7 @@ function splitBody(body) {
   return parts;
 }
 
-function header({ title, version, sectionPath, statuses }) {
+function header({ title, version, sectionPath, statuses, reviewBy }) {
   const lines = [
     '[ARETE SYNTHESIS: an AI-assisted summary written for teaching. Not a primary text and not published scholarship.]',
     `Document: ${title} (version ${version}). Section: ${sectionPath}.`,
@@ -161,6 +161,11 @@ function header({ title, version, sectionPath, statuses }) {
   ];
   if (statuses.some(s => NOT_ATTRIBUTABLE.has(s))) {
     lines.push('Do not present this section as what any ancient author said.');
+  }
+  // Interpretive sections apply the sources to the present, and the present
+  // moves on. review_by is the date to check that application again.
+  if (reviewBy && statuses.includes('interpretive')) {
+    lines.push(`Review by: ${reviewBy}. After that date, treat this application to the present as possibly out of date.`);
   }
   lines.push('Citing: cite the ancient or scholarly source this passage names, not this summary. Where it names none, say the point comes from an Arete synthesis.');
   return lines.join('\n');
@@ -180,6 +185,10 @@ function parseSynthesis(md, filename = 'synthesis.md') {
   if (!Number.isInteger(version) || version < 1 || version >= 1000) throw new Error(`${filename}: version must be an integer from 1`);
   if (!/^[a-z0-9-]+$/.test(meta.doc_key)) throw new Error(`${filename}: doc_key must be kebab-case`);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(meta.created_at)) throw new Error(`${filename}: created_at must be YYYY-MM-DD`);
+  const reviewBy = scalar(meta, 'review_by');
+  if (reviewBy !== null && (typeof reviewBy !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(reviewBy))) {
+    throw new Error(`${filename}: review_by must be YYYY-MM-DD`);
+  }
   const sourcesUsed = scalar(meta, 'sources_used') || [];
   const regenerateWhen = scalar(meta, 'regenerate_when') || [];
   if (!sourcesUsed.length) throw new Error(`${filename}: sources_used is empty`);
@@ -237,7 +246,7 @@ function parseSynthesis(md, filename = 'synthesis.md') {
         verification_status: statuses,
         body: part,
         word_count: wordCount(part),
-        chunk_text: `${header({ title: meta.title, version, sectionPath: s.path, statuses })}\n\n${part}`,
+        chunk_text: `${header({ title: meta.title, version, sectionPath: s.path, statuses, reviewBy })}\n\n${part}`,
         embed_input: `${meta.title}: ${s.path}\n\n${part}`,
       });
     }
@@ -254,6 +263,7 @@ function parseSynthesis(md, filename = 'synthesis.md') {
     reviewed_by: scalar(meta, 'reviewed_by'),
     sources_used: sourcesUsed,
     regenerate_when: regenerateWhen,
+    review_by: reviewBy,
     file_path: `academy/corpus-ingestion/synthesis/${path.basename(filename)}`,
     content_sha256: crypto.createHash('sha256').update(md).digest('hex'),
   };
@@ -339,9 +349,11 @@ function emitSql(parsed, { part = 1, parts = 1 } = {}) {
       (parts > 1 ? `; part ${part} of ${parts}, chunks ${chunks[0].chunk_index} to ${chunks[chunks.length - 1].chunk_index}` : ''));
     out.push(
       'insert into public.corpus_synthesis_documents\n' +
-      '  (doc_key, version, title, author, created_at, generated_with, reviewed_by, sources_used, regenerate_when, file_path, content_sha256)\n' +
+      '  (doc_key, version, title, author, created_at, generated_with, reviewed_by, sources_used, regenerate_when, ' +
+      (d.review_by ? 'review_by, ' : '') + 'file_path, content_sha256)\n' +
       `values (${[d.doc_key, d.version, d.title, d.author, d.created_at].map(lit).join(', ')}::date, ` +
       `${lit(d.generated_with)}, ${lit(d.reviewed_by)}, ${lit(d.sources_used)}, ${lit(d.regenerate_when)}, ` +
+      (d.review_by ? `${lit(d.review_by)}::date, ` : '') +
       `${lit(d.file_path)}, ${lit(d.content_sha256)})\n` +
       'on conflict (doc_key, version) do nothing;');
     const cols = Object.keys(chunkRow(d, p.chunks[0], null)).filter(c => c !== 'synthesis_document_id');
@@ -402,6 +414,9 @@ async function syncOne(p, { supabase, log }) {
       doc_key: d.doc_key, version: d.version, title: d.title, author: d.author, created_at: d.created_at,
       generated_with: d.generated_with, reviewed_by: d.reviewed_by, sources_used: d.sources_used,
       regenerate_when: d.regenerate_when, file_path: d.file_path, content_sha256: d.content_sha256,
+      // Only sent when set, so documents without one load against a schema
+      // that predates the column.
+      ...(d.review_by ? { review_by: d.review_by } : {}),
     }).select('id').single();
     if (error) throw new Error(`inserting ${d.doc_key} v${d.version}: ${error.message}`);
     id = data.id;

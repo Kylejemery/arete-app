@@ -6605,6 +6605,16 @@ app.post('/api/admin/convergence/run', makeAgentRunEndpoint('convergence', { run
 // Fills the review queue at /admin/stoic-replies; never posts anything.
 app.post('/api/admin/stoic-replies/run', makeAgentRunEndpoint('stoic-replies', { running: false }, runStoicReplyAgent));
 
+// POST /api/admin/synthesis/stoic-life/run — one Stoic Life cycle of the
+// Synthesis Agent: top up the topic backlog, then draft the oldest approved
+// topic if no draft is in review. The admin page calls it when Kyle approves
+// a topic or reviews a draft; there is no schedule. Drafts wait at
+// /admin/synthesis/stoic-life (server/synthesis/modes/stoic-life.js).
+app.post('/api/admin/synthesis/stoic-life/run', makeAgentRunEndpoint(
+  'stoic-life', { running: false },
+  () => require('./synthesis/modes/stoic-life').runStoicLifeCycle(),
+));
+
 // ===========================================================================
 // THE LIBRARY OF ARETE — public reading rooms over rag_corpus.
 // Stoic-focused, but every primary text is viewable, readable, and discussable.

@@ -113,3 +113,68 @@ Generated documents are reviewed at `academy.pursuearete.com/admin` →
 - **Agent Config** — tune `documents_per_week`, `min_user_frequency`, and the
   enabled toggle.
 - **Ingested archive** — read-only record of what synthesis is in the corpus.
+
+## Stoic Life mode
+
+A second mode of the same agent writes ~2000-word pieces on how to live a
+Stoic life, one topic at a time, as versioned Markdown in the format of
+`academy/corpus-ingestion/synthesis/` (the path Kyle's Stoic Logic and
+Virtues of Socrates documents took). Code: `synthesis/modes/stoic-life.js`
+(config, prompts, drafting), `synthesis/topic-proposer.js` (the backlog),
+`synthesis/checks.js` (citation and political checks), `synthesis/drafts.js`
+(the queue), `synthesis/shared.js` (model calls, embeddings), and
+`lib/synthesis-markdown.js` (the file renderer).
+
+**Flow.** Topics (`synthesis_topics`) → Kyle approves → a draft
+(`synthesis_drafts`, one in review at a time) → Kyle approves →
+`academy/corpus-ingestion/export-synthesis-drafts.js` writes
+`<doc_key>.v1.md` → PR → merge → the nightly sync loads it. Nothing reaches
+`rag_corpus` without a committed file.
+
+**When it runs.** No schedule. The admin page at
+`/admin/synthesis/stoic-life` starts a cycle
+(`POST /api/admin/synthesis/stoic-life/run` on the API server) whenever Kyle
+approves or rejects a topic or a draft, and has a Run now button. By hand:
+`node synthesis-agent.js --mode stoic-life`. A cycle tops up the backlog,
+then claims the oldest approved topic (`claim_stoic_life_topic`) unless a
+draft is already in review.
+
+**What a draft reads.** Primary texts only, author by author (Seneca,
+Epictetus, Marcus Aurelius, Musonius Rufus, Diogenes Laertius Book VII): every
+other layer is excluded in the query with the fence's own lists, and rows are
+filtered again on `text_type` and author. No synthesis, including this mode's
+own pieces, can reach a prompt; the fence is unchanged. For the present day it
+reads the newest `world_observations` row with status `approved` (never
+`auto_approved`), if no older than `world_observation_max_age_days`; it shapes
+how the topic is applied, never which topic.
+
+**What a draft claims.** Sections reporting the sources are `corpus_verified`
+when the Haiku citation check supports them, `unverified` when it does not;
+sections applying them to the present, and the introduction, are
+`interpretive`, with `review_by` (12 months). The political check flags any
+contemporary political reference not in the approved observation; the draft
+is written once more without it, and a remaining flag is shown to Kyle.
+
+**The backlog.** Seeded with nine topics from Kyle's two documents. When
+fewer than `min_approved_topics` (5) approved topics wait, the proposer adds
+up to the shortfall (never more than `max_pending_proposals` unreviewed), in
+order: corpus gaps (thin Cabinet retrieval, clustered, at least 3 members,
+counts stored and no question text), primary-text themes no title covers,
+follow-ons from approved drafts, aggregated journal themes (at least 3
+members). Internal and admin accounts never count. World observations are
+only a context note.
+
+**Config** (`agent_config.synthesis_stoic_life`, no redeploy): model
+(`claude-sonnet-4-6`), check model (Haiku 4.5), authors and works, passage
+counts, world-observation age, review period, backlog sizes, and the
+proposer's thresholds. Missing keys fall back to the defaults in
+`stoic-life.js`.
+
+**Cost.** About $0.10 a draft (one Sonnet call, two Haiku checks), and about
+$0.05 a proposal pass. At four drafts a month, with redrafts and proposals,
+roughly $1-2 a month.
+
+**Journal-demand drafts as Markdown.** `node synthesis-agent.js --markdown`
+runs the original mode but writes each document to `synthesis_drafts` as a
+`.v1.md` file, with every section's status set by the citation check, instead
+of to `synthesis_documents`. The default run is unchanged.

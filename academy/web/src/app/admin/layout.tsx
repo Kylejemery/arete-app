@@ -40,6 +40,7 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
     tabs: [
       { href: '/admin/tensions', label: 'Tensions' },
       { href: '/admin/synthesis', label: 'Synthesis' },
+      { href: '/admin/synthesis/stoic-life', label: 'Stoic Life' },
       { href: '/admin/inquiry', label: 'Inquiry' },
       { href: '/admin/convergence', label: 'Convergence' },
       { href: '/admin/consolidation', label: 'Consolidation' },
