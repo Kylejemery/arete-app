@@ -201,3 +201,42 @@ test('a supported section citing a paper summary is via_summary', () => {
   assert.deepEqual(statusForCheck({ supported: true, sources: [1, 2] }, passages, types), ['via_summary']);
   assert.deepEqual(statusForCheck({ supported: false, sources: [1] }, passages, types), ['unverified']);
 });
+
+test('a quotation in no passage, or under the wrong author, makes its ancient section unverified', () => {
+  const d = life.validateDraft(rawDraft(), 5);
+  const supported = [{ supported: true }, { supported: true }];
+  assert.deepEqual(
+    life.sectionStatuses(d, supported, [[{ problem: 'not_found' }], [{ problem: 'wrong_locator' }], [], []]),
+    [['unverified'], ['corpus_verified'], ['interpretive'], ['interpretive']],
+    'not_found downgrades; a wrong section number is a flag only',
+  );
+  assert.deepEqual(life.sectionStatuses(d, supported, [[], [{ problem: 'wrong_author' }]])[1], ['unverified']);
+  assert.deepEqual(life.sectionStatuses(d, supported)[0], ['corpus_verified'], 'no quotation findings: unchanged');
+});
+
+test('quotation checks run per section and carry the heading', () => {
+  const draft = {
+    introduction: '',
+    sections: [
+      { heading: 'Advice', kind: 'ancient', body: 'He says "stop and take the best advisers" (Marcus Aurelius, Meditations 8.22).' },
+      { heading: 'Now', kind: 'present', body: 'Apply it.' },
+    ],
+  };
+  const passages = [{ author: 'Marcus Aurelius', work: 'Meditations', section_label: '10.12', chunk_text: 'stop and take the best advisers. But if' }];
+  const q = life.quotationChecks(draft, passages);
+  assert.equal(q.perSection[0][0].problem, 'wrong_locator');
+  assert.deepEqual(q.perSection[1], []);
+  assert.equal(q.flat[0].heading, 'Advice');
+});
+
+test('the tells check keeps dash findings when the model call fails', async () => {
+  const saved = process.env.CLAUDE_API_KEY;
+  delete process.env.CLAUDE_API_KEY;
+  try {
+    const { checkTells } = require('../synthesis/checks');
+    const out = await checkTells('The work — and the waiting — was his. Lives 7.103–7.106 is a range.');
+    assert.deepEqual(out.map(t => t.tell), ['dash', 'check failed']);
+  } finally {
+    if (saved !== undefined) process.env.CLAUDE_API_KEY = saved;
+  }
+});
