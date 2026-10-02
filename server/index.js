@@ -7002,6 +7002,57 @@ app.get('/api/library/search', async (req, res) => {
   }
 });
 
+// GET /api/library/locate?id=<rag_corpus id> — where one chunk sits in the
+// reader, so a citation can link to the passage itself (/library?chunk=<id>)
+// rather than to a page number that moves whenever rows are added or
+// deprecated. Counted the same way as search: the work's shown rows that
+// precede this one. A deprecated, hidden, or off-language row has no place.
+app.get('/api/library/locate', async (req, res) => {
+  try {
+    const id = (req.query.id || '').toString();
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return res.status(400).json({ error: 'id must be a chunk id' });
+    const { data: row, error } = await supabase
+      .from('rag_corpus')
+      .select('author, work, chunk_index, language, deprecated')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!row || row.deprecated) return res.status(404).json({ error: 'Passage not found' });
+
+    const { data: ov } = await supabase
+      .from('library_overrides')
+      .select('hidden')
+      .eq('author', row.author)
+      .eq('work', row.work)
+      .maybeSingle();
+    if (ov && ov.hidden) return res.status(404).json({ error: 'Passage not found' });
+
+    const language = await readingLanguageFilter(supabase, row.author, row.work);
+    if (language && row.language !== language) return res.status(404).json({ error: 'Passage not found' });
+    const { count, error: cErr } = await withLanguage(supabase
+      .from('rag_corpus')
+      .select('id', { count: 'exact', head: true })
+      .eq('author', row.author)
+      .eq('work', row.work)
+      .eq('deprecated', false)
+      .lt('chunk_index', row.chunk_index), language);
+    if (cErr) throw cErr;
+
+    const position = count || 0;
+    return res.json({
+      author: row.author,
+      work: row.work,
+      page: Math.floor(position / LIBRARY_PAGE_CHUNKS),
+      // The row's position among the work's shown rows: the reader's firstChunk
+      // and chunkStarts are counted the same way.
+      chunk: position,
+    });
+  } catch (err) {
+    console.error('[/api/library/locate] error:', err.message);
+    return res.status(500).json({ error: 'Locate failed' });
+  }
+});
+
 // POST /api/library/related — "reads itself alongside": semantic neighbors of
 // an open text, drawn from a representative passage. Non-critical: failures
 // return an empty list rather than erroring the reader.

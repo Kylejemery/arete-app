@@ -46,8 +46,6 @@
 .period { color: var(--qca-muted); font-size: 0.75rem; font-weight: 400; }
 .scoreSelect { font: inherit; font-variant-numeric: tabular-nums; background: transparent; color: var(--qca-fg); border: 1px solid var(--qca-border); border-radius: 4px; padding: 0.15rem 0.2rem; }
 .changed { border-color: var(--qca-accent); box-shadow: 0 0 0 1px var(--qca-accent); }
-.detailRow td { background: var(--qca-surface); font-size: 0.9rem; line-height: 1.55; }
-.detailRow p { margin: 0 0 0.5rem; max-width: 48rem; }
 .flags { color: var(--qca-muted); font-size: 0.85rem; }
 .controls { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.95rem; }
 .controls select { font: inherit; margin-left: 0.25rem; }
@@ -68,3 +66,53 @@
 .dot { fill: var(--qca-accent); fill-opacity: 0.85; cursor: pointer; }
 .dotBreak { fill: var(--qca-weak); cursor: pointer; }
 .plotCaption { font-size: 0.85rem; color: var(--qca-muted); min-height: 1.4em; margin: 0.25rem 0 0; }
+
+/* Evidence sheet: slides in from the left; a full screen sheet on narrow
+ * screens. Flat, square-cornered, no shadow, per the academy design. */
+.sheetRoot { position: fixed; inset: 0; z-index: 50; }
+.sheetScrim { position: absolute; inset: 0; background: rgba(10, 22, 40, 0.72); animation: qcaFade 200ms ease-out; }
+.sheet {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: min(36rem, 92vw);
+  background: var(--qca-bg); color: var(--qca-fg);
+  border-right: 1px solid color-mix(in srgb, var(--qca-accent) 27%, transparent);
+  display: flex; flex-direction: column;
+  animation: qcaSlide 200ms ease-out;
+  color-scheme: dark;
+}
+.sheetHead { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 1.25rem 1.25rem 1rem; border-bottom: 1px solid var(--qca-border); }
+.sheetTitle { font-family: var(--font-playfair), Georgia, serif; font-weight: 400; font-size: 1.6rem; margin: 0; line-height: 1.2; }
+.sheetClose { font: inherit; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; background: none; color: var(--qca-accent); border: 1px solid color-mix(in srgb, var(--qca-accent) 53%, transparent); border-radius: 0; padding: 0.4rem 0.75rem; cursor: pointer; }
+.sheetClose:hover { background: color-mix(in srgb, var(--qca-accent) 13%, transparent); }
+.sheetBody { overflow-y: auto; padding: 1rem 1.25rem 3rem; font-size: 0.92rem; line-height: 1.55; overscroll-behavior: contain; }
+.sheetMeta { margin: 0 0 0.5rem; }
+.scoreBlock { border-top: 1px solid var(--qca-border); padding: 1rem 0 0.5rem; margin-top: 1rem; }
+.scoreHead { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+.scoreHead h3 { font-size: 1rem; font-weight: 600; margin: 0; }
+.scoreHead h3 code { font-size: 0.85em; background: var(--qca-surface); padding: 0.1em 0.4em; border-radius: 2px; margin-right: 0.35em; }
+.scorePair { display: flex; gap: 0.9rem; font-variant-numeric: tabular-nums; font-weight: 600; }
+.scoreMine { color: var(--qca-accent); }
+.scoreLabel { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--qca-muted); font-weight: 600; margin-right: 0.3rem; }
+.drafted { display: inline-block; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--qca-accent); border: 1px solid color-mix(in srgb, var(--qca-accent) 53%, transparent); padding: 0.1rem 0.5rem; margin: 0.5rem 0 0; }
+.levelMeaning { margin: 0.5rem 0 0; }
+.rationale { margin: 0.6rem 0 0; }
+.concern { margin: 0.6rem 0 0; padding: 0.5rem 0.75rem; background: color-mix(in srgb, var(--qca-accent) 8%, transparent); font-size: 0.88rem; }
+.evidenceList { list-style: none; padding: 0; margin: 0.75rem 0 0; display: grid; gap: 0.9rem; }
+.excerpt { margin: 0 0 0.35rem; padding: 0.1rem 0 0.1rem 0.85rem; border-left: 3px solid var(--qca-accent); font-style: italic; color: #e0d5b5; }
+.citation { margin: 0; font-size: 0.85rem; color: var(--qca-muted); }
+.citation a { color: var(--qca-accent); }
+.evidenceNote { margin: 0.15rem 0 0; font-size: 0.8rem; color: var(--qca-muted); font-style: italic; }
+@keyframes qcaSlide { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+@keyframes qcaFade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 640px) {
+  .sheet { width: 100vw; border-right: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .sheetScrim { animation: none; }
+}
+
+/* Admin: export the current scoring as a data.ts change. */
+.exportBox { margin: 0.75rem 0 0; padding: 0.75rem; border: 1px dashed color-mix(in srgb, var(--qca-accent) 27%, transparent); font-size: 0.9rem; }
+.exportBox textarea { width: 100%; min-height: 10rem; font-family: ui-monospace, monospace; font-size: 0.75rem; background: var(--qca-surface); color: var(--qca-fg); border: 1px solid var(--qca-border); margin: 0.5rem 0; }
+.exportActions { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+.exportButton { font: inherit; font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; background: var(--qca-accent); color: var(--qca-bg); border: none; border-radius: 0; padding: 0.45rem 0.9rem; cursor: pointer; font-weight: 700; }

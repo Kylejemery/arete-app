@@ -25,7 +25,10 @@ export type ReaderText = {
   firstChunk?: number; chunkStarts?: (number | null)[] | null;
 };
 export type ReaderRelated = { id: string; author: string; work: string; title: string; reason: string };
-export type ReaderTarget = { page: number; para?: number; comment?: string } | null;
+// chunk is a row's position among the work's shown rows (as /api/library/locate
+// reports it); quote is the opening of the cited words, to land on the exact
+// paragraph when the row spans several.
+export type ReaderTarget = { page: number; para?: number; comment?: string; chunk?: number; quote?: string } | null;
 
 type OutlineEntry = { level?: number; label: string; page: number; key?: string; marker?: string; chunk?: number };
 type SearchHit = { page: number; snippet: string; section: string | null };
@@ -302,15 +305,21 @@ export default function Reader(props: {
     }
   }, [pendingJump, reader, readerLoading, resolvePara, scrollToPara]);
 
-  // A deep link (?page=&p= or &c=) arrives from the page shell as a target.
+  // A deep link (?page=&p=, &c=, or ?chunk=) arrives from the page shell as a target.
   useEffect(() => {
     if (!target) return;
     if (reader && !readerLoading) {
       if (typeof target.para === 'number') jumpTo({ page: target.page, para: target.para, select: true });
+      else if (typeof target.chunk === 'number' || target.quote) {
+        // The cited words when the folio holds them, else the row they sit in.
+        const viaQuote = target.quote ? resolvePara({ page: target.page, query: target.quote }) : null;
+        const i = viaQuote ?? resolvePara({ page: target.page, chunk: target.chunk });
+        if (i !== null) jumpTo({ page: target.page, para: i, select: true });
+      }
       else if (target.comment) setPendingJump({ page: target.page, comment: target.comment, select: true });
       clearTarget();
     }
-  }, [target, reader, readerLoading, jumpTo, clearTarget]);
+  }, [target, reader, readerLoading, jumpTo, resolvePara, clearTarget]);
 
   // Turning a folio drops the selection; a jump that wants one re-selects
   // after the new folio loads. Opening another work resets too.

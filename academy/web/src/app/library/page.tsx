@@ -376,8 +376,39 @@ export default function LibraryOfArete() {
   };
 
   // A shared link opens straight onto its passage: /library?text=Author::Work&page=3&p=12
+  // A citation links to the passage itself: /library?chunk=<rag_corpus id>&q=<its opening words>.
+  // The chunk's page is looked up rather than carried in the link, because it
+  // moves whenever the work's rows change. text=Author::Work, when present, is
+  // the fallback if the lookup fails.
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
+    const chunkId = sp.get('chunk');
+    if (!chunkId) return;
+    const quote = sp.get('q') || undefined;
+    (async () => {
+      try {
+        const res = await fetch(`/api/library/locate?id=${encodeURIComponent(chunkId)}`);
+        if (res.ok) {
+          const loc = await res.json();
+          if (loc && typeof loc.author === 'string' && typeof loc.work === 'string') {
+            const page = Number(loc.page) || 0;
+            setTarget({ page, chunk: typeof loc.chunk === 'number' ? loc.chunk : undefined, quote });
+            openWork(loc.author, loc.work, loc.work, page);
+            return;
+          }
+        }
+      } catch { /* fall through to the work itself */ }
+      const text = sp.get('text');
+      if (text && text.includes('::')) {
+        const [author, work] = text.split('::');
+        if (author && work) openWork(author, work, work, 0);
+      }
+    })();
+  }, [openWork]);
+
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('chunk')) return;
     const text = sp.get('text');
     if (!text || !text.includes('::')) return;
     const [author, work] = text.split('::');
