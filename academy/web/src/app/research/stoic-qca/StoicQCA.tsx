@@ -1,7 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { getProfile } from "@/lib/db";
 import { CASES, SCALE, type Condition, type SetName, type StoicCase } from "./data";
+import EvidencePanel from "./EvidencePanel";
+import { casesSource, fmtScore, scoreChanges } from "./evidence";
 import { PATHS, fit, neg, truthTable } from "./qca";
 import styles from "./stoic-qca.module.css";
 
@@ -69,6 +72,16 @@ export default function StoicQCA() {
   const [inclCut, setInclCut] = useState(0.8);
   const [open, setOpen] = useState<string | null>(null);
   const [plotPath, setPlotPath] = useState(PATHS[1].id);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const closePanel = useCallback(() => setOpen(null), []);
+
+  // The export is an editing convenience for the site's admin, not a
+  // permission: it only formats the scoring already on screen.
+  useEffect(() => {
+    let live = true;
+    getProfile().then((p) => { if (live) setIsAdmin(p?.is_admin === true); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
 
   const edited = useMemo(
     () => cases.some((c, i) => COLUMNS.some((k) => c.scores[k] !== CASES[i].scores[k])),
@@ -108,7 +121,8 @@ export default function StoicQCA() {
         <h2>The cases</h2>
         <p className={styles.help}>
           Every score is editable. Change one and the truth table and path fits below recalculate.
-          Tap a name to see the sources and the reasoning behind the scores.
+          Tap a name to see the evidence for each score: what the level means, why it was given, and the
+          passages behind it.
         </p>
         {edited && (
           <p className={styles.editedNote}>
@@ -118,6 +132,7 @@ export default function StoicQCA() {
             </button>
           </p>
         )}
+        {isAdmin && <ScoringExport cases={cases} />}
         <div className={styles.scroll}>
           <table className={styles.table}>
             <thead>
@@ -133,8 +148,7 @@ export default function StoicQCA() {
                 <FragmentRow
                   key={c.name}
                   c={c}
-                  isOpen={open === c.name}
-                  onToggle={() => setOpen(open === c.name ? null : c.name)}
+                  onOpen={() => setOpen(c.name)}
                   onChange={(k, v) => setScore(i, k, v)}
                   changed={(k) => c.scores[k] !== CASES[i].scores[k]}
                 />
@@ -142,6 +156,12 @@ export default function StoicQCA() {
             </tbody>
           </table>
         </div>
+        {open && (() => {
+          const i = CASES.findIndex((c) => c.name === open);
+          return i < 0 ? null : (
+            <EvidencePanel published={CASES[i]} current={cases[i]} sets={COLUMNS} showConcerns={isAdmin} onClose={closePanel} />
+          );
+        })()}
       </section>
 
       <section>
@@ -323,53 +343,100 @@ function XYPlot({ cases, pathId }: { cases: StoicCase[]; pathId: string }) {
 
 function FragmentRow({
   c,
-  isOpen,
-  onToggle,
+  onOpen,
   onChange,
   changed,
 }: {
   c: StoicCase;
-  isOpen: boolean;
-  onToggle: () => void;
+  onOpen: () => void;
   onChange: (k: SetName, v: number) => void;
   changed: (k: SetName) => boolean;
 }) {
   return (
-    <>
-      <tr>
-        <th scope="row" className={styles.sticky}>
-          <button className={styles.caseButton} onClick={onToggle} aria-expanded={isOpen}>
-            {c.name}
-          </button>
-          <div className={styles.period}>{c.period}</div>
-        </th>
-        {COLUMNS.map((k) => (
-          <td key={k} className={k === "CONS" ? styles.outcomeCol : undefined}>
-            <select
-              aria-label={`${c.name} ${k}`}
-              className={`${styles.scoreSelect} ${changed(k) ? styles.changed : ""}`}
-              value={c.scores[k]}
-              onChange={(e) => onChange(k, Number(e.target.value))}
-            >
-              {(k === "PROF" ? [0, 1] : SCALE).map((v) => (
-                <option key={v} value={v}>{v === 0 || v === 1 ? v : v.toFixed(2)}</option>
+    <tr>
+      <th scope="row" className={styles.sticky}>
+        <button className={styles.caseButton} onClick={onOpen} aria-haspopup="dialog">
+          {c.name}
+        </button>
+        <div className={styles.period}>{c.period}</div>
+      </th>
+      {COLUMNS.map((k) => (
+        <td key={k} className={k === "CONS" ? styles.outcomeCol : undefined}>
+          <select
+            aria-label={`${c.name} ${k}`}
+            className={`${styles.scoreSelect} ${changed(k) ? styles.changed : ""}`}
+            value={c.scores[k]}
+            onChange={(e) => onChange(k, Number(e.target.value))}
+          >
+            {(k === "PROF" ? [0, 1] : SCALE).map((v) => (
+              <option key={v} value={v}>{v === 0 || v === 1 ? v : v.toFixed(2)}</option>
+            ))}
+          </select>
+        </td>
+      ))}
+    </tr>
+  );
+}
+
+/**
+ * Admin only: the scoring on screen as a replacement for the CASES declaration
+ * in data.ts, so a rescoring becomes the published version through a PR.
+ */
+function ScoringExport({ cases }: { cases: StoicCase[] }) {
+  const [show, setShow] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const changes = useMemo(() => scoreChanges(CASES, cases, COLUMNS), [cases]);
+  const source = useMemo(() => casesSource(cases), [cases]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(source);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* the textarea is there to select by hand */ }
+  };
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([source], { type: "text/plain" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "stoic-qca-cases.ts";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className={styles.exportBox}>
+      <button className={styles.linkButton} onClick={() => setShow(!show)} aria-expanded={show}>
+        {show ? "Hide the export" : "Admin: export this scoring as a data.ts change"}
+      </button>
+      {show && (
+        <>
+          <p className={styles.help}>
+            {changes.length === 0
+              ? "No score differs from the published one yet."
+              : `${changes.length} ${changes.length === 1 ? "score differs" : "scores differ"} from the published version:`}
+          </p>
+          {changes.length > 0 && (
+            <ul className={styles.help}>
+              {changes.map((ch) => (
+                <li key={`${ch.name}-${ch.set}`}>
+                  {ch.name} · {ch.set}: {fmtScore(ch.from)} to {fmtScore(ch.to)}
+                </li>
               ))}
-            </select>
-          </td>
-        ))}
-      </tr>
-      {isOpen && (
-        <tr className={styles.detailRow}>
-          <td colSpan={COLUMNS.length + 1}>
-            <p><strong>Sources.</strong> {c.sources}</p>
-            <p><strong>Coding notes.</strong> {c.notes}</p>
-            <p className={styles.flags}>
-              Teacher known: {c.teachKnown ? "yes" : "no"} · Conduct under a specific test recorded:{" "}
-              {c.consTested ? "yes" : "no"}
-            </p>
-          </td>
-        </tr>
+            </ul>
+          )}
+          <p className={styles.help}>
+            Replace the CASES declaration in academy/web/src/app/research/stoic-qca/data.ts with the text below,
+            run python3 academy/web/scripts/stoic_qca_workbook.py to bring the workbook&apos;s Scores and Evidence
+            sheets into line, record each change on the Revision Log sheet, and open a PR.
+          </p>
+          <textarea readOnly value={source} aria-label="CASES declaration for data.ts" onFocus={(e) => e.target.select()} />
+          <div className={styles.exportActions}>
+            <button className={styles.exportButton} onClick={copy}>{copied ? "Copied" : "Copy"}</button>
+            <button className={styles.exportButton} onClick={download}>Download</button>
+          </div>
+        </>
       )}
-    </>
+    </div>
   );
 }
