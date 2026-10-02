@@ -159,7 +159,7 @@ export default function StoicQCA() {
         {open && (() => {
           const i = CASES.findIndex((c) => c.name === open);
           return i < 0 ? null : (
-            <EvidencePanel published={CASES[i]} current={cases[i]} sets={COLUMNS} onClose={closePanel} />
+            <EvidencePanel published={CASES[i]} current={cases[i]} sets={COLUMNS} showConcerns={isAdmin} onClose={closePanel} />
           );
         })()}
       </section>

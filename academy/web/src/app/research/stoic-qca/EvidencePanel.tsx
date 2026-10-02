@@ -21,11 +21,14 @@ export default function EvidencePanel({
   published,
   current,
   sets,
+  showConcerns,
   onClose,
 }: {
   published: StoicCase;
   current: StoicCase;
   sets: SetName[];
+  /** Questions raised in drafting are review notes for the admin, not readers. */
+  showConcerns: boolean;
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -124,7 +127,7 @@ export default function EvidencePanel({
                       <p className={styles.help}>This rationale was written for a score of {fmtScore(e.scoredAs)}.</p>
                     )}
                     <p className={styles.rationale}>{e.rationale}</p>
-                    {e.concern && e.status === "drafted" && (
+                    {showConcerns && e.concern && e.status === "drafted" && (
                       <p className={styles.concern}>
                         <span className={styles.scoreLabel}>Question raised in drafting</span> {e.concern}
                       </p>
