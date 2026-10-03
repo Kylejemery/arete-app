@@ -33,6 +33,11 @@ const libraryHelpers = require('./library');
 // voice. Descriptive, not live; see server/lib/self-knowledge.js.
 const { SELF_KNOWLEDGE } = require('./lib/self-knowledge');
 
+// Sourcing rules and the citation tag each Cabinet passage carries, so every
+// factual claim about an ancient figure points at a passage or says it can't.
+const { SOURCING_DISCIPLINE } = require('./lib/sourcing-discipline');
+const { attachCitationFields, formatTaggedPassage, citationTag } = require('./lib/citation-tag');
+
 // Observatory Living Sky — all new /api/observatory/* routes live in their own
 // module to keep the merge surface of this shared file minimal. recordRetrieval
 // is the fire-and-forget retrieval-event logger the retrieval paths below call.
@@ -2008,6 +2013,8 @@ async function handleCabinetChat(req, res) {
           7,
           { fence: isCounselorVisible },
         );
+        // Citation fields by id, after ranking: order and membership unchanged.
+        contextChunks = await attachCitationFields(supabase, contextChunks);
       } catch (err) {
         console.error('[Cabinet] Corpus retrieval error:', err.message);
       }
@@ -2130,7 +2137,7 @@ async function handleCabinetChat(req, res) {
     }
 
     const sources = contextChunks
-      .map(c => ({ author: c.author ?? null, work: c.work ?? null }))
+      .map(c => ({ author: c.author ?? null, work: c.work ?? null, citation: citationTag(c).tag }))
       .filter(s => s.author || s.work);
 
     // Shared session: mirror this turn into session_messages so the partner's
@@ -2202,8 +2209,8 @@ async function handleCabinetChat(req, res) {
 
   let ragContext = '';
   if (ragChunks.length > 0) {
-    ragContext = `\n\n[RELEVANT SOURCE TEXTS]\nThe following passages from this counselor's actual writings are relevant to the current conversation. Draw on them naturally in your response — do not quote them verbatim or cite them explicitly, but let them inform your thinking and voice:\n\n` +
-      ragChunks.map((c, i) => `${i + 1}. (${c.source_title})\n${c.content}`).join('\n\n') +
+    ragContext = `\n\n[RELEVANT SOURCE TEXTS]\nThe following passages from this counselor's actual writings are relevant to the current conversation. Let them inform your thinking and voice; do not quote them at length, and follow the sourcing discipline when you state what they say:\n\n` +
+      ragChunks.map(c => formatTaggedPassage(c)).join('\n\n') +
       `\n[END SOURCE TEXTS]`;
   }
 
@@ -2227,9 +2234,11 @@ async function handleCabinetChat(req, res) {
         // Phase B: Hebbian expansion (no-op unless GRAPH_BOOST=true).
         libraryChunks = (await expandCandidates(data, 5, { fence: isCounselorVisible }))
           .rows.filter(isCounselorVisible);
+        // Citation fields by id, after ranking: order and membership unchanged.
+        libraryChunks = await attachCitationFields(supabase, libraryChunks);
         pulseFromChunks(libraryChunks, lastUserMessage);
-        libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, citing author and work naturally in your own voice:\n\n` +
-          libraryChunks.map(c => `[${c.author ?? ''} — ${c.work ?? 'Corpus'}]\n${c.chunk_text ?? ''}`).join('\n\n---\n\n') +
+        libraryContext = `\n\n[LIBRARY PASSAGES]\nThe following passages from the Library of Arete are relevant to the current conversation. Draw on them where they genuinely help, in your own voice, citing each by its tag as the sourcing discipline says:\n\n` +
+          libraryChunks.map(formatTaggedPassage).join('\n\n---\n\n') +
           `\n[END LIBRARY PASSAGES]`;
       }
     } catch (err) {
@@ -2260,9 +2269,9 @@ async function handleCabinetChat(req, res) {
   // half (persona, profile, catalog, self-knowledge) is byte-stable across a
   // conversation's turns; RAG retrievals, session context, and the pulse vary
   // per message and must stay after the cache breakpoint.
-  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + pulseBlock + singleTurnBlock;
+  const enrichedSystem = system + dateTimeBlock + profileBlock + sharedContext + longitudinalContext + ragContext + libraryContext + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + SOURCING_DISCIPLINE + pulseBlock + singleTurnBlock;
   const counselorSystemBlocks = buildSystemBlocks(
-    system + profileBlock + catalogBlock + resourceInstruction + SELF_KNOWLEDGE,
+    system + profileBlock + catalogBlock + resourceInstruction + SELF_KNOWLEDGE + SOURCING_DISCIPLINE,
     dateTimeBlock + sharedContext + longitudinalContext + ragContext + libraryContext + pulseBlock + singleTurnBlock
   );
 
@@ -5269,10 +5278,10 @@ async function fireParallelCounselors(question, counselors, history, contextChun
   // Split for prompt caching: everything that holds for this counselor and
   // user across turns goes first (cached via buildSystemBlocks), and what
   // changes per turn (retrieved passages, pulse, check-in, colleagues) after.
-  const stableBlock = catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE;
+  const stableBlock = catalogBlock + voiceGuard + lengthGuard + toneGuard + (sharedContext || '') + SELF_KNOWLEDGE + SOURCING_DISCIPLINE;
 
   const contextBlock = (contextChunks.length > 0
-    ? `\n\n[CONTEXT]\n${contextChunks.map(c => `${c.author ?? ''}, ${c.work ?? 'Corpus'}:\n${c.chunk_text ?? ''}`).join('\n\n---\n\n')}\n[END CONTEXT]`
+    ? `\n\n[CONTEXT]\n${contextChunks.map(formatTaggedPassage).join('\n\n---\n\n')}\n[END CONTEXT]`
     : '') + (await getObservatoryPulseBlock());
 
   const checkInBlock = checkInContext
