@@ -27,6 +27,9 @@ export const RELEASED_PLAYGROUND = [
   'the-impression',
   'stoic-logic',
   'stoic-qca',
+  // The walkthrough alone, not the essay it explains: the gate matches the
+  // whole path, so the-long-filter and its formal statement stay unreleased.
+  'the-long-filter/walkthrough',
 ]
 
 /**

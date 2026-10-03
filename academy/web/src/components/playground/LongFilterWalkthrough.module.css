@@ -1,0 +1,156 @@
+/* The Long Filter, walkthrough — a teaching companion to the formal statement.
+ *
+ * Builds on LongFilterFormalism.module.css (the plate, the type, the tables):
+ * this file adds only what running prose needs, display math, and the one chart.
+ * The variables (--ink, --oxide, --indigo, ...) are set on that file's .page.
+ */
+
+.prose {
+  padding-bottom: 3rem;
+}
+.prose > * {
+  max-width: 44rem;
+}
+.prose h2 {
+  margin: 3.2rem 0 1.2rem;
+  padding-top: 2.4rem;
+  border-top: 1px solid var(--rule);
+}
+.prose h3 {
+  margin: 2.2rem 0 0.8rem;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--oxide);
+}
+.prose p,
+.prose li {
+  color: var(--ink);
+}
+.prose p {
+  margin: 0 0 1.1rem;
+}
+.prose ul,
+.prose ol {
+  margin: 0 0 1.2rem;
+  padding-left: 1.4rem;
+}
+.prose li {
+  margin-bottom: 0.45rem;
+}
+.prose li::marker {
+  color: var(--ink-faint);
+}
+
+/* Tables may be wider than the measure; they scroll inside their own box. */
+.prose > div:has(> table) {
+  max-width: none;
+}
+.prose .tbl td:first-child {
+  white-space: normal;
+}
+/* Headers here carry case-sensitive symbols (d, N, p₀), so no capitals. */
+.prose .tbl th {
+  text-transform: none;
+  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+}
+
+/* ── display math ── */
+.math {
+  margin: 0.4rem 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--oxide);
+  overflow-x: auto;
+  overflow-y: hidden;
+  color: var(--ink);
+}
+.math :global(.katex-display) {
+  margin: 0;
+}
+.math :global(.katex) {
+  font-size: 1.08em;
+}
+
+/* ── the S curve ── */
+.figure {
+  margin: 1.2rem 0 1.8rem;
+  padding: 1.1rem 1.1rem 0.6rem;
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid var(--rule);
+}
+.figTitle {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 0.6rem;
+}
+.chartSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.grid {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.tick,
+.axisLabel,
+.midLabel,
+.pointLabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  fill: var(--ink-faint);
+}
+.axisLabel {
+  font-size: 10.5px;
+  fill: var(--ink-soft);
+}
+.curve {
+  fill: none;
+  stroke: var(--indigo);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+.midLine {
+  stroke: var(--oxide);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 4;
+}
+.midLabel {
+  fill: var(--oxide);
+}
+.point {
+  fill: var(--plate);
+  stroke: var(--indigo);
+  stroke-width: 2;
+}
+.pointLabel {
+  fill: var(--indigo);
+}
+
+@media (max-width: 700px) {
+  .prose h2 {
+    margin-top: 2.4rem;
+    padding-top: 1.8rem;
+  }
+  .figure {
+    padding: 0.8rem 0.6rem 0.4rem;
+  }
+  /* The SVG scales down with the screen; set its labels larger to compensate. */
+  .tick,
+  .midLabel,
+  .pointLabel {
+    font-size: 14px;
+  }
+  .axisLabel {
+    font-size: 14.5px;
+  }
+}
