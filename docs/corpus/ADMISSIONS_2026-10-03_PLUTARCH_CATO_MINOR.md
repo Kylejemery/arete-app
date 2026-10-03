@@ -197,3 +197,11 @@ and probes retrievability. The run needs `OPENAI_API_KEY`.
 
 - 2026-10-03: Staged from the Perseus TEI (LacusCurtius and perseus.tufts.edu
   unreachable). 103 body chunks and 77 notes. Not promoted.
+- 2026-10-03: Kyle accepted the Perseus TEI as the source and kept the
+  `Plut. Cat. Min. 5.3` locator form, and approved promotion. Promoted at
+  20:11 UTC: 103 rows and 77 notes into `rag_corpus` (17,939 → 18,119), all
+  embedded, 0 superseded, 4 question registrations, retrievability probe
+  passed. `reviewed_at` was filled at 20:12, a minute after promotion, because
+  the approval update missed it. Still open: whether chapters 66–70 (the
+  suicide) stay `quotable_on_air`, and the "72" dropped at 58.7, which has not
+  been checked against the printed page.
