@@ -111,3 +111,16 @@ prefers to the source's). The license is `public_domain_no_renewal` (a 1947 US
 publication; the renewal search of the 1974–76 catalogs found none), and it is
 never quotable on air. Admission record:
 `docs/corpus/ADMISSIONS_2026-09-29_MUSONIUS_LUTZ.md`.
+
+## Plutarch, Cato the Younger, Perrin 1919 (2026-10-03)
+
+`plutarch-cato-minor-perrin-1919`: Perrin's Loeb translation from the Perseus
+Digital Library's TEI (PerseusDL/canonical-greekLit at a pinned commit, read
+through `localFiles`: LacusCurtius and perseus.tufts.edu were unreachable).
+`parsers/perseus-tei.js` reads `<div subtype="chapter">` / `<div
+subtype="section">`, takes Perrin's `<note>`s out as note chunks, and restores
+quotation marks from `<q>` markup. Chunks never cross a chapter; a chunk that
+holds a whole chapter is cited `Plut. Cat. Min. 5`, part of one
+`Plut. Cat. Min. 9.1–3` (`locatorOf` and `sectionLabelOf` in `sources.js`,
+which `build.js` now hands the parsed sections). Staged only. Admission
+record: `docs/corpus/ADMISSIONS_2026-10-03_PLUTARCH_CATO_MINOR.md`.
