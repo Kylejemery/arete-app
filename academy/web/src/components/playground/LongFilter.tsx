@@ -1885,6 +1885,11 @@ export default function LongFilter({
             The derivations, the parameter sources, and the thirteen ways this could be wrong
           </Link>
         </p>
+        <p className={`${styles.footnote} ${styles.colophonLink}`}>
+          <Link href="/playground/the-long-filter/walkthrough">
+            New to the math? Start with the walkthrough.
+          </Link>
+        </p>
         <p className={`${styles.footnote} ${styles.mono} ${styles.colophonLine}`}>
           Arete &nbsp;·&nbsp; working note &nbsp;·&nbsp; subject to revision
         </p>

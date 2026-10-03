@@ -111,6 +111,11 @@ export default function LongFilterFormalism({
       <header className={`${styles.wrap} ${styles.hero}`}>
         <p className={styles.eyebrow}>Arete / playground / formal statement</p>
         <h1>The Long Filter: Formal Statement</h1>
+        <p className={`${styles.footnote} ${styles.colophonLink}`}>
+          <Link href="/playground/the-long-filter/walkthrough">
+            New to the math? Start with the walkthrough.
+          </Link>
+        </p>
         <p className={styles.byline}>
           {BYLINE} &nbsp;·&nbsp; {REVISED}
         </p>

@@ -1,5 +1,7 @@
 # Appendix A. The model behind the Long Filter
 
+New to the math? Start with the [walkthrough](https://academy.pursuearete.com/playground/the-long-filter/walkthrough).
+
 This appendix lays out the arithmetic that the interactive page
 (`/playground/the-long-filter`) computes, in the order the page computes it.
 Each step is explained twice: first in plain words, then as the formula a
