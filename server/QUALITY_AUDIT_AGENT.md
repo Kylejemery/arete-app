@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Thirty probes across four domains. A probe is a named check that knows one
+Thirty-one probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -46,9 +46,21 @@ shipped, or the Academy's `RELEASED_PLAYGROUND` gate does not list its slug and
 a thinker the corpus cannot show a passage for), `library.shelf_orphans` (a
 `library_overrides` row pointing at a work that was deprecated or re-labelled out
 from under it — including a *hidden* override that no longer matches, which
-quietly puts a work back on the shelf), and `library.presentation_gaps` (works
+quietly puts a work back on the shelf), `library.presentation_gaps` (works
 still shelved under a one-word filename fragment, authors with no spine colour,
-works displaying no era).
+works displaying no era), and `library.qca_evidence` (a Stoic QCA evidence
+excerpt that is no longer verbatim in a live `rag_corpus` chunk: the chunk is
+gone, deprecated, or its text changed, which is critical because the evidence
+panel presents it as a quotation from the corpus; or a chunk the Reading Room
+will not open, hidden or outside the work's reading language, which is a
+warning because the quotation stands and only its Read in context link breaks).
+
+`library.qca_evidence` reads the deployed `/research/stoic-qca/evidence.json`,
+which the Academy builds from `data.ts`, so it runs on the nightly Railway
+service with no checkout and checks what readers are actually shown. Where the
+site cannot be reached and a checkout is present it reads `data.ts` instead and
+names that as its source; with neither, it reports one `info` finding and
+claims nothing. Each finding is keyed `case:set:chunkId`.
 
 ### `repo` — the code
 
@@ -255,7 +267,8 @@ the agent:
 | `locator_coarse_median` | `2` | Median chunks per locator at or above which a work's locator scheme is reported as too coarse to cite. Eleven of the twelve located works sit at 1. |
 | `locator_min_chunks` | `30` | Below this many chunks a work is too short for that median to mean anything. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
-| `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads. |
+| `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads, and when fetching the Stoic QCA evidence. |
+| `academy_url` | `https://academy.pursuearete.com` | Where `library.qca_evidence` reads the published evidence from. |
 | `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
 | `fetch_before_drift_check` | `true` | Whether to fetch the base before comparing. `false` where there is no network; the comparison then uses the local remote-tracking ref, which may itself be stale. |
 | `retrieval_warn_ms` | `500` | Warm median of `match_rag_corpus` above this is a warning. Was 187ms at 13.7k chunks when the line was drawn. |
@@ -297,7 +310,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: thirty probes in two languages would be two copies of the
+  TypeScript: thirty-one probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is

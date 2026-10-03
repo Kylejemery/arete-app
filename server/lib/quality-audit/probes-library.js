@@ -9,8 +9,11 @@
 // None of this breaks a request. It just looks careless to the one person
 // reading that page, which for a library is the whole failure.
 
+const fs = require('fs');
+const path = require('path');
 const { finding } = require('./framework');
 const { spine, era, workTitle } = require('../../library');
+const { readingLanguageFilter } = require('../library-language');
 
 const DOMAIN = 'library';
 
@@ -75,6 +78,54 @@ async function probeUrl(url, timeoutMs) {
     // where the probe is running, not about the exhibit.
     return { unreachable: err.name === 'TimeoutError' ? 'timed out' : (err.cause?.code || err.message) };
   }
+}
+
+// The Stoic QCA evidence panel quotes passages from the corpus. The deployed
+// site publishes them, with the chunk each is quoted from, at this path.
+const DEFAULT_ACADEMY_URL = 'https://academy.pursuearete.com';
+const QCA_EVIDENCE_PATH = '/research/stoic-qca/evidence.json';
+const QCA_DATA_TS = 'academy/web/src/app/research/stoic-qca/data.ts';
+
+// The JSON literal data.ts assigns to `head`. CASES and EVIDENCE are written
+// as plain JSON, which is what lets this read them without a TS compiler.
+function jsonLiteral(src, head) {
+  const at = src.indexOf(head);
+  if (at < 0) return null;
+  const start = at + head.length;
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < src.length; i++) {
+    const ch = src[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === '\\') esc = true;
+      else if (ch === '"') inStr = false;
+    } else if (ch === '"') inStr = true;
+    else if (ch === '[' || ch === '{') depth++;
+    else if (ch === ']' || ch === '}') {
+      depth--;
+      if (depth === 0) return JSON.parse(src.slice(start, i + 1));
+    }
+  }
+  return null;
+}
+
+// The same items the deployed evidence.json lists, read from a checkout.
+function qcaItemsFromCheckout(repoRoot) {
+  const abs = path.join(repoRoot, QCA_DATA_TS);
+  if (!fs.existsSync(abs)) return null;
+  const src = fs.readFileSync(abs, 'utf8');
+  const cases = jsonLiteral(src, 'export const CASES: StoicCase[] = ');
+  const evidence = jsonLiteral(src, 'export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = ');
+  if (!cases || !evidence) throw new Error(`${QCA_DATA_TS} no longer declares CASES and EVIDENCE as JSON literals`);
+  const items = [];
+  for (const c of cases) {
+    for (const [set, e] of Object.entries(evidence[c.name] || {})) {
+      for (const v of e.evidence) {
+        if (v.chunkId) items.push({ case: c.name, set, citation: v.citation, excerpt: v.excerpt, chunkId: v.chunkId });
+      }
+    }
+  }
+  return items;
 }
 
 const probes = [
@@ -353,6 +404,117 @@ const probes = [
         }));
       }
 
+      return out;
+    },
+  },
+  {
+    id: 'library.qca_evidence',
+    domain: DOMAIN,
+    title: 'Stoic QCA evidence excerpts are in the live corpus',
+    needs: ['db'],
+    async run(ctx) {
+      // The evidence panel shows each excerpt as a verbatim quotation from a
+      // rag_corpus chunk and links to it in the Reading Room. A deprecation, a
+      // re-chunk or a corrected text can break that without anyone touching
+      // the page. Reads what is deployed, so it checks what readers are shown;
+      // where the site cannot be reached and a checkout is present, it reads
+      // data.ts instead, and says which it read.
+      const base = (ctx.config?.academy_url || DEFAULT_ACADEMY_URL).replace(/\/$/, '');
+      const timeoutMs = ctx.config?.exhibit_reach_timeout_ms || DEFAULT_REACH_TIMEOUT_MS;
+      let items = null, source = null, fetchProblem = null;
+      try {
+        const res = await fetch(base + QCA_EVIDENCE_PATH, {
+          signal: AbortSignal.timeout(timeoutMs),
+          headers: { 'user-agent': 'arete-quality-audit' },
+        });
+        if (res.ok) {
+          const body = await res.json();
+          if (Array.isArray(body?.items)) { items = body.items; source = `the deployed ${QCA_EVIDENCE_PATH}`; }
+          else fetchProblem = `${QCA_EVIDENCE_PATH} answered without an items list`;
+        } else fetchProblem = `${QCA_EVIDENCE_PATH} answered ${res.status}`;
+      } catch (err) {
+        fetchProblem = err.name === 'TimeoutError' ? 'timed out' : (err.cause?.code || err.message);
+      }
+      if (!items && ctx.repoRoot) {
+        items = qcaItemsFromCheckout(ctx.repoRoot);
+        if (items) source = `${QCA_DATA_TS} in this checkout (the site was not read: ${fetchProblem})`;
+      }
+      if (!items) {
+        return [finding({
+          probe: 'library.qca_evidence', domain: DOMAIN, severity: 'info', key: 'no_source',
+          title: 'Could not read the Stoic QCA evidence, so none was checked',
+          detail:
+            `The deployed ${QCA_EVIDENCE_PATH} could not be read (${fetchProblem}) and there is no checkout ` +
+            'to read data.ts from. That says where this run happened, not whether the excerpts are sound.',
+          action: 'Run the audit somewhere with outbound HTTPS or a checkout. If the site answered 404, the route was removed: restore it or retire this probe.',
+        })];
+      }
+
+      const ids = [...new Set(items.map(i => i.chunkId))];
+      const chunks = new Map();
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data, error } = await ctx.supabase
+          .from('rag_corpus').select('id, author, work, language, chunk_text, deprecated')
+          .in('id', ids.slice(i, i + 100));
+        if (error) throw new Error(`rag_corpus read failed: ${error.message}`);
+        for (const row of data || []) chunks.set(row.id, row);
+      }
+      const { data: ovs, error: ovErr } = await ctx.supabase
+        .from('library_overrides').select('author, work').eq('hidden', true);
+      if (ovErr) throw new Error(`library_overrides read failed: ${ovErr.message}`);
+      const hidden = new Set((ovs || []).map(o => `${o.author}::${o.work}`));
+      const languages = new Map();
+      const languageOf = async row => {
+        const k = `${row.author}::${row.work}`;
+        if (!languages.has(k)) languages.set(k, await readingLanguageFilter(ctx.supabase, row.author, row.work));
+        return languages.get(k);
+      };
+
+      const out = [];
+      for (const item of items) {
+        const row = chunks.get(item.chunkId);
+        const where = `${item.case} · ${item.set} · ${item.citation}`;
+        const key = `${item.case}:${item.set}:${item.chunkId}`;
+        let problem = null;
+        if (!row) problem = `chunk ${item.chunkId} is not in rag_corpus`;
+        else if (row.deprecated) problem = `chunk ${item.chunkId} is deprecated`;
+        else if (item.excerpt && !String(row.chunk_text || '').includes(item.excerpt)) {
+          problem = `the excerpt is no longer verbatim in chunk ${item.chunkId}: “${item.excerpt.slice(0, 80)}”`;
+        }
+        if (problem) {
+          out.push(finding({
+            probe: 'library.qca_evidence', domain: DOMAIN, severity: 'critical', key,
+            title: `Stoic QCA evidence for ${item.case} ${item.set} quotes a passage the live corpus no longer holds`,
+            detail:
+              'The evidence panel presents this excerpt as a verbatim quotation from a live corpus chunk, and ' +
+              `links to it. It is not one any more: ${problem}. Read from ${source}.`,
+            evidence: [where],
+            action:
+              'Find what changed (a deprecation, a re-chunk, a corrected text). Re-source the excerpt word for word ' +
+              'from a live row, update its chunkId in data.ts, set its status back to "drafted", and run ' +
+              'python3 academy/web/scripts/stoic_qca_workbook.py so the Evidence sheet matches.',
+          }));
+          continue;
+        }
+        // The quotation stands, but "Read in context" opens nothing: the
+        // Reading Room does not show hidden works, or rows outside a mixed
+        // work's reading language (the same rules /api/library/locate applies).
+        const language = await languageOf(row);
+        const unreadable = hidden.has(`${row.author}::${row.work}`)
+          ? `${row.author}, ${row.work} is hidden from the Library`
+          : (language && row.language !== language
+            ? `the chunk is ${row.language}, and the Reading Room shows ${row.work} in ${language}`
+            : null);
+        if (unreadable) {
+          out.push(finding({
+            probe: 'library.qca_evidence', domain: DOMAIN, severity: 'warning', key,
+            title: `Stoic QCA evidence for ${item.case} ${item.set} links to a passage the Reading Room will not open`,
+            detail: `The excerpt is still verbatim, but its Read in context link leads nowhere: ${unreadable}. Read from ${source}.`,
+            evidence: [where],
+            action: 'Quote the same words from a row the Reading Room shows, or unhide the work if hiding it was not meant to break citations.',
+          }));
+        }
+      }
       return out;
     },
   },
