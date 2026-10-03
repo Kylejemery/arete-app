@@ -526,6 +526,69 @@ const SOURCES = [
       { question_id: 'Q10', role: 'states', position: 'A king above all men must study philosophy, since to judge justly, to be self-controlled and courageous and to prevail in argument are what philosophy teaches; the good king is of necessity a philosopher and the philosopher a kingly person (Lecture VIII).' },
     ],
   },
+  // ---- Plutarch, Cato the Younger, Perrin 1919 (2026-10-03) ---------------
+  // Requested by Kyle, 2026-10-03. Staged only; promotion is Kyle's call.
+  // LacusCurtius and perseus.tufts.edu were both refused by the session's
+  // egress proxy, so the text is the Perseus Digital Library's own TEI of
+  // Perrin's translation, read from PerseusDL/canonical-greekLit on GitHub at
+  // a pinned commit (data/raw/<slug>/manifest.json). Admission record:
+  // docs/corpus/ADMISSIONS_2026-10-03_PLUTARCH_CATO_MINOR.md.
+  {
+    slug: 'plutarch-cato-minor-perrin-1919', batch: 'plutarch-cato-minor-2026-10', citedBy: ['Requested by Kyle, 2026-10-03'],
+    tier: 1, author: 'Plutarch', work: 'Life of Cato the Younger',
+    language: 'english', translator: 'Bernadotte Perrin',
+    edition: 'Loeb Classical Library 100 (Plutarch\'s Lives, vol. VIII)', edition_year: 1919,
+    text_type: 'primary', quotable_on_air: true, license_status: PD_US,
+    urls: [], localFiles: ['tlg0007.tlg050.perseus-eng2.xml'],
+    sourceUrl: 'https://github.com/PerseusDL/canonical-greekLit/blob/bcc5df0602f3b3fe6fefe1e1d575602a25ab1db6/data/tlg0007/tlg050/tlg0007.tlg050.perseus-eng2.xml',
+    licenseEvidence: 'Bernadotte Perrin, tr., Plutarch\'s Lives, vol. VIII (Sertorius and Eumenes, Phocion and Cato the Younger), Loeb Classical Library 100. Cambridge, MA: Harvard University Press; London: William Heinemann Ltd., 1919. Published in 1919, before 1931: public domain in the United States. The text is the Perseus Digital Library\'s digitisation (urn:cts:greekLit:tlg0007.tlg050.perseus-eng2, Trustees of Tufts University), whose TEI header reads: "Available under a Creative Commons Attribution-ShareAlike 4.0 International License". That license covers Perseus\'s encoding; the 1919 translation it carries is public domain. Attribution: Perseus Digital Library, Tufts University.',
+    parser: 'perseus-tei',
+    parse: {
+      labelOf: (c) => `Chapter ${String(c).split('.')[0]}`,
+      fixes: [
+        // 58.7: a stray "72" before an empty <note/>. The footnote's text is
+        // not in the TEI; "72" is not Perrin's wording. Check against the
+        // printed page (archive.org plutarchslives08plut) when it can be reached.
+        [/camps,72<note resp="editor" place="inline" anchored="true"\/>/g, 'camps,<note resp="editor" place="inline" anchored="true"/>', 'stray "72" before an empty note (58.7, "Caesar was in possession of their camps,")'],
+      ],
+    },
+    // "Plut. Cat. Min. 5" for a whole chapter, "Plut. Cat. Min. 5.1–3" for part of one.
+    locatorOf: (c, sections) => catoLocator(c, sections),
+    sectionLabelOf: (c, sections) => catoLabel(c, sections),
+    expect: ['Bernadotte Perrin', '1919', 'Cato the Younger'],
+    cleaningNote: 'From the Perseus TEI: Perrin\'s footnotes (<note>, 77 with text) leave the body and are staged as note chunks linked to their passage; one empty <note/> is dropped with the stray "72" before it (see parse.fixes). The TEI keeps quotations as <q> markup without the printed quotation marks, so the marks are supplied from that markup (“…”, ‘…’ inside a quotation; a speech running on into the next section is left open, as in print). Verse lines are joined with " / ". Perseus\'s chapter and section numbers are Perrin\'s. Nothing in Perrin\'s wording is changed.',
+    registrations: [
+      { question_id: 'Q10', role: 'complicates', position: 'Cato is the Stoic who goes into politics and will not bend in it: he trains for public speech as a philosopher (4.1–2), fights bribery and Caesar, and loses the consulship rather than change his manners (49–50). Plutarch counts the cost: judged by results, Cato was "wholly wrong" to refuse Pompey\'s marriage alliance, which drove Pompey to Caesar (30.6), and Cicero faults him for not courting the people when the state needed him (50.2).' },
+      { question_id: 'Q13', role: 'complicates', position: 'The Roman candidate for the Stoic sage, drawn by a Platonist who admires him: steadfast from childhood, indifferent to heat, cold, office and death, yet seen to show "more passion than philosophy" at his brother\'s death (11.2), and vehement and inflexible where flexibility would have served. The Life presses the question of whether such a man is a sage or a magnificent extremist.' },
+      { question_id: 'Q14', role: 'states', position: 'Philosophy as a way of life lived in public office: Cato studies with Antipater of Tyre (4.1), hardens his body to heat and cold and walks while his friends ride (5.3, 9.3), brings the Stoic Athenodorus back to his camp and keeps philosophers about him (10, 57), and on his last night argues the Stoic paradox that the good man alone is free and reads Plato\'s dialogue On the Soul twice before taking his life (67–68).' },
+      { question_id: 'Q05', role: 'complicates', position: 'Cato is famed for firmness against pleasures and fears, yet grieves for Caepio with lamentation and a costly funeral; Plutarch defends the grief as tenderness mingled with inflexibility rather than a lapse (11.2–3), so the Stoic ideal of freedom from passion meets a case its admirers would not call a fault.' },
+    ],
+  },
 ];
+
+// Cato the Younger: a chunk is cited by chapter when it holds the whole
+// chapter, and by chapter and section range when it holds part of one.
+function catoChapterOf(c) { return String(c.parent); }
+function catoSectionsIn(chapter, sections) {
+  return sections.filter((s) => String(s.cite).split('.')[0] === chapter).map((s) => String(s.cite).split('.')[1]);
+}
+function catoRange(c) {
+  const first = String(c.cites[0]).split('.')[1];
+  const last = String(c.cites[c.cites.length - 1]).split('.')[1];
+  return first === last ? first : `${first}–${last}`;
+}
+function catoWhole(c, sections) {
+  return c.cites.length === catoSectionsIn(catoChapterOf(c), sections).length;
+}
+function catoLocator(c, sections) {
+  const ch = catoChapterOf(c);
+  return catoWhole(c, sections) ? `Plut. Cat. Min. ${ch}` : `Plut. Cat. Min. ${ch}.${catoRange(c)}`;
+}
+function catoLabel(c, sections) {
+  const ch = catoChapterOf(c);
+  if (catoWhole(c, sections)) return `Chapter ${ch}`;
+  const r = catoRange(c);
+  return `Chapter ${ch}, ${r.includes('–') ? 'sections' : 'section'} ${r}`;
+}
 
 module.exports = { BATCH, SOURCES, dl6Life };

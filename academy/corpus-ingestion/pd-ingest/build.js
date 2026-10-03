@@ -13,6 +13,7 @@ const PARSERS = {
   'ia-ocr': require('./parsers/ia-ocr'),
   'summary-md': require('./parsers/summary-md'),
   'facing-ocr': require('./parsers/facing-ocr'),
+  'perseus-tei': require('./parsers/perseus-tei'),
 };
 
 function parseFiles(source, files) {
@@ -75,11 +76,13 @@ function rangeOf(locator) {
 function build(source, files, { translationChunks = null } = {}) {
   const parsed = parseFiles(source, files);
   // Page-unit and summary sources have no canonical citations to order.
-  const structure = ['ia-ocr', 'summary-md', 'facing-ocr'].includes(source.parser)
+  const pageUnit = ['ia-ocr', 'summary-md', 'facing-ocr'].includes(source.parser);
+  const structure = pageUnit
     ? { ok: parsed.reasons.length === 0 && parsed.sections.length > 0, reasons: parsed.reasons.length ? parsed.reasons : (parsed.sections.length ? [] : ['no pages recovered']), bodyWords: parsed.sections.reduce((n, s) => n + countWords(s.text), 0), frontWords: 0 }
     : checkStructure({ sections: parsed.sections, front: parsed.front, rawText: parsed.rawText, order: compareCites });
   const expectMissing = (source.expect || []).filter((e) => !parsed.rawText.includes(e));
-  const reasons = [...structure.reasons, ...expectMissing.map((e) => `expected "${e}" in the source (translator or edition check) and did not find it`)];
+  // A citation parser's own refusals (a fix that no longer matches) count too.
+  const reasons = [...structure.reasons, ...(pageUnit ? [] : parsed.reasons), ...expectMissing.map((e) => `expected "${e}" in the source (translator or edition check) and did not find it`)];
   if (reasons.length) return { ok: false, reasons, parsed };
 
   let chunks;
@@ -94,9 +97,12 @@ function build(source, files, { translationChunks = null } = {}) {
       // Tier 2 has no canonical citation: the page is carried in printed_pages
       // and the label, and locator stays null (ACQUISITION_PLAN Part 5, rule 3).
       // A source whose sections are not its citations says how to cite a chunk.
-      locator: source.tier === 2 ? null : (source.locatorOf ? source.locatorOf(c) : c.locator),
+      // locatorOf and sectionLabelOf also get the parsed sections, so a
+      // chunk can be told apart from the whole division it belongs to.
+      locator: source.tier === 2 ? null : (source.locatorOf ? source.locatorOf(c, parsed.sections) : c.locator),
       // A summary section keeps its heading; a Tier 2 page chunk is labelled by page.
-      section_label: source.tier === 2 && source.parser !== 'summary-md' ? (c.printed_pages ? `pp. ${c.printed_pages}` : c.section_label) : c.section_label,
+      section_label: source.sectionLabelOf ? source.sectionLabelOf(c, parsed.sections)
+        : source.tier === 2 && source.parser !== 'summary-md' ? (c.printed_pages ? `pp. ${c.printed_pages}` : c.section_label) : c.section_label,
       chunk_text: c.chunk_text,
       word_count: c.word_count,
       printed_pages: c.printed_pages,
