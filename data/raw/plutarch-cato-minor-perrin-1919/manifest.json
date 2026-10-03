@@ -1,0 +1,11 @@
+{
+  "files": {
+    "tlg0007.tlg050.perseus-eng2.xml": {
+      "url": "https://github.com/PerseusDL/canonical-greekLit/blob/bcc5df0602f3b3fe6fefe1e1d575602a25ab1db6/data/tlg0007/tlg050/tlg0007.tlg050.perseus-eng2.xml",
+      "retrieved_at": "2026-10-03T13:52:00Z",
+      "sha256": "92f47222c81ca8ce751477240c600d4375248768b213c20483ddd453ec4b8231",
+      "bytes": 205794,
+      "note": "The Perseus Digital Library's TEI of Perrin's Cato the Younger (urn:cts:greekLit:tlg0007.tlg050.perseus-eng2), read from a sparse git clone of PerseusDL/canonical-greekLit at commit bcc5df0602f3b3fe6fefe1e1d575602a25ab1db6 (2026-09-22). It is the file the Perseus reading environments render. The session could not reach penelope.uchicago.edu (LacusCurtius) or www.perseus.tufts.edu because the egress proxy refused the connection, so fetch.js was not used and the file is read through localFiles."
+    }
+  }
+}
