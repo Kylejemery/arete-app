@@ -88,7 +88,7 @@
   "ledger_items": 19
  },
  "source": {
-  "commit": "8bf812e5a008efd8a8db9f3e0afd3c41624630b4",
+  "commit": "c26f52b792bb5a88670ec87fc86ee24ebf6ed6db",
   "inputs_clean": true,
   "inputs": [
    "themata/lean/",
@@ -101,7 +101,7 @@
    "files": 28,
    "lean_toolchain": "leanprover/lean4:v4.22.0"
   },
-  "ledger_sha256": "211583dfdb9db5230383d50d2f9d80fa067b0f526e639a08937ab7c1eba72afe"
+  "ledger_sha256": "bfec3a38790aeba5a60f9fde05a98beff39e4cd0d8bd101616946444807c2f56"
  },
  "counts": {
   "unit": "distinct searches: candidate x proof setting (single, contra, view) x formal item",
@@ -178,7 +178,7 @@
  "failed_runs": [],
  "failure_policy": "The harness has no timeout: every search runs to its depth or size bound, and a run stopped by the size bound is recorded, not failed (size_bound_hits). build_export.py stops on any error or failed check, and lake exe harness --export stops if any reduction fails to replay, so an export that is written has no failed runs.",
  "review_status": {
-  "ledger_entries_verified_by_kyle": "0 of 19",
+  "ledger_entries_verified_by_kyle": "9 of 19",
   "specialist_review": "not yet",
   "caution": "Guardrail 5 (THEMATA_PROJECT.md): no public claims until a specialist in Stoic logic has reviewed the ledger and the formalization."
  },

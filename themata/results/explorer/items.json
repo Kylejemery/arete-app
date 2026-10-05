@@ -225,7 +225,8 @@
    "passage": "The first kind of indemonstrable statement is that in which the whole argument is constructed of a hypothetical proposition and the clause with which the hypothetical proposition begins, while the final clause is the conclusion; as e.g. “If the first, then the second; but the first is, therefore the second is.”",
    "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -466,7 +467,8 @@
    "passage": "The second is that which employs a hypothetical proposition and the contradictory of the consequent, while the conclusion is the contradictory of the antecedent; e.g. “If it is day, it is light; but it is night, therefore it is not day.” Here the minor premiss is the contradictory of the consequent; the conclusion the contradictory of the antecedent.",
    "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -707,7 +709,8 @@
    "passage": "The third kind of indemonstrable employs a conjunction of negative propositions for major premiss and one of the conjoined propositions for minor premiss, concluding thence the contradictory of the remaining proposition; e.g. “It is not the case that Plato is both dead and alive; but he is dead, therefore Plato is not alive.”",
    "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -948,7 +951,8 @@
    "passage": "The fourth kind employs a disjunctive proposition and one of the two alternatives in the disjunction as premisses, and its conclusion is the contradictory of the other alternative; e.g. “Either A or B; but A is, therefore B is not.”",
    "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -1189,7 +1193,8 @@
    "passage": "The fifth kind is that in which the argument as a whole is constructed of a disjunctive proposition and the contradictory of one of the alternatives in the disjunction, its conclusion being the other alternative; e.g. “Either it is day or it is night; but it is not night, therefore it is day.”",
    "corpus_ref": "dbaf3427-c4d5-4f04-bd95-b5c332606b3a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -1430,7 +1435,8 @@
    "passage": "Of arguments some are conclusive, others inconclusive. Inconclusive are such that the contradictory of the conclusion is not incompatible with combination of the premisses, as in the following: “If it is day, it is light; but it is day, therefore Dion walks.”",
    "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -1671,7 +1677,8 @@
    "passage": "Arguments not syllogistic are those which plausibly resemble syllogistic arguments, but are not cogent proof; e.g. “If Dion is a horse, he is an animal; but Dion is not a horse, therefore he is not an animal.”",
    "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -1913,6 +1920,7 @@
    "corpus_ref": "f9d254ff-01b0-4b37-b98d-9d71132839a9",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -1924,7 +1932,7 @@
     "witness": "primary",
     "basis": null
    },
-   "notes": "An important boundary case. DL calls this argument conclusive (valid) but\nnot syllogistic, so a correct reconstruction of the themata must NOT derive\nit from the indemonstrables. Mates's summary (chunk\n78c91994-ccd2-47ac-9eb9-17201baa0783) reads it the same way: the premise\nsays a conjunction \"is false\" rather than negating it, and \"the Stoics\ndistinguished between the negation of a proposition and the assertion that\na proposition is false\".\nRuling (Kyle, 2026-09-27): verdict valid_nonsyllogistic. The harness must\ncheck both that the argument is valid under the validity criterion and\nthat it is not derivable through the themata.\nPhase 2 represents \"'p' is false\" as its own operator (`saidFalse` in\nSyntax.lean), semantically the negation but syntactically distinct, so no\nindemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is\nvalid under the criterion and not derivable from the base cases."
+   "notes": "An important boundary case. DL calls this argument conclusive (valid) but\nnot syllogistic, so a correct reconstruction of the themata must NOT derive\nit from the indemonstrables. Mates's summary (chunk\n78c91994-ccd2-47ac-9eb9-17201baa0783) reads it the same way: the premise\nsays a conjunction \"is false\" rather than negating it, and \"the Stoics\ndistinguished between the negation of a proposition and the assertion that\na proposition is false\".\nRuling (Kyle, 2026-09-27): verdict valid_nonsyllogistic. The harness must\ncheck both that the argument is valid under the validity criterion and\nthat it is not derivable through the themata.\nPhase 2 represents \"'p' is false\" as its own operator (`saidFalse` in\nSyntax.lean), semantically the negation but syntactically distinct, so no\nindemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is\nvalid under the criterion and not derivable from the base cases.\nKyle's review (2026-10-05): why DL 7.78 calls it conclusive but not\nsyllogistic. The first premise asserts that the conjunction \"it is both\nday and night\" is false. That is not the same as the negated conjunction\n(\"not both day and night\") that the third indemonstrable requires. So the\nargument has the third indemonstrable's shape but cannot be reduced to it."
   }
  },
  {
@@ -2153,7 +2161,8 @@
    "passage": "These are the arguments of Chrysippus, which even he himself did not refute. For what could he do with such a conclusion as this,—“If it shines, it shines: but it does shine, therefore it does shine?” He must give in; for the principle of the connexion compels you to grant the last proposition after you have once granted the first.",
    "corpus_ref": "df555ec8-e886-440d-9d99-b7376a22b63a",
    "research_ref": null,
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -2395,6 +2404,7 @@
    "corpus_ref": "df555ec8-e886-440d-9d99-b7376a22b63a",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -2406,7 +2416,7 @@
     "witness": "primary",
     "basis": null
    },
-   "notes": "Yonge's English runs the conditional and the minor premise together. It\nis read here as a first indemonstrable whose antecedent is a conjunction,\nsince Cicero calls it \"the first mood\". The Liar variant follows in the\nsame chunk: \"If you say that you are a liar, and speak the truth, then you\nare a liar. But you do say that you are a liar, and you do speak the truth,\ntherefore you are a liar.\" The form is not disputed there. The dispute is\nwhether the Liar's premises can be assented to.\nThis is a test of whether the object language lets an indemonstrable take\na compound as its antecedent."
+   "notes": "Yonge's English runs the conditional and the minor premise together. It\nis read here as a first indemonstrable whose antecedent is a conjunction,\nsince Cicero calls it \"the first mood\". The Liar variant follows in the\nsame chunk: \"If you say that you are a liar, and speak the truth, then you\nare a liar. But you do say that you are a liar, and you do speak the truth,\ntherefore you are a liar.\" The form is not disputed there. The dispute is\nwhether the Liar's premises can be assented to.\nThis is a test of whether the object language lets an indemonstrable take\na compound as its antecedent.\nKyle's review (2026-10-05): \"valid\" records the Stoic position. Cicero\n(Ac. II.95-96) endorses the form only to turn it against the Stoics by way\nof the Liar."
   }
  },
  {
@@ -2636,6 +2646,7 @@
    "corpus_ref": "8e7bb081-9d8b-481f-b3ac-57183751efa5",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "ancient_text_via_secondary_work",
    "secondary_summary": {
     "flag": false,
@@ -2873,6 +2884,7 @@
    "corpus_ref": "401a8e59-19ef-4e5e-80f0-dbeb990103a0",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "mode2_summary",
    "secondary_summary": {
     "flag": true,
@@ -3113,6 +3125,7 @@
    "corpus_ref": "401a8e59-19ef-4e5e-80f0-dbeb990103a0",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "mode2_summary",
    "secondary_summary": {
     "flag": true,
@@ -3353,6 +3366,7 @@
    "corpus_ref": "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "ancient_text_via_secondary_work",
    "secondary_summary": {
     "flag": true,
@@ -3593,6 +3607,7 @@
    "corpus_ref": "6dea256b-8bed-46db-9df4-e015a90e5636",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "mode2_summary",
    "secondary_summary": {
     "flag": true,
@@ -3637,6 +3652,7 @@
    "corpus_ref": "6dea256b-8bed-46db-9df4-e015a90e5636",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "mode2_summary",
    "secondary_summary": {
     "flag": true,
@@ -3881,6 +3897,7 @@
    "corpus_ref": "e624f24d-83d0-4efd-98d3-19457ace3554",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -3892,7 +3909,7 @@
     "witness": "primary",
     "basis": null
    },
-   "notes": "The Sorites. The \" … \" is in the chunk text itself. The corpus copy of\n7.82 is abridged, so what DL says about the Veiled argument is lost.\nHicks's \"It cannot be that if two is few, three is not so likewise\" is\nread as \"not (two is few and three is not few)\", a negated conjunction.\nEach step is then a third indemonstrable followed by removal of a double\nnegation, which makes the form a test of the double negation parameter\n(rules.yaml C06).\nChrysippus's response concerns assent, not form. Cicero, Academica II ch.\nXXIX (chunk dc6299a6-98fb-450b-abd5-e19a5d96a49b): \"For Chrysippus’s plan\nis, when he is interrogated step by step (by way of giving an instance),\nwhether there are three, or few, or many, to rest a little before he comes\nto the “many;”\".\nRuling (Kyle, 2026-09-27): the chain form is valid, tagged kind: sophism.\nThe fault of the Sorites lies in its premises, not its form. Under the\nsyntactic reading of \"contradictory\" (C06), each link is a plain third\nindemonstrable, since the contradictory of \"not p2\" is \"p2\". Under the\nnegation reading, each link also needs double-negation elimination."
+   "notes": "The Sorites. The \" … \" is in the chunk text itself (see Kyle's note 4\nbelow on what it hides).\nHicks's \"It cannot be that if two is few, three is not so likewise\" is\nread as \"not (two is few and three is not few)\", a negated conjunction.\nEach step is then a third indemonstrable followed by removal of a double\nnegation, which makes the form a test of the double negation parameter\n(rules.yaml C06).\nChrysippus's response concerns assent, not form. Cicero, Academica II ch.\nXXIX (chunk dc6299a6-98fb-450b-abd5-e19a5d96a49b): \"For Chrysippus’s plan\nis, when he is interrogated step by step (by way of giving an instance),\nwhether there are three, or few, or many, to rest a little before he comes\nto the “many;”\".\nRuling (Kyle, 2026-09-27): the chain form is valid, tagged kind: sophism.\nThe fault of the Sorites lies in its premises, not its form. Under the\nsyntactic reading of \"contradictory\" (C06), each link is a plain third\nindemonstrable, since the contradictory of \"not p2\" is \"p2\". Under the\nnegation reading, each link also needs double-negation elimination.\nKyle's review (2026-10-05):\n(1) The claim is \"valid in form, with a false premise\".\n(2) DL lists it among the insoluble arguments, and Chrysippus did not\naccept it: he fell silent before the failing step (Cicero, Ac. II.93;\nSextus, M VII.416).\n(3) The three-atom chain in the encoding stands for the full series up\nto ten.\n(4) In DL 7.82 the text sits under \"the Veiled\", which is likely a\nlacuna. The excerpt's ellipsis hides this."
   }
  },
  {
@@ -3929,6 +3946,7 @@
    "corpus_ref": "e624f24d-83d0-4efd-98d3-19457ace3554",
    "research_ref": null,
    "verified_by_kyle": false,
+   "verified_on": null,
    "witness": "primary",
    "secondary_summary": {
     "flag": false,
@@ -4172,7 +4190,8 @@
     "source_id": "4339bf26-71fa-4245-abe1-fbce3f35ea04",
     "locator": "VII.15"
    },
-   "verified_by_kyle": false,
+   "verified_by_kyle": true,
+   "verified_on": "2026-10-05",
    "witness": "primary",
    "secondary_summary": {
     "flag": false,

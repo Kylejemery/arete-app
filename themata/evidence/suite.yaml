@@ -38,8 +38,9 @@
 #     same section. The passage must pass research_source_contains(source_id,
 #     passage). First used by S020.
 #
-# verified_by_kyle is false on every entry. Nothing enters the harness until
-# Kyle signs off.
+# verified_by_kyle records Kyle's sign-off, with verified_on its date. First
+# sign-offs, 2026-10-05: S001-S007, S009, S020. The other entries are not yet
+# signed off; S008, S010 and S018 carry notes his review asked for first.
 
 # ---------------------------------------------------------------------------
 # The five indemonstrables
@@ -73,7 +74,8 @@
     (scholarship, chunk 35f286cd-cf33-400a-80e0-417dce60038c) and by Cicero,
     Academica II, who calls it "the first mood" (see S010).
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S002
   schema: "if p, q; not q; therefore not p"
@@ -98,7 +100,8 @@
     removed) counts as a second indemonstrable is a parameter question (see
     rules.yaml C06, and Params.lean in Phase 2).
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S003
   schema: "not (p and q); p; therefore not q"
@@ -124,7 +127,8 @@
     negated conjunction is useful for demonstration. That is a dispute about
     usefulness, not validity.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S004
   schema: "either p or q; p; therefore not q"
@@ -141,7 +145,8 @@
     This is valid only if "either ... or" is exclusive. For the corpus
     evidence on disjunction see rules.yaml C04.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S005
   schema: "either p or q; not p; therefore q"
@@ -160,7 +165,8 @@
     "πέμπτος ἀναπόδεικτος διὰ πλειόνων" (a fifth indemonstrable with more than
     two disjuncts). The corpus gives the name only, not the form. See gaps.md.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 # ---------------------------------------------------------------------------
 # Forms the sources reject
@@ -189,7 +195,8 @@
     This passage is also the corpus's statement of the validity criterion:
     see rules.yaml C08.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S007
   schema: "if p, q; not p; therefore not q"
@@ -209,7 +216,8 @@
     antecedent". That description is garbled in the summary and cannot be
     matched to a schema without the Sextus text.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 # ---------------------------------------------------------------------------
 # Valid, but not syllogistic
@@ -245,6 +253,11 @@
     Syntax.lean), semantically the negation but syntactically distinct, so no
     indemonstrable applies to it. Lean/Stoic/Tests.lean proves that S008 is
     valid under the criterion and not derivable from the base cases.
+    Kyle's review (2026-10-05): why DL 7.78 calls it conclusive but not
+    syllogistic. The first premise asserts that the conjunction "it is both
+    day and night" is false. That is not the same as the negated conjunction
+    ("not both day and night") that the third indemonstrable requires. So the
+    argument has the third indemonstrable's shape but cannot be reduced to it.
   confidence: high
   verified_by_kyle: false
 
@@ -282,7 +295,8 @@
     This form is an instance of S001 with q := p, so any reconstruction that
     has S001 derives it. It serves as a sanity check, not a discriminator.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"
 
 - id: S010
   schema: "if (p and q), r; p and q; therefore r"
@@ -306,6 +320,9 @@
     whether the Liar's premises can be assented to.
     This is a test of whether the object language lets an indemonstrable take
     a compound as its antecedent.
+    Kyle's review (2026-10-05): "valid" records the Stoic position. Cicero
+    (Ac. II.95-96) endorses the form only to turn it against the Stoics by way
+    of the Liar.
   confidence: medium
   verified_by_kyle: false
 
@@ -505,8 +522,8 @@
     also is ten.”
   corpus_ref: "e624f24d-83d0-4efd-98d3-19457ace3554"
   notes: |
-    The Sorites. The " … " is in the chunk text itself. The corpus copy of
-    7.82 is abridged, so what DL says about the Veiled argument is lost.
+    The Sorites. The " … " is in the chunk text itself (see Kyle's note 4
+    below on what it hides).
     Hicks's "It cannot be that if two is few, three is not so likewise" is
     read as "not (two is few and three is not few)", a negated conjunction.
     Each step is then a third indemonstrable followed by removal of a double
@@ -522,6 +539,15 @@
     syntactic reading of "contradictory" (C06), each link is a plain third
     indemonstrable, since the contradictory of "not p2" is "p2". Under the
     negation reading, each link also needs double-negation elimination.
+    Kyle's review (2026-10-05):
+    (1) The claim is "valid in form, with a false premise".
+    (2) DL lists it among the insoluble arguments, and Chrysippus did not
+    accept it: he fell silent before the failing step (Cicero, Ac. II.93;
+    Sextus, M VII.416).
+    (3) The three-atom chain in the encoding stands for the full series up
+    to ten.
+    (4) In DL 7.82 the text sits under "the Veiled", which is likely a
+    lacuna. The excerpt's ellipsis hides this.
   confidence: low
   verified_by_kyle: false
 
@@ -590,4 +616,5 @@
     (3,743,531 characters, licence public_domain). An earlier, truncated
     upload (c20ccbce-12a1-4f09-8746-9fcfd12fec34) is deprecated.
   confidence: medium
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-05"

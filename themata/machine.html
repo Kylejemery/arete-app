@@ -135,6 +135,15 @@ ol.steps li.last .arg { color: var(--gold-light); }
 .variant .name { font: 600 11px/1 var(--ui); letter-spacing: 1.2px; text-transform: uppercase; color: var(--body); }
 .empty-state { font: italic 400 15px/1.5 var(--display); color: var(--muted); }
 
+.outside { display: grid; gap: 14px; border-top: 1px solid var(--line); padding-top: 24px; }
+.outside > p.note { margin: 0; }
+.outside .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); }
+.outside .card { background: var(--surface); border: 1px solid var(--line); padding: 18px; display: grid; gap: 10px; min-width: 0; align-content: start; }
+.outside .card h3 { margin: 0; font: 600 13px/1.3 var(--ui); letter-spacing: 1px; color: var(--gold); }
+details.notes summary { cursor: pointer; font: 600 10.5px/1.6 var(--ui); letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+details.notes summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+details.notes .body { display: grid; gap: 8px; margin-top: 8px; font-size: 12.5px; line-height: 1.55; color: var(--body); overflow-wrap: anywhere; }
+details.notes .body p { margin: 0; }
 .appendix { display: grid; gap: 22px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); border-top: 1px solid var(--line); padding-top: 24px; }
 .appendix section { display: grid; gap: 10px; align-content: start; min-width: 0; }
 table.small { border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; width: 100%; }
@@ -174,6 +183,8 @@ table.small td code { white-space: nowrap; }
     </div>
     <aside class="panel" id="panel" aria-live="polite"><p class="empty-state">Choose a cell to open its run.</p></aside>
   </div>
+
+  <section class="outside" id="outside" aria-labelledby="outside-title"></section>
 
   <div class="appendix" id="appendix"></div>
 </div>
@@ -218,6 +229,13 @@ table.small td code { white-space: nowrap; }
   const matchOf = (r) => (r == null ? null : typeof r.matches_ledger === "string" ? r.matches_ledger : r.matches_ledger[S.cond]);
   const statusClass = (st) => ({ derived: "derived", proven_underivable: "proven", not_found_within_depth: "notfound" }[st] || "");
   const statusText = (st) => ({ derived: "Derived", proven_underivable: "Proven underivable", not_found_within_depth: "Not found within depth" }[st] || st);
+  // Ledger notes are hard-wrapped YAML: blank lines separate paragraphs.
+  const notesHtml = (notes) => {
+    if (!notes) return "";
+    const paras = notes.split(/\n\s*\n/).map((p) => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean);
+    return '<details class="notes"><summary>Ledger notes</summary><div class="body">' + paras.map((p) => "<p>" + esc(p) + "</p>").join("") + "</div></details>";
+  };
+  const signPill = (pv) => '<span class="pill ' + (pv.verified_by_kyle ? "ok" : "") + '">' + (pv.verified_by_kyle ? "signed off" + (pv.verified_on ? " " + esc(pv.verified_on) : "") : "not signed off") + "</span>";
 
   function renderStatic() {
     const rs = X.index.review_status, src = X.index.source, c = X.index.counts;
@@ -238,6 +256,19 @@ table.small td code { white-space: nowrap; }
       '<span><i class="sw derived"></i>derived</span><span><i class="sw proven"></i>proven underivable</span><span><i class="sw notfound"></i>not found within depth</span><span><i class="sw miss"></i>disagrees with the ledger</span><span><i class="sw unknown"></i>agreement unknown</span>';
     const vb = c.variants_by_view;
     const vrow = (v) => "<tr><td><code>" + esc(v) + "</code></td>" + ["redundant_variant", "duplicate_variant"].map((k) => ["derived", "not_found_within_depth", "proven_underivable"].map((s) => '<td class="num">' + num(vb[v][k][s]) + "</td>").join("")).join("") + "</tr>";
+    const outside = X.items.filter((i) => !i.in_formal_suite);
+    $("outside").innerHTML = outside.length
+      ? '<h2 id="outside-title">Outside the formal suite</h2><p class="note">Kept in the ledger but not run: their verdict turns on something propositional form cannot see. The harness makes no claim about them; this is the evidence they rest on.</p><div class="cards">' +
+        outside.map((it) => {
+          const pv = it.provenance;
+          return '<article class="card"><h3>' + esc(it.id) + " · " + esc(it.kind) + '</h3><div class="argument">' + esc(it.schema) + "</div>" +
+            '<div class="verdict"><span class="pill">' + esc(it.ancient_verdict.replace("_", " ")) + '</span><span class="pill">confidence ' + esc(it.confidence) + "</span>" +
+            (pv.non_primary.flag ? '<span class="pill gold">NP · ' + esc(pv.non_primary.basis) + "</span>" : '<span class="pill ok">primary text</span>') + signPill(pv) + "</div>" +
+            '<dl class="kv"><dt>Source</dt><dd>' + esc(pv.source) + "</dd>" + (pv.corpus_ref ? "<dt>Corpus chunk</dt><dd><code>" + esc(pv.corpus_ref) + "</code></dd>" : "") +
+            (pv.research_ref ? "<dt>Research ref</dt><dd>" + esc(Array.isArray(pv.research_ref) ? pv.research_ref.map((r) => r.locator).join("; ") : pv.research_ref.locator) + "</dd>" : "") + "</dl>" +
+            '<div class="passage">' + esc(pv.passage) + "</div>" + notesHtml(pv.notes) + "</article>";
+        }).join("") + "</div>"
+      : "";
     $("appendix").innerHTML =
       '<section><h3>Cell labels</h3><div class="tablewrap"><table class="small"><tbody>' +
       Object.entries(h).map(([k, v]) => "<tr><td><code>" + esc(k) + "</code></td><td>" + esc(v) + "</td></tr>").join("") +
@@ -385,10 +416,10 @@ table.small td code { white-space: nowrap; }
     h += "<section><h3>Evidence</h3>" +
       (it.example ? '<p class="quote" lang="' + esc(it.example.language) + '">' + esc(it.example.text) + "</p>" + (it.example.note ? '<p class="note">' + esc(it.example.note) + "</p>" : "") : '<p class="note">The ledger passage has no worked example.</p>') +
       '<div class="verdict">' + (pv.non_primary.flag ? '<span class="pill gold">NP · ' + esc(pv.non_primary.basis) + "</span>" : '<span class="pill ok">primary text</span>') +
-      '<span class="pill ' + (pv.verified_by_kyle ? "ok" : "") + '">' + (pv.verified_by_kyle ? "signed off" : "not signed off") + "</span></div>" +
+      signPill(pv) + "</div>" +
       '<dl class="kv"><dt>Source</dt><dd>' + esc(pv.source) + "</dd>" + (pv.corpus_ref ? "<dt>Corpus chunk</dt><dd><code>" + esc(pv.corpus_ref) + "</code></dd>" : "") +
       (pv.research_ref ? "<dt>Research ref</dt><dd>" + esc(pv.research_ref.locator) + "</dd>" : "") + "</dl>" +
-      '<div class="passage">' + esc(pv.passage) + "</div></section>";
+      '<div class="passage">' + esc(pv.passage) + "</div>" + notesHtml(pv.notes) + "</section>";
     h += '<section><h3>The candidate</h3><p class="note">' + esc(c.source) + '</p><dl class="kv">' +
       (c.rules.length ? c.rules.map((ru) => "<dt><code>" + esc(ru.shape) + "</code></dt><dd>" + esc(ru.name) + "</dd>").join("") : "<dt>Rules</dt><dd>none: the base cases only</dd>") + "</dl></section>";
     panel.innerHTML = h;

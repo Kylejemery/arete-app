@@ -98,6 +98,8 @@ for i in sorted(set(by_id) & set(encoded)):
         problems.append(f"{i}: ledger verdict {e['verdict']}, harness {h['ancient_verdict']}")
     if ("non_formal" in (e.get("flags") or [])) != h["non_formal"]:
         problems.append(f"{i}: non_formal flag differs")
+    if e.get("verified_by_kyle") and not e.get("verified_on"):
+        problems.append(f"{i}: signed off without a verified_on date")
 
 # Editorial inputs are quotations, checked.
 examples = editorial.get("examples") or {}
@@ -175,6 +177,7 @@ for e in ledger:
             "corpus_ref": e.get("corpus_ref"),
             "research_ref": e.get("research_ref"),
             "verified_by_kyle": e["verified_by_kyle"],
+            "verified_on": str(e["verified_on"]) if e.get("verified_by_kyle") and e.get("verified_on") else None,
             "witness": witness(e),
             "secondary_summary": secondary(e),
             "non_primary": non_primary(e),
