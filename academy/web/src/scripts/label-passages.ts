@@ -116,9 +116,11 @@ interface WorkSpec {
 
 // Stewart's Minor Dialogues: twelve dialogue "books", each one essay (De Ira
 // spans dialogue-books III–V as its books 1–3), then On Clemency I–II. The
-// same fixed table serves both ingested copies of the collection.
+// same fixed table serves both ingested copies of the collection. Book XI is
+// To Helvia and XII To Polybius, as the text's own headings say; the two were
+// transposed here until 20261005134832_seneca_consolation_labels.sql.
 const ORDINALS = ['', 'FIRST', 'SECOND', 'THIRD', 'FOURTH', 'FIFTH', 'SIXTH', 'SEVENTH', 'EIGHTH', 'NINTH', 'TENTH', 'ELEVENTH', 'TWELFTH']
-const DIALOGUE_ESSAYS = ['', 'On Providence', 'On Constancy', 'On Anger 1', 'On Anger 2', 'On Anger 3', 'Consolation to Marcia', 'On a Happy Life', 'On Leisure', 'On Peace of Mind', 'On the Shortness of Life', 'Consolation to Polybius', 'Consolation to Helvia']
+const DIALOGUE_ESSAYS = ['', 'On Providence', 'On Constancy', 'On Anger 1', 'On Anger 2', 'On Anger 3', 'Consolation to Marcia', 'On a Happy Life', 'On Leisure', 'On Peace of Mind', 'On the Shortness of Life', 'Consolation to Helvia', 'Consolation to Polybius']
 
 function minorDialoguesMatcher(line: string, state: Record<string, number | string>): string | null {
   const bookHead = line.match(/^THE ([A-Z]+) BOOK OF THE DIALOGUES/)
