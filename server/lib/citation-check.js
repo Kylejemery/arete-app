@@ -34,7 +34,17 @@ function looksLikeCitation(open, inner) {
 
 const OUTSIDE_MARK = '(outside our library)';
 
-const normTag = (t) => String(t).replace(/^[[(]|[\])]$/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+// How far after a quotation its tag may sit and still belong to it.
+const TAG_REACH = 120;
+
+// Markdown emphasis is dropped: "[Arete synthesis, *Discipline…*]".
+const normTag = (t) => String(t).replace(/^[[(]|[\])]$/g, '').replace(/[*_]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+// The words of a tag that identify it: every number and numeral, and every
+// other word of three letters or more.
+const wordsOf = (t) => (normTag(t).match(/[\p{L}\p{N}.]+/gu) || [])
+  .map(w => w.replace(/\.$/, ''))
+  .filter(w => /\d/.test(w) || /^[ivxlc]+$/.test(w) || w.length >= 3);
 
 // The place a tag points at: its numbers and roman numerals ("7.180", "XI").
 const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
@@ -59,12 +69,16 @@ function withinRange(tag, known) {
 // A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
 // of "DL 7.179–7.181"), a place inside a retrieved range ("DL 7.180–7.181" of
 // "DL 7.180–7.183"), or a shortened form naming the same place ("Lectures XI"
-// for "Musonius, Lecture XI, p. 81").
+// for "Musonius, Lecture XI, p. 81"), or a shortened form whose every word is
+// in one retrieved tag ("Arete synthesis, Discipline as Second Nature" for
+// "Arete synthesis, unverified: Discipline as Second Nature: Practice, …").
 function isRetrieved(tag, retrievedTags) {
   const known = retrievedTags.map(normTag);
   const n = normTag(tag);
   if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
   if (known.some(k => withinRange(tag, k))) return true;
+  const cw = wordsOf(tag);
+  if (cw.length >= 2 && known.some(k => { const kw = new Set(wordsOf(k)); return cw.every(w => kw.has(w)); })) return true;
   const place = placeOf(tag);
   return place.length > 0 && known.some(k => {
     const kp = placeOf(k);
@@ -75,16 +89,22 @@ function isRetrieved(tag, retrievedTags) {
 /**
  * @param {string} text           the reply
  * @param {string[]} retrievedTags tags of the passages the model was given
+ * @param {{ end: number, tag: string }[]} [runs] runs copied from a passage;
+ *        a wrong tag directly after one names that passage instead, since
+ *        the words demonstrably came from it
  * @returns {{ text: string, unmatched: string[] }}
  */
-function checkCitations(text, retrievedTags) {
+function checkCitations(text, retrievedTags, runs = []) {
   if (typeof text !== 'string' || !text) return { text, unmatched: [] };
   const unmatched = [];
-  const out = text.replace(TAG_RE, (whole, inner) => {
+  const out = text.replace(TAG_RE, (whole, inner, offset) => {
     if (!looksLikeCitation(whole[0], inner)) return whole;
     if (isRetrieved(inner, retrievedTags || [])) return whole;
     unmatched.push(whole);
-    return OUTSIDE_MARK;
+    // Only a tag directly after the run (closing marks and punctuation
+    // between) belongs to it; a later claim keeps its own verdict.
+    const run = runs.find(r => r.tag && offset >= r.end && /^[\s”"'’.,;:!?]*$/.test(text.slice(r.end, offset)));
+    return run ? run.tag : OUTSIDE_MARK;
   });
   return { text: out, unmatched };
 }
@@ -119,9 +139,10 @@ function quotedAt(text, i) {
  *
  * @param {string} text
  * @param {{ tag?: string, text: string }[]} passages
- * @returns {{ words: number, excerpt: string, tag: string|null, quoted: boolean, tagged: boolean }[]}
+ * @param {{ all?: boolean }} [opts] all: also return runs already quoted and tagged
+ * @returns {{ words: number, start: number, end: number, excerpt: string, tag: string|null, quoted: boolean, tagged: boolean }[]}
  */
-function verbatimOverlap(text, passages) {
+function verbatimOverlap(text, passages, { all = false } = {}) {
   const reply = String(text || '');
   const rw = words(reply);
   const findings = [];
@@ -146,8 +167,8 @@ function verbatimOverlap(text, passages) {
         const from = lead ? start + lead[0].length : start;
         const quoted = quotedAt(reply, from) || (lead !== null && /^[“"]/.test(reply.slice(from)));
         // The tag belongs right after the quotation, not somewhere later on.
-        const tagged = new RegExp(TAG_RE.source).test(reply.slice(end, Math.min(paraEnd, end + 120)));
-        if (!(quoted && tagged)) {
+        const tagged = new RegExp(TAG_RE.source).test(reply.slice(end, Math.min(paraEnd, end + TAG_REACH)));
+        if (all || !(quoted && tagged)) {
           findings.push({ words: count, start, end, excerpt: reply.slice(start, end), tag: p.tag || null, quoted, tagged });
         }
       }
@@ -211,7 +232,8 @@ function quoteVerbatim(text, passages) {
  */
 function enforceSourcing(text, passages) {
   const q = quoteVerbatim(text, passages);
-  const c = checkCitations(q.text, (passages || []).map(p => p.tag));
+  const runs = verbatimOverlap(q.text, passages, { all: true });
+  const c = checkCitations(q.text, (passages || []).map(p => p.tag), runs);
   return { text: c.text, unmatched: c.unmatched, quoted: q.quoted };
 }
 

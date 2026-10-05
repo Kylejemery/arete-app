@@ -104,6 +104,22 @@ test('enforceSourcing quotes copied runs and still replaces invented tags', () =
   assert.ok(r.text.endsWith(`He also ran marathons ${OUTSIDE_MARK}.`));
 });
 
+// Run 3, 2026-10-05: the model shortened a synthesis tag and set it in italics.
+test('a shortened tag whose words are all in one retrieved tag is retrieved', () => {
+  const tags = ['[Arete synthesis, unverified: Discipline as Second Nature: Practice, Hardship, and the Question of What Asceticism Is For]', '[Seneca, Ep. 18]'];
+  assert.deepEqual(checkCitations('He set days apart [Arete synthesis, *Discipline as Second Nature*].', tags).unmatched, []);
+  assert.deepEqual(checkCitations('He set days apart [Arete synthesis, Discipline as First Nature].', tags).unmatched, ['[Arete synthesis, Discipline as First Nature]']);
+  assert.deepEqual(checkCitations('He wrote to Lucilius (Seneca, Ep. 104).', tags).unmatched, ['(Seneca, Ep. 104)']);
+});
+
+test('a wrong tag right after a copied quotation names the passage it came from', () => {
+  const reply = `Plutarch writes, "${PLUTARCH}" (Plut. Cat. Min. 90) That is the man.`;
+  const r = enforceSourcing(reply, CATO);
+  assert.deepEqual(r.unmatched, ['(Plut. Cat. Min. 90)']);
+  assert.ok(r.text.includes(`"${PLUTARCH}" [Plut. Cat. Min. 5] That is the man.`), r.text);
+  assert.deepEqual(verbatimOverlap(r.text, CATO), []);
+});
+
 test('a reply with nothing copied is returned unchanged', () => {
   const reply = 'Cato trained hard and walked everywhere [Plut. Cat. Min. 5].';
   assert.deepEqual(enforceSourcing(reply, CATO), { text: reply, unmatched: [], quoted: [] });
