@@ -2,33 +2,37 @@
 # rest on secondary evidence (Mates's Stoic Logic as a Mode 2 summary, and
 # Zeller). Not read by the harness; suite.yaml is unchanged.
 #
-# Each proposal cites research_sources (guardrail 1, amended 2026-09-28).
-# Both Sextus texts are still licence 'unconfirmed', so research_source_contains
-# returns false for them and none of these can go into suite.yaml yet. When a
-# text is checked against a copy Kyle owns and moved to licensed_copy, rerun
+# Each proposal cites research_sources (guardrail 1, amended 2026-09-28). Both
+# Bury volumes are licence 'quotation_only' (migration 20261005184546): each
+# quotation is at most 60 words and is checked whole, with its entry's `source`
+# line as the attribution (author, work, translator and edition year must all
+# be named there) and the ref's locator. Check with
 #   python3 scripts/themata/verify_ledger.py themata/evidence/primary-proposals.yaml
-# then carry the proposal into suite.yaml for Kyle's sign-off.
+# then carry a proposal into suite.yaml for Kyle's sign-off.
 #
 # Every passage below is an exact substring (whitespace collapsed) of the text
-# stored under its source_id. Ellipses mark text left out.
+# stored under its source_id. Ellipses mark text left out. Bracketed note
+# markers ([a], [c]) and section markers are kept as stored.
 #
 # Sources:
-#   f18c0230-bc6e-44be-865e-04e61e22de55  Sextus, Outlines of Pyrrhonism, tr. Mates (1996)
-#     PH II 134-204 proofread by reading; no page images exist.
+#   937d0561-1290-422a-a887-81a8678dbfcc  Sextus, Outlines of Pyrrhonism II, tr. Bury (Loeb 1933)
+#     pp. 245, 247, 249, 253, 255, 259 and the Greek of PH II 146-147 (p. 244)
+#     proofread against the scan. Replaces Mates (1996) as the PH witness
+#     (Kyle, 2026-10-02); no proposal cites Mates now.
 #   ca2d7557-ef76-49c7-a3d7-bee6c0b78b32  Sextus, Against the Logicians, tr. Bury (Loeb 1935)
 #     pp. 353-363, 385-389, 415-419, 463-465, 469-471, 481 proofread against the scan
 #     (version 2; version 1, 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, is deprecated).
 
 - id: S012
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  source: "Sextus Empiricus, Against the Logicians II (M VIII) 229-233 (tr. R.G. Bury, 1935)"
+  source: "Sextus Empiricus, Against the Logicians II (M VIII) 229-233 (tr. R. G. Bury, Loeb 1935)"
   research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 232"}
   passage: |
-    Since, then, we have two premisses,—the major “If it is day, it is light,”
-    which begins with the simple proposition “it is day” but ends with the
-    not-simple major “if it is day, it is light,” and also its antecedent “it is
-    day,”—from these we shall infer, by the first non-demonstrable, the
-    consequent of that major, namely “Therefore if it is day, it is light.”
+    the major “If it is day, it is light,” which begins with the simple
+    proposition “it is day” but ends with the not-simple major “if it is day,
+    it is light,” and also its antecedent “it is day,”—from these we shall
+    infer, by the first non-demonstrable, the consequent of that major, namely
+    “Therefore if it is day, it is light.”
   notes: |
     Proofread page (p. 359). The analysis fits the schema "if p, (if p, q); p;
     therefore q": a major that begins with "it is day" and ends in the
@@ -36,45 +40,48 @@
     printed, in Bekker's Greek and in Bury's English alike, as a plain first
     indemonstrable ("If it is day, it is light; but in fact it is day; therefore
     it is light"), which does not have that shape. Quote § 232, not § 230, and
-    record the discrepancy for the specialist review.
+    record the discrepancy for the specialist review. The quotation starts at
+    "the major" to stay within 60 words; the words before it are "Since, then,
+    we have two premisses,—".
   confidence: medium
 
 - id: S013
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  source: "Sextus Empiricus, Against the Logicians II (M VIII) 234-236 (tr. R.G. Bury, 1935)"
+  source: "Sextus Empiricus, Against the Logicians II (M VIII) 234-236 (tr. R. G. Bury, Loeb 1935)"
   research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 235-236"}
   passage: |
     For an argument like this is compounded of the second non-demonstrable and
-    the third, as one may learn from its analysis; and this will become clearer
-    when we have given instruction as to its “scheme,” which goes thus: “If the
-    first and the second, the third ⟨is true⟩; but the third is not ⟨true⟩,
-    whereas the first is; therefore the second is not ⟨true⟩.”
+    the third, … its “scheme,” which goes thus: “If the first and the second,
+    the third ⟨is true⟩; but the third is not ⟨true⟩, whereas the first is;
+    therefore the second is not ⟨true⟩.”
   notes: |
     Proofread page (p. 361). § 236 gives the analysis: a second indemonstrable
     yields "the first and the second are not ⟨true⟩", and with the remaining
     premiss a third indemonstrable yields "the second is not ⟨true⟩". The
     worked instance is Aenesidemus's argument about signs (§ 234). Premiss
     order in the scheme is major, not-third, first, which matches the schema.
+    The ellipsis leaves out "as one may learn from its analysis; and this will
+    become clearer when we have given instruction as to" (60-word limit).
   confidence: high
 
 - id: S014
   replaces: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, ch. V text and n.245"
-  source: "Sextus Empiricus, Outlines of Pyrrhonism II 159, 167 (tr. B. Mates, 1996); Against the Logicians II (M VIII) 443 (tr. R.G. Bury, 1935)"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 159, 167 (tr. R. G. Bury, Loeb 1933); Sextus Empiricus, Against the Logicians II (M VIII) 443 (tr. R. G. Bury, Loeb 1935)"
   research_ref:
-    - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 167"}
-    - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 159"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 167"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 159"}
     - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 443"}
   passages:
     - ref: 0
       text: |
-        And if some people disapprove single-premised arguments, they are no
-        more worthy of credence than Antipater, who does not reject such
-        arguments.
+        But if some persons disapprove of arguments being of a “one-premiss
+        form,” they deserve no more credence than does Antipater[c] who does
+        not reject such arguments.
     - ref: 1
       text: |
-        then in saying "It is day" we imply "It is light," so that this argument
-        will suffice: It is day. Therefore, it is light; and the conditional "If
-        it is day, it is light" will be superfluous.
+        so that an argument in the form “It is day, therefore it is light” is
+        sufficient,[a] and the major premiss “If it is day, it is light” is
+        redundant.
     - ref: 2
       text: |
         For to say that Chrysippus does not approve of arguments having but one
@@ -86,11 +93,13 @@
         that arguments with a single premiss can be constructed.
   notes: |
     Sextus gives both sides of the dispute: Chrysippus did not accept
-    single-premised arguments, Antipater did. The example "It is day; therefore
+    single-premised arguments, Antipater did. The example "It is day, therefore
     it is light" is Sextus's own reduction of the first indemonstrable (PH II
-    159; also M VIII 440-441, proofread p. 469). The second M VIII quotation is
-    on p. 471, proofread against the scan on 2026-09-30. S014 now also covers
-    the former S015.
+    159, p. 255; Bury's note a there calls it "the syllogismus decurtatus, which
+    has but one premiss; cf. § 167"; also M VIII 440-441, proofread p. 469).
+    PH II 167 is p. 259, whose note c names Antipater of Tarsus and points to
+    M VIII 443. The second M VIII quotation is on p. 471, proofread against the
+    scan on 2026-09-30. S014 now also covers the former S015.
   confidence: high
 
 - id: S015
@@ -99,50 +108,61 @@
 
 - id: S016
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  source: "Sextus Empiricus, Outlines of Pyrrhonism II 146-147 (tr. B. Mates, 1996); Against the Logicians II (M VIII) 431 (tr. R.G. Bury, 1935)"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 146-147 (tr. R. G. Bury, Loeb 1933, with the facing Greek); Sextus Empiricus, Against the Logicians II (M VIII) 431 (tr. R. G. Bury, Loeb 1935)"
   research_ref:
-    - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 146-147"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 147"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 147, Greek (p. 244)"}
     - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 431"}
   passages:
     - ref: 0
       text: |
-        It is invalid by redundancy when it contains a premise that is not
-        needed for [PH II 147] the validity of the argument, for example: If it is
-        day, it is light. It is day. Dion is walking. Therefore, it is light.
+        And it is a case of redundancy when we find a premiss that is
+        superfluous for the logic of the argument, as for instance “If it is
+        day, it is light; but in fact it is day and Dion also is walking;
+        therefore it is light.”
     - ref: 1
+      text: |
+        παρὰ δὲ παρολκὴν ὅταν εὑρίσκηται λῆμμα παρέλκον πρὸς τὴν τοῦ λόγου
+        συναγωγήν, οἷον “εἰ ἡμέρα ἔστι, φῶς ἔστιν· ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ
+        καὶ Δίων περιπατεῖ· φῶς ἄρα ἔστιν.”
+    - ref: 2
       text: |
         And the argument is indefinite through redundancy when something is
         included, extrinsically and superfluously, along with the premisses, as
         is the case with one like this—“If it is day, it is light; but in fact
         it is day, and also virtue benefits; therefore it is light”
   notes: |
-    Now an ancient example, not a generic instantiation, and the verdict
-    (invalid) is Sextus's report of Stoic doctrine, not Mates's doubt about it.
-    PH II gives the superfluous item as a separate premise, matching the
-    schema. M VIII (proofread p. 463) gives it as a conjunct added to the minor
-    premiss ("it is day, and also virtue benefits"). If the harness treats
-    premises as a list, the two are different encodings; that may bear on the
-    Redundancy parameter (F1). Consider a second entry for the conjunct form.
-    The quotation keeps the source's [PH II 147] marker, which falls mid-sentence.
+    An ancient example, not a generic instantiation, and the verdict (invalid)
+    is Sextus's report of Stoic doctrine. Correction (2026-10-05): the earlier
+    note here said PH II gives the superfluous item as a separate premise. That
+    came from Mates's translation, which prints "It is day. Dion is walking."
+    Bury's English gives a conjunct minor premiss ("it is day and Dion also is
+    walking"), the same shape as M VIII 431 ("it is day, and also virtue
+    benefits"). The Greek, ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ καὶ Δίων περιπατεῖ, can be
+    read either way, and the definition just before it calls the superfluous
+    item a λῆμμα παρέλκον, a superfluous premiss. Both are quoted. How to encode
+    it (premise list or conjunct; the Redundancy parameter, F1) is the S016
+    question Kyle parked until after his sign-offs; nothing is decided here.
   confidence: high
 
 - id: S017
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  source: "Sextus Empiricus, Outlines of Pyrrhonism II 150 (tr. B. Mates, 1996); Against the Logicians II (M VIII) 434 (tr. R.G. Bury, 1935)"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 150 (tr. R. G. Bury, Loeb 1933); Sextus Empiricus, Against the Logicians II (M VIII) 434 (tr. R. G. Bury, Loeb 1935)"
   research_ref:
-    - {source_id: f18c0230-bc6e-44be-865e-04e61e22de55, locator: "PH II 150"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 150"}
     - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 434"}
   passages:
     - ref: 0
       text: |
-        An argument is unsound by deficiency if something is lacking that is
-        needed for inferring the conclusion. For example, while the following
-        argument is sound, as they suppose: Wealth is good or bad or
-        indifferent.
+        And the argument is faulty by deficiency, when it suffers from the
+        omission of some factor needed for the deducing of the conclusion: thus,
+        for instance, while we have, as they think, a valid argument in “Wealth
+        is either good or bad or indifferent; but it is neither bad nor
+        indifferent; therefore it is good,”
     - ref: 0
       text: |
-        this argument is defective by deficiency: Wealth is good or bad. It is
-        not bad. Therefore, it is good.
+        is faulty by way of deficiency: “Wealth is either good or bad; but it is
+        not bad; therefore it is good.”
     - ref: 1
       text: |
         And the argument becomes indefinite through deficiency when one of its
@@ -152,8 +172,9 @@
         indifferent,”
   notes: |
     Both witnesses make the defect a missing disjunct ("indifferent"), which
-    supports the non_formal flag already on this entry. M VIII 434 is on
-    p. 465, proofread against the scan on 2026-09-30.
+    supports the non_formal flag already on this entry. PH II 150 runs from
+    p. 247 to p. 249 (proofread); M VIII 434 is on p. 465, proofread against
+    the scan on 2026-09-30.
   flags: [non_formal]
   confidence: high
 

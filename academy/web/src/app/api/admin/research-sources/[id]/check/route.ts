@@ -6,10 +6,13 @@ export const dynamic = 'force-dynamic'
 
 // POST /api/admin/research-sources/:id/check  { passage }
 // Guardrail 1's test for a stored-source citation, through
-// research_source_contains: is the passage in the text, whitespace collapsed?
-// The function answers false for a deprecated or licence-unconfirmed source,
-// so the response also says whether the source is citable, to tell "not in
-// the text" from "not citable yet". Admin-gated.
+// research_quotation_problems: is the passage in the text, whitespace
+// collapsed, and within the source's quotation rules? The function answers
+// false for a deprecated or licence-unconfirmed source, so the response also
+// says whether the source is citable, to tell "not in the text" from "not
+// citable yet". A quotation_only source also needs an attribution and a
+// locator; this lookup supplies the source's own, so the length rule (at most
+// 60 words) still applies. Admin-gated.
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -30,19 +33,25 @@ export async function POST(
     const admin = createAdminClient()
     const { data: source, error: readErr } = await admin
       .from('research_sources')
-      .select('id, licence_status, deprecated')
+      .select('id, author, work, translator, edition_year, licence_status, deprecated')
       .eq('id', id)
       .maybeSingle()
     if (readErr) throw new Error(readErr.message)
     if (!source) return NextResponse.json({ error: 'Source not found' }, { status: 404 })
 
     const citable = !source.deprecated && source.licence_status !== 'unconfirmed'
-    const { data, error } = await admin.rpc('research_source_contains', {
+    const attribution = [source.author, source.work, source.translator, source.edition_year]
+      .filter(Boolean)
+      .join(', ')
+    const { data, error } = await admin.rpc('research_quotation_problems', {
       p_source: id,
       p_passage: passage.normalize('NFC'),
+      p_attribution: attribution,
+      p_locator: 'admin check',
     })
     if (error) throw new Error(error.message)
-    return NextResponse.json({ verified: data === true, citable })
+    const problems: string[] = Array.isArray(data) ? data : []
+    return NextResponse.json({ verified: problems.length === 0, citable, problems })
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Check failed' },

@@ -5,6 +5,7 @@ export const LICENCE_STATUSES = [
   'public_domain',
   'open_licence_confirmed',
   'licensed_copy',
+  'quotation_only',
   'unconfirmed',
 ] as const
 export type LicenceStatus = (typeof LICENCE_STATUSES)[number]
@@ -13,10 +14,12 @@ export const LICENCE_LABEL: Record<LicenceStatus, string> = {
   public_domain: 'public domain',
   open_licence_confirmed: 'open licence (confirmed)',
   licensed_copy: 'licensed copy',
+  quotation_only: 'short quotation only',
   unconfirmed: 'unconfirmed',
 }
 
-// Every column except full_text, which the list never sends to the browser.
+// Every column except full_text, which no API role can read (migration
+// 20261005184546); the database checks quotations with research_source_contains.
 export const SOURCE_COLUMNS =
   'id, author, work, volume, translator, edition, edition_year, source_url, how_obtained, licence_status, licence_notes, locator_scheme, sha256, notes, deprecated, created_at'
 

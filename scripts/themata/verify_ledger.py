@@ -7,9 +7,12 @@ For each entry:
   * corpus_ref: the chunk must exist in rag_corpus with deprecated = false, and
     every fragment of `passage` (split at ellipses) must be a whitespace-collapsed
     substring of its chunk_text.
-  * research_ref (one ref, or a list with `passages: [{ref, text}]`): every
-    fragment must pass research_source_contains(source_id, fragment), which is
-    false for a deprecated source or one whose licence is still 'unconfirmed'.
+  * research_ref (one ref, or a list with `passages: [{ref, text}]`): each
+    quotation goes whole to research_quotation_problems(source_id, passage,
+    attribution, locator), with the entry's `source` line as attribution and the
+    ref's locator. It must come back with no problems: every fragment in the
+    text, the source live and not 'unconfirmed', and for a 'quotation_only'
+    source at most 60 words with author, work, translator and year named.
 A cited passage with nothing left to check (empty, or only fragments under
 eight characters) fails. Entries with no citation are listed, not failed.
 Exits 1 if any check fails.
@@ -47,9 +50,12 @@ def research_checks(entry):
     out = []
     for t in texts:
         ref = refs[t["ref"]]
-        for f in fragments(t["text"]):
-            ok = call("/rest/v1/rpc/research_source_contains", {"p_source": ref["source_id"], "p_passage": f})
-            out.append((ref["locator"], ok))
+        if not fragments(t["text"]):
+            continue
+        probs = call("/rest/v1/rpc/research_quotation_problems", {
+            "p_source": ref["source_id"], "p_passage": t["text"],
+            "p_attribution": entry.get("source"), "p_locator": ref.get("locator")})
+        out.append((ref["locator"], not probs, probs))
     return out
 
 
@@ -73,9 +79,10 @@ for e in yaml.safe_load(open(path)):
     if e.get("research_ref") and not rc:
         line.append("research_ref has no passage to check"); failed = True
     if rc:
-        ok = sum(1 for _, v in rc if v)
+        ok = sum(1 for _, v, _ in rc if v)
         failed |= ok < len(rc)
-        line.append(f"research {ok}/{len(rc)} ({', '.join(sorted({l for l, _ in rc}))})")
+        line.append(f"research {ok}/{len(rc)} ({', '.join(sorted({l for l, _, _ in rc}))})")
+        line += [f"  {l}: {'; '.join(p)}" for l, v, p in rc if not v]
     if len(line) == 1:
         line.append("no citation to check")
     print(" | ".join(line))
