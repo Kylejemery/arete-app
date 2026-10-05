@@ -38,3 +38,26 @@ test('a voice that errored is a failure, never a clean pass', () => {
   assert.equal(r.failed, 1);
   assert.match(r.markdown, /Failed prompts or voices: 1/);
 });
+
+// Cases from the first live run, 2026-10-05.
+test('a tag in square brackets counts, and its dots do not split the sentence', () => {
+  assert.deepEqual(checkResponse('Diocles reports an old woman saying Chrysippus wrote 500 lines a day [DL 7.180].', ['[DL 7.180–7.183]']), []);
+  assert.deepEqual(checkResponse('Cato walked while his companions rode [Plut. Cat. Min. 5].', ['[Plut. Cat. Min. 5]']), []);
+});
+
+test('a shortened tag naming a retrieved place is not invented', () => {
+  assert.deepEqual(checkResponse('Musonius said farming suits a philosopher (Lectures XI).', ['[Musonius, Lecture XI, p. 81]']), []);
+  const f = checkResponse('Musonius said farming suits a philosopher (Lectures XIV).', ['[Musonius, Lecture XI, p. 81]']);
+  assert.deepEqual(f.map(x => x.kind), ['invented']);
+});
+
+test('a sentence that goes on about the named figure is checked too', () => {
+  const f = checkResponse('Seneca was wealthy. He wrote openly that he was still "in the deep waters of wickedness."', []);
+  assert.deepEqual(f.map(x => x.kind), ['untagged']);
+});
+
+test('a reply that never repeats the name is still about the figure the question named', () => {
+  const reply = 'He practiced it, in a limited way. He wrote openly that he was still "in the deep waters of wickedness."';
+  assert.deepEqual(checkResponse(reply, [], false), []);
+  assert.deepEqual(checkResponse(reply, [], true).map(x => x.kind), ['untagged']);
+});

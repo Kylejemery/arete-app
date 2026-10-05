@@ -47,8 +47,11 @@ const FIGURE_RE = new RegExp(`\\b(${FIGURES.join('|')})\\b`);
 // habit words a fabricated anecdote leans on.
 const SPECIFIC_RE = /\d|\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b|["“”]|\b(miles?|stadia|leagues?|hours?|days?|years?|daily|every (day|morning|night)|barefoot|bare-headed|cold|heat|desert|march(ed)?|walk(ed|ing)?|ran|runner|wrote|said|told|refused|slept|ate|drank)\b/i;
 
-// A citation tag in parentheses, as the sourcing discipline asks: (DL 7.179).
-const TAG_RE = /\(([^()]*?(?:\d|\b[IVXLC]+\b|no locator|synthesis)[^()]*)\)/g;
+// A citation tag after the claim: (DL 7.179) as the sourcing discipline asks,
+// or [DL 7.179] as the passages print it. Both count.
+const TAG_RE = /[([]([^()[\]]*?(?:\d|\b[IVXLC]+\b|no locator|synthesis)[^()[\]]*)[)\]]/g;
+// A sentence that carries on about the figure the last one named.
+const PRONOUN_RE = /\b(he|his|him|she|her)\b/i;
 const OUTSIDE_RE = /not in (our|the) library|outside (our|the) library|isn't in (our|the) library|our library doesn't|we don't have/i;
 
 // Split at sentence ends, never inside parentheses, so "(Plut. Cat. Min. 5.3)"
@@ -59,8 +62,8 @@ function sentences(text) {
   let depth = 0; let start = 0;
   for (let i = 0; i < s.length; i++) {
     const ch = s[i];
-    if (ch === '(') depth++;
-    else if (ch === ')') depth = Math.max(0, depth - 1);
+    if (ch === '(' || ch === '[') depth++;
+    else if (ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
     else if (depth === 0 && /[.!?]/.test(ch) && /\s/.test(s[i + 1] || '') && /[A-Z“"(]/.test(s.slice(i + 1).trimStart()[0] || '')) {
       out.push(s.slice(start, i + 1));
       start = i + 1;
@@ -72,20 +75,42 @@ function sentences(text) {
 
 const normTag = (t) => String(t).replace(/^\[|\]$/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 
-function checkResponse(text, retrievedTags) {
-  const known = new Set(retrievedTags.map(normTag));
+// The place a tag points at: its numbers and roman numerals ("7.180", "XI").
+const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
+
+// A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
+// of "DL 7.179–7.181"), or a shortened form naming the same place
+// ("Lectures XI" for "Musonius, Lecture XI, p. 81").
+function isRetrieved(tag, known) {
+  const n = normTag(tag);
+  if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
+  const place = placeOf(tag);
+  return place.length > 0 && known.some(k => {
+    const kp = placeOf(k);
+    return place.every(x => kp.some(y => y === x || y.startsWith(`${x}.`)));
+  });
+}
+
+// promptNamesFigure: the question named the figure, so a reply that opens
+// "He practised it…" is about them from its first sentence.
+function checkResponse(text, retrievedTags, promptNamesFigure = false) {
+  const known = retrievedTags.map(normTag);
   const findings = [];
-  for (const s of sentences(text)) {
-    const tags = [...s.matchAll(TAG_RE)].map(m => m[1]);
-    for (const t of tags) {
-      // A cited tag may be a prefix of the retrieved one ("DL 7.179" of "DL 7.179–7.181").
-      const n = normTag(t);
-      const ok = [...known].some(k => k === n || k.startsWith(n) || n.startsWith(k));
-      if (!ok) findings.push({ kind: 'invented', sentence: s, tag: t });
+  for (const para of String(text || '').split(/\n+/)) {
+    // "He wrote openly that…" is still about the figure the paragraph named.
+    let figure = promptNamesFigure;
+    for (const s of sentences(para)) {
+      const tags = [...s.matchAll(TAG_RE)].map(m => m[1]);
+      for (const t of tags) {
+        if (!isRetrieved(t, known)) findings.push({ kind: 'invented', sentence: s, tag: t });
+      }
+      const names = FIGURE_RE.test(s);
+      const about = names || (figure && PRONOUN_RE.test(s));
+      if (names) figure = true;
+      if (!about || !SPECIFIC_RE.test(s)) continue;
+      if (tags.length > 0 || OUTSIDE_RE.test(s)) continue;
+      findings.push({ kind: 'untagged', sentence: s });
     }
-    if (!FIGURE_RE.test(s) || !SPECIFIC_RE.test(s)) continue;
-    if (tags.length > 0 || OUTSIDE_RE.test(s)) continue;
-    findings.push({ kind: 'untagged', sentence: s });
   }
   return findings;
 }
@@ -123,7 +148,7 @@ function report(results) {
     for (const v of r.voices) {
       // A voice that errored said nothing to check; it is a failed run, not a pass.
       if (v.error) failed++;
-      const findings = v.error ? [] : checkResponse(v.text, r.retrievedTags);
+      const findings = v.error ? [] : checkResponse(v.text, r.retrievedTags, FIGURE_RE.test(r.prompt.text));
       tagged += [...String(v.text || '').matchAll(TAG_RE)].length;
       untagged += findings.filter(f => f.kind === 'untagged').length;
       invented += findings.filter(f => f.kind === 'invented').length;
