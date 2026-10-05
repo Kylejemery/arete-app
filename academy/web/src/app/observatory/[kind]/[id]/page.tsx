@@ -47,6 +47,7 @@ function opening(kind: Kind, p: Piece): string {
     case 'dream': return str(p.content);
     case 'convergence': return str(p.conclusion);
     case 'world': return str(p.response) || str(p.tension);
+    case 'essay': return str(p.opening);
   }
 }
 
@@ -74,6 +75,41 @@ function Prose({ text, quiet }: { text: string; quiet?: boolean }) {
           {p.split('\n').map((line, j) => <Fragment key={j}>{j > 0 && <br />}{inline(line)}</Fragment>)}
         </p>
       ))}
+    </>
+  );
+}
+
+// A Stoic Life essay is Markdown committed to the corpus: section headings,
+// paragraphs, and bulleted practices. Render those three and the emphasis;
+// nothing else is interpreted.
+const LIST_ITEM = /^\s*[-*]\s+/;
+
+function EssayBody({ markdown }: { markdown: string }) {
+  // Bulleted practices are often separated by blank lines; consecutive list
+  // blocks are one list.
+  type Block = { kind: 'h2' | 'h3' | 'p'; text: string } | { kind: 'ul'; items: string[] };
+  const blocks: Block[] = [];
+  for (const raw of markdown.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)) {
+    const h = raw.match(/^(#{2,3})\s+(.+)$/);
+    if (h && !raw.includes('\n')) { blocks.push({ kind: h[1] === '##' ? 'h2' : 'h3', text: h[2] }); continue; }
+    const lines = raw.split('\n');
+    if (lines.every(l => LIST_ITEM.test(l))) {
+      const items = lines.map(l => l.replace(LIST_ITEM, ''));
+      const last = blocks[blocks.length - 1];
+      if (last && last.kind === 'ul') last.items.push(...items);
+      else blocks.push({ kind: 'ul', items });
+      continue;
+    }
+    blocks.push({ kind: 'p', text: raw.replace(/\n/g, ' ') });
+  }
+  return (
+    <>
+      {blocks.map((b, i) => {
+        if (b.kind === 'ul') return <ul key={i} className="obp-list">{b.items.map((t, j) => <li key={j}>{inline(t)}</li>)}</ul>;
+        if (b.kind === 'h2') return <h2 key={i} className="obp-essay-h2">{b.text}</h2>;
+        if (b.kind === 'h3') return <h3 key={i} className="obp-essay-h3">{b.text}</h3>;
+        return <p key={i} className="obp-body">{inline(b.text)}</p>;
+      })}
     </>
   );
 }
@@ -231,6 +267,15 @@ export default async function ObservatoryPiecePage({ params }: { params: Promise
           </>
         )}
 
+        {k === 'essay' && (
+          <>
+            <EssayBody markdown={str(piece.body)} />
+            {str(piece.reviewBy) && (
+              <p className="obp-note">The interpretive sections are due to be checked again by {fmtDate(str(piece.reviewBy))}.</p>
+            )}
+          </>
+        )}
+
         {authors.length > 0 && (
           <p style={{ fontFamily: MONO, fontSize: 10, letterSpacing: '0.08em', color: MUTED, margin: '34px 0 0' }}>
             Voices: {authors.join(' · ')}
@@ -271,6 +316,11 @@ const CSS = `
 .obp-body { font-family: ${SERIF}; font-size: 20px; line-height: 1.7; color: #ece4cf; margin: 0 0 22px; overflow-wrap: break-word; }
 .obp-quiet { font-family: ${SERIF}; font-size: 18px; line-height: 1.65; color: ${TEXT}; margin: 0 0 16px; opacity: 0.9; }
 .obp-h2 { font-family: ${MONO}; font-weight: 400; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: ${GOLD}; margin: 38px 0 14px; }
+.obp-essay-h2 { font-family: ${SERIF}; font-weight: 500; font-size: 27px; line-height: 1.2; color: ${IVORY}; margin: 42px 0 14px; }
+.obp-essay-h3 { font-family: ${SERIF}; font-weight: 500; font-size: 22px; line-height: 1.25; color: ${IVORY}; margin: 30px 0 10px; }
+.obp-list { margin: 0 0 22px; padding-left: 22px; list-style: disc outside; }
+.obp-list li { font-family: ${SERIF}; font-size: 19px; line-height: 1.65; color: #ece4cf; margin: 0 0 12px; }
+.obp-list li::marker { color: ${GOLD}; }
 .obp-note { font-family: ${MONO}; font-size: 10px; letter-spacing: 0.06em; color: ${MUTED}; margin: 20px 0 0; }
 .obp-more { display: flex; flex-direction: column; gap: 6px; text-decoration: none; padding: 18px 0; border-bottom: 1px solid rgba(201,168,76,0.12); }
 .obp-more-title { font-family: ${SERIF}; font-size: 22px; line-height: 1.2; color: ${IVORY}; }

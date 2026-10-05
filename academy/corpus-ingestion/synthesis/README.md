@@ -162,6 +162,7 @@ with no embedding cannot be retrieved by any `match_rag_corpus*` function.
 | `virtues-of-socrates.v3.md` (inactive, kept for history) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
 | `virtues-of-socrates.v2.md` (inactive, kept for history) | 71 | 43 corpus_verified, 22 interpretive, 5 unverified, 1 interpretive + unverified |
 | `virtues-of-socrates.v1.md` (inactive, kept for history) | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
+| `stoic-life-practical-wisdom-telling-the-good-from-the-indifferent.v1.md` | 8 | 5 corpus_verified, 3 interpretive |
 
 Converted from Kyle's Claude Docs exports (PDF) on 2026-09-29; the Virtues
 document is the updated export of that afternoon, with Diet, Small habits, and
