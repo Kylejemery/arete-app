@@ -810,3 +810,26 @@ enforces it.
   chunk, research_ref quotations through `research_quotation_problems` with
   the entry's `source` line as attribution. `verify_ledger.py` and the
   auditor's `repo.themata_ledger` only parse the YAML and report.
+
+## First sign-offs (2026-10-05)
+
+Kyle signed off S001-S007, S009 and S020. The ledger records it as
+`verified_by_kyle: true` with `verified_on: "2026-10-05"`; the export carries
+`verified_on` and refuses a sign-off without a date.
+
+Fixes his review asked for before sign-off, added to the ledger notes as his:
+- **S008**: why DL 7.78 calls it conclusive but not syllogistic: the first
+  premise asserts that the conjunction is false, which is not the negated
+  conjunction the third indemonstrable requires, so it has the third's shape
+  but cannot be reduced to it.
+- **S010**: "valid" records the Stoic position; Cicero (Ac. II.95-96) endorses
+  the form only to turn it against them through the Liar.
+- **S018**: valid in form with a false premise; listed by DL among the
+  insoluble arguments, and Chrysippus did not accept it, falling silent before
+  the failing step (Cicero Ac. II.93, Sextus M VII.416); the three-atom chain
+  stands for the series to ten; in DL 7.82 the text sits under "the Veiled",
+  likely a lacuna, which the excerpt's ellipsis hides.
+- **S019**: non-formal, so the Machine page showed no evidence for it. The page
+  now has a section "Outside the formal suite" with each non-formal entry's
+  schema, verdict, source, passage and notes, and every item's evidence panel
+  shows its ledger notes.

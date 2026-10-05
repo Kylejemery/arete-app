@@ -1449,6 +1449,7 @@
        "corpus_ref",
        "research_ref",
        "verified_by_kyle",
+       "verified_on",
        "witness",
        "secondary_summary",
        "non_primary",
@@ -1494,6 +1495,14 @@
        },
        "verified_by_kyle": {
         "type": "boolean"
+       },
+       "verified_on": {
+        "type": [
+         "string",
+         "null"
+        ],
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+        "description": "Date of Kyle's sign-off (YYYY-MM-DD), or null if not signed off."
        },
        "witness": {
         "enum": [
