@@ -173,6 +173,15 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
   Relabelled in place, chapter numbers kept, *On Clemency*'s first chunk moved
   to its work, by `20261005134832_seneca_consolation_labels.sql`. Outstanding:
   the Stewart volume still has no `source_url` and no `locator` values.
+- **Seneca, *Morals* (L'Estrange).** The first sixteen rows were L'Estrange's
+  preface and his life of Seneca, live as Seneca's primary text. The life is
+  refiled as `Roger L'Estrange / Seneca's Life and Death` (scholarship,
+  registered Q13 and Q14) and the preface deprecated under his name, by
+  `20261005172705_lestrange_seneca_life_refiled.sql`; tests and reasons in
+  `ADMISSIONS_2026-10-05_LESTRANGE_SENECA_LIFE.md`. Outstanding: L'Estrange
+  calls the *Morals* an abstract, not a translation, so the 307 rows still
+  filed as Seneca's primary text are his digest. Whether they stay `primary`
+  needs a decision.
 - **Epictetus, *Discourses*.** Verify the current 459 chunks are Long's complete four books and not the abridged *Selection* that circulates on Gutenberg as ebook 10661. Spot checks suggest it is complete, but this was not confirmed. The complete Long is at `archive.org/download/discoursesofepic033057mbp/discoursesofepic033057mbp_djvu.txt`.
 - **Aristotle.** The corpus holds *Nicomachean Ethics* only. *De Anima* is Tier A. *Physics* (Hardie & Gaye 1930, public domain by one year, in `archive.org/download/worksofaristotle0002wdro/worksofaristotle0002wdro_djvu.txt`) and *Metaphysics* (Ross 1908, Wikisource) are worth adding for Q12.
 - **Plato.** *Timaeus* is already queued. *Phaedo* and *Phaedrus* should follow for Q02 and Q11.

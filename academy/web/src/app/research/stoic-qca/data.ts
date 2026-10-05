@@ -2237,7 +2237,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
           "chunkId": "f1c8a155-93c6-4801-85db-746024829f51"
         },
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "he came first to be _quæstor_, then _prætor,_ and some will have it that he was chosen _consul_; but this is doubtful.",
           "chunkId": "efefcd29-d721-4d72-8456-db7fd3986fff"
         },
@@ -2256,7 +2256,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
       "support": "excerpt",
       "evidence": [
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "His gardens, villas, lands, possessions, and incredible sums of money, are agreed upon at all hands; which drew an envy upon him.",
           "chunkId": "d121b070-c349-4829-98a6-dec39d547f55"
         },
@@ -2295,7 +2295,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
           "chunkId": "62abcc20-fe70-4d82-a602-7e5110862515"
         },
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "Go back to him then, says Nero, and tell him, _that he is condemned to die_.",
           "chunkId": "f3ddfa99-da3b-4a5c-891a-799d07520132"
         },
@@ -2330,7 +2330,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
           "chunkId": "b0c92c77-827e-4204-8e23-38316869a75b"
         },
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "He was a great hearer of the celebrated men of those times; as Attalus, Sotion, Papirius, Fabianus,",
           "chunkId": "efefcd29-d721-4d72-8456-db7fd3986fff"
         }
@@ -2348,7 +2348,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
           "chunkId": "f1c8a155-93c6-4801-85db-746024829f51"
         },
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "His father was not at all pleased with his humor of _philosophy_, but forced him upon the _law_, and for a while he practiced _pleading_.",
           "chunkId": "efefcd29-d721-4d72-8456-db7fd3986fff"
         }
@@ -2361,7 +2361,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
       "support": "excerpt",
       "evidence": [
         {
-          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (preface to Seneca's Morals, after Lipsius, paraphrasing Tacitus; secondary, early modern; corpus labels it author Seneca, work Morals)",
+          "citation": "Roger L'Estrange, 'Seneca's Life and Death' (1678, prefixed to his Seneca's Morals; much of it renders Tacitus; scholarship)",
           "excerpt": "Being Nero’s tutor and governor, all things were well so long as Nero followed his counsel.",
           "chunkId": "efefcd29-d721-4d72-8456-db7fd3986fff"
         },
