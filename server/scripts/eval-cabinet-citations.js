@@ -14,7 +14,13 @@
 // The detector is deliberately broad: it would rather flag a sentence a person
 // clears than miss a fabricated one. Read the flagged lines, not the score.
 //
-//   node server/scripts/eval-cabinet-citations.js --base-url http://localhost:3000 [--out report.md]
+//   node server/scripts/eval-cabinet-citations.js --base-url http://localhost:3000 [--user-id <uuid>] [--out report.md]
+//
+// The parallel Cabinet only answers when PARALLEL_CABINET_ENABLED is on and,
+// if PARALLEL_CABINET_ALLOWLIST is set, the userId is on it; otherwise the
+// server falls back to single mode and this eval would test the wrong path.
+// Pass --user-id for an allowlisted (internal) account; a turn that comes back
+// in any mode but parallel is reported as a failure, never scored.
 //
 // Cost: five Cabinet turns (one to three voices each) on the server's own
 // model ladder, roughly the price of five user messages. Nothing scheduled.
@@ -84,7 +90,7 @@ function checkResponse(text, retrievedTags) {
   return findings;
 }
 
-async function runPrompt(baseUrl, prompt) {
+async function runPrompt(baseUrl, prompt, userId) {
   const res = await fetch(`${baseUrl.replace(/\/$/, '')}/api/chat/counselor`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -93,10 +99,12 @@ async function runPrompt(baseUrl, prompt) {
       messages: [{ role: 'user', content: prompt.text }],
       activeCounselorId: 'cabinet',
       tzOffsetMinutes: 0,
+      ...(userId ? { userId } : {}),
     }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(body).slice(0, 200)}`);
+  if (body.mode !== 'parallel') throw new Error(`answered in ${body.mode || 'single'} mode, not the parallel Cabinet (check PARALLEL_CABINET_ENABLED and pass an allowlisted --user-id)`);
   const responses = Array.isArray(body.responses) ? body.responses : [];
   const retrievedTags = [...new Set(responses.flatMap(r => (r.sources || []).map(s => s.citation).filter(Boolean)))];
   return { mode: body.mode, retrievedTags, voices: responses.map(r => ({ name: r.counselorName, text: r.response, error: r.error })) };
@@ -139,16 +147,17 @@ async function main() {
   const results = [];
   for (const prompt of PROMPTS) {
     try {
-      results.push({ prompt, ...(await runPrompt(baseUrl, prompt)) });
+      results.push({ prompt, ...(await runPrompt(baseUrl, prompt, arg('--user-id'))) });
     } catch (err) {
       results.push({ prompt, error: err.message });
     }
   }
   const { markdown, untagged, invented } = report(results);
+  const failed = results.filter(r => r.error).length;
   const out = arg('--out');
   if (out) fs.writeFileSync(out, markdown);
   console.log(markdown);
-  process.exitCode = untagged + invented > 0 ? 1 : 0;
+  process.exitCode = untagged + invented + failed > 0 ? 1 : 0;
 }
 
 if (require.main === module) main();
