@@ -10,7 +10,7 @@ import { readCommentsSeenAt, writeCommentsSeenAt } from '@/lib/comments-seen'
 // Unhide puts it back. Nothing is deleted. Opening this tab marks comments as
 // seen, which is what the Overview card's "new" count is measured from.
 
-type Kind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world'
+type Kind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world' | 'essay'
 type Comment = {
   id: string
   piece_kind: Kind
@@ -35,6 +35,7 @@ const KIND_LABEL: Record<Kind, string> = {
   dream: 'Dream',
   convergence: 'Convergence',
   world: 'World',
+  essay: 'Stoic Life essay',
 }
 
 function fmtDateTime(iso: string): string {

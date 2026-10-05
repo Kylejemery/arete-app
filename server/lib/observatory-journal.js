@@ -10,7 +10,7 @@
 //
 // Pure helpers here, so the shaping is testable without a database.
 
-const KINDS = Object.freeze(['tension', 'inquiry', 'dream', 'convergence', 'world']);
+const KINDS = Object.freeze(['tension', 'inquiry', 'dream', 'convergence', 'world', 'essay']);
 
 // Reading speed for the "N min read" line. Philosophy reads slower than news.
 const WORDS_PER_MINUTE = 200;
@@ -39,6 +39,34 @@ function words(...parts) {
 
 function readMinutes(...parts) {
   return Math.max(1, Math.round(words(...parts) / WORDS_PER_MINUTE));
+}
+
+// A Stoic Life essay is a versioned Markdown file (synthesis_drafts.markdown,
+// the same text committed to academy/corpus-ingestion/synthesis/). Split it
+// into what a reader needs: the title, the body without front matter or the
+// title line, the opening sentence, and the authors it draws on.
+function parseEssay(markdown) {
+  const md = String(markdown || '');
+  const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  const front = fm ? fm[1] : '';
+  let body = fm ? md.slice(fm[0].length) : md;
+  const h1 = body.match(/^\s*#\s+(.+)\s*$/m);
+  const title = h1 ? h1[1].trim() : ((front.match(/^title:\s*(.+)$/m) || [])[1] || '').trim();
+  if (h1) body = body.replace(h1[0], '');
+  body = body.trim();
+  // sources_used:\n  - Author | Work   (one per line)
+  const authors = [];
+  const block = front.match(/^sources_used:\s*\n((?:\s+-\s.*\n?)+)/m);
+  if (block) {
+    for (const line of block[1].split('\n')) {
+      const m = line.match(/^\s+-\s*([^|]+)\|/);
+      const a = m && m[1].trim();
+      if (a && !authors.includes(a)) authors.push(a);
+    }
+  }
+  const firstPara = (body.split(/\n\s*\n/).find(p => p.trim() && !/^\s*(#|-)/.test(p)) || '');
+  const reviewBy = ((front.match(/^review_by:\s*(\S+)/m) || [])[1]) || null;
+  return { title, body, authors, opening: firstPara.trim(), reviewBy };
 }
 
 function names(v) {
@@ -105,6 +133,17 @@ function toJournalEntry(kind, r) {
         publishedAt: r.reviewed_at || r.generated_at,
       };
       break;
+    case 'essay': {
+      const e = parseEssay(r.markdown);
+      entry = {
+        title: e.title || r.title,
+        dek: firstSentence(e.opening),
+        authors: e.authors,
+        minutes: r.word_count ? Math.max(1, Math.round(r.word_count / WORDS_PER_MINUTE)) : readMinutes(e.body),
+        publishedAt: r.exported_at || r.reviewed_at,
+      };
+      break;
+    }
     default:
       return null;
   }
@@ -150,6 +189,14 @@ const SOURCES = Object.freeze({
     select: 'id, title, conclusion_text, pursuit_text, breakpoint_text, source_authors, status, created_at',
     gate: q => q.in('status', ['approved', 'starred']),
   },
+  // Stoic Life essays, once Kyle has approved them AND they have been
+  // exported to the repo: readers see exactly the text committed to the
+  // corpus, never a draft. The id is the synthesis_drafts row.
+  essay: {
+    table: 'synthesis_drafts',
+    select: 'id, title, markdown, word_count, exported_at, reviewed_at',
+    gate: q => q.eq('mode', 'stoic_life').in('status', ['exported', 'ingested']),
+  },
   world: {
     table: 'world_observations',
     select: 'id, dominant_signal, corpus_response, world_corpus_tension, relevant_authors, reviewed_at, generated_at',
@@ -173,6 +220,7 @@ module.exports = {
   firstSentence,
   clip,
   readMinutes,
+  parseEssay,
   toJournalEntry,
   sortJournal,
   loadJournal,
