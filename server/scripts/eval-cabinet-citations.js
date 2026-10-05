@@ -95,7 +95,9 @@ async function runPrompt(baseUrl, prompt, userId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      system: '',
+      // Required by the endpoint; the parallel path builds each counselor's
+      // persona server-side and does not read it.
+      system: 'Cabinet thread.',
       messages: [{ role: 'user', content: prompt.text }],
       activeCounselorId: 'cabinet',
       tzOffsetMinutes: 0,
@@ -112,12 +114,15 @@ async function runPrompt(baseUrl, prompt, userId) {
 
 function report(results) {
   const lines = ['# Cabinet citation eval', '', `Run ${new Date().toISOString()}`, ''];
-  let untagged = 0; let invented = 0; let tagged = 0;
+  let untagged = 0; let invented = 0; let tagged = 0; let failed = 0;
   for (const r of results) {
     lines.push(`## ${r.prompt.id}: ${r.prompt.text}`, '');
-    if (r.error) { lines.push(`**Failed:** ${r.error}`, ''); continue; }
+    if (r.error) { failed++; lines.push(`**Failed:** ${r.error}`, ''); continue; }
+    if (r.voices.length === 0) { failed++; lines.push('**Failed:** no counselor answered', ''); continue; }
     lines.push(`Retrieved tags: ${r.retrievedTags.length ? r.retrievedTags.join(' ') : '(none)'}`, '');
     for (const v of r.voices) {
+      // A voice that errored said nothing to check; it is a failed run, not a pass.
+      if (v.error) failed++;
       const findings = v.error ? [] : checkResponse(v.text, r.retrievedTags);
       tagged += [...String(v.text || '').matchAll(TAG_RE)].length;
       untagged += findings.filter(f => f.kind === 'untagged').length;
@@ -132,8 +137,8 @@ function report(results) {
       lines.push('');
     }
   }
-  lines.splice(3, 0, `Tags cited: ${tagged}. Untagged details: ${untagged}. Tags not among retrieved passages: ${invented}.`, '');
-  return { markdown: lines.join('\n'), untagged, invented };
+  lines.splice(3, 0, `Tags cited: ${tagged}. Untagged details: ${untagged}. Tags not among retrieved passages: ${invented}. Failed prompts or voices: ${failed}.`, '');
+  return { markdown: lines.join('\n'), untagged, invented, failed };
 }
 
 async function main() {
@@ -152,8 +157,7 @@ async function main() {
       results.push({ prompt, error: err.message });
     }
   }
-  const { markdown, untagged, invented } = report(results);
-  const failed = results.filter(r => r.error).length;
+  const { markdown, untagged, invented, failed } = report(results);
   const out = arg('--out');
   if (out) fs.writeFileSync(out, markdown);
   console.log(markdown);
@@ -162,4 +166,4 @@ async function main() {
 
 if (require.main === module) main();
 
-module.exports = { checkResponse, sentences, PROMPTS };
+module.exports = { checkResponse, sentences, report, PROMPTS };

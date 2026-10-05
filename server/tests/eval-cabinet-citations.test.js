@@ -31,3 +31,10 @@ test('a cited prefix of a retrieved range counts as retrieved', () => {
 test('advice with no figure and no detail is left alone', () => {
   assert.deepEqual(checkResponse('Start small and be honest with yourself.', []), []);
 });
+
+test('a voice that errored is a failure, never a clean pass', () => {
+  const { report } = require('../scripts/eval-cabinet-citations');
+  const r = report([{ prompt: { id: 'x', text: 'x' }, retrievedTags: [], voices: [{ name: 'Marcus Aurelius', text: 'The connection to Marcus Aurelius was interrupted. Try again.', error: 'Claude API 400' }] }]);
+  assert.equal(r.failed, 1);
+  assert.match(r.markdown, /Failed prompts or voices: 1/);
+});
