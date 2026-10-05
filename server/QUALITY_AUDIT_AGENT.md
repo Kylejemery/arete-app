@@ -74,7 +74,7 @@ neither ships nor releases), `repo.checks` (lint and typecheck per workspace),
 (committed docs linking to paths that moved),
 `repo.themata_ledger` (a Themata ledger passage, in
 `themata/evidence/suite.yaml` or `rules.yaml`, that is no longer verbatim in the
-live `rag_corpus` chunk it cites or no longer passes `research_quotation_problems` (for a `quotation_only` source that includes the 60-word limit and full attribution)
+live `rag_corpus` chunk it cites or no longer passes `research_quotation_problems` (for a `quotation_only` source that includes the 60-word limit and full attribution); the whole check is the database function `themata_ledger_problems`, which `scripts/themata/verify_ledger.py` calls too, so the probe and the script cannot drift apart
 for its `research_ref` — guardrail 1 of `themata/THEMATA_PROJECT.md`, which a
 deprecation, a re-chunk or a corrected text can break without anyone touching
 the ledger; one finding per entry, keyed `file:id`;

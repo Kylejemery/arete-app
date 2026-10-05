@@ -785,3 +785,28 @@ enforces it.
   (λῆμμα παρέλκον). The earlier contrast between the two works was an artefact
   of the translation. Both the English and the Greek are now quoted; the
   encoding question stays parked until after Kyle's sign-offs.
+
+## Wallies's Alexander stored; one ledger check (2026-10-05)
+
+- **The text.** CAG II.1 (Wallies 1883), `research_sources` `4543eb65`:
+  in APr. 17.10-25, 18.1-20, 283.12-24, 284.10-18, transcribed by hand from
+  the page images. Each passage is continuous text (words divided at line ends
+  rejoined) followed by a line index, so quotations check as substrings and
+  locators still go to page.line; the bearing apparatus entries follow each
+  passage.
+- **284.** The page image puts the Stoics' themata at 284.10-18 (Wallies's
+  index pointed to 284.19). The Peripatetics handed down the synthetic theorem
+  as far as use required; "those from the Stoa" took it, divided it, and made
+  from it their second, third and fourth thema, neglecting the useful. At
+  284.13 Στοᾶς is MS B's reading, the Aldine has τοῦ, and Wallies notes that B
+  confirms Zeller's conjecture. The Stoic attribution rests on B.
+- **S011.** in APr. 18.14-17 names the ἀδιαφόρως περαίνοντες of "the moderns",
+  but ἀδιαφόρως is the Aldine's reading (BLM διαφόρως), and the example as
+  printed (φῶς, LM) is a plain first indemonstrable; aB's ἡμέρα makes the
+  conclusion repeat a premiss. The disjunctive schema S011 encodes is in in
+  Top. 10.7-13 (CAG II.2, 1891), not stored.
+- **One check.** `themata_ledger_problems(entries)` (migration
+  `20261005191145`) holds guardrail 1: corpus_ref fragments against the live
+  chunk, research_ref quotations through `research_quotation_problems` with
+  the entry's `source` line as attribution. `verify_ledger.py` and the
+  auditor's `repo.themata_ledger` only parse the YAML and report.
