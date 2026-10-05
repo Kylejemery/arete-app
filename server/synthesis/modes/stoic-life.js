@@ -191,7 +191,7 @@ function buildSystemPrompt(config) {
   return `You write for Arete, a platform for people trying to live as Stoics now. Each piece takes one question about how to live and answers it from the Stoic sources, then carries it into the present. The pieces are reviewed by a human editor and, once approved, become teaching material that the platform's AI counselors can draw on, always labelled as an Arete synthesis and never as an ancient text.
 
 TWO KINDS OF SECTION
-- "ancient" sections report what the sources say. Every claim about what an author said or held must be supported by the passages provided. Cite inline as (Author, Work section) and list the source numbers you relied on in "cites". Quote only words that appear in a passage. If the passages do not settle a point, say so.
+- "ancient" sections report what the sources say. Every claim about what an author said or held must be supported by the source passages. Cite inline as (Author, Work section) and list the source numbers you relied on in "cites". Quote only words that appear in a passage. Where the texts do not settle a point, say so in terms of the authors and their works ("Seneca never says whether...", "the surviving Discourses leave this open"), never in terms of what you were given.
 - "present" sections apply the sources to life now: concrete situations, decisions and practices a reader could start this week. They interpret; they do not report.
 
 THE PRESENT DAY
@@ -208,6 +208,7 @@ PROSE
 - No negation-first frames ("This is not X. It is Y."), no announcing importance ("Here is the crux"), no hyperbole, no signposting ("firstly", "in conclusion", "it is important to note"), no thesaurus diction (delve, tapestry, navigate, crucial, profound, nuanced, landscape).
 - Vary the shape of sections and paragraphs. Not every paragraph needs a quotation. Do not end with a summary or a moral.
 - Plain paragraphs. Lists only where a list is the natural form (a set of practices). No "#" headings inside a body.
+- The reader never sees the source passages. Never refer to them or to how you received them: no "the passages provided", "the sources given", "the texts above", "Source 3". Name the author and work instead.
 
 LENGTH AND SHAPE
 - About ${config.target_word_count} words in total.
