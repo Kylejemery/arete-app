@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Re-embed live chunks whose stored embedding no longer matches their text.
+// Re-embed live chunks whose stored embedding no longer matches their text,
+// or that have none.
 //
 // A migration that edits chunk_text (stripping page furniture, trimming an
 // apparatus prefix) leaves the vector computed over the old text. rag_corpus
@@ -10,6 +11,12 @@
 // Usage:
 //   node reembed-stale.js "Seneca/On Anger" "Plato/Alcibiades"          # dry run
 //   node reembed-stale.js "Seneca/On Anger" "Plato/Alcibiades" --apply  # write
+//   node reembed-stale.js "E. Vernon Arnold/Roman Stoicism" --missing-only --apply
+//
+// --missing-only embeds only chunks with no stored vector, such as a chunk a
+// migration restored (migrations write text, not vectors), and skips measuring
+// the rest. Without it, the model's run-to-run noise (cosine 0.998-0.999 on
+// unchanged text) can put a few untouched chunks just under the threshold.
 //
 // Only non-deprecated chunks below --threshold (default 0.999) are rewritten,
 // and each rewritten chunk is re-read and re-checked afterwards.
@@ -20,6 +27,7 @@ const { embedChunks, estimateCost } = require('./embedder');
 
 const args = process.argv.slice(2);
 const apply = args.includes('--apply');
+const missingOnly = args.includes('--missing-only');
 const tIdx = args.indexOf('--threshold');
 const threshold = tIdx >= 0 ? Number(args[tIdx + 1]) : 0.999;
 const works = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--threshold');
@@ -55,14 +63,22 @@ async function liveChunks(author, work) {
 
 async function measure(rows) {
   const embedded = await embedChunks(rows.map(r => ({ ...r, text: r.chunk_text })));
-  return embedded.map(r => ({ ...r, cos: cosine(parseVector(r.embedding_old), r.embedding) }));
+  // A chunk with no stored vector (one restored by a migration, which writes
+  // text only) is stale by definition: nothing retrieves it until it has one.
+  return embedded.map(r => ({
+    ...r,
+    cos: r.embedding_old == null ? -1 : cosine(parseVector(r.embedding_old), r.embedding),
+  }));
 }
 
 async function main() {
   let stale = [];
   for (const w of works) {
     const [author, work] = w.split('/');
-    const rows = (await liveChunks(author, work)).map(r => ({ ...r, embedding_old: r.embedding, embedding: undefined }));
+    const rows = (await liveChunks(author, work))
+      .filter(r => !missingOnly || r.embedding == null)
+      .map(r => ({ ...r, embedding_old: r.embedding, embedding: undefined }));
+    if (!rows.length) { console.log(`${author} / ${work}: nothing to embed`); continue; }
     const measured = await measure(rows);
     const s = measured.filter(r => r.cos < threshold);
     const min = Math.min(...measured.map(r => r.cos));
