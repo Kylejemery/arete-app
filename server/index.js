@@ -37,6 +37,16 @@ const { SELF_KNOWLEDGE } = require('./lib/self-knowledge');
 // factual claim about an ancient figure points at a passage or says it can't.
 const { SOURCING_DISCIPLINE } = require('./lib/sourcing-discipline');
 const { attachCitationFields, formatTaggedPassage, citationTag } = require('./lib/citation-tag');
+const { checkCitations } = require('./lib/citation-check');
+
+// Sourcing rule 8, enforced: a tag in a reply that names none of the passages
+// retrieved for the turn becomes "(outside our library)". Returns the checked
+// text and the tags that failed, which are logged and sent beside the reply.
+function enforceCitations(text, chunks, where) {
+  const { text: checked, unmatched } = checkCitations(text, (chunks || []).map(c => citationTag(c).tag));
+  if (unmatched.length > 0) console.warn(`[Cabinet] ${where}: ${unmatched.length} tag(s) named no retrieved passage: ${unmatched.join(' ')}`);
+  return { text: checked, unmatched };
+}
 
 // Observatory Living Sky — all new /api/observatory/* routes live in their own
 // module to keep the merge surface of this shared file minimal. recordRetrieval
@@ -2072,7 +2082,7 @@ async function handleCabinetChat(req, res) {
         onVoiceDone: (r) => sse.send('voice_done', {
           counselorId: r.counselorId,
           counselorName: r.counselorName,
-          response: stripOfferMarkers(r.response),
+          response: typeof r.response === 'string' ? checkCitations(stripOfferMarkers(r.response), contextChunks.map(c => citationTag(c).tag)).text : r.response,
           error: !!r.error,
         }),
       };
@@ -2101,7 +2111,9 @@ async function handleCabinetChat(req, res) {
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
       const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
       const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
-      r.response = parsedRequest.text;
+      const cited = enforceCitations(parsedRequest.text, contextChunks, `parallel/${r.counselorId}`);
+      r.response = cited.text;
+      r.citationFlags = cited.unmatched;
       if (parsedRequest.request && !offeredRequest) { offeredRequest = parsedRequest.request; requestCounselorId = r.counselorId || null; }
       if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
       if (parsedTask.task && !offeredTask) { offeredTask = parsedTask.task; goalCounselorId = r.counselorId || null; }
@@ -2137,7 +2149,7 @@ async function handleCabinetChat(req, res) {
     }
 
     const sources = contextChunks
-      .map(c => ({ author: c.author ?? null, work: c.work ?? null, citation: citationTag(c).tag }))
+      .map(c => ({ id: c.id ?? null, author: c.author ?? null, work: c.work ?? null, citation: citationTag(c).tag }))
       .filter(s => s.author || s.work);
 
     // Shared session: mirror this turn into session_messages so the partner's
@@ -2333,7 +2345,8 @@ async function handleCabinetChat(req, res) {
         const parsedTask = cabinetOffers.parseTaskMarker(parsedReply.text);
         const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
         const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
-        const text = parsedRequest.text;
+        const cited = enforceCitations(parsedRequest.text, loggedChunks, `single/${compatModel}`);
+        const text = cited.text;
         await writeSharedAssistant(text);
         if (text && loggedChunks.length > 0) {
           attributeUsage({ requestId, chunks: loggedChunks, responseText: text });
@@ -2359,7 +2372,7 @@ async function handleCabinetChat(req, res) {
           request: parsedRequest.request,
           counselorId: singleCounselorId,
         }));
-        const compatPayload = { content: [{ type: 'text', text }], request_id: requestId, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) };
+        const compatPayload = { content: [{ type: 'text', text }], request_id: requestId, citation_flags: cited.unmatched, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) };
         // Other providers are not streamed; a streaming client gets the whole
         // reply as its one voice, then done.
         if (sse) {
@@ -2435,13 +2448,16 @@ async function handleCabinetChat(req, res) {
     let singleTask = null;
     let singleAdjust = null;
     let singleRequest = null;
+    const singleCitationFlags = [];
     for (const b of (data.content || [])) {
       if (b.type !== 'text' || typeof b.text !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(b.text);
       const parsedTask = cabinetOffers.parseTaskMarker(parsed.text);
       const parsedAdjust = proposalRules.parseAdjustMarker(parsedTask.text);
       const parsedRequest = featureRequests.parseRequestMarker(parsedAdjust.text);
-      b.text = parsedRequest.text;
+      const cited = enforceCitations(parsedRequest.text, loggedChunks, `single/${anthropicModel || HAIKU_MODEL}`);
+      b.text = cited.text;
+      singleCitationFlags.push(...cited.unmatched);
       if (parsedRequest.request && !singleRequest) singleRequest = parsedRequest.request;
       if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
       if (parsedTask.task && !singleTask) singleTask = parsedTask.task;
@@ -2477,6 +2493,7 @@ async function handleCabinetChat(req, res) {
       attributeUsage({ requestId, chunks: loggedChunks, responseText: assistantText });
     }
     data.request_id = requestId;
+    data.citation_flags = singleCitationFlags;
     if (sse) {
       sse.send('voice_done', { counselorId: singleCounselorId, counselorName: null, response: assistantText, error: false });
       return sse.done(data);

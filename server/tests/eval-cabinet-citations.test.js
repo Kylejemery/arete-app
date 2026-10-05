@@ -56,6 +56,24 @@ test('a sentence that goes on about the named figure is checked too', () => {
   assert.deepEqual(f.map(x => x.kind), ['untagged']);
 });
 
+test('long unquoted copying from a retrieved passage is a verbatim finding', () => {
+  const passage = 'He built up his body by vigorous exercises, accustoming himself to endure both heat and snow with uncovered head, and to journey on foot at all seasons, without a vehicle.';
+  const f = checkResponse(`Cato, as Plutarch tells it: ${passage}`, ['[Plut. Cat. Min. 5]'], true, [{ tag: '[Plut. Cat. Min. 5]', text: passage }]);
+  assert.ok(f.some(x => x.kind === 'verbatim'));
+});
+
+test('a turn with no passage text is reported as unchecked, not passed', () => {
+  const { report } = require('../scripts/eval-cabinet-citations');
+  const r = report([{ prompt: { id: 'x', text: 'x' }, retrievedTags: [], passages: null, voices: [{ name: 'Marcus Aurelius', text: 'Start small.', error: null }] }]);
+  assert.equal(r.verbatimUnchecked, 1);
+});
+
+test('tags the server replaced are counted', () => {
+  const { report } = require('../scripts/eval-cabinet-citations');
+  const r = report([{ prompt: { id: 'x', text: 'x' }, retrievedTags: [], passages: [], voices: [{ name: 'Marcus Aurelius', text: 'Start small (outside our library).', error: null, serverFlags: ['(Lectures XIX–XX)'] }] }]);
+  assert.equal(r.serverFlagged, 1);
+});
+
 test('a reply that never repeats the name is still about the figure the question named', () => {
   const reply = 'He practiced it, in a limited way. He wrote openly that he was still "in the deep waters of wickedness."';
   assert.deepEqual(checkResponse(reply, [], false), []);

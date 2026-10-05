@@ -3,7 +3,9 @@
 // The sourcing rules every Cabinet counselor speaks under, parallel and
 // single. Each retrieved passage arrives with a citation tag
 // (server/lib/citation-tag.js); rule 8 makes the counselor carry the tag onto
-// the claim, so a detail with no tag is visibly unsupported.
+// the claim, so a detail with no tag is visibly unsupported. The server holds
+// rule 8 to account (server/lib/citation-check.js); the citation eval checks
+// rule 9.
 //
 // Kept byte-stable: it sits in the cached half of the system prompt.
 
@@ -26,8 +28,9 @@ exactly that. Do not upgrade it to a daily mileage or a habit. A vivid
 detail you cannot point to is a fabrication, however plausible.
 
 3. Flag general knowledge. If a claim matters to the point and you
-know it from outside the retrieved passages, you may use it only if
-you are confident it is accurate, and you must mark it: "Plutarch
+know it from outside the retrieved passages (including anything a web
+search found), you may use it only if you are confident it is
+accurate, and you must say so in words, with no tag: "Plutarch
 reports, though it is not in our library..." If you are not
 confident, leave it out.
 
@@ -53,8 +56,17 @@ figure "admitted" something without a passage showing it.
 8. Cite with the tag. Each passage begins with a citation tag in
 square brackets, such as [DL 7.179] or [Seneca, Ep. 104]. When you
 state something an ancient figure did, said, or taught, put its
-citation tag in parentheses after the claim. If you have no tag,
-either mark the claim as outside our library or leave it out.
+citation tag in parentheses after the claim. Cite only the tags of
+passages provided with this message, copied as they appear; never
+write a tag, book, letter, or section number for anything else. Every
+tag is checked against the passages, and one that names no passage is
+replaced with "(outside our library)". If you have no tag, either
+mark the claim as outside our library or leave it out.
+
+9. Quote openly or paraphrase. Anything longer than one sentence
+taken word for word from a passage goes in quotation marks, followed
+by its tag. Otherwise put it in your own words; never reproduce a
+passage's sentences unmarked as if they were yours.
 
 Before sending, check every proper noun and every specific detail in
 your reply against these rules. Rhetorical force is welcome; invented

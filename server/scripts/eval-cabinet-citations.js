@@ -10,6 +10,13 @@
 //              citation tag and no "outside our library" marker
 //   invented   a tag that is not among the passages retrieved for that turn
 //              (a made-up locator is worse than none)
+//   verbatim   20 or more words copied in order from a retrieved passage
+//              without quotation marks and a tag (sourcing rule 9); needs
+//              the passage text, read from rag_corpus with server/.env
+//
+// The server replaces a tag that names no retrieved passage before the reply
+// leaves it (lib/citation-check.js), so "invented" should stay at zero; the
+// tags it replaced come back as citationFlags and are reported and counted.
 //
 // The detector is deliberately broad: it would rather flag a sentence a person
 // clears than miss a fabricated one. Read the flagged lines, not the score.
@@ -47,9 +54,9 @@ const FIGURE_RE = new RegExp(`\\b(${FIGURES.join('|')})\\b`);
 // habit words a fabricated anecdote leans on.
 const SPECIFIC_RE = /\d|\b(one|two|three|four|five|six|seven|eight|nine|ten|twelve|twenty|thirty|forty|fifty|hundred|thousand)\b|["“”]|\b(miles?|stadia|leagues?|hours?|days?|years?|daily|every (day|morning|night)|barefoot|bare-headed|cold|heat|desert|march(ed)?|walk(ed|ing)?|ran|runner|wrote|said|told|refused|slept|ate|drank)\b/i;
 
-// A citation tag after the claim: (DL 7.179) as the sourcing discipline asks,
-// or [DL 7.179] as the passages print it. Both count.
-const TAG_RE = /[([]([^()[\]]*?(?:\d|\b[IVXLC]+\b|no locator|synthesis)[^()[\]]*)[)\]]/g;
+// The tag pattern and the retrieved-tag matcher are the server's own
+// (lib/citation-check.js), so the eval and the server agree on what counts.
+const { TAG_RE, isRetrieved, verbatimOverlap, MIN_RUN_WORDS } = require('../lib/citation-check');
 // A sentence that carries on about the figure the last one named.
 const PRONOUN_RE = /\b(he|his|him|she|her)\b/i;
 const OUTSIDE_RE = /not in (our|the) library|outside (our|the) library|isn't in (our|the) library|our library doesn't|we don't have/i;
@@ -73,29 +80,15 @@ function sentences(text) {
   return out.map(x => x.trim()).filter(Boolean);
 }
 
-const normTag = (t) => String(t).replace(/^\[|\]$/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
-
-// The place a tag points at: its numbers and roman numerals ("7.180", "XI").
-const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
-
-// A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
-// of "DL 7.179–7.181"), or a shortened form naming the same place
-// ("Lectures XI" for "Musonius, Lecture XI, p. 81").
-function isRetrieved(tag, known) {
-  const n = normTag(tag);
-  if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
-  const place = placeOf(tag);
-  return place.length > 0 && known.some(k => {
-    const kp = placeOf(k);
-    return place.every(x => kp.some(y => y === x || y.startsWith(`${x}.`)));
-  });
-}
-
 // promptNamesFigure: the question named the figure, so a reply that opens
 // "He practised it…" is about them from its first sentence.
-function checkResponse(text, retrievedTags, promptNamesFigure = false) {
-  const known = retrievedTags.map(normTag);
+// passages: [{ tag, text }] retrieved for the turn, for the verbatim check.
+function checkResponse(text, retrievedTags, promptNamesFigure = false, passages = []) {
+  const known = retrievedTags;
   const findings = [];
+  for (const v of verbatimOverlap(text, passages)) {
+    findings.push({ kind: 'verbatim', sentence: v.excerpt, tag: v.tag, words: v.words, quoted: v.quoted, tagged: v.tagged });
+  }
   for (const para of String(text || '').split(/\n+/)) {
     // "He wrote openly that…" is still about the figure the paragraph named.
     let figure = promptNamesFigure;
@@ -133,37 +126,75 @@ async function runPrompt(baseUrl, prompt, userId) {
   if (!res.ok) throw new Error(`${res.status} ${JSON.stringify(body).slice(0, 200)}`);
   if (body.mode !== 'parallel') throw new Error(`answered in ${body.mode || 'single'} mode, not the parallel Cabinet (check PARALLEL_CABINET_ENABLED and pass an allowlisted --user-id)`);
   const responses = Array.isArray(body.responses) ? body.responses : [];
-  const retrievedTags = [...new Set(responses.flatMap(r => (r.sources || []).map(s => s.citation).filter(Boolean)))];
-  return { mode: body.mode, retrievedTags, voices: responses.map(r => ({ name: r.counselorName, text: r.response, error: r.error })) };
+  const sources = responses.flatMap(r => r.sources || []);
+  const retrievedTags = [...new Set(sources.map(s => s.citation).filter(Boolean))];
+  const passages = await passageTexts(sources);
+  return {
+    mode: body.mode,
+    retrievedTags,
+    passages,
+    voices: responses.map(r => ({ name: r.counselorName, text: r.response, error: r.error, serverFlags: r.citationFlags || [] })),
+  };
+}
+
+// The text of each retrieved passage, by id, for the verbatim check. Reads
+// rag_corpus with the server's own credentials (server/.env). Without them the
+// verbatim check cannot run, and the report says so rather than passing.
+let supabaseClient;
+async function passageTexts(sources) {
+  const ids = [...new Set(sources.map(s => s.id).filter(Boolean))];
+  if (ids.length === 0) return null;
+  if (supabaseClient === undefined) {
+    require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+    supabaseClient = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+      ? require('@supabase/supabase-js').createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      : null;
+  }
+  if (!supabaseClient) return null;
+  const { data, error } = await supabaseClient.from('rag_corpus').select('id, chunk_text').in('id', ids);
+  if (error || !Array.isArray(data)) return null;
+  const byId = new Map(data.map(d => [d.id, d.chunk_text]));
+  return sources.filter(s => byId.has(s.id)).map(s => ({ tag: s.citation, text: byId.get(s.id) }));
 }
 
 function report(results) {
   const lines = ['# Cabinet citation eval', '', `Run ${new Date().toISOString()}`, ''];
-  let untagged = 0; let invented = 0; let tagged = 0; let failed = 0;
+  let untagged = 0; let invented = 0; let tagged = 0; let failed = 0; let verbatim = 0; let serverFlagged = 0; let verbatimUnchecked = 0;
   for (const r of results) {
     lines.push(`## ${r.prompt.id}: ${r.prompt.text}`, '');
     if (r.error) { failed++; lines.push(`**Failed:** ${r.error}`, ''); continue; }
     if (r.voices.length === 0) { failed++; lines.push('**Failed:** no counselor answered', ''); continue; }
     lines.push(`Retrieved tags: ${r.retrievedTags.length ? r.retrievedTags.join(' ') : '(none)'}`, '');
+    // No passage text means the verbatim check did not run; say so, never pass it.
+    if (!Array.isArray(r.passages)) { verbatimUnchecked++; lines.push('**Verbatim check did not run:** no passage text for this turn.', ''); }
     for (const v of r.voices) {
       // A voice that errored said nothing to check; it is a failed run, not a pass.
       if (v.error) failed++;
-      const findings = v.error ? [] : checkResponse(v.text, r.retrievedTags, FIGURE_RE.test(r.prompt.text));
+      const findings = v.error ? [] : checkResponse(v.text, r.retrievedTags, FIGURE_RE.test(r.prompt.text), r.passages || []);
       tagged += [...String(v.text || '').matchAll(TAG_RE)].length;
       untagged += findings.filter(f => f.kind === 'untagged').length;
       invented += findings.filter(f => f.kind === 'invented').length;
+      verbatim += findings.filter(f => f.kind === 'verbatim').length;
+      // Tags the model wrote that the server replaced before the reply left it.
+      const flags = v.serverFlags || [];
+      serverFlagged += flags.length;
       lines.push(`### ${v.name}${v.error ? ' (failed)' : ''}`, '', '> ' + String(v.text || '').replace(/\n+/g, '\n> '), '');
-      if (findings.length === 0) lines.push('No flags.', '');
+      if (findings.length === 0 && flags.length === 0) lines.push('No flags.', '');
+      for (const t of flags) lines.push(`- **TAG REPLACED BY SERVER**: ${t}`);
       for (const f of findings) {
-        lines.push(f.kind === 'invented'
-          ? `- **INVENTED TAG** (${f.tag}): ${f.sentence}`
-          : `- **UNTAGGED DETAIL**: ${f.sentence}`);
+        if (f.kind === 'invented') lines.push(`- **INVENTED TAG** (${f.tag}): ${f.sentence}`);
+        else if (f.kind === 'verbatim') lines.push(`- **VERBATIM, ${f.words} words, ${f.quoted ? 'quoted' : 'unquoted'}, ${f.tagged ? 'tagged' : 'untagged'}** (from ${f.tag || 'a retrieved passage'}): ${f.sentence}`);
+        else lines.push(`- **UNTAGGED DETAIL**: ${f.sentence}`);
       }
       lines.push('');
     }
   }
-  lines.splice(3, 0, `Tags cited: ${tagged}. Untagged details: ${untagged}. Tags not among retrieved passages: ${invented}. Failed prompts or voices: ${failed}.`, '');
-  return { markdown: lines.join('\n'), untagged, invented, failed };
+  lines.splice(3, 0,
+    `Tags cited: ${tagged}. Untagged details: ${untagged}. Tags not among retrieved passages: ${invented}. ` +
+    `Tags the server replaced: ${serverFlagged}. Verbatim runs of ${MIN_RUN_WORDS}+ words not quoted and tagged: ${verbatim}` +
+    `${verbatimUnchecked ? ` (check did not run for ${verbatimUnchecked} prompt(s))` : ''}. Failed prompts or voices: ${failed}.`, '');
+  return { markdown: lines.join('\n'), untagged, invented, failed, verbatim, serverFlagged, verbatimUnchecked };
 }
 
 async function main() {
@@ -182,11 +213,11 @@ async function main() {
       results.push({ prompt, error: err.message });
     }
   }
-  const { markdown, untagged, invented, failed } = report(results);
+  const { markdown, untagged, invented, failed, verbatim, serverFlagged, verbatimUnchecked } = report(results);
   const out = arg('--out');
   if (out) fs.writeFileSync(out, markdown);
   console.log(markdown);
-  process.exitCode = untagged + invented + failed > 0 ? 1 : 0;
+  process.exitCode = untagged + invented + failed + verbatim + serverFlagged + verbatimUnchecked > 0 ? 1 : 0;
 }
 
 if (require.main === module) main();

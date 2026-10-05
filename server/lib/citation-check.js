@@ -1,0 +1,134 @@
+// server/lib/citation-check.js
+//
+// Checks a Cabinet reply against the passages retrieved for its turn.
+//
+//   checkCitations   every tag in the reply must name a retrieved passage
+//                    (sourcing rules 3 and 8); a tag that does not is replaced,
+//                    visibly, with "(outside our library)", and returned so the
+//                    caller can log it. The server runs this on every reply.
+//   verbatimOverlap  long word-for-word runs shared with a retrieved passage
+//                    that are not quoted and tagged (rule 9). The citation
+//                    eval runs this; the server does not.
+//
+// The eval (scripts/eval-cabinet-citations.js) uses the same matcher, so the
+// server and the eval agree on what counts as a retrieved tag.
+
+// A tag after a claim: (DL 7.179) as the sourcing discipline asks, or
+// [DL 7.179] as the passages print it. Broad on purpose: the eval would rather
+// flag a parenthesis a person clears than miss a made-up locator.
+const TAG_RE = /[([]([^()[\]]*?(?:\d|\b[IVXLC]+\b|no locator|synthesis)[^()[\]]*)[)\]]/g;
+
+// The narrower form the server rewrites. A bracketed tag always counts; a
+// parenthesis counts only when it reads like a citation (opens with a capital,
+// names a place) and is not a date, so "(AD 65)" or "(born 4 BC)" in a
+// reply is never touched.
+function looksLikeCitation(open, inner) {
+  if (open === '[') return true;
+  if (!/^[A-Z]/.test(inner)) return false;
+  if (/\b(BC|BCE|AD|CE)\b|\bc\.\s?\d/.test(inner)) return false;
+  return /\d|\b[IVXLC]+\b|no locator|synthesis/.test(inner);
+}
+
+const OUTSIDE_MARK = '(outside our library)';
+
+const normTag = (t) => String(t).replace(/^[[(]|[\])]$/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+// The place a tag points at: its numbers and roman numerals ("7.180", "XI").
+const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
+
+// A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
+// of "DL 7.179–7.181"), or a shortened form naming the same place
+// ("Lectures XI" for "Musonius, Lecture XI, p. 81").
+function isRetrieved(tag, retrievedTags) {
+  const known = retrievedTags.map(normTag);
+  const n = normTag(tag);
+  if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
+  const place = placeOf(tag);
+  return place.length > 0 && known.some(k => {
+    const kp = placeOf(k);
+    return place.every(x => kp.some(y => y === x || y.startsWith(`${x}.`)));
+  });
+}
+
+/**
+ * @param {string} text           the reply
+ * @param {string[]} retrievedTags tags of the passages the model was given
+ * @returns {{ text: string, unmatched: string[] }}
+ */
+function checkCitations(text, retrievedTags) {
+  if (typeof text !== 'string' || !text) return { text, unmatched: [] };
+  const unmatched = [];
+  const out = text.replace(TAG_RE, (whole, inner) => {
+    if (!looksLikeCitation(whole[0], inner)) return whole;
+    if (isRetrieved(inner, retrievedTags || [])) return whole;
+    unmatched.push(whole);
+    return OUTSIDE_MARK;
+  });
+  return { text: out, unmatched };
+}
+
+// --- Verbatim overlap -------------------------------------------------------
+
+const SHINGLE = 8;        // words per comparison window
+const MIN_RUN_WORDS = 20; // about one long sentence copied word for word
+
+function words(text) {
+  const out = [];
+  const re = /[\p{L}\p{N}']+/gu;
+  let m;
+  while ((m = re.exec(String(text || '')))) out.push({ w: m[0].toLowerCase().replace(/'/g, ''), start: m.index, end: m.index + m[0].length });
+  return out;
+}
+
+// Inside quotation marks at offset i: an odd count of straight quotes before
+// it, or more opening curly quotes than closing ones.
+function quotedAt(text, i) {
+  const before = text.slice(0, i);
+  const straight = (before.match(/"/g) || []).length;
+  const open = (before.match(/“/g) || []).length;
+  const close = (before.match(/”/g) || []).length;
+  return straight % 2 === 1 || open > close;
+}
+
+/**
+ * Runs of at least MIN_RUN_WORDS words a reply shares, in order, with one of
+ * the passages, that are not both in quotation marks and followed closely by a
+ * tag.
+ *
+ * @param {string} text
+ * @param {{ tag?: string, text: string }[]} passages
+ * @returns {{ words: number, excerpt: string, tag: string|null, quoted: boolean, tagged: boolean }[]}
+ */
+function verbatimOverlap(text, passages) {
+  const reply = String(text || '');
+  const rw = words(reply);
+  const findings = [];
+  for (const p of passages || []) {
+    const pw = words(p.text).map(x => x.w);
+    if (pw.length < SHINGLE || rw.length < SHINGLE) continue;
+    const grams = new Set();
+    for (let i = 0; i + SHINGLE <= pw.length; i++) grams.add(pw.slice(i, i + SHINGLE).join(' '));
+    let i = 0;
+    while (i + SHINGLE <= rw.length) {
+      if (!grams.has(rw.slice(i, i + SHINGLE).map(x => x.w).join(' '))) { i++; continue; }
+      let j = i;
+      while (j + 1 + SHINGLE <= rw.length && grams.has(rw.slice(j + 1, j + 1 + SHINGLE).map(x => x.w).join(' '))) j++;
+      const count = j - i + SHINGLE;
+      if (count >= MIN_RUN_WORDS) {
+        const start = rw[i].start;
+        const end = rw[j + SHINGLE - 1].end;
+        const paraEnd = (() => { const k = reply.indexOf('\n', end); return k < 0 ? reply.length : k; })();
+        const quoted = quotedAt(reply, start);
+        // The tag belongs right after the quotation, not somewhere later on.
+        const tagged = new RegExp(TAG_RE.source).test(reply.slice(end, Math.min(paraEnd, end + 120)));
+        if (!(quoted && tagged)) {
+          findings.push({ words: count, excerpt: reply.slice(start, end), tag: p.tag || null, quoted, tagged });
+        }
+      }
+      i = j + SHINGLE;
+    }
+  }
+  return findings;
+}
+
+module.exports = { TAG_RE, OUTSIDE_MARK, normTag, isRetrieved, checkCitations, verbatimOverlap, MIN_RUN_WORDS };
