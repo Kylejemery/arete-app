@@ -1835,7 +1835,7 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
       "scoredAs": 0.67,
       "rationale": "He lost the Acrocorinth to Aratus in 243 BCE and by one account was wounded and killed, a major catastrophe.",
       "support": "excerpt",
-      "concern": "Score may be too low: the codebook puts slavery at ADV 1, and Arnold says 'good authorities' (Gellius 2.18.8, Athenaeus, both not in corpus) make Persaeus Zeno's servant (oiketes) before he became his fellow-lodger. Arnold also cites Seneca for Zeno having no slave, and Seneca, Consolation to Helvia 12.4, says Zeno 'had none' (in the corpus as chunk fd773923-fb41-43aa-b146-5c393e39f200, which is mislabelled there as Consolation to Polybius), so the slavery is contested. Suggest 1 if the Gellius tradition is accepted, otherwise keep 0.67 and note the dispute. The DL 7.36 estate loss was a false report, so it is not adversity.",
+      "concern": "Score may be too low: the codebook puts slavery at ADV 1, and Arnold says 'good authorities' (Gellius 2.18.8, Athenaeus, both not in corpus) make Persaeus Zeno's servant (oiketes) before he became his fellow-lodger. Arnold also cites Seneca for Zeno having no slave, and Seneca, Consolation to Helvia 12.4, says Zeno 'had none' (in the corpus as chunk fd773923-fb41-43aa-b146-5c393e39f200), so the slavery is contested. Suggest 1 if the Gellius tradition is accepted, otherwise keep 0.67 and note the dispute. The DL 7.36 estate loss was a false report, so it is not adversity.",
       "evidence": [
         {
           "citation": "E. V. Arnold, Roman Stoicism, sec. 89 (scholarship)",
@@ -2285,10 +2285,9 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
       "support": "excerpt",
       "evidence": [
         {
-          "citation": "Seneca, Consolation to Helvia 18 (corpus chunk labelled 'Consolation to Polybius')",
+          "citation": "Seneca, Consolation to Helvia 18",
           "excerpt": "I shall make no complaints about my childlessness or my exile,",
-          "chunkId": "6e147062-fcd3-4293-9898-6bea4c0cdde9",
-          "note": "Corpus work labels for the two consolations appear swapped: this text is To Helvia."
+          "chunkId": "6e147062-fcd3-4293-9898-6bea4c0cdde9"
         },
         {
           "citation": "St. George Stock, A Guide to Stoicism, chronology (scholarship)",
@@ -2367,16 +2366,15 @@ export const EVIDENCE: Record<string, Record<SetName, ScoreEvidence>> = {
           "chunkId": "efefcd29-d721-4d72-8456-db7fd3986fff"
         },
         {
-          "citation": "Seneca, On Clemency 1.1 (corpus chunk labelled 'Consolation to Helvia')",
+          "citation": "Seneca, On Clemency 1.1",
           "excerpt": "I have determined to write a book upon clemency, Nero Caesar, in order that I may as it were serve as a mirror to you,",
-          "chunkId": "a390ff9a-e243-4e32-bbcf-858ea2f4ae65",
-          "note": "The opening of On Clemency sits in a chunk labelled Consolation to Helvia."
+          "chunkId": "a390ff9a-e243-4e32-bbcf-858ea2f4ae65"
         },
         {
-          "citation": "Seneca, Consolation to Polybius 13 (corpus chunk labelled 'Consolation to Helvia')",
+          "citation": "Seneca, Consolation to Polybius 13",
           "excerpt": "even from the corner in which I am confined his mercy has unearthed and restored to light many exiles",
           "chunkId": "d3385a55-84e0-4072-ac7b-b851adf30f64",
-          "note": "Shows dependence on the emperor's favour; text is To Polybius despite the label."
+          "note": "Shows dependence on the emperor's favour."
         }
       ],
       "status": "drafted"

@@ -164,6 +164,15 @@ Burnet is how you get the Heraclitus fragments, which are the immediate source o
   now `3.1`, Plato's whole life in 31 chunks. Per-section precision for any of
   them needs a numbered edition — the Book VII remedy — since Yonge's text has
   no section numbers of its own.
+- **Seneca, *Consolation to Helvia* / *Consolation to Polybius*.** Each
+  carried the other's name: Stewart's *Minor Dialogues* heads Book XI *To
+  Helvia* and Book XII *To Polybius*, and the ingest's book table
+  (`DIALOGUE_ESSAYS` in `academy/web/src/scripts/label-passages.ts`) had the two
+  transposed, so `work` and `section_label` named the wrong dialogue for all 61
+  rows, and the opening of *On Clemency* sat in a chunk labelled *Helvia*.
+  Relabelled in place, chapter numbers kept, *On Clemency*'s first chunk moved
+  to its work, by `20261005134832_seneca_consolation_labels.sql`. Outstanding:
+  the Stewart volume still has no `source_url` and no `locator` values.
 - **Epictetus, *Discourses*.** Verify the current 459 chunks are Long's complete four books and not the abridged *Selection* that circulates on Gutenberg as ebook 10661. Spot checks suggest it is complete, but this was not confirmed. The complete Long is at `archive.org/download/discoursesofepic033057mbp/discoursesofepic033057mbp_djvu.txt`.
 - **Aristotle.** The corpus holds *Nicomachean Ethics* only. *De Anima* is Tier A. *Physics* (Hardie & Gaye 1930, public domain by one year, in `archive.org/download/worksofaristotle0002wdro/worksofaristotle0002wdro_djvu.txt`) and *Metaphysics* (Ross 1908, Wikisource) are worth adding for Q12.
 - **Plato.** *Timaeus* is already queued. *Phaedo* and *Phaedrus* should follow for Q02 and Q11.
