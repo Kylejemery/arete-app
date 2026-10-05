@@ -111,13 +111,17 @@ const DASH_RE = /[^\n.!?]*(?:\u2014|\s\u2013\s|\s-\s)[^\n.!?]*[.!?]?/g;
 // provided", "the sources given", "Source 3". The reader never saw the
 // passages, so to them this reads as the machine showing through. Matched
 // with no model call, like the dashes.
-const PROMPT_REF_RE = /\b(?:(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)\s+(?:provided|given|supplied|above|here|at hand|in front of me)|(?:provided|given|supplied|retrieved|above)\s+(?:source\s+)?(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)|source passages?|\[?source\s+\d+\]?)\b/i;
+const PROMPT_REF_RE = /\b(?:(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)\s+(?:provided|given|supplied|above|at hand|in front of me)|(?:provided|given|supplied|retrieved|above)\s+(?:source\s+)?(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)|source passages?|\[?source\s+\d+\]?|passages?\s+\[?\d+\]?)\b|\[\d+\]/i;
 const SENTENCE_RE = /[^\n.!?]+[.!?]?/g;
+
+function refersToPrompt(sentence) {
+  return PROMPT_REF_RE.test(String(sentence || ''));
+}
 
 function promptReferences(text) {
   return (String(text || '').match(SENTENCE_RE) || [])
     .map(s => s.trim())
-    .filter(s => s && PROMPT_REF_RE.test(s));
+    .filter(s => s && refersToPrompt(s));
 }
 
 function squash(s) {
@@ -160,4 +164,4 @@ Return only JSON: {"tells": [{"tell": "<short name>", "sentence": "<the exact se
   return found.slice(0, 25);
 }
 
-module.exports = { CHECK_MODEL, TELLS, checkCitations, checkPolitical, checkTells, passageBlock, promptReferences };
+module.exports = { CHECK_MODEL, TELLS, checkCitations, checkPolitical, checkTells, passageBlock, promptReferences, refersToPrompt };

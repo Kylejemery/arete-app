@@ -8116,18 +8116,31 @@ app.post('/api/observatory/reply', async (req, res) => {
       kind: comment.piece_kind, piece, commentBody: comment.body, handle: comment.handle, passages,
     });
 
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, system, messages: [{ role: 'user', content: user }] }),
-    });
-    if (!claudeRes.ok) {
-      console.error('[/api/observatory/reply] Claude error:', claudeRes.status, await claudeRes.text());
-      return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Your comment is posted.' });
-    }
-    const claudeData = await claudeRes.json();
-    const body = observatoryReply.cleanReply(claudeData.content?.[0]?.text);
+    const askClaude = async messages => {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': CLAUDE_API_KEY, 'anthropic-version': '2023-06-01' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 500, system, messages }),
+      });
+      if (!r.ok) {
+        console.error('[/api/observatory/reply] Claude error:', r.status, await r.text());
+        return null;
+      }
+      return observatoryReply.cleanReply((await r.json()).content?.[0]?.text);
+    };
+    let body = await askClaude([{ role: 'user', content: user }]);
     if (!body) return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Your comment is posted.' });
+    // The reader never saw the passages. A reply that mentions them gets one
+    // rewrite; whatever still slips through is dropped sentence by sentence.
+    if (observatoryReply.promptReferences(body).length) {
+      const rewrite = await askClaude([
+        { role: 'user', content: user },
+        { role: 'assistant', content: body },
+        { role: 'user', content: observatoryReply.REWRITE_NOTE },
+      ]);
+      body = observatoryReply.dropPromptReferences(rewrite || body);
+      if (!body) return res.status(502).json({ error: 'silent', message: 'The corpus is silent just now. Your comment is posted.' });
+    }
 
     const { data: inserted, error: insErr } = await supabase
       .from('observatory_comments')

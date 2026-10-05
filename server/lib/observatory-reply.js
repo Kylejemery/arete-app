@@ -9,6 +9,8 @@
 // Pure helpers here so the prompt is testable; the endpoint is in index.js
 // (POST /api/observatory/reply).
 
+const { promptReferences, refersToPrompt } = require('../synthesis/checks');
+
 const CORPUS_HANDLE = 'The Corpus';
 // Corpus replies a reader can prompt per day. Each costs one Sonnet call.
 const DAILY_LIMIT = Math.max(0, parseInt(process.env.OBS_REPLY_DAILY_LIMIT || '5', 10) || 0);
@@ -83,7 +85,7 @@ function buildReplyPrompt({ kind, piece, commentBody, handle, passages }) {
 
   const system = `You are the Corpus of the Library of Arete: the whole tradition speaking as one reader who has the shelves by heart. You wrote the Observatory piece below, and a reader has answered it in the comments. Reply to them.
 
-Write 80 to 160 words, addressed to the reader directly. Take their actual point seriously: grant what is right in it, and press where it goes wrong or goes too fast. Bring in one or two voices from the passages provided, naming the author and work in the prose (for example: Epictetus, in the Discourses, would say...). Stay grounded in the passages given and in the piece; do not invent quotations or citations. If the reader has found a real weakness in the piece, say so plainly. If there is a tension, name it and leave it standing rather than resolving it. End with a question back to the reader only if it genuinely moves the conversation.
+Write 80 to 160 words, addressed to the reader directly. Take their actual point seriously: grant what is right in it, and press where it goes wrong or goes too fast. Bring in one or two voices from the passages below, naming the author and work in the prose (for example: Epictetus, in the Discourses, would say...). Stay grounded in those passages and in the piece; do not invent quotations or citations. The reader never sees the passages, so never refer to them or to how you received them: no "the passages provided", "the texts above", "passage 2" or bracketed numbers. Speak of the authors and their works instead. If the reader has found a real weakness in the piece, say so plainly. If there is a tension, name it and leave it standing rather than resolving it. End with a question back to the reader only if it genuinely moves the conversation.
 
 You speak in the corpus's own voice, never as a historical thinker. Do not use em dashes or en dashes; use commas, colons, or full stops. No headings, no lists, no markdown: plain prose only.
 
@@ -100,6 +102,18 @@ ${ctx || '(none retrieved; answer from the piece alone and say that the shelves 
 
 // The model's reply as plain prose, dashes and markdown stripped, or '' if
 // nothing usable came back.
+// The rewrite asked for when a reply talks about its passages anyway.
+const REWRITE_NOTE = 'Rewrite your reply so it never mentions the passages, sources or texts you were given, or their numbers. Name the authors and works instead. Keep everything else. Return only the reply.';
+
+// The reply with any sentence that refers to the passages dropped: the last
+// resort after one rewrite, so a reader never sees the machinery.
+function dropPromptReferences(body) {
+  return (String(body || '').match(/[^\n.!?]+[.!?]*\s*/g) || [])
+    .filter(seg => !refersToPrompt(seg))
+    .join('')
+    .trim();
+}
+
 function cleanReply(raw) {
   return String(raw || '')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
@@ -118,4 +132,7 @@ module.exports = {
   retrievalQuery,
   buildReplyPrompt,
   cleanReply,
+  REWRITE_NOTE,
+  dropPromptReferences,
+  promptReferences,
 };
