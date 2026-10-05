@@ -32,6 +32,7 @@ export const RELEASED_PLAYGROUND = [
   'the-long-filter',
   'the-long-filter/formalism',
   'the-long-filter/walkthrough',
+  'view-from-above',
 ]
 
 /**
