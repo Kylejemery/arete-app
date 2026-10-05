@@ -120,13 +120,41 @@ function mentionsAuthor(text, author) {
 
 // Quotations of four words or more. An ellipsis splits a quotation into
 // fragments that must each be found.
+//
+// Quotation marks are paired in order within each paragraph (curly marks by
+// direction, straight marks alternately), and only then is a pair judged
+// long enough to be a quotation. Matching quotations with a length-limited
+// pattern instead lets a short quoted term ("preferred") be skipped, so its
+// closing mark opens the next "quotation" and every pair after it is the
+// prose between two real ones.
 function extractQuotes(text) {
   const out = [];
-  const re = /["“]([^"“”]{12,800})["”]/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    const fragments = m[1].split(/\.\.\.|…/).map(f => f.trim()).filter(f => normalize(f).split(' ').length >= 4);
-    if (fragments.length) out.push({ quote: m[1], fragments, start: m.index, end: m.index + m[0].length });
+  const src = String(text || '');
+  const paraBreak = /\n\s*\n/g;
+  let paraStart = 0;
+  const paragraphs = [];
+  let b;
+  while ((b = paraBreak.exec(src)) !== null) {
+    paragraphs.push([paraStart, b.index]);
+    paraStart = b.index + b[0].length;
+  }
+  paragraphs.push([paraStart, src.length]);
+
+  for (const [from, to] of paragraphs) {
+    let open = -1;
+    for (let i = from; i < to; i++) {
+      const c = src[i];
+      if (c === '“') { open = i; continue; }
+      const closes = c === '”' || (c === '"' && open !== -1);
+      if (c === '"' && open === -1) { open = i; continue; }
+      if (!closes || open === -1) continue;
+      const quote = src.slice(open + 1, i);
+      if (quote.length >= 12 && quote.length <= 800) {
+        const fragments = quote.split(/\.\.\.|…/).map(f => f.trim()).filter(f => normalize(f).split(' ').length >= 4);
+        if (fragments.length) out.push({ quote, fragments, start: open, end: i + 1 });
+      }
+      open = -1;
+    }
   }
   return out;
 }
