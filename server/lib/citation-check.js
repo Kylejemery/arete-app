@@ -8,7 +8,10 @@
 //                    caller can log it. The server runs this on every reply.
 //   verbatimOverlap  long word-for-word runs shared with a retrieved passage
 //                    that are not quoted and tagged (rule 9). The citation
-//                    eval runs this; the server does not.
+//                    eval runs this to measure the model.
+//   enforceSourcing  what the server runs on every reply: copied runs are put
+//                    in quotation marks with their passage's tag
+//                    (quoteVerbatim), then checkCitations.
 //
 // The eval (scripts/eval-cabinet-citations.js) uses the same matcher, so the
 // server and the eval agree on what counts as a retrieved tag.
@@ -137,11 +140,15 @@ function verbatimOverlap(text, passages) {
         const start = rw[i].start;
         const end = rw[j + SHINGLE - 1].end;
         const paraEnd = (() => { const k = reply.indexOf('\n', end); return k < 0 ? reply.length : k; })();
-        const quoted = quotedAt(reply, start);
+        // A run can open with the tail of the sentence before its quotation
+        // ("discipline. “He built…"); judge the quoting where the copy begins.
+        const lead = reply.slice(start, Math.min(end, start + 40)).match(/^[^.!?]*[.!?]\s+/);
+        const from = lead ? start + lead[0].length : start;
+        const quoted = quotedAt(reply, from) || (lead !== null && /^[“"]/.test(reply.slice(from)));
         // The tag belongs right after the quotation, not somewhere later on.
         const tagged = new RegExp(TAG_RE.source).test(reply.slice(end, Math.min(paraEnd, end + 120)));
         if (!(quoted && tagged)) {
-          findings.push({ words: count, excerpt: reply.slice(start, end), tag: p.tag || null, quoted, tagged });
+          findings.push({ words: count, start, end, excerpt: reply.slice(start, end), tag: p.tag || null, quoted, tagged });
         }
       }
       i = j + SHINGLE;
@@ -150,4 +157,62 @@ function verbatimOverlap(text, passages) {
   return findings;
 }
 
-module.exports = { TAG_RE, OUTSIDE_MARK, normTag, isRetrieved, checkCitations, verbatimOverlap, MIN_RUN_WORDS };
+// Rule 9, enforced: a run copied from a passage without quotation marks and a
+// tag gets both. A run that starts with the tail of an earlier sentence
+// ("discipline. He built up…") is quoted from the sentence it copies.
+function quoteVerbatim(text, passages) {
+  if (typeof text !== 'string' || !text) return { text, quoted: [] };
+  const found = verbatimOverlap(text, passages).filter(f => f.tag);
+  // One fix per stretch of the reply: the longest run wins where two passages
+  // share the same words.
+  found.sort((a, b) => b.words - a.words);
+  const keep = [];
+  for (const f of found) if (!keep.some(k => f.start < k.end && k.start < f.end)) keep.push(f);
+  keep.sort((a, b) => b.start - a.start);
+  let out = text;
+  for (const f of keep) {
+    let start = f.start;
+    const lead = out.slice(start, Math.min(f.end, start + 40)).match(/^[^.!?]*[.!?]\s+/);
+    if (lead && !f.quoted) start += lead[0].length;
+    let end = f.end;
+    let insert = '';
+    if (!f.quoted) {
+      // Close the quotation after the run's own sentence-ending mark, if any.
+      const tail = out.slice(end).match(/^[.!?]/);
+      if (tail) end += 1;
+      // A quotation the reply opened inside the run ("said: "What a…") is
+      // closed by the reply's own mark; the outer quotation ends after it.
+      const span = out.slice(start, end);
+      const straightOpen = (span.match(/"/g) || []).length % 2 === 1;
+      const curlyOpen = (span.match(/“/g) || []).length > (span.match(/”/g) || []).length;
+      if (straightOpen || curlyOpen) {
+        const close = out.slice(end, end + 40).search(straightOpen ? /"/ : /”/);
+        if (close >= 0) end += close + 1;
+      }
+      insert = `”${f.tagged ? '' : ` ${f.tag}`}`;
+      out = `${out.slice(0, start)}“${out.slice(start, end)}${insert}${out.slice(end)}`;
+    } else {
+      // Already quoted: put the tag just after the closing quotation mark.
+      const close = out.slice(end, end + 40).search(/[”"]/);
+      const at = close >= 0 ? end + close + 1 : end;
+      out = `${out.slice(0, at)} ${f.tag}${out.slice(at)}`;
+    }
+  }
+  return { text: out, quoted: keep.map(f => ({ tag: f.tag, words: f.words, wasQuoted: f.quoted, wasTagged: f.tagged })) };
+}
+
+/**
+ * Both rules a reply is held to before it leaves the server: copied runs are
+ * quoted and tagged (rule 9), then every tag must name a retrieved passage
+ * (rule 8).
+ *
+ * @param {string} text
+ * @param {{ tag: string, text: string }[]} passages  the turn's passages
+ */
+function enforceSourcing(text, passages) {
+  const q = quoteVerbatim(text, passages);
+  const c = checkCitations(q.text, (passages || []).map(p => p.tag));
+  return { text: c.text, unmatched: c.unmatched, quoted: q.quoted };
+}
+
+module.exports = { TAG_RE, OUTSIDE_MARK, normTag, isRetrieved, checkCitations, verbatimOverlap, quoteVerbatim, enforceSourcing, MIN_RUN_WORDS };

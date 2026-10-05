@@ -7,7 +7,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 
-const { checkCitations, verbatimOverlap, OUTSIDE_MARK } = require('../lib/citation-check');
+const { checkCitations, verbatimOverlap, quoteVerbatim, enforceSourcing, OUTSIDE_MARK } = require('../lib/citation-check');
 
 // Cases from the 2026-10-05 runs.
 test('a tag that names no retrieved passage is replaced, visibly', () => {
@@ -67,4 +67,44 @@ test('quoted but untagged is still flagged', () => {
 test('a paraphrase sharing a few words is not flagged', () => {
   const reply = 'Cato trained his body hard, went bareheaded in heat and snow, and walked everywhere rather than ride [Plut. Cat. Min. 5].';
   assert.deepEqual(verbatimOverlap(reply, [{ tag: '[Plut. Cat. Min. 5]', text: PLUTARCH }]), []);
+});
+
+const CATO = [{ tag: '[Plut. Cat. Min. 5]', text: `Cato returned to his silence and discipline. ${PLUTARCH} Friends rode horses.` }];
+
+test('the server quotes and tags a copied run, from the sentence it copies', () => {
+  const reply = `Cato went back into silence and discipline. ${PLUTARCH} That is the man.`;
+  const r = quoteVerbatim(reply, CATO);
+  assert.equal(r.text, `Cato went back into silence and discipline. “${PLUTARCH}” [Plut. Cat. Min. 5] That is the man.`);
+  assert.equal(r.quoted.length, 1);
+  assert.deepEqual(verbatimOverlap(r.text, CATO), []);
+});
+
+test('a copied run already quoted gets only its tag', () => {
+  const reply = `Plutarch writes, "${PLUTARCH}" That is the man.`;
+  const r = quoteVerbatim(reply, CATO);
+  assert.equal(r.text, `Plutarch writes, "${PLUTARCH}" [Plut. Cat. Min. 5] That is the man.`);
+});
+
+test('a quotation the reply opened inside the run stays whole', () => {
+  const said = 'What a piece of good fortune it is for Italy that he is a boy; for if he were a man, I do not think we could get a single vote among the people.';
+  const passages = [{ tag: '[Plut. Cat. Min. 2.1–5]', text: `Pompaedius set him down and said quietly to his friends: "${said}"` }];
+  const reply = `Pompaedius finally set him down and said quietly to his friends: "${said}" What do you make of that?`;
+  const r = quoteVerbatim(reply, passages);
+  // The reply's own quotation closes first, then the outer one, then the tag.
+  assert.ok(r.text.includes(`"${said}"” [Plut. Cat. Min. 2.1–5]`), r.text);
+  assert.equal((r.text.match(/“/g) || []).length, 1);
+  assert.deepEqual(verbatimOverlap(r.text, passages), []);
+});
+
+test('enforceSourcing quotes copied runs and still replaces invented tags', () => {
+  const reply = `Cato went back into silence and discipline. ${PLUTARCH} He also ran marathons (Plut. Cat. Min. 90).`;
+  const r = enforceSourcing(reply, CATO);
+  assert.equal(r.quoted.length, 1);
+  assert.deepEqual(r.unmatched, ['(Plut. Cat. Min. 90)']);
+  assert.ok(r.text.endsWith(`He also ran marathons ${OUTSIDE_MARK}.`));
+});
+
+test('a reply with nothing copied is returned unchanged', () => {
+  const reply = 'Cato trained hard and walked everywhere [Plut. Cat. Min. 5].';
+  assert.deepEqual(enforceSourcing(reply, CATO), { text: reply, unmatched: [], quoted: [] });
 });

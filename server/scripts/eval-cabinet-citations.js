@@ -14,9 +14,11 @@
 //              without quotation marks and a tag (sourcing rule 9); needs
 //              the passage text, read from rag_corpus with server/.env
 //
-// The server replaces a tag that names no retrieved passage before the reply
-// leaves it (lib/citation-check.js), so "invented" should stay at zero; the
-// tags it replaced come back as citationFlags and are reported and counted.
+// The server replaces a tag that names no retrieved passage, and quotes and
+// tags a copied run, before the reply leaves it (lib/citation-check.js), so
+// "invented" and "verbatim" should stay at zero; what it changed comes back as
+// citationFlags and quotedByServer and is reported and counted, because that
+// is what the model itself still does.
 //
 // The detector is deliberately broad: it would rather flag a sentence a person
 // clears than miss a fabricated one. Read the flagged lines, not the score.
@@ -133,7 +135,7 @@ async function runPrompt(baseUrl, prompt, userId) {
     mode: body.mode,
     retrievedTags,
     passages,
-    voices: responses.map(r => ({ name: r.counselorName, text: r.response, error: r.error, serverFlags: r.citationFlags || [] })),
+    voices: responses.map(r => ({ name: r.counselorName, text: r.response, error: r.error, serverFlags: r.citationFlags || [], serverQuoted: r.quotedByServer || [] })),
   };
 }
 
@@ -160,7 +162,7 @@ async function passageTexts(sources) {
 
 function report(results) {
   const lines = ['# Cabinet citation eval', '', `Run ${new Date().toISOString()}`, ''];
-  let untagged = 0; let invented = 0; let tagged = 0; let failed = 0; let verbatim = 0; let serverFlagged = 0; let verbatimUnchecked = 0;
+  let untagged = 0; let invented = 0; let tagged = 0; let failed = 0; let verbatim = 0; let serverFlagged = 0; let serverQuoted = 0; let verbatimUnchecked = 0;
   for (const r of results) {
     lines.push(`## ${r.prompt.id}: ${r.prompt.text}`, '');
     if (r.error) { failed++; lines.push(`**Failed:** ${r.error}`, ''); continue; }
@@ -179,9 +181,13 @@ function report(results) {
       // Tags the model wrote that the server replaced before the reply left it.
       const flags = v.serverFlags || [];
       serverFlagged += flags.length;
+      // Copied runs the server put in quotation marks with their tag.
+      const quotedRuns = v.serverQuoted || [];
+      serverQuoted += quotedRuns.length;
       lines.push(`### ${v.name}${v.error ? ' (failed)' : ''}`, '', '> ' + String(v.text || '').replace(/\n+/g, '\n> '), '');
-      if (findings.length === 0 && flags.length === 0) lines.push('No flags.', '');
+      if (findings.length === 0 && flags.length === 0 && quotedRuns.length === 0) lines.push('No flags.', '');
       for (const t of flags) lines.push(`- **TAG REPLACED BY SERVER**: ${t}`);
+      for (const q of quotedRuns) lines.push(`- **COPIED RUN QUOTED BY SERVER**: ${q.words} words from ${q.tag} (${q.wasQuoted ? 'was quoted' : 'was unquoted'}, ${q.wasTagged ? 'was tagged' : 'was untagged'})`);
       for (const f of findings) {
         if (f.kind === 'invented') lines.push(`- **INVENTED TAG** (${f.tag}): ${f.sentence}`);
         else if (f.kind === 'verbatim') lines.push(`- **VERBATIM, ${f.words} words, ${f.quoted ? 'quoted' : 'unquoted'}, ${f.tagged ? 'tagged' : 'untagged'}** (from ${f.tag || 'a retrieved passage'}): ${f.sentence}`);
@@ -192,9 +198,10 @@ function report(results) {
   }
   lines.splice(3, 0,
     `Tags cited: ${tagged}. Untagged details: ${untagged}. Tags not among retrieved passages: ${invented}. ` +
-    `Tags the server replaced: ${serverFlagged}. Verbatim runs of ${MIN_RUN_WORDS}+ words not quoted and tagged: ${verbatim}` +
+    `Tags the server replaced: ${serverFlagged}. Copied runs the server quoted: ${serverQuoted}. ` +
+    `Verbatim runs of ${MIN_RUN_WORDS}+ words not quoted and tagged: ${verbatim}` +
     `${verbatimUnchecked ? ` (check did not run for ${verbatimUnchecked} prompt(s))` : ''}. Failed prompts or voices: ${failed}.`, '');
-  return { markdown: lines.join('\n'), untagged, invented, failed, verbatim, serverFlagged, verbatimUnchecked };
+  return { markdown: lines.join('\n'), untagged, invented, failed, verbatim, serverFlagged, serverQuoted, verbatimUnchecked };
 }
 
 async function main() {
@@ -213,11 +220,11 @@ async function main() {
       results.push({ prompt, error: err.message });
     }
   }
-  const { markdown, untagged, invented, failed, verbatim, serverFlagged, verbatimUnchecked } = report(results);
+  const { markdown, untagged, invented, failed, verbatim, serverFlagged, serverQuoted, verbatimUnchecked } = report(results);
   const out = arg('--out');
   if (out) fs.writeFileSync(out, markdown);
   console.log(markdown);
-  process.exitCode = untagged + invented + failed + verbatim + serverFlagged + verbatimUnchecked > 0 ? 1 : 0;
+  process.exitCode = untagged + invented + failed + verbatim + serverFlagged + serverQuoted + verbatimUnchecked > 0 ? 1 : 0;
 }
 
 if (require.main === module) main();

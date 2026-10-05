@@ -37,15 +37,21 @@ const { SELF_KNOWLEDGE } = require('./lib/self-knowledge');
 // factual claim about an ancient figure points at a passage or says it can't.
 const { SOURCING_DISCIPLINE } = require('./lib/sourcing-discipline');
 const { attachCitationFields, formatTaggedPassage, citationTag } = require('./lib/citation-tag');
-const { checkCitations } = require('./lib/citation-check');
+const { enforceSourcing } = require('./lib/citation-check');
 
-// Sourcing rule 8, enforced: a tag in a reply that names none of the passages
+// The turn's passages as the citation check reads them: tag and text.
+const sourcingPassages = (chunks) => (chunks || []).map(c => ({ tag: citationTag(c).tag, text: c.chunk_text ?? c.content ?? '' }));
+
+// Sourcing rules 8 and 9, enforced: a run copied from a passage goes in
+// quotation marks with its tag, and a tag that names none of the passages
 // retrieved for the turn becomes "(outside our library)". Returns the checked
-// text and the tags that failed, which are logged and sent beside the reply.
+// text, the tags that failed, and the runs quoted, which are logged and sent
+// beside the reply.
 function enforceCitations(text, chunks, where) {
-  const { text: checked, unmatched } = checkCitations(text, (chunks || []).map(c => citationTag(c).tag));
+  const { text: checked, unmatched, quoted } = enforceSourcing(text, sourcingPassages(chunks));
   if (unmatched.length > 0) console.warn(`[Cabinet] ${where}: ${unmatched.length} tag(s) named no retrieved passage: ${unmatched.join(' ')}`);
-  return { text: checked, unmatched };
+  if (quoted.length > 0) console.warn(`[Cabinet] ${where}: quoted ${quoted.length} copied run(s): ${quoted.map(q => `${q.words} words from ${q.tag}`).join('; ')}`);
+  return { text: checked, unmatched, quoted };
 }
 
 // Observatory Living Sky — all new /api/observatory/* routes live in their own
@@ -2082,7 +2088,7 @@ async function handleCabinetChat(req, res) {
         onVoiceDone: (r) => sse.send('voice_done', {
           counselorId: r.counselorId,
           counselorName: r.counselorName,
-          response: typeof r.response === 'string' ? checkCitations(stripOfferMarkers(r.response), contextChunks.map(c => citationTag(c).tag)).text : r.response,
+          response: typeof r.response === 'string' ? enforceSourcing(stripOfferMarkers(r.response), sourcingPassages(contextChunks)).text : r.response,
           error: !!r.error,
         }),
       };
@@ -2114,6 +2120,7 @@ async function handleCabinetChat(req, res) {
       const cited = enforceCitations(parsedRequest.text, contextChunks, `parallel/${r.counselorId}`);
       r.response = cited.text;
       r.citationFlags = cited.unmatched;
+      r.quotedByServer = cited.quoted;
       if (parsedRequest.request && !offeredRequest) { offeredRequest = parsedRequest.request; requestCounselorId = r.counselorId || null; }
       if (parsed.goal && !offeredGoal) { offeredGoal = parsed.goal; goalCounselorId = r.counselorId || null; }
       if (parsedTask.task && !offeredTask) { offeredTask = parsedTask.task; goalCounselorId = r.counselorId || null; }
@@ -2372,7 +2379,7 @@ async function handleCabinetChat(req, res) {
           request: parsedRequest.request,
           counselorId: singleCounselorId,
         }));
-        const compatPayload = { content: [{ type: 'text', text }], request_id: requestId, citation_flags: cited.unmatched, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) };
+        const compatPayload = { content: [{ type: 'text', text }], request_id: requestId, citation_flags: cited.unmatched, quoted_by_server: cited.quoted, ...(offer ? { offer } : {}), ...(proposal ? { proposal } : {}), ...(personal.teenSupport ? { support: true } : {}) };
         // Other providers are not streamed; a streaming client gets the whole
         // reply as its one voice, then done.
         if (sse) {
@@ -2449,6 +2456,7 @@ async function handleCabinetChat(req, res) {
     let singleAdjust = null;
     let singleRequest = null;
     const singleCitationFlags = [];
+    const singleQuoted = [];
     for (const b of (data.content || [])) {
       if (b.type !== 'text' || typeof b.text !== 'string') continue;
       const parsed = cabinetOffers.parseGoalMarker(b.text);
@@ -2458,6 +2466,7 @@ async function handleCabinetChat(req, res) {
       const cited = enforceCitations(parsedRequest.text, loggedChunks, `single/${anthropicModel || HAIKU_MODEL}`);
       b.text = cited.text;
       singleCitationFlags.push(...cited.unmatched);
+      singleQuoted.push(...cited.quoted);
       if (parsedRequest.request && !singleRequest) singleRequest = parsedRequest.request;
       if (parsed.goal && !singleGoal) singleGoal = parsed.goal;
       if (parsedTask.task && !singleTask) singleTask = parsedTask.task;
@@ -2494,6 +2503,7 @@ async function handleCabinetChat(req, res) {
     }
     data.request_id = requestId;
     data.citation_flags = singleCitationFlags;
+    data.quoted_by_server = singleQuoted;
     if (sse) {
       sse.send('voice_done', { counselorId: singleCounselorId, counselorName: null, response: assistantText, error: false });
       return sse.done(data);
