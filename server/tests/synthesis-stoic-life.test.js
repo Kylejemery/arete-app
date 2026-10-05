@@ -240,3 +240,36 @@ test('the tells check keeps dash findings when the model call fails', async () =
     if (saved !== undefined) process.env.CLAUDE_API_KEY = saved;
   }
 });
+
+// ── References to the prompt ───────────────────────────────────────────────
+
+const { promptReferences } = require('../synthesis/checks');
+
+test('the system prompt never invites talk of "the passages provided"', () => {
+  const sys = life.buildSystemPrompt(life.defaultConfig);
+  assert.doesNotMatch(sys, /If the passages do not settle/);
+  assert.match(sys, /The reader never sees the source passages/);
+});
+
+test('sentences about the prompt are flagged, sentences about the texts are not', () => {
+  const flagged = [
+    'The passages provided do not fully resolve whether the sage feels grief.',
+    'None of the provided sources address this directly.',
+    'The texts given here leave the question open.',
+    'As Source 3 shows, Seneca hesitates.',
+    'The source passages are silent on money.',
+  ];
+  for (const s of flagged) assert.deepEqual(promptReferences(s), [s], s);
+  const clean = [
+    'Seneca never says whether the sage feels grief.',
+    'In the passages where Epictetus speaks of the body, he is blunt.',
+    'The surviving Discourses leave this open.',
+    'Marcus was given the empire; he did not seek it.',
+  ];
+  for (const s of clean) assert.deepEqual(promptReferences(s), [], s);
+});
+
+test('only the offending sentence is quoted', () => {
+  const text = 'Epictetus is clear on this. The passages provided do not settle it. Seneca agrees.';
+  assert.deepEqual(promptReferences(text), ['The passages provided do not settle it.']);
+});

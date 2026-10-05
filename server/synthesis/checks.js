@@ -107,6 +107,19 @@ const TELLS = Object.freeze([
 
 const DASH_RE = /[^\n.!?]*(?:\u2014|\s\u2013\s|\s-\s)[^\n.!?]*[.!?]?/g;
 
+// Sentences that talk about the prompt rather than the texts: "the passages
+// provided", "the sources given", "Source 3". The reader never saw the
+// passages, so to them this reads as the machine showing through. Matched
+// with no model call, like the dashes.
+const PROMPT_REF_RE = /\b(?:(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)\s+(?:provided|given|supplied|above|here|at hand|in front of me)|(?:provided|given|supplied|retrieved|above)\s+(?:source\s+)?(?:passages?|sources?|texts?|excerpts?|extracts?|materials?)|source passages?|\[?source\s+\d+\]?)\b/i;
+const SENTENCE_RE = /[^\n.!?]+[.!?]?/g;
+
+function promptReferences(text) {
+  return (String(text || '').match(SENTENCE_RE) || [])
+    .map(s => s.trim())
+    .filter(s => s && PROMPT_REF_RE.test(s));
+}
+
 function squash(s) {
   return String(s || '').replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\s+/g, ' ').trim().toLowerCase();
 }
@@ -121,6 +134,9 @@ async function checkTells(text, { model = CHECK_MODEL } = {}) {
   const found = [];
   for (const m of String(text || '').match(DASH_RE) || []) {
     if (m.trim()) found.push({ tell: 'dash', sentence: m.trim() });
+  }
+  for (const sentence of promptReferences(text)) {
+    found.push({ tell: 'refers to the source passages', sentence });
   }
   const system = `You find machine-writing tells in an essay so a human editor can fix them. The tells:
 ${TELLS.map((t, i) => `${i + 1}. ${t}`).join('\n')}
@@ -144,4 +160,4 @@ Return only JSON: {"tells": [{"tell": "<short name>", "sentence": "<the exact se
   return found.slice(0, 25);
 }
 
-module.exports = { CHECK_MODEL, TELLS, checkCitations, checkPolitical, checkTells, passageBlock };
+module.exports = { CHECK_MODEL, TELLS, checkCitations, checkPolitical, checkTells, passageBlock, promptReferences };
