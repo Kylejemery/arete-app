@@ -833,7 +833,8 @@ const probes = [
     async run(ctx) {
       // Guardrail 1 of themata/THEMATA_PROJECT.md: every ledger passage must be
       // an exact substring (whitespace collapsed) of a live chunk named by
-      // corpus_ref, or pass research_source_contains for its research_ref.
+      // corpus_ref, or pass research_quotation_problems (no problems) for its
+      // research_ref.
       // scripts/themata/verify_ledger.py makes the same check by hand; keep the
       // two in step. A deprecation, a re-chunk or a text fix upstream can break
       // an entry without anyone touching the ledger.
@@ -898,16 +899,16 @@ const probes = [
         for (const t of texts) {
           const ref = refs[t.ref];
           if (!ref) { problems.push(`passage points at research_ref ${t.ref}, which does not exist`); continue; }
-          for (const f of fragments(t.text)) {
-            const { data, error } = await ctx.supabase.rpc('research_source_contains', {
-              p_source: ref.source_id, p_passage: f,
-            });
-            if (error) throw new Error(`research_source_contains failed: ${error.message}`);
-            if (data !== true) {
-              problems.push(`${ref.locator}: research_source_contains is false (source deprecated, licence unconfirmed, or text changed)`);
-              break;
-            }
-          }
+          if (!fragments(t.text).length) continue;
+          // The whole quotation, with the entry's source line as attribution:
+          // a quotation_only source also checks length (at most 60 words) and
+          // that author, work, translator and year are named.
+          const { data, error } = await ctx.supabase.rpc('research_quotation_problems', {
+            p_source: ref.source_id, p_passage: t.text,
+            p_attribution: e.source || null, p_locator: ref.locator || null,
+          });
+          if (error) throw new Error(`research_quotation_problems failed: ${error.message}`);
+          if (Array.isArray(data) && data.length) problems.push(`${ref.locator}: ${data.join('; ')}`);
         }
         if (problems.length) failures.push({ file, id: e.id, problems });
       }
@@ -919,7 +920,7 @@ const probes = [
         title: `Themata ${f.file} ${f.id}: its passage is not in the live store it cites`,
         detail:
           'Guardrail 1: every ledger passage must be verbatim in a live rag_corpus chunk ' +
-          '(corpus_ref) or pass research_source_contains (research_ref). This one no longer ' +
+          '(corpus_ref) or pass research_quotation_problems (research_ref). This one no longer ' +
           'does, so the harness is running an item whose evidence cannot be shown. ' +
           f.problems.join('; ') + '.',
         action:

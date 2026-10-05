@@ -755,3 +755,33 @@ Export counts change only by S015's share: 13,464 distinct searches
 S012), and 30 losses per view are proven (was 32; the other two were
 S015's). Mentions of S015 above this entry are the record of earlier work
 and are left as they were.
+
+## Bury's Outlines replaces Mates; quotation_only (2026-10-05)
+
+Kyle's rulings (2026-10-02, 2026-10-05): the PH II quotations come from
+Bury's Loeb volume I (1933), not Mates; short scholarly quotation does not
+depend on the renewal question; a new licence status says so and the database
+enforces it.
+
+- **The status.** `quotation_only` (migration `20261005184546`). The check is
+  `research_quotation_problems(source, passage, attribution, locator)`, which
+  returns its reasons; `research_source_contains` is true when there are none.
+  For a `quotation_only` source the whole quotation (fragments joined by
+  ellipses) is at most 60 words, the attribution names author, work,
+  translator and edition year, and a locator is given. The ledger's `source`
+  line is the attribution. Triggers keep such a work out of `rag_corpus` in
+  both directions, and `full_text` is no longer readable through the API for
+  any source, so the full text cannot be exported, to the Themata Machine page
+  or anywhere else. `verify_ledger.py` and the auditor's
+  `repo.themata_ledger` both send whole quotations now.
+- **The text.** PH Book II, pp. 151-323, from the DLI scan
+  `in.ernet.dli.2015.183761`, built by the same script as Against the
+  Logicians; pp. 245-259 (the cited sections) and the Greek of 146-147
+  proofread against the page images. `research_sources` `937d0561`.
+- **S016.** Mates prints PH II 147's example as two premisses; Bury's English
+  has a conjunct ("it is day and Dion also is walking"), like M VIII 431. The
+  Greek (ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ καὶ Δίων περιπατεῖ) can be read either
+  way, and Sextus's definition calls the extra item a superfluous premiss
+  (λῆμμα παρέλκον). The earlier contrast between the two works was an artefact
+  of the translation. Both the English and the Greek are now quoted; the
+  encoding question stays parked until after Kyle's sign-offs.

@@ -16,13 +16,16 @@
 //     --locator-scheme "M book.section (Bekker)"
 //
 // --licence is one of public_domain, open_licence_confirmed, licensed_copy,
-// unconfirmed. Nothing stored as unconfirmed can be cited until it is changed.
+// quotation_only, unconfirmed. Nothing stored as unconfirmed can be cited until
+// it is changed. quotation_only allows quotations of at most 60 words with full
+// attribution, and the database keeps the work out of rag_corpus (migration
+// 20261005184546).
 // Add --dry-run to print the row without writing it.
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parseArgs } from 'node:util';
 
-const LICENCES = ['public_domain', 'open_licence_confirmed', 'licensed_copy', 'unconfirmed'];
+const LICENCES = ['public_domain', 'open_licence_confirmed', 'licensed_copy', 'quotation_only', 'unconfirmed'];
 
 const { values: a } = parseArgs({
   options: {
