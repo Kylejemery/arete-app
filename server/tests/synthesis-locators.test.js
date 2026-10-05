@@ -94,3 +94,48 @@ test('a name the passage itself reports is not a misattribution (Posidonius in D
   const text = 'Posidonius, however, "maintains that these things too are among goods" (Diogenes Laërtius, Lives VII.103).';
   assert.deepEqual(L.checkQuotations(text, dl), []);
 });
+
+// The essay's own paragraphs, where short quoted terms ("preferred",
+// "rejected") once threw the pairing off and the prose between two real
+// quotations was flagged as a quotation in no passage.
+const dlHolder = {
+  author: 'Diogenes Laërtius', work: 'Lives of Eminent Philosophers, Book VII', section_label: '7.103–7.106',
+  chunk_text: 'Further, they say that that is not good of which both good and bad use can be made; but of wealth and health both good and bad use can be made. In quite another sense those things are said to be indifferent which are without the power of stirring inclination or aversion; e.g. the fact that the number of hairs on one’s head is odd or even.',
+};
+const epHolder = {
+  author: 'Epictetus', work: 'Discourses', section_label: '2.5–2.6',
+  chunk_text: 'The hypothetical proposition is indifferent: the judgement about it is not indifferent. Life is indifferent: the use is not indifferent.',
+};
+const essay = [
+  'The school was careful to distinguish two senses of "indifferent." Unlike whether the number of hairs on one\'s head is odd or even, these things have the power of "stirring inclination or aversion" and so some are "preferred" and others "rejected" (Diogenes Laërtius, Lives VII.104-105). A preferred indifferent has what the Stoics called value. The same argument applies to wealth and health: "of which both good and bad use can be made" cannot qualify as unambiguously good (Diogenes Laërtius, Lives VII.103).',
+  '',
+  'Epictetus frames the same structure from a different angle. "Life is indifferent: the use is not indifferent" (Epictetus, Discourses 2.6). The thing itself does not determine the value.',
+].join('\n');
+
+test('short quoted terms do not throw the pairing off: every quotation is a real one', () => {
+  const quotes = L.extractQuotes(essay).map(q => q.quote);
+  assert.deepEqual(quotes, [
+    'stirring inclination or aversion',
+    'of which both good and bad use can be made',
+    'Life is indifferent: the use is not indifferent',
+  ]);
+  assert.deepEqual(L.checkQuotations(essay, [dlHolder, epHolder]), []);
+});
+
+test('an unclosed mark does not carry into the next paragraph', () => {
+  const text = 'He said "this never closes and runs on for a while.\n\nNext paragraph: "four words or more here" stands alone.';
+  assert.deepEqual(L.extractQuotes(text).map(q => q.quote), ['four words or more here']);
+});
+
+test('curly quotation marks pair by direction', () => {
+  const text = 'A term, “indifferent,” and then “of which both good and bad use can be made” (Diogenes Laërtius, Lives VII.103).';
+  assert.deepEqual(L.extractQuotes(text).map(q => q.quote), ['of which both good and bad use can be made']);
+  assert.deepEqual(L.checkQuotations(text, [dlHolder]), []);
+});
+
+test('the misquote is still caught once the pairing is right', () => {
+  const text = 'These things "excite inclination or aversion" (Diogenes Laërtius, Lives VII.104).';
+  const f = L.checkQuotations(text, [dlHolder]);
+  assert.equal(f.length, 1);
+  assert.equal(f[0].problem, 'not_found');
+});
