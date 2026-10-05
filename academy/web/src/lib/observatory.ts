@@ -15,8 +15,8 @@ export const BACKEND_URL =
 export const SITE_URL = 'https://academy.pursuearete.com';
 export const APP_URL = 'https://app.pursuearete.com';
 
-export type Kind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world';
-export const KINDS: Kind[] = ['convergence', 'tension', 'inquiry', 'dream', 'world'];
+export type Kind = 'tension' | 'inquiry' | 'dream' | 'convergence' | 'world' | 'essay';
+export const KINDS: Kind[] = ['essay', 'convergence', 'tension', 'inquiry', 'dream', 'world'];
 
 export function isKind(v: unknown): v is Kind {
   return typeof v === 'string' && (KINDS as string[]).includes(v);
@@ -29,6 +29,9 @@ export const ACCENT: Record<Kind, string> = {
   dream: '#9a7ad9',
   convergence: '#6ad9a3',
   world: '#d99a6a',
+  // Essays are the journal's long form: warm parchment, the colour the design
+  // system gives anything said in the tradition's voice.
+  essay: '#e0d5b5',
 };
 
 // The kicker above a piece's title.
@@ -38,6 +41,7 @@ export const TAG: Record<Kind, string> = {
   dream: 'The corpus imagines',
   convergence: 'The corpus concludes',
   world: 'The corpus is responding to',
+  essay: 'Stoic Life',
 };
 
 // The journal's section names, as in the sky's filter.
@@ -47,6 +51,7 @@ export const SECTION: Record<Kind, string> = {
   inquiry: 'Inquiries',
   dream: 'Imagines',
   world: 'World',
+  essay: 'Essays',
 };
 
 // What each kind is, said plainly beside every piece. Load-bearing: none of
@@ -57,6 +62,7 @@ export const DISCLOSE: Record<Kind, string> = {
   dream: 'A thought from the corpus, not a passage in it: conjecture seeded by the tradition and written in the corpus’s own voice. Never the words of any historical thinker.',
   convergence: 'A conclusion the corpus assembled from far-apart passages, stated in none of them, entailed by several. The corpus discloses what it concluded and how far apart its sources stand.',
   world: 'The corpus reading the week’s world through a Stoic lens: what Seneca, Epictetus, Marcus Aurelius and Musonius Rufus say to what is happening now, grounded in what they wrote then.',
+  essay: 'An essay on living a Stoic life, written by the corpus from the Stoics’ own texts and read by the editor before it was published. The sections that report the sources were checked against them; the sections that apply them to today are the corpus’s interpretation, and say so.',
 };
 
 export type JournalEntry = {

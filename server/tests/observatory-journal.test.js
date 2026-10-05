@@ -3,7 +3,27 @@ const assert = require('node:assert');
 const { firstSentence, clip, readMinutes, toJournalEntry, sortJournal, KINDS } = require('../lib/observatory-journal');
 
 test('the journal covers the five Observatory kinds', () => {
-  assert.deepStrictEqual([...KINDS], ['tension', 'inquiry', 'dream', 'convergence', 'world']);
+  assert.deepStrictEqual([...KINDS], ['tension', 'inquiry', 'dream', 'convergence', 'world', 'essay']);
+});
+
+test('an essay is read from its committed Markdown', () => {
+  const { parseEssay } = require('../lib/observatory-journal');
+  const md = [
+    '---', 'doc_key: stoic-life-x', 'title: Front title', 'version: 1', 'review_by: 2027-10-02',
+    'sources_used:', '  - Seneca | Letters', '  - Epictetus | Discourses', '  - Seneca | On Benefits', '---', '',
+    '# The real title', '', 'First paragraph opens here. Then more.', '', '## A section', '', '- a point', '',
+  ].join('\n');
+  const e = parseEssay(md);
+  assert.strictEqual(e.title, 'The real title');
+  assert.deepStrictEqual(e.authors, ['Seneca', 'Epictetus']);
+  assert.strictEqual(e.reviewBy, '2027-10-02');
+  assert.ok(e.body.startsWith('First paragraph'));
+  assert.ok(!e.body.includes('# The real title'));
+  const entry = toJournalEntry('essay', { id: 'e1', markdown: md, word_count: 2000, exported_at: '2026-10-05T00:00:00Z' });
+  assert.strictEqual(entry.title, 'The real title');
+  assert.strictEqual(entry.dek, 'First paragraph opens here.');
+  assert.strictEqual(entry.minutes, 10);
+  assert.strictEqual(entry.publishedAt, '2026-10-05T00:00:00Z');
 });
 
 test('first sentence, clip and reading time', () => {
@@ -49,7 +69,7 @@ test('a world headline is the first sentence of the signal', () => {
 
 test('a row with no headline or an unknown kind is left out', () => {
   assert.strictEqual(toJournalEntry('tension', { id: 't', title: '  ' }), null);
-  assert.strictEqual(toJournalEntry('essay', { id: 'e', title: 'x' }), null);
+  assert.strictEqual(toJournalEntry('podcast', { id: 'e', title: 'x' }), null);
   assert.strictEqual(toJournalEntry('world', null), null);
 });
 

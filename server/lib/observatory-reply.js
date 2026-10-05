@@ -19,6 +19,7 @@ const KIND_NOUN = {
   dream: 'a dream (conjecture the corpus wrote in its own voice, seeded by the tradition)',
   convergence: 'a convergence (a conclusion the corpus assembled from far-apart passages)',
   world: 'a world response (the corpus reading this week\'s news through a Stoic lens)',
+  essay: 'a Stoic Life essay (a piece the corpus wrote from the Stoics\' own texts on how to live, reviewed by the editor)',
 };
 
 function clip(text, max) {
@@ -53,6 +54,10 @@ function pieceText(kind, p) {
     case 'world':
       title = p.dominantSignal;
       parts.push(p.response, p.tension);
+      break;
+    case 'essay':
+      title = p.title;
+      parts.push(p.body);
       break;
     default:
       break;

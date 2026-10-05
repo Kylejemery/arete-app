@@ -7999,6 +7999,27 @@ async function loadObservatoryPiece(kind, id) {
       created_at: data.created_at,
     };
   }
+  if (kind === 'essay') {
+    // A Stoic Life essay, once approved and exported to the repo (the gate in
+    // server/lib/observatory-journal.js). The body is the committed Markdown.
+    const { data } = await supabase
+      .from('synthesis_drafts')
+      .select('id, title, markdown, word_count, exported_at, reviewed_at')
+      .eq('id', id).eq('mode', 'stoic_life').in('status', ['exported', 'ingested'])
+      .maybeSingle();
+    if (!data) return null;
+    const e = require('./lib/observatory-journal').parseEssay(data.markdown);
+    return {
+      id: data.id,
+      title: e.title || data.title,
+      body: e.body,
+      opening: e.opening,
+      authors: e.authors,
+      reviewBy: e.reviewBy,
+      wordCount: data.word_count || null,
+      publishedAt: data.exported_at || data.reviewed_at || null,
+    };
+  }
   if (kind === 'world') {
     const { data } = await supabase
       .from('world_observations')
@@ -8023,7 +8044,7 @@ async function loadObservatoryPiece(kind, id) {
 
 app.get('/api/observatory/piece/:kind/:id', async (req, res) => {
   const { kind, id } = req.params;
-  if (!['tension', 'inquiry', 'dream', 'convergence', 'world'].includes(kind) || !OBS_PIECE_ID_RE.test(id || '')) {
+  if (!['tension', 'inquiry', 'dream', 'convergence', 'world', 'essay'].includes(kind) || !OBS_PIECE_ID_RE.test(id || '')) {
     return res.status(404).json({ error: 'No such piece' });
   }
   try {
