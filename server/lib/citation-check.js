@@ -36,13 +36,32 @@ const normTag = (t) => String(t).replace(/^[[(]|[\])]$/g, '').replace(/\s+/g, ' 
 // The place a tag points at: its numbers and roman numerals ("7.180", "XI").
 const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
 
+// "7.180" → [7, 180]; "104" → [104].
+const parts = (p) => p.split('.').map(Number);
+const cmp = (a, b) => (a[0] - b[0]) || ((a[1] ?? 0) - (b[1] ?? 0));
+
+// The words before a tag's first number: "dl", "seneca, ep.".
+const headOf = (t) => normTag(t).split(/\d/)[0].replace(/[^a-z]/g, '');
+
+// A retrieved range ("DL 7.180–7.183") holds a cited place or narrower range
+// ("DL 7.180–7.181", "DL 7.182") in the same work.
+function withinRange(tag, known) {
+  const m = normTag(known).match(/(\d+(?:\.\d+)?)\s*[–-]\s*(\d+(?:\.\d+)?)/);
+  if (!m || headOf(tag) !== headOf(known)) return false;
+  const lo = parts(m[1]); const hi = parts(m[2]);
+  const cited = (normTag(tag).match(/\d+(?:\.\d+)?/g) || []).map(parts);
+  return cited.length > 0 && cited.every(c => cmp(c, lo) >= 0 && cmp(c, hi) <= 0);
+}
+
 // A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
-// of "DL 7.179–7.181"), or a shortened form naming the same place
-// ("Lectures XI" for "Musonius, Lecture XI, p. 81").
+// of "DL 7.179–7.181"), a place inside a retrieved range ("DL 7.180–7.181" of
+// "DL 7.180–7.183"), or a shortened form naming the same place ("Lectures XI"
+// for "Musonius, Lecture XI, p. 81").
 function isRetrieved(tag, retrievedTags) {
   const known = retrievedTags.map(normTag);
   const n = normTag(tag);
   if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
+  if (known.some(k => withinRange(tag, k))) return true;
   const place = placeOf(tag);
   return place.length > 0 && known.some(k => {
     const kp = placeOf(k);

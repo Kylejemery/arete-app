@@ -24,6 +24,14 @@ test('retrieved tags, their prefixes, and shortened forms are left alone', () =>
   assert.equal(r.text, text);
 });
 
+test('a narrower range inside a retrieved range is retrieved; one outside it, or in another work, is not', () => {
+  const tags = ['[DL 7.180–7.183]', '[DL 7.177–7.180]'];
+  assert.deepEqual(checkCitations('He wrote daily [DL 7.180–7.181].', tags).unmatched, []);
+  assert.deepEqual(checkCitations('He wrote daily [DL 7.182].', tags).unmatched, []);
+  assert.deepEqual(checkCitations('He wrote daily [DL 7.190].', tags).unmatched, ['[DL 7.190]']);
+  assert.deepEqual(checkCitations('He wrote daily [Seneca, Ep. 7.181].', tags).unmatched, ['[Seneca, Ep. 7.181]']);
+});
+
 test('dates and asides in parentheses are never rewritten', () => {
   const text = 'Seneca died (AD 65) at Nero\'s order; Zeno came to Athens (c. 300 BC) and taught (about 2 hours a day, by one report).';
   assert.equal(checkCitations(text, []).text, text);
