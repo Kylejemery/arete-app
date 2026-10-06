@@ -22,6 +22,8 @@
 #   4543eb65-0f06-4015-ad10-c0842f31fecc  Alexander, in APr. I, ed. Wallies, CAG II.1 (1883), Greek
 #     17.10-25, 18.1-20, 283.12-24, 284.10-18, transcribed from the page images
 #     with the bearing apparatus; public_domain. Locators are page.line.
+#   36848d34-d68e-4ad4-8bbe-04091fd0dc7b  Alexander, in Top., ed. Wallies, CAG II.2 (1891), Greek
+#     10.5-14, transcribed from the page image with its apparatus; public_domain.
 #   ca2d7557-ef76-49c7-a3d7-bee6c0b78b32  Sextus, Against the Logicians, tr. Bury (Loeb 1935)
 #     pp. 353-363, 385-389, 415-419, 463-465, 469-471, 481 proofread against the scan
 #     (version 2; version 1, 1349a6e0-dedf-436c-afbb-6fafbc1bfa81, is deprecated).
@@ -117,7 +119,7 @@
 
 - id: S015
   replaces: "(merged into S014 by Kyle, 2026-09-30; id retired)"
-  proposal: "None. The S014 proposal covers the form, and now quotes its second example (ἀναπνεῖς, ζῇς ἄρα) from Alex. in APr. 17.18-21 (CAG II.1, stored). See also in Top. 8-9 (CAG II.2, not stored)."
+  proposal: "None. The S014 proposal covers the form, and now quotes its second example (ἀναπνεῖς, ζῇς ἄρα) from Alex. in APr. 17.18-21 (CAG II.1, stored). See also in Top. 8-9 (CAG II.2; only 10.5-14 is stored)."
 
 - id: S016
   replaces: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
@@ -193,31 +195,48 @@
 
 - id: S011
   replaces: "Alexander of Aphrodisias, in APr., as reported in Zeller, ch. V n.239"
-  source: "Alexander of Aphrodisias, in APr. 18.14-17 (ed. Wallies, CAG II.1, 1883)"
-  research_ref: {source_id: 4543eb65-0f06-4015-ad10-c0842f31fecc, locator: "in APr. 18.14-17"}
-  passage: |
-    τὸ γὰρ χρειῶδες τοῦ συλλογισμοῦ οὐ παρέχεται τὸ ‘εἰ ἡμέρα ἐστίν, φῶς
-    ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· φῶς ἄρα ἐστί’, καὶ ὅλως οἱ λεγόμενοι ὑπὸ τῶν
-    νεωτέρων ἀδιαφόρως περαίνοντες.
+  source: "Alexander of Aphrodisias, in Top. 10.7-12 (ed. Wallies, CAG II.2, 1891); Alexander of Aphrodisias, in APr. 18.14-17 (ed. Wallies, CAG II.1, 1883)"
+  research_ref:
+    - {source_id: 36848d34-d68e-4ad4-8bbe-04091fd0dc7b, locator: "in Top. 10.7-12"}
+    - {source_id: 4543eb65-0f06-4015-ad10-c0842f31fecc, locator: "in APr. 18.14-17"}
+  passages:
+    - ref: 0
+      text: |
+        οἷοί εἰσι κατὰ τοὺς ἀπὸ τῆς Στοᾶς οἱ διφορούμενοί τε καὶ οἱ
+        ἀδιαφόρως περαίνειν ὑπ' αὐτῶν λεγόμενοι. διφορούμενοι μὲν γάρ εἰσι
+        κατ' αὐτοὺς οἱ τοιοῦτοι ‘εἰ ἡμέρα ἐστίν, ἡμέρα ἐστίν· ἀλλὰ μὴν ἡμέρα
+        ἐστίν· ἡμέρα ἄρα ἐστίν’· ἀδιαφόρως δὲ περαίνοντες ἐν οἷς τὸ
+        συμπέρασμα ταὐτόν ἐστιν ἑνὶ τῶν λημμάτων, ὡς ἐπὶ τῶν τοιούτων ‘ἤτοι
+        ἡμέρα ἐστὶν ἢ φῶς ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· ἡμέρα ἄρα ἐστίν’.
+    - ref: 1
+      text: |
+        τὸ γὰρ χρειῶδες τοῦ συλλογισμοῦ οὐ παρέχεται τὸ ‘εἰ ἡμέρα ἐστίν, φῶς
+        ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· φῶς ἄρα ἐστί’, καὶ ὅλως οἱ λεγόμενοι ὑπὸ
+        τῶν νεωτέρων ἀδιαφόρως περαίνοντες.
   witnesses:
-    - "Alex. in Top. 10.7-13 (CAG II.2, Wallies 1891, not stored): attributed to 'those from the Stoa'; the ἀδιαφόρως περαίνοντες are those 'in which the conclusion is the same as one of the premisses', e.g. ἤτοι ἡμέρα ἐστὶν ἢ φῶς ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· ἡμέρα ἄρα ἐστίν. Checked against the page image. Wallies prints 'or it is light'; Zeller n.239 has 'or night'. This, not in APr., is the passage that gives S011's disjunctive schema."
     - "Alex. in APr. 20.11 and 164.25-31 (CAG II.1): further mentions (Wallies's index), no disjunctive example; not stored."
   notes: |
-    Stored and quoted: in APr. 18.14-17, where Alexander names the ἀδιαφόρως
-    περαίνοντες of 'the moderns' (and, 18.17-18, the διφορούμενοι: 'if it is
-    day, it is day; but it is day; therefore it is day'). Two cautions from
-    Wallies's apparatus, both read against the page image. (1) The example as
-    printed concludes 'therefore it is light' (φῶς, MSS LM): a plain first
-    indemonstrable. MSS aB read ἡμέρα, 'therefore it is day', which makes the
-    conclusion one of the premisses. (2) ἀδιαφόρως is the Aldine's reading;
-    BLM have διαφόρως, and B διαφορούμενοι. So in APr. supports the name and
-    the idea, conditionally on the reading, but not S011's disjunctive schema.
-    That schema ("either p or q; p; therefore p") is attested in in Top.
-    10.7-13 (CAG II.2), with the disjunct "it is light", not "it is night";
-    the form is the same. Storing CAG II.2 would let the ledger quote it.
+    in Top. 10.7-12 (stored 2026-10-06, read against the page image) is the
+    witness for S011's schema. Alexander attributes both kinds to 'those from
+    the Stoa': the διφορούμενοι ('if it is day, it is day; but it is day;
+    therefore it is day') and the ἀδιαφόρως περαίνοντες, 'in which the
+    conclusion is the same as one of the premisses', e.g. 'either it is day or
+    it is light; but it is day; therefore it is day'. The schema "either p or
+    q; p; therefore p" is attested with the disjunct "it is light", not "it is
+    night" as in Zeller n.239; the form is the same.
+    What the text rests on, from Wallies's apparatus: (1) ἀδιαφόρως (10.8,
+    10.10) is Prantl's emendation; every manuscript reads διαφόρως. (2) ἤτοι
+    ('either', 10.11) is added in P's margin by a later hand (P3). (3) ἐστὶν ἢ
+    ('is, or', 10.12) is corrected in B by B2 from ἐστὶ; A reads ἐστὶν εἰ
+    ('is, if'). So the disjunctive example rests on later corrections, and the
+    name on an emendation. The attribution to the Stoa (10.7) has no variant.
+    in APr. 18.14-17 (CAG II.1) names the same class of 'the moderns', with
+    the same emendation question (ἀδιαφόρως a: διαφόρως BLM) and an example
+    that, as printed (φῶς, LM), is a plain first indemonstrable; aB read
+    ἡμέρα, which makes the conclusion repeat a premiss.
   scans:
     - "CAG II.1: https://archive.org/details/alexandriinaris00berlgoog (also bub_gb_ZMIOAAAAQAAJ)"
-    - "CAG II.2: https://archive.org/details/commentariainar01michgoog"
+    - "CAG II.2: https://archive.org/details/commentariainar01michgoog (title page: 1891)"
 
 - id: T04
   file: rules.yaml
