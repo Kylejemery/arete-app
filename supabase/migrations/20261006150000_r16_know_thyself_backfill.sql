@@ -22,10 +22,9 @@
 -- Scroll (startFirstScrollIfMissing), so these users get one on their next
 -- visit.
 --
--- Idempotent: a second run touches nothing. Reads only whether fields are
+-- Idempotent: a second run touches nothing. The migration tool runs it in one
+-- transaction, so it has no begin or commit of its own. Reads only whether fields are
 -- empty, never their text.
-
-begin;
 
 with eligible as (
   select p.id as user_id
@@ -61,4 +60,3 @@ from flagged f
 where s.user_id = f.id
   and s.kt_completed_at is null;
 
-commit;
