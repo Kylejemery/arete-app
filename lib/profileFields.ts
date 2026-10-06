@@ -18,16 +18,19 @@ export interface ProfileField {
   question: string;
   priority: number;
   sensitive: boolean;
+  // One of the three short step fields; all three filled is what "Know
+  // Thyself complete" means (decision D7).
+  completion?: boolean;
 }
 
 export const PROFILE_FIELDS: ProfileField[] = [
   { key: 'feedback_style', column: 'feedback_preference', question: 'How do you want your Cabinet to challenge you?', priority: 1, sensitive: false },
   { key: 'arete_reason', column: 'app_usage_intent', question: 'What brought you to Arete?', priority: 2, sensitive: false },
-  { key: 'top_goal', column: 'kt_goals', question: 'What are your goals right now?', priority: 3, sensitive: false },
-  { key: 'main_obstacle', column: 'kt_weaknesses', question: 'Where do you consistently fall short?', priority: 4, sensitive: false },
+  { key: 'top_goal', column: 'kt_goals', question: 'What are your goals right now?', priority: 3, sensitive: false, completion: true },
+  { key: 'main_obstacle', column: 'kt_weaknesses', question: 'Where do you consistently fall short?', priority: 4, sensitive: false, completion: true },
   { key: 'life_situation', column: 'kt_life_situation', question: 'What does your life look like right now?', priority: 5, sensitive: true },
   { key: 'background', column: 'kt_background', question: 'Background & Life Story', priority: 6, sensitive: true },
-  { key: 'hard_times_pattern', column: 'kt_patterns', question: 'What do you do when things get hard?', priority: 7, sensitive: false },
+  { key: 'hard_times_pattern', column: 'kt_patterns', question: 'What do you do when things get hard?', priority: 7, sensitive: false, completion: true },
   { key: 'identity', column: 'kt_identity', question: 'Professional Identity & Pursuits', priority: 8, sensitive: false },
   { key: 'strengths', column: 'kt_strengths', question: 'Strengths', priority: 9, sensitive: false },
   { key: 'future_self', column: 'future_self_description', question: 'Who do you want to become?', priority: 10, sensitive: false },
@@ -35,7 +38,9 @@ export const PROFILE_FIELDS: ProfileField[] = [
   { key: 'off_limits', column: 'kt_off_limits', question: 'Anything your Cabinet should never bring up?', priority: 12, sensitive: true },
 ];
 
-export const TOP_FIVE_KEYS = PROFILE_FIELDS.filter(f => f.priority <= 5).map(f => f.key);
+// The completion set (decision D7, 2026-10-06): goals, where you fall short,
+// and what you do when things get hard. Everything else is the expanded form.
+export const COMPLETION_KEYS = PROFILE_FIELDS.filter(f => f.completion).map(f => f.key);
 
 export const SOURCE_LABELS: Record<FactSource, string> = {
   form: 'You wrote this',
@@ -115,8 +120,8 @@ export function completenessScore(facts: ProfileFact[], settings: Record<string,
   return total ? got / total : 0;
 }
 
-export function topFiveFilled(facts: ProfileFact[], settings: Record<string, unknown> | null): boolean {
-  return TOP_FIVE_KEYS.every(k => isFieldFilled(k, facts, settings));
+export function completionFieldsFilled(facts: ProfileFact[], settings: Record<string, unknown> | null): boolean {
+  return COMPLETION_KEYS.every(k => isFieldFilled(k, facts, settings));
 }
 
 export async function confirmFact(fact: ProfileFact): Promise<boolean> {

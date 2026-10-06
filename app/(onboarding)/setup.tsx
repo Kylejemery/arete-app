@@ -145,7 +145,7 @@ export default function SetupScreen() {
       cabinet_members: activeMembers,
     });
     // The wizard has collected the Know Thyself answers; if they meet the
-    // completion rule (goals plus two more), the Home banner, Scrolls empty
+    // completion rule (the three short step fields, D7), the Home banner, Scrolls empty
     // state and counselor prompt stop treating this user as unprofiled and
     // the first Scroll starts. Previously only the conversational agent set
     // the flag, and wizard completers were nagged to "Meet Your Future Self".

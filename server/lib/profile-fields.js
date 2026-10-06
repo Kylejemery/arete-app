@@ -13,6 +13,8 @@
 //   sensitive  touches health, loss or relationships: never inferred; only
 //              the user can fill it (the form, or answering a direct question)
 //   askable    false = the Cabinet never asks about it
+//   completion true = one of the three short step fields; all three filled
+//              is what "Know Thyself complete" means (decision D7)
 //   keywords   words that make the field relevant to the current topic
 
 const PROFILE_FIELDS = [
@@ -42,6 +44,7 @@ const PROFILE_FIELDS = [
     question: 'What are your goals right now?',
     phrasing: 'the one thing they most want to accomplish right now',
     priority: 3,
+    completion: true,
     sensitive: false,
     askable: true,
     keywords: ['goal', 'want', 'trying', 'achieve', 'build', 'plan', 'improve', 'better', 'career', 'train'],
@@ -52,6 +55,7 @@ const PROFILE_FIELDS = [
     question: 'Where do you consistently fall short?',
     phrasing: 'what usually gets in their way',
     priority: 4,
+    completion: true,
     sensitive: false,
     askable: true,
     keywords: ['procrastinat', 'stuck', 'lazy', 'fail', 'quit', 'distract', 'discipline', 'motivation', 'keep', 'again'],
@@ -82,6 +86,7 @@ const PROFILE_FIELDS = [
     question: 'What do you do when things get hard?',
     phrasing: 'what they tend to do when things get hard',
     priority: 7,
+    completion: true,
     sensitive: false,
     askable: true,
     keywords: ['hard', 'stress', 'pressure', 'cope', 'avoid', 'shut down', 'overwhelm', 'difficult'],
@@ -139,8 +144,9 @@ const PROFILE_FIELDS = [
 ];
 
 const FIELD_BY_KEY = Object.fromEntries(PROFILE_FIELDS.map(f => [f.key, f]));
-const TOP_FIVE_KEYS = PROFILE_FIELDS.filter(f => f.priority <= 5).map(f => f.key);
+// The completion set (decision D7, 2026-10-06): the three short step fields.
+const COMPLETION_KEYS = PROFILE_FIELDS.filter(f => f.completion).map(f => f.key);
 // Sources the user authored; never overwritten by extraction.
 const USER_SOURCES = new Set(['form', 'cabinet_asked', 'user_confirmed']);
 
-module.exports = { PROFILE_FIELDS, FIELD_BY_KEY, TOP_FIVE_KEYS, USER_SOURCES };
+module.exports = { PROFILE_FIELDS, FIELD_BY_KEY, COMPLETION_KEYS, USER_SOURCES };
