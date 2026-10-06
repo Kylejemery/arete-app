@@ -51,7 +51,7 @@
     "author": "Plato",
     "work": "Apology",
     "tier": 1,
-    "chunk_threshold": 50,
+    "chunk_threshold": 33,
     "source_type": "public_domain",
     "notes": "The examined life. Socrates as the model of philosophical courage."
   },

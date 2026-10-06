@@ -833,27 +833,22 @@ const probes = [
     async run(ctx) {
       // Guardrail 1 of themata/THEMATA_PROJECT.md: every ledger passage must be
       // an exact substring (whitespace collapsed) of a live chunk named by
-      // corpus_ref, or pass research_source_contains for its research_ref.
-      // scripts/themata/verify_ledger.py makes the same check by hand; keep the
-      // two in step. A deprecation, a re-chunk or a text fix upstream can break
-      // an entry without anyone touching the ledger.
+      // corpus_ref, or pass research_quotation_problems for its research_ref.
+      // The rules live in one place, the database function
+      // themata_ledger_problems, which scripts/themata/verify_ledger.py calls
+      // too; this probe only parses the YAML and reports what comes back. A
+      // deprecation, a re-chunk or a text fix upstream can break an entry
+      // without anyone touching the ledger.
       const YAML = require('yaml');
       const files = ['themata/evidence/suite.yaml', 'themata/evidence/rules.yaml'];
-      const collapse = s => String(s || '').replace(/\s+/g, ' ').trim();
-      const fragments = p => String(p || '')
-        .split(/\s*(?:…|\.\.\.)\s*/)
-        .map(collapse)
-        .filter(f => f.length >= 8);
 
-      const entries = [];
+      const byFile = [];
       for (const rel of files) {
         const abs = path.join(ctx.repoRoot, rel);
         if (!fs.existsSync(abs)) continue;
-        for (const e of YAML.parse(fs.readFileSync(abs, 'utf8')) || []) {
-          entries.push({ file: path.basename(rel, '.yaml'), e });
-        }
+        byFile.push({ file: path.basename(rel, '.yaml'), entries: YAML.parse(fs.readFileSync(abs, 'utf8')) || [] });
       }
-      if (!entries.length) {
+      if (!byFile.some(f => f.entries.length)) {
         return [finding({
           probe: 'repo.themata_ledger', domain: DOMAIN, severity: 'info',
           title: 'No Themata ledger in this checkout',
@@ -863,53 +858,14 @@ const probes = [
         })];
       }
 
-      const ids = [...new Set(entries.map(x => x.e.corpus_ref).filter(Boolean))];
-      const chunks = new Map();
-      for (let i = 0; i < ids.length; i += 100) {
-        const { data, error } = await ctx.supabase
-          .from('rag_corpus').select('id, chunk_text, deprecated')
-          .in('id', ids.slice(i, i + 100));
-        if (error) throw new Error(`rag_corpus read failed: ${error.message}`);
-        for (const row of data || []) chunks.set(row.id, row);
-      }
-
       const failures = [];
-      for (const { file, e } of entries) {
-        const problems = [];
-        if (e.corpus_ref) {
-          const row = chunks.get(e.corpus_ref);
-          const frs = fragments(e.passage);
-          if (!row) problems.push(`corpus_ref ${e.corpus_ref} is not in rag_corpus`);
-          else {
-            if (row.deprecated) problems.push(`corpus_ref ${e.corpus_ref} is deprecated`);
-            if (!frs.length) problems.push('the passage has nothing left to check');
-            const text = collapse(row.chunk_text);
-            const missing = frs.filter(f => !text.includes(f));
-            if (missing.length) problems.push(`not in the chunk: “${missing[0].slice(0, 80)}”`);
-          }
+      for (const { file, entries } of byFile) {
+        if (!entries.length) continue;
+        const { data, error } = await ctx.supabase.rpc('themata_ledger_problems', { p_entries: entries });
+        if (error) throw new Error(`themata_ledger_problems failed: ${error.message}`);
+        for (const row of data || []) {
+          if (row.problems && row.problems.length) failures.push({ file, id: row.entry_id, problems: row.problems });
         }
-        const refs = e.research_ref
-          ? (Array.isArray(e.research_ref) ? e.research_ref : [e.research_ref]) : [];
-        const texts = Array.isArray(e.research_ref)
-          ? (e.passages || []) : (e.research_ref ? [{ ref: 0, text: e.passage }] : []);
-        if (refs.length && !texts.some(t => fragments(t.text).length)) {
-          problems.push('research_ref has no passage to check');
-        }
-        for (const t of texts) {
-          const ref = refs[t.ref];
-          if (!ref) { problems.push(`passage points at research_ref ${t.ref}, which does not exist`); continue; }
-          for (const f of fragments(t.text)) {
-            const { data, error } = await ctx.supabase.rpc('research_source_contains', {
-              p_source: ref.source_id, p_passage: f,
-            });
-            if (error) throw new Error(`research_source_contains failed: ${error.message}`);
-            if (data !== true) {
-              problems.push(`${ref.locator}: research_source_contains is false (source deprecated, licence unconfirmed, or text changed)`);
-              break;
-            }
-          }
-        }
-        if (problems.length) failures.push({ file, id: e.id, problems });
       }
 
       return failures.map(f => finding({
@@ -919,7 +875,8 @@ const probes = [
         title: `Themata ${f.file} ${f.id}: its passage is not in the live store it cites`,
         detail:
           'Guardrail 1: every ledger passage must be verbatim in a live rag_corpus chunk ' +
-          '(corpus_ref) or pass research_source_contains (research_ref). This one no longer ' +
+          '(corpus_ref) or pass research_quotation_problems (research_ref); the check is ' +
+          'themata_ledger_problems. This one no longer ' +
           'does, so the harness is running an item whose evidence cannot be shown. ' +
           f.problems.join('; ') + '.',
         action:

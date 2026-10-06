@@ -153,13 +153,26 @@ export default function MorningPage() {
     }
   };
 
-  const toggleTask = async (id: string) => {
+  // R15: toggle saves run one after another on this chain. Two quick ticks
+  // used to fire two upserts at once, and when the first landed last the row
+  // read "1 of 2" while the page showed 2 of 2. The send handler waits on the
+  // same chain, and the button is held while a save is pending.
+  const taskSaveChain = useRef<Promise<void>>(Promise.resolve());
+  const [pendingTaskSaves, setPendingTaskSaves] = useState(0);
+
+  const toggleTask = (id: string) => {
     const updated = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
     setTasks(updated);
     persistDone(updated);
     const allDone = updated.length > 0 && updated.every(t => t.done);
-    await upsertTodayCheckin({ morning_tasks: updated, morning_done: allDone });
-    if (allDone) await incrementStreak();
+    setPendingTaskSaves(n => n + 1);
+    taskSaveChain.current = taskSaveChain.current
+      .then(async () => {
+        await upsertTodayCheckin({ morning_tasks: updated, morning_done: allDone });
+        if (allDone) await incrementStreak();
+      })
+      .catch(() => { /* upsertTodayCheckin logs its own errors */ })
+      .finally(() => setPendingTaskSaves(n => n - 1));
   };
 
   const addTask = async () => {
@@ -194,7 +207,11 @@ export default function MorningPage() {
     setIsLoading(true);
     const isRetry = checkInDone;
     try {
-      const result = await sendCheckInToCabinet('morning', { affirmation: MORNING_QUOTE });
+      // R15: let every tick land first, then tell the Cabinet exactly what
+      // the page shows rather than re-reading the row.
+      await taskSaveChain.current;
+      await flushIntention();
+      const result = await sendCheckInToCabinet('morning', { affirmation: MORNING_QUOTE, tasks, intention });
       // The routine is complete either way; only a real reply is ever stored.
       await upsertTodayCheckin(
         result.ok ? { cabinet_morning_response: result.text, morning_done: true } : { morning_done: true }
@@ -484,7 +501,7 @@ export default function MorningPage() {
                 </p>
                 <button
                   onClick={handleCheckIn}
-                  disabled={isLoading}
+                  disabled={isLoading || pendingTaskSaves > 0}
                   className="text-[12px] font-semibold px-4 py-2 rounded-lg disabled:opacity-50 flex-shrink-0"
                   style={{ background: 'rgba(201,168,76,0.13)', border: '1px solid rgba(201,168,76,0.53)', color: '#c9a84c' }}
                 >
@@ -516,7 +533,7 @@ export default function MorningPage() {
         ) : (
           <button
             onClick={handleCheckIn}
-            disabled={isLoading}
+            disabled={isLoading || pendingTaskSaves > 0}
             className="w-full rounded-2xl px-4 py-4 flex justify-between items-center disabled:opacity-60 disabled:cursor-not-allowed transition-opacity hover:opacity-90"
             style={{ background: 'linear-gradient(135deg, #e3c77a, #8a6f27)' }}
           >
@@ -525,13 +542,13 @@ export default function MorningPage() {
                 className="text-[9.5px] tracking-[1.6px] font-bold"
                 style={{ fontFamily: 'var(--font-mono, monospace)', color: '#0f1724' }}
               >
-                {isLoading ? 'SPEAKING…' : 'SEND TO CABINET'}
+                {isLoading ? 'SPEAKING…' : pendingTaskSaves > 0 ? 'SAVING…' : 'SEND TO CABINET'}
               </div>
               <div
                 className="text-[18px] font-semibold mt-0.5"
                 style={{ fontFamily: 'var(--font-serif, Georgia, serif)', color: '#0f1724' }}
               >
-                {isLoading ? 'Your Cabinet speaks…' : 'Begin with the Cabinet ☀️'}
+                {isLoading ? 'Your Cabinet speaks…' : pendingTaskSaves > 0 ? 'Saving…' : 'Begin with the Cabinet ☀️'}
               </div>
             </div>
             <span className="text-xl font-bold" style={{ color: '#0f1724' }}>→</span>

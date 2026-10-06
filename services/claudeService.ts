@@ -2,7 +2,8 @@ import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { fetch as expoFetch } from 'expo/fetch';
 import { readCabinetResponse, type CabinetStreamEvent } from '../lib/cabinetStream';
 import { pronounsFor } from '../lib/pronouns';
-import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
+import { ThreadMessage, appendMessages, getContextWindow, loadThread } from './threadService';
+import { checkInThreadBlock } from '../lib/checkinThread';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
@@ -1112,9 +1113,12 @@ function checkInFailure(status: number, body: string): CheckInResult {
 
 // `affirmation` is the quote the screen actually displayed, so the prompt's
 // "Affirmation shown" line is true (R4). Falls back to the day's entry.
+// `tasks` and `intention` (R15) are what the screen shows at the moment of
+// sending. When given they are used instead of today's row, so a save still
+// in flight can never make the Cabinet read a stale tick.
 export async function sendCheckInToCabinet(
   type: 'morning' | 'evening',
-  options: { affirmation?: string } = {}
+  options: { affirmation?: string; tasks?: { title: string; done: boolean }[]; intention?: string } = {}
 ): Promise<CheckInResult> {
   try {
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
@@ -1125,7 +1129,7 @@ export async function sendCheckInToCabinet(
     let userMessage: string;
 
     if (type === 'morning') {
-      const morningTasks = checkin?.morning_tasks ?? [];
+      const morningTasks = options.tasks ?? checkin?.morning_tasks ?? [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -1140,23 +1144,28 @@ export async function sendCheckInToCabinet(
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
       const affirmation = options.affirmation?.trim() || affirmations[day];
-      const intention = (checkin?.intention || '').trim();
+      const intention = (options.intention ?? checkin?.intention ?? '').trim();
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
       userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
-      const eveningTasks = checkin?.evening_tasks ?? [];
+      const eveningTasks = options.tasks ?? checkin?.evening_tasks ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
       const stoic = checkin?.stoic_answer || '(not answered)';
-      const intention = (checkin?.intention || '').trim();
+      const intention = (options.intention ?? checkin?.intention ?? '').trim();
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
       userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }
 
     const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    // R14: what the person already told the Cabinet today (last night's, for
+    // the morning), so the check-in builds on it instead of asking again.
+    const cabinetThread = await loadThread('cabinet').catch(() => null);
+    const threadBlock = checkInThreadBlock(cabinetThread?.messages ?? [], type);
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
-      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '');
+      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '')
+      + (threadBlock ? '\n\n---\n\n' + threadBlock : '');
 
     const { data: { user: _ciUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {

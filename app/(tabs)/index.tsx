@@ -10,7 +10,7 @@ import YesterdayCard from '../../components/YesterdayCard';
 import { fetchFollowup, isYesterdayAnswered, localDate, markYesterdayCardSeenToday, type YesterdayCard as YesterdayCardData } from '@/lib/yesterday';
 import WhatsNewModal from '../../components/WhatsNewModal';
 import YourPractices from '../../components/YourPractices';
-import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, upsertUserSettings } from '@/lib/db';
+import { getUserSettings, getTodayCheckin, getRandomCabinetQuote, checkAndResetStreakIfMissed, upsertUserSettings, getKnowThyselfComplete } from '@/lib/db';
 import { useSubscription } from '@/lib/useSubscription';
 import { normalizeCounselorId } from '../../services/threadService';
 import { prefetchDailyQuestion } from '../../services/claudeService';
@@ -72,6 +72,8 @@ export default function HomeScreen() {
   const [morningDone, setMorningDone] = useState(false);
   const [eveningDone, setEveningDone] = useState(false);
   const [streak, setStreak] = useState(0);
+  // D9: the one Know Thyself prompt on Home, shown while the flag is false.
+  const [knowThyselfIncomplete, setKnowThyselfIncomplete] = useState(false);
   // R8: yesterday's intention and a counselor's follow-up, top of Home.
   const [yesterdayCard, setYesterdayCard] = useState<YesterdayCardData | null>(null);
   const [namePromptVisible, setNamePromptVisible] = useState(false);
@@ -113,6 +115,9 @@ export default function HomeScreen() {
     if (!settings?.user_name && !namePromptSkipped) {
       setNamePromptVisible(true);
     }
+    getKnowThyselfComplete()
+      .then(complete => setKnowThyselfIncomplete(!complete))
+      .catch(() => {});
 
     const [checkin, freshStreak] = await Promise.all([
       getTodayCheckin(),
@@ -290,6 +295,26 @@ export default function HomeScreen() {
         <View style={styles.quoteSkeleton} />
       )}
 
+      {/* Know Thyself prompt (D9): the only one on Home, until the flag is set */}
+      {knowThyselfIncomplete && (
+        <TouchableOpacity
+          style={styles.ktBanner}
+          onPress={() => router.push('/know-thyself' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.ktBannerIcon}>
+            <Text style={styles.ktBannerIconGlyph}>✦</Text>
+          </View>
+          <View style={styles.ktBannerBody}>
+            <Text style={styles.ktBannerKicker}>Know Thyself</Text>
+            <Text style={styles.ktBannerText}>
+              Tell your Cabinet who you are. Three questions, about two minutes. They will answer differently afterward.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color="#c9a84c" />
+        </TouchableOpacity>
+      )}
+
       {/* Status Pills */}
       <View style={styles.pillRow}>
         <TouchableOpacity
@@ -446,6 +471,48 @@ const styles = StyleSheet.create({
     height: 90,
     marginBottom: 20,
     opacity: 0.4,
+  },
+  ktBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(201, 168, 76, 0.09)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.35)',
+  },
+  ktBannerIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(201, 168, 76, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(201, 168, 76, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ktBannerIconGlyph: {
+    color: '#c9a84c',
+    fontSize: 18,
+  },
+  ktBannerBody: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ktBannerKicker: {
+    color: '#c9a84c',
+    fontSize: 9.5,
+    letterSpacing: 1.6,
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  ktBannerText: {
+    color: '#e6eef8',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 4,
   },
   nameModalOverlay: {
     flex: 1,

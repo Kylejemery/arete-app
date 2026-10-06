@@ -128,8 +128,8 @@ export default function ProfilePage() {
     logFormFieldsFilled(settingsSnapshot, update);
     setSettingsSnapshot({ ...(settingsSnapshot || {}), ...update });
     setFactsReload(n => n + 1);
-    // Saving the form completes Know Thyself once goals plus two other
-    // answers are filled (the rule lives in markKnowThyselfComplete). That
+    // Saving the form completes Know Thyself once the three short step
+    // answers (D7) are filled (the rule lives in markKnowThyselfComplete). That
     // clears the home banner and the Scrolls empty state, which key on
     // profiles.know_thyself_complete, and starts the first Scroll.
     const complete = await markKnowThyselfComplete();
@@ -160,8 +160,8 @@ export default function ProfilePage() {
     fontFamily: 'var(--font-serif, Georgia, serif)',
   };
 
-  // The short step: goals plus two more is the completion rule (R3), so
-  // these three alone complete Know Thyself.
+  // The short step: these three are the completion set (decision D7), so
+  // they alone complete Know Thyself.
   const shortSections = [
     { label: 'Goals', sub: 'What are you working toward? Be specific.', placeholder: 'Finish the book draft by December. Run a half marathon in the spring.', value: goals, onChange: setGoals, rows: 4 },
     { label: 'Where you consistently fall short', sub: 'The thing you already know about yourself.', placeholder: 'I say yes to everything and then resent the calendar.', value: weaknesses, onChange: setWeaknesses, rows: 3 },

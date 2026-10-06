@@ -755,3 +755,97 @@ Export counts change only by S015's share: 13,464 distinct searches
 S012), and 30 losses per view are proven (was 32; the other two were
 S015's). Mentions of S015 above this entry are the record of earlier work
 and are left as they were.
+
+## Bury's Outlines replaces Mates; quotation_only (2026-10-05)
+
+Kyle's rulings (2026-10-02, 2026-10-05): the PH II quotations come from
+Bury's Loeb volume I (1933), not Mates; short scholarly quotation does not
+depend on the renewal question; a new licence status says so and the database
+enforces it.
+
+- **The status.** `quotation_only` (migration `20261005184546`). The check is
+  `research_quotation_problems(source, passage, attribution, locator)`, which
+  returns its reasons; `research_source_contains` is true when there are none.
+  For a `quotation_only` source the whole quotation (fragments joined by
+  ellipses) is at most 60 words, the attribution names author, work,
+  translator and edition year, and a locator is given. The ledger's `source`
+  line is the attribution. Triggers keep such a work out of `rag_corpus` in
+  both directions, and `full_text` is no longer readable through the API for
+  any source, so the full text cannot be exported, to the Themata Machine page
+  or anywhere else. `verify_ledger.py` and the auditor's
+  `repo.themata_ledger` both send whole quotations now.
+- **The text.** PH Book II, pp. 151-323, from the DLI scan
+  `in.ernet.dli.2015.183761`, built by the same script as Against the
+  Logicians; pp. 245-259 (the cited sections) and the Greek of 146-147
+  proofread against the page images. `research_sources` `937d0561`.
+- **S016.** Mates prints PH II 147's example as two premisses; Bury's English
+  has a conjunct ("it is day and Dion also is walking"), like M VIII 431. The
+  Greek (ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ καὶ Δίων περιπατεῖ) can be read either
+  way, and Sextus's definition calls the extra item a superfluous premiss
+  (λῆμμα παρέλκον). The earlier contrast between the two works was an artefact
+  of the translation. Both the English and the Greek are now quoted; the
+  encoding question stays parked until after Kyle's sign-offs.
+
+## Wallies's Alexander stored; one ledger check (2026-10-05)
+
+- **The text.** CAG II.1 (Wallies 1883), `research_sources` `4543eb65`:
+  in APr. 17.10-25, 18.1-20, 283.12-24, 284.10-18, transcribed by hand from
+  the page images. Each passage is continuous text (words divided at line ends
+  rejoined) followed by a line index, so quotations check as substrings and
+  locators still go to page.line; the bearing apparatus entries follow each
+  passage.
+- **284.** The page image puts the Stoics' themata at 284.10-18 (Wallies's
+  index pointed to 284.19). The Peripatetics handed down the synthetic theorem
+  as far as use required; "those from the Stoa" took it, divided it, and made
+  from it their second, third and fourth thema, neglecting the useful. At
+  284.13 Στοᾶς is MS B's reading, the Aldine has τοῦ, and Wallies notes that B
+  confirms Zeller's conjecture. The Stoic attribution rests on B.
+- **S011.** in APr. 18.14-17 names the ἀδιαφόρως περαίνοντες of "the moderns",
+  but ἀδιαφόρως is the Aldine's reading (BLM διαφόρως), and the example as
+  printed (φῶς, LM) is a plain first indemonstrable; aB's ἡμέρα makes the
+  conclusion repeat a premiss. The disjunctive schema S011 encodes is in in
+  Top. 10.7-13 (CAG II.2, 1891), not stored.
+- **One check.** `themata_ledger_problems(entries)` (migration
+  `20261005191145`) holds guardrail 1: corpus_ref fragments against the live
+  chunk, research_ref quotations through `research_quotation_problems` with
+  the entry's `source` line as attribution. `verify_ledger.py` and the
+  auditor's `repo.themata_ledger` only parse the YAML and report.
+
+## First sign-offs (2026-10-05)
+
+Kyle signed off S001-S007, S009 and S020. The ledger records it as
+`verified_by_kyle: true` with `verified_on: "2026-10-05"`; the export carries
+`verified_on` and refuses a sign-off without a date.
+
+Fixes his review asked for before sign-off, added to the ledger notes as his:
+- **S008**: why DL 7.78 calls it conclusive but not syllogistic: the first
+  premise asserts that the conjunction is false, which is not the negated
+  conjunction the third indemonstrable requires, so it has the third's shape
+  but cannot be reduced to it.
+- **S010**: "valid" records the Stoic position; Cicero (Ac. II.95-96) endorses
+  the form only to turn it against them through the Liar.
+- **S018**: valid in form with a false premise; listed by DL among the
+  insoluble arguments, and Chrysippus did not accept it, falling silent before
+  the failing step (Cicero Ac. II.93, Sextus M VII.416); the three-atom chain
+  stands for the series to ten; in DL 7.82 the text sits under "the Veiled",
+  likely a lacuna, which the excerpt's ellipsis hides.
+- **S019**: non-formal, so the Machine page showed no evidence for it. The page
+  now has a section "Outside the formal suite" with each non-formal entry's
+  schema, verdict, source, passage and notes, and every item's evidence panel
+  shows its ledger notes.
+
+## S011: Alexander's in Topica stored (2026-10-06)
+
+CAG II.2 (Wallies 1891), `research_sources` `36848d34`: in Top. 10.5-14,
+transcribed from the page image with the apparatus for those lines. S011 now
+quotes 10.7-12, where Alexander attributes to "those from the Stoa" both the
+διφορούμενοι and the ἀδιαφόρως περαίνοντες, "in which the conclusion is the
+same as one of the premisses", with the example "either it is day or it is
+light; but it is day; therefore it is day".
+
+The apparatus qualifies it. ἀδιαφόρως is Prantl's emendation; every
+manuscript reads διαφόρως (the same split as in APr. 18.17, where only the
+Aldine has ἀδιαφόρως). ἤτοι is added in P's margin by a later hand, and ἢ is a
+correction in B; A reads εἰ, "if". So the disjunctive form of the example rests
+on corrections and the name on an emendation. The Stoic attribution has no
+variant. This is for Kyle's sign-off of S011 and for the specialist review.

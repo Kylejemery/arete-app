@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { getUserSettings, getScrolls, getKnowThyselfComplete } from '@/lib/db';
+import { getUserSettings, getScrolls, getKnowThyselfComplete, startFirstScrollIfMissing } from '@/lib/db';
 import type { Scroll } from '@/lib/types';
 import ChapterRule from '@/components/ChapterRule';
 
@@ -106,6 +106,14 @@ export default function ScrollsPage() {
       setStoredUserName(settings.user_name || '');
       setStoredUserId(user.id);
       setLoading(false);
+      // R16: complete but no Scroll (set by the Cabinet or the backfill, with
+      // nothing to start the first one). Start it now and show it when ready.
+      if (ktDone && data.length === 0) {
+        startFirstScrollIfMissing()
+          .then(started => (started ? getScrolls(user.id) : null))
+          .then(fresh => { if (fresh && fresh.length > 0) setScrolls(fresh); })
+          .catch(() => { /* the request form stays available */ });
+      }
     }
     load();
   }, [router]);

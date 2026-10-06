@@ -1,7 +1,8 @@
 import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { pronounsFor } from './pronouns';
 import { getUserSettings, getLatestCheckIn, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getRoutineTemplates } from './db';
-import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
+import { ThreadMessage, appendMessages, getContextWindow, loadThread } from './threadService';
+import { checkInThreadBlock } from './checkinThread';
 import { COUNSELOR_PROFILE_MAP } from './counselors';
 import { supabase } from '@/lib/supabase';
 import { readCabinetResponse, type CabinetStreamEvent } from './cabinetStream';
@@ -735,9 +736,12 @@ function checkInFailure(status: number, body: string): CheckInResult {
 // `affirmation` is the quote the page actually displayed, so the prompt's
 // "Affirmation shown" line is true (R4). Without it the morning falls back to
 // the day's entry in AFFIRMATIONS, which is what the mobile app shows.
+// `tasks` and `intention` (R15) are what the page shows at the moment of
+// sending. When given they are used instead of today's row, so a toggle whose
+// save has not landed yet can never make the Cabinet read a stale tick.
 export async function sendCheckInToCabinet(
   type: 'morning' | 'evening',
-  options: { affirmation?: string } = {}
+  options: { affirmation?: string; tasks?: { title: string; done: boolean }[]; intention?: string } = {}
 ): Promise<CheckInResult> {
   try {
     // Today's row is the source of truth for tasks and intention (the morning
@@ -747,12 +751,12 @@ export async function sendCheckInToCabinet(
     const userName = settings?.user_name || 'the user';
     // Run B, Part B4: they/them/their unless the person set pronouns.
     const pr = pronounsFor((settings as { pronouns?: string | null } | null)?.pronouns);
-    const intention = String(checkin?.intention ?? '').trim();
+    const intention = String(options.intention ?? checkin?.intention ?? '').trim();
 
     let userMessage: string;
 
     if (type === 'morning') {
-      const morningTasks = (checkin?.morning_tasks as { title: string; done: boolean }[] | null) ?? [];
+      const morningTasks = options.tasks ?? (checkin?.morning_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -770,7 +774,7 @@ export async function sendCheckInToCabinet(
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
       userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
-      const eveningTasks = (checkin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
+      const eveningTasks = options.tasks ?? (checkin?.evening_tasks as { title: string; done: boolean }[] | null) ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map(t => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -779,8 +783,15 @@ export async function sendCheckInToCabinet(
       userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }
 
-    const [systemBase, appContext] = await Promise.all([buildSystemPrompt(), gatherAppContext()]);
-    const systemPrompt = systemBase + '\n\n---\n\n' + appContext;
+    const [systemBase, appContext, cabinetThread] = await Promise.all([
+      buildSystemPrompt(),
+      gatherAppContext(),
+      loadThread('cabinet').catch(() => null),
+    ]);
+    // R14: what the person already told the Cabinet today (last night's, for
+    // the morning), so the check-in builds on it instead of asking again.
+    const threadBlock = checkInThreadBlock(cabinetThread?.messages ?? [], type);
+    const systemPrompt = systemBase + '\n\n---\n\n' + appContext + (threadBlock ? '\n\n---\n\n' + threadBlock : '');
 
     const { data: { session: checkInSession } } = await supabase.auth.getSession();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {

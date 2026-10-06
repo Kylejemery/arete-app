@@ -193,6 +193,29 @@ test('the client registries and the SQL mapping carry the same keys and columns'
   assert.deepEqual(sqlPairs, pairs);
 });
 
+test('the completion set is the three short step fields everywhere (D7)', () => {
+  const root = path.join(__dirname, '..', '..');
+  const { COMPLETION_KEYS } = require('../lib/profile-fields');
+  const expected = ['hard_times_pattern', 'main_obstacle', 'top_goal'];
+  assert.deepEqual([...COMPLETION_KEYS].sort(), expected);
+  for (const rel of ['lib/profileFields.ts', 'web/src/lib/profileFields.ts']) {
+    const src = fs.readFileSync(path.join(root, rel), 'utf8');
+    const marked = [...src.matchAll(/key: '([a-z_]+)'[^\n]*completion: true/g)].map(m => m[1]).sort();
+    assert.deepEqual(marked, expected, rel);
+  }
+  // The newest migration that redefines the completeness trigger uses them too.
+  const dir = path.join(root, 'supabase', 'migrations');
+  const latest = fs.readdirSync(dir).filter(f => /^\d+_.*\.sql$/.test(f)).sort()
+    .filter(f => fs.readFileSync(path.join(dir, f), 'utf8').includes('FUNCTION public.user_profile_facts_after_write()'))
+    .pop();
+  const sql = fs.readFileSync(path.join(dir, latest), 'utf8');
+  const m = sql.match(/f\.field_key IN \(([^)]*)\)\) = (\d+) THEN/);
+  assert.ok(m, latest);
+  const sqlKeys = [...m[1].matchAll(/'([a-z_]+)'/g)].map(x => x[1]).sort();
+  assert.deepEqual(sqlKeys, expected, latest);
+  assert.equal(Number(m[2]), expected.length, latest);
+});
+
 test('session origin mirrors the database rule', () => {
   const { messageOrigin } = require('../lib/conversation-sessions');
   assert.equal(messageOrigin({ role: 'user', content: '[Morning check-in] Sam has just completed...' }), 'check_in');

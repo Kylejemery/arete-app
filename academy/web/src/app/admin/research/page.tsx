@@ -14,6 +14,7 @@ const LICENCE_PILL: Record<LicenceStatus, string> = {
   public_domain: styles.pillOk,
   open_licence_confirmed: styles.pillOk,
   licensed_copy: styles.pillOk,
+  quotation_only: styles.pillOk,
   unconfirmed: styles.pillFailed,
 }
 
@@ -37,7 +38,7 @@ function fmtDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
-type CheckResult = { verified: boolean; citable: boolean } | { error: string }
+type CheckResult = { verified: boolean; citable: boolean; problems?: string[] } | { error: string }
 
 export default function ResearchSourcesPage() {
   const [sources, setSources] = useState<ResearchSource[]>([])
@@ -161,7 +162,9 @@ export default function ResearchSourcesPage() {
     }
     return r.verified
       ? <p className={styles.muted} style={{ marginTop: 6, color: '#2E7D4F' }}>✓ Verified: the passage is in the text.</p>
-      : <p className={styles.errText} style={{ marginTop: 6 }}>✕ Not found. Check the wording against the stored text.</p>
+      : <p className={styles.errText} style={{ marginTop: 6 }}>
+          ✕ {r.problems?.length ? r.problems.join('; ') : 'Not found. Check the wording against the stored text.'}
+        </p>
   }
 
   const live = sources.filter(s => !s.deprecated)

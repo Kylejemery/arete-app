@@ -1,4 +1,4 @@
-import { getProfileFacts, topFiveFilled, type ProfileFact } from './profileFields'
+import { getProfileFacts, completionFieldsFilled, type ProfileFact } from './profileFields'
 import { supabase } from './supabase'
 import { getDevPremiumOverride } from './devMode'
 import { triggerScrollGeneration } from './scrolls'
@@ -759,17 +759,19 @@ export async function saveOnboardingProfile(profile: OnboardingProfile): Promise
   return markKnowThyselfComplete()
 }
 
-// The one definition of "Know Thyself complete" (activation plan, Part 3):
-// the five highest priority registry fields (lib/profileFields.ts) are
-// filled, by any source: the form, an answer to a counselor, a confirmed or
-// an inferred fact. A database trigger on user_profile_facts applies the same
-// rule when the Cabinet fills a field, so the flag is set whichever way the
-// fifth field arrives. The flag is never unset.
+// The one definition of "Know Thyself complete" (decision D7, 2026-10-06):
+// the three short step fields marked `completion` in the registry
+// (lib/profileFields.ts) are filled: goals, where you consistently fall
+// short, and what you do when things get hard. Any source counts: the form,
+// an answer to a counselor, a confirmed or an inferred fact. A database
+// trigger on user_profile_facts applies the same rule when the Cabinet fills
+// a field, so the flag is set whichever way the third field arrives. The
+// flag is never unset.
 export function isKnowThyselfProfileComplete(
   s: Record<string, unknown> | null | undefined,
   facts: ProfileFact[] = [],
 ): boolean {
-  return topFiveFilled(facts, (s as Record<string, unknown> | null) ?? null)
+  return completionFieldsFilled(facts, (s as Record<string, unknown> | null) ?? null)
 }
 
 /**
@@ -788,7 +790,7 @@ export async function markKnowThyselfComplete(): Promise<boolean> {
   try {
     const { data } = await supabase
       .from('user_settings')
-      .select('user_name, kt_goals, kt_weaknesses, feedback_preference, app_usage_intent, kt_life_situation')
+      .select('user_name, kt_goals, kt_weaknesses, kt_patterns')
       .eq('user_id', userId)
       .maybeSingle()
     settings = (data as UserSettings | null) ?? null
@@ -835,6 +837,40 @@ async function ensureFirstScroll(userId: string, userName: string | null, goalsT
   } catch (e) {
     console.warn('ensureFirstScroll failed:', e)
   }
+}
+
+// One generation at a time per app session, so returning to the tab while
+// the first Scroll is still being written does not start another.
+let firstScrollInFlight: Promise<boolean> | null = null
+
+/**
+ * Retention plan R16. Mirror of web/src/lib/db.ts. The flag can be set with
+ * no client there to start the first Scroll: the user_profile_facts trigger
+ * sets it when the Cabinet fills the fifth field, and the R16 backfill sets
+ * it in SQL. The Scrolls tab calls this when the flag is set and the user has
+ * no Scroll. Resolves true once a generation has run.
+ */
+export function startFirstScrollIfMissing(): Promise<boolean> {
+  if (firstScrollInFlight) return firstScrollInFlight
+  firstScrollInFlight = (async () => {
+    const userId = await getUserId()
+    if (!userId) return false
+    try {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('user_name, kt_goals')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const goals = (data as { kt_goals?: string | null } | null)?.kt_goals ?? ''
+      if (!goals.trim()) return false
+      await ensureFirstScroll(userId, (data as { user_name?: string | null } | null)?.user_name ?? null, goals)
+      return true
+    } catch (e) {
+      console.warn('startFirstScrollIfMissing failed:', e)
+      return false
+    }
+  })().finally(() => { firstScrollInFlight = null })
+  return firstScrollInFlight
 }
 
 export async function getRandomCabinetQuote(
