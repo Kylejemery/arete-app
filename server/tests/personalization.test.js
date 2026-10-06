@@ -310,11 +310,12 @@ const { spawnSync } = require('child_process');
 // back byte for byte; recomputed on 2026-09-26 when the Yesterday card began
 // hiding once answered (a deliberate Home change), and again on 2026-09-30
 // for R12 (commit 82d7440), whose streak line on both Homes now says a
-// morning alone does not extend the chain. Recompute the same way whenever
+// morning alone does not extend the chain, and on 2026-10-06 for D9, which
+// restores the one Know Thyself prompt on both Homes. Recompute the same way whenever
 // Home is changed on purpose.
 const HOME_BEFORE_RUN_C = {
-  'app/(tabs)/index.tsx': '38d02bb2b852bf6d872cb06601bf6c02560d443a7adf81212f1fda9394c255f3',
-  'web/src/app/page.tsx': '6861afc38a39a2275c53f49945901aa5e7c8118061ce662dd0c73a7194b2a0c7',
+  'app/(tabs)/index.tsx': '349d7a71f1a8adc58b3d7d2cc3480e8678d532412c88c30c65ffab672177881d',
+  'web/src/app/page.tsx': '1a65596b4e48ccde3bb89a61a887adde0a7f4353ebed8c3e2e4a13526ea2bba3',
 };
 
 test('Home minus the Your practices lines is byte-for-byte the Home from before run C', () => {
