@@ -61,7 +61,7 @@ Two things the suite cannot settle:
 
 | Phase | Output | Where |
 | --- | --- | --- |
-| 1 | Evidence ledger: 20 argument forms and 19 rules or definitions, each quoting a verified passage from the corpus or from a stored research source | `evidence/suite.yaml`, `evidence/rules.yaml`, `evidence/gaps.md` |
+| 1 | Evidence ledger: 19 argument forms and 19 rules or definitions, each quoting a verified passage from the corpus or from a stored research source | `evidence/suite.yaml`, `evidence/rules.yaml`, `evidence/gaps.md` |
 | 2 | Stoic propositional logic as its own object language in Lean 4; the five indemonstrables; parameters for the disputed readings | `lean/Stoic/*.lean` |
 | 3 | 66 candidate rule sets: the attested third thema, Mates (two variants), and 63 generated variants | `lean/Stoic/Themata/`, `results/candidates.md` |
 | 4 | Evaluation of every candidate × setting × item, with proofs of underivability | `lean/Stoic/Harness/`, `Soundness.lean`, `Sugihara.lean`, `Undergeneration.lean`, `FirstThema.lean`, `results/matrix.md` |
@@ -155,12 +155,15 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
 
 ## 6. Limits and caveats
 
-- **The ledger is small and unsigned.**
+- **The ledger is small and mostly unsigned.**
   - It holds 17 formal items.
-  - No entry has Kyle's sign-off.
-  - The main ancient sources for the themata are missing from the corpus:
-    Sextus M VIII, Galen and Alexander. Origen is available through
-    `research_sources`.
+  - Kyle has signed off 9 of its 19 argument forms (S001-S007, S009, S020,
+    on 2026-10-05) and none of the rules yet.
+  - Sextus (PH II, M VIII, Bury's Loeb), Alexander (in APr., in Top.,
+    Wallies) and Origen are stored in `research_sources`, and every argument
+    form now quotes a primary text (2026-10-06). Galen is still missing.
+  - Some of the Alexander readings rest on emendation or later correction
+    (S011, T04); the ledger notes say where.
 - **S020 rests on a later, non-Stoic witness.**
   - Origen reports the form as Stoic.
   - In this copy the OCR scrambles the general schema sentence, and that
@@ -197,7 +200,8 @@ The questions we most need answered:
 
 1. **The ledger.** Are the verdicts right, especially:
    - S011 (valid);
-   - S016 (invalid, reported only through Mates);
+   - S016 (invalid; Sextus gives the redundant item as a conjunct in both
+     PH II 147 and M VIII 431, though PH II's definition calls it a premiss);
    - S008 (valid but not syllogistic);
    - S018 (the Sorites form taken as valid);
    - S020 (the two conditionals argument, from Origen)?
@@ -223,5 +227,5 @@ The questions we most need answered:
    matrix then needs regenerating (`lake exe harness`).
 2. A specialist in Stoic logic reviews this file, the ledger and the encoding
    (guardrail 5).
-3. The remaining ancient texts named in gaps.md are stored: Sextus M VIII,
-   Galen, Alexander.
+3. The remaining ancient texts named in gaps.md are stored. Sextus and
+   Alexander are (2026-10-06); Galen is not.
