@@ -2,7 +2,8 @@ import { asCabinetProposal, type CabinetProposal } from '@/lib/practices';
 import { fetch as expoFetch } from 'expo/fetch';
 import { readCabinetResponse, type CabinetStreamEvent } from '../lib/cabinetStream';
 import { pronounsFor } from '../lib/pronouns';
-import { ThreadMessage, appendMessages, getContextWindow } from './threadService';
+import { ThreadMessage, appendMessages, getContextWindow, loadThread } from './threadService';
+import { checkInThreadBlock } from '../lib/checkinThread';
 import { getUserSettings, getTodayCheckin, getJournalEntries, getReadingData, getCounselorsBySlugs, getUserCabinet, getGoals, getKnowThyselfProfile, getKnowThyselfComplete, getConversationMemory, saveConversationMemory, getDailyQuestionCache, saveDailyQuestionCache, checkAndIncrementMessageCount, getSubscriptionTier, getProfileStreak, getRoutineTemplates, MAX_TOKENS_BY_TIER } from '../lib/db';
 import type { SubscriptionTier } from '../lib/types';
 import { modelForCounselor } from '../lib/llmModels';
@@ -1158,8 +1159,13 @@ export async function sendCheckInToCabinet(
     }
 
     const ciWhatsNew = await takeCabinetWhatsNewNote().catch(() => null);
+    // R14: what the person already told the Cabinet today (last night's, for
+    // the morning), so the check-in builds on it instead of asking again.
+    const cabinetThread = await loadThread('cabinet').catch(() => null);
+    const threadBlock = checkInThreadBlock(cabinetThread?.messages ?? [], type);
     const systemPrompt = (await buildSystemPrompt()) + '\n\n---\n\n' + (await gatherAppContext())
-      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '');
+      + (ciWhatsNew ? '\n\n' + ciWhatsNew : '')
+      + (threadBlock ? '\n\n---\n\n' + threadBlock : '');
 
     const { data: { user: _ciUser } } = await supabase.auth.getUser();
     const response = await fetch(`${API_BASE_URL}/api/chat`, {
