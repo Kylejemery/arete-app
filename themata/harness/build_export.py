@@ -47,6 +47,15 @@ problems = []
 def collapse(s):
     return re.sub(r"\s+", " ", s or "").strip()
 
+def ledger_passage(e):
+    """The entry's quotation. An entry citing several research refs keeps them
+    in `passages: [{ref, text}]`; it is shown as one passage, each quotation
+    led by its ref's locator in brackets."""
+    if e.get("passages"):
+        refs = e["research_ref"]
+        return " ".join(f"[{refs[t['ref']]['locator']}] {collapse(t['text'])}" for t in e["passages"])
+    return collapse(e.get("passage"))
+
 
 def git(*args, cwd=None):
     return subprocess.run(["git", *args], cwd=cwd or repo, check=True, capture_output=True, text=True).stdout
@@ -106,7 +115,7 @@ examples = editorial.get("examples") or {}
 for i, ex in examples.items():
     if i not in by_id:
         problems.append(f"example for unknown item {i}")
-    elif collapse(ex["text"]) not in collapse(by_id[i]["passage"]):
+    elif collapse(ex["text"]) not in ledger_passage(by_id[i]):
         problems.append(f"{i}: example is not quoted from the ledger passage")
 extra_secondary = editorial.get("secondary_summary") or {}
 for i, s in extra_secondary.items():
@@ -173,7 +182,7 @@ for e in ledger:
         "duplicate_variant": h.get("duplicate_variant"),
         "provenance": {
             "source": e["source"],
-            "passage": collapse(e["passage"]),
+            "passage": ledger_passage(e),
             "corpus_ref": e.get("corpus_ref"),
             "research_ref": e.get("research_ref"),
             "verified_by_kyle": e["verified_by_kyle"],

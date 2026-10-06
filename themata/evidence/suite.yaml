@@ -35,8 +35,12 @@
 #   research_ref: {source_id, locator}, for a passage cited from the private
 #     research_sources store instead of rag_corpus (guardrail 1, amended
 #     2026-09-28). corpus_ref is then null, or a Mode 2 summary chunk of the
-#     same section. The passage must pass research_source_contains(source_id,
-#     passage). First used by S020.
+#     same section. First used by S020. An entry citing several sources gives
+#     research_ref as a list and its quotations as `passages: [{ref, text}]`,
+#     `ref` indexing the list (S011-S017, moved from primary-proposals.yaml on
+#     2026-10-06). Every quotation must pass themata_ledger_problems, which
+#     sends it to research_quotation_problems with the entry's `source` line as
+#     the attribution (scripts/themata/verify_ledger.py).
 #
 # verified_by_kyle records Kyle's sign-off, with verified_on its date. First
 # sign-offs, 2026-10-05: S001-S007, S009, S020. The other entries are not yet
@@ -330,17 +334,51 @@
   schema: "either p or q; p; therefore p"
   verdict: valid
   kind: other
-  source: "Alexander of Aphrodisias, in APr., as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V n.239"
-  passage: |
-    [239] Two such cases are distinguished, one in which all three clauses,
-    the other in which the conclusion and minor premiss are identical. The
-    first class are called διφορούμενοι· If it is day, it is day; It is day, ∴
-    It is day. The second class, ἀδιαφόρως περαίνοντες· It is either day or
-    night; It is day, ∴ It is day. The latter term is, however, applied to both
-    kinds. See Alex. Anal. Pr. 7, a; 53, b; Top. 7; Schol. in Arist. 294, b,
-    25; Cic. Acad. ii. 30, 96; Prantl, 476, 185.
-  corpus_ref: "8e7bb081-9d8b-481f-b3ac-57183751efa5"
+  source: "Alexander of Aphrodisias, in Top. 10.7-12 (ed. Wallies, CAG II.2, 1891); Alexander of Aphrodisias, in APr. 18.14-17 (ed. Wallies, CAG II.1, 1883)"
+  research_ref:
+    - {source_id: 36848d34-d68e-4ad4-8bbe-04091fd0dc7b, locator: "in Top. 10.7-12"}
+    - {source_id: 4543eb65-0f06-4015-ad10-c0842f31fecc, locator: "in APr. 18.14-17"}
+  passages:
+    - ref: 0
+      text: |
+        οἷοί εἰσι κατὰ τοὺς ἀπὸ τῆς Στοᾶς οἱ διφορούμενοί τε καὶ οἱ
+        ἀδιαφόρως περαίνειν ὑπ' αὐτῶν λεγόμενοι. διφορούμενοι μὲν γάρ εἰσι
+        κατ' αὐτοὺς οἱ τοιοῦτοι ‘εἰ ἡμέρα ἐστίν, ἡμέρα ἐστίν· ἀλλὰ μὴν ἡμέρα
+        ἐστίν· ἡμέρα ἄρα ἐστίν’· ἀδιαφόρως δὲ περαίνοντες ἐν οἷς τὸ
+        συμπέρασμα ταὐτόν ἐστιν ἑνὶ τῶν λημμάτων, ὡς ἐπὶ τῶν τοιούτων ‘ἤτοι
+        ἡμέρα ἐστὶν ἢ φῶς ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· ἡμέρα ἄρα ἐστίν’.
+    - ref: 1
+      text: |
+        τὸ γὰρ χρειῶδες τοῦ συλλογισμοῦ οὐ παρέχεται τὸ ‘εἰ ἡμέρα ἐστίν, φῶς
+        ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· φῶς ἄρα ἐστί’, καὶ ὅλως οἱ λεγόμενοι ὑπὸ
+        τῶν νεωτέρων ἀδιαφόρως περαίνοντες.
+  corpus_ref: null
   notes: |
+    in Top. 10.7-12 (stored 2026-10-06, read against the page image) is the
+    witness for S011's schema. Alexander attributes both kinds to 'those from
+    the Stoa': the διφορούμενοι ('if it is day, it is day; but it is day;
+    therefore it is day') and the ἀδιαφόρως περαίνοντες, 'in which the
+    conclusion is the same as one of the premisses', e.g. 'either it is day or
+    it is light; but it is day; therefore it is day'. The schema "either p or
+    q; p; therefore p" is attested with the disjunct "it is light", not "it is
+    night" as in Zeller n.239; the form is the same.
+    What the text rests on, from Wallies's apparatus: (1) ἀδιαφόρως (10.8,
+    10.10) is Prantl's emendation; every manuscript reads διαφόρως. (2) ἤτοι
+    ('either', 10.11) is added in P's margin by a later hand (P3). (3) ἐστὶν ἢ
+    ('is, or', 10.12) is corrected in B by B2 from ἐστὶ; A reads ἐστὶν εἰ
+    ('is, if'). So the disjunctive example rests on later corrections, and the
+    name on an emendation. The attribution to the Stoa (10.7) has no variant.
+    in APr. 18.14-17 (CAG II.1) names the same class of 'the moderns', with
+    the same emendation question (ἀδιαφόρως a: διαφόρως BLM) and an example
+    that, as printed (φῶς, LM), is a plain first indemonstrable; aB read
+    ἡμέρα, which makes the conclusion repeat a premiss.
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Alexander of Aphrodisias, in APr., as reported in Zeller,
+    The Stoics, Epicureans and Sceptics, ch. V n.239 (corpus_ref
+    8e7bb081-9d8b-481f-b3ac-57183751efa5). Earlier notes, written for that
+    evidence, kept for the rulings in them:
+
     An indifferently concluding argument (ἀδιαφόρως περαίνων). Zeller's main
     text (chunk 8026da9e-bbf9-4a39-b1e7-d2ca5604b7ca) says that among the
     indemonstrable forms "importance is attached to some in which the same
@@ -373,38 +411,69 @@
   schema: "if p, (if p, q); p; therefore q"
   verdict: valid
   kind: derived
-  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  source: "Sextus Empiricus, Against the Logicians II (M VIII) 229-233 (tr. R. G. Bury, Loeb 1935)"
+  research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 232"}
   passage: |
-    Mates illustrates the procedure with two examples from Sextus. The first
-    shows that an argument of the form "If p, then (if p then q); p; therefore
-    q" decomposes into two successive applications of the type 1 undemonstrated
-    argument.
-  corpus_ref: "401a8e59-19ef-4e5e-80f0-dbeb990103a0"
+    the major “If it is day, it is light,” which begins with the simple
+    proposition “it is day” but ends with the not-simple major “if it is day,
+    it is light,” and also its antecedent “it is day,”—from these we shall
+    infer, by the first non-demonstrable, the consequent of that major, namely
+    “Therefore if it is day, it is light.”
+  corpus_ref: null
   notes: |
+    Proofread page (p. 359). The analysis fits the schema "if p, (if p, q); p;
+    therefore q": a major that begins with "it is day" and ends in the
+    conditional "if it is day, it is light". The example itself at § 230 is
+    printed, in Bekker's Greek and in Bury's English alike, as a plain first
+    indemonstrable ("If it is day, it is light; but in fact it is day; therefore
+    it is light"), which does not have that shape. Quote § 232, not § 230, and
+    record the discrepancy for the specialist review. The quotation starts at
+    "the major" to stay within 60 words; the words before it are "Since, then,
+    we have two premisses,—".
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Sextus Empiricus, as reported in Benson Mates, Stoic Logic
+    (Mode 2 summary) (corpus_ref 401a8e59-19ef-4e5e-80f0-dbeb990103a0). Earlier
+    notes, written for that evidence, kept for the rulings in them:
+
     The only derived syllogism in the corpus whose form is explicit, together
     with S013. Both come through a Mode 2 summary, not through Sextus, who is
     absent from the corpus (gaps.md). Note that the premise p is used twice,
     which makes this a test of how premise multiplicity is handled (Phase 2,
     Argument.lean).
-  confidence: low
+  confidence: medium
   verified_by_kyle: false
 
 - id: S013
   schema: "if (p and q), r; not r; p; therefore not q"
   verdict: valid
   kind: derived
-  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
+  source: "Sextus Empiricus, Against the Logicians II (M VIII) 234-236 (tr. R. G. Bury, Loeb 1935)"
+  research_ref: {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 235-236"}
   passage: |
-    The second shows that an argument of the form "If (p and q) then r; not-r;
-    p; therefore not-q" decomposes into a type 2 argument followed by a type 3
-    argument, with the intermediate conclusion licensed as a usable premise by
-    the dialectical theorema.
-  corpus_ref: "401a8e59-19ef-4e5e-80f0-dbeb990103a0"
+    For an argument like this is compounded of the second non-demonstrable and
+    the third, … its “scheme,” which goes thus: “If the first and the second,
+    the third ⟨is true⟩; but the third is not ⟨true⟩, whereas the first is;
+    therefore the second is not ⟨true⟩.”
+  corpus_ref: null
   notes: |
+    Proofread page (p. 361). § 236 gives the analysis: a second indemonstrable
+    yields "the first and the second are not ⟨true⟩", and with the remaining
+    premiss a third indemonstrable yields "the second is not ⟨true⟩". The
+    worked instance is Aenesidemus's argument about signs (§ 234). Premiss
+    order in the scheme is major, not-third, first, which matches the schema.
+    The ellipsis leaves out "as one may learn from its analysis; and this will
+    become clearer when we have given instruction as to" (60-word limit).
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Sextus Empiricus, as reported in Benson Mates, Stoic Logic
+    (Mode 2 summary) (corpus_ref 401a8e59-19ef-4e5e-80f0-dbeb990103a0). Earlier
+    notes, written for that evidence, kept for the rulings in them:
+
     The analysis runs: a second indemonstrable gives not (p and q), then a
     third indemonstrable with p gives not q. The summary attributes the step
     to the "dialectical theorem" (rules.yaml T05), not to a named thema.
-  confidence: low
+  confidence: high
   verified_by_kyle: false
 
 # ---------------------------------------------------------------------------
@@ -415,12 +484,58 @@
   schema: "p; therefore q   (where 'if p, q' is true, e.g. 'It is day; therefore it is light', 'You are breathing; therefore you are living')"
   verdict: disputed
   kind: single_premise
-  source: "Alexander of Aphrodisias and Sextus Empiricus, as reported in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245"
-  passage: |
-    [245] Called μονολήμματοι συλλογισμοί. Such were ἡμέρα ἔστι, φῶς ἄρα
-    ἔστιν· and ἀναπνεῖς, ζῇς ἄρα.
-  corpus_ref: "73ca2320-47fc-4eed-b9b0-fc8ad0d060e4"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 159, 167 (tr. R. G. Bury, Loeb 1933); Sextus Empiricus, Against the Logicians II (M VIII) 443 (tr. R. G. Bury, Loeb 1935); Alexander of Aphrodisias, in APr. 17.18-21 (ed. Wallies, CAG II.1, 1883)"
+  research_ref:
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 167"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 159"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 443"}
+    - {source_id: 4543eb65-0f06-4015-ad10-c0842f31fecc, locator: "in APr. 17.18-21"}
+  passages:
+    - ref: 0
+      text: |
+        But if some persons disapprove of arguments being of a “one-premiss
+        form,” they deserve no more credence than does Antipater[c] who does
+        not reject such arguments.
+    - ref: 1
+      text: |
+        so that an argument in the form “It is day, therefore it is light” is
+        sufficient,[a] and the major premiss “If it is day, it is light” is
+        redundant.
+    - ref: 2
+      text: |
+        For to say that Chrysippus does not approve of arguments having but one
+        premiss—which some, perhaps, will say in reply to this objection—is
+        utterly non-
+    - ref: 2
+      text: |
+        for Antipater, one of the most eminent men in the Stoic school, asserted
+        that arguments with a single premiss can be constructed.
+    - ref: 3
+      text: |
+        οἱ δὲ λεγόμενοι μονολήμματοι δοκοῦσιν εἶναί ποτε συλλογισμοὶ τῷ τὴν
+        ἑτέραν πρότασιν διὰ τὸ εἶναι γνώριμον τοὺς ἀκούοντας προστιθέναι. τὸ γὰρ
+        ‘ἀναπνεῖς, ζῇς ἄρα’ δοκεῖ συλλογισμὸς εἶναι,
+  corpus_ref: null
   notes: |
+    Sextus gives both sides of the dispute: Chrysippus did not accept
+    single-premised arguments, Antipater did. The example "It is day, therefore
+    it is light" is Sextus's own reduction of the first indemonstrable (PH II
+    159, p. 255; Bury's note a there calls it "the syllogismus decurtatus, which
+    has but one premiss; cf. § 167"; also M VIII 440-441, proofread p. 469).
+    PH II 167 is p. 259, whose note c names Antipater of Tarsus and points to
+    M VIII 443. The second M VIII quotation is on p. 471, proofread against the
+    scan on 2026-09-30. S014 now also covers the former S015. Its second
+    example ('You are breathing, therefore you are living') is Alexander's, in
+    APr. 17.18-21 (Wallies 1883): the μονολήμματοι of 'the moderns' seem to be
+    syllogisms only because the hearer supplies the familiar premiss 'everyone
+    who breathes lives'; Alexander denies they are syllogisms (17.11-12).
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Alexander of Aphrodisias and Sextus Empiricus, as reported
+    in Zeller, The Stoics, Epicureans and Sceptics, ch. V text and n.245
+    (corpus_ref 73ca2320-47fc-4eed-b9b0-fc8ad0d060e4). Earlier notes, written
+    for that evidence, kept for the rulings in them:
+
     Merged with the former S015 (Kyle, 2026-09-30). The two entries had the
     same form and were kept apart only because their examples come down
     separately. Zeller n.245 gives both; the id S015 is retired, not reused.
@@ -443,7 +558,7 @@
     Phase 2 decision (Params.lean).
     Primary replacement drafted in primary-proposals.yaml (Sextus PH II 159,
     167; M VIII 443), pending the Sextus licences.
-  confidence: medium
+  confidence: high
   verified_by_kyle: false
 
 # ---------------------------------------------------------------------------
@@ -454,14 +569,48 @@
   schema: "if p, q; p; r; therefore q   (r superfluous)"
   verdict: invalid
   kind: redundant
-  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  passage: |
-    (2) Redundant arguments (para parhelkon) contain a superfluous premise;
-    Mates notes, pointedly, that by standard logical criteria these would
-    count as valid, and suggests either that Sextus erred or was working from
-    a poor handbook.
-  corpus_ref: "6dea256b-8bed-46db-9df4-e015a90e5636"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 146-147 (tr. R. G. Bury, Loeb 1933, with the facing Greek); Sextus Empiricus, Against the Logicians II (M VIII) 431 (tr. R. G. Bury, Loeb 1935)"
+  research_ref:
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 147"}
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 147, Greek (p. 244)"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 431"}
+  passages:
+    - ref: 0
+      text: |
+        And it is a case of redundancy when we find a premiss that is
+        superfluous for the logic of the argument, as for instance “If it is
+        day, it is light; but in fact it is day and Dion also is walking;
+        therefore it is light.”
+    - ref: 1
+      text: |
+        παρὰ δὲ παρολκὴν ὅταν εὑρίσκηται λῆμμα παρέλκον πρὸς τὴν τοῦ λόγου
+        συναγωγήν, οἷον “εἰ ἡμέρα ἔστι, φῶς ἔστιν· ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ
+        καὶ Δίων περιπατεῖ· φῶς ἄρα ἔστιν.”
+    - ref: 2
+      text: |
+        And the argument is indefinite through redundancy when something is
+        included, extrinsically and superfluously, along with the premisses, as
+        is the case with one like this—“If it is day, it is light; but in fact
+        it is day, and also virtue benefits; therefore it is light”
+  corpus_ref: null
   notes: |
+    An ancient example, not a generic instantiation, and the verdict (invalid)
+    is Sextus's report of Stoic doctrine. Correction (2026-10-05): the earlier
+    note here said PH II gives the superfluous item as a separate premise. That
+    came from Mates's translation, which prints "It is day. Dion is walking."
+    Bury's English gives a conjunct minor premiss ("it is day and Dion also is
+    walking"), the same shape as M VIII 431 ("it is day, and also virtue
+    benefits"). The Greek, ἀλλὰ μὴν ἡμέρα ἔστιν, ἀλλὰ καὶ Δίων περιπατεῖ, can be
+    read either way, and the definition just before it calls the superfluous
+    item a λῆμμα παρέλκον, a superfluous premiss. Both are quoted. How to encode
+    it (premise list or conjunct; the Redundancy parameter, F1) is the S016
+    question Kyle parked until after his sign-offs; nothing is decided here.
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Sextus Empiricus, as reported in Benson Mates, Stoic Logic
+    (Mode 2 summary) (corpus_ref 6dea256b-8bed-46db-9df4-e015a90e5636). Earlier
+    notes, written for that evidence, kept for the rulings in them:
+
     This is the non-monotonicity constraint in the project brief, and the
     corpus supports it only weakly. The schema is a generic
     instantiation. The corpus holds no ancient example of a redundant
@@ -478,20 +627,48 @@
     Redundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see
     NOTES.md finding F1). This entry is invalid under both readings, since r
     is an unrelated atom.
-  confidence: low
+  confidence: high
   verified_by_kyle: false
 
 - id: S017
   schema: "either p or q; not p; therefore q   (where a third alternative r exists and was omitted)"
   verdict: invalid
   kind: other
-  source: "Sextus Empiricus, as reported in Benson Mates, Stoic Logic (Mode 2 summary)"
-  passage: |
-    (4) Deficient arguments (para elleipsin) rest on a premise that is
-    incomplete — the example is a disjunction that omits a third alternative,
-    making the inference structurally unsound.
-  corpus_ref: "6dea256b-8bed-46db-9df4-e015a90e5636"
+  source: "Sextus Empiricus, Outlines of Pyrrhonism II 150 (tr. R. G. Bury, Loeb 1933); Sextus Empiricus, Against the Logicians II (M VIII) 434 (tr. R. G. Bury, Loeb 1935)"
+  research_ref:
+    - {source_id: 937d0561-1290-422a-a887-81a8678dbfcc, locator: "PH II 150"}
+    - {source_id: ca2d7557-ef76-49c7-a3d7-bee6c0b78b32, locator: "M VIII 434"}
+  passages:
+    - ref: 0
+      text: |
+        And the argument is faulty by deficiency, when it suffers from the
+        omission of some factor needed for the deducing of the conclusion: thus,
+        for instance, while we have, as they think, a valid argument in “Wealth
+        is either good or bad or indifferent; but it is neither bad nor
+        indifferent; therefore it is good,”
+    - ref: 0
+      text: |
+        is faulty by way of deficiency: “Wealth is either good or bad; but it is
+        not bad; therefore it is good.”
+    - ref: 1
+      text: |
+        And the argument becomes indefinite through deficiency when one of its
+        deductive premisses is deficient. For example, “Either wealth is an evil
+        or wealth is a good; but wealth is not an evil; therefore wealth is a
+        good”; for in the disjunctive premiss there is an omission of “wealth is
+        indifferent,”
+  corpus_ref: null
   notes: |
+    Both witnesses make the defect a missing disjunct ("indifferent"), which
+    supports the non_formal flag already on this entry. PH II 150 runs from
+    p. 247 to p. 249 (proofread); M VIII 434 is on p. 465, proofread against
+    the scan on 2026-09-30.
+
+    Moved from primary-proposals.yaml on 2026-10-06 (Kyle). Until then this
+    entry rested on: Sextus Empiricus, as reported in Benson Mates, Stoic Logic
+    (Mode 2 summary) (corpus_ref 6dea256b-8bed-46db-9df4-e015a90e5636). Earlier
+    notes, written for that evidence, kept for the rulings in them:
+
     Formally this is S005. The defect lies in the truth of the disjunctive
     premise, not in the form. A purely formal harness cannot tell this
     apart from S005 unless the object language has n-ary exclusive
@@ -502,7 +679,7 @@
     Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
     ledger flagged non_formal.
   flags: [non_formal]
-  confidence: low
+  confidence: high
   verified_by_kyle: false
 
 # ---------------------------------------------------------------------------

@@ -51,8 +51,9 @@ examples:
     language: en
     note: "Yonge's English runs the conditional and the minor premise together (see the ledger notes)."
   S011:
-    text: "It is either day or night; It is day, ∴ It is day."
-    language: en
+    text: "‘ἤτοι ἡμέρα ἐστὶν ἢ φῶς ἐστιν· ἀλλὰ μὴν ἡμέρα ἐστίν· ἡμέρα ἄρα ἐστίν’"
+    language: grc
+    note: "'Either it is day or it is light; but it is day; therefore it is day' (Alexander, in Top. 10.11-12; ἤτοι and ἢ rest on later corrections, see the ledger notes)."
   S014:
     text: "ἀναπνεῖς, ζῇς ἄρα"
     language: grc
@@ -67,6 +68,6 @@ examples:
     text: "1st, If you know that you are dead, you are dead; 2d, if you know that you are dead, you are not dead. And the conclusion is—“you do not know that you are dead.”"
     language: en
 
-secondary_summary:
-  S014:
-    quote: "That Chrysippus rejected them appears in the corpus only through Mates's summary"
+secondary_summary: {}
+# S014's entry (Chrysippus's rejection known only through Mates's summary) was
+# removed on 2026-10-06: S014 now quotes Sextus, M VIII 443, directly.

@@ -849,3 +849,21 @@ Aldine has ἀδιαφόρως). ἤτοι is added in P's margin by a later han
 correction in B; A reads εἰ, "if". So the disjunctive form of the example rests
 on corrections and the name on an emendation. The Stoic attribution has no
 variant. This is for Kyle's sign-off of S011 and for the specialist review.
+
+## S011-S017 rest on primary texts (2026-10-06)
+
+The proposals moved into `suite.yaml` at Kyle's request. Each entry keeps its
+schema, verdict, kind and flags; its `source`, refs and quotations are the
+proposal's; `corpus_ref` is null. The earlier notes, written for the Mates and
+Zeller evidence, are kept under a label because they carry Kyle's rulings
+(S014's single-premise parameter, S016's Redundancy parameter, S017's
+non_formal flag). Confidence comes from the proposals (S011 medium, S012
+medium, S013 high, S014 high, S016 high, S017 high) and is Kyle's to confirm
+at sign-off; S016's earlier note had asked not to raise it until the Sextus
+text was available.
+
+An entry citing several sources keeps `research_ref` as a list and its
+quotations as `passages`. The export shows them as one passage, each quotation
+led by its locator in brackets. S011's worked example is now Alexander's own
+(in Top. 10.11-12), and S014 no longer carries the flag that its Chrysippus
+evidence came only through Mates's summary: M VIII 443 is quoted directly.

@@ -88,7 +88,7 @@
   "ledger_items": 19
  },
  "source": {
-  "commit": "c26f52b792bb5a88670ec87fc86ee24ebf6ed6db",
+  "commit": "c8ca9c1fca5987b3e7af39f6d5e20fbd6e1a95c5",
   "inputs_clean": true,
   "inputs": [
    "themata/lean/",
@@ -101,7 +101,7 @@
    "files": 28,
    "lean_toolchain": "leanprover/lean4:v4.22.0"
   },
-  "ledger_sha256": "bfec3a38790aeba5a60f9fde05a98beff39e4cd0d8bd101616946444807c2f56"
+  "ledger_sha256": "715a6802757e1c9beb7e8937f751005bf830756ca52de3c3e7f6a170357e2a74"
  },
  "counts": {
   "unit": "distinct searches: candidate x proof setting (single, contra, view) x formal item",
