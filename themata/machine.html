@@ -418,7 +418,7 @@ table.small td code { white-space: nowrap; }
       '<div class="verdict">' + (pv.non_primary.flag ? '<span class="pill gold">NP · ' + esc(pv.non_primary.basis) + "</span>" : '<span class="pill ok">primary text</span>') +
       signPill(pv) + "</div>" +
       '<dl class="kv"><dt>Source</dt><dd>' + esc(pv.source) + "</dd>" + (pv.corpus_ref ? "<dt>Corpus chunk</dt><dd><code>" + esc(pv.corpus_ref) + "</code></dd>" : "") +
-      (pv.research_ref ? "<dt>Research ref</dt><dd>" + esc(pv.research_ref.locator) + "</dd>" : "") + "</dl>" +
+      (pv.research_ref ? "<dt>Research ref</dt><dd>" + esc(Array.isArray(pv.research_ref) ? pv.research_ref.map((r) => r.locator).join("; ") : pv.research_ref.locator) + "</dd>" : "") + "</dl>" +
       '<div class="passage">' + esc(pv.passage) + "</div>" + notesHtml(pv.notes) + "</section>";
     h += '<section><h3>The candidate</h3><p class="note">' + esc(c.source) + '</p><dl class="kv">' +
       (c.rules.length ? c.rules.map((ru) => "<dt><code>" + esc(ru.shape) + "</code></dt><dd>" + esc(ru.name) + "</dd>").join("") : "<dt>Rules</dt><dd>none: the base cases only</dd>") + "</dl></section>";

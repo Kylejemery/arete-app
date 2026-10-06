@@ -1470,7 +1470,7 @@
         ]
        },
        "research_ref": {
-        "description": "A private research_sources entry, where the ledger cites one.",
+        "description": "A private research_sources entry, or a list of them, where the ledger cites one or more.",
         "oneOf": [
          {
           "type": "null"
@@ -1488,6 +1488,26 @@
            },
            "locator": {
             "type": "string"
+           }
+          }
+         },
+         {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+           "type": "object",
+           "required": [
+            "source_id",
+            "locator"
+           ],
+           "additionalProperties": false,
+           "properties": {
+            "source_id": {
+             "type": "string"
+            },
+            "locator": {
+             "type": "string"
+            }
            }
           }
          }
