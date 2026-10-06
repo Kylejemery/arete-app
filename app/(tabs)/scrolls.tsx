@@ -16,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { getKnowThyselfComplete } from '@/lib/db';
+import { getKnowThyselfComplete, startFirstScrollIfMissing } from '@/lib/db';
 import { getUserScrolls, type Scroll } from '@/lib/scrolls';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:3000';
@@ -53,6 +53,14 @@ export default function ScrollsTab() {
       const [data, complete] = await Promise.all([getUserScrolls(user.id), getKnowThyselfComplete()]);
       setScrolls(data);
       setKtComplete(complete);
+      // R16: complete but no Scroll (set by the Cabinet or the backfill, with
+      // nothing to start the first one). Start it now and show it when ready.
+      if (complete && data.length === 0) {
+        startFirstScrollIfMissing()
+          .then(started => (started ? getUserScrolls(user.id) : null))
+          .then(fresh => { if (fresh && fresh.length > 0) setScrolls(fresh); })
+          .catch(() => { /* the request form stays available */ });
+      }
     } catch (e) {
       console.error('loadScrolls error:', e);
     } finally {

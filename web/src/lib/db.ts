@@ -1182,3 +1182,37 @@ async function ensureFirstScroll(userId: string, userName: string | null, goalsT
     console.warn('ensureFirstScroll failed:', e)
   }
 }
+
+// One generation at a time per page session, so a re-render or a second
+// visit while the first Scroll is still being written does not start another.
+let firstScrollInFlight: Promise<boolean> | null = null
+
+/**
+ * Retention plan R16. The flag can be set with no client there to start the
+ * first Scroll: the user_profile_facts trigger sets it when the Cabinet fills
+ * the fifth field, and the R16 backfill sets it in SQL. The Scrolls page calls
+ * this when the flag is set and the user has no Scroll. Resolves true once a
+ * generation has run (the caller then reloads the list).
+ */
+export function startFirstScrollIfMissing(): Promise<boolean> {
+  if (firstScrollInFlight) return firstScrollInFlight
+  firstScrollInFlight = (async () => {
+    const userId = await getUserId()
+    if (!userId) return false
+    try {
+      const { data } = await supabase
+        .from('user_settings')
+        .select('user_name, kt_goals')
+        .eq('user_id', userId)
+        .maybeSingle()
+      const goals = (data as { kt_goals?: string | null } | null)?.kt_goals ?? ''
+      if (!goals.trim()) return false
+      await ensureFirstScroll(userId, (data as { user_name?: string | null } | null)?.user_name ?? null, goals)
+      return true
+    } catch (e) {
+      console.warn('startFirstScrollIfMissing failed:', e)
+      return false
+    }
+  })().finally(() => { firstScrollInFlight = null })
+  return firstScrollInFlight
+}
