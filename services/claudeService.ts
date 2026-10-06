@@ -1112,9 +1112,12 @@ function checkInFailure(status: number, body: string): CheckInResult {
 
 // `affirmation` is the quote the screen actually displayed, so the prompt's
 // "Affirmation shown" line is true (R4). Falls back to the day's entry.
+// `tasks` and `intention` (R15) are what the screen shows at the moment of
+// sending. When given they are used instead of today's row, so a save still
+// in flight can never make the Cabinet read a stale tick.
 export async function sendCheckInToCabinet(
   type: 'morning' | 'evening',
-  options: { affirmation?: string } = {}
+  options: { affirmation?: string; tasks?: { title: string; done: boolean }[]; intention?: string } = {}
 ): Promise<CheckInResult> {
   try {
     const [settings, checkin] = await Promise.all([getUserSettings(), getTodayCheckin()]);
@@ -1125,7 +1128,7 @@ export async function sendCheckInToCabinet(
     let userMessage: string;
 
     if (type === 'morning') {
-      const morningTasks = checkin?.morning_tasks ?? [];
+      const morningTasks = options.tasks ?? checkin?.morning_tasks ?? [];
       const taskSummary = morningTasks.length > 0
         ? morningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
@@ -1140,16 +1143,16 @@ export async function sendCheckInToCabinet(
         "Begin at once to live, and count each separate day as a separate life. — Seneca",
       ];
       const affirmation = options.affirmation?.trim() || affirmations[day];
-      const intention = (checkin?.intention || '').trim();
+      const intention = (options.intention ?? checkin?.intention ?? '').trim();
       const intentionLine = intention ? ` Today's intention, in their own words: '${intention}'.` : '';
       userMessage = `[Morning check-in] ${userName} has just completed ${pr.possessive} morning routine. Tasks: ${taskSummary}.${intentionLine} Affirmation shown: '${affirmation}'. Speak to ${pr.object} briefly as ${pr.subject} ${pr.subject === 'they' ? 'begin' : 'begins'} the day.`;
     } else {
-      const eveningTasks = checkin?.evening_tasks ?? [];
+      const eveningTasks = options.tasks ?? checkin?.evening_tasks ?? [];
       const taskSummary = eveningTasks.length > 0
         ? eveningTasks.map((t: any) => `${t.title} ${t.done ? '✓' : '✗'}`).join(', ')
         : '(no tasks)';
       const stoic = checkin?.stoic_answer || '(not answered)';
-      const intention = (checkin?.intention || '').trim();
+      const intention = (options.intention ?? checkin?.intention ?? '').trim();
       const intentionLine = intention ? ` This morning's intention was: '${intention}'.` : '';
       userMessage = `[Evening check-in] ${userName} is wrapping up ${pr.possessive} evening. Tasks: ${taskSummary}.${intentionLine} Evening reflection: '${stoic}'. Speak to ${pr.object} as ${pr.subject} ${pr.subject === 'they' ? 'close' : 'closes'} the day.`;
     }

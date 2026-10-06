@@ -84,6 +84,7 @@ export default function MorningScreen() {
   const [intentionAsk, setIntentionAsk] = useState(intentionQuestion(null));
   const intentionSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingIntention = useRef<string | null>(null);
+  const taskSaveChain = useRef<Promise<void>>(Promise.resolve());
   const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   useFocusEffect(
@@ -186,13 +187,20 @@ export default function MorningScreen() {
 
   const saveTasks = async (updatedTasks: any[]) => {
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.done);
-    await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
-    try { await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
+    // R15: writes run one after another on this chain. Two quick taps used to
+    // fire two upserts at once, and when the first landed last the row (and
+    // so the check-in) read "1 of 2" while the screen showed 2 of 2.
+    const write = taskSaveChain.current.then(async () => {
+      await upsertTodayCheckin({ morning_tasks: updatedTasks, morning_done: allDone });
+      try { await AsyncStorage.setItem('arete:morning_tasks', JSON.stringify({ date: localToday(), tasks: updatedTasks })); } catch {}
+    }).catch(e => { console.error(e); });
+    taskSaveChain.current = write;
+    await write;
     if (allDone) {
       await updateStreak();
       const checkin = await getTodayCheckin();
       if (!checkin?.cabinet_morning_response) {
-        await requestCabinetReply(false);
+        await requestCabinetReply(false, updatedTasks);
       } else {
         logEvent('checkin_completed', { kind: 'morning', cabinet_replied: true, repeat: true });
       }
@@ -202,11 +210,14 @@ export default function MorningScreen() {
   // Ask the Cabinet to answer the finished morning. Only a real reply is ever
   // written to cabinet_morning_response, so after a failure the column is
   // still null and the Retry button (isRetry) can ask again.
-  const requestCabinetReply = async (isRetry: boolean) => {
+  const requestCabinetReply = async (isRetry: boolean, tasksNow: any[] = tasks) => {
     setCheckinLoading(true);
     setCheckinFailed(false);
     setCheckinResponse(null);
-    const result = await sendCheckInToCabinet('morning', { affirmation });
+    // R15: let every pending tick land, then send what the screen shows
+    // rather than re-reading the row.
+    await taskSaveChain.current;
+    const result = await sendCheckInToCabinet('morning', { affirmation, tasks: tasksNow, intention });
     setCheckinLoading(false);
     if (result.ok) {
       setCheckinResponse(result.text);
