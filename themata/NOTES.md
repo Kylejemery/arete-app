@@ -833,3 +833,19 @@ Fixes his review asked for before sign-off, added to the ledger notes as his:
   now has a section "Outside the formal suite" with each non-formal entry's
   schema, verdict, source, passage and notes, and every item's evidence panel
   shows its ledger notes.
+
+## S011: Alexander's in Topica stored (2026-10-06)
+
+CAG II.2 (Wallies 1891), `research_sources` `36848d34`: in Top. 10.5-14,
+transcribed from the page image with the apparatus for those lines. S011 now
+quotes 10.7-12, where Alexander attributes to "those from the Stoa" both the
+διφορούμενοι and the ἀδιαφόρως περαίνοντες, "in which the conclusion is the
+same as one of the premisses", with the example "either it is day or it is
+light; but it is day; therefore it is day".
+
+The apparatus qualifies it. ἀδιαφόρως is Prantl's emendation; every
+manuscript reads διαφόρως (the same split as in APr. 18.17, where only the
+Aldine has ἀδιαφόρως). ἤτοι is added in P's margin by a later hand, and ἢ is a
+correction in B; A reads εἰ, "if". So the disjunctive form of the example rests
+on corrections and the name on an emendation. The Stoic attribution has no
+variant. This is for Kyle's sign-off of S011 and for the specialist review.
