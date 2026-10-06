@@ -117,8 +117,8 @@ export default function KnowThyselfScreen() {
       logFormFieldsFilled(settingsSnapshot, update);
       setSettingsSnapshot({ ...(settingsSnapshot || {}), ...update });
       setFactsReload(n => n + 1);
-      // Saving the form completes Know Thyself once goals plus two other
-      // answers are filled (the rule lives in markKnowThyselfComplete). That
+      // Saving the form completes Know Thyself once the three short step
+      // answers (D7) are filled (the rule lives in markKnowThyselfComplete). That
       // clears the Home banner, the Scrolls empty state, and the "unprofiled"
       // note in the prompt, and starts the first Scroll.
       const complete = await markKnowThyselfComplete();
