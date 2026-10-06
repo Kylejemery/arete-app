@@ -1,22 +1,26 @@
 -- Retention plan R16: backfill profiles.know_thyself_complete for users who
--- completed Know Thyself through the form under the R3 rule but whose flag
--- is still false.
+-- completed Know Thyself through the form but whose flag is still false.
 --
--- NOT APPLIED. Kyle applies this after review.
+-- NOT APPLIED. Kyle applies this after review, and after
+-- 20261006140000_kt_completion_short_step.sql (decision D7), so the code,
+-- the trigger and this backfill agree.
 --
--- The rule is the R3 rule, as the ticket asks, which Kyle confirmed on
--- 2026-10-05: kt_goals filled, plus at least two of kt_background,
--- kt_identity, kt_strengths, kt_weaknesses, kt_patterns, kt_major_events,
--- future_self_description. It is the same rule as
--- supabase/backfills/2026-09-21_know_thyself_complete.sql, which was never
--- run. Since 2026-09-25 the live definition is "the top five registry
--- fields are filled" (activation plan, Part 3), so users flagged here will
--- have a flag that does not mean "top five filled". The flag is never unset.
+-- The rule (decision D8, 2026-10-06): the R3 rule as the ticket asks, which
+-- is kt_goals filled plus at least two of kt_background, kt_identity,
+-- kt_strengths, kt_weaknesses, kt_patterns, kt_major_events and
+-- future_self_description. On top of that, users without BOTH of the other
+-- two short step fields (kt_weaknesses and kt_patterns) are excluded. What
+-- remains meets the D7 completion rule, the three short step fields. When it
+-- was written that left 6 of the 19 users the R3 rule matches; the PR lists
+-- the 13 excluded by user id.
+--
+-- It repeats supabase/backfills/2026-09-21_know_thyself_complete.sql, which
+-- was never run.
 --
 -- No Scroll is written here (that needs a model call). The Scrolls page on
--- both platforms now starts the first Scroll when it sees the flag set and
--- no Scroll (startFirstScrollIfMissing), so these users get one on their
--- next visit.
+-- both platforms starts the first Scroll when it sees the flag set and no
+-- Scroll (startFirstScrollIfMissing), so these users get one on their next
+-- visit.
 --
 -- Idempotent: a second run touches nothing. Reads only whether fields are
 -- empty, never their text.
@@ -38,6 +42,9 @@ with eligible as (
       + (nullif(btrim(s.kt_major_events), '') is not null)::int
       + (nullif(btrim(s.future_self_description), '') is not null)::int
     ) >= 2
+    -- D8: both other short step fields, so the flag means what D7 says.
+    and nullif(btrim(s.kt_weaknesses), '') is not null
+    and nullif(btrim(s.kt_patterns), '') is not null
 ),
 flagged as (
   update profiles p
