@@ -114,10 +114,18 @@ function citationTag(row = {}) {
 
 // The kind of evidence a passage is, said beside the tag so a counselor never
 // quotes a modern summary as the ancient author (sourcing rules 5 and 6).
+// The label names the scholar, because a bare "(modern scholarship)" was not
+// enough: the 2026-10-05 eval had the Cabinet quote Arnold's paraphrase as
+// Seneca's own words even with sourcing rule 9 in the prompt.
 function layerNote(row = {}) {
+  const who = clean(row.author) || 'the scholar';
   switch (row.text_type) {
-    case 'scholarship': return ' (modern scholarship)';
-    case 'paper_summary': return ' (summary of modern scholarship, not a quotation)';
+    case 'scholarship':
+      return ` — modern scholarship: these are ${who}'s words, not an ancient author's. Attribute any quotation to ${who}.`;
+    case 'paper_summary':
+      return ` — an Arete summary of ${who}'s modern scholarship: not a quotation of ${who} or of any ancient author.`;
+    case 'synthesis':
+      return ' — Arete teaching material, not ancient testimony.';
     default: return '';
   }
 }

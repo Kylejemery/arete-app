@@ -61,3 +61,10 @@ test('a reply that never repeats the name is still about the figure the question
   assert.deepEqual(checkResponse(reply, [], false), []);
   assert.deepEqual(checkResponse(reply, [], true).map(x => x.kind), ['untagged']);
 });
+
+test('a section inside a retrieved range is not invented', () => {
+  assert.deepEqual(checkResponse('Diogenes Laertius says Chrysippus was a runner [DL 7.179].', ['[DL 7.177–7.180]']), []);
+  assert.deepEqual(checkResponse('Chrysippus wrote 500 lines a day [DL 7.180–7.181].', ['[DL 7.180–7.183]']), []);
+  const f = checkResponse('Chrysippus died laughing [DL 7.190].', ['[DL 7.177–7.180]']);
+  assert.deepEqual(f.map(x => x.kind), ['invented']);
+});

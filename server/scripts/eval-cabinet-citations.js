@@ -81,9 +81,28 @@ const placeOf = (t) => (normTag(t).match(/\d+(?:\.\d+)?|\b[ivxlc]+\b/g) || []);
 // A cited tag is retrieved when it is a prefix of a retrieved tag ("DL 7.179"
 // of "DL 7.179–7.181"), or a shortened form naming the same place
 // ("Lectures XI" for "Musonius, Lecture XI, p. 81").
+// "dl 7.177–7.180" → { head: 'dl', from: [7,177], to: [7,180] }; null when the
+// tag does not end in a dotted section or range.
+function rangeOf(t) {
+  const m = normTag(t).match(/^(.*?)\s*(\d+)\.(\d+)(?:\s*[–-]\s*(?:(\d+)\.)?(\d+))?$/);
+  if (!m) return null;
+  const [, head, b, s1, b2, s2] = m;
+  const from = [Number(b), Number(s1)];
+  const to = s2 ? [Number(b2 ?? b), Number(s2)] : from;
+  return { head: head.replace(/[,\s]+$/, ''), from, to };
+}
+const cmp = (a, b) => a[0] - b[0] || a[1] - b[1];
+
 function isRetrieved(tag, known) {
   const n = normTag(tag);
   if (known.some(k => k === n || k.startsWith(n) || n.startsWith(k))) return true;
+  // Narrowing a retrieved range to the exact section is good citing:
+  // [DL 7.179] inside a retrieved [DL 7.177–7.180].
+  const r = rangeOf(tag);
+  if (r && known.some(k => {
+    const kr = rangeOf(k);
+    return kr && kr.head === r.head && cmp(kr.from, r.from) <= 0 && cmp(r.to, kr.to) <= 0;
+  })) return true;
   const place = placeOf(tag);
   return place.length > 0 && known.some(k => {
     const kp = placeOf(k);
