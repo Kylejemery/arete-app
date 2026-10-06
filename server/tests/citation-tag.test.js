@@ -60,7 +60,7 @@ test('missing attribution is said outright', () => {
 test('scholarship and summaries are labelled beside the tag', () => {
   assert.equal(
     formatTaggedPassage({ author: 'Eduard Zeller', work: 'The Stoics, Epicureans and Sceptics', text_type: 'scholarship', chunk_text: 'text' }),
-    '[Eduard Zeller, The Stoics, Epicureans and Sceptics, no locator] (modern scholarship)\ntext',
+    "[Eduard Zeller, The Stoics, Epicureans and Sceptics, no locator] — modern scholarship: these are Eduard Zeller's words, not an ancient author's. Attribute any quotation to Eduard Zeller.\ntext",
   );
 });
 
@@ -80,4 +80,10 @@ test('attachCitationFields leaves rows alone when the lookup fails', async () =>
   const rows = [{ id: 'a', section_label: 'XXI' }];
   const supabase = { from: () => ({ select: () => ({ in: async () => { throw new Error('down'); } }) }) };
   assert.deepEqual(await attachCitationFields(supabase, rows), rows);
+});
+
+test('summaries and synthesis say what they are not', () => {
+  assert.match(formatTaggedPassage({ author: 'Émile Bréhier', work: 'Chrysippe (English summary)', text_type: 'paper_summary', chunk_text: 'x' }), /summary of Émile Bréhier's modern scholarship: not a quotation/);
+  assert.match(formatTaggedPassage({ author: 'Arete Synthesis', work: 'T', text_type: 'synthesis', chunk_text: 'x' }), /not ancient testimony/);
+  assert.equal(formatTaggedPassage({ author: 'Seneca', work: 'Letters', locator: '18', text_type: 'primary', chunk_text: 'x' }), '[Seneca, Ep. 18]\nx');
 });
