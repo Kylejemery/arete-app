@@ -19,6 +19,7 @@ const { expandCandidates, retrievalMode } = require('./lib/graph-boost');
 const { aboveSimilarityFloor, belowFloorLogRow } = require('./lib/cabinet-retrieval');
 const { counselorRetrievalParams, isCounselorVisible, modernFenceParams, passesModernFence } = require('./lib/corpus-fence');
 const { detectNamedAuthors, getPrimaryAuthors, reserveNamedPrimary, withinTimeout } = require('./lib/author-mentions');
+const { readScrollJson } = require('./lib/scroll-json');
 const { readingLanguageFilter, withLanguage } = require('./lib/library-language');
 const { FREE_COUNSELOR_SLUGS, FUTURE_SELF_SLUGS, isFreeCounselorSlug } = require('./lib/free-counselors');
 const { createEventLog, appBuildFromUserAgent } = require('./lib/events');
@@ -3774,24 +3775,23 @@ You must respond with ONLY valid JSON in exactly this format, nothing else:
     const errorText = await response.text();
     const err = new Error(errorText);
     err.status = response.status;
+    err.reason = 'upstream';
     throw err;
   }
 
   const data = await response.json();
-  const rawText = data.content?.find((b) => b.type === 'text')?.text || '';
-
-  let parsed;
-  try {
-    // Strip markdown code fences if Claude wrapped it
-    const cleaned = rawText.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-    parsed = JSON.parse(cleaned);
-  } catch {
+  // Every text block, last JSON object: web_search splits the reply, and the
+  // first text block is often a sentence written before searching.
+  const { scroll, diag } = readScrollJson(data.content, data.stop_reason);
+  if (!scroll) {
+    console.error('[scrolls] parse failed:', JSON.stringify(diag));
     const err = new Error('Failed to parse generated scroll');
     err.status = 500;
+    err.reason = 'parse';
     throw err;
   }
 
-  return { title: parsed.title, body: parsed.body, counselor };
+  return { title: scroll.title, body: scroll.body, counselor };
 }
 
 app.post('/api/scrolls/generate', async (req, res) => {
@@ -3809,7 +3809,7 @@ app.post('/api/scrolls/generate', async (req, res) => {
     return res.json(await generateScrollContent({ goal, counselor: requestedCounselor, userName }));
   } catch (error) {
     if (error.status) {
-      console.error('Scroll generation failed:', error.status);
+      console.error('Scroll generation failed:', error.status, `(${error.reason || 'unknown'})`);
       return res.status(error.status).json({ error: error.message });
     }
     console.error('Failed to generate scroll:', error.message);
@@ -3946,7 +3946,7 @@ app.post('/api/cabinet/offers/:id/respond', async (req, res) => {
       }).select('id').single();
       if (row) await supabase.from('cabinet_offers').update({ result_id: row.id }).eq('id', offer.id);
     } catch (err) {
-      console.error('[offers] scroll generation failed:', err.status || 'error');
+      console.error('[offers] scroll generation failed:', err.status || 'error', `(${err.reason || 'unknown'})`);
     }
   })();
 });
