@@ -33,6 +33,7 @@ export const RELEASED_PLAYGROUND = [
   'the-long-filter/formalism',
   'the-long-filter/walkthrough',
   'view-from-above',
+  'no-one-errs-willingly',
 ]
 
 /**
@@ -43,6 +44,7 @@ export const PLAYGROUND_PIECES = [
   'chrysippus-cylinder',
   'happiness-scale',
   'kosmopolis',
+  'no-one-errs-willingly',
   'situations',
   'stoic-logic',
   'stoic-qca',

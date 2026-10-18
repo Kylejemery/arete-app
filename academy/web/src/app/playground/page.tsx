@@ -117,6 +117,19 @@ export default function PlaygroundHub() {
           <span className="pg-card-go">Rescore the Stoics →</span>
         </Link>
 
+        {/* A plain link: the essay is a standalone HTML page served by a
+            route handler, so it needs a full page load, not client routing. */}
+        <a className="pg-card" href="/playground/no-one-errs-willingly">
+          <p className="pg-card-kicker">Essay · Socrates and the Stoics</p>
+          <h2>No one errs willingly</h2>
+          <p>
+            Socrates denied that anyone acts against their better judgement.
+            Restate your own lapse the way he would, test your assent against
+            five impressions, and check the distinction.
+          </p>
+          <span className="pg-card-go">Read the essay →</span>
+        </a>
+
         {/* Unreleased (not in RELEASED_PLAYGROUND): a draft for specialist
             review, visible to the owner only. See /playground/themata. */}
         <Link className="pg-card" href="/playground/themata">
