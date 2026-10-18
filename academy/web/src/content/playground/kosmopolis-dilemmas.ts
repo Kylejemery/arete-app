@@ -156,6 +156,18 @@ export const DILEMMAS: Dilemma[] = [
   },
 ];
 
+/**
+ * What a choice does to the soul. The counselled course is not free: it builds
+ * the virtue but costs the soul some comfort now (the coin returned, the safety
+ * given up, the pride swallowed). The tempting course pays at once and takes
+ * from character. That is the Stoic wager, and it is what makes the choice a
+ * choice rather than a button.
+ */
+export const CHOICE_EFFECT = {
+  good: { virtue: 0.1, eud: -0.05, near: 0.03 },
+  ill: { virtue: -0.08, eud: 0.07, near: -0.03 },
+} as const;
+
 /** Pick a dilemma that presses on the soul's weakest virtue, if one fits. */
 export function pickDilemma(virtues: Record<VirtueKey, number>, avoidId?: string): Dilemma {
   let weakest: VirtueKey = "wisdom";

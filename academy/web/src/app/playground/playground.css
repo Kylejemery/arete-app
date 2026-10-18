@@ -1033,3 +1033,26 @@
 .kp-tip { position: absolute; z-index: 6; transform: translate(14px, -50%); max-width: 15rem; pointer-events: none; background: rgba(16, 18, 20, 0.94); border: 1px solid var(--tape-rule); border-radius: 4px; padding: 0.4rem 0.55rem; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); }
 .kp-tip b { display: block; font-family: var(--display); font-size: 0.82rem; color: var(--paper); margin: 0 0 0.15rem; }
 .kp-tip span { display: block; font-family: var(--util); font-size: 0.7rem; line-height: 1.4; color: var(--bone-dim); }
+
+/* The run: pneuma, the cycle card, and the cycle's close */
+.kp-pneuma { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.3rem; }
+.kp-pneuma-pips { display: flex; gap: 3px; flex: 1; }
+.kp-pneuma-pips i { flex: 1; height: 8px; border: 1px solid var(--tape-rule); background: transparent; transition: background 0.3s ease; }
+.kp-pneuma-pips i.kp-pip-on { background: linear-gradient(180deg, #e2c787, #d6b26a); border-color: #d6b26a; }
+.kp-pneuma-n { font-family: var(--mono); font-size: 0.66rem; color: var(--bone); font-variant-numeric: tabular-nums; }
+.kp-card .kp-metrics + .kp-bar { margin-top: 0.5rem; }
+.kp-card .kp-hint + .kp-metrics { margin-top: 0.7rem; }
+.kp-v-ill { color: #d0675d; }
+.kp-cost { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); margin-left: 0.4rem; }
+.kp-runs { list-style: none; margin: 0.7rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.kp-runs li { display: grid; grid-template-columns: 4.5rem 1fr auto; gap: 0.5rem; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-runs b { color: var(--bone); font-weight: 400; font-variant-numeric: tabular-nums; }
+.kp-runs li.kp-run-ill b { color: #d0675d; }
+.kp-runend-concord { border-top-color: #d6b26a; }
+.kp-runend-stasis { border-top-color: #b8473f; }
+.kp-score-lines { list-style: none; margin: 1rem 0; padding: 0; border-top: 1px solid var(--tape-rule); }
+.kp-score-lines li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.4rem 0; border-bottom: 1px solid var(--tape-rule); font-size: 0.8rem; color: var(--bone-dim); }
+.kp-score-lines b { font-family: var(--mono); font-weight: 400; color: var(--bone); font-variant-numeric: tabular-nums; }
+.kp-score-lines li.kp-score-ill b { color: #d0675d; }
+.kp-score-lines li.kp-score-total { color: var(--paper); font-size: 0.9rem; }
+.kp-score-lines li.kp-score-total b { font-family: var(--display); font-size: 1.4rem; color: var(--paper); }

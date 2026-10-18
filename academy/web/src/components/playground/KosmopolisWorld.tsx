@@ -19,7 +19,28 @@ import {
   type VirtueKey,
   type Dials,
 } from "@/content/playground/kosmopolis";
-import { pickDilemma, type Dilemma, type DilemmaOption, type Verdict } from "@/content/playground/kosmopolis-dilemmas";
+import { pickDilemma, CHOICE_EFFECT, type Dilemma, type DilemmaOption, type Verdict } from "@/content/playground/kosmopolis-dilemmas";
+import {
+  PNEUMA_MAX,
+  PNEUMA_START,
+  PNEUMA_EVERY,
+  COSTS,
+  RUN_YEARS,
+  STASIS_FLOOR,
+  STASIS_YEARS,
+  CONCORD_HARMONY,
+  RUN_END_META,
+  scoreRun,
+  shuffled,
+  wheel,
+  BACKSLIDE,
+  BACKSLIDE_TO,
+  type CostKey,
+  type RunEnd,
+  type RunRecord,
+  type RunTally,
+  type ScoreLine,
+} from "@/content/playground/kosmopolis-run";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
 
@@ -43,8 +64,7 @@ import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiri
 const W = 1680;
 const H = 1050;
 const MAX_SOULS = 150;
-const REBIRTH_HARMONY = 0.82;
-const REBIRTH_YEARS = 120;
+const REBIRTH_HARMONY = CONCORD_HARMONY;
 
 // The world is a planet-face: procedural land inside a disc of this radius, in
 // world units. The camera flies from the whole disc down to individual people.
@@ -146,6 +166,15 @@ type World = {
   pendingEpitaphs: Epitaph[]; // legacies of the dead, awaiting the shared ledger
   tod: number; // time of day in [0,1): 0 midnight, 0.5 noon — a wall-clock cycle
   festival: number; // frames left in a festival, when the whole town gathers
+  // The run: one cycle as a game. See content/playground/kosmopolis-run.ts.
+  pneuma: number; // breath the visitor acts through
+  runYears: number; // acting years elapsed in this cycle
+  discord: number; // consecutive-ish years below the stasis floor
+  peakHarmony: number; // the highest harmony this cycle has reached
+  goodDeaths: number; // souls who died well this cycle
+  runOver: { end: RunEnd; score: number; lines: ScoreLine[] } | null; // set when the cycle has closed
+  best: number; // the best score any cycle of this world has earned
+  runs: RunRecord[]; // closed cycles, newest first
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -235,6 +264,14 @@ function createWorld(): World {
     pendingEpitaphs: [],
     tod: 0.58,
     festival: 0,
+    pneuma: PNEUMA_START,
+    runYears: 0,
+    discord: 0,
+    peakHarmony: 0,
+    goodDeaths: 0,
+    runOver: null,
+    best: 0,
+    runs: [],
   };
 }
 
@@ -391,6 +428,16 @@ type SavedWorld = {
   builtInst: InstType[][];
   laws: VirtueKey[];
   lastAssembly: number;
+  // Added with the run. Optional so saves from before it still load (the
+  // version is unchanged; missing fields take their defaults).
+  pneuma?: number;
+  runYears?: number;
+  discord?: number;
+  peakHarmony?: number;
+  goodDeaths?: number;
+  runOver?: World["runOver"];
+  best?: number;
+  runs?: RunRecord[];
 };
 
 function serialize(w: World): SavedWorld {
@@ -418,6 +465,14 @@ function serialize(w: World): SavedWorld {
     builtInst: w.builtInst,
     laws: w.laws,
     lastAssembly: w.lastAssembly,
+    pneuma: w.pneuma,
+    runYears: w.runYears,
+    discord: w.discord,
+    peakHarmony: w.peakHarmony,
+    goodDeaths: w.goodDeaths,
+    runOver: w.runOver,
+    best: w.best,
+    runs: w.runs.slice(0, 12),
   };
 }
 
@@ -502,6 +557,20 @@ function hydrate(w: World, data: unknown): boolean {
     : [];
   w.laws = Array.isArray(d.laws) ? (d.laws as unknown[]).filter((x) => (VIRTUE_KEYS as string[]).includes(x as string)) as VirtueKey[] : [];
   w.lastAssembly = Math.max(0, Math.round(numOr(d.lastAssembly, 0)));
+  // A world saved before the run existed starts its first cycle now, at full breath.
+  w.pneuma = clamp(numOr(d.pneuma, PNEUMA_START), 0, PNEUMA_MAX);
+  w.runYears = Math.max(0, Math.round(numOr(d.runYears, 0)));
+  w.discord = Math.max(0, Math.round(numOr(d.discord, 0)));
+  w.peakHarmony = clamp(numOr(d.peakHarmony, w.harmony), 0, 1);
+  w.goodDeaths = Math.max(0, Math.round(numOr(d.goodDeaths, 0)));
+  w.runOver =
+    d.runOver && typeof d.runOver === "object" && typeof d.runOver.score === "number" && d.runOver.end in RUN_END_META
+      ? { end: d.runOver.end, score: d.runOver.score, lines: Array.isArray(d.runOver.lines) ? d.runOver.lines : [] }
+      : null;
+  w.best = Math.max(0, Math.round(numOr(d.best, 0)));
+  w.runs = Array.isArray(d.runs)
+    ? (d.runs as RunRecord[]).filter((r) => r && typeof r.score === "number" && r.end in RUN_END_META).slice(0, 12)
+    : [];
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
@@ -941,10 +1010,11 @@ function applyFortune(world: World, f: { good: boolean; name?: string }) {
   // Resolve is resilience won by rehearsing loss (premeditatio malorum).
   const shield = world.dials.sageShield;
   const vanguard = world.laws.includes("courage"); // the people bear fortune together
+  const bite = wheel(world.runYears).harm; // ill fortune bites harder late in a cycle
   for (const s of world.souls) {
     const a = arete(s.v);
     const exposure = clamp(1 - a * shield - s.resolve, 0.05, 1);
-    let hit = (f.good ? 0.09 : -0.13) * (0.12 + exposure * 0.88);
+    let hit = (f.good ? 0.09 : -0.13 * bite) * (0.12 + exposure * 0.88);
     // A granary — and a polis-wide Law of the Vanguard — soften fortune's blows.
     if (!f.good && hasInst(world, s.home, "granary")) hit *= 0.5;
     if (!f.good && vanguard) hit *= 0.7;
@@ -989,6 +1059,18 @@ function ekpyrosis(world: World) {
   world.flash = 60;
   world.cycle++;
   world.harmony = 0.55;
+  // Everything the people built burns with the world. A new cycle earns its own
+  // institutions and laws, so one cycle's score never rides on another's.
+  world.builtInst = world.settlements.map(() => []);
+  world.laws = [];
+  world.lastAssembly = world.year;
+  // And a new run begins, at full breath.
+  world.pneuma = PNEUMA_START;
+  world.runYears = 0;
+  world.discord = 0;
+  world.peakHarmony = world.harmony;
+  world.goodDeaths = 0;
+  world.runOver = null;
   const seeds = elite.length ? elite : [undefined];
   for (let i = 0; i < 10; i++) {
     seedSouls(world, 1, seeds[i % seeds.length]);
@@ -1026,6 +1108,7 @@ function reap(world: World) {
       }
     }
     if (wellLived) {
+      world.goodDeaths++;
       log(world, `${s.name} died in their ${ordSuffix(lived)} year, and met the end without complaint.`);
       // a good death instructs: it lifts the whole, gently
       world.harmony = clamp(world.harmony + 0.01, 0, 1);
@@ -1075,6 +1158,7 @@ function assembly(world: World) {
 }
 
 function tick(world: World) {
+  if (world.runOver) return; // a closed cycle waits for the fire
   world.year++;
   advanceEpoch(world);
   const e = EPOCHS[world.epoch];
@@ -1084,7 +1168,7 @@ function tick(world: World) {
     if (world.fortune.life <= 0) world.fortune = null;
   }
 
-  if (e.act && !world.fortune && Math.random() < world.dials.fortuneFreq) {
+  if (e.act && !world.fortune && Math.random() < world.dials.fortuneFreq * wheel(world.runYears).freq) {
     const f = pick(FORTUNES);
     world.fortune = { name: f.name, good: f.good, tint: f.tint, life: FORTUNE_LIFE_MIN + ((Math.random() * FORTUNE_LIFE_SPREAD) | 0) };
     applyFortune(world, f);
@@ -1093,6 +1177,11 @@ function tick(world: World) {
 
   if (e.act) {
     for (const s of world.souls) act(world, s);
+    // Untended progress slides back; reason holds the awakened (BACKSLIDE).
+    for (const s of world.souls) {
+      if (s.awake) continue;
+      for (const k of VIRTUE_KEYS) s.v[k] += (BACKSLIDE_TO - s.v[k]) * BACKSLIDE;
+    }
     teach(world);
     maybeBuild(world);
     reap(world); // the last things
@@ -1103,11 +1192,52 @@ function tick(world: World) {
     const target = world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5;
     world.harmony += (target - world.harmony) * 0.06;
 
-    // Track sustained concord for the rebirth.
-    if (world.harmony >= REBIRTH_HARMONY) world.highRun++;
-    else world.highRun = Math.max(0, world.highRun - 2);
-    if (world.highRun >= REBIRTH_YEARS) ekpyrosis(world);
+    // The run. The rebirth is no longer automatic: concord only makes it
+    // possible, and the visitor chooses the moment (see endRun).
+    world.runYears++;
+    if (world.runYears % PNEUMA_EVERY === 0) world.pneuma = Math.min(PNEUMA_MAX, world.pneuma + 1);
+    if (world.harmony > world.peakHarmony) world.peakHarmony = world.harmony;
+    if (world.harmony < STASIS_FLOOR) world.discord++;
+    else world.discord = Math.max(0, world.discord - 1);
+    if (world.discord >= STASIS_YEARS || (world.runYears > 30 && world.souls.length === 0)) endRun(world, "stasis");
+    else if (world.runYears >= RUN_YEARS) endRun(world, "great-year");
   }
+}
+
+// Gather what the score is computed from. Live during a run, final at its end.
+function tallyRun(world: World): RunTally {
+  let institutions = 0;
+  for (const row of world.builtInst) institutions += row.length;
+  let awake = 0;
+  let sages = 0;
+  for (const s of world.souls) {
+    if (!s.awake) continue;
+    awake++;
+    if (arete(s.v) >= 0.88) sages++;
+  }
+  return {
+    peakHarmony: world.peakHarmony,
+    goodDeaths: world.goodDeaths,
+    institutions,
+    laws: world.laws.length,
+    awake,
+    sages,
+    pneuma: world.pneuma,
+    yearsLeft: Math.max(0, RUN_YEARS - world.runYears),
+  };
+}
+
+// Close the cycle: score it, keep the record, and stop the world until the
+// visitor passes it into fire.
+function endRun(world: World, end: RunEnd) {
+  if (world.runOver) return;
+  const { total, lines } = scoreRun(tallyRun(world), end);
+  world.runOver = { end, score: total, lines };
+  world.running = false;
+  world.best = Math.max(world.best, total);
+  world.runs.unshift({ cycle: world.cycle, end, score: total, year: world.year });
+  if (world.runs.length > 12) world.runs.pop();
+  log(world, `${RUN_END_META[end].kicker}. The ${ordSuffix(world.cycle)} cycle is weighed at ${total.toLocaleString()}.`, end === "stasis");
 }
 
 /** Daily life: souls walk to a spot in their town, pause to rest or work, then
@@ -1255,6 +1385,13 @@ type UiState = {
   cycle: number;
   fortune: string | null;
   canRebirth: boolean;
+  pneuma: number;
+  runYears: number;
+  discord: number;
+  liveScore: number;
+  runOver: World["runOver"];
+  best: number;
+  runs: RunRecord[];
 };
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -2829,8 +2966,7 @@ function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev:
 }
 
 export default function KosmopolisWorld() {
-  const worldRef = useRef<World>(createWorld());
-  const reduceRef = useRef(false);
+  const worldRef = useRef<World>(createWorld());  const reduceRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cosmosRef = useRef<HTMLElement | null>(null);
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
@@ -2863,6 +2999,13 @@ export default function KosmopolisWorld() {
     cycle: 1,
     fortune: null,
     canRebirth: false,
+    pneuma: PNEUMA_START,
+    runYears: 0,
+    discord: 0,
+    liveScore: 0,
+    runOver: null,
+    best: 0,
+    runs: [],
   });
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
@@ -2930,7 +3073,14 @@ export default function KosmopolisWorld() {
       generations: w.generations,
       cycle: w.cycle,
       fortune: w.fortune ? w.fortune.name : null,
-      canRebirth: EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length > 0,
+      canRebirth: !w.runOver && EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length > 0,
+      pneuma: w.pneuma,
+      runYears: w.runYears,
+      discord: w.discord,
+      liveScore: scoreRun(tallyRun(w), null).total,
+      runOver: w.runOver,
+      best: w.best,
+      runs: w.runs.slice(0, 5),
     });
     setChron(w.chron.slice(0, 48));
     setMaxims(w.maxims.slice(0, 12));
@@ -3867,6 +4017,27 @@ export default function KosmopolisWorld() {
     ctx.textBaseline = "alphabetic";
   }
 
+  /* ---- pneuma: the breath every intervention spends ---- */
+  // Whether the visitor can act now, saying why not if they cannot.
+  const canAfford = useCallback((key: CostKey): boolean => {
+    const w = worldRef.current;
+    if (w.runOver) {
+      setNotice("This cycle has closed. Pass the world into fire to begin the next.");
+      return false;
+    }
+    if (w.pneuma < COSTS[key]) {
+      setNotice(`That takes ${COSTS[key]} pneuma and you hold ${w.pneuma}. Breath returns as time runs.`);
+      return false;
+    }
+    return true;
+  }, []);
+  // Spend the breath. Oracle acts call this only once the Oracle has answered,
+  // so a silent Oracle costs nothing.
+  const spend = useCallback((key: CostKey) => {
+    const w = worldRef.current;
+    w.pneuma = Math.max(0, w.pneuma - COSTS[key]);
+  }, []);
+
   /* ---- controls ---- */
   const ignite = useCallback(() => {
     const w = worldRef.current;
@@ -3888,6 +4059,7 @@ export default function KosmopolisWorld() {
       ignite();
       return;
     }
+    if (w.runOver) return; // a closed cycle does not run on
     w.running = !w.running;
     dirtyRef.current = true;
     if (!w.running) flush(true); // save on pause
@@ -3924,6 +4096,9 @@ export default function KosmopolisWorld() {
       setNotice("The world is as full as it can hold.");
       return;
     }
+    if (!canAfford("seed")) return;
+    spend("seed");
+    setNotice(null);
     const home = w.settlements.length ? (Math.random() * w.settlements.length) | 0 : 0;
     const s = makeSoul(w, home);
     w.souls.push(s);
@@ -3931,12 +4106,26 @@ export default function KosmopolisWorld() {
     log(w, `A soul — ${s.name} — was breathed into being by a hand outside the world.`);
     dirtyRef.current = true;
     refresh();
-  }, [ignite, refresh]);
+  }, [ignite, refresh, canAfford, spend]);
 
+  // Kindling the rebirth from concord is how a cycle is won. It closes the run
+  // and scores it; the fire itself waits for passIntoFire.
   const rebirth = useCallback(() => {
     const w = worldRef.current;
-    if (!(EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length)) return;
+    if (w.runOver || !(EPOCHS[w.epoch].act === true && w.harmony >= REBIRTH_HARMONY && w.souls.length)) return;
+    endRun(w, "concord");
+    dirtyRef.current = true;
+    flush(true);
+    refresh();
+  }, [refresh, flush]);
+
+  // After any ending: the conflagration, and the next cycle from the best souls.
+  const passIntoFire = useCallback(() => {
+    const w = worldRef.current;
+    if (!w.runOver) return;
     ekpyrosis(w);
+    setSelected(null);
+    setNotice(null);
     dirtyRef.current = true;
     flush(true);
     refresh();
@@ -4138,6 +4327,7 @@ export default function KosmopolisWorld() {
     const w = worldRef.current;
     const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
     if (!s || awakening) return;
+    if (!canAfford("awaken")) return;
     setAwakening(true);
     setNotice(null);
     try {
@@ -4159,6 +4349,7 @@ export default function KosmopolisWorld() {
         return;
       }
       const key = (data.virtue as VirtueKey) ?? "wisdom";
+      spend("awaken");
       // Awakening gives reason: the exercised virtue strengthens durably, the
       // soul flourishes, and it now wears the ring of reason.
       s.awake = true;
@@ -4189,7 +4380,7 @@ export default function KosmopolisWorld() {
     } finally {
       setAwakening(false);
     }
-  }, [awakening, refresh, loadLedger, flush]);
+  }, [awakening, refresh, loadLedger, flush, canAfford, spend]);
 
   /* ---- the Oracle: counsel ---- */
   const submitCounsel = useCallback(async () => {
@@ -4197,6 +4388,7 @@ export default function KosmopolisWorld() {
     const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
     const text = advice.trim();
     if (!s || !text || counseling) return;
+    if (!canAfford("counsel")) return;
     setCounseling(true);
     setNotice(null);
     try {
@@ -4218,6 +4410,7 @@ export default function KosmopolisWorld() {
         return;
       }
       const key = (data.virtue as VirtueKey) ?? "wisdom";
+      spend("counsel");
       s.v[key] = clamp(s.v[key] + 0.08, 0.05, 0.99);
       s.eud = clamp(s.eud + 0.08, 0.02, 1);
       s.reflection = data.reply;
@@ -4236,35 +4429,41 @@ export default function KosmopolisWorld() {
     } finally {
       setCounseling(false);
     }
-  }, [advice, counselorId, counseling, refresh, loadLedger, flush]);
+  }, [advice, counselorId, counseling, refresh, loadLedger, flush, canAfford, spend]);
 
   /* ---- decisions: a soul faces a dilemma, you help it choose ---- */
   const openDilemma = useCallback(() => {
     const w = worldRef.current;
     const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
     if (!s) return;
+    // Looking is free; the breath is spent when a course is chosen.
+    if (!canAfford("decide")) return;
     const d = pickDilemma(s.v, lastDilemmaRef.current);
     lastDilemmaRef.current = d.id;
-    setDilemma(d);
+    // The counselled course is never in a fixed place.
+    setDilemma({ ...d, options: shuffled(d.options) });
     setScripture(null);
     setDilemmaOpen(true);
     setNotice(null);
-  }, []);
+  }, [canAfford]);
 
   // Premeditatio malorum — the visitor guides the soul to rehearse the loss of
-  // what it clings to. Costs no Oracle; it builds resolve (diminishing returns),
-  // which blunts fortune, and is itself the discipline of desire.
+  // what it clings to. Costs no Oracle, only pneuma; it builds resolve
+  // (diminishing returns), which blunts fortune, and is itself the discipline of desire.
   const rehearse = useCallback(() => {
     const w = worldRef.current;
     const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
     if (!s) return;
+    if (!canAfford("rehearse")) return;
+    spend("rehearse");
+    setNotice(null);
     s.resolve = clamp(s.resolve + (0.5 - s.resolve) * 0.3, 0, 0.5);
     s.metDesire = true;
     log(w, `${s.name} rehearsed the loss of what is not theirs to keep, and stood the readier for fortune.`);
     dirtyRef.current = true;
     flush(true);
     refresh();
-  }, [flush, refresh]);
+  }, [flush, refresh, canAfford, spend]);
 
   // Spend the Oracle to draw a live passage for the open dilemma, in place of
   // the authored verdict. The virtue at stake frames the search.
@@ -4299,9 +4498,16 @@ export default function KosmopolisWorld() {
       const w = worldRef.current;
       const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
       if (!s) return;
-      const mag = opt.good ? 1 : -1;
-      s.v[opt.virtue] = clamp(s.v[opt.virtue] + mag * 0.1, 0.02, 0.99);
-      s.eud = clamp(s.eud + mag * 0.16, 0.02, 1);
+      if (!canAfford("decide")) {
+        setDilemmaOpen(false);
+        return;
+      }
+      spend("decide");
+      // The counselled course builds character and costs comfort now; the
+      // tempting one pays at once and takes from character (CHOICE_EFFECT).
+      const fx = opt.good ? CHOICE_EFFECT.good : CHOICE_EFFECT.ill;
+      s.v[opt.virtue] = clamp(s.v[opt.virtue] + fx.virtue, 0.02, 0.99);
+      s.eud = clamp(s.eud + fx.eud, 0.02, 1);
       s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
       if (opt.good) s.metAction = true; // the discipline of action: a virtuous course chosen
       const text = opt.outcome(s.name);
@@ -4325,7 +4531,7 @@ export default function KosmopolisWorld() {
         if (o === s) continue;
         const dx = o.x - s.x;
         const dy = o.y - s.y;
-        if (dx * dx + dy * dy < 6000) o.eud = clamp(o.eud + mag * 0.03, 0.02, 1);
+        if (dx * dx + dy * dy < 6000) o.eud = clamp(o.eud + fx.near, 0.02, 1);
       }
       w.playout = { soulId: s.id, text, good: opt.good, life: 240 };
       log(
@@ -4353,7 +4559,7 @@ export default function KosmopolisWorld() {
         .catch(() => {});
       setScripture(null);
     },
-    [flush, refresh, loadLedger, dilemma, scripture]
+    [flush, refresh, loadLedger, dilemma, scripture, canAfford, spend]
   );
 
   /* ---------------------------------------------------------------- view */
@@ -4520,6 +4726,64 @@ export default function KosmopolisWorld() {
           </div>
 
           <div className="kp-card">
+            <h3>This cycle</h3>
+            <div className="kp-pneuma" aria-label={`Pneuma ${ui.pneuma} of ${PNEUMA_MAX}`}>
+              <span className="kp-k">Pneuma</span>
+              <span className="kp-pneuma-pips" aria-hidden="true">
+                {Array.from({ length: PNEUMA_MAX }, (_, i) => (
+                  <i key={i} className={i < ui.pneuma ? "kp-pip-on" : ""} />
+                ))}
+              </span>
+              <span className="kp-pneuma-n">
+                {ui.pneuma}/{PNEUMA_MAX}
+              </span>
+            </div>
+            <p className="kp-hint">The breath you act through. One returns every {PNEUMA_EVERY} years while time runs; you cannot tend every soul.</p>
+            <div className="kp-metrics">
+              <div className="kp-metric">
+                <span className="kp-k">Score</span>
+                <span className="kp-v">{ui.liveScore.toLocaleString()}</span>
+              </div>
+              <div className="kp-metric">
+                <span className="kp-k">Best</span>
+                <span className="kp-v">{ui.best ? ui.best.toLocaleString() : "—"}</span>
+              </div>
+              <div className="kp-metric">
+                <span className="kp-k">Great Year</span>
+                <span className="kp-v">
+                  {Math.max(0, RUN_YEARS - ui.runYears)}
+                  <small> yrs left</small>
+                </span>
+              </div>
+              <div className="kp-metric">
+                <span className="kp-k">Discord</span>
+                <span className={`kp-v${ui.discord > STASIS_YEARS / 2 ? " kp-v-ill" : ""}`}>
+                  {ui.discord}
+                  <small>/{STASIS_YEARS}</small>
+                </span>
+              </div>
+            </div>
+            <div className="kp-bar" title="Years of discord before the city falls into stasis">
+              <i style={{ width: `${Math.min(100, (ui.discord / STASIS_YEARS) * 100)}%`, background: "linear-gradient(90deg,#b8473f,#7a2a24)" }} />
+            </div>
+            <p className="kp-hint">
+              Win by bringing harmony to {Math.round(REBIRTH_HARMONY * 100)}% and kindling the rebirth. Lose if harmony stays under{" "}
+              {Math.round(STASIS_FLOOR * 100)}% for {STASIS_YEARS} years: the city falls into stasis.
+            </p>
+            {ui.runs.length > 0 && (
+              <ul className="kp-runs">
+                {ui.runs.map((r, i) => (
+                  <li key={i} className={r.end === "stasis" ? "kp-run-ill" : ""}>
+                    <span>Cycle {r.cycle}</span>
+                    <span>{r.end === "concord" ? "Concord" : r.end === "stasis" ? "Stasis" : "Great Year spent"}</span>
+                    <b>{r.score.toLocaleString()}</b>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="kp-card">
             <h3>Providence</h3>
             <div className="kp-controls">
               <div className="kp-btn-row">
@@ -4541,15 +4805,15 @@ export default function KosmopolisWorld() {
                   </button>
                 ))}
               </div>
-              <button className="kp-btn kp-wide" onClick={seedOne}>
-                ✦ Breathe a soul into being
+              <button className="kp-btn kp-wide" onClick={seedOne} disabled={ui.pneuma < COSTS.seed || !!ui.runOver}>
+                ✦ Breathe a soul into being <span className="kp-cost">{COSTS.seed} pneuma</span>
               </button>
               <button className="kp-btn kp-wide kp-btn-fire" onClick={rebirth} disabled={!ui.canRebirth}>
                 ⟳ Kindle the rebirth
               </button>
               <p className="kp-hint">
                 {ui.canRebirth
-                  ? "Harmony is high enough to pass the world through fire — it will begin again from its best souls."
+                  ? "The world is in concord. Kindle the rebirth now to close the cycle as a victory, or hold on to build a higher score and risk the turn."
                   : "Ignite, then let time flow. Click any point of light to look into a soul."}
               </p>
             </div>
@@ -4571,6 +4835,7 @@ export default function KosmopolisWorld() {
                 onCounsel={() => setCounselOpen(true)}
                 onDecide={openDilemma}
                 onRehearse={rehearse}
+                pneuma={ui.runOver ? 0 : ui.pneuma}
                 acting={EPOCHS[worldRef.current.epoch].act === true}
                 shield={worldRef.current.dials.sageShield}
                 badFortune={!!worldRef.current.fortune && !worldRef.current.fortune.good}
@@ -4840,8 +5105,42 @@ export default function KosmopolisWorld() {
               </button>
             )}
             <p className="kp-modal-foot">
-              Choose the course you would have them take, and watch it play out.
+              Choose the course you would have them take, for {COSTS.decide} pneuma. The right course is rarely the comfortable one: it builds
+              character and costs them something now.
               {scripture ? " The passage above will be the word remembered." : ""}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* the cycle closes */}
+      {ui.runOver && (
+        <div className="kp-modal" role="dialog" aria-modal="true" aria-label={RUN_END_META[ui.runOver.end].title}>
+          <div className="kp-modal-scrim" />
+          <div className={`kp-modal-body kp-runend kp-runend-${ui.runOver.end}`}>
+            <p className="kp-modal-kicker">
+              {RUN_END_META[ui.runOver.end].kicker} · Cycle {ui.cycle}
+            </p>
+            <h2 className="kp-modal-h">{RUN_END_META[ui.runOver.end].title}</h2>
+            <p className="kp-modal-scene">{RUN_END_META[ui.runOver.end].body}</p>
+            <ul className="kp-score-lines">
+              {ui.runOver.lines.map((l) => (
+                <li key={l.label} className={l.points < 0 ? "kp-score-ill" : ""}>
+                  <span>{l.label}</span>
+                  <b>{l.points > 0 ? `+${l.points.toLocaleString()}` : l.points.toLocaleString()}</b>
+                </li>
+              ))}
+              <li className="kp-score-total">
+                <span>The cycle is weighed at</span>
+                <b>{ui.runOver.score.toLocaleString()}</b>
+              </li>
+            </ul>
+            {ui.runOver.score >= ui.best && ui.runs.length > 1 && <p className="kp-modal-foot">The best cycle this world has known.</p>}
+            <button className="kp-btn kp-wide kp-btn-fire" onClick={passIntoFire}>
+              ⟳ Pass into fire · begin cycle {ui.cycle + 1}
+            </button>
+            <p className="kp-modal-foot">
+              Everything built burns. The four most virtuous souls seed the next world, and your breath returns.
             </p>
           </div>
         </div>
@@ -4872,6 +5171,7 @@ function SoulCard({
   onCounsel,
   onDecide,
   onRehearse,
+  pneuma,
   acting,
   shield,
   badFortune,
@@ -4885,6 +5185,7 @@ function SoulCard({
   onCounsel: () => void;
   onDecide: () => void;
   onRehearse: () => void;
+  pneuma: number;
   acting: boolean;
   shield: number;
   badFortune: boolean;
@@ -5011,18 +5312,24 @@ function SoulCard({
           </p>
         </div>
       )}
-      <button className={`kp-btn kp-wide kp-decide ${troubled ? "kp-btn-primary" : ""}`} onClick={onDecide}>
-        ⚖ Help {soul.name} decide
+      <button className={`kp-btn kp-wide kp-decide ${troubled ? "kp-btn-primary" : ""}`} onClick={onDecide} disabled={pneuma < COSTS.decide}>
+        ⚖ Help {soul.name} decide <span className="kp-cost">{COSTS.decide} pneuma</span>
       </button>
-      <button className="kp-btn kp-wide" onClick={onRehearse} title="Premeditatio malorum — rehearse the loss of what is not yours to keep, and stand the readier for fortune.">
-        ◇ Rehearse loss
+      <button
+        className="kp-btn kp-wide"
+        onClick={onRehearse}
+        disabled={pneuma < COSTS.rehearse}
+        title="Premeditatio malorum — rehearse the loss of what is not yours to keep, and stand the readier for fortune."
+      >
+        ◇ Rehearse loss <span className="kp-cost">{COSTS.rehearse} pneuma</span>
       </button>
       <div className="kp-soul-actions">
-        <button className="kp-btn" onClick={onAwaken} disabled={awakening || soul.awake}>
+        <button className="kp-btn" onClick={onAwaken} disabled={awakening || soul.awake || pneuma < COSTS.awaken}>
           {soul.awake ? "Reason kindled" : awakening ? "The Oracle reasons…" : "✦ Awaken"}
+          {!soul.awake && !awakening && <span className="kp-cost">{COSTS.awaken}</span>}
         </button>
-        <button className="kp-btn" onClick={onCounsel}>
-          Counsel
+        <button className="kp-btn" onClick={onCounsel} disabled={pneuma < COSTS.counsel}>
+          Counsel <span className="kp-cost">{COSTS.counsel}</span>
         </button>
       </div>
     </div>
