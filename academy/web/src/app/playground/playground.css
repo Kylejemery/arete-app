@@ -1056,3 +1056,57 @@
 .kp-score-lines li.kp-score-ill b { color: #d0675d; }
 .kp-score-lines li.kp-score-total { color: var(--paper); font-size: 0.9rem; }
 .kp-score-lines li.kp-score-total b { font-family: var(--display); font-size: 1.4rem; color: var(--paper); }
+
+/* The polis: Schools, the towns' stores, threats, and the Assembly vote */
+.kp-school-line { margin: 0 0 0.6rem; font-size: 0.78rem; color: var(--bone-dim); }
+.kp-school-line b { font-family: var(--display); font-weight: 400; color: var(--paper); margin-right: 0.3rem; }
+.kp-school-line span { font-family: var(--book); font-style: italic; }
+.kp-schools-body { width: min(46rem, 100%); }
+.kp-schools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+@media (max-width: 560px) { .kp-schools { grid-template-columns: 1fr; } }
+.kp-school {
+  display: flex; flex-direction: column; gap: 0.3rem; text-align: left; cursor: pointer;
+  background: var(--tape); border: 1px solid var(--tape-rule); border-top: 2px solid var(--tape-rule); padding: 0.85rem 0.9rem; color: var(--bone);
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.kp-school:hover { border-color: #d6b26a; background: rgba(214, 178, 106, 0.06); }
+.kp-school:active { transform: translateY(1px); }
+.kp-school-stoa { border-top-color: #d6b26a; }
+.kp-school-garden { border-top-color: #7aa88e; }
+.kp-school-lyceum { border-top-color: #7a9cc4; }
+.kp-school-cynic { border-top-color: #b8473f; }
+.kp-school-name { font-family: var(--display); font-size: 1.15rem; color: var(--paper); }
+.kp-school-founder { font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-school-motto { font-family: var(--book); font-style: italic; font-size: 0.86rem; color: var(--bone); }
+.kp-school-bends { font-family: var(--util); font-size: 0.78rem; line-height: 1.45; color: var(--bone); }
+.kp-school-dials { display: flex; flex-direction: column; gap: 0.1rem; margin-top: 0.2rem; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-school-dials b { font-weight: 400; color: var(--bone); }
+
+.kp-stores { width: 100%; border-collapse: collapse; font-size: 0.72rem; }
+.kp-stores th, .kp-stores td { padding: 0.22rem 0.3rem 0.22rem 0; text-align: left; font-weight: 400; }
+.kp-stores thead th { font-family: var(--mono); font-size: 0.54rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-stores tbody th { color: var(--bone); white-space: nowrap; }
+.kp-stores tbody th small { font-family: var(--mono); font-size: 0.56rem; color: var(--bone-dim); margin-left: 0.2rem; }
+.kp-stores td { width: 22%; }
+.kp-store-bar { display: block; height: 6px; border: 1px solid var(--tape-rule); }
+.kp-store-bar i { display: block; height: 100%; background: linear-gradient(90deg, #7aa88e, #d6b26a); }
+.kp-store-low .kp-store-bar { border-color: rgba(184, 71, 63, 0.6); }
+.kp-store-low .kp-store-bar i { background: #b8473f; }
+.kp-store-empty { opacity: 0.45; }
+
+.kp-threats { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.kp-threat { border-left: 2px solid #b8473f; padding-left: 0.6rem; }
+.kp-threat-sophist { border-left-color: #9660be; }
+.kp-threat-head { font-size: 0.8rem; color: var(--bone-dim); margin-bottom: 0.3rem; }
+.kp-threat-head b { font-family: var(--display); font-weight: 400; color: var(--paper); margin-right: 0.25rem; }
+.kp-threat .kp-bar i { background: linear-gradient(90deg, #7a2a24, #b8473f); }
+.kp-threat-sophist .kp-bar i { background: linear-gradient(90deg, #5d3c78, #9660be); }
+.kp-threat-seized .kp-threat-head span { color: #d0675d; }
+.kp-threat .kp-btn { margin-top: 0.4rem; }
+
+.kp-vote { display: flex; gap: 0.4rem; margin: 0.35rem 0 0.2rem; }
+.kp-vote .kp-btn { flex: 1; font-size: 0.66rem; padding: 0.3rem 0.4rem; }
+.kp-dial input[type="range"]:disabled { opacity: 0.75; cursor: default; }
+
+.kp-option { flex-wrap: wrap; }
+.kp-option-stores { flex-basis: 100%; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); }

@@ -33,6 +33,10 @@ export const COSTS = {
   counsel: 1, // a voice of the tradition (also spends the Oracle)
   awaken: 2, // kindle reason (also spends the Oracle)
   seed: 2, // breathe a new soul into being
+  vote: 3, // call the Assembly to bend the doctrine one step
+  refute: 2, // answer a sophist
+  rally: 2, // rally the citizens against a tyrant
+  embassy: 2, // treat with the rival polis (and a little coin)
 } as const;
 
 export type CostKey = keyof typeof COSTS;
@@ -105,6 +109,8 @@ export type RunTally = {
   sages: number; // awakened souls of the highest virtue alive
   pneuma: number; // breath unspent
   yearsLeft: number; // acting years left in the Great Year
+  threatsMet?: number; // sophists refuted, tyrants overthrown, rivals brought to peace
+  seized?: boolean; // a tyrant holds the assembly at the close: its laws do not count
 };
 
 export type ScoreLine = { label: string; points: number };
@@ -119,10 +125,11 @@ export function scoreRun(t: RunTally, end: RunEnd | null): { total: number; line
     { label: "Peak harmony", points: Math.round(t.peakHarmony * 100) * 4 },
     { label: "Souls who died well", points: t.goodDeaths * 8 },
     { label: "Institutions standing", points: t.institutions * 20 },
-    { label: "Laws enacted", points: t.laws * 35 },
+    { label: t.seized ? "Laws enacted (the assembly is seized)" : "Laws enacted", points: t.seized ? 0 : t.laws * 35 },
     { label: "Souls awakened", points: t.awake * 12 },
     { label: "Sages", points: t.sages * 60 },
   ];
+  if (t.threatsMet) lines.push({ label: "Threats overcome", points: t.threatsMet * 40 });
   if (end === "concord") {
     lines.push({ label: "Concord", points: 300 });
     lines.push({ label: "Years to spare", points: Math.max(0, Math.round(t.yearsLeft / 2)) });
