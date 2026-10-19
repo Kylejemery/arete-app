@@ -17,6 +17,8 @@
  * No React here; the component imports these and does the drawing.
  */
 
+import { POINTS_PER_LAND, POINTS_PER_COLONY, EXPEDITION_COST, COLONY_PNEUMA } from "@/content/playground/kosmopolis-explore";
+
 /* ------------------------------------------------------------------ pneuma */
 
 /** The most breath a visitor can hold at once. */
@@ -37,6 +39,8 @@ export const COSTS = {
   refute: 2, // answer a sophist
   rally: 2, // rally the citizens against a tyrant
   embassy: 2, // treat with the rival polis (and a little coin)
+  explore: EXPEDITION_COST, // send an expedition into the fog
+  colony: COLONY_PNEUMA, // found a colony on discovered land (and settlers, grain, coin)
 } as const;
 
 export type CostKey = keyof typeof COSTS;
@@ -111,6 +115,8 @@ export type RunTally = {
   yearsLeft: number; // acting years left in the Great Year
   threatsMet?: number; // sophists refuted, tyrants overthrown, rivals brought to peace
   seized?: boolean; // a tyrant holds the assembly at the close: its laws do not count
+  lands?: number; // land masses beyond the home shore discovered this cycle
+  colonies?: number; // colonies founded this cycle and still standing
 };
 
 export type ScoreLine = { label: string; points: number };
@@ -130,6 +136,8 @@ export function scoreRun(t: RunTally, end: RunEnd | null): { total: number; line
     { label: "Sages", points: t.sages * 60 },
   ];
   if (t.threatsMet) lines.push({ label: "Threats overcome", points: t.threatsMet * 40 });
+  if (t.lands) lines.push({ label: "Lands discovered", points: t.lands * POINTS_PER_LAND });
+  if (t.colonies) lines.push({ label: "Colonies founded", points: t.colonies * POINTS_PER_COLONY });
   if (end === "concord") {
     lines.push({ label: "Concord", points: 300 });
     lines.push({ label: "Years to spare", points: Math.max(0, Math.round(t.yearsLeft / 2)) });

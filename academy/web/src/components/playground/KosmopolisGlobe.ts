@@ -141,7 +141,8 @@ void main() {
   float beyond = smoothstep(0.12, -0.3, nw.z);
   float cl = fbm(nw * 3.2 + vec3(uTime * 0.012, 0.0, uTime * 0.004));
   vec3 veil = VEIL + vec3(0.05) * cl;
-  col = mix(col, mix(veil, mix(col, OCEAN, 0.5), 0.25), max((1.0 - seen) * 0.92, beyond * 0.85));
+  // the veil keeps none of the land's own colour, so hidden coasts cannot be read through it
+  col = mix(col, mix(veil, OCEAN, 0.25), max((1.0 - seen) * 0.96, beyond * 0.85));
   // the light of the hour, per point: the flat map's daylight at the centre
   float lam = dot(nw, L);
   col *= daylight(lam);
