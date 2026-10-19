@@ -41,6 +41,40 @@ import {
   type RunTally,
   type ScoreLine,
 } from "@/content/playground/kosmopolis-run";
+import {
+  INDIFF_KEYS,
+  INDIFF_META,
+  COLLAPSE,
+  STORE_RATE,
+  INST_COST,
+  FORTUNE_STORES,
+  SCHOOLS,
+  SCHOOL_KEYS,
+  VOTE_EVERY,
+  VOTE_STEP,
+  THREAT_META,
+  SOPHIST_REACH,
+  SOPHIST_BITE,
+  TYRANT_GROWTH,
+  RAID_EVERY,
+  RIVAL_GROWTH,
+  emptyStores,
+  comfortOf,
+  canPay,
+  addStores,
+  storesLabel,
+  costLabel,
+  isSchool,
+  voteChance,
+  voteBounds,
+  noThreats,
+  rivalName,
+  type IndiffKey,
+  type Stores,
+  type SchoolKey,
+  type Threats,
+  type ThreatKey,
+} from "@/content/playground/kosmopolis-polis";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
 
@@ -175,6 +209,12 @@ type World = {
   runOver: { end: RunEnd; score: number; lines: ScoreLine[] } | null; // set when the cycle has closed
   best: number; // the best score any cycle of this world has earned
   runs: RunRecord[]; // closed cycles, newest first
+  // The polis. See content/playground/kosmopolis-polis.ts.
+  stores: Stores[]; // grain, coin, standing per settlement, index-aligned
+  school: SchoolKey | null; // the doctrine this cycle runs on; null until chosen
+  lastVote: number; // runYears of the last Assembly vote
+  threats: Threats;
+  threatsMet: number; // threats overcome this cycle
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -272,6 +312,11 @@ function createWorld(): World {
     runOver: null,
     best: 0,
     runs: [],
+    stores: [],
+    school: null,
+    lastVote: -VOTE_EVERY,
+    threats: noThreats(),
+    threatsMet: 0,
   };
 }
 
@@ -438,6 +483,12 @@ type SavedWorld = {
   runOver?: World["runOver"];
   best?: number;
   runs?: RunRecord[];
+  // Added with the polis, optional for the same reason.
+  stores?: Stores[];
+  school?: SchoolKey | null;
+  lastVote?: number;
+  threats?: Threats;
+  threatsMet?: number;
 };
 
 function serialize(w: World): SavedWorld {
@@ -473,6 +524,11 @@ function serialize(w: World): SavedWorld {
     runOver: w.runOver,
     best: w.best,
     runs: w.runs.slice(0, 12),
+    stores: w.stores,
+    school: w.school,
+    lastVote: w.lastVote,
+    threats: w.threats,
+    threatsMet: w.threatsMet,
   };
 }
 
@@ -484,6 +540,31 @@ function validSoul(s: unknown): s is Soul {
   if (typeof o.id !== "number" || !o.v || typeof o.v !== "object") return false;
   const v = o.v as Record<string, unknown>;
   return VIRTUE_KEYS.every((k) => typeof v[k] === "number");
+}
+
+function hydrateThreats(v: unknown): Threats {
+  const t = noThreats();
+  if (!v || typeof v !== "object") return t;
+  const o = v as Partial<Threats>;
+  const s = o.sophist;
+  if (s && typeof s === "object" && typeof s.strength === "number") {
+    t.sophist = { home: Math.max(0, Math.round(numOr(s.home, 0))), x: numOr(s.x, 0), y: numOr(s.y, 0), strength: clamp(s.strength, 0, 1), since: numOr(s.since, 0) };
+  }
+  const ty = o.tyrant;
+  if (ty && typeof ty === "object" && typeof ty.grip === "number") {
+    t.tyrant = {
+      name: typeof ty.name === "string" ? ty.name : makeName(),
+      home: Math.max(0, Math.round(numOr(ty.home, 0))),
+      grip: clamp(ty.grip, 0, 1),
+      seized: !!ty.seized,
+      since: numOr(ty.since, 0),
+    };
+  }
+  const r = o.rival;
+  if (r && typeof r === "object" && typeof r.menace === "number") {
+    t.rival = { name: typeof r.name === "string" ? r.name : rivalName(), menace: clamp(r.menace, 0, 1), nextRaid: numOr(r.nextRaid, 0), since: numOr(r.since, 0) };
+  }
+  return t;
 }
 
 /** Load saved data into an existing world. Returns false (leaving it untouched)
@@ -571,6 +652,20 @@ function hydrate(w: World, data: unknown): boolean {
   w.runs = Array.isArray(d.runs)
     ? (d.runs as RunRecord[]).filter((r) => r && typeof r.score === "number" && r.end in RUN_END_META).slice(0, 12)
     : [];
+  // A world saved before the polis keeps its doctrine until the visitor chooses
+  // a School; its towns start with ordinary stores (padStores fills them).
+  w.stores = Array.isArray(d.stores)
+    ? (d.stores as unknown[]).map((row) => {
+        const o = (row && typeof row === "object" ? row : {}) as Partial<Stores>;
+        const st = emptyStores();
+        for (const k of INDIFF_KEYS) st[k] = clamp(numOr(o[k], st[k]), 0, 1);
+        return st;
+      })
+    : [];
+  w.school = isSchool(d.school) ? d.school : null;
+  w.lastVote = Math.round(numOr(d.lastVote, -VOTE_EVERY));
+  w.threats = hydrateThreats(d.threats);
+  w.threatsMet = Math.max(0, Math.round(numOr(d.threatsMet, 0)));
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
@@ -770,9 +865,9 @@ function circleOf(s: Soul): Circle {
 // in the physics' own numbers (the same ones act, applyFortune, reap and tick use).
 
 /** Where a dial sits against the doctrine, in a short opening sentence. */
-function doctrineBand(key: keyof Dials, v: number, less: string, more: string): string {
+function doctrineBand(key: keyof Dials, v: number, less: string, more: string, base: Dials): string {
   const meta = DIAL_META.find((m) => m.key === key);
-  const def = DEFAULT_DIALS[key];
+  const def = base[key]; // the School's setting, or the old doctrine before one is chosen
   const eps = (meta?.step ?? 1) / 2;
   if (Math.abs(v - def) < eps) return "The doctrine’s setting.";
   const doc = meta ? meta.format(def) : String(def);
@@ -781,7 +876,7 @@ function doctrineBand(key: keyof Dials, v: number, less: string, more: string): 
 }
 
 /** Contagion: how far a strong deed carries, by circle of concern. */
-function contagionNote(c: number): string {
+function contagionNote(c: number, base: Dials): string {
   if (c <= 0) return "Souls stand alone. A deed moves only the one who does it; no act, kind or cruel, reaches a neighbour.";
   const reach = (stage: number) => Math.round(c * CIRCLES[stage].factor);
   const town = reach(2);
@@ -793,11 +888,11 @@ function contagionNote(c: number): string {
         : town <= TOWN_R_MIN + TOWN_R_SPREAD
           ? "about to its town’s edge"
           : "past its town’s edge";
-  return `${doctrineBand("contagion", c, "Narrower", "Wider")} A strong deed, kind or cruel, by a soul that counts its town its own carries ${town} units, ${edge}. The dashed ring around a chosen soul shows its own reach, from ${reach(0)} for the selfish to ${reach(4)} for one that counts every soul a citizen.`;
+  return `${doctrineBand("contagion", c, "Narrower", "Wider", base)} A strong deed, kind or cruel, by a soul that counts its town its own carries ${town} units, ${edge}. The dashed ring around a chosen soul shows its own reach, from ${reach(0)} for the selfish to ${reach(4)} for one that counts every soul a citizen.`;
 }
 
 /** The sage's shield: how far fortune still moves a soul, as the inspector counts it. */
-function shieldNote(sh: number, meanArete: number | null): string {
+function shieldNote(sh: number, meanArete: number | null, base: Dials): string {
   if (sh <= 0)
     return "Fortune strikes every soul alike. A sage is moved by plague, plenty, and grief as much as a fool, and hardship tempers only a soul that has rehearsed it.";
   const mercy = (a: number) => Math.round(Math.max(0.05, 1 - a * sh) * 100);
@@ -805,7 +900,7 @@ function shieldNote(sh: number, meanArete: number | null): string {
     meanArete != null
       ? `An unrehearsed soul of this world’s mean virtue, ${Math.round(meanArete * 100)}%, stands ${mercy(meanArete)}% at fortune’s mercy`
       : `An unrehearsed soul of middling virtue, 50%, stands ${mercy(0.5)}% at fortune’s mercy`;
-  return `${doctrineBand("sageShield", sh, "Weaker", "Stronger")} ${lead}; one at 90%, all but a sage, stands ${mercy(0.9)}%. Plenty, and the grief of a death, are softened the same way.`;
+  return `${doctrineBand("sageShield", sh, "Weaker", "Stronger", base)} ${lead}; one at 90%, all but a sage, stands ${mercy(0.9)}%. Plenty, and the grief of a death, are softened the same way.`;
 }
 
 /** Up to two significant figures, without trailing zeros: 0.6, 0.78, 2.6. */
@@ -814,34 +909,34 @@ function sig2(x: number): string {
 }
 
 /** Force of habit: how far one act moves a virtue, on the inspector's 100-point scale. */
-function habitNote(h: number, measure: boolean): string {
+function habitNote(h: number, measure: boolean, base: Dials): string {
   if (h <= 0)
     return "Acts never become character. Virtue still moves through teachers, schools, hardship met well, and your own counsel, but practice alone changes nothing.";
   const pts = h * (measure ? 1.3 : 1) * 100;
   const acts = Math.ceil(10 / pts - 1e-9);
-  return `${doctrineBand("habituation", h, "Slower", "Faster")} Each wholehearted act moves its virtue up to ${sig2(pts)} points of 100, and an indulged vice wears it down the same way${measure ? ", the Law of Measure adding 30%" : ""}. Ten points take at least ${acts} such acts, and a soul acts once a year for a life of at least ${LIFESPAN_MIN} years.`;
+  return `${doctrineBand("habituation", h, "Slower", "Faster", base)} Each wholehearted act moves its virtue up to ${sig2(pts)} points of 100, and an indulged vice wears it down the same way${measure ? ", the Law of Measure adding 30%" : ""}. Ten points take at least ${acts} such acts, and a soul acts once a year for a life of at least ${LIFESPAN_MIN} years.`;
 }
 
 /** Reach of fortune: the yearly chance, the quiet between, and the share of time under fortune. */
-function fortuneNote(f: number): string {
+function fortuneNote(f: number, base: Dials): string {
   if (f <= 0)
     return "Fortune never visits. No soul is tried by hardship or tempered by it, and the sage’s shield is left only the grief of deaths to soften.";
   const quiet = 1 / f;
   const linger = FORTUNE_LIFE_MIN + (FORTUNE_LIFE_SPREAD - 1) / 2;
   const share = Math.round((linger / (quiet + linger)) * 100);
-  return `${doctrineBand("fortuneFreq", f, "Rarer", "More often")} In each year without a visitation fortune has a ${(f * 100).toFixed(1)}% chance to arrive, so the quiet between lasts about ${Math.round(quiet)} years. Each lingers ${FORTUNE_LIFE_MIN} to ${FORTUNE_LIFE_MIN + FORTUNE_LIFE_SPREAD - 1} years, so fortune holds the world about ${share}% of the time, and three visitations in five are plague, famine, or war.`;
+  return `${doctrineBand("fortuneFreq", f, "Rarer", "More often", base)} In each year without a visitation fortune has a ${(f * 100).toFixed(1)}% chance to arrive, so the quiet between lasts about ${Math.round(quiet)} years. Each lingers ${FORTUNE_LIFE_MIN} to ${FORTUNE_LIFE_MIN + FORTUNE_LIFE_SPREAD - 1} years, so fortune holds the world about ${share}% of the time, and three visitations in five are plague, famine, or war.`;
 }
 
-function dialNote(key: keyof Dials, v: number, meanArete: number | null, laws: VirtueKey[]): string {
+function dialNote(key: keyof Dials, v: number, meanArete: number | null, laws: VirtueKey[], base: Dials): string {
   switch (key) {
     case "contagion":
-      return contagionNote(v);
+      return contagionNote(v, base);
     case "sageShield":
-      return shieldNote(v, meanArete);
+      return shieldNote(v, meanArete, base);
     case "habituation":
-      return habitNote(v, laws.includes("temperance"));
+      return habitNote(v, laws.includes("temperance"), base);
     case "fortuneFreq":
-      return fortuneNote(v);
+      return fortuneNote(v, base);
   }
 }
 
@@ -902,6 +997,18 @@ function hasInst(world: World, home: number, type: InstType): boolean {
 }
 function padInst(world: World) {
   while (world.builtInst.length < world.settlements.length) world.builtInst.push([]);
+  padStores(world);
+}
+function padStores(world: World) {
+  while (world.stores.length < world.settlements.length) world.stores.push(emptyStores());
+}
+/** Whether the School of this cycle keeps stores. A world with no School yet does. */
+function keepsStores(world: World): boolean {
+  return world.school ? SCHOOLS[world.school].stores : true;
+}
+/** A law of the polis, in force only while no tyrant holds the assembly. */
+function hasLaw(world: World, v: VirtueKey): boolean {
+  return world.laws.includes(v) && !world.threats.tyrant?.seized;
 }
 
 // Emergent building: a town whose residents have grown strong in a virtue raises
@@ -911,7 +1018,9 @@ function maybeBuild(world: World) {
   const n = world.settlements.length;
   if (!n) return;
   padInst(world);
+  if (world.school && !SCHOOLS[world.school].builds) return; // the Cynics raise nothing
   if (Math.random() > 0.03) return; // building is rare and momentous
+  const stores = keepsStores(world);
 
   const sum: Virtues[] = [];
   const max: Virtues[] = [];
@@ -943,6 +1052,15 @@ function maybeBuild(world: World) {
   }
   if (!candidates.length) return;
   const c = candidates[(Math.random() * candidates.length) | 0];
+  // Stone and wages are indifferents too: a town that cannot pay does not build.
+  if (stores) {
+    const cost = INST_COST[c.type];
+    if (!canPay(world.stores[c.home], cost)) {
+      if (Math.random() < 0.25) log(world, `${world.settlements[c.home].name} wished to raise a ${instDef(c.type).name.toLowerCase()}, but could not meet the cost (${costLabel(cost)}).`, true);
+      return;
+    }
+    addStores(world.stores[c.home], cost, -1);
+  }
   world.builtInst[c.home].push(c.type);
   const def = instDef(c.type);
   log(world, `The people of ${world.settlements[c.home].name} raised a ${def.name.toLowerCase()} — ${def.note}`);
@@ -952,9 +1070,9 @@ function act(world: World, s: Soul) {
   const d = world.dials;
   // A court in the soul's town — and a polis-wide Law of Restitution — restrain
   // the harm a vicious act does.
-  const viceScale = (hasInst(world, s.home, "court") ? 0.5 : 1) * (world.laws.includes("justice") ? 0.7 : 1);
+  const viceScale = (hasInst(world, s.home, "court") ? 0.5 : 1) * (hasLaw(world, "justice") ? 0.7 : 1);
   // A Law of Measure makes virtue take hold faster once practised.
-  const habit = d.habituation * (world.laws.includes("temperance") ? 1.3 : 1);
+  const habit = d.habituation * (hasLaw(world, "temperance") ? 1.3 : 1);
   const key = weightedVirtue(s);
   const strength = clamp(s.v[key] + rand(-0.4, 0.4), 0, 1);
   const virtuous = strength > 0.5;
@@ -1002,15 +1120,29 @@ function act(world: World, s: Soul) {
     log(world, `${s.name} ${verb} — the field grew ${virtuous ? "brighter" : "dimmer"}.`, !virtuous);
   }
   // A rehearsal not repeated slowly fades — resolve must be kept up.
-  if (s.resolve > 0) s.resolve = Math.max(0, s.resolve - 0.0009);
+  // (A Cynic soul never lets it fall below the School's floor.)
+  const floor = world.school ? SCHOOLS[world.school].resolveFloor : 0;
+  if (s.resolve > floor) s.resolve = Math.max(floor, s.resolve - 0.0009);
+  else if (s.resolve < floor) s.resolve = floor;
 }
 
 function applyFortune(world: World, f: { good: boolean; name?: string }) {
   // The sage is unshaken: impact scales with (1 − virtue × shield − resolve).
   // Resolve is resilience won by rehearsing loss (premeditatio malorum).
   const shield = world.dials.sageShield;
-  const vanguard = world.laws.includes("courage"); // the people bear fortune together
+  const vanguard = hasLaw(world, "courage"); // the people bear fortune together
   const bite = wheel(world.runYears).harm; // ill fortune bites harder late in a cycle
+  // Fortune takes (or gives) the indifferents too, town by town; a granary
+  // keeps half the grain a bad year would take.
+  const drain = f.name ? FORTUNE_STORES[f.name] : undefined;
+  if (drain && keepsStores(world)) {
+    padStores(world);
+    world.stores.forEach((st, i) => {
+      const d: Partial<Stores> = { ...drain };
+      if (!f.good && d.grain && hasInst(world, i, "granary")) d.grain *= 0.5;
+      addStores(st, d, f.good ? 1 : bite);
+    });
+  }
   for (const s of world.souls) {
     const a = arete(s.v);
     const exposure = clamp(1 - a * shield - s.resolve, 0.05, 1);
@@ -1035,7 +1167,9 @@ function applyFortune(world: World, f: { good: boolean; name?: string }) {
 }
 
 function beget(world: World) {
-  const flourishing = world.souls.filter((s) => s.eud > 0.5);
+  // A town whose granaries are empty raises no children.
+  const fed = (s: Soul) => !keepsStores(world) || !world.stores[s.home] || world.stores[s.home].grain >= COLLAPSE;
+  const flourishing = world.souls.filter((s) => s.eud > 0.5 && fed(s));
   if (flourishing.length < 2) return;
   const a = pick(flourishing);
   const b = pick(flourishing);
@@ -1071,6 +1205,12 @@ function ekpyrosis(world: World) {
   world.peakHarmony = world.harmony;
   world.goodDeaths = 0;
   world.runOver = null;
+  // The new cycle chooses its School afresh, and its towns begin with ordinary stores.
+  world.stores = world.settlements.map(() => emptyStores());
+  world.school = null;
+  world.lastVote = -VOTE_EVERY;
+  world.threats = noThreats();
+  world.threatsMet = 0;
   const seeds = elite.length ? elite : [undefined];
   for (let i = 0; i < 10; i++) {
     seedSouls(world, 1, seeds[i % seeds.length]);
@@ -1145,6 +1285,7 @@ function reap(world: World) {
 function assembly(world: World) {
   if (world.souls.length < 6) return;
   if (world.year - world.lastAssembly < 70) return;
+  if (world.threats.tyrant?.seized) return; // a seized assembly enacts nothing
   world.lastAssembly = world.year;
   const sum: Virtues = { wisdom: 0, justice: 0, courage: 0, temperance: 0 };
   for (const s of world.souls) for (const k of VIRTUE_KEYS) sum[k] += s.v[k];
@@ -1155,6 +1296,364 @@ function assembly(world: World) {
   const def = lawDef(strongest);
   log(world, `The assembly of the Polis enacted the ${def.name} — ${def.note}`);
   world.festival = 780; // the polis keeps festival to mark a new law
+}
+
+/* ---- the polis: indifferents, Schools, threats (content/playground/kosmopolis-polis.ts) ---- */
+
+type TownTally = { count: number; awake: number; mean: Virtues; best: Virtues };
+
+/** Who lives in each town, and how virtuous they are on average and at best. */
+function townTallies(world: World): TownTally[] {
+  const out: TownTally[] = world.settlements.map(() => ({
+    count: 0,
+    awake: 0,
+    mean: { wisdom: 0, justice: 0, courage: 0, temperance: 0 },
+    best: { wisdom: 0, justice: 0, courage: 0, temperance: 0 },
+  }));
+  for (const s of world.souls) {
+    const t = out[s.home];
+    if (!t) continue;
+    t.count++;
+    if (s.awake) t.awake++;
+    for (const k of VIRTUE_KEYS) {
+      t.mean[k] += s.v[k];
+      if (s.v[k] > t.best[k]) t.best[k] = s.v[k];
+    }
+  }
+  for (const t of out) if (t.count) for (const k of VIRTUE_KEYS) t.mean[k] /= t.count;
+  return out;
+}
+
+function meanVirtue(world: World, k: VirtueKey): number {
+  if (!world.souls.length) return 0.5;
+  let t = 0;
+  for (const s of world.souls) t += s.v[k];
+  return t / world.souls.length;
+}
+
+/** The mean of one store across the towns that have people; a School without stores reads as middling. */
+function meanStore(world: World, k: IndiffKey): number {
+  if (!keepsStores(world)) return 0.45;
+  const lived = new Set(world.souls.map((s) => s.home));
+  let t = 0;
+  let n = 0;
+  world.stores.forEach((st, i) => {
+    if (lived.has(i)) {
+      t += st[k];
+      n++;
+    }
+  });
+  return n ? t / n : 0.45;
+}
+
+/** A town with people in it, chosen at random (weighted by population). */
+function populatedTown(world: World, except?: number): number | null {
+  const homes = world.souls.map((s) => s.home).filter((h) => h !== except && world.settlements[h]);
+  return homes.length ? pick(homes) : null;
+}
+
+/** How much fortune (or a raid) moves a soul, as applyFortune counts it. */
+function exposureOf(world: World, s: Soul): number {
+  return clamp(1 - arete(s.v) * world.dials.sageShield - s.resolve, 0.05, 1);
+}
+
+// The indifferents. Each town's stores drift toward what its people can keep
+// up (temperate hands grow grain, fair dealing earns coin, justice and courage
+// earn standing), and its comfort moves its souls. A store that collapses hurts
+// every soul in the town, the virtuous too: the School decides only by how much.
+function economy(world: World) {
+  if (!keepsStores(world)) return;
+  padStores(world);
+  const weight = world.school ? SCHOOLS[world.school].weight : 1;
+  const towns = townTallies(world);
+  const seized = !!world.threats.tyrant?.seized;
+  towns.forEach((t, i) => {
+    const st = world.stores[i];
+    if (!t.count) {
+      for (const k of INDIFF_KEYS) st[k] += (0.2 - st[k]) * STORE_RATE * 0.5; // an empty town runs down
+      return;
+    }
+    const m = t.mean;
+    const hands = Math.min(1, t.count / 2);
+    const target: Stores = {
+      grain: 0.15 + hands * (0.3 + 0.4 * m.temperance + 0.15 * m.courage) + (hasLaw(world, "temperance") ? 0.08 : 0) + (hasInst(world, i, "granary") ? 0.08 : 0),
+      coin: 0.1 + hands * (0.25 + 0.45 * m.justice + 0.2 * m.wisdom) + (hasInst(world, i, "court") ? 0.06 : 0),
+      standing: 0.1 + hands * (0.2 + 0.35 * m.justice + 0.3 * m.courage) + (t.awake / t.count) * 0.15,
+    };
+    for (const k of INDIFF_KEYS) st[k] = clamp(st[k] + (target[k] - st[k]) * STORE_RATE, 0, 1);
+    if (seized) st.standing = Math.max(0, st.standing - 0.004); // tyranny wears repute away
+  });
+  for (const s of world.souls) {
+    const st = world.stores[s.home];
+    if (!st) continue;
+    let d = (comfortOf(st) - 0.3) * 0.006 * weight;
+    for (const k of INDIFF_KEYS) if (st[k] < COLLAPSE) d -= 0.006 * Math.max(weight, 0.8);
+    s.eud = clamp(s.eud + d, 0.02, 1);
+  }
+}
+
+// The threats: their arrival, and what they do each acting year.
+function threatsYear(world: World) {
+  const t = world.threats;
+  if (!world.settlements.length || !world.souls.length) return;
+  const ry = world.runYears;
+
+  if (ry > 40) {
+    if (!t.sophist && Math.random() < 0.006) {
+      const home = populatedTown(world);
+      if (home != null) {
+        const seat = world.settlements[home];
+        t.sophist = { home, x: seat.x, y: seat.y, strength: 1, since: world.year };
+        log(world, `A sophist came to ${seat.name}, selling fine arguments for whatever a soul already wanted.`, true);
+      }
+    }
+    if (!t.tyrant && EPOCHS[world.epoch].breed && world.souls.length >= 6) {
+      const chance = 0.002 + Math.max(0, 0.5 - meanVirtue(world, "justice")) * 0.02 + (meanStore(world, "standing") < 0.3 ? 0.004 : 0);
+      if (Math.random() < chance) {
+        const home = populatedTown(world) ?? 0;
+        const name = makeName();
+        t.tyrant = { name, home, grip: 0.1, seized: false, since: world.year };
+        log(world, `${name} of ${world.settlements[home]?.name ?? "the polis"} began to gather a faction, with an eye on the assembly.`, true);
+      }
+    }
+    if (!t.rival && ry >= 120 && Math.random() < 0.008) {
+      const name = rivalName();
+      t.rival = { name, menace: 0.35, nextRaid: ry + 30, since: world.year };
+      log(world, `${name} rose on the border, and looked at the towns of the polis with interest.`, true);
+    }
+  }
+
+  const so = t.sophist;
+  if (so) {
+    const seat = world.settlements[so.home];
+    if (seat) {
+      so.x += (seat.x + rand(-seat.r, seat.r) * 0.6 - so.x) * 0.3;
+      so.y += (seat.y + rand(-seat.r, seat.r) * 0.6 - so.y) * 0.3;
+    }
+    const r2 = SOPHIST_REACH * SOPHIST_REACH;
+    for (const s of world.souls) {
+      if (s.awake) continue; // reason hears through it
+      const dx = s.x - so.x;
+      const dy = s.y - so.y;
+      if (dx * dx + dy * dy >= r2) continue;
+      const key = pick(VIRTUE_KEYS);
+      s.v[key] = clamp(s.v[key] - SOPHIST_BITE * so.strength * (1 - s.v.wisdom * 0.6), 0.02, 0.99);
+      s.eud = clamp(s.eud + 0.0015 * so.strength, 0.02, 1); // flattery feels like flourishing
+      if (Math.random() < 0.04) s.faulty = faultyFor(key);
+    }
+    // The wise of the town answer it, slowly; a school answers faster.
+    let wise = 0;
+    for (const s of world.souls) if (s.home === so.home && (s.awake || s.v.wisdom >= 0.7)) wise++;
+    so.strength -= (0.002 + 0.006 * wise) * (hasInst(world, so.home, "school") ? 2 : 1);
+    if (so.strength <= 0) {
+      t.sophist = null;
+      world.threatsMet++;
+      log(world, `The people of ${seat?.name ?? "the town"} saw through the sophist at last, and the sophist left with nothing to sell.`);
+    } else if (Math.random() < 0.02) {
+      const next = populatedTown(world, so.home);
+      if (next != null) {
+        so.home = next;
+        log(world, `The sophist moved on to ${world.settlements[next].name}.`, true);
+      }
+    }
+  }
+
+  const ty = t.tyrant;
+  if (ty) {
+    let awake = 0;
+    for (const s of world.souls) if (s.awake) awake++;
+    let g = TYRANT_GROWTH * (1.25 - meanVirtue(world, "justice") - 0.6 * meanVirtue(world, "courage"));
+    if (g > 0 && hasLaw(world, "justice")) g *= 0.7;
+    g -= 0.0008 * awake;
+    ty.grip = clamp(ty.grip + g, 0, 1);
+    settleTyrant(world);
+  }
+
+  const rv = t.rival;
+  if (rv) {
+    rv.menace = clamp(rv.menace + RIVAL_GROWTH * wheel(ry).harm, 0, 1);
+    if (ry >= rv.nextRaid) {
+      rv.nextRaid = ry + RAID_EVERY + ((rand(-15, 15)) | 0);
+      raid(world);
+    }
+  }
+}
+
+/** Seize or free the assembly as the tyrant's grip crosses its marks, and let a tyrant with no grip fall. */
+function settleTyrant(world: World) {
+  const ty = world.threats.tyrant;
+  if (!ty) return;
+  if (!ty.seized && ty.grip >= 1) {
+    ty.seized = true;
+    log(world, `${ty.name} seized the assembly. The laws of the polis lapse, and no vote will be called while the tyrant sits.`, true);
+  } else if (ty.seized && ty.grip < 0.7) {
+    ty.seized = false;
+    log(world, `The citizens took back the assembly from ${ty.name}. The laws stand again.`);
+  }
+  if (ty.grip <= 0) {
+    world.threats.tyrant = null;
+    world.threatsMet++;
+    log(world, `${ty.name}’s faction melted away. The polis governs itself.`);
+  }
+}
+
+/** The rival polis falls on one town. Courage and standing turn it back. */
+function raid(world: World) {
+  const rv = world.threats.rival;
+  const home = populatedTown(world);
+  if (!rv || home == null) return;
+  const st = world.stores[home];
+  const stores = keepsStores(world) && !!st;
+  const town = world.settlements[home];
+  const towns = townTallies(world);
+  const courage = towns[home]?.mean.courage ?? 0.5;
+  const defense = courage * 0.6 + (stores ? st.standing : 0.45) * 0.4 + (hasLaw(world, "courage") ? 0.1 : 0);
+  if (defense >= rv.menace * rand(0.7, 1.3)) {
+    rv.menace = clamp(rv.menace - 0.06, 0, 1);
+    if (stores) st.standing = Math.min(1, st.standing + 0.06);
+    for (const s of world.souls) if (s.home === home) s.eud = clamp(s.eud + 0.02, 0.02, 1);
+    log(world, `${rv.name} raided ${town.name} and was turned back at the walls.`);
+  } else {
+    const bite = wheel(world.runYears).harm;
+    if (stores) addStores(st, { grain: -0.2, coin: -0.15, standing: -0.05 }, bite);
+    for (const s of world.souls) if (s.home === home) s.eud = clamp(s.eud - 0.08 * exposureOf(world, s) * bite, 0.02, 1);
+    log(world, `${rv.name} raided ${town.name} and carried off its grain and coin.`, true);
+  }
+}
+
+/* The visitor's acts on the polis. Each returns a line for the chronicle (or
+ * null if there was nothing to act on); the caller has already paid the pneuma. */
+
+/** Begin a cycle under a School: its doctrine becomes the dials, locked for the run. */
+function chooseSchool(world: World, key: SchoolKey) {
+  const school = SCHOOLS[key];
+  world.school = key;
+  world.dials = { ...school.dials };
+  world.lastVote = -VOTE_EVERY;
+  padStores(world);
+  for (const s of world.souls) if (s.resolve < school.resolveFloor) s.resolve = school.resolveFloor;
+  log(world, `The ${ordSuffix(world.cycle)} cycle will run on the doctrine of ${school.name}. "${school.motto}"`);
+}
+
+/** A dilemma resolved: what the chosen course does to the soul, its neighbours, and its town's stores. */
+function applyChoice(world: World, s: Soul, opt: DilemmaOption) {
+  // The counselled course builds character and costs comfort now; the
+  // tempting one pays at once and takes from character (CHOICE_EFFECT).
+  const fx = opt.good ? CHOICE_EFFECT.good : CHOICE_EFFECT.ill;
+  s.v[opt.virtue] = clamp(s.v[opt.virtue] + fx.virtue, 0.02, 0.99);
+  s.eud = clamp(s.eud + fx.eud, 0.02, 1);
+  s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
+  if (opt.good) s.metAction = true; // the discipline of action: a virtuous course chosen
+  // the choice ripples to those nearby, for good or ill
+  for (const o of world.souls) {
+    if (o === s) continue;
+    const dx = o.x - s.x;
+    const dy = o.y - s.y;
+    if (dx * dx + dy * dy < 6000) o.eud = clamp(o.eud + fx.near, 0.02, 1);
+  }
+  // and the town pays (or gains) in indifferents
+  if (opt.stores && keepsStores(world)) {
+    padStores(world);
+    const st = world.stores[s.home];
+    if (st) addStores(st, opt.stores);
+  }
+}
+
+/** Why an Assembly vote to move a dial one step cannot be called now, or null if it can. */
+function voteBlocked(world: World, key: keyof Dials, dir: 1 | -1): string | null {
+  if (world.runOver) return "This cycle has closed.";
+  if (!world.school) return "Choose a School first.";
+  if (!EPOCHS[world.epoch].act) return "There is no one yet to vote.";
+  if (world.souls.length < 6) return "The assembly needs at least six souls.";
+  if (world.threats.tyrant?.seized) return "A tyrant holds the assembly.";
+  const wait = world.lastVote + VOTE_EVERY - world.runYears;
+  if (wait > 0) return `The assembly will not sit again for ${wait} years.`;
+  const meta = DIAL_META.find((m) => m.key === key);
+  if (!meta) return "No such dial.";
+  const [lo, hi] = voteBounds(world.school, key, meta.min, meta.max);
+  const v = world.dials[key];
+  if (dir > 0 && v >= hi - meta.step / 2) return `${SCHOOLS[world.school].name} will bend no further this way.`;
+  if (dir < 0 && v <= lo + meta.step / 2) return `${SCHOOLS[world.school].name} will bend no further this way.`;
+  return null;
+}
+
+/** The odds an Assembly vote passes now. */
+function voteOdds(world: World): number {
+  return voteChance(meanVirtue(world, "wisdom"), meanStore(world, "standing"));
+}
+
+/** Call the Assembly to move one dial a step. The vote is held (and the breath spent) whether or not it passes. */
+function assemblyVote(world: World, key: keyof Dials, dir: 1 | -1): { passed: boolean; text: string } {
+  const meta = DIAL_META.find((m) => m.key === key)!;
+  world.lastVote = world.runYears;
+  const passed = Math.random() < voteOdds(world);
+  const word = dir > 0 ? "raise" : "lower";
+  if (!passed) {
+    const text = `The assembly was asked to ${word} ${meta.label.toLowerCase()}, and would not be persuaded.`;
+    log(world, text, true);
+    return { passed, text };
+  }
+  const [lo, hi] = voteBounds(world.school!, key, meta.min, meta.max);
+  const next = clamp(world.dials[key] + dir * VOTE_STEP[key], lo, hi);
+  world.dials = { ...world.dials, [key]: Number(next.toFixed(6)) };
+  const text = `The assembly voted to ${word} ${meta.label.toLowerCase()} to ${meta.format(world.dials[key])}.`;
+  log(world, text);
+  world.festival = Math.max(world.festival, 300);
+  return { passed, text };
+}
+
+/** Answer the sophist: strongest where the town has a wise soul to speak. */
+function refuteSophist(world: World): string | null {
+  const so = world.threats.sophist;
+  if (!so) return null;
+  const best = townTallies(world)[so.home]?.best.wisdom ?? 0.4;
+  so.strength -= 0.3 + 0.45 * best;
+  const town = world.settlements[so.home]?.name ?? "the town";
+  if (so.strength <= 0) {
+    world.threats.sophist = null;
+    world.threatsMet++;
+    const text = `In the square of ${town} the sophist was answered point by point, and left with nothing to sell.`;
+    log(world, text);
+    return text;
+  }
+  const text = `The sophist in ${town} was answered, and lost some of the crowd.`;
+  log(world, text);
+  return text;
+}
+
+/** Rally the citizens against the tyrant: as strong as the people's courage. */
+function rallyCitizens(world: World): string | null {
+  const ty = world.threats.tyrant;
+  if (!ty) return null;
+  ty.grip = clamp(ty.grip - (0.2 + 0.4 * meanVirtue(world, "courage")), 0, 1);
+  const text = `The citizens were rallied against ${ty.name}, and the faction thinned.`;
+  log(world, text);
+  settleTyrant(world);
+  return text;
+}
+
+/** Treat with the rival polis. Costs a little coin from the richest town; enough embassies make peace. */
+function sendEmbassy(world: World): string | null {
+  const rv = world.threats.rival;
+  if (!rv) return null;
+  if (keepsStores(world) && world.stores.length) {
+    let rich = 0;
+    world.stores.forEach((st, i) => {
+      if (st.coin > world.stores[rich].coin) rich = i;
+    });
+    world.stores[rich].coin = Math.max(0, world.stores[rich].coin - 0.08);
+  }
+  rv.menace = clamp(rv.menace - 0.25, 0, 1);
+  if (rv.menace <= 0.08) {
+    world.threats.rival = null;
+    world.threatsMet++;
+    const text = `An embassy made a lasting peace with ${rv.name}.`;
+    log(world, text);
+    return text;
+  }
+  const text = `An embassy to ${rv.name} bought a season of quiet.`;
+  log(world, text);
+  return text;
 }
 
 function tick(world: World) {
@@ -1186,10 +1685,13 @@ function tick(world: World) {
     maybeBuild(world);
     reap(world); // the last things
     if (e.breed) assembly(world); // the polis governs itself
+    economy(world); // the indifferents
+    threatsYear(world); // the sophist, the tyrant, the rival
     // Souls beget through the acting age, so births can balance the deaths.
     if (world.souls.length < MAX_SOULS && Math.random() < 0.05 + meanEud(world) * 0.08) beget(world);
 
-    const target = world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5;
+    // A seized assembly is a city at odds with itself.
+    const target = (world.souls.length ? meanArete(world) * 0.6 + meanEud(world) * 0.4 : 0.5) - (world.threats.tyrant?.seized ? 0.05 : 0);
     world.harmony += (target - world.harmony) * 0.06;
 
     // The run. The rebirth is no longer automatic: concord only makes it
@@ -1224,6 +1726,8 @@ function tallyRun(world: World): RunTally {
     sages,
     pneuma: world.pneuma,
     yearsLeft: Math.max(0, RUN_YEARS - world.runYears),
+    threatsMet: world.threatsMet,
+    seized: !!world.threats.tyrant?.seized,
   };
 }
 
@@ -1247,7 +1751,7 @@ function endRun(world: World, end: RunEnd) {
 // kindled, spreads on its own — the corpus made local.
 function teach(world: World) {
   // A Law of Inquiry quickens all teaching and learning across the polis.
-  const inquiry = world.laws.includes("wisdom") ? 1.5 : 1;
+  const inquiry = hasLaw(world, "wisdom") ? 1.5 : 1;
   // A school lifts the wisdom of its townsfolk on its own, teacher or no.
   for (const s of world.souls) {
     if (!s.awake && hasInst(world, s.home, "school")) s.v.wisdom = clamp(s.v.wisdom + 0.0006 * inquiry, 0.02, 0.99);
@@ -1392,6 +1896,12 @@ type UiState = {
   runOver: World["runOver"];
   best: number;
   runs: RunRecord[];
+  school: SchoolKey | null;
+  towns: { name: string; pop: number; stores: Stores }[];
+  threats: Threats;
+  threatsMet: number;
+  voteOdds: number;
+  voteWait: number; // years until the assembly will sit again (0 = now)
 };
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -3006,6 +3516,12 @@ export default function KosmopolisWorld() {
     runOver: null,
     best: 0,
     runs: [],
+    school: null,
+    towns: [],
+    threats: noThreats(),
+    threatsMet: 0,
+    voteOdds: 0,
+    voteWait: 0,
   });
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
@@ -3081,6 +3597,20 @@ export default function KosmopolisWorld() {
       runOver: w.runOver,
       best: w.best,
       runs: w.runs.slice(0, 5),
+      school: w.school,
+      towns: w.settlements.map((st, i) => ({
+        name: st.name,
+        pop: w.souls.reduce((n, s) => n + (s.home === i ? 1 : 0), 0),
+        stores: { ...(w.stores[i] ?? emptyStores()) },
+      })),
+      threats: {
+        sophist: w.threats.sophist ? { ...w.threats.sophist } : null,
+        tyrant: w.threats.tyrant ? { ...w.threats.tyrant } : null,
+        rival: w.threats.rival ? { ...w.threats.rival } : null,
+      },
+      threatsMet: w.threatsMet,
+      voteOdds: voteOdds(w),
+      voteWait: Math.max(0, w.lastVote + VOTE_EVERY - w.runYears),
     });
     setChron(w.chron.slice(0, 48));
     setMaxims(w.maxims.slice(0, 12));
@@ -3416,7 +3946,7 @@ export default function KosmopolisWorld() {
       const w = worldRef.current;
       w.tod = (t / DAY_SECS) % 1; // advance the wall-clock day
 
-      if (w.running) {
+      if (w.running && (w.school || !w.ignited)) {
         acc += dt * w.speed;
         let guard = 0;
         while (acc >= 1 && guard < 30) {
@@ -3604,6 +4134,72 @@ export default function KosmopolisWorld() {
           ctx.fillStyle = "rgba(228,229,220,0.8)";
           ctx.textAlign = "center";
           ctx.fillText(st.name, st.x, st.y - 12 * inv);
+        }
+      }
+    }
+
+    // 3b. the threats: the sophist's reach, the tyrant's seat, the rival on the rim
+    {
+      const { sophist, tyrant, rival } = w.threats;
+      const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
+      if (sophist) {
+        ctx.save();
+        ctx.setLineDash([10 * inv, 8 * inv]);
+        ctx.lineWidth = 2 * inv;
+        ctx.strokeStyle = `rgba(150,96,190,${(0.35 + 0.35 * pulse) * Math.max(0.3, sophist.strength)})`;
+        ctx.beginPath();
+        ctx.arc(sophist.x, sophist.y, SOPHIST_REACH, 0, 6.283);
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = "rgba(150,96,190,0.9)";
+        ctx.beginPath();
+        ctx.arc(sophist.x, sophist.y, 6 * inv, 0, 6.283);
+        ctx.fill();
+      }
+      const seat = tyrant ? w.settlements[tyrant.home] : null;
+      if (tyrant && seat) {
+        ctx.font = `${(tyrant.seized ? 30 : 22) * inv}px Georgia, serif`;
+        ctx.textAlign = "center";
+        ctx.fillStyle = tyrant.seized ? "rgba(236,112,98,1)" : `rgba(236,112,98,${0.55 + 0.45 * tyrant.grip})`;
+        // above the institutions' row, clear of the 3-D buildings when close in
+        const cy = seat.y - seat.r * 0.55 - (zoom >= BUILDING_ZOOM ? 36 : zoom >= FIGURE_ZOOM ? 16 : 0) - 14 * inv;
+        ctx.lineWidth = 1.5 * inv;
+        ctx.strokeStyle = "rgba(16,18,20,0.85)";
+        ctx.strokeText("♛", seat.x, cy);
+        ctx.fillText("♛", seat.x, cy);
+        if (tyrant.seized) {
+          ctx.lineWidth = 3 * inv;
+          ctx.strokeStyle = `rgba(184,71,63,${0.3 + 0.3 * pulse})`;
+          ctx.beginPath();
+          ctx.arc(seat.x, seat.y, seat.r * 1.1, 0, 6.283);
+          ctx.stroke();
+        }
+      }
+      if (rival) {
+        let h = 0;
+        for (let i = 0; i < rival.name.length; i++) h = (h * 31 + rival.name.charCodeAt(i)) | 0;
+        const a = ((h >>> 0) % 628) / 100;
+        const rx = Math.cos(a) * R * 0.97;
+        const ry = Math.sin(a) * R * 0.97;
+        const sz = 14 * inv;
+        ctx.strokeStyle = "rgba(228,229,220,0.8)";
+        ctx.lineWidth = 2 * inv;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry + sz);
+        ctx.lineTo(rx, ry - sz * 1.6);
+        ctx.stroke();
+        ctx.fillStyle = `rgba(184,71,63,${0.55 + 0.4 * rival.menace})`;
+        ctx.beginPath();
+        ctx.moveTo(rx, ry - sz * 1.6);
+        ctx.lineTo(rx + sz * 1.6, ry - sz * 1.1);
+        ctx.lineTo(rx, ry - sz * 0.6);
+        ctx.closePath();
+        ctx.fill();
+        if (zoom > 0.25 && zoom < FIGURE_ZOOM) {
+          ctx.font = `${15 * inv}px Georgia, serif`;
+          ctx.fillStyle = "rgba(220,150,140,0.85)";
+          ctx.textAlign = "center";
+          ctx.fillText(rival.name, rx, ry + sz * 2.4);
         }
       }
     }
@@ -4048,7 +4644,7 @@ export default function KosmopolisWorld() {
       advanceEpoch(w);
       log(w, "The creative fire was struck. Out of the formless field a world began to condense.");
     }
-    w.running = true;
+    w.running = !!w.school; // a cycle with no School waits for the visitor to choose one
     dirtyRef.current = true;
     refresh();
   }, [refresh, ensureGeography]);
@@ -4060,6 +4656,7 @@ export default function KosmopolisWorld() {
       return;
     }
     if (w.runOver) return; // a closed cycle does not run on
+    if (!w.school) return; // the School chooser is up
     w.running = !w.running;
     dirtyRef.current = true;
     if (!w.running) flush(true); // save on pause
@@ -4075,6 +4672,7 @@ export default function KosmopolisWorld() {
       return;
     }
     w.running = false;
+    if (!w.school) return;
     tick(w);
     dirtyRef.current = true;
     refresh();
@@ -4130,6 +4728,60 @@ export default function KosmopolisWorld() {
     flush(true);
     refresh();
   }, [refresh, flush]);
+
+  // Begin the cycle under a School. Its doctrine becomes the dials, locked for the run.
+  const pickSchool = useCallback(
+    (key: SchoolKey) => {
+      const w = worldRef.current;
+      if (w.school || w.runOver) return;
+      chooseSchool(w, key);
+      setDials({ ...w.dials });
+      if (w.ignited) w.running = true;
+      setNotice(null);
+      dirtyRef.current = true;
+      flush(true);
+      refresh();
+    },
+    [refresh, flush]
+  );
+
+  // Call the Assembly to bend one dial a step. The vote can fail; the breath is spent either way.
+  const callVote = useCallback(
+    (key: keyof Dials, dir: 1 | -1) => {
+      const w = worldRef.current;
+      const why = voteBlocked(w, key, dir);
+      if (why) {
+        setNotice(why);
+        return;
+      }
+      if (!canAfford("vote")) return;
+      spend("vote");
+      const r = assemblyVote(w, key, dir);
+      setDials({ ...w.dials });
+      setNotice(r.text);
+      dirtyRef.current = true;
+      flush(true);
+      refresh();
+    },
+    [refresh, flush, canAfford, spend]
+  );
+
+  // Meet a threat: refute the sophist, rally against the tyrant, treat with the rival.
+  const meetThreat = useCallback(
+    (kind: ThreatKey) => {
+      const w = worldRef.current;
+      if (!w.threats[kind]) return;
+      const key: CostKey = kind === "sophist" ? "refute" : kind === "tyrant" ? "rally" : "embassy";
+      if (!canAfford(key)) return;
+      spend(key);
+      const text = kind === "sophist" ? refuteSophist(w) : kind === "tyrant" ? rallyCitizens(w) : sendEmbassy(w);
+      setNotice(text);
+      dirtyRef.current = true;
+      flush(true);
+      refresh();
+    },
+    [refresh, flush, canAfford, spend]
+  );
 
   // Wipe the CURRENT world back to the Void, keeping its slot (id + name).
   const beginAgain = useCallback(() => {
@@ -4503,13 +5155,7 @@ export default function KosmopolisWorld() {
         return;
       }
       spend("decide");
-      // The counselled course builds character and costs comfort now; the
-      // tempting one pays at once and takes from character (CHOICE_EFFECT).
-      const fx = opt.good ? CHOICE_EFFECT.good : CHOICE_EFFECT.ill;
-      s.v[opt.virtue] = clamp(s.v[opt.virtue] + fx.virtue, 0.02, 0.99);
-      s.eud = clamp(s.eud + fx.eud, 0.02, 1);
-      s.lastDeed = { virtue: opt.virtue, virtuous: opt.good };
-      if (opt.good) s.metAction = true; // the discipline of action: a virtuous course chosen
+      applyChoice(w, s, opt);
       const text = opt.outcome(s.name);
       s.reflection = text;
       // The tradition's word on this choice: a live passage if the visitor drew
@@ -4525,13 +5171,6 @@ export default function KosmopolisWorld() {
       } else {
         s.lastVerdict = dilemma?.verdict ?? null;
         s.sources = null;
-      }
-      // the choice ripples to those nearby, for good or ill
-      for (const o of w.souls) {
-        if (o === s) continue;
-        const dx = o.x - s.x;
-        const dy = o.y - s.y;
-        if (dx * dx + dy * dy < 6000) o.eud = clamp(o.eud + fx.near, 0.02, 1);
       }
       w.playout = { soulId: s.id, text, good: opt.good, life: 240 };
       log(
@@ -4727,6 +5366,11 @@ export default function KosmopolisWorld() {
 
           <div className="kp-card">
             <h3>This cycle</h3>
+            {ui.school && (
+              <p className="kp-school-line">
+                <b>{SCHOOLS[ui.school].name}</b> <span>&ldquo;{SCHOOLS[ui.school].motto}&rdquo;</span>
+              </p>
+            )}
             <div className="kp-pneuma" aria-label={`Pneuma ${ui.pneuma} of ${PNEUMA_MAX}`}>
               <span className="kp-k">Pneuma</span>
               <span className="kp-pneuma-pips" aria-hidden="true">
@@ -4780,6 +5424,101 @@ export default function KosmopolisWorld() {
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+
+          {/* what presses on the polis */}
+          <div className="kp-card">
+            <h3>Threats</h3>
+            {!ui.threats.sophist && !ui.threats.tyrant && !ui.threats.rival ? (
+              <p className="kp-empty">
+                None at present. A sophist, a would-be tyrant, or a rival polis may come as the cycle ages.
+                {ui.threatsMet > 0 ? ` Overcome this cycle: ${ui.threatsMet}.` : ""}
+              </p>
+            ) : (
+              <ul className="kp-threats">
+                {(["sophist", "tyrant", "rival"] as ThreatKey[]).map((kind) => {
+                  const meta = THREAT_META[kind];
+                  const { sophist, tyrant, rival } = ui.threats;
+                  const cost = COSTS[kind === "sophist" ? "refute" : kind === "tyrant" ? "rally" : "embassy"];
+                  let level = 0;
+                  let where = "";
+                  let levelName = "";
+                  if (kind === "sophist" && sophist) {
+                    level = sophist.strength;
+                    where = `in ${ui.towns[sophist.home]?.name ?? "a town"}`;
+                    levelName = "Sway";
+                  } else if (kind === "tyrant" && tyrant) {
+                    level = tyrant.grip;
+                    where = `${tyrant.name}${tyrant.seized ? ", holding the assembly" : ""}`;
+                    levelName = "Grip";
+                  } else if (kind === "rival" && rival) {
+                    level = rival.menace;
+                    where = rival.name;
+                    levelName = "Menace";
+                  } else return null;
+                  return (
+                    <li key={kind} className={`kp-threat kp-threat-${kind}${tyrant?.seized && kind === "tyrant" ? " kp-threat-seized" : ""}`}>
+                      <div className="kp-threat-head">
+                        <b>{meta.title}</b> <span>{where}</span>
+                      </div>
+                      <div className="kp-bar" title={`${levelName} ${Math.round(level * 100)}%`}>
+                        <i style={{ width: `${Math.round(level * 100)}%` }} />
+                      </div>
+                      <p className="kp-hint">{meta.body}</p>
+                      <button className="kp-btn kp-wide" onClick={() => meetThreat(kind)} disabled={ui.pneuma < cost || !!ui.runOver}>
+                        {meta.counter} <span className="kp-cost">{cost} pneuma</span>
+                      </button>
+                      <p className="kp-hint">{meta.counterNote}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* the indifferents */}
+          <div className="kp-card">
+            <h3>The towns: what they hold</h3>
+            {ui.school && !SCHOOLS[ui.school].stores ? (
+              <p className="kp-empty">The Cynics keep no stores. There is nothing to drain, and nothing to fall back on.</p>
+            ) : ui.towns.length === 0 ? (
+              <p className="kp-empty">No towns yet. They are seated when the world condenses.</p>
+            ) : (
+              <>
+                <table className="kp-stores">
+                  <thead>
+                    <tr>
+                      <th scope="col">Town</th>
+                      {INDIFF_KEYS.map((k) => (
+                        <th key={k} scope="col" title={INDIFF_META[k].note}>
+                          {INDIFF_META[k].name}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ui.towns.map((t) => (
+                      <tr key={t.name} className={t.pop ? "" : "kp-store-empty"}>
+                        <th scope="row">
+                          {t.name} <small>{t.pop}</small>
+                        </th>
+                        {INDIFF_KEYS.map((k) => (
+                          <td key={k} className={t.stores[k] < COLLAPSE ? "kp-store-low" : ""} title={`${INDIFF_META[k].name} ${Math.round(t.stores[k] * 100)}%`}>
+                            <span className="kp-store-bar">
+                              <i style={{ width: `${Math.round(t.stores[k] * 100)}%` }} />
+                            </span>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="kp-hint">
+                  Grain, coin, and standing are indifferents: not goods, but a town that runs out of one (under {Math.round(COLLAPSE * 100)}%, in red) suffers
+                  whatever its virtue, and an empty granary raises no children. Institutions cost them; fortune and raids take them.
+                </p>
+              </>
             )}
           </div>
 
@@ -4847,7 +5586,12 @@ export default function KosmopolisWorld() {
 
           {/* doctrine dials */}
           <div className="kp-card">
-            <h3>Doctrine — argue the model</h3>
+            <h3>Doctrine{ui.school ? `: ${SCHOOLS[ui.school].name}` : ""}</h3>
+            <p className="kp-hint">
+              {ui.school
+                ? `The School sets the doctrine and it holds for the cycle. An Assembly vote can bend one dial a step, for ${COSTS.vote} pneuma. It passes ${Math.round(ui.voteOdds * 100)}% of the time (wiser, better regarded people persuade more), sits once every ${VOTE_EVERY} years, and does not sit while a tyrant holds it.${ui.voteWait > 0 ? ` Next sitting in ${ui.voteWait} years.` : ""}`
+                : "Choose a School to set the doctrine for this cycle."}
+            </p>
             <div className="kp-dials">
               {DIAL_META.map((d) => (
                 <div key={d.key} className="kp-dial">
@@ -4863,16 +5607,32 @@ export default function KosmopolisWorld() {
                     max={d.max}
                     step={d.step}
                     value={dials[d.key]}
-                    onChange={(e) => setDials((prev) => ({ ...prev, [d.key]: Number(e.target.value) }))}
+                    disabled
+                    readOnly
                   />
+                  {ui.school && (
+                    <div className="kp-vote">
+                      {([-1, 1] as const).map((dir) => {
+                        const why = voteBlocked(worldRef.current, d.key, dir);
+                        return (
+                          <button
+                            key={dir}
+                            className="kp-btn"
+                            onClick={() => callVote(d.key, dir)}
+                            disabled={!!why || ui.pneuma < COSTS.vote}
+                            title={why ?? `Ask the assembly to ${dir > 0 ? "raise" : "lower"} it one step`}
+                          >
+                            {dir > 0 ? "Vote to raise" : "Vote to lower"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <p className="kp-dial-note" id={`kp-dial-${d.key}-note`}>
-                    {dialNote(d.key, dials[d.key], ui.arete, laws)}
+                    {dialNote(d.key, dials[d.key], ui.arete, laws, ui.school ? SCHOOLS[ui.school].dials : DEFAULT_DIALS)}
                   </p>
                 </div>
               ))}
-              <button className="kp-btn kp-wide" onClick={() => setDials({ ...DEFAULT_DIALS })}>
-                Restore the doctrine
-              </button>
             </div>
           </div>
 
@@ -4907,7 +5667,10 @@ export default function KosmopolisWorld() {
                 </li>
               ))}
             </ul>
-            <p className="kp-hint">A town raises these on its own as its people grow strong in the virtue each serves.</p>
+            <p className="kp-hint">
+              A town raises these on its own as its people grow strong in the virtue each serves, if it can pay: a school costs{" "}
+              {costLabel(INST_COST.school)}, a court {costLabel(INST_COST.court)}, a granary {costLabel(INST_COST.granary)}.{ui.school && !SCHOOLS[ui.school].builds ? " The Cynics raise none." : ""}
+            </p>
           </div>
 
           {/* self-government */}
@@ -5073,6 +5836,40 @@ export default function KosmopolisWorld() {
       )}
 
       {/* decision modal */}
+      {/* a cycle begins: choose its School */}
+      {ui.ignited && !ui.school && !ui.runOver && (
+        <div className="kp-modal" role="dialog" aria-modal="true" aria-label="Choose a School">
+          <div className="kp-modal-scrim" />
+          <div className="kp-modal-body kp-schools-body">
+            <p className="kp-modal-kicker">Cycle {ui.cycle} · Choose a School</p>
+            <h2 className="kp-modal-h">On what doctrine will this world run?</h2>
+            <p className="kp-modal-scene">
+              The School sets the physics for the whole cycle. Only an Assembly vote, which costs breath and can fail, bends it afterward.
+            </p>
+            <div className="kp-schools">
+              {SCHOOL_KEYS.map((k) => {
+                const sc = SCHOOLS[k];
+                return (
+                  <button key={k} className={`kp-school kp-school-${k}`} onClick={() => pickSchool(k)}>
+                    <span className="kp-school-name">{sc.name}</span>
+                    <span className="kp-school-founder">{sc.founder}</span>
+                    <span className="kp-school-motto">&ldquo;{sc.motto}&rdquo;</span>
+                    <span className="kp-school-bends">{sc.bends}</span>
+                    <span className="kp-school-dials">
+                      {DIAL_META.map((d) => (
+                        <span key={d.key}>
+                          {d.label}: <b>{d.format(sc.dials[d.key])}</b>
+                        </span>
+                      ))}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {dilemmaOpen && dilemma && selected && (
         <div className="kp-modal" role="dialog" aria-modal="true" aria-label={`A choice for ${selected.name}`}>
           <div className="kp-modal-scrim" onClick={() => setDilemmaOpen(false)} />
@@ -5090,6 +5887,11 @@ export default function KosmopolisWorld() {
                   <span className="kp-option-virtue" style={{ color: rgb(virtueDef(opt.virtue).color) }}>
                     {virtueDef(opt.virtue).name}
                   </span>
+                  {opt.stores && (!ui.school || SCHOOLS[ui.school].stores) && (
+                    <span className="kp-option-stores">
+                      {ui.towns[selected.home]?.name ?? "The town"}: {storesLabel(opt.stores)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
