@@ -94,6 +94,7 @@ import {
 } from "@/content/playground/kosmopolis-modes";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
+import { useTownRenderer, type TownRenderer } from "./KosmopolisPixi";
 
 /**
  * Kosmopolis — the world itself.
@@ -3677,6 +3678,15 @@ export default function KosmopolisWorld() {
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
   const terrainRef = useRef<HTMLCanvasElement | null>(null);
   const terrainSeedRef = useRef<number>(-1);
+  // The preview renderer (PixiJS, town view only), off unless switched on.
+  const pixiCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [pixiPreview, setPixiPreview] = useState(false);
+  const pixiPreviewRef = useRef(false);
+  useEffect(() => {
+    pixiPreviewRef.current = pixiPreview;
+  }, [pixiPreview]);
+  const pixiFail = useCallback(() => setPixiPreview(false), []);
+  const pixiRef = useTownRenderer(pixiCanvasRef, pixiPreview, W, H, pixiFail);
 
   // Build (or rebuild) the planet's terrain + settlements from the world's seed.
   // Cached by seed so it runs once per world, not per frame.
@@ -4192,7 +4202,11 @@ export default function KosmopolisWorld() {
         if (w.playout.life <= 0) w.playout = null;
       }
 
-      draw(ctx, w, t);
+      const pixi = pixiPreviewRef.current ? pixiRef.current : null;
+      const town = !!pixi && w.ignited && w.camera.zoom >= FIGURE_ZOOM && w.camera.zoom < STREET_ZOOM;
+      pixiRef.current?.setVisible(town);
+      if (pixi && town) drawTown(pixi, w, t);
+      else draw(ctx, w, t);
 
       sinceRefresh += dt;
       if (sinceRefresh >= 0.28) {
@@ -4209,6 +4223,24 @@ export default function KosmopolisWorld() {
   }, [refresh]);
 
   /* ---- drawing: a planet you fly into ---- */
+  // The town view through the preview renderer: the same World, with the
+  // helpers it needs from this file. See KosmopolisPixi.ts.
+  function drawTown(r: TownRenderer, w: World, t: number) {
+    const elev = sunElevation(w.tod);
+    r.render(w, {
+      t,
+      elev,
+      daylight: daylightTint(elev),
+      acting: EPOCHS[w.epoch].act === true,
+      planetR: PLANET_R,
+      terrain: terrainSeedRef.current === w.seed ? terrainRef.current : null,
+      buildingZoom: BUILDING_ZOOM,
+      portraitZoom: PORTRAIT_ZOOM,
+      market: marketSquare,
+      reach: (s) => w.dials.contagion * circleOf(s as Soul).factor,
+    });
+  }
+
   function draw(ctx: CanvasRenderingContext2D, w: World, t: number) {
     const cam = w.camera;
     const R = PLANET_R;
@@ -5494,6 +5526,22 @@ export default function KosmopolisWorld() {
         {/* the cosmos */}
         <section className="kp-cosmos" aria-label="The simulated world" ref={cosmosRef}>
           <canvas ref={canvasRef} width={W} height={H} />
+          <canvas
+            ref={pixiCanvasRef}
+            width={W}
+            height={H}
+            aria-hidden="true"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", visibility: "hidden" }}
+          />
+          <button
+            className="kp-cam-btn"
+            onClick={() => setPixiPreview((x) => !x)}
+            aria-pressed={pixiPreview}
+            title="Draw the town view (zoom 0.9 to 5) with the WebGL preview renderer"
+            style={{ position: "absolute", top: "0.8rem", right: "3.4rem", width: "auto", padding: "0 0.6rem", zIndex: 3, fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", ...(pixiPreview ? { borderColor: "var(--pom-lit)", color: "var(--paper)" } : null) }}
+          >
+            New renderer (preview) · {pixiPreview ? "on" : "off"}
+          </button>
           {hoverInst && (
             <div className="kp-tip" style={{ left: hoverInst.x, top: hoverInst.y }} role="tooltip">
               <b>{hoverInst.name}</b>
