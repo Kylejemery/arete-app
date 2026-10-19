@@ -94,7 +94,7 @@ import {
 } from "@/content/playground/kosmopolis-modes";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
-import { useTownRenderer, type TownRenderer } from "./KosmopolisPixi";
+import { useWorldRenderer, type WorldRenderer } from "./KosmopolisPixi";
 
 /**
  * Kosmopolis — the world itself.
@@ -3678,7 +3678,7 @@ export default function KosmopolisWorld() {
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
   const terrainRef = useRef<HTMLCanvasElement | null>(null);
   const terrainSeedRef = useRef<number>(-1);
-  // The preview renderer (PixiJS, town view only), off unless switched on.
+  // The preview renderer (PixiJS, every zoom), off unless switched on.
   const pixiCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [pixiPreview, setPixiPreview] = useState(false);
   const pixiPreviewRef = useRef(false);
@@ -3686,7 +3686,7 @@ export default function KosmopolisWorld() {
     pixiPreviewRef.current = pixiPreview;
   }, [pixiPreview]);
   const pixiFail = useCallback(() => setPixiPreview(false), []);
-  const pixiRef = useTownRenderer(pixiCanvasRef, pixiPreview, W, H, pixiFail);
+  const pixiRef = useWorldRenderer(pixiCanvasRef, pixiPreview, W, H, pixiFail);
 
   // Build (or rebuild) the planet's terrain + settlements from the world's seed.
   // Cached by seed so it runs once per world, not per frame.
@@ -4203,10 +4203,13 @@ export default function KosmopolisWorld() {
       }
 
       const pixi = pixiPreviewRef.current ? pixiRef.current : null;
-      const town = !!pixi && w.ignited && w.camera.zoom >= FIGURE_ZOOM && w.camera.zoom < STREET_ZOOM;
-      pixiRef.current?.setVisible(town);
-      if (pixi && town) drawTown(pixi, w, t);
-      else draw(ctx, w, t);
+      pixiRef.current?.setVisible(!!pixi);
+      if (!pixi) draw(ctx, w, t);
+      else if (!w.ignited || w.camera.zoom >= EYE_ZOOM) {
+        // the Void and the eye-level street: drawn by draw(), shown through WebGL
+        draw(ctx, w, t);
+        pixi.present(canvas);
+      } else drawPixi(pixi, w, t);
 
       sinceRefresh += dt;
       if (sinceRefresh >= 0.28) {
@@ -4223,9 +4226,9 @@ export default function KosmopolisWorld() {
   }, [refresh]);
 
   /* ---- drawing: a planet you fly into ---- */
-  // The town view through the preview renderer: the same World, with the
-  // helpers it needs from this file. See KosmopolisPixi.ts.
-  function drawTown(r: TownRenderer, w: World, t: number) {
+  // The world through the preview renderer: the same World, with the helpers
+  // and zoom bands it needs from this file. See KosmopolisPixi.ts.
+  function drawPixi(r: WorldRenderer, w: World, t: number) {
     const elev = sunElevation(w.tod);
     r.render(w, {
       t,
@@ -4234,8 +4237,10 @@ export default function KosmopolisWorld() {
       acting: EPOCHS[w.epoch].act === true,
       planetR: PLANET_R,
       terrain: terrainSeedRef.current === w.seed ? terrainRef.current : null,
+      figureZoom: FIGURE_ZOOM,
       buildingZoom: BUILDING_ZOOM,
       portraitZoom: PORTRAIT_ZOOM,
+      streetZoom: STREET_ZOOM,
       market: marketSquare,
       reach: (s) => w.dials.contagion * circleOf(s as Soul).factor,
     });
@@ -5144,6 +5149,9 @@ export default function KosmopolisWorld() {
       lastY = c.y;
       moved += Math.abs(dx) + Math.abs(dy);
       const cam = worldRef.current.camera;
+      // in the preview renderer the globe turns under a drag rather than panning
+      const pixi = pixiPreviewRef.current ? pixiRef.current : null;
+      if (pixi && worldRef.current.ignited && pixi.spinBy(dx, dy, cam.zoom)) return;
       cam.cx -= dx / cam.zoom;
       cam.cy -= dy / cam.zoom;
       clampCam();
@@ -5154,8 +5162,8 @@ export default function KosmopolisWorld() {
       dragging = false;
       if (moved > 6) return; // a pan, not a click
       const c = toCanvas(e.clientX, e.clientY);
-      const wp = toWorld(c.x, c.y);
       const w = worldRef.current;
+      const wp = (pixiPreviewRef.current && pixiRef.current?.pick(c.x, c.y, w.camera.zoom)) || toWorld(c.x, c.y);
       let best: Soul | null = null;
       let bd = Infinity;
       for (const s of w.souls) {
@@ -5248,7 +5256,7 @@ export default function KosmopolisWorld() {
       window.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("wheel", onWheel);
     };
-  }, [refresh]);
+  }, [refresh, pixiRef]);
 
   const zoomBy = useCallback((factor: number) => {
     const cam = worldRef.current.camera;
@@ -5256,7 +5264,8 @@ export default function KosmopolisWorld() {
   }, []);
   const viewWorld = useCallback(() => {
     worldRef.current.camera = { cx: 0, cy: 0, zoom: FIT_ZOOM };
-  }, []);
+    pixiRef.current?.resetSpin();
+  }, [pixiRef]);
   const followSelected = useCallback(() => {
     const w = worldRef.current;
     const s = w.selected != null ? w.souls.find((x) => x.id === w.selected) : null;
