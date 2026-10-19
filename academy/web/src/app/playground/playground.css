@@ -1110,3 +1110,26 @@
 
 .kp-option { flex-wrap: wrap; }
 .kp-option-stores { flex-basis: 100%; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); }
+
+/* Ranked worlds, the board, and legacy cards */
+.kp-mode-line { margin: 0 0 0.35rem; font-family: var(--mono); font-size: 0.56rem; letter-spacing: 0.1em; text-transform: uppercase; color: #d6b26a; }
+.kp-board { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+.kp-board li { display: grid; grid-template-columns: 1.4rem 1fr auto auto; gap: 0.5rem; align-items: baseline; font-size: 0.76rem; color: var(--bone); padding: 0.15rem 0; border-bottom: 1px solid var(--tape-rule); }
+.kp-board-rank { font-family: var(--mono); font-size: 0.6rem; color: var(--bone-dim); }
+.kp-board-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kp-board-end { font-family: var(--mono); font-size: 0.52rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-board b { font-family: var(--mono); font-weight: 400; font-variant-numeric: tabular-nums; color: var(--paper); }
+.kp-board li.kp-board-you { color: #d6b26a; }
+.kp-legacies { list-style: none; margin: 0 0 0.5rem; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+.kp-legacy { display: flex; gap: 0.5rem; align-items: baseline; font-size: 0.76rem; color: var(--bone); }
+.kp-legacy b { font-family: var(--display); font-weight: 400; color: var(--paper); }
+.kp-legacy-glyph { flex: none; width: 1.1rem; text-align: center; color: #d6b26a; }
+.kp-legacy-effect { color: var(--bone-dim); }
+.kp-earned { margin-top: 1rem; }
+.kp-post-note a { color: #d6b26a; }
+.kp-carry { margin: 0 0 1rem; }
+.kp-carry-row { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.3rem; }
+.kp-carry-card { flex: 0 0 11rem; display: flex; flex-direction: column; gap: 0.2rem; text-align: left; cursor: pointer; background: var(--tape); border: 1px solid var(--tape-rule); padding: 0.55rem 0.6rem; color: var(--bone); font-size: 0.7rem; line-height: 1.35; }
+.kp-carry-card b { font-family: var(--display); font-weight: 400; font-size: 0.82rem; color: var(--paper); }
+.kp-carry-card:hover { border-color: #d6b26a; }
+.kp-carry-on { border-color: #d6b26a; background: rgba(214, 178, 106, 0.1); }

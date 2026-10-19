@@ -75,6 +75,23 @@ import {
   type Threats,
   type ThreatKey,
 } from "@/content/playground/kosmopolis-polis";
+import {
+  SCENARIOS,
+  LEGACY_META,
+  LEGACY_MAX,
+  LEGACY_PER_CYCLE,
+  BOARD_RE,
+  utcDate,
+  seedFrom,
+  dailySchool,
+  withSeed,
+  scenarioById,
+  boardLabel,
+  type RankedMode,
+  type Scenario,
+  type LegacyCard,
+  type LegacyKind,
+} from "@/content/playground/kosmopolis-modes";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
 
@@ -206,7 +223,7 @@ type World = {
   discord: number; // consecutive-ish years below the stasis floor
   peakHarmony: number; // the highest harmony this cycle has reached
   goodDeaths: number; // souls who died well this cycle
-  runOver: { end: RunEnd; score: number; lines: ScoreLine[] } | null; // set when the cycle has closed
+  runOver: { end: RunEnd; score: number; lines: ScoreLine[]; earned?: LegacyCard[] } | null; // set when the cycle has closed
   best: number; // the best score any cycle of this world has earned
   runs: RunRecord[]; // closed cycles, newest first
   // The polis. See content/playground/kosmopolis-polis.ts.
@@ -215,6 +232,11 @@ type World = {
   lastVote: number; // runYears of the last Assembly vote
   threats: Threats;
   threatsMet: number; // threats overcome this cycle
+  // Ranked worlds and legacies. See content/playground/kosmopolis-modes.ts.
+  mode: RankedMode | null; // a daily world or a scenario; null for a free world
+  legacy: LegacyCard[]; // cards earned by closed cycles, newest first
+  carried: LegacyCard | null; // the card carried into this cycle
+  overcome: ThreatKey[]; // which threats this cycle overcame, for its legacy
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -317,6 +339,10 @@ function createWorld(): World {
     lastVote: -VOTE_EVERY,
     threats: noThreats(),
     threatsMet: 0,
+    mode: null,
+    legacy: [],
+    carried: null,
+    overcome: [],
   };
 }
 
@@ -408,7 +434,13 @@ function buildGeography(seed: number): Geography {
   }
   ctx!.putImageData(img, 0, 0);
 
-  // Seat settlements on habitable land (grass/forest), spread apart.
+  return { canvas, settlements: seatSettlements(seed) };
+}
+
+/** Seat settlements on habitable land (grass/forest), spread apart. Pure, so a
+ *  ranked world can be set up before (or without) the terrain raster. */
+function seatSettlements(seed: number): Settlement[] {
+  const R = PLANET_R;
   const settlements: Settlement[] = [];
   let attempts = 0;
   const target = 7;
@@ -424,7 +456,7 @@ function buildGeography(seed: number): Geography {
     if (settlements.some((s) => Math.hypot(s.x - x, s.y - y) < R * 0.34)) continue;
     settlements.push({ x, y, r: TOWN_R_MIN + prng() * TOWN_R_SPREAD, name: placeName(prng) });
   }
-  return { canvas, settlements };
+  return settlements;
 }
 
 function mulberry(a: number) {
@@ -489,6 +521,11 @@ type SavedWorld = {
   lastVote?: number;
   threats?: Threats;
   threatsMet?: number;
+  // Added with ranked worlds and legacies, optional for the same reason.
+  mode?: RankedMode | null;
+  legacy?: LegacyCard[];
+  carried?: LegacyCard | null;
+  overcome?: ThreatKey[];
 };
 
 function serialize(w: World): SavedWorld {
@@ -529,6 +566,10 @@ function serialize(w: World): SavedWorld {
     lastVote: w.lastVote,
     threats: w.threats,
     threatsMet: w.threatsMet,
+    mode: w.mode,
+    legacy: w.legacy,
+    carried: w.carried,
+    overcome: w.overcome,
   };
 }
 
@@ -540,6 +581,12 @@ function validSoul(s: unknown): s is Soul {
   if (typeof o.id !== "number" || !o.v || typeof o.v !== "object") return false;
   const v = o.v as Record<string, unknown>;
   return VIRTUE_KEYS.every((k) => typeof v[k] === "number");
+}
+
+function validCard(v: unknown): v is LegacyCard {
+  if (!v || typeof v !== "object") return false;
+  const o = v as Partial<LegacyCard>;
+  return typeof o.id === "string" && typeof o.title === "string" && typeof o.kind === "string" && o.kind in LEGACY_META;
 }
 
 function hydrateThreats(v: unknown): Threats {
@@ -646,7 +693,12 @@ function hydrate(w: World, data: unknown): boolean {
   w.goodDeaths = Math.max(0, Math.round(numOr(d.goodDeaths, 0)));
   w.runOver =
     d.runOver && typeof d.runOver === "object" && typeof d.runOver.score === "number" && d.runOver.end in RUN_END_META
-      ? { end: d.runOver.end, score: d.runOver.score, lines: Array.isArray(d.runOver.lines) ? d.runOver.lines : [] }
+      ? {
+          end: d.runOver.end,
+          score: d.runOver.score,
+          lines: Array.isArray(d.runOver.lines) ? d.runOver.lines : [],
+          earned: Array.isArray(d.runOver.earned) ? d.runOver.earned.filter(validCard) : [],
+        }
       : null;
   w.best = Math.max(0, Math.round(numOr(d.best, 0)));
   w.runs = Array.isArray(d.runs)
@@ -666,6 +718,14 @@ function hydrate(w: World, data: unknown): boolean {
   w.lastVote = Math.round(numOr(d.lastVote, -VOTE_EVERY));
   w.threats = hydrateThreats(d.threats);
   w.threatsMet = Math.max(0, Math.round(numOr(d.threatsMet, 0)));
+  const m = d.mode;
+  w.mode =
+    m && typeof m === "object" && (m.kind === "daily" || m.kind === "scenario") && typeof m.board === "string" && BOARD_RE.test(m.board)
+      ? { kind: m.kind, key: String(m.key ?? ""), board: m.board, cycle: Math.max(1, Math.round(numOr(m.cycle, 1))), posted: !!m.posted }
+      : null;
+  w.legacy = Array.isArray(d.legacy) ? d.legacy.filter(validCard).slice(0, LEGACY_MAX) : [];
+  w.carried = validCard(d.carried) ? d.carried : null;
+  w.overcome = Array.isArray(d.overcome) ? (d.overcome.filter((k) => k === "sophist" || k === "tyrant" || k === "rival") as ThreatKey[]) : [];
   // Keep id counters ahead of anything restored.
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
@@ -1211,6 +1271,8 @@ function ekpyrosis(world: World) {
   world.lastVote = -VOTE_EVERY;
   world.threats = noThreats();
   world.threatsMet = 0;
+  world.carried = null;
+  world.overcome = [];
   const seeds = elite.length ? elite : [undefined];
   for (let i = 0; i < 10; i++) {
     seedSouls(world, 1, seeds[i % seeds.length]);
@@ -1403,7 +1465,7 @@ function threatsYear(world: World) {
       const home = populatedTown(world);
       if (home != null) {
         const seat = world.settlements[home];
-        t.sophist = { home, x: seat.x, y: seat.y, strength: 1, since: world.year };
+        t.sophist = { home, x: seat.x, y: seat.y, strength: world.carried?.kind === "refutation" ? 0.5 : 1, since: world.year };
         log(world, `A sophist came to ${seat.name}, selling fine arguments for whatever a soul already wanted.`, true);
       }
     }
@@ -1418,7 +1480,7 @@ function threatsYear(world: World) {
     }
     if (!t.rival && ry >= 120 && Math.random() < 0.008) {
       const name = rivalName();
-      t.rival = { name, menace: 0.35, nextRaid: ry + 30, since: world.year };
+      t.rival = { name, menace: world.carried?.kind === "peace" ? 0.2 : 0.35, nextRaid: ry + 30, since: world.year };
       log(world, `${name} rose on the border, and looked at the towns of the polis with interest.`, true);
     }
   }
@@ -1447,7 +1509,7 @@ function threatsYear(world: World) {
     so.strength -= (0.002 + 0.006 * wise) * (hasInst(world, so.home, "school") ? 2 : 1);
     if (so.strength <= 0) {
       t.sophist = null;
-      world.threatsMet++;
+      overcame(world, "sophist");
       log(world, `The people of ${seat?.name ?? "the town"} saw through the sophist at last, and the sophist left with nothing to sell.`);
     } else if (Math.random() < 0.02) {
       const next = populatedTown(world, so.home);
@@ -1464,6 +1526,7 @@ function threatsYear(world: World) {
     for (const s of world.souls) if (s.awake) awake++;
     let g = TYRANT_GROWTH * (1.25 - meanVirtue(world, "justice") - 0.6 * meanVirtue(world, "courage"));
     if (g > 0 && hasLaw(world, "justice")) g *= 0.7;
+    if (g > 0 && world.carried?.kind === "tyrannicide") g *= 0.7;
     g -= 0.0008 * awake;
     ty.grip = clamp(ty.grip + g, 0, 1);
     settleTyrant(world);
@@ -1471,7 +1534,7 @@ function threatsYear(world: World) {
 
   const rv = t.rival;
   if (rv) {
-    rv.menace = clamp(rv.menace + RIVAL_GROWTH * wheel(ry).harm, 0, 1);
+    rv.menace = clamp(rv.menace + RIVAL_GROWTH * wheel(ry).harm * (world.carried?.kind === "peace" ? 0.6 : 1), 0, 1);
     if (ry >= rv.nextRaid) {
       rv.nextRaid = ry + RAID_EVERY + ((rand(-15, 15)) | 0);
       raid(world);
@@ -1492,7 +1555,7 @@ function settleTyrant(world: World) {
   }
   if (ty.grip <= 0) {
     world.threats.tyrant = null;
-    world.threatsMet++;
+    overcame(world, "tyrant");
     log(world, `${ty.name}’s faction melted away. The polis governs itself.`);
   }
 }
@@ -1525,7 +1588,7 @@ function raid(world: World) {
  * null if there was nothing to act on); the caller has already paid the pneuma. */
 
 /** Begin a cycle under a School: its doctrine becomes the dials, locked for the run. */
-function chooseSchool(world: World, key: SchoolKey) {
+function chooseSchool(world: World, key: SchoolKey, carry?: LegacyCard | null) {
   const school = SCHOOLS[key];
   world.school = key;
   world.dials = { ...school.dials };
@@ -1533,6 +1596,131 @@ function chooseSchool(world: World, key: SchoolKey) {
   padStores(world);
   for (const s of world.souls) if (s.resolve < school.resolveFloor) s.resolve = school.resolveFloor;
   log(world, `The ${ordSuffix(world.cycle)} cycle will run on the doctrine of ${school.name}. "${school.motto}"`);
+  if (carry) carryLegacy(world, carry);
+}
+
+/** A threat overcome: counted for the score, and remembered for the cycle's legacy. */
+function overcame(world: World, kind: ThreatKey) {
+  world.threatsMet++;
+  if (!world.overcome.includes(kind)) world.overcome.push(kind);
+}
+
+/** Carry one legacy card into this cycle. It is spent: it leaves the collection. */
+function carryLegacy(world: World, card: LegacyCard) {
+  const held = world.legacy.find((c) => c.id === card.id);
+  if (!held) return;
+  world.legacy = world.legacy.filter((c) => c.id !== card.id);
+  world.carried = held;
+  switch (held.kind) {
+    case "concord":
+      world.pneuma = Math.min(PNEUMA_MAX, world.pneuma + 2);
+      break;
+    case "sage":
+      if (held.virtues) seedSouls(world, 1, held.virtues);
+      break;
+    case "law":
+      if (held.law && !world.laws.includes(held.law)) world.laws.push(held.law);
+      break;
+    case "plenty":
+      padStores(world);
+      for (const st of world.stores) addStores(st, { grain: 0.15, coin: 0.15, standing: 0.15 });
+      break;
+    default:
+      break; // refutation, tyrannicide, and peace act on the threats as they come
+  }
+  log(world, `The cycle carries a legacy: ${held.title}. ${LEGACY_META[held.kind].effect}`);
+}
+
+/** What a closing cycle leaves behind: up to LEGACY_PER_CYCLE cards, kept newest first. */
+function earnLegacies(world: World, end: RunEnd): LegacyCard[] {
+  const earned: LegacyCard[] = [];
+  const add = (kind: LegacyKind, title: string, extra: Partial<LegacyCard> = {}) => {
+    if (earned.length >= LEGACY_PER_CYCLE) return;
+    earned.push({ id: `${world.cycle}-${kind}-${(Math.random() * 1e9) | 0}`, kind, title, cycle: world.cycle, ...extra });
+  };
+  if (end === "concord") add("concord", `The concord of cycle ${world.cycle}`);
+  const sage = [...world.souls].filter((s) => arete(s.v) >= (s.awake ? 0.85 : 0.8)).sort((a, b) => arete(b.v) - arete(a.v))[0];
+  if (sage) add("sage", `${sage.name}, of ${world.settlements[sage.home]?.name ?? "the polis"}`, { name: sage.name, virtues: { ...sage.v } });
+  const threatCard: Record<ThreatKey, [LegacyKind, string]> = {
+    sophist: ["refutation", "The sophist answered"],
+    tyrant: ["tyrannicide", "The tyrant overthrown"],
+    rival: ["peace", "The peace on the border"],
+  };
+  for (const k of world.overcome) add(threatCard[k][0], `${threatCard[k][1]}, cycle ${world.cycle}`);
+  if (end !== "stasis" && world.laws.length) add("law", lawDef(world.laws[0]).name, { law: world.laws[0] });
+  if (keepsStores(world) && (meanStore(world, "grain") + meanStore(world, "coin") + meanStore(world, "standing")) / 3 >= 0.6) {
+    add("plenty", `The full granaries of cycle ${world.cycle}`);
+  }
+  world.legacy = [...earned, ...world.legacy].slice(0, LEGACY_MAX);
+  return earned;
+}
+
+/** A scenario's opening: stores, character, breath, threats, and fortune already set. */
+function applyScenario(world: World, sc: Scenario) {
+  padStores(world);
+  if (sc.stores) for (const st of world.stores) for (const k of INDIFF_KEYS) if (sc.stores[k] != null) st[k] = sc.stores[k]!;
+  if (sc.virtues) for (const s of world.souls) for (const k of VIRTUE_KEYS) s.v[k] = clamp(s.v[k] + (sc.virtues[k] ?? 0), 0.02, 0.99);
+  if (sc.pneuma != null) world.pneuma = clamp(sc.pneuma, 0, PNEUMA_MAX);
+  const towns = townTallies(world);
+  let home = 0;
+  towns.forEach((t, i) => {
+    if (t.count > (towns[home]?.count ?? 0)) home = i;
+  });
+  const seat = world.settlements[home];
+  const t = world.threats;
+  if (sc.sophist && seat) t.sophist = { home, x: seat.x, y: seat.y, strength: sc.sophist, since: world.year };
+  if (sc.tyrant) t.tyrant = { name: makeName(), home, grip: sc.tyrant.grip, seized: sc.tyrant.seized, since: world.year };
+  if (sc.rival) t.rival = { name: rivalName(), menace: sc.rival, nextRaid: world.runYears + 25, since: world.year };
+  if (sc.fortune) {
+    const f = FORTUNES.find((x) => x.name === sc.fortune);
+    if (f) {
+      world.fortune = { name: f.name, good: f.good, tint: f.tint, life: FORTUNE_LIFE_MIN + 10 };
+      applyFortune(world, f);
+    }
+  }
+}
+
+/**
+ * Set up a ranked world: the same planet, towns, and founding souls for every
+ * visitor on its board (setup runs under withSeed), brought to the eve of the
+ * acting age, under the board's School, with the scenario's opening if any.
+ * From the first acting year on, each visitor's world runs on its own.
+ */
+function beginRanked(world: World, mode: RankedMode, school: SchoolKey, scenario: Scenario | null) {
+  const seed = seedFrom(mode.board);
+  withSeed(seed, () => {
+    world.seed = seed;
+    world.settlements = seatSettlements(seed);
+    world.builtInst = [];
+    world.stores = [];
+    padInst(world);
+    world.ignited = true;
+    world.year = 1;
+    advanceEpoch(world);
+    log(world, "The creative fire was struck. Out of the formless field a world began to condense.");
+    while (world.year + 1 < ACT_START) tick(world);
+    chooseSchool(world, school);
+    if (scenario) applyScenario(world, scenario);
+  });
+  world.mode = mode;
+  world.camera = { cx: 0, cy: 0, zoom: FIT_ZOOM };
+  log(
+    world,
+    scenario
+      ? `Scenario: ${scenario.title}, after ${scenario.after}. Its first cycle is ranked.`
+      : `This is the world of ${mode.key}, the same towns and founding souls for every visitor today. Its first cycle is ranked.`
+  );
+}
+
+/** A new daily world for today (UTC). */
+function beginDaily(world: World) {
+  const date = utcDate();
+  beginRanked(world, { kind: "daily", key: date, board: `daily:${date}`, cycle: 1 }, dailySchool(date), null);
+}
+
+/** A new world for an authored scenario. */
+function beginScenario(world: World, sc: Scenario) {
+  beginRanked(world, { kind: "scenario", key: sc.id, board: `scenario:${sc.id}`, cycle: 1 }, sc.school, sc);
 }
 
 /** A dilemma resolved: what the chosen course does to the soul, its neighbours, and its town's stores. */
@@ -1611,7 +1799,7 @@ function refuteSophist(world: World): string | null {
   const town = world.settlements[so.home]?.name ?? "the town";
   if (so.strength <= 0) {
     world.threats.sophist = null;
-    world.threatsMet++;
+    overcame(world, "sophist");
     const text = `In the square of ${town} the sophist was answered point by point, and left with nothing to sell.`;
     log(world, text);
     return text;
@@ -1646,7 +1834,7 @@ function sendEmbassy(world: World): string | null {
   rv.menace = clamp(rv.menace - 0.25, 0, 1);
   if (rv.menace <= 0.08) {
     world.threats.rival = null;
-    world.threatsMet++;
+    overcame(world, "rival");
     const text = `An embassy made a lasting peace with ${rv.name}.`;
     log(world, text);
     return text;
@@ -1736,7 +1924,8 @@ function tallyRun(world: World): RunTally {
 function endRun(world: World, end: RunEnd) {
   if (world.runOver) return;
   const { total, lines } = scoreRun(tallyRun(world), end);
-  world.runOver = { end, score: total, lines };
+  const earned = earnLegacies(world, end);
+  world.runOver = { end, score: total, lines, earned };
   world.running = false;
   world.best = Math.max(world.best, total);
   world.runs.unshift({ cycle: world.cycle, end, score: total, year: world.year });
@@ -1902,7 +2091,13 @@ type UiState = {
   threatsMet: number;
   voteOdds: number;
   voteWait: number; // years until the assembly will sit again (0 = now)
+  mode: RankedMode | null;
+  legacy: LegacyCard[];
+  carried: LegacyCard | null;
 };
+
+type BoardRow = { rank: number; name: string; score: number; end: string; school: string; runYears: number };
+type Board = { board: string; top: BoardRow[]; players: number; you: BoardRow | null; authenticated: boolean };
 
 const rgb = (c: [number, number, number]) => `rgb(${c[0]},${c[1]},${c[2]})`;
 
@@ -3522,6 +3717,9 @@ export default function KosmopolisWorld() {
     threatsMet: 0,
     voteOdds: 0,
     voteWait: 0,
+    mode: null,
+    legacy: [],
+    carried: null,
   });
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
@@ -3540,6 +3738,12 @@ export default function KosmopolisWorld() {
   const [counselorId, setCounselorId] = useState(COUNSELORS[0].id);
   const [advice, setAdvice] = useState("");
   const [counseling, setCounseling] = useState(false);
+
+  // Phase 3: scenarios, boards, and the legacy carried into a cycle.
+  const [scenariosOpen, setScenariosOpen] = useState(false);
+  const [board, setBoard] = useState<Board | null>(null);
+  const [postNote, setPostNote] = useState<string | null>(null);
+  const [carryId, setCarryId] = useState<string | null>(null);
 
   const [dilemmaOpen, setDilemmaOpen] = useState(false);
   const [dilemma, setDilemma] = useState<Dilemma | null>(null);
@@ -3611,6 +3815,9 @@ export default function KosmopolisWorld() {
       threatsMet: w.threatsMet,
       voteOdds: voteOdds(w),
       voteWait: Math.max(0, w.lastVote + VOTE_EVERY - w.runYears),
+      mode: w.mode ? { ...w.mode } : null,
+      legacy: [...w.legacy],
+      carried: w.carried,
     });
     setChron(w.chron.slice(0, 48));
     setMaxims(w.maxims.slice(0, 12));
@@ -3750,11 +3957,22 @@ export default function KosmopolisWorld() {
     [flush, adopt]
   );
 
-  const newWorld = useCallback(async () => {
+  // A new world: free, today's daily world, or a scenario (both ranked on their first cycle).
+  const newWorld = useCallback(async (start?: "daily" | Scenario) => {
     await flush(true);
     const w = createWorld();
     worldRef.current = w;
-    const name = `World ${saves.length + 1}`;
+    let name = `World ${saves.length + 1}`;
+    if (start === "daily") {
+      beginDaily(w);
+      name = `Today · ${w.mode?.key ?? ""}`;
+    } else if (start) {
+      beginScenario(w, start);
+      name = start.title;
+    }
+    if (w.ignited) ensureGeography();
+    setPostNote(null);
+    setCarryId(null);
     let id: string | undefined;
     if (authedRef.current) {
       try {
@@ -3783,7 +4001,7 @@ export default function KosmopolisWorld() {
     setSelected(null);
     setSync(authedRef.current ? "synced" : "local");
     refresh();
-  }, [flush, saves.length, refresh]);
+  }, [flush, saves.length, refresh, ensureGeography]);
 
   const renameActive = useCallback(() => {
     const id = activeIdRef.current;
@@ -4724,6 +4942,7 @@ export default function KosmopolisWorld() {
     ekpyrosis(w);
     setSelected(null);
     setNotice(null);
+    setPostNote(null);
     dirtyRef.current = true;
     flush(true);
     refresh();
@@ -4734,7 +4953,8 @@ export default function KosmopolisWorld() {
     (key: SchoolKey) => {
       const w = worldRef.current;
       if (w.school || w.runOver) return;
-      chooseSchool(w, key);
+      chooseSchool(w, key, w.legacy.find((c) => c.id === carryId) ?? null);
+      setCarryId(null);
       setDials({ ...w.dials });
       if (w.ignited) w.running = true;
       setNotice(null);
@@ -4742,8 +4962,57 @@ export default function KosmopolisWorld() {
       flush(true);
       refresh();
     },
-    [refresh, flush]
+    [refresh, flush, carryId]
   );
+
+  // The board for a ranked world, with this visitor's best and rank.
+  const loadBoard = useCallback(async (b: string) => {
+    try {
+      const res = await fetch(`/api/playground/kosmopolis/runs?board=${encodeURIComponent(b)}`);
+      if (!res.ok) return;
+      setBoard((await res.json()) as Board);
+    } catch {
+      /* the board is a grace note; the world runs without it */
+    }
+  }, []);
+  const boardKey = ui.mode?.board ?? null;
+  useEffect(() => {
+    setBoard(null);
+    if (boardKey) loadBoard(boardKey);
+  }, [boardKey, loadBoard]);
+
+  // When the ranked cycle closes, post its score once. A post refused for want
+  // of a sign-in stays unposted, so it goes through after the visitor signs in
+  // and comes back; postTried keeps this page from retrying it in a loop.
+  const postTried = useRef<string | null>(null);
+  useEffect(() => {
+    const w = worldRef.current;
+    const m = w.mode;
+    if (!w.runOver || !m || m.posted || w.cycle !== m.cycle || !w.school) return;
+    const attempt = `${activeIdRef.current}:${m.board}`;
+    if (postTried.current === attempt) return;
+    postTried.current = attempt;
+    m.posted = true;
+    dirtyRef.current = true;
+    const run = w.runOver;
+    setPostNote("Posting your score…");
+    (async () => {
+      try {
+        const res = await fetch("/api/playground/kosmopolis/runs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ board: m.board, school: w.school, end: run.end, score: run.score, runYears: w.runYears }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (res.status === 401) m.posted = false;
+        setPostNote(res.ok ? `Posted to ${boardLabel(m.board)}.` : (j.error as string) || "The score could not be posted.");
+      } catch {
+        setPostNote("The board could not be reached.");
+      }
+      loadBoard(m.board);
+      flush(true);
+    })();
+  }, [ui.runOver, ui.cycle, ui.mode?.posted, loadBoard, flush]);
 
   // Call the Assembly to bend one dial a step. The vote can fail; the breath is spent either way.
   const callVote = useCallback(
@@ -5316,7 +5585,15 @@ export default function KosmopolisWorld() {
               ))}
             </ul>
             <div className="kp-world-actions">
-              <button className="kp-btn" onClick={newWorld}>
+              <button className="kp-btn" onClick={() => newWorld("daily")} title="The same world for every visitor today. One ranked score a day.">
+                ☀ Today&rsquo;s world
+              </button>
+              <button className="kp-btn" onClick={() => setScenariosOpen(true)}>
+                Scenarios
+              </button>
+            </div>
+            <div className="kp-world-actions">
+              <button className="kp-btn" onClick={() => newWorld()}>
                 + New world
               </button>
               <button className="kp-btn" onClick={renameActive} disabled={!activeId}>
@@ -5366,6 +5643,13 @@ export default function KosmopolisWorld() {
 
           <div className="kp-card">
             <h3>This cycle</h3>
+            {ui.mode && (
+              <p className="kp-mode-line">
+                {boardLabel(ui.mode.board)}
+                {ui.mode.kind === "scenario" ? `, after ${scenarioById(ui.mode.key)?.after ?? ""}` : ""} ·{" "}
+                {ui.cycle === ui.mode.cycle ? "this cycle is ranked" : "ranked cycle closed; playing on freely"}
+              </p>
+            )}
             {ui.school && (
               <p className="kp-school-line">
                 <b>{SCHOOLS[ui.school].name}</b> <span>&ldquo;{SCHOOLS[ui.school].motto}&rdquo;</span>
@@ -5426,6 +5710,63 @@ export default function KosmopolisWorld() {
               </ul>
             )}
           </div>
+
+          {/* the board for a ranked world */}
+          {ui.mode && (
+            <div className="kp-card">
+              <h3>The board: {boardLabel(ui.mode.board)}</h3>
+              {!board ? (
+                <p className="kp-empty">Reading the board…</p>
+              ) : board.top.length === 0 ? (
+                <p className="kp-empty">No one has posted here yet. Close the ranked cycle to be the first.</p>
+              ) : (
+                <ol className="kp-board">
+                  {board.top.map((r) => (
+                    <li key={r.rank} className={board.you?.rank === r.rank ? "kp-board-you" : ""}>
+                      <span className="kp-board-rank">{r.rank}</span>
+                      <span className="kp-board-name">{r.name}</span>
+                      <span className="kp-board-end">{r.end === "concord" ? "Concord" : r.end === "stasis" ? "Stasis" : "Great Year"}</span>
+                      <b>{r.score.toLocaleString()}</b>
+                    </li>
+                  ))}
+                </ol>
+              )}
+              {board?.you && board.you.rank > board.top.length && (
+                <p className="kp-hint">
+                  Your best: {board.you.score.toLocaleString()}, {ordSuffix(board.you.rank)} of {board.players}.
+                </p>
+              )}
+              <p className="kp-hint">
+                {ui.mode.kind === "daily"
+                  ? "Everyone today has these towns, these founding souls, and this School. One score a day: the first close of the first cycle is the one that counts."
+                  : "Everyone who plays this scenario starts here. The first cycle is ranked; your best score stands."}
+                {board && !board.authenticated ? " Sign in to post a score." : ""}
+              </p>
+            </div>
+          )}
+
+          {/* what this world's closed cycles left behind */}
+          {(ui.legacy.length > 0 || ui.carried) && (
+            <div className="kp-card">
+              <h3>Legacies</h3>
+              {ui.carried && (
+                <p className="kp-hint">
+                  Carried into this cycle: <b>{ui.carried.title}</b>. {LEGACY_META[ui.carried.kind].effect}
+                </p>
+              )}
+              <ul className="kp-legacies">
+                {ui.legacy.map((c) => (
+                  <li key={c.id} className="kp-legacy">
+                    <span className="kp-legacy-glyph">{LEGACY_META[c.kind].glyph}</span>
+                    <span>
+                      <b>{c.title}</b> <span className="kp-legacy-effect">{LEGACY_META[c.kind].effect}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="kp-hint">A closed cycle leaves cards for what it achieved. Carry one into a new cycle when you choose its School; it is spent in the carrying.</p>
+            </div>
+          )}
 
           {/* what presses on the polis */}
           <div className="kp-card">
@@ -5836,6 +6177,41 @@ export default function KosmopolisWorld() {
       )}
 
       {/* decision modal */}
+      {/* scenarios: authored starts, each with its own board */}
+      {scenariosOpen && (
+        <div className="kp-modal" role="dialog" aria-modal="true" aria-label="Scenarios">
+          <div className="kp-modal-scrim" onClick={() => setScenariosOpen(false)} />
+          <div className="kp-modal-body kp-schools-body">
+            <button className="kp-modal-x" onClick={() => setScenariosOpen(false)} aria-label="Close">
+              ×
+            </button>
+            <p className="kp-modal-kicker">Scenarios</p>
+            <h2 className="kp-modal-h">Begin where history pressed hardest</h2>
+            <p className="kp-modal-scene">
+              Each scenario opens a new world in trouble, under a fixed School. Its first cycle is ranked on the scenario&rsquo;s board.
+            </p>
+            <div className="kp-schools">
+              {SCENARIOS.map((sc) => (
+                <button
+                  key={sc.id}
+                  className={`kp-school kp-school-${sc.school}`}
+                  onClick={() => {
+                    setScenariosOpen(false);
+                    newWorld(sc);
+                  }}
+                >
+                  <span className="kp-school-name">{sc.title}</span>
+                  <span className="kp-school-founder">
+                    {sc.after} · {SCHOOLS[sc.school].name}
+                  </span>
+                  <span className="kp-school-bends">{sc.body}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* a cycle begins: choose its School */}
       {ui.ignited && !ui.school && !ui.runOver && (
         <div className="kp-modal" role="dialog" aria-modal="true" aria-label="Choose a School">
@@ -5846,6 +6222,25 @@ export default function KosmopolisWorld() {
             <p className="kp-modal-scene">
               The School sets the physics for the whole cycle. Only an Assembly vote, which costs breath and can fail, bends it afterward.
             </p>
+            {ui.legacy.length > 0 && (
+              <div className="kp-carry">
+                <p className="kp-modal-kicker">Carry a legacy (optional)</p>
+                <div className="kp-carry-row">
+                  {ui.legacy.map((c) => (
+                    <button
+                      key={c.id}
+                      className={`kp-carry-card${carryId === c.id ? " kp-carry-on" : ""}`}
+                      onClick={() => setCarryId((prev) => (prev === c.id ? null : c.id))}
+                      aria-pressed={carryId === c.id}
+                    >
+                      <span className="kp-legacy-glyph">{LEGACY_META[c.kind].glyph}</span>
+                      <b>{c.title}</b>
+                      <span>{LEGACY_META[c.kind].effect}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="kp-schools">
               {SCHOOL_KEYS.map((k) => {
                 const sc = SCHOOLS[k];
@@ -5938,6 +6333,32 @@ export default function KosmopolisWorld() {
               </li>
             </ul>
             {ui.runOver.score >= ui.best && ui.runs.length > 1 && <p className="kp-modal-foot">The best cycle this world has known.</p>}
+            {ui.mode && ui.cycle === ui.mode.cycle && (
+              <p className="kp-modal-foot kp-post-note">
+                {postNote ?? "This cycle is ranked."}
+                {board && !board.authenticated && (
+                  <>
+                    {" "}
+                    <a href="/login?redirectTo=/playground/kosmopolis">Go to sign in</a>
+                  </>
+                )}
+              </p>
+            )}
+            {!!ui.runOver.earned?.length && (
+              <div className="kp-earned">
+                <p className="kp-modal-kicker">Legacies earned</p>
+                <ul className="kp-legacies">
+                  {ui.runOver.earned.map((c) => (
+                    <li key={c.id} className="kp-legacy">
+                      <span className="kp-legacy-glyph">{LEGACY_META[c.kind].glyph}</span>
+                      <span>
+                        <b>{c.title}</b> <span className="kp-legacy-effect">{LEGACY_META[c.kind].effect}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <button className="kp-btn kp-wide kp-btn-fire" onClick={passIntoFire}>
               ⟳ Pass into fire · begin cycle {ui.cycle + 1}
             </button>
