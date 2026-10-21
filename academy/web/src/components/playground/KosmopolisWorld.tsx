@@ -3987,16 +3987,18 @@ function drawEyeStreet(ctx: CanvasRenderingContext2D, w: World, t: number, elev:
 }
 
 export default function KosmopolisWorld() {
-  const worldRef = useRef<World>(createWorld());  const reduceRef = useRef(false);
+  const worldRef = useRef<World>(createWorld());
+  const reduceRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const cosmosRef = useRef<HTMLElement | null>(null);
   const starsRef = useRef<{ x: number; y: number; r: number; tw: number }[]>([]);
   const terrainRef = useRef<HTMLCanvasElement | null>(null);
   const terrainSeedRef = useRef<number>(-1);
-  // The preview renderer (PixiJS, every zoom), off unless switched on.
+  // The WebGL renderer (PixiJS, every zoom, the globe) is the default. The
+  // classic canvas stays as a switch, and as the fallback if WebGL fails.
   const pixiCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [pixiPreview, setPixiPreview] = useState(false);
-  const pixiPreviewRef = useRef(false);
+  const [pixiPreview, setPixiPreview] = useState(true);
+  const pixiPreviewRef = useRef(true);
   useEffect(() => {
     pixiPreviewRef.current = pixiPreview;
   }, [pixiPreview]);
@@ -6102,10 +6104,10 @@ export default function KosmopolisWorld() {
             className="kp-cam-btn"
             onClick={() => setPixiPreview((x) => !x)}
             aria-pressed={pixiPreview}
-            title="Draw the town view (zoom 0.9 to 5) with the WebGL preview renderer"
-            style={{ position: "absolute", top: "0.8rem", right: "3.4rem", width: "auto", padding: "0 0.6rem", zIndex: 3, fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase", ...(pixiPreview ? { borderColor: "var(--pom-lit)", color: "var(--paper)" } : null) }}
+            title={pixiPreview ? "Switch to the classic flat map, lighter on older devices" : "Switch back to the globe and the full-detail towns"}
+            style={{ position: "absolute", top: "0.8rem", right: "3.4rem", width: "auto", padding: "0 0.6rem", zIndex: 3, fontSize: "0.62rem", letterSpacing: "0.08em", textTransform: "uppercase" }}
           >
-            New renderer (preview) · {pixiPreview ? "on" : "off"}
+            {pixiPreview ? "Classic view" : "Globe view"}
           </button>
           {hoverInst && (
             <div className="kp-tip" style={{ left: hoverInst.x, top: hoverInst.y }} role="tooltip">
