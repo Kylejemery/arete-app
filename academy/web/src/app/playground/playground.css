@@ -1133,3 +1133,13 @@
 .kp-carry-card b { font-family: var(--display); font-weight: 400; font-size: 0.82rem; color: var(--paper); }
 .kp-carry-card:hover { border-color: #d6b26a; }
 .kp-carry-on { border-color: #d6b26a; background: rgba(214, 178, 106, 0.1); }
+
+/* Exploration: the known world card */
+.kp-voyages, .kp-lands { list-style: none; margin: 0.7rem 0 0; padding: 0; display: flex; flex-direction: column; gap: 0.45rem; }
+.kp-voyages li { display: grid; grid-template-columns: 1fr auto auto; gap: 0.6rem; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--bone-dim); }
+.kp-lands li { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; font-size: 0.78rem; color: var(--bone); }
+.kp-lands li b { font-weight: 400; min-width: 6rem; }
+.kp-lands li .kp-hint { flex-basis: 100%; margin: 0; }
+.kp-plan { margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.kp-plan b { color: var(--bone); font-weight: 400; }
+.kp-card .kp-metrics + .kp-btn, .kp-card .kp-voyages + .kp-btn { margin-top: 0.7rem; }

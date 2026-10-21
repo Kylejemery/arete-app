@@ -92,9 +92,34 @@ import {
   type LegacyCard,
   type LegacyKind,
 } from "@/content/playground/kosmopolis-modes";
+import {
+  FOG_N,
+  SIGHT_START,
+  SIGHT_ROUTE,
+  SIGHT_GOAL,
+  EXPEDITIONS_MAX,
+  COLONY_STORES,
+  COLONY_SETTLERS,
+  COLONY_MIN_TOWN,
+  emptyFog,
+  isRevealed,
+  reveal,
+  revealedShare,
+  packFog,
+  unpackFog,
+  landmasses,
+  landAt,
+  isDiscovered,
+  expeditionRisk,
+  expeditionYears,
+  expeditionAt,
+  type Fog,
+  type Landmass,
+  type Expedition,
+} from "@/content/playground/kosmopolis-explore";
 import { faultyFor, type FaultyReasoning } from "@/content/playground/kosmopolis-reasonings";
 import { ENCHIRIDION, chapterFor } from "@/content/playground/kosmopolis-enchiridion";
-import { useWorldRenderer, type WorldRenderer } from "./KosmopolisPixi";
+import { useWorldRenderer, type WorldRenderer, type ViewVoyages } from "./KosmopolisPixi";
 
 /**
  * Kosmopolis — the world itself.
@@ -238,6 +263,16 @@ type World = {
   legacy: LegacyCard[]; // cards earned by closed cycles, newest first
   carried: LegacyCard | null; // the card carried into this cycle
   overcome: ThreatKey[]; // which threats this cycle overcame, for its legacy
+  // Exploration. See content/playground/kosmopolis-explore.ts.
+  fog: Fog; // what the world has seen; reset by the fire
+  fogVer: number; // bumped on every reveal, so the drawn fog knows to refresh (not saved)
+  lands: Landmass[]; // the land masses beyond the home shore, from the seed (not saved)
+  baseTowns: number; // how many settlements the seed founded; the rest are colonies
+  landsAtStart: number; // lands already in sight when the cycle began; they score nothing
+  colonies: Settlement[]; // towns founded on discovered land this cycle, after the seed's
+  expeditions: Expedition[]; // abroad now
+  leaders: Soul[]; // the souls leading them, out of the world until they return
+  expId: number;
 };
 
 // The words a well-lived soul leaves behind at death, to be carried to the
@@ -344,6 +379,15 @@ function createWorld(): World {
     legacy: [],
     carried: null,
     overcome: [],
+    fog: emptyFog(),
+    fogVer: 0,
+    lands: [],
+    baseTowns: 0,
+    landsAtStart: 0,
+    colonies: [],
+    expeditions: [],
+    leaders: [],
+    expId: 1,
   };
 }
 
@@ -374,9 +418,34 @@ function valueNoise(x: number, y: number, seed: number): number {
   const d = hash2(ix + 1, iy + 1, seed);
   return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
 }
-/** Elevation 0..1 at a world point. High in the middle, falling to ocean at the
- *  rim, so the planet reads as land surrounded by sea. */
+/** Elevation 0..1 at a world point: the home continent, plus the land masses in
+ *  the outer seas that expeditions can discover. */
 function heightAt(wx: number, wy: number, seed: number): number {
+  let h = homeHeight(wx, wy, seed);
+  for (const l of landsFor(seed)) {
+    const d = Math.hypot(wx - l.x, wy - l.y) / l.r;
+    if (d >= 1.4) continue;
+    const coast = (valueNoise((wx / l.r) * 2.2 + 3.1, (wy / l.r) * 2.2 + 5.3, seed + 977) - 0.5) * 0.34;
+    h = Math.max(h, 0.7 * (1 - d * d) + 0.06 + coast);
+  }
+  return clamp(h, 0, 1);
+}
+
+// The land masses of a seed, computed once per seed (heightAt runs per pixel).
+const landsCache = new Map<number, Landmass[]>();
+function landsFor(seed: number): Landmass[] {
+  let lands = landsCache.get(seed);
+  if (!lands) {
+    lands = landmasses(seed, PLANET_R, placeName);
+    landsCache.set(seed, lands);
+  }
+  return lands;
+}
+
+/** Elevation of the home continent alone. High in the middle, falling to ocean
+ *  at the rim. The founding towns are seated on this, so adding the outer lands
+ *  never moved a saved world's towns. */
+function homeHeight(wx: number, wy: number, seed: number): number {
   const nx = (wx / PLANET_R) * 3.1;
   const ny = (wy / PLANET_R) * 3.1;
   let h = 0;
@@ -452,7 +521,7 @@ function seatSettlements(seed: number): Settlement[] {
     const rad = Math.sqrt(prng()) * R * 0.86;
     const x = Math.cos(ang) * rad;
     const y = Math.sin(ang) * rad;
-    const h = heightAt(x, y, seed);
+    const h = homeHeight(x, y, seed);
     if (h < 0.54 || h > 0.75) continue; // not water, not mountain
     if (settlements.some((s) => Math.hypot(s.x - x, s.y - y) < R * 0.34)) continue;
     settlements.push({ x, y, r: TOWN_R_MIN + prng() * TOWN_R_SPREAD, name: placeName(prng) });
@@ -506,6 +575,13 @@ type SavedWorld = {
   builtInst: InstType[][];
   laws: VirtueKey[];
   lastAssembly: number;
+  // Added with exploration, optional for the same reason as the run's fields.
+  fog?: string;
+  landsAtStart?: number;
+  colonies?: Settlement[];
+  expeditions?: Expedition[];
+  leaders?: Soul[];
+  expId?: number;
   // Added with the run. Optional so saves from before it still load (the
   // version is unchanged; missing fields take their defaults).
   pneuma?: number;
@@ -562,6 +638,12 @@ function serialize(w: World): SavedWorld {
     runOver: w.runOver,
     best: w.best,
     runs: w.runs.slice(0, 12),
+    fog: packFog(w.fog),
+    landsAtStart: w.landsAtStart,
+    colonies: w.colonies,
+    expeditions: w.expeditions,
+    leaders: w.leaders,
+    expId: w.expId,
     stores: w.stores,
     school: w.school,
     lastVote: w.lastVote,
@@ -727,7 +809,24 @@ function hydrate(w: World, data: unknown): boolean {
   w.legacy = Array.isArray(d.legacy) ? d.legacy.filter(validCard).slice(0, LEGACY_MAX) : [];
   w.carried = validCard(d.carried) ? d.carried : null;
   w.overcome = Array.isArray(d.overcome) ? (d.overcome.filter((k) => k === "sophist" || k === "tyrant" || k === "rival") as ThreatKey[]) : [];
+  // Exploration. A world saved before it opens with fresh fog around its towns
+  // (ensureExplore lifts it once the towns are seated).
+  w.fog = unpackFog(d.fog) ?? emptyFog();
+  w.fogVer++;
+  w.lands = []; // rebuilt from the seed by ensureExplore
+  w.baseTowns = 0;
+  w.landsAtStart = Math.max(0, Math.round(numOr(d.landsAtStart, 0)));
+  w.colonies = Array.isArray(d.colonies)
+    ? (d.colonies as Settlement[]).filter((c) => c && typeof c.x === "number" && typeof c.y === "number" && typeof c.name === "string").map((c) => ({ x: c.x, y: c.y, r: numOr(c.r, TOWN_R_MIN), name: c.name }))
+    : [];
+  w.leaders = Array.isArray(d.leaders) ? (d.leaders as unknown[]).filter(validSoul) : [];
+  w.expeditions = Array.isArray(d.expeditions)
+    ? (d.expeditions as Expedition[]).filter((e) => e && typeof e.tx === "number" && typeof e.years === "number" && w.leaders.some((l) => l.id === e.leaderId))
+    : [];
+  w.leaders = w.leaders.filter((l) => w.expeditions.some((e) => e.leaderId === l.id));
+  w.expId = Math.max(1, Math.round(numOr(d.expId, 1)));
   // Keep id counters ahead of anything restored.
+  for (const s of w.leaders) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const s of w.souls) if (s.id >= w.nextId) w.nextId = s.id + 1;
   for (const c of w.chron) if (c.id >= w.chronId) w.chronId = c.id + 1;
   for (const m of w.maxims) if (m.id >= w.maximId) w.maximId = m.id + 1;
@@ -1243,6 +1342,199 @@ function beget(world: World) {
   if (Math.random() < 0.4) log(world, `${child.name} was born into the world, carrying something of those before them.`);
 }
 
+/* ---------------------------------------------------------- exploration */
+
+/** Seat the world's towns: the seed's own, then any colonies this cycle founded.
+ *  Every place settlements are seated from the seed goes through here, so
+ *  colonies and the fog survive a reload. */
+function seatWorld(world: World, base: Settlement[]) {
+  world.baseTowns = base.length;
+  world.settlements = base.concat(world.colonies);
+  world.lands = landsFor(world.seed);
+  padInst(world);
+  if (!world.fog.some((c) => c === 1)) openFog(world);
+}
+
+/** Fresh fog: each founding town sees its own country, and no further. */
+function openFog(world: World) {
+  world.fog = emptyFog();
+  for (let i = 0; i < world.baseTowns; i++) {
+    const st = world.settlements[i];
+    reveal(world.fog, st.x, st.y, SIGHT_START * PLANET_R, PLANET_R);
+  }
+  world.fogVer++;
+  world.landsAtStart = landsDiscovered(world);
+}
+
+function landsDiscovered(world: World): number {
+  return world.lands.filter((l) => isDiscovered(world.fog, l, PLANET_R)).length;
+}
+
+/** Whether a colony already stands on this land mass. */
+function colonised(world: World, land: number): boolean {
+  return world.colonies.some((c) => landAt(world.lands, c.x, c.y) === land);
+}
+
+function townSize(world: World, home: number): number {
+  let n = 0;
+  for (const s of world.souls) if (s.home === home) n++;
+  return n;
+}
+
+/** The town an expedition or colony would set out from: the nearest with enough people. */
+function nearestTown(world: World, x: number, y: number, minSouls: number): number {
+  let best = -1;
+  let bd = Infinity;
+  world.settlements.forEach((st, i) => {
+    if (townSize(world, i) < minSouls) return;
+    const d = Math.hypot(st.x - x, st.y - y);
+    if (d < bd) {
+      bd = d;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** The bravest soul of a town, who would lead an expedition from it. */
+function bravestOf(world: World, home: number): Soul | null {
+  let best: Soul | null = null;
+  for (const s of world.souls) if (s.home === home && (!best || s.v.courage > best.v.courage)) best = s;
+  return best;
+}
+
+type ExpeditionPlan = { from: number; tx: number; ty: number; leaderId: number; leaderName: string; risk: number; years: number };
+
+/** Plan an expedition toward a point in the fog, or say why one cannot go. */
+function planExpedition(world: World, tx: number, ty: number): ExpeditionPlan | string {
+  if (Math.hypot(tx, ty) > PLANET_R) return "That is beyond the edge of the world.";
+  if (isRevealed(world.fog, tx, ty, PLANET_R)) return "That country is already known. Choose a point in the fog.";
+  const from = nearestTown(world, tx, ty, 2);
+  if (from < 0) return "No town has the people to spare for an expedition.";
+  const leader = bravestOf(world, from);
+  if (!leader) return "No one in that town can lead it.";
+  const st = world.settlements[from];
+  const dist = Math.hypot(tx - st.x, ty - st.y);
+  return {
+    from,
+    tx,
+    ty,
+    leaderId: leader.id,
+    leaderName: leader.name,
+    risk: expeditionRisk(dist, leader.v.courage, PLANET_R),
+    years: expeditionYears(dist, PLANET_R),
+  };
+}
+
+/** Send a planned expedition. Its leader leaves the world until it ends. */
+function sendExpedition(world: World, plan: ExpeditionPlan): boolean {
+  const leader = world.souls.find((s) => s.id === plan.leaderId);
+  const st = world.settlements[plan.from];
+  if (!leader || !st || world.expeditions.length >= EXPEDITIONS_MAX) return false;
+  world.souls = world.souls.filter((s) => s !== leader);
+  if (world.selected === leader.id) world.selected = null;
+  world.leaders.push(leader);
+  world.expeditions.push({
+    id: world.expId++,
+    from: plan.from,
+    sx: st.x,
+    sy: st.y,
+    tx: plan.tx,
+    ty: plan.ty,
+    depart: world.runYears,
+    years: plan.years,
+    risk: plan.risk,
+    leaderId: leader.id,
+  });
+  log(world, `${leader.name} set out from ${st.name} with an expedition into the unknown, to be gone ${plan.years} years.`);
+  return true;
+}
+
+/** Each acting year: expeditions travel, lift the fog along the way, and end. */
+function voyage(world: World) {
+  if (!world.expeditions.length) return;
+  const known = world.lands.map((l) => isDiscovered(world.fog, l, PLANET_R));
+  const still: Expedition[] = [];
+  for (const e of world.expeditions) {
+    const at = expeditionAt(e, world.runYears);
+    // The fog lifts along the way; every third year, so the map is not redrawn every year.
+    if ((world.runYears - e.depart) % 3 === 0 && reveal(world.fog, at.x, at.y, SIGHT_ROUTE * PLANET_R, PLANET_R)) world.fogVer++;
+    if (at.t < 1) {
+      still.push(e);
+      continue;
+    }
+    const leader = world.leaders.find((l) => l.id === e.leaderId);
+    world.leaders = world.leaders.filter((l) => l.id !== e.leaderId);
+    const name = leader?.name ?? "The expedition";
+    if (Math.random() < e.risk) {
+      log(world, `${name}'s expedition was lost at sea. Nothing came back but the rumour of a far coast.`, true);
+      continue;
+    }
+    if (reveal(world.fog, e.tx, e.ty, SIGHT_GOAL * PLANET_R, PLANET_R)) world.fogVer++;
+    const home = world.settlements[e.from] ? e.from : 0;
+    const seat = world.settlements[home];
+    if (leader && seat && world.souls.length < MAX_SOULS) {
+      leader.home = home;
+      leader.x = leader.tx = seat.x;
+      leader.y = leader.ty = seat.y;
+      leader.v.courage = clamp(leader.v.courage + 0.04, 0.02, 0.99); // the far shore tempers them
+      world.souls.push(leader);
+    }
+    log(world, `${name} came home from the far side of the fog with charts of what lies there.`);
+  }
+  world.expeditions = still;
+  world.lands.forEach((l, i) => {
+    if (!known[i] && isDiscovered(world.fog, l, PLANET_R)) log(world, `A new land was sighted: ${l.name}. It lies open to settlement.`);
+  });
+}
+
+/** Where a colony on this land would stand: habitable ground near its heart. */
+function colonySite(world: World, land: Landmass): { x: number; y: number } {
+  const rnd = mulberry((world.seed ^ Math.round(land.x * 7 + land.y * 13)) >>> 0);
+  for (let i = 0; i < 80; i++) {
+    const a = rnd() * Math.PI * 2;
+    const d = Math.sqrt(rnd()) * land.r * 0.6;
+    const x = land.x + Math.cos(a) * d;
+    const y = land.y + Math.sin(a) * d;
+    const h = heightAt(x, y, world.seed);
+    if (h >= 0.54 && h <= 0.75) return { x, y };
+  }
+  return { x: land.x, y: land.y };
+}
+
+/** Why a colony cannot be founded on this land now, or the town that would send it. */
+function colonyFrom(world: World, land: number): number | string {
+  const l = world.lands[land];
+  if (!l || !isDiscovered(world.fog, l, PLANET_R)) return "That land has not been found.";
+  if (colonised(world, land)) return `A colony already stands on ${l.name}.`;
+  const from = nearestTown(world, l.x, l.y, COLONY_MIN_TOWN);
+  if (from < 0) return `No town has the ${COLONY_MIN_TOWN} people it takes to spare ${COLONY_SETTLERS} settlers.`;
+  if (keepsStores(world) && !canPay(world.stores[from], COLONY_STORES))
+    return `${world.settlements[from].name} cannot spare ${costLabel(COLONY_STORES)} for the voyage.`;
+  return from;
+}
+
+/** Found a colony: settlers leave the sending town for the new land. */
+function foundColony(world: World, land: number, from: number) {
+  const l = world.lands[land];
+  const site = colonySite(world, l);
+  const town: Settlement = { x: site.x, y: site.y, r: TOWN_R_MIN, name: l.name };
+  world.colonies.push(town);
+  world.settlements.push(town);
+  padInst(world);
+  const idx = world.settlements.length - 1;
+  if (keepsStores(world)) addStores(world.stores[from], COLONY_STORES, -1);
+  // The settlers: the most flourishing of the town, who can best bear the voyage.
+  const settlers = world.souls.filter((s) => s.home === from).sort((a, b) => b.eud - a.eud).slice(0, COLONY_SETTLERS);
+  for (const s of settlers) {
+    s.home = idx;
+    s.x = s.tx = site.x + rand(-40, 40);
+    s.y = s.ty = site.y + rand(-40, 40);
+  }
+  if (reveal(world.fog, site.x, site.y, SIGHT_START * PLANET_R * 0.7, PLANET_R)) world.fogVer++;
+  log(world, `Settlers from ${world.settlements[from].name} founded ${l.name} on the far shore.`);
+}
+
 function ekpyrosis(world: World) {
   // The conflagration: the world passes into fire and begins again, seeded from
   // the virtue of its most excellent souls — Stoic eternal recurrence.
@@ -1254,6 +1546,12 @@ function ekpyrosis(world: World) {
   world.flash = 60;
   world.cycle++;
   world.harmony = 0.55;
+  // The colonies burn too, and the fog closes again: each cycle discovers its own world.
+  world.colonies = [];
+  world.settlements = world.settlements.slice(0, world.baseTowns || world.settlements.length);
+  world.expeditions = [];
+  world.leaders = [];
+  openFog(world);
   // Everything the people built burns with the world. A new cycle earns its own
   // institutions and laws, so one cycle's score never rides on another's.
   world.builtInst = world.settlements.map(() => []);
@@ -1691,10 +1989,13 @@ function beginRanked(world: World, mode: RankedMode, school: SchoolKey, scenario
   const seed = seedFrom(mode.board);
   withSeed(seed, () => {
     world.seed = seed;
-    world.settlements = seatSettlements(seed);
     world.builtInst = [];
     world.stores = [];
-    padInst(world);
+    world.colonies = [];
+    world.expeditions = [];
+    world.leaders = [];
+    world.fog = emptyFog();
+    seatWorld(world, seatSettlements(seed));
     world.ignited = true;
     world.year = 1;
     advanceEpoch(world);
@@ -1886,6 +2187,7 @@ function tick(world: World) {
     // The run. The rebirth is no longer automatic: concord only makes it
     // possible, and the visitor chooses the moment (see endRun).
     world.runYears++;
+    voyage(world); // expeditions travel, and some come home
     if (world.runYears % PNEUMA_EVERY === 0) world.pneuma = Math.min(PNEUMA_MAX, world.pneuma + 1);
     if (world.harmony > world.peakHarmony) world.peakHarmony = world.harmony;
     if (world.harmony < STASIS_FLOOR) world.discord++;
@@ -1917,6 +2219,8 @@ function tallyRun(world: World): RunTally {
     yearsLeft: Math.max(0, RUN_YEARS - world.runYears),
     threatsMet: world.threatsMet,
     seized: !!world.threats.tyrant?.seized,
+    lands: Math.max(0, landsDiscovered(world) - world.landsAtStart),
+    colonies: world.colonies.length,
   };
 }
 
@@ -2095,7 +2399,18 @@ type UiState = {
   mode: RankedMode | null;
   legacy: LegacyCard[];
   carried: LegacyCard | null;
+  explore: ExploreUi;
 };
+
+type ExploreUi = {
+  seen: number; // share of the planet revealed, 0..1
+  found: number; // land masses discovered
+  total: number; // land masses there are
+  voyages: { id: number; leader: string; yearsLeft: number; risk: number }[];
+  lands: { index: number; name: string; settled: boolean; from: string | null; why: string | null }[];
+};
+
+const NO_EXPLORE: ExploreUi = { seen: 0, found: 0, total: 0, voyages: [], lands: [] };
 
 type BoardRow = { rank: number; name: string; score: number; end: string; school: string; runYears: number };
 type Board = { board: string; top: BoardRow[]; players: number; you: BoardRow | null; authenticated: boolean };
@@ -3696,8 +4011,7 @@ export default function KosmopolisWorld() {
     const geo = buildGeography(w.seed);
     terrainRef.current = geo.canvas;
     terrainSeedRef.current = w.seed;
-    w.settlements = geo.settlements;
-    padInst(w); // keep the institutions array aligned to the settlements
+    seatWorld(w, geo.settlements); // the seed's towns, this cycle's colonies, the fog
   }, []);
 
   const [ui, setUi] = useState<UiState>({
@@ -3730,6 +4044,7 @@ export default function KosmopolisWorld() {
     mode: null,
     legacy: [],
     carried: null,
+    explore: NO_EXPLORE,
   });
   const [chron, setChron] = useState<Chron[]>([]);
   const [maxims, setMaxims] = useState<Maxim[]>([]);
@@ -3774,6 +4089,20 @@ export default function KosmopolisWorld() {
   const loadedRef = useRef(false);
   const savingRef = useRef(false);
   const [expanded, setExpanded] = useState(false);
+
+  // Exploration: choosing a point in the fog, and the expedition planned to it.
+  const [charting, setCharting] = useState(false);
+  const chartingRef = useRef(false);
+  const [plan, setPlan] = useState<ExpeditionPlan | null>(null);
+  const planRef = useRef<ExpeditionPlan | null>(null); // read by the draw loop
+  const fogViewRef = useRef<{ seed: number; ver: number; at: number; canvas: HTMLCanvasElement } | null>(null);
+  const pixiFogRef = useRef<{ r: WorldRenderer | null; key: string }>({ r: null, key: "" }); // the fog last handed to the preview renderer
+  useEffect(() => {
+    chartingRef.current = charting;
+  }, [charting]);
+  useEffect(() => {
+    planRef.current = plan;
+  }, [plan]);
 
   // Keep the simulation reading the latest dials, and remember the change.
   useEffect(() => {
@@ -3828,6 +4157,31 @@ export default function KosmopolisWorld() {
       mode: w.mode ? { ...w.mode } : null,
       legacy: [...w.legacy],
       carried: w.carried,
+      explore: {
+        seen: revealedShare(w.fog, PLANET_R),
+        found: landsDiscovered(w),
+        total: w.lands.length,
+        voyages: w.expeditions.map((e) => ({
+          id: e.id,
+          leader: w.leaders.find((l) => l.id === e.leaderId)?.name ?? "An expedition",
+          yearsLeft: Math.max(0, e.depart + e.years - w.runYears),
+          risk: e.risk,
+        })),
+        lands: w.lands.flatMap((l, i) => {
+          if (!isDiscovered(w.fog, l, PLANET_R)) return [];
+          const settled = colonised(w, i);
+          const from = settled ? "" : colonyFrom(w, i);
+          return [
+            {
+              index: i,
+              name: l.name,
+              settled,
+              from: typeof from === "number" ? w.settlements[from].name : null,
+              why: typeof from === "string" && !settled ? from : null,
+            },
+          ];
+        }),
+      },
     });
     setChron(w.chron.slice(0, 48));
     setMaxims(w.maxims.slice(0, 12));
@@ -4226,9 +4580,136 @@ export default function KosmopolisWorld() {
   }, [refresh]);
 
   /* ---- drawing: a planet you fly into ---- */
+  // The fog as a mask the preview renderer takes (see its FOG HOOK): one pixel
+  // per fog cell, white where the world has seen, black where it has not. The
+  // renderer scales it over the planet, so the fog's edges come out soft.
+  function fogMask(w: World): HTMLCanvasElement {
+    const mask = document.createElement("canvas");
+    mask.width = FOG_N;
+    mask.height = FOG_N;
+    const m = mask.getContext("2d");
+    if (m) {
+      const img = m.createImageData(FOG_N, FOG_N);
+      for (let k = 0; k < FOG_N * FOG_N; k++) {
+        const v = w.fog[k] === 1 ? 255 : 0;
+        img.data[k * 4] = img.data[k * 4 + 1] = img.data[k * 4 + 2] = v;
+        img.data[k * 4 + 3] = 255;
+      }
+      m.putImageData(img, 0, 0);
+    }
+    return mask;
+  }
+
+  // The terrain as the world knows it, for the canvas renderer: the raster
+  // with the fog laid over what is unexplored. Rebuilt only when the fog has
+  // lifted, and at most about once a second.
+  function terrainView(w: World): HTMLCanvasElement | null {
+    const src = terrainSeedRef.current === w.seed ? terrainRef.current : null;
+    if (!src) return null;
+    const v = fogViewRef.current;
+    const now = performance.now();
+    if (v && v.seed === w.seed && (v.ver === w.fogVer || now - v.at < 1000)) return v.canvas;
+    const canvas = document.createElement("canvas");
+    canvas.width = src.width;
+    canvas.height = src.height;
+    const c = canvas.getContext("2d");
+    if (!c) return src;
+    c.drawImage(src, 0, 0);
+    // One pixel per fog cell, scaled up with smoothing so the fog has soft edges.
+    const mask = document.createElement("canvas");
+    mask.width = FOG_N;
+    mask.height = FOG_N;
+    const m = mask.getContext("2d");
+    if (m) {
+      const img = m.createImageData(FOG_N, FOG_N);
+      for (let k = 0; k < FOG_N * FOG_N; k++) {
+        const hidden = w.fog[k] !== 1;
+        img.data[k * 4] = 15;
+        img.data[k * 4 + 1] = 19;
+        img.data[k * 4 + 2] = 27;
+        img.data[k * 4 + 3] = hidden ? 238 : 0;
+      }
+      m.putImageData(img, 0, 0);
+      c.globalCompositeOperation = "source-atop"; // only over the planet, not the space around it
+      c.imageSmoothingEnabled = true;
+      c.imageSmoothingQuality = "high";
+      c.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    }
+    fogViewRef.current = { seed: w.seed, ver: w.fogVer, at: now, canvas };
+    return canvas;
+  }
+
+  // Expeditions under way, the route being planned, and the lands sighted but not settled.
+  function drawVoyages(ctx: CanvasRenderingContext2D, w: World, zoom: number, t: number) {
+    const inv = 1 / zoom;
+    ctx.save();
+    ctx.lineWidth = 1.6 * inv;
+    // lands sighted and open to settlement: a laurel ring at their heart
+    w.lands.forEach((l, i) => {
+      if (!isDiscovered(w.fog, l, PLANET_R) || colonised(w, i)) return;
+      ctx.beginPath();
+      ctx.arc(l.x, l.y, 9 * inv, 0, 6.283);
+      ctx.strokeStyle = "rgba(214,178,106,0.9)";
+      ctx.stroke();
+      ctx.fillStyle = "rgba(214,178,106,0.85)";
+      ctx.font = `${12 * inv}px var(--mono, monospace)`;
+      ctx.textAlign = "center";
+      ctx.fillText(l.name, l.x, l.y - 14 * inv);
+    });
+    const route = (sx: number, sy: number, tx: number, ty: number, color: string) => {
+      ctx.setLineDash([6 * inv, 6 * inv]);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(tx, ty);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(tx, ty, 6 * inv, 0, 6.283);
+      ctx.stroke();
+    };
+    for (const e of w.expeditions) {
+      route(e.sx, e.sy, e.tx, e.ty, "rgba(122,156,196,0.75)");
+      const at = expeditionAt(e, w.runYears);
+      const bob = Math.sin(t * 3 + e.id) * 2 * inv;
+      ctx.fillStyle = "#e2c787";
+      ctx.beginPath(); // a little sail
+      ctx.moveTo(at.x, at.y - 10 * inv + bob);
+      ctx.lineTo(at.x + 7 * inv, at.y + 3 * inv + bob);
+      ctx.lineTo(at.x - 7 * inv, at.y + 3 * inv + bob);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const plan = planRef.current;
+    if (plan) {
+      const st = w.settlements[plan.from];
+      if (st) route(st.x, st.y, plan.tx, plan.ty, "rgba(226,199,135,0.95)");
+    }
+    ctx.restore();
+  }
+
+  // The same marks drawVoyages paints, as data for the preview renderer.
+  function voyageMarks(w: World): ViewVoyages {
+    const routes: ViewVoyages["routes"] = w.expeditions.map((e) => ({ sx: e.sx, sy: e.sy, tx: e.tx, ty: e.ty, planned: false }));
+    const plan = planRef.current;
+    const st = plan ? w.settlements[plan.from] : null;
+    if (plan && st) routes.push({ sx: st.x, sy: st.y, tx: plan.tx, ty: plan.ty, planned: true });
+    return {
+      routes,
+      sails: w.expeditions.map((e) => ({ ...expeditionAt(e, w.runYears), id: e.id })),
+      lands: w.lands.filter((l, i) => isDiscovered(w.fog, l, PLANET_R) && !colonised(w, i)),
+    };
+  }
+
   // The world through the preview renderer: the same World, with the helpers
   // and zoom bands it needs from this file. See KosmopolisPixi.ts.
   function drawPixi(r: WorldRenderer, w: World, t: number) {
+    // The fog goes to the renderer as a mask, and only when it has changed.
+    const fogKey = `${w.seed}:${w.fogVer}`;
+    if (pixiFogRef.current.r !== r || pixiFogRef.current.key !== fogKey) {
+      r.setFog(fogMask(w), PLANET_R);
+      pixiFogRef.current = { r, key: fogKey };
+    }
     const elev = sunElevation(w.tod);
     r.render(w, {
       t,
@@ -4236,7 +4717,8 @@ export default function KosmopolisWorld() {
       daylight: daylightTint(elev),
       acting: EPOCHS[w.epoch].act === true,
       planetR: PLANET_R,
-      terrain: terrainSeedRef.current === w.seed ? terrainRef.current : null,
+      terrain: terrainSeedRef.current === w.seed ? terrainRef.current : null, // fog goes in via setFog
+      voyages: voyageMarks(w),
       figureZoom: FIGURE_ZOOM,
       buildingZoom: BUILDING_ZOOM,
       portraitZoom: PORTRAIT_ZOOM,
@@ -4294,10 +4776,11 @@ export default function KosmopolisWorld() {
       ctx.fillStyle = "#14202e";
       ctx.fill();
 
-      // terrain (a static raster, blit once per frame) — only when it matches this world
-      if (terrainRef.current && terrainSeedRef.current === w.seed) {
+      // terrain under its fog (a raster rebuilt only when the fog lifts), blit once per frame
+      const land = terrainView(w);
+      if (land) {
         ctx.imageSmoothingEnabled = true;
-        ctx.drawImage(terrainRef.current, -R, -R, 2 * R, 2 * R);
+        ctx.drawImage(land, -R, -R, 2 * R, 2 * R);
       }
       // harmony tints the whole planet warm or cold
       const h = w.harmony;
@@ -4310,6 +4793,8 @@ export default function KosmopolisWorld() {
         : `rgba(90,80,110,${((0.5 - h) * 0.3).toFixed(3)})`;
       ctx.fill();
     }
+
+    drawVoyages(ctx, w, zoom, t);
 
     const acting = EPOCHS[w.epoch].act === true;
     const figures = zoom >= FIGURE_ZOOM;
@@ -4889,6 +5374,65 @@ export default function KosmopolisWorld() {
     w.pneuma = Math.max(0, w.pneuma - COSTS[key]);
   }, []);
 
+  /* ---- exploration ---- */
+  // Begin charting: the next click on the map chooses where an expedition sails.
+  const startCharting = useCallback(() => {
+    const w = worldRef.current;
+    if (!EPOCHS[w.epoch].act) {
+      setNotice("No one sails before the moral physics wake. Let time run to the Kindling.");
+      return;
+    }
+    if (w.expeditions.length >= EXPEDITIONS_MAX) {
+      setNotice(`${EXPEDITIONS_MAX} expeditions are already abroad. Wait for one to come home.`);
+      return;
+    }
+    if (!canAfford("explore")) return;
+    setPlan(null);
+    setCharting(true);
+    setNotice("Click a point in the fog on the map to choose where the expedition sails.");
+  }, [canAfford]);
+
+  const cancelCharting = useCallback(() => {
+    setCharting(false);
+    setPlan(null);
+    setNotice(null);
+  }, []);
+
+  const sendPlanned = useCallback(() => {
+    const w = worldRef.current;
+    if (!plan || !canAfford("explore")) return;
+    if (!sendExpedition(w, plan)) {
+      setNotice("The expedition could not set out. Its leader may be gone, or too many are abroad.");
+      setPlan(null);
+      return;
+    }
+    spend("explore");
+    setPlan(null);
+    setNotice(null);
+    dirtyRef.current = true;
+    flush(true);
+    refresh();
+  }, [plan, canAfford, spend, flush, refresh]);
+
+  const settleLand = useCallback(
+    (land: number) => {
+      const w = worldRef.current;
+      const from = colonyFrom(w, land);
+      if (typeof from === "string") {
+        setNotice(from);
+        return;
+      }
+      if (!canAfford("colony")) return;
+      spend("colony");
+      foundColony(w, land, from);
+      setNotice(null);
+      dirtyRef.current = true;
+      flush(true);
+      refresh();
+    },
+    [canAfford, spend, flush, refresh]
+  );
+
   /* ---- controls ---- */
   const ignite = useCallback(() => {
     const w = worldRef.current;
@@ -5164,6 +5708,18 @@ export default function KosmopolisWorld() {
       const c = toCanvas(e.clientX, e.clientY);
       const w = worldRef.current;
       const wp = (pixiPreviewRef.current && pixiRef.current?.pick(c.x, c.y, w.camera.zoom)) || toWorld(c.x, c.y);
+      // Charting an expedition: this click chooses where it sails.
+      if (chartingRef.current) {
+        const p = planExpedition(w, wp.x, wp.y);
+        if (typeof p === "string") {
+          setNotice(p);
+        } else {
+          setPlan(p);
+          setCharting(false);
+          setNotice(null);
+        }
+        return;
+      }
       let best: Soul | null = null;
       let bd = Infinity;
       for (const s of w.souls) {
@@ -5873,6 +6429,91 @@ export default function KosmopolisWorld() {
                 })}
               </ul>
             )}
+          </div>
+
+          {/* exploration */}
+          <div className="kp-card">
+            <h3>The known world</h3>
+            <div className="kp-metrics">
+              <div className="kp-metric">
+                <span className="kp-k">Charted</span>
+                <span className="kp-v">
+                  {Math.round(ui.explore.seen * 100)}
+                  <small>%</small>
+                </span>
+              </div>
+              <div className="kp-metric">
+                <span className="kp-k">Lands found</span>
+                <span className="kp-v">
+                  {ui.explore.found}
+                  <small>/{ui.explore.total || "?"}</small>
+                </span>
+              </div>
+            </div>
+            {ui.explore.voyages.length > 0 && (
+              <ul className="kp-voyages">
+                {ui.explore.voyages.map((v) => (
+                  <li key={v.id}>
+                    <span>⛵ {v.leader}</span>
+                    <span>{v.yearsLeft ? `${v.yearsLeft} yrs to go` : "arriving"}</span>
+                    <span className={v.risk > 0.3 ? "kp-v-ill" : ""}>{Math.round(v.risk * 100)}% risk</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {plan ? (
+              <div className="kp-plan">
+                <p className="kp-hint">
+                  From <b>{ui.towns[plan.from]?.name ?? "a town"}</b>, led by <b>{plan.leaderName}</b>, the bravest there. {plan.years} years to arrive;{" "}
+                  <span className={plan.risk > 0.3 ? "kp-v-ill" : ""}>{Math.round(plan.risk * 100)}% chance it is lost</span>, and its leader with it.
+                </p>
+                <div className="kp-btn-row">
+                  <button className="kp-btn kp-btn-primary" onClick={sendPlanned} disabled={ui.pneuma < COSTS.explore || !!ui.runOver}>
+                    Send it <span className="kp-cost">{COSTS.explore} pneuma</span>
+                  </button>
+                  <button className="kp-btn" onClick={cancelCharting}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : charting ? (
+              <button className="kp-btn kp-wide kp-on" onClick={cancelCharting}>
+                Click the fog on the map… (cancel)
+              </button>
+            ) : (
+              <button
+                className="kp-btn kp-wide"
+                onClick={startCharting}
+                disabled={ui.pneuma < COSTS.explore || !!ui.runOver || ui.explore.voyages.length >= EXPEDITIONS_MAX}
+              >
+                ⛵ Chart an expedition <span className="kp-cost">{COSTS.explore} pneuma</span>
+              </button>
+            )}
+            {ui.explore.lands.length > 0 && (
+              <ul className="kp-lands">
+                {ui.explore.lands.map((l) => (
+                  <li key={l.index}>
+                    <b>{l.name}</b>
+                    {l.settled ? (
+                      <span className="kp-hint">settled</span>
+                    ) : (
+                      <>
+                        <button className="kp-btn" onClick={() => settleLand(l.index)} disabled={!l.from || ui.pneuma < COSTS.colony || !!ui.runOver} title={l.why ?? undefined}>
+                          Found a colony <span className="kp-cost">{COSTS.colony} pneuma</span>
+                        </button>
+                        <span className="kp-hint">
+                          {l.from ? `${COLONY_SETTLERS} settlers and ${costLabel(COLONY_STORES)} from ${l.from}` : l.why}
+                        </span>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="kp-hint">
+              Most of the world lies under fog. An expedition lifts it along its way and charts the coast it reaches; its leader may not come back. A land found can be
+              settled, at a price in settlers and stores. The fire closes the fog again each cycle.
+            </p>
           </div>
 
           {/* the indifferents */}

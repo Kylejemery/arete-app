@@ -116,6 +116,15 @@ export type ViewFrame = {
   streetZoom: number;
   market: (st: ViewSettlement) => { x: number; y: number };
   reach: (s: ViewSoul) => number; // the radius of a soul's circle of concern
+  voyages?: ViewVoyages; // exploration marks over the flat map (see kosmopolis-explore.ts)
+};
+
+/** Exploration marks in world units: routes (dashed, from and to), the sails
+ *  of expeditions under way, and the lands sighted but not yet settled. */
+export type ViewVoyages = {
+  routes: { sx: number; sy: number; tx: number; ty: number; planned: boolean }[];
+  sails: { x: number; y: number; id: number }[];
+  lands: { x: number; y: number }[];
 };
 
 /* ---------------------------------------------------------- the renderer */
@@ -644,6 +653,30 @@ export class WorldRenderer {
     return v;
   }
 
+  // Exploration marks, in fx over the flat map: dashed routes, little sails,
+  // and a gold ring at the heart of each land sighted but not settled.
+  private drawVoyages(v: ViewVoyages, inv: number, t: number) {
+    const fx = this.fx;
+    const dash = 6 * inv;
+    for (const r of v.routes) {
+      const len = Math.hypot(r.tx - r.sx, r.ty - r.sy);
+      const n = Math.max(1, Math.floor(len / (dash * 2)));
+      const color = r.planned ? 0xe2c787 : 0x7a9cc4;
+      for (let k = 0; k < n; k++) {
+        const a = (k * 2 * dash) / len;
+        const b = Math.min(1, ((k * 2 + 1) * dash) / len);
+        fx.moveTo(r.sx + (r.tx - r.sx) * a, r.sy + (r.ty - r.sy) * a).lineTo(r.sx + (r.tx - r.sx) * b, r.sy + (r.ty - r.sy) * b);
+      }
+      fx.stroke({ width: 1.6 * inv, color, alpha: r.planned ? 0.95 : 0.75 });
+      fx.circle(r.tx, r.ty, 6 * inv).stroke({ width: 1.6 * inv, color, alpha: 0.9 });
+    }
+    for (const s of v.sails) {
+      const bob = Math.sin(t * 3 + s.id) * 2 * inv;
+      fx.poly([s.x, s.y - 10 * inv + bob, s.x + 7 * inv, s.y + 3 * inv + bob, s.x - 7 * inv, s.y + 3 * inv + bob]).fill({ color: 0xe2c787 });
+    }
+    for (const l of v.lands) fx.circle(l.x, l.y, 9 * inv).stroke({ width: 1.6 * inv, color: 0xd6b26a, alpha: 0.9 });
+  }
+
   render(w: ViewWorld, f: ViewFrame) {
     this.frameNo++;
     const { t, elev } = f;
@@ -687,8 +720,10 @@ export class WorldRenderer {
     this.caption.visible = false;
     for (const c of this.crowns) c.visible = false;
 
-    if (flat) this.renderFlat(w, f, { zoom, inv, R, W, H, nightK, dayK, festival, portrait, figures, townA, streetA, onScreen, toScreen });
-    else for (const [, v] of this.souls) v.body.visible = v.shadow.visible = v.aura.visible = v.lantern.visible = v.flame.visible = false;
+    if (flat) {
+      this.renderFlat(w, f, { zoom, inv, R, W, H, nightK, dayK, festival, portrait, figures, townA, streetA, onScreen, toScreen });
+      if (f.voyages) this.drawVoyages(f.voyages, inv, t);
+    } else for (const [, v] of this.souls) v.body.visible = v.shadow.visible = v.aura.visible = v.lantern.visible = v.flame.visible = false;
 
     // the light of day, multiplied over the flat scene (the globe lights itself)
     const d = f.daylight;
