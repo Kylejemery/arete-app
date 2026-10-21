@@ -109,6 +109,10 @@ export default function GapAgentPage() {
   const [pdfPages, setPdfPages] = useState<string[]>([])
   const [pdfMode, setPdfMode] = useState<'verbatim' | 'summary'>('verbatim')
   const [pdfPublicDomain, setPdfPublicDomain] = useState(false)
+  // Summary mode only: the work is held as an opponent (ACQUISITION_PLAN.md
+  // test 7), so it lands as counterposition_summary and is fenced from
+  // counselors instead of being absorbed as agreement.
+  const [pdfCounterposition, setPdfCounterposition] = useState(false)
   const [pdfBusy, setPdfBusy] = useState<'extracting' | 'ingesting' | null>(null)
   const [pdfMsg, setPdfMsg] = useState('')
   const [pdfProgress, setPdfProgress] = useState<{ done: number; total: number } | null>(null)
@@ -385,8 +389,9 @@ export default function GapAgentPage() {
             sourceText: s.text,     // original goes to corpus_sources (admin-only)
             mode: 'summary',
             // Keeps the work off the Reading Room shelf while leaving it
-            // retrievable and listed in the counselor source catalog.
-            textType: 'paper_summary',
+            // retrievable and listed in the counselor source catalog. A
+            // counterposition is retrievable by research surfaces only.
+            textType: pdfCounterposition ? 'counterposition_summary' : 'paper_summary',
             author: pdfForm.author,
             work: pdfForm.work,
             section: pdfForm.section,
@@ -696,6 +701,22 @@ export default function GapAgentPage() {
               onChange={e => setPdfPublicDomain(e.target.checked)}
             />
             I confirm this text is public domain (or otherwise mine to ingest verbatim)
+          </label>
+        )}
+        {pdfMode === 'summary' && (
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#444', margin: '10px 0' }}>
+            <input
+              type="checkbox"
+              checked={pdfCounterposition}
+              onChange={e => setPdfCounterposition(e.target.checked)}
+              disabled={pdfBusy !== null}
+              style={{ marginTop: 3 }}
+            />
+            <span>
+              <strong>Counterposition</strong> — the corpus holds this work as an opponent (a manual
+              for power, say). It is labelled as a position to argue against and kept from the
+              Cabinet, the Proctor, the Journal and the Dispatch; research agents still read it.
+            </span>
           </label>
         )}
         {pdfMode === 'summary' && pdfText && (

@@ -31,7 +31,7 @@ const DEFAULT_LOCATOR_MIN_CHUNKS = 30;
 // here is a layer nobody has decided the visibility of.
 const KNOWN_TEXT_TYPES = [
   'primary', 'scholarship', 'paper_summary', 'synthesis',
-  'concordance', 'modern_primary', 'modern_summary',
+  'concordance', 'modern_primary', 'modern_summary', 'counterposition_summary',
 ];
 
 // Short, deliberately ordinary queries for the live fence checks. They are

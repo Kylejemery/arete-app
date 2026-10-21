@@ -17,7 +17,7 @@ with r as (
     regexp_replace(regexp_replace(trim(coalesce(section_label, '')), '\s+', ' ', 'g'), '\s*\(\d+/\d+\)$', '') as sl
   from rag_corpus
   where not coalesce(deprecated, false)
-    and coalesce(text_type, '') not in ('concordance', 'modern_primary', 'modern_summary')
+    and coalesce(text_type, '') not in ('concordance', 'modern_primary', 'modern_summary', 'counterposition_summary')
 ), c as (
   select *,
     case

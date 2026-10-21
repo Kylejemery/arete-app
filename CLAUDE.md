@@ -78,10 +78,13 @@ Two standing rules that predate this file and still hold:
   `match_rag_corpus` first, and the nightly `corpus.retrieval_latency` probe
   is the guard. The two migrations of 2026-09-20/21 carry the numbers.
 - `text_type` is the layer field and the only fence: primary, scholarship,
-  paper_summary, synthesis, concordance, modern_primary, modern_summary
-  (locked by a check constraint). The counselor, modern, and research fences
-  live in `server/lib/corpus-fence.js`; a new layer is a migration plus a
-  fence entry, never an ad hoc value.
+  paper_summary, synthesis, concordance, modern_primary, modern_summary,
+  counterposition_summary (locked by a check constraint). A modern work the
+  corpus holds as an opponent (Greene's 48 Laws) is a counterposition_summary,
+  never a paper_summary: check the Counterposition box on the admin PDF form.
+  The counselor, modern, and research fences live in
+  `server/lib/corpus-fence.js`; a new layer is a migration plus a fence
+  entry, never an ad hoc value.
 
 ## The nightly auditor
 

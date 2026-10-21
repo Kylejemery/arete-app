@@ -51,7 +51,9 @@ const TOOLS = [
             'Which corpus layers to search. Default ["canon"]: the ancient and modern primary texts only. ' +
             '"scholarship" adds published secondary work and summaries of it; "apparatus" adds editorial concordances; ' +
             '"synthesis" adds Arete\'s own AI-assisted summaries, which are teaching material, not evidence: each is ' +
-            'labelled with its verification_status, and an unverified or interpretive one must never be presented as what an ancient author said.',
+            'labelled with its verification_status, and an unverified or interpretive one must never be presented as what an ancient author said. ' +
+            '"counterposition" adds summaries of works the corpus holds as opponents (Greene\'s 48 Laws of Power, Art of Seduction, 50th Law): ' +
+            'each is labelled [COUNTERPOSITION: ...] and is a position to examine or argue against, never advice.',
         },
       },
       required: ['query'],

@@ -42,10 +42,25 @@ test('teaching fences are unchanged and do not exclude synthesis', () => {
   assert.ok(!fence.modernFenceParams().exclude_text_types.includes('synthesis'));
 });
 
+test('counterpositions are fenced from counselor and modern surfaces, visible to research', () => {
+  assert.ok(fence.counselorRetrievalParams().exclude_text_types.includes('counterposition_summary'));
+  assert.ok(fence.modernFenceParams().exclude_text_types.includes('counterposition_summary'));
+  assert.ok(!fence.researchRetrievalParams().exclude_text_types.includes('counterposition_summary'));
+  assert.ok(!fence.isCounselorVisible({ text_type: 'counterposition_summary' }));
+  assert.ok(fence.isModernFenced({ text_type: 'counterposition_summary' }));
+  assert.ok(fence.isResearchVisible({ text_type: 'counterposition_summary', author: 'Robert Greene' }));
+});
+
+test('the MCP server serves counterpositions only on request', () => {
+  assert.ok(!fence.DEFAULT_MCP_LAYERS.includes('counterposition'));
+  assert.ok(fence.excludeTextTypesForLayers(['canon', 'scholarship', 'apparatus', 'synthesis']).includes('counterposition_summary'));
+  assert.ok(!fence.excludeTextTypesForLayers(['counterposition']).includes('counterposition_summary'));
+});
+
 test('every locked text_type belongs to exactly one layer', () => {
   const all = Object.values(fence.LAYERS).flat();
   assert.deepEqual([...all].sort(), [
-    'concordance', 'modern_primary', 'modern_summary', 'paper_summary', 'primary', 'scholarship', 'synthesis',
+    'concordance', 'counterposition_summary', 'modern_primary', 'modern_summary', 'paper_summary', 'primary', 'scholarship', 'synthesis',
   ]);
   assert.equal(new Set(all).size, all.length);
 });
@@ -85,7 +100,8 @@ test('search_corpus with default parameters asks the RPC to exclude synthesis', 
   }
   assert.equal(calls[0].name, 'match_rag_corpus');
   assert.ok(calls[0].args.exclude_text_types.includes('synthesis'));
-  assert.deepEqual(calls[1].args.exclude_text_types, []);
+  // Every teaching layer still leaves counterpositions out: they come only on request.
+  assert.deepEqual(calls[1].args.exclude_text_types, ['counterposition_summary']);
 });
 
 test('a synthesis row prints its layer and verification status', () => {
