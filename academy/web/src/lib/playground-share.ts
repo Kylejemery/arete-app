@@ -34,6 +34,7 @@ export const RELEASED_PLAYGROUND = [
   'the-long-filter/walkthrough',
   'view-from-above',
   'no-one-errs-willingly',
+  'kosmopolis',
 ]
 
 /**
