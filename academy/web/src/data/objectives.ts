@@ -361,7 +361,7 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
     4: [
       { id: 'phil801-s4-obj1', description: 'States Chrysippus\'s four modal definitions with their two clauses and contrasts them with Diodorus (DL 7.75; Boethius in Int. 234 to 235).' },
       { id: 'phil801-s4-obj2', description: 'Reconstructs the Master Argument from Epictetus 2.19 and says which premiss each of Diodorus, Cleanthes and Chrysippus rejected.' },
-      { id: 'phil801-s4-obj3', description: 'Formalises the three accounts of possibility over a discrete time line and checks which inclusions hold, marking what rests only on a summary of the modal logic paper.' },
+      { id: 'phil801-s4-obj3', description: 'Formalises the three accounts of possibility over a discrete time line and checks which inclusions hold, and compares the result with the 1993 reconstruction by Bobzien, including her supplement to the definition of the impossible.' },
     ],
     5: [
       { id: 'phil801-s5-obj1', description: 'States the Stoic criterion of validity and the four ways an argument fails (PH 2.137, 146 to 150) with an example of each.' },
