@@ -49,6 +49,12 @@ const TAB_GROUPS: { label: string; tabs: { href: string; label: string }[] }[] =
     ],
   },
   {
+    label: 'Academy',
+    tabs: [
+      { href: '/admin/seminar', label: 'Seminar Builder' },
+    ],
+  },
+  {
     label: 'Members',
     tabs: [
       { href: '/admin/journal-agent', label: 'Journal Agent' },

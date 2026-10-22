@@ -8214,7 +8214,7 @@ agora.init({
   claudeApiKey: CLAUDE_API_KEY,
 });
 
-seminar.init({ getAuthenticatedUserId, isAdmin });
+seminar.init({ getAuthenticatedUserId, isAdmin, embedQuery });
 
 enchiridion.init({
   getAuthenticatedUserId,
