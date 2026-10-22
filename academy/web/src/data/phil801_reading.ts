@@ -35,7 +35,8 @@ export const PHIL801_READING: Record<number, ReadingItem[]> = {
     { source: 'Diogenes Laertius', passage: 'Lives VII.75', note: 'The Stoic modal definitions.' },
     { source: 'Plutarch', passage: 'On Stoic Self-Contradictions 1055d-f', note: 'Chrysippus against Diodorus on the possible.' },
     { source: 'Boethius', passage: 'in De Interpretatione, 2nd ed., 234-235 (Meiser)', note: 'The fullest statement of the Stoic definitions.' },
-    { source: BOBZIEN_1999, passage: 'pp. 83-92 (the Megarics) and 117-121', note: 'The Master Argument and the Stoic modal system. The 2000s modal logic paper is held only as a summary.' },
+    { source: BOBZIEN_1999, passage: 'pp. 83-92 (the Megarics) and 117-121', note: 'The Master Argument and the Stoic modal system.' },
+    { source: 'Bobzien', passage: '"Chrysippus\' Modal Logic and its Relation to Philo and Diodorus", in Döring and Ebert (eds.), Dialektiker und Stoiker (1993), pp. 63-84', note: 'The formal reconstruction of all three systems; Scheme 2 (p. 83). Does not reconstruct the Master Argument.' },
   ],
   5: [
     { source: 'Sextus Empiricus', passage: 'Outlines of Pyrrhonism II.146-150, 156-167; Against the Logicians II.429-434, 443', note: 'The four ways an argument fails; redundancy; one-premiss arguments.' },
