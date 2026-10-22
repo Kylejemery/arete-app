@@ -201,71 +201,71 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "Why did the Stoics include epistemology under 'logic'?",
         options: [
           'A) For organizational convenience only',
-          'B) Because both concern logos — reasoning about knowledge and valid inference',
-          'C) Because Aristotle had done the same',
+          'B) Because Aristotle had done the same',
+          'C) Because both concern logos — reasoning about knowledge and valid inference',
           'D) Because they had no separate word for epistemology',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'The Stoic concept of logos does NOT refer to:',
         options: [
           'A) Rational speech — language governed by reason',
-          'B) The rational principle pervading the cosmos',
-          'C) The faculty of reason in humans',
-          'D) The emotional impulse that drives action',
+          'B) The emotional impulse that drives action',
+          'C) The rational principle pervading the cosmos',
+          'D) The faculty of reason in humans',
         ],
-        correct: 'D',
+        correct: 'B',
       },
       {
         question: 'Which argument form is logically valid?',
         options: [
           'A) All dogs bark. Rex barks. Therefore Rex is a dog.',
           'B) If it rains, the ground is wet. The ground is wet. Therefore it rained.',
-          'C) All Sages are wise. Socrates is not a Sage. Therefore Socrates is not wise.',
-          'D) If I am virtuous, I act from reason. I am not virtuous. Therefore I do not act from reason.',
+          'C) If I am virtuous, I act from reason. I am not virtuous. Therefore I do not act from reason.',
+          'D) All Sages are wise. Socrates is not a Sage. Therefore Socrates is not wise.',
         ],
-        correct: 'D',
+        correct: 'C',
       },
       {
         question: 'The Stoic argument that logic must precede ethics rests on:',
         options: [
-          'A) The belief that physics is more important than ethics',
-          'B) The claim that ethical reasoning requires the ability to evaluate impressions and assent — which is logic',
+          'A) The claim that ethical reasoning requires the ability to evaluate impressions and assent — which is logic',
+          'B) The belief that physics is more important than ethics',
           'C) The view that logic is more pleasurable to study',
           'D) An arbitrary traditional ordering inherited from Plato',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: "In what sense does Stoic 'logic' differ from modern logic?",
         options: [
           'A) It is narrower — limited to syllogisms only',
-          'B) It is broader — including grammar, rhetoric, and epistemology',
-          'C) It excludes formal argument analysis entirely',
-          'D) It deals only with mathematical proof',
+          'B) It excludes formal argument analysis entirely',
+          'C) It deals only with mathematical proof',
+          'D) It is broader — including grammar, rhetoric, and epistemology',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "Chrysippus's reputation in antiquity was:",
         options: [
-          'A) Modest — he was seen as derivative of Zeno',
-          'B) Dominant — widely considered the greatest logician who ever lived',
+          'A) Dominant — widely considered the greatest logician who ever lived',
+          'B) Modest — he was seen as derivative of Zeno',
           'C) Controversial — most Stoics rejected his logical work',
           'D) Limited to ethics — his logic was considered amateurish',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: 'The Stoic concept of synkatathesis (assent) is introduced in this session because:',
         options: [
           "A) It is a rhetorical technique for public argument",
-          'B) It connects logic to ethics: assent is up to us, making us responsible for our beliefs and actions',
-          'C) It explains why logic precedes physics',
+          'B) It explains why logic precedes physics',
+          'C) It connects logic to ethics: assent is up to us, making us responsible for our beliefs and actions',
           "D) It is the name for the Stoic school's voting procedure",
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'Which of the following best describes the Stoic position on the relationship between logic and ethics?',
@@ -367,26 +367,26 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "The Stoic term 'lekton' is best translated as:",
         options: [
           'A) The physical utterance of a word',
-          'B) The external object a word refers to',
-          'C) The incorporeal sayable — what is meant or communicated',
+          'B) The incorporeal sayable — what is meant or communicated',
+          'C) The external object a word refers to',
           "D) A mental image in the speaker's mind",
         ],
-        correct: 'C',
-      },
-      {
-        question: 'According to the Stoics, which of the three connected things is incorporeal?',
-        options: ['A) The signifier', 'B) The signified (lekton)', 'C) The external object', 'D) All three are incorporeal'],
         correct: 'B',
       },
       {
-        question: 'Truth and falsity are properties of:',
-        options: ['A) Physical sounds', 'B) External objects', 'C) Mental images', 'D) Lekta (sayables)'],
+        question: 'According to the Stoics, which of the three connected things is incorporeal?',
+        options: ['A) The signifier', 'B) The external object', 'C) All three are incorporeal', 'D) The signified (lekton)'],
         correct: 'D',
       },
       {
+        question: 'Truth and falsity are properties of:',
+        options: ['A) Physical sounds', 'B) Lekta (sayables)', 'C) External objects', 'D) Mental images'],
+        correct: 'B',
+      },
+      {
         question: 'The Stoics identified four incorporeals. Which of these is NOT one of them?',
-        options: ['A) Lekta (sayables)', 'B) Void', 'C) Soul (psyche)', 'D) Time'],
-        correct: 'C',
+        options: ['A) Soul (psyche)', 'B) Lekta (sayables)', 'C) Void', 'D) Time'],
+        correct: 'A',
       },
       {
         question: "What is the 'external object' (tynchanon) in Sextus's example of 'Dion'?",
@@ -412,11 +412,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "A 'complete lekton' differs from an 'incomplete lekton' in that:",
         options: [
           'A) Complete lekta are true; incomplete lekta are false',
-          'B) Complete lekta express a full proposition capable of truth or falsity; incomplete lekta require a subject to be complete',
-          'C) Complete lekta refer to bodies; incomplete lekta are purely abstract',
-          'D) Complete lekta are written; incomplete lekta are only spoken',
+          'B) Complete lekta refer to bodies; incomplete lekta are purely abstract',
+          'C) Complete lekta are written; incomplete lekta are only spoken',
+          'D) Complete lekta express a full proposition capable of truth or falsity; incomplete lekta require a subject to be complete',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "Which of the following best states why the Stoics' three-way distinction matters for logic?",
@@ -441,12 +441,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: 'The Stoic account of lekta is most importantly different from Platonic Forms in that:',
         options: [
-          'A) Lekta are eternal and mind-independent; Forms are not',
-          'B) Lekta are not transcendent eternal objects but arise in connection with rational language use',
+          'A) Lekta are not transcendent eternal objects but arise in connection with rational language use',
+          'B) Lekta are eternal and mind-independent; Forms are not',
           'C) Lekta are physical; Forms are not',
           'D) There is no important difference — both accounts posit incorporeal abstract entities',
         ],
-        correct: 'B',
+        correct: 'A',
       },
     ],
   },
@@ -547,21 +547,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: 'Which of the following is a complete lekton but NOT an axioma?',
         options: [
           "A) 'Epictetus walks'",
-          "B) 'Is Epictetus walking?'",
-          "C) 'Epictetus walked'",
-          "D) 'It is not the case that Epictetus walks'",
+          "B) 'Epictetus walked'",
+          "C) 'It is not the case that Epictetus walks'",
+          "D) 'Is Epictetus walking?'",
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "An 'incomplete lekton' is:",
         options: [
           'A) A false proposition',
-          'B) A predicate that requires a subject to form a complete proposition',
-          'C) A question without an answer',
-          'D) A proposition whose truth value is unknown',
+          'B) A question without an answer',
+          'C) A proposition whose truth value is unknown',
+          'D) A predicate that requires a subject to form a complete proposition',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "The word 'axioma' comes from a Greek verb meaning:",
@@ -571,12 +571,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: "The Stoic negation of 'Cato is wise' is correctly formed as:",
         options: [
-          "A) 'Cato is unwise'",
-          "B) 'Cato is not wise'",
-          "C) 'It is not the case that Cato is wise'",
+          "A) 'It is not the case that Cato is wise'",
+          "B) 'Cato is unwise'",
+          "C) 'Cato is not wise'",
           "D) 'Cato may not be wise'",
         ],
-        correct: 'C',
+        correct: 'A',
       },
       {
         question: "Which of the following is an example of a 'definite' proposition as the Stoics used the term?",
@@ -587,26 +587,26 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: 'The Stoics are notable in the history of logic for:',
         options: [
           'A) Making the term, not the proposition, the basic unit of analysis',
-          'B) Making the proposition the basic unit — anticipating modern propositional logic',
-          'C) Rejecting the idea of logical connectives',
+          'B) Rejecting the idea of logical connectives',
+          'C) Making the proposition the basic unit — anticipating modern propositional logic',
           'D) Confining logic to syllogistic forms only',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: "A conjunction ('Both P and Q') is true if and only if:",
-        options: ['A) Either P or Q is true', 'B) P is true', 'C) Both P and Q are true', 'D) Neither P nor Q is false'],
-        correct: 'C',
+        options: ['A) Either P or Q is true', 'B) Both P and Q are true', 'C) P is true', 'D) Neither P nor Q is false'],
+        correct: 'B',
       },
       {
         question: 'Why do questions not bear truth values, according to the Stoic account?',
         options: [
           'A) Because questions use different words than propositions',
-          'B) Because questions are not lekta at all',
-          'C) Because questions do not assert — they request; the assertoric mode is missing',
+          'B) Because questions do not assert — they request; the assertoric mode is missing',
+          'C) Because questions are not lekta at all',
           'D) Because Chrysippus arbitrarily excluded them',
         ],
-        correct: 'C',
+        correct: 'B',
       },
       {
         question: "The distinction between 'Socrates is not walking' and 'It is not the case that Socrates is walking' matters because:",
@@ -704,8 +704,8 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     quiz: [
       {
         question: "The Greek word 'phantasia' is derived from a verb meaning:",
-        options: ['A) To reason or calculate', 'B) To appear or seem', 'C) To act or produce', 'D) To know or understand'],
-        correct: 'B',
+        options: ['A) To appear or seem', 'B) To reason or calculate', 'C) To act or produce', 'D) To know or understand'],
+        correct: 'A',
       },
       {
         question: "Zeno's original definition compared an impression to:",
@@ -715,67 +715,67 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: "Why did Chrysippus revise Zeno's seal-in-wax model?",
         options: [
-          'A) Because impressions are not physical at all',
-          'B) Because the metaphor implied spatial displacement that is physically impossible',
+          'A) Because the metaphor implied spatial displacement that is physically impossible',
+          'B) Because impressions are not physical at all',
           'C) Because wax is too unstable to represent long-lasting beliefs',
           "D) Because Zeno's model was borrowed from Plato and therefore suspect",
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: "The 'hēgemonikon' is:",
         options: [
           'A) The five senses combined',
-          'B) The rational ruling faculty — the part of the soul that receives impressions and gives assent',
-          'C) The Stoic word for God',
-          'D) The physical location of the soul in the chest',
+          'B) The Stoic word for God',
+          'C) The physical location of the soul in the chest',
+          'D) The rational ruling faculty — the part of the soul that receives impressions and gives assent',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: 'The Stoics located the hēgemonikon in the:',
-        options: ['A) Brain', 'B) Liver', 'C) Heart', 'D) Spine'],
-        correct: 'C',
+        options: ['A) Brain', 'B) Heart', 'C) Liver', 'D) Spine'],
+        correct: 'B',
       },
       {
         question: "A 'rational impression' differs from a non-rational impression in that:",
         options: [
           'A) Rational impressions are stronger and clearer',
-          'B) Rational impressions have propositional content — they can be articulated as a lekton',
-          'C) Rational impressions come only from the senses',
-          'D) Rational impressions are always true',
+          'B) Rational impressions come only from the senses',
+          'C) Rational impressions are always true',
+          'D) Rational impressions have propositional content — they can be articulated as a lekton',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: 'Which of the following CANNOT give or withhold assent to an impression?',
         options: [
           'A) A Stoic Sage',
-          'B) A human being in a state of passion',
-          'C) A dog responding to a stimulus',
+          'B) A dog responding to a stimulus',
+          'C) A human being in a state of passion',
           'D) A human child learning to walk',
         ],
-        correct: 'C',
+        correct: 'B',
       },
       {
         question: 'The soul (psyche) for the Stoics is:',
         options: [
           'A) Incorporeal — a Form or substance outside the body',
-          'B) Physical — a kind of pneuma (fiery breath)',
-          'C) Mental — a collection of ideas and representations',
-          'D) Divine — identical with the Logos of the cosmos',
+          'B) Mental — a collection of ideas and representations',
+          'C) Divine — identical with the Logos of the cosmos',
+          'D) Physical — a kind of pneuma (fiery breath)',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: 'Impressions can arise from which of the following sources? (Select the most complete answer)',
         options: [
-          'A) Sense experience only',
-          'B) Sense experience and memory only',
-          'C) Sense experience, memory, and rational thought',
+          'A) Sense experience, memory, and rational thought',
+          'B) Sense experience only',
+          'C) Sense experience and memory only',
           'D) Rational thought only — sense impressions are unreliable',
         ],
-        correct: 'C',
+        correct: 'A',
       },
       {
         question: 'The Stoic account of rational impressions is philosophically important because:',
@@ -877,22 +877,22 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: "The 'katalēptikē phantasia' is best translated as:",
         options: [
-          'A) The false impression',
-          'B) The cognitive (graspable) impression — the Stoic criterion of truth',
+          'A) The cognitive (graspable) impression — the Stoic criterion of truth',
+          'B) The false impression',
           'C) The sensory impression of external objects',
           'D) The impression that survives Academic scrutiny',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: 'The three conditions of the cognitive impression are: from a real object; corresponding to that object; and:',
         options: [
           'A) Accompanied by a feeling of certainty',
-          'B) Approved by a Sage',
-          'C) Of such a kind as could not arise from a non-existing thing',
+          'B) Of such a kind as could not arise from a non-existing thing',
+          'C) Approved by a Sage',
           'D) Replicated by at least one other observer',
         ],
-        correct: 'C',
+        correct: 'B',
       },
       {
         question: 'The Academic philosopher who most forcefully challenged the cognitive impression was:',
@@ -903,56 +903,56 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "The 'twin argument' against the Stoic criterion states that:",
         options: [
           'A) The same object always produces two impressions',
-          "B) Indistinguishable impressions could arise from different objects, undermining the criterion's self-certifying character",
-          'C) Cognitive impressions are reliable only in twins',
-          'D) The Stoic criterion requires two observers to verify any impression',
+          'B) Cognitive impressions are reliable only in twins',
+          'C) The Stoic criterion requires two observers to verify any impression',
+          "D) Indistinguishable impressions could arise from different objects, undermining the criterion's self-certifying character",
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: 'The Stoic reply to the twin argument was:',
         options: [
           'A) Twins are actually distinguishable if you look closely enough at their souls',
-          'B) Nature always individuates — no two real objects are qualitatively identical',
-          'C) The twin argument is a logical contradiction and can be dismissed',
-          'D) The cognitive impression does not require distinguishing twins',
+          'B) The twin argument is a logical contradiction and can be dismissed',
+          'C) The cognitive impression does not require distinguishing twins',
+          'D) Nature always individuates — no two real objects are qualitatively identical',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "The 'criterion of truth' is:",
         options: [
           'A) A list of acceptable sources for beliefs',
-          'B) The standard by which true cognition is distinguished from false',
-          'C) A logical proof that knowledge exists',
+          'B) A logical proof that knowledge exists',
+          'C) The standard by which true cognition is distinguished from false',
           'D) The Stoic equivalent of the Socratic method',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'Katalepsis — the cognitive act associated with the kataleptike phantasia — means:',
         options: [
-          'A) Doubting an impression until it proves itself',
-          'B) Assenting to a non-cognitive impression',
-          'C) The firm grasp of a true object through a reliable impression',
+          'A) The firm grasp of a true object through a reliable impression',
+          'B) Doubting an impression until it proves itself',
+          'C) Assenting to a non-cognitive impression',
           'D) Withholding assent from all impressions',
         ],
-        correct: 'C',
+        correct: 'A',
       },
       {
         question: 'According to the Stoics, who consistently acts ONLY on cognitive impressions?',
-        options: ['A) Any rational adult', 'B) A trained philosopher', 'C) The ideal Sage', 'D) Anyone who has studied Stoic logic'],
-        correct: 'C',
+        options: ['A) The ideal Sage', 'B) Any rational adult', 'C) A trained philosopher', 'D) Anyone who has studied Stoic logic'],
+        correct: 'A',
       },
       {
         question: "The Stoic account of the cognitive impression most closely anticipates which of Descartes's ideas?",
         options: [
           'A) The evil demon hypothesis',
-          'B) Cogito ergo sum',
-          'C) Clear and distinct ideas as the criterion of truth',
+          'B) Clear and distinct ideas as the criterion of truth',
+          'C) Cogito ergo sum',
           'D) The wax example in Meditation II',
         ],
-        correct: 'C',
+        correct: 'B',
       },
       {
         question: 'What is the philosophical significance of the debate between Stoics and Academics about the criterion?',
@@ -1052,22 +1052,22 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: "The Greek word 'synkatathesis' literally means:",
         options: [
-          'A) To reason about impressions',
-          'B) To place oneself in agreement with something — to assent',
+          'A) To place oneself in agreement with something — to assent',
+          'B) To reason about impressions',
           'C) To withhold judgment indefinitely',
           'D) To receive an impression from an external object',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: 'What distinguishes rational animals from non-rational animals in the Stoic account of assent?',
         options: [
           'A) Rational animals have stronger impressions',
-          'B) Rational animals can pause and choose whether to assent to an impression',
-          'C) Rational animals always assent correctly',
+          'B) Rational animals always assent correctly',
+          'C) Rational animals can pause and choose whether to assent to an impression',
           'D) Non-rational animals do not have impressions at all',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: "When Epictetus says 'men are disturbed by opinions, not things,' the 'opinion' refers to:",
@@ -1093,41 +1093,41 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "The term 'propatheiai' refers to:",
         options: [
           "A) The Sage's fully rational responses to events",
-          'B) Pre-emotional involuntary responses that precede full passions',
-          'C) Impressions that arrive without any corresponding external object',
+          'B) Impressions that arrive without any corresponding external object',
+          'C) Pre-emotional involuntary responses that precede full passions',
           'D) Propositions that cannot be assented to',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'The Academic skeptics used epochē (withholding of assent) to:',
         options: [
           'A) Train themselves to give only cognitive impressions their assent',
-          'B) Universally suspend judgment because no criterion of truth is reliable',
-          'C) Evaluate impressions before acting on them, as the Stoics recommended',
+          'B) Evaluate impressions before acting on them, as the Stoics recommended',
+          'C) Universally suspend judgment because no criterion of truth is reliable',
           'D) Identify which impressions correspond to external objects',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'According to the Stoics, an ordinary human being who feels strong grief at a friend\'s death has:',
         options: [
           'A) Received an impression that was not real',
-          'B) Assented to the evaluative proposition that the death is a great evil',
-          'C) Used impressions wisely and responded proportionally',
+          'B) Used impressions wisely and responded proportionally',
+          'C) Assented to the evaluative proposition that the death is a great evil',
           'D) Acted without any impression at all',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'The Sage, unlike the ordinary person, differs in the Stoic account in that:',
         options: [
           'A) The Sage feels no impressions of loss or pain',
-          'B) The Sage assents only to cognitive impressions and withholds assent from evaluative additions',
-          'C) The Sage has a different physical soul-substance',
+          'B) The Sage has a different physical soul-substance',
+          'C) The Sage assents only to cognitive impressions and withholds assent from evaluative additions',
           'D) The Sage never receives impressions of bad events',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'How does the theory of assent connect logic to ethics?',
@@ -1143,11 +1143,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "Epictetus's statement that the 'use of impressions' is the one thing up to us is best understood as:",
         options: [
           'A) A rhetorical exaggeration to motivate students',
-          'B) A technical claim that assent — the act by which we endorse or refuse impression content — is the paradigm of what is in our rational control',
-          'C) An argument that all external events are actually up to us if we try hard enough',
+          'B) An argument that all external events are actually up to us if we try hard enough',
+          'C) A technical claim that assent — the act by which we endorse or refuse impression content — is the paradigm of what is in our rational control',
           'D) A denial that anything external can affect us',
         ],
-        correct: 'B',
+        correct: 'C',
       },
     ],
   },
@@ -1238,11 +1238,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: "The Greek word 'hormē' most directly means:",
         options: [
           'A) Pleasure or enjoyment',
-          'B) Impulse — a directed motivational movement toward something',
-          'C) The rational evaluation of an impression',
+          'B) The rational evaluation of an impression',
+          'C) Impulse — a directed motivational movement toward something',
           'D) The outcome of a successful action',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'The opposite of hormē (approach-impulse) is:',
@@ -1257,42 +1257,42 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: 'In the four-step Stoic causal chain, the correct order is:',
         options: [
-          'A) Assent → Impression → Impulse → Action',
-          'B) Impression → Impulse → Assent → Action',
-          'C) Impression → Assent → Impulse → Action',
+          'A) Impression → Assent → Impulse → Action',
+          'B) Assent → Impression → Impulse → Action',
+          'C) Impression → Impulse → Assent → Action',
           'D) Impulse → Assent → Impression → Action',
         ],
-        correct: 'C',
+        correct: 'A',
       },
       {
         question: 'What distinguishes rational impulse from the impulses of non-rational animals?',
         options: [
           'A) Rational impulse is stronger and more persistent',
-          'B) Rational impulse arises from assent to a practical proposition, not direct response to impression',
-          'C) Non-rational animals have no impulses at all',
+          'B) Non-rational animals have no impulses at all',
+          'C) Rational impulse arises from assent to a practical proposition, not direct response to impression',
           'D) Rational impulse always leads to correct action',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: "Chrysippus claimed that assent and impulse are 'the same thing' in rational beings. This means:",
         options: [
           'A) There is no psychological difference between thinking and acting',
-          'B) The endorsement of a practical proposition is simultaneously the motivational state to act on it',
-          'C) Impulse precedes assent in the causal chain',
-          'D) Rational beings never experience involuntary impulses',
+          'B) Impulse precedes assent in the causal chain',
+          'C) Rational beings never experience involuntary impulses',
+          'D) The endorsement of a practical proposition is simultaneously the motivational state to act on it',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: "The concept of 'oikeiōsis' refers to:",
         options: [
           'A) The Stoic account of valid argument forms',
-          'B) Natural affiliation — the original orientation of a creature toward its own constitution',
-          'C) The process of acquiring virtue through practice',
-          'D) The relationship between lekta and external objects',
+          'B) The process of acquiring virtue through practice',
+          'C) The relationship between lekta and external objects',
+          'D) Natural affiliation — the original orientation of a creature toward its own constitution',
         ],
-        correct: 'B',
+        correct: 'D',
       },
       {
         question: 'According to the Stoic account of oikeiōsis, self-preservation is:',
@@ -1318,21 +1318,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         question: 'The four Stoic passions are:',
         options: [
           'A) Anger, fear, grief, envy',
-          'B) Fear, desire, pleasure (pathological), distress',
-          'C) Pride, envy, lust, greed',
+          'B) Pride, envy, lust, greed',
+          'C) Fear, desire, pleasure (pathological), distress',
           'D) Anxiety, depression, rage, desire',
         ],
-        correct: 'B',
+        correct: 'C',
       },
       {
         question: 'The Stoic cosmopolitan conclusion — that we are affiliated with all rational beings — follows from oikeiōsis because:',
         options: [
           'A) We are commanded to love others by the Logos',
-          'B) The rational ground for self-affiliation (shared rational nature) applies equally to all rational beings',
-          'C) Emotional warmth naturally extends from family to all humans',
+          'B) Emotional warmth naturally extends from family to all humans',
+          'C) The rational ground for self-affiliation (shared rational nature) applies equally to all rational beings',
           'D) The Sage has no self-affiliation and is affiliated with everyone equally',
         ],
-        correct: 'B',
+        correct: 'C',
       },
     ],
   },
@@ -1429,22 +1429,22 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       {
         question: "A 'simple proposition' (haploun axioma) in Stoic logic is:",
         options: [
-          'A) A proposition with only one-syllable words',
-          'B) A proposition not formed by combining others with logical connectives',
+          'A) A proposition not formed by combining others with logical connectives',
+          'B) A proposition with only one-syllable words',
           'C) A proposition whose truth is immediately obvious',
           'D) A proposition about a single individual',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: "The Stoic conjunction 'It is day and it is light' is true if and only if:",
         options: [
           "A) Either 'it is day' or 'it is light' is true",
           "B) 'It is day' is true regardless of 'it is light'",
-          "C) Both 'it is day' and 'it is light' are true",
-          'D) The conjunction has been assented to by a Sage',
+          'C) The conjunction has been assented to by a Sage',
+          "D) Both 'it is day' and 'it is light' are true",
         ],
-        correct: 'C',
+        correct: 'D',
       },
       {
         question: 'The Stoic disjunction is:',
@@ -1458,33 +1458,33 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       },
       {
         question: "The Stoic technical term for a conditional proposition ('if...then') is:",
-        options: ['A) Sumpeplegmenon', 'B) Diezeugmenon', 'C) Sunēmmenon', 'D) Axiōma haploun'],
-        correct: 'C',
+        options: ['A) Sumpeplegmenon', 'B) Sunēmmenon', 'C) Diezeugmenon', 'D) Axiōma haploun'],
+        correct: 'B',
       },
       {
         question: "Philo of Megara's account of the conditional holds that 'If P, then Q' is false only when:",
         options: [
           'A) P and Q are both true',
           'B) P is false',
-          'C) P is true and Q is false',
-          'D) P and Q have no causal connection',
+          'C) P and Q have no causal connection',
+          'D) P is true and Q is false',
         ],
-        correct: 'C',
+        correct: 'D',
       },
       {
         question: "Chrysippus's 'conflict criterion' for the conditional requires that:",
         options: [
-          'A) The antecedent and consequent both be true',
-          'B) The negation of the consequent be incompatible with the antecedent — a necessary connection holds',
+          'A) The negation of the consequent be incompatible with the antecedent — a necessary connection holds',
+          'B) The antecedent and consequent both be true',
           'C) The conditional be assented to by a rational being',
           'D) The antecedent be a simple proposition',
         ],
-        correct: 'B',
+        correct: 'A',
       },
       {
         question: 'The philosopher who rediscovered the Chrysippan strict conditional in the early twentieth century was:',
-        options: ['A) Bertrand Russell', 'B) Gottlob Frege', 'C) C.I. Lewis', 'D) Ludwig Wittgenstein'],
-        correct: 'C',
+        options: ['A) Bertrand Russell', 'B) C.I. Lewis', 'C) Gottlob Frege', 'D) Ludwig Wittgenstein'],
+        correct: 'B',
       },
       {
         question: "A 'definite proposition' in Stoic terminology is:",
@@ -1498,18 +1498,18 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       },
       {
         question: "Which of the following is an 'indefinite proposition' in the Stoic classification?",
-        options: ["A) 'Socrates walks'", "B) 'A man walks'", "C) 'Someone walks'", "D) 'Walking is good exercise'"],
-        correct: 'C',
+        options: ["A) 'Someone walks'", "B) 'Socrates walks'", "C) 'A man walks'", "D) 'Walking is good exercise'"],
+        correct: 'A',
       },
       {
         question: 'The distinction between material implication and strict implication matters for Stoic logic because:',
         options: [
           'A) Material implication is always false; strict implication is always true',
           'B) The Stoics used material implication; Chrysippus used strict implication for the conditional',
-          'C) The Stoic argument forms (the indemonstrables) require genuine necessary connections, not just factual co-occurrence',
-          'D) Only strict implication can appear in a conjunction',
+          'C) Only strict implication can appear in a conjunction',
+          'D) The Stoic argument forms (the indemonstrables) require genuine necessary connections, not just factual co-occurrence',
         ],
-        correct: 'C',
+        correct: 'D',
       },
     ],
   },
@@ -1595,11 +1595,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "Diodorus Cronus's criterion for the conditional differs from Philo's in that:",
       "options": [
         "A) Diodorus requires a causal connection between antecedent and consequent",
-        "B) Diodorus requires that P-true-Q-false never occurs at any time — a temporal prohibition",
-        "C) Diodorus uses inclusive disjunction instead of the conditional",
+        "B) Diodorus uses inclusive disjunction instead of the conditional",
+        "C) Diodorus requires that P-true-Q-false never occurs at any time — a temporal prohibition",
         "D) Diodorus requires the antecedent to be a simple proposition"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The 'paradox of material implication' refers to:",
@@ -1615,31 +1615,31 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "On Philo's material conditional account, 'If it is currently night, 2+2=4' is:",
       "options": [
         "A) False, because the antecedent and consequent are unrelated",
-        "B) True, because the consequent (2+2=4) is always true",
-        "C) Indeterminate until we know whether it is night",
+        "B) Indeterminate until we know whether it is night",
+        "C) True, because the consequent (2+2=4) is always true",
         "D) False, because Philo required causal connection"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The 'conflict criterion' (Chrysippus) holds that 'If P then Q' is true if:",
       "options": [
         "A) P and Q are both currently true",
         "B) P is false",
-        "C) The negation of Q is incompatible with P — P and not-Q cannot both obtain",
-        "D) Q follows temporally after P"
+        "C) Q follows temporally after P",
+        "D) The negation of Q is incompatible with P — P and not-Q cannot both obtain"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "Which of the following conditionals PASSES Chrysippus's conflict criterion?",
       "options": [
         "A) 'If it is night, fire is cold'",
         "B) 'If Socrates was Athenian, then 2+2=4'",
-        "C) 'If a figure has three sides, the sum of its angles is 180 degrees'",
-        "D) 'If it is Tuesday, Dion is walking'"
+        "C) 'If it is Tuesday, Dion is walking'",
+        "D) 'If a figure has three sides, the sum of its angles is 180 degrees'"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "The 'causal proposition' (parasuēmmenon) differs from a conditional in that:",
@@ -1654,32 +1654,32 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "The biconditional asserts:",
       "options": [
-        "A) That P is the cause of Q",
-        "B) That P and Q are true together and false together — P if and only if Q",
+        "A) That P and Q are true together and false together — P if and only if Q",
+        "B) That P is the cause of Q",
         "C) That either P or Q is true, but not both",
         "D) That the conditional from P to Q has been established by proof"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The 'connectionist' (relevance) criterion for the conditional requires:",
       "options": [
         "A) That the antecedent be true",
-        "B) That the antecedent be relevant to or part of the truth of the consequent",
-        "C) That the conditional have been derived from an axiom",
+        "B) That the conditional have been derived from an axiom",
+        "C) That the antecedent be relevant to or part of the truth of the consequent",
         "D) That antecedent and consequent share at least one term"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "Which philosopher's view of the conditional most closely anticipates C.I. Lewis's strict implication?",
       "options": [
         "A) Philo of Megara",
-        "B) Diodorus Cronus",
-        "C) Chrysippus",
+        "B) Chrysippus",
+        "C) Diodorus Cronus",
         "D) Arcesilaus"
       ],
-      "correct": "C"
+      "correct": "B"
     },
     {
       "question": "The four conditional positions (Philo, Diodorus, Chrysippus, connectionists) can be arranged from weakest to strongest requirement as:",
@@ -1788,41 +1788,41 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The 'lazy argument' (argos logos) concluded that:",
       "options": [
         "A) Logical reasoning is impossible under fate",
-        "B) Rational action makes no difference because outcomes are fated independently of action",
-        "C) The Stoic conditional is logically invalid",
-        "D) Fate and assent are incompatible concepts"
+        "B) The Stoic conditional is logically invalid",
+        "C) Fate and assent are incompatible concepts",
+        "D) Rational action makes no difference because outcomes are fated independently of action"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "Chrysippus's response to the lazy argument introduced the concept of:",
       "options": [
         "A) Apodictic necessity — all fated events are logically necessary",
-        "B) Co-fated events — outcomes fated along with the actions that produce them",
-        "C) Temporal conditionals — fate operates through time, not logic",
+        "B) Temporal conditionals — fate operates through time, not logic",
+        "C) Co-fated events — outcomes fated along with the actions that produce them",
         "D) Voluntary fate — the Sage chooses to accept fate"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The logical error in the lazy argument, on Chrysippus's account, is:",
       "options": [
-        "A) Using an exclusive disjunction instead of an inclusive one",
-        "B) Treating a conditional fate (if you act, you recover) as an unconditional fact",
+        "A) Treating a conditional fate (if you act, you recover) as an unconditional fact",
+        "B) Using an exclusive disjunction instead of an inclusive one",
         "C) Confusing the material conditional with the conflict conditional",
         "D) Assuming the future is already past"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The Master Argument (Kurieuōn logos) was constructed by:",
       "options": [
         "A) Chrysippus",
         "B) Zeno of Citium",
-        "C) Diodorus Cronus",
-        "D) Arcesilaus"
+        "C) Arcesilaus",
+        "D) Diodorus Cronus"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "The conclusion of the Master Argument is:",
@@ -1837,22 +1837,22 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "Premise (i) of the Master Argument states:",
       "options": [
-        "A) The future is open and undetermined",
-        "B) Impossible events follow from impossible premises",
-        "C) Every past true proposition is now necessary",
+        "A) Every past true proposition is now necessary",
+        "B) The future is open and undetermined",
+        "C) Impossible events follow from impossible premises",
         "D) The possible includes everything that can be conceived"
       ],
-      "correct": "C"
+      "correct": "A"
     },
     {
       "question": "The Stoic response to the Master Argument required:",
       "options": [
         "A) Accepting that the possible is exhausted by the actual",
-        "B) Defending a concept of genuine modality — real possibilities that may never be actualized",
-        "C) Rejecting the concept of fate entirely",
-        "D) Revising the conflict criterion to allow weaker conditionals"
+        "B) Rejecting the concept of fate entirely",
+        "C) Revising the conflict criterion to allow weaker conditionals",
+        "D) Defending a concept of genuine modality — real possibilities that may never be actualized"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Stoic ethical conditionals ('if assent is up to us, we are responsible for our judgments') satisfy Chrysippus's conflict criterion because:",
@@ -1868,21 +1868,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The concept of co-fated events (sunkatēramena) is important for Stoic ethics because:",
       "options": [
         "A) It proves that all events are logically necessary",
-        "B) It shows that rational deliberation and action are part of the causal order, not external to it — preserving the relevance of agency within fate",
-        "C) It allows the Sage to override fate through virtue",
-        "D) It demonstrates that the Master Argument is unsound"
+        "B) It allows the Sage to override fate through virtue",
+        "C) It demonstrates that the Master Argument is unsound",
+        "D) It shows that rational deliberation and action are part of the causal order, not external to it — preserving the relevance of agency within fate"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The debate between Stoics and Diodorus Cronus over the Master Argument anticipates which modern philosophical debate?",
       "options": [
         "A) The debate over the existence of abstract objects",
-        "B) The debate in modal logic about the relationship between possibility and actuality",
-        "C) The debate over the analytic/synthetic distinction",
-        "D) The debate about the reference of proper names"
+        "B) The debate over the analytic/synthetic distinction",
+        "C) The debate about the reference of proper names",
+        "D) The debate in modal logic about the relationship between possibility and actuality"
       ],
-      "correct": "B"
+      "correct": "D"
     }
   ]
 },
@@ -1895,14 +1895,14 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
   "preSeminarBriefing": {
     "problem": "We have built the full propositional vocabulary — lekta, axiomata, connectives, conditionals. Now we use it. The five indemonstrables are Chrysippus's five basic valid argument forms. They are 'indemonstrable' not because their validity cannot be shown, but because their validity is immediately obvious — they need no proof, and all other valid arguments can be reduced to combinations of them. This is the Stoic analogue of what we now call natural deduction rules.",
     "whyItMatters": "The five indemonstrables are the engine of Stoic argumentation — in logic, in ethics, in physics. Every Stoic proof ultimately rests on one or more of these five forms. When Epictetus argues from 'if something is not up to us, it is nothing to us' to a conclusion about how to face death, he is using an indemonstrable. Knowing the forms lets you see the logical skeleton of every Stoic argument.",
-    "whatToWatchFor": "Pay close attention to the precise formulation of each indemonstrable. The third and fourth involve the disjunction — and recall that the Stoics use exclusive disjunction. This matters for validity. Also note that the fifth indemonstrable introduces conjunctive reasoning — it is the only one that starts from a conjunction.",
+    "whatToWatchFor": "Pay close attention to the precise formulation of each indemonstrable. The order follows Diogenes Laertius VII.80–81. The fourth and fifth start from a disjunction, and the Stoics read disjunction as exclusive: exactly one disjunct is true. This matters for validity. The third is the only one that starts from a negated conjunction ('not both').",
     "yourTask": "Before the session, try to construct a valid ethical argument using at least two of the five forms chained together. The Proctor will ask you to identify which forms you used and verify the chain is valid."
   },
   "parts": [
     {
       "title": "Part 1 — What Is an Indemonstrable?",
       "content": [
-        "The word anapodeiktos means 'not requiring demonstration' — immediate, self-evident in its validity. Chrysippus identified five such argument forms. They are the atomic units of valid propositional inference: all other valid arguments in Stoic logic are constructed by combining these five, or by reducing complex arguments to sequences of them.",
+        "The word anapodeiktos means 'not requiring demonstration' — immediate, self-evident in its validity. Chrysippus identified five such argument forms. They are the atomic units of valid propositional inference: all other syllogisms (the Stoic term for arguments valid by their form) are constructed by combining these five, or by reducing complex arguments to sequences of them.",
         "This is a remarkable anticipation of modern proof theory. In natural deduction systems (Gentzen, Prawitz), logical validity is also established by reduction to basic inference rules — introduction and elimination rules for each connective. The Stoics got there first, working from a propositional rather than predicate base.",
         "Each indemonstrable has a fixed structure: one or two premises (called the leading premise and co-assumption) and a conclusion. The Stoics called the major premise the hēgoumenon (leader) and the minor premise the proslēpsis (co-assumption). Together they yield the epiphora (conclusion)."
       ]
@@ -1928,15 +1928,15 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "It is not light.",
         "Therefore it is not day.",
         "3rd Indemonstrable",
-        "(Disjunctive Tollens)",
-        "Either P or Q. [exclusive]",
-        "Not-P.",
-        "Therefore Q.",
-        "Either it is day or it is night.",
-        "It is not day.",
-        "Therefore it is night.",
+        "(From a negated conjunction)",
+        "Not both P and Q.",
+        "P.",
+        "Therefore not-Q.",
+        "Not both: it is day and it is night.",
+        "It is day.",
+        "Therefore it is not night.",
         "4th Indemonstrable",
-        "(Disjunctive Ponens)",
+        "(Exclusive disjunction: affirm one, deny the other)",
         "Either P or Q. [exclusive]",
         "P.",
         "Therefore not-Q.",
@@ -1944,13 +1944,13 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "It is day.",
         "Therefore it is not night.",
         "5th Indemonstrable",
-        "(Conjunctive Tollens)",
-        "Not both P and Q.",
-        "P.",
-        "Therefore not-Q.",
-        "Not both: it is day and it is night.",
-        "It is day.",
-        "Therefore it is not night."
+        "(Exclusive disjunction: deny one, affirm the other)",
+        "Either P or Q. [exclusive]",
+        "Not-P.",
+        "Therefore Q.",
+        "Either it is day or it is night.",
+        "It is not day.",
+        "Therefore it is night."
       ]
     },
     {
@@ -1959,10 +1959,10 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "The five indemonstrables are the Stoic propositional logic's basic valid inference rules:",
         "1st: From 'If P then Q' and P, conclude Q. (Modern: modus ponens)",
         "2nd: From 'If P then Q' and not-Q, conclude not-P. (Modern: modus tollens)",
-        "3rd: From 'Either P or Q' and not-P, conclude Q. (Disjunctive syllogism — exclusive or)",
-        "4th: From 'Either P or Q' and P, conclude not-Q. (Unique to exclusive disjunction)",
-        "5th: From 'Not both P and Q' and P, conclude not-Q. (Conjunctive tollens)",
-        "All other valid Stoic arguments are reducible to combinations of these five."
+        "3rd: From 'Not both P and Q' and P, conclude not-Q. (From a negated conjunction)",
+        "4th: From 'Either P or Q' and P, conclude not-Q. (Valid only for exclusive disjunction)",
+        "5th: From 'Either P or Q' and not-P, conclude Q. (Modern: disjunctive syllogism)",
+        "The Stoics held that every syllogism reduces to these five by analysis (Session 12). They also recognised valid arguments that are not syllogisms and do not reduce, so the reduction claim is about syllogisms, not about every valid argument."
       ]
     },
     {
@@ -1979,7 +1979,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "title": "Exercise 11.1 — Identification",
       "body": "Identify which indemonstrable (1st–5th) each of the following arguments uses, and verify it is valid by checking the form:\na) If virtue is sufficient for happiness, the Sage is always happy. Virtue is sufficient for happiness. Therefore the Sage is always happy.\nb) If assent is up to us, we are responsible for our passions. We are not responsible for our passions. Therefore assent is not up to us.\nc) Either this pain is an evil or it is an indifferent. It is not an evil. Therefore it is an indifferent.\nd) Not both: Socrates knew he was ignorant and Socrates was not the wisest man in Athens. Socrates knew he was ignorant. Therefore Socrates was the wisest man in Athens.",
-      "answer": "a) 1st indemonstrable (modus ponens): If P then Q; P; therefore Q. Valid. b) 2nd indemonstrable (modus tollens): If P then Q; not-Q; therefore not-P. Valid — and note this is a reductio: if assent were not up to us, we would not be responsible, which the Stoics deny. c) 3rd indemonstrable (disjunctive tollens): Either P or Q; not-P; therefore Q. Valid under exclusive disjunction. d) 5th indemonstrable (conjunctive tollens): Not both P and Q; P; therefore not-Q. Valid. Note: the Oracle's declaration that no one is wiser than Socrates is the major premise suppressed here — this is a valid inference from it."
+      "answer": "a) 1st indemonstrable (modus ponens): If P then Q; P; therefore Q. Valid. b) 2nd indemonstrable (modus tollens): If P then Q; not-Q; therefore not-P. Valid — and note this is a reductio: if assent were not up to us, we would not be responsible, which the Stoics deny. c) 5th indemonstrable: Either P or Q; not-P; therefore Q. Valid under exclusive disjunction. d) 3rd indemonstrable: Not both P and Q; P; therefore not-Q. Valid. Here Q is itself a negation ('Socrates was not the wisest'), so the conclusion is a double negation, which the Stoics treat as equivalent to the affirmative (DL VII.69). Note: the Oracle's declaration that no one is wiser than Socrates is the major premise suppressed here — this is a valid inference from it."
     },
     {
       "title": "Exercise 11.2 — Chain Argument",
@@ -1994,7 +1994,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "title": "Exercise 11.4 — Formal Logic",
       "body": "The 4th indemonstrable is unique to exclusive disjunction. Show why it fails under inclusive disjunction:\nInclusive 'or' form: P or Q (or both). P. Therefore not-Q.\nConstruct a counterexample — a case where P or Q (inclusive) and P are both true, but Q is also true.",
-      "answer": "Counterexample: 'Either it is warm or it is sunny (or both). It is warm. Therefore it is not sunny.' — False: it can be both warm AND sunny simultaneously. Under inclusive disjunction, affirming one disjunct does not eliminate the other. This is exactly why the Stoics used exclusive disjunction for the 3rd and 4th indemonstrables: their logical system requires that exactly one disjunct holds. If both can be true, the 4th indemonstrable does not go through. This shows that the choice between inclusive and exclusive disjunction is not merely terminological — it determines which argument forms are valid."
+      "answer": "Counterexample: 'Either it is warm or it is sunny (or both). It is warm. Therefore it is not sunny.' — False: it can be both warm AND sunny simultaneously. Under inclusive disjunction, affirming one disjunct does not eliminate the other. This is exactly why the Stoics used exclusive disjunction for the 4th and 5th indemonstrables: their logical system requires that exactly one disjunct holds. If both can be true, the 4th indemonstrable does not go through. This shows that the choice between inclusive and exclusive disjunction is not merely terminological — it determines which argument forms are valid."
     }
   ],
   "quiz": [
@@ -2002,11 +2002,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The word 'anapodeiktos' means:",
       "options": [
         "A) Provable by demonstration",
-        "B) Not requiring demonstration — immediately valid",
-        "C) Unprovable and therefore uncertain",
+        "B) Unprovable and therefore uncertain",
+        "C) Not requiring demonstration — immediately valid",
         "D) Demonstrable only by the Sage"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The 1st indemonstrable corresponds to the modern inference rule:",
@@ -2021,29 +2021,29 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "The 2nd indemonstrable has the form:",
       "options": [
-        "A) If P then Q; P; therefore Q",
-        "B) If P then Q; not-Q; therefore not-P",
+        "A) If P then Q; not-Q; therefore not-P",
+        "B) If P then Q; P; therefore Q",
         "C) Either P or Q; not-P; therefore Q",
         "D) Not both P and Q; P; therefore not-Q"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "Why does the 4th indemonstrable only work under exclusive disjunction?",
       "options": [
-        "A) Because inclusive disjunction is not a Stoic concept",
-        "B) Because affirming one disjunct eliminates the other only if they cannot both be true",
+        "A) Because affirming one disjunct eliminates the other only if they cannot both be true",
+        "B) Because inclusive disjunction is not a Stoic concept",
         "C) Because the 4th requires both disjuncts to be false",
         "D) Because the Stoics defined 'or' to always mean 'and'"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The 5th indemonstrable begins with:",
       "options": [
         "A) A conditional",
-        "B) A disjunction",
-        "C) A negated conjunction",
+        "B) A negated conjunction",
+        "C) A disjunction",
         "D) A negated conditional"
       ],
       "correct": "C"
@@ -2062,41 +2062,41 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "Affirming the consequent — 'If P then Q; Q; therefore P' — is:",
       "options": [
         "A) The 1st indemonstrable",
-        "B) The 3rd indemonstrable under inclusive disjunction",
-        "C) A formal fallacy — not a valid argument form",
-        "D) Valid only if P and Q are both true"
+        "B) The 5th indemonstrable under inclusive disjunction",
+        "C) Valid only if P and Q are both true",
+        "D) A formal fallacy — not a valid argument form"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "In Stoic terminology, the major premise of an argument is called the:",
       "options": [
         "A) Epilogos",
         "B) Proslēpsis",
-        "C) Hēgoumenon",
-        "D) Anapodeiktos"
+        "C) Anapodeiktos",
+        "D) Hēgoumenon"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "The claim that all valid Stoic arguments reduce to combinations of the five indemonstrables anticipates:",
       "options": [
         "A) Aristotle's syllogistic",
-        "B) Modern natural deduction and proof-reduction in proof theory",
-        "C) Kant's transcendental deduction",
-        "D) Frege's predicate calculus"
+        "B) Kant's transcendental deduction",
+        "C) Frege's predicate calculus",
+        "D) Modern natural deduction and proof-reduction in proof theory"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "If I argue: 'Either Epictetus is free or Epictetus is enslaved. Epictetus is enslaved. Therefore Epictetus is not free' — which indemonstrable am I using?",
       "options": [
         "A) 1st (modus ponens)",
-        "B) 3rd (disjunctive tollens)",
-        "C) 4th (disjunctive ponens)",
-        "D) 5th (conjunctive tollens)"
+        "B) 4th (disjunction: affirm one, deny the other)",
+        "C) 3rd (from a negated conjunction)",
+        "D) 5th (disjunction: deny one, affirm the other)"
       ],
-      "correct": "C"
+      "correct": "B"
     }
   ]
 },
@@ -2104,12 +2104,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
   "id": 12,
   "title": "Analysis and the Themata",
   "block": "Block E",
-  "primarySources": "L&S 36B–D; Sextus AM 8.229–238; Alexander of Aphrodisias, On Mixture 3",
-  "keyConcepts": "Analysis (analusis); the four themata; hypothetical syllogism; argument reduction; completeness",
+  "primarySources": "L&S 36B–D; Sextus AM 8.229–238 (analysis; the synthetic theorem at 8.231); Sextus PH 2.146–150 (redundancy); Apuleius, De Interpretatione 209 (first thema); Alexander, in An. Pr. 278, and Simplicius, in De Caelo 237 (third thema)",
+  "keyConcepts": "Analysis (analusis); the four themata; hypothetical syllogism; argument reduction; the synthetic theorem; redundancy (parolkē)",
   "preSeminarBriefing": {
     "problem": "We have the five indemonstrables — the atomic valid inference forms. But philosophical arguments are rarely single-step. How do multi-step arguments work in Stoic logic? And how do we know when a complex argument is valid? The answer is analysis (analusis): the reduction of any complex valid argument to a sequence of indemonstrables. The tools for this reduction are the four themata — meta-rules that govern how indemonstrable steps can be chained.",
-    "whyItMatters": "Analysis is what makes Stoic logic a genuine system rather than a list of five useful patterns. If every valid argument reduces to indemonstrables, then the system is complete: to know whether an argument is valid, you only need to ask whether it reduces. This is a deep result — it means Chrysippus had, in effect, a proof of the completeness of his propositional system.",
-    "whatToWatchFor": "The themata are complex and only partially preserved in ancient sources. We have reliable evidence for two of them. The most important is the 'third thema' — a substitution rule that allows replacing a step in a proof with its own derivation. Also notice the concept of 'redundant premises' (periōdoi): the Stoics carefully studied what happens when arguments contain more premises than needed.",
+    "whyItMatters": "Analysis is what makes Stoic logic a genuine system rather than a list of five useful patterns. The Stoics held that every syllogism reduces to indemonstrables, so that to test an argument you ask whether it reduces. Whether the system is complete in the modern sense (every argument valid under some semantics is derivable) is a question the ancient sources do not settle. It can only be asked of a modern reconstruction, and reconstructions differ on the themata and on what counts as valid. There is no ancient proof of completeness.",
+    "whatToWatchFor": "The themata are complex and only partially preserved in ancient sources. Two survive in their ancient wording: the first (in Apuleius) and the third (in Alexander, and in a differently worded version in Simplicius). The second and fourth are modern reconstructions, the standard one being Bobzien's. The third thema is the one modern scholars compare to Gentzen's Cut. Also notice redundancy (parolkē): for the Stoics an argument with a premise that does no work is not valid (Sextus PH 2.146–150).",
     "yourTask": "Come prepared to reduce the following argument to indemonstrables before the session: 'If it is day, it is light. If it is light, Dion sees. It is day. Therefore Dion sees.' How many indemonstrable steps are required?"
   },
   "parts": [
@@ -2125,15 +2125,15 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "title": "Part 2 — The Four Themata",
       "content": [
         "The themata (sing. thema) are meta-rules — rules about how arguments can be combined and transformed. They govern the chaining and reduction of indemonstrables into complex proofs. Ancient sources record four themata, but only two are well-preserved.",
-        "The First Thema (best preserved): 'When from two propositions a third follows, and one of those propositions together with the conclusion of the argument yields something, then that something follows from the remaining proposition and the other original proposition.' In modern terms: if P and Q yield R, and R and P yield S, then Q and P yield S. This is a transitivity rule for inference.",
-        "The Third Thema (also called the 'cutting thema'): 'When from two propositions a third follows, and we also have premises from which one of the two follows, then from those additional premises combined with the other original proposition, the conclusion follows.' In modern terms: if you can derive a premise from sub-premises, you can substitute the sub-argument in place of that premise. This is the key substitution rule — it allows analysis to proceed by replacing complex premises with their own derivations.",
-        "The Second and Fourth Themata are only partially preserved. The second appears to involve commutativity of premises (P and Q yield the same conclusion as Q and P). The fourth deals with arguments containing negations that cancel."
+        "The First Thema (Apuleius, De Interpretatione 209): 'If from two propositions a third follows, then from either one of them together with the contradictory of the conclusion, the contradictory of the other follows.' In modern terms: if P, Q yield R, then P and not-R yield not-Q, and Q and not-R yield not-P. This is a contraposition rule, sometimes called the antilogism. It lets an argument be turned around: a reductio becomes a direct proof and back.",
+        "The Third Thema (Alexander, in An. Pr. 278): 'When from two propositions a third follows, and from the one that follows together with another, external one, another follows, then this other also follows from the first two and the externally co-assumed one.' In modern terms: if P, Q yield R, and R, S yield T, then P, Q, S yield T. A derived conclusion can be used as a premise and then dropped from the final argument. Modern scholars compare it to Gentzen's Cut rule. Simplicius (in De Caelo 237) preserves a differently worded version, which Bobzien ('Stoic Syllogistic', 1996) argues is closer to the Stoic original; Alexander's wording looks adapted to his own Aristotelian purposes.",
+        "The Second and Fourth Themata survive only in later reports of what they did, not in their wording. Bobzien's standard reconstruction treats both as further cut-type rules. The second covers the case where the derived conclusion is combined with one or both of the original premises: if P, Q yield R, and R with P yields T, then P, Q yield T. The fourth covers the case where the derived conclusion is combined with an original premise and an external one. The 'synthetic theorem' Sextus reports (AM 8.231) does the work of the second to fourth themata together."
       ]
     },
     {
       "title": "Key Concept — The Third Thema",
       "content": [
-        "The Third Thema is the engine of analysis. It says: if you have an argument from {A, B} to C, and you also have an argument from {D, E} to A, then you can replace the premise A with the sub-argument {D, E} and get a larger argument from {D, E, B} to C. This is the substitution rule that allows complex multi-step arguments to be built from indemonstrables — and allows any complex argument to be reduced back down to its indemonstrable components. Without the Third Thema, analysis could not proceed."
+        "The Third Thema is the engine of analysis. It says: if {A, B} yields C, and {C, D} yields E, then {A, B, D} yields E. Read forwards, it builds longer arguments by feeding one conclusion into a further step. Read backwards, it is analysis: given an argument from {A, B, D} to E, look for a C such that {C, D} to E is an indemonstrable and {A, B} to C is one too, or reduces further. Without cut-type rules like this, analysis could not proceed."
       ]
     },
     {
@@ -2145,7 +2145,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "Step 2 (1st indemonstrable again): From 'If Q then R' and Q (from step 1), conclude R.",
         "Two applications of the first indemonstrable, chained by the third thema. The reduction is complete. The argument is valid.",
         "This kind of chaining is ubiquitous in Stoic ethical argument. 'If something is not up to us, it is an indifferent. If it is an indifferent, it is nothing to fear. Death is not up to us. Therefore death is nothing to fear.' This three-step argument reduces to two chained first indemonstrables. The logic of Epictetus's teaching is entirely transparent once you have analysis.",
-        "The Stoics also investigated what happens with redundant premises — arguments with more premises than strictly needed for validity. Chrysippus held that a valid argument with a redundant premise is still valid (the redundant premise does not invalidate it), but it is logically inelegant. The ideal proof uses exactly the premises needed — no more, no less."
+        "The Stoics also classified arguments with redundant premises: arguments with more premises than the conclusion needs. Sextus (PH 2.146–150) lists redundancy (parolkē) as one of the four ways an argument fails to be conclusive, with an example like 'If it is day, it is light; it is day; virtue benefits; therefore it is light.' A redundant premise does not merely make an argument inelegant: it makes it invalid. Scholars disagree about exactly what counts as redundant (an irrelevant extra premise only, or a repeated one as well), and that disagreement matters when the Stoic system is formalised."
       ]
     },
     {
@@ -2161,7 +2161,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "(3) Implicit variable-sharing principle — Stoic valid arguments require that premises and conclusions share content. This is a relevance constraint — a feature of substructural logics — that distinguishes the Stoic system from classical logic, which allows arbitrary thinning (adding irrelevant premises without affecting validity).",
         "(4) Deliberate rejection of Thinning — recall from Session 12 that Chrysippus was careful about redundant premises. Bobzien shows this is not mere logical tidiness but a principled rejection of the structural rule of Thinning (weakening) — the rule that says you can always add an extra premise without affecting validity. Rejecting Thinning makes the Stoic system relevant in the technical sense: the conclusion must actually depend on all the premises.",
         "(5) Avoidance of paradoxes of implication — recall from Session 9 that Chrysippus's conflict criterion for the conditional blocks the paradoxes of material implication. Bobzien connects this to the broader pattern: the Stoics were building a relevance-sensitive logic, not classical logic.",
-        "Stoic system vs. modern parallel — Proof method: analysis (reduction of complex arguments to indemonstrables) ≈ backward proof search in sequent calculi. Cut rule: the Third Thema (substitute a derived conclusion as a premise) ≈ Gentzen's Cut rule (1933). Thinning: rejected — redundant premises are inelegant and non-canonical ≈ substructural logics (no weakening). Relevance: premises must be connected to the conclusion ≈ relevant/substructural logics. Conditional: the conflict criterion — no arbitrary implication ≈ avoids the paradoxes of material implication. Decidability: implied by the analysis procedure ≈ proved formally for sequent systems.",
+        "Stoic system vs. modern parallel — Proof method: analysis (reduction of complex arguments to indemonstrables) ≈ backward proof search in sequent calculi. Cut rule: the Third Thema (substitute a derived conclusion as a premise) ≈ Gentzen's Cut rule (1933). Thinning: rejected, since a redundant premise makes an argument invalid ≈ substructural logics (no weakening). Relevance: premises must be connected to the conclusion ≈ relevant/substructural logics. Conditional: the conflict criterion — no arbitrary implication ≈ avoids the paradoxes of material implication. Decidability: implied by the analysis procedure ≈ proved formally for sequent systems.",
         "Why This Matters for Session 12",
         "Session 12 framed the themata as anticipating natural deduction. Bobzien's paper sharpens this: the Stoic system anticipates not just any modern proof theory but a specific family of relevance-sensitive sequent systems that are still actively researched. The Stoics were not doing a cruder version of what Frege and Gentzen later did — they were doing something structurally different that has its own distinct modern descendants.",
         "This also retroactively illuminates the conflict criterion from Sessions 8–9. The rejection of the paradoxes of material implication is not an isolated peculiarity — it is of a piece with the rejection of Thinning and the relevance constraints in the proof system. The Stoic logical system is coherent in a way that may not have been visible before Bobzien's analysis.",
@@ -2178,100 +2178,100 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     },
     {
       "title": "Exercise 12.2 — Mixed Chain",
-      "body": "Reduce the following argument to indemonstrables:\n'Either Cato is wise or Cato is a fool. If Cato is a fool, Cato is unhappy. Cato is not a fool. Therefore Cato is not unhappy.'\nIdentify each indemonstrable step and label the connective type at each step.",
-      "answer": "Step 1 — 3rd indemonstrable (disjunctive tollens, exclusive disjunction):\n\nEither Cato is wise or Cato is a fool.\n\nCato is not a fool.\n\nTherefore: Cato is wise. [Intermediate]\n\nStep 2 — 2nd indemonstrable (modus tollens):\n\nIf Cato is a fool, Cato is unhappy.\n\nCato is not a fool. [restated from above — or derived from Step 1: Cato is wise entails not-fool]\n\nTherefore: Cato is not unhappy. [Final conclusion]\n\nNote: there is a subtle issue. Step 2 uses 'Cato is not a fool' as a premise — this is directly given, not derived from Step 1. The analysis uses two independent applications: 3rd indemonstrable to establish Cato is wise, and 2nd indemonstrable to establish not-unhappy. Both steps are independently sound."
+      "body": "Reduce the following argument to indemonstrables:\n'Either Cato is a fool or Cato is wise. If Cato is wise, Cato is happy. Cato is not a fool. Therefore Cato is happy.'\nIdentify each indemonstrable step, label the connective type at each step, and name the thema that joins them. Then say what goes wrong if the conditional is replaced by 'If Cato is a fool, Cato is unhappy' and the conclusion by 'Cato is not unhappy.'",
+      "answer": "Step 1, 5th indemonstrable (exclusive disjunction):\n\nEither Cato is a fool or Cato is wise.\n\nCato is not a fool.\n\nTherefore: Cato is wise. [Intermediate]\n\nStep 2, 1st indemonstrable (conditional):\n\nIf Cato is wise, Cato is happy.\n\nCato is wise. [From Step 1]\n\nTherefore: Cato is happy. [Final conclusion]\n\nThe Third Thema joins them: the conclusion of Step 1 is fed into Step 2 as a premise, together with the external premise 'If Cato is wise, Cato is happy.' Every premise does work, so there is no redundancy.\n\nThe variant fails. 'If Cato is a fool, Cato is unhappy; Cato is not a fool; therefore Cato is not unhappy' denies the antecedent. That is not the 2nd indemonstrable and it is not valid: as far as the conditional says, Cato could be unhappy for some other reason. The 2nd indemonstrable needs the consequent denied ('Cato is not unhappy') to conclude that the antecedent is false ('Cato is not a fool'). The disjunction would also be redundant, since no step uses it."
     },
     {
       "title": "Exercise 12.3 — Redundant Premises",
-      "body": "Consider this argument: 'If it is day, it is light. It is day. It is also raining. Therefore it is light.'\na) Is this argument valid?\nb) Which premise is redundant?\nc) What did Chrysippus say about arguments with redundant premises?\nd) Is there an ethical or practical lesson in the idea of proof economy — using exactly the premises you need?",
-      "answer": "a) Yes — the argument is valid. The conclusion 'it is light' follows from 'if it is day it is light' and 'it is day' by the 1st indemonstrable. b) 'It is also raining' is redundant — it plays no role in the inference to 'it is light.' c) Chrysippus held that redundant premises do not invalidate the argument but are logically inelegant. A good argument uses exactly the premises needed. d) Open-ended: the practical lesson is that good reasoning — and good living — requires knowing exactly what your conclusions depend on. Carrying unnecessary assumptions is an intellectual version of the Stoic vice of over-attachment: you think your conclusion requires more than it does, making it seem more precarious than it is."
+      "body": "Consider this argument: 'If it is day, it is light. It is day. It is also raining. Therefore it is light.'\na) Is this argument valid by Stoic standards? Is it valid in modern classical logic?\nb) Which premise is redundant?\nc) What do the Stoic sources say about arguments with redundant premises?\nd) Is there an ethical or practical lesson in the idea of proof economy — using exactly the premises you need?",
+      "answer": "a) By Stoic standards, no: it is invalid by redundancy (parolkē), and Sextus (PH 2.146–150) gives almost this example. In modern classical logic it is valid, because classical logic allows Thinning: adding a premise never destroys validity. b) 'It is also raining' is redundant; it plays no role in the inference to 'it is light.' c) The Stoics counted redundancy as one of four ways an argument fails to be conclusive, alongside disconnection, bad form, and deficiency. Remove the extra premise and what is left is a 1st indemonstrable. d) Open-ended: the practical lesson is that good reasoning — and good living — requires knowing exactly what your conclusions depend on. Carrying unnecessary assumptions is an intellectual version of the Stoic vice of over-attachment: you think your conclusion requires more than it does, making it seem more precarious than it is."
     },
     {
       "title": "Exercise 12.4 — Proctor Warm-Up",
-      "body": "The claim that all valid arguments reduce to the five indemonstrables is a completeness claim. Compare it to Euclid's claim that all geometric theorems follow from his five postulates.\na) What would it mean for the Stoic system to be 'complete' in the modern logical sense?\nb) Is there evidence that Chrysippus was aware of this as a theoretical achievement?\nc) Can you think of a valid argument that might resist reduction to the five indemonstrables — and what would that show?",
-      "answer": "a) Completeness in the modern sense: every proposition that is logically valid (true in all interpretations) is derivable from the axioms/rules. For Chrysippus, completeness would mean: every propositionally valid argument is reducible to the five indemonstrables via the themata. b) Indirect evidence: Chrysippus's systematic treatment of the themata as reduction tools suggests he was aware that the system needed to be closed — that every valid argument had to have a derivation. Ancient sources say he claimed the indemonstrables were 'sufficient' for all argument, which is a completeness claim. c) Arguments involving quantification ('All men are mortal; Socrates is a man; therefore Socrates is mortal') cannot be reduced to the five indemonstrables as stated — they require predicate logic. This shows that Stoic propositional logic is not complete for all of classical logic, only for propositional logic. The limitation was recognized but not fully addressed in antiquity."
+      "body": "The Stoic claim that every syllogism reduces to the five indemonstrables looks like a completeness claim. Compare it to Euclid's claim that all geometric theorems follow from his five postulates.\na) What would it mean for the Stoic system to be 'complete' in the modern logical sense?\nb) Is there evidence that Chrysippus was aware of this as a theoretical achievement?\nc) Can you think of a valid argument that might resist reduction to the five indemonstrables — and what would that show?",
+      "answer": "a) Completeness in the modern sense: every proposition that is logically valid (true in all interpretations) is derivable from the axioms/rules. For Chrysippus, completeness would mean: every propositionally valid argument is reducible to the five indemonstrables via the themata. b) The sources report the reduction claim, and the themata were plainly designed to make reduction possible. But there is no ancient proof of completeness, and the Stoics themselves recognised valid arguments that are not syllogisms and do not reduce (the 'unmethodically concluding' arguments reported by Alexander and Galen). So the evidence supports only that the Stoics claimed every syllogism reduces. Whether a reconstruction of the system is complete is a modern result about that reconstruction, and reconstructions differ. c) Arguments involving quantification ('All men are mortal; Socrates is a man; therefore Socrates is mortal') cannot be reduced to the five indemonstrables as stated — they require predicate logic. This shows that Stoic propositional logic is not complete for all of classical logic, only for propositional logic. The limitation was recognized but not fully addressed in antiquity."
     }
   ],
   "quiz": [
     {
       "question": "In Stoic logic, 'analysis' (analusis) refers to:",
       "options": [
-        "A) Philosophical self-examination in the Socratic tradition",
-        "B) The reduction of a complex valid argument to a sequence of indemonstrable steps",
+        "A) The reduction of a complex valid argument to a sequence of indemonstrable steps",
+        "B) Philosophical self-examination in the Socratic tradition",
         "C) The process of identifying false impressions",
         "D) Breaking a conjunction into its individual conjuncts"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The 'themata' in Stoic logic are:",
       "options": [
         "A) The five indemonstrable argument forms",
-        "B) Meta-rules governing how indemonstrables can be combined and proofs constructed",
-        "C) The four types of lekta recognized by Chrysippus",
+        "B) The four types of lekta recognized by Chrysippus",
+        "C) Meta-rules governing how indemonstrables can be combined and proofs constructed",
         "D) Logical axioms from which the indemonstrables are derived"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
-      "question": "The Third Thema is sometimes called the 'cutting thema' because:",
+      "question": "Modern scholars compare the Third Thema to Gentzen's Cut rule because:",
       "options": [
-        "A) It cuts invalid premises from an argument",
-        "B) It allows a premise to be replaced by its own sub-derivation — cutting into the argument to substitute a proof",
+        "A) It lets a derived conclusion serve as a premise for a further step and then drops it from the final argument",
+        "B) It cuts invalid premises from an argument",
         "C) It cuts the conclusion from the premises",
         "D) It was used by Chrysippus to refute opponents"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "A hypothetical syllogism ('If P then Q; if Q then R; P; therefore R') reduces to:",
       "options": [
-        "A) One application of the 1st indemonstrable",
-        "B) Two applications of the 1st indemonstrable, connected by the Third Thema",
+        "A) Two applications of the 1st indemonstrable, connected by the Third Thema",
+        "B) One application of the 1st indemonstrable",
         "C) One application of the 2nd indemonstrable",
         "D) The 4th indemonstrable under exclusive disjunction"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
-      "question": "Chrysippus's view on arguments with redundant premises was:",
+      "question": "The Stoic view (Sextus, PH 2.146–150) of arguments with redundant premises was:",
       "options": [
-        "A) They are automatically invalid because they contain unnecessary claims",
-        "B) They are valid but logically inelegant — a good proof uses exactly the premises needed",
-        "C) They are the most reliable form of argument because they have extra support",
-        "D) They cannot be reduced to indemonstrables"
+        "A) They are valid but inelegant: a good proof uses exactly the premises needed",
+        "B) They are the most reliable form of argument because they have extra support",
+        "C) They are invalid: a premise that does no work makes the argument inconclusive",
+        "D) They are valid, since adding a premise can never destroy validity"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The First Thema establishes:",
       "options": [
-        "A) That contradictions cannot both be true",
-        "B) A transitivity rule — if premises yield a conclusion that combines with another premise to yield a further conclusion, the original premises yield the further conclusion",
-        "C) That the order of premises does not matter",
-        "D) That negated conclusions can replace premises"
+        "A) If two premises yield a conclusion, either premise with the contradictory of the conclusion yields the contradictory of the other",
+        "B) That contradictories cannot both be true",
+        "C) A transitivity rule: premises that yield a conclusion yield whatever that conclusion yields",
+        "D) That the order of premises does not matter"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The motivation for analysis in Stoic logic is primarily:",
       "options": [
         "A) To make arguments shorter and easier to memorize",
-        "B) Epistemological — only arguments traceable to indemonstrables can be known to be valid with certainty",
-        "C) To impress opponents in debate",
+        "B) To impress opponents in debate",
+        "C) Epistemological — only arguments traceable to indemonstrables can be known to be valid with certainty",
         "D) To convert ethical claims into mathematical statements"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "What kind of arguments resist full reduction to the Stoic five indemonstrables?",
       "options": [
         "A) Arguments about the gods",
-        "B) Arguments involving 'all' or 'some' — quantified arguments requiring predicate logic",
-        "C) Arguments with more than three premises",
+        "B) Arguments with more than three premises",
+        "C) Arguments involving 'all' or 'some' — quantified arguments requiring predicate logic",
         "D) Arguments about fate and possibility"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The analogy between Chrysippus's reduction to indemonstrables and modern proof theory is that:",
@@ -2286,12 +2286,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "In Stoic terminology, the minor premise of an argument is called the:",
       "options": [
-        "A) Hēgoumenon",
-        "B) Epilogos",
-        "C) Proslēpsis",
+        "A) Proslēpsis",
+        "B) Hēgoumenon",
+        "C) Epilogos",
         "D) Anapodeikton"
       ],
-      "correct": "C"
+      "correct": "A"
     }
   ]
 },
@@ -2376,51 +2376,51 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The ancient term 'pseudomenos' refers to:",
       "options": [
         "A) A false premise in an argument",
-        "B) The Liar Paradox — the proposition 'I am lying'",
-        "C) A fallacious argument form",
-        "D) A philosopher who argues in bad faith"
+        "B) A fallacious argument form",
+        "C) A philosopher who argues in bad faith",
+        "D) The Liar Paradox — the proposition 'I am lying'"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Liar Paradox threatens Stoic logic specifically because:",
       "options": [
         "A) It is a valid argument that cannot be reduced to the indemonstrables",
-        "B) It produces a well-formed proposition that appears to be neither determinately true nor determinately false — threatening LEM and LNC",
-        "C) It shows that conditionals can be false even when antecedent and consequent are true",
-        "D) It proves that the five indemonstrables are inconsistent"
+        "B) It shows that conditionals can be false even when antecedent and consequent are true",
+        "C) It proves that the five indemonstrables are inconsistent",
+        "D) It produces a well-formed proposition that appears to be neither determinately true nor determinately false — threatening LEM and LNC"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "Chrysippus reportedly wrote how many books on the Liar Paradox?",
       "options": [
-        "A) One",
-        "B) Three",
-        "C) Six",
+        "A) Six",
+        "B) One",
+        "C) Three",
         "D) Twelve"
       ],
-      "correct": "C"
+      "correct": "A"
     },
     {
       "question": "Chrysippus's recommended response to the Liar was:",
       "options": [
-        "A) Assert that it is true and accept the consequence",
-        "B) Assert that it is false and accept the consequence",
-        "C) Remain silent — neither assert it true nor false, recognizing it as defective",
+        "A) Remain silent — neither assert it true nor false, recognizing it as defective",
+        "B) Assert that it is true and accept the consequence",
+        "C) Assert that it is false and accept the consequence",
         "D) Dismiss it as a verbal trick with no logical content"
       ],
-      "correct": "C"
+      "correct": "A"
     },
     {
       "question": "The Sorites paradox ('heap paradox') challenges Stoic logic through:",
       "options": [
         "A) Self-reference",
-        "B) Vagueness — predicates without sharp boundaries that produce indeterminate truth values",
-        "C) Invalid use of the exclusive disjunction",
-        "D) Denial of the principle of non-contradiction"
+        "B) Invalid use of the exclusive disjunction",
+        "C) Denial of the principle of non-contradiction",
+        "D) Vagueness — predicates without sharp boundaries that produce indeterminate truth values"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "Chrysippus's response to the Sorites was to:",
@@ -2435,32 +2435,32 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "Tarski's solution to the Liar Paradox works by:",
       "options": [
-        "A) Assigning a probability rather than a truth value to the Liar",
-        "B) Separating truth predicate from object language — truth claims belong to a metalanguage above the level where the proposition is stated",
+        "A) Separating truth predicate from object language — truth claims belong to a metalanguage above the level where the proposition is stated",
+        "B) Assigning a probability rather than a truth value to the Liar",
         "C) Denying that self-referential sentences have any content",
         "D) Extending the five indemonstrables to cover self-referential arguments"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The 'strengthened Liar' ('This sentence is not true') is philosophically important because:",
       "options": [
-        "A) It uses a different indemonstrable than the original Liar",
-        "B) It defeats many proposed solutions including Tarski's hierarchy, since 'not true' can apply even when 'false' is avoided",
+        "A) It defeats many proposed solutions including Tarski's hierarchy, since 'not true' can apply even when 'false' is avoided",
+        "B) It uses a different indemonstrable than the original Liar",
         "C) It was solved by Chrysippus in his sixth book on the topic",
         "D) It involves vagueness as well as self-reference"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "What structural feature do the Liar Paradox and Godel's incompleteness sentence share?",
       "options": [
-        "A) Both use the 1st indemonstrable in their derivation",
-        "B) Both employ self-reference — a sentence that makes a claim about a property of itself",
+        "A) Both employ self-reference — a sentence that makes a claim about a property of itself",
+        "B) Both use the 1st indemonstrable in their derivation",
         "C) Both involve exclusive disjunction",
         "D) Both were discovered by ancient Greek logicians"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "Modern responses to vagueness (fuzzy logic, supervaluationism, epistemicism) were foreshadowed by the ancient debate because:",
@@ -2558,12 +2558,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "The Stoic term 'epistēmē' is best defined as:",
       "options": [
-        "A) Any true belief held with confidence",
-        "B) Secure, stable, systematic cognitive grasp immune to argument — possessed only by the Sage",
+        "A) Secure, stable, systematic cognitive grasp immune to argument — possessed only by the Sage",
+        "B) Any true belief held with confidence",
         "C) The act of apprehending a cognitive impression",
         "D) A well-evidenced scientific hypothesis"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The difference between katalepsis and epistēmē is:",
@@ -2579,11 +2579,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "Doxa (opinion) can be:",
       "options": [
         "A) Only false — doxa is always a mistake",
-        "B) True or false — but even true doxa is epistemically worthless because it is not properly grounded",
-        "C) Elevated to epistēmē by repeated confirmation",
+        "B) Elevated to epistēmē by repeated confirmation",
+        "C) True or false — but even true doxa is epistemically worthless because it is not properly grounded",
         "D) Only held by non-philosophers"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The Stoic claim that 'there is no stable intermediate between knowledge and ignorance' means:",
@@ -2598,32 +2598,32 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "The 'prokopton' is:",
       "options": [
-        "A) The ideal Stoic Sage who has achieved epistēmē",
-        "B) One who is making philosophical progress — developing katalepsis, working toward the Sage ideal",
+        "A) One who is making philosophical progress — developing katalepsis, working toward the Sage ideal",
+        "B) The ideal Stoic Sage who has achieved epistēmē",
         "C) A Stoic term for doxa",
         "D) A student who has memorized the five indemonstrables"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The Stoics compared the epistemic difference between doxa and epistēmē to:",
       "options": [
         "A) The difference between running and walking",
-        "B) Standing on firm ground versus standing in a swamp — the swamp may not be sinking you now, but it is unstable",
-        "C) The difference between youth and old age",
-        "D) Looking through clear glass versus frosted glass"
+        "B) The difference between youth and old age",
+        "C) Looking through clear glass versus frosted glass",
+        "D) Standing on firm ground versus standing in a swamp — the swamp may not be sinking you now, but it is unstable"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "Why does the Stoic Sage's immunity to argument NOT constitute dogmatism, according to the Stoic view?",
       "options": [
         "A) Because the Sage never engages with opposing arguments",
-        "B) Because the Sage's immunity arises from complete understanding of the grounds — the Sage can evaluate every counterargument and see where it fails",
-        "C) Because the Sage has been certified by a philosophical institution",
+        "B) Because the Sage has been certified by a philosophical institution",
+        "C) Because the Sage's immunity arises from complete understanding of the grounds — the Sage can evaluate every counterargument and see where it fails",
         "D) Because the Sage uses only the five indemonstrables"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The three parts of Stoic philosophical education (logic, physics, ethics) relate to the prokopton's epistemic development because:",
@@ -2639,11 +2639,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "True doxa differs from false doxa in:",
       "options": [
         "A) Its stability — true doxa cannot be revised",
-        "B) Its truth value only — both are epistemically equivalent in terms of their grounds and reliability",
-        "C) Its relation to cognitive impressions — true doxa is always based on a cognitive impression",
-        "D) The degree of confidence with which it is held"
+        "B) Its relation to cognitive impressions — true doxa is always based on a cognitive impression",
+        "C) The degree of confidence with which it is held",
+        "D) Its truth value only — both are epistemically equivalent in terms of their grounds and reliability"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Stoic claim that the Sage is 'rarer than the phoenix' indicates:",
@@ -2746,11 +2746,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The first paragraph of Epictetus's Enchiridion ('Of things, some are up to us...') is logically structured as:",
       "options": [
         "A) A rhetorical appeal to the reader's emotions",
-        "B) A chain of first indemonstrables (modus ponens) deriving what is up to us from the nature of assent",
-        "C) A disjunction between freedom and necessity",
+        "B) A disjunction between freedom and necessity",
+        "C) A chain of first indemonstrables (modus ponens) deriving what is up to us from the nature of assent",
         "D) A statement of Stoic physics, not logic"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The Stoic response to Academic skepticism is 'existential' because:",
@@ -2766,71 +2766,71 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The 'dichotomy of control' converges logic, epistemology, and ethics because:",
       "options": [
         "A) All three parts of Stoic philosophy are studied in the same course",
-        "B) Assent — the act studied in logic and epistemology — is also what is up to us in ethics, making the quality of cognitive and ethical life the same thing",
-        "C) The five indemonstrables apply to ethical arguments as well as logical ones",
-        "D) The Sage studies all three parts simultaneously"
+        "B) The five indemonstrables apply to ethical arguments as well as logical ones",
+        "C) The Sage studies all three parts simultaneously",
+        "D) Assent — the act studied in logic and epistemology — is also what is up to us in ethics, making the quality of cognitive and ethical life the same thing"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The puzzle about the Sage's freedom arises because:",
       "options": [
         "A) The Sage never makes decisions",
-        "B) The Sage's epistēmē makes their assent immune to revision — which seems to threaten the condition that assent is free (could always be otherwise)",
-        "C) The Sage is subject to fate like everyone else",
-        "D) The Sage has no impulses to govern"
+        "B) The Sage is subject to fate like everyone else",
+        "C) The Sage has no impulses to govern",
+        "D) The Sage's epistēmē makes their assent immune to revision — which seems to threaten the condition that assent is free (could always be otherwise)"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Stoic resolution of the freedom puzzle holds that the Sage's immunity to false assent is:",
       "options": [
         "A) A form of compulsion — the Sage is determined by nature",
-        "B) Not unfreedom but perfection — full self-determination by reason, with no ignorance or external compulsion",
-        "C) Only possible through divine intervention",
-        "D) A theoretical ideal that cannot be coherently described"
+        "B) Only possible through divine intervention",
+        "C) A theoretical ideal that cannot be coherently described",
+        "D) Not unfreedom but perfection — full self-determination by reason, with no ignorance or external compulsion"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "Marcus Aurelius's Meditations are philosophically significant in this context because:",
       "options": [
         "A) They contain the clearest statement of the five indemonstrables",
-        "B) They document a prokopton's daily struggle to close the gap between knowing Stoic theory and living it — making the gap between katalepsis and epistēmē concrete",
-        "C) They prove that the Sage ideal is achievable",
+        "B) They prove that the Sage ideal is achievable",
+        "C) They document a prokopton's daily struggle to close the gap between knowing Stoic theory and living it — making the gap between katalepsis and epistēmē concrete",
         "D) They were written to refute Academic skepticism"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The claim that the examined life is possible depends on:",
       "options": [
-        "A) The Liar Paradox being fully resolved",
-        "B) The cognitive impression existing and being identifiable — so that assent can progressively align with truth",
+        "A) The cognitive impression existing and being identifiable — so that assent can progressively align with truth",
+        "B) The Liar Paradox being fully resolved",
         "C) The prokopton already having some epistēmē",
         "D) The five indemonstrables being complete for all valid arguments"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The relationship between the three parts of Stoic philosophy (logic, physics, ethics) is best described as:",
       "options": [
-        "A) Parallel and independent — each can be studied without the others",
-        "B) Hierarchical — ethics depends on physics, which depends on logic",
-        "C) Structurally unified — each part contributes to the single system of rational life, and the dichotomy of control is their convergence point",
+        "A) Structurally unified — each part contributes to the single system of rational life, and the dichotomy of control is their convergence point",
+        "B) Parallel and independent — each can be studied without the others",
+        "C) Hierarchical — ethics depends on physics, which depends on logic",
         "D) Contradictory — the logical parts conflict with the ethical parts"
       ],
-      "correct": "C"
+      "correct": "A"
     },
     {
       "question": "A prokopton who understands the theory of assent but still feels pulled by passionate impressions illustrates:",
       "options": [
         "A) That the Stoic theory is false",
-        "B) The gap between katalepsis (grasping the theory) and epistēmē (systematic immunity) — knowing it intellectually and having it fully integrated are different",
-        "C) That passions cannot be controlled",
+        "B) That passions cannot be controlled",
+        "C) The gap between katalepsis (grasping the theory) and epistēmē (systematic immunity) — knowing it intellectually and having it fully integrated are different",
         "D) That logic and ethics are unrelated in practice"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "If the dichotomy of control is 'merely analytic' — true by definition — which of the following best states its philosophical value?",
@@ -2967,21 +2967,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The 'Logos' in Stoic physics is:",
       "options": [
         "A) The faculty of language in rational beings",
-        "B) The divine rational principle that is immanent in the cosmos — the active force that orders passive matter",
-        "C) The set of valid logical inference rules",
-        "D) The Sage's inner voice of conscience"
+        "B) The set of valid logical inference rules",
+        "C) The Sage's inner voice of conscience",
+        "D) The divine rational principle that is immanent in the cosmos — the active force that orders passive matter"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "In the cylinder argument, the 'antecedent cause' is:",
       "options": [
         "A) The cylinder's own shape and weight",
-        "B) The external push that initiates the motion",
-        "C) The rational soul's character",
+        "B) The rational soul's character",
+        "C) The external push that initiates the motion",
         "D) The outcome of the motion"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "In the cylinder argument, the 'principal cause' is:",
@@ -2998,20 +2998,20 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "options": [
         "A) It has no prior causes at all",
         "B) It is caused by a supernatural free will outside the causal order",
-        "C) It flows from the agent's own rational nature and character, as opposed to external compulsion",
-        "D) The agent was unaware of any prior causes"
+        "C) The agent was unaware of any prior causes",
+        "D) It flows from the agent's own rational nature and character, as opposed to external compulsion"
       ],
-      "correct": "C"
+      "correct": "D"
     },
     {
       "question": "Harry Frankfurt's distinction between first-order desires and second-order volitions maps onto the Stoic framework as:",
       "options": [
-        "A) The distinction between lekta and external objects",
-        "B) The distinction between impulse (hormē) and assent — freedom consists in second-order endorsement of first-order impulses",
+        "A) The distinction between impulse (hormē) and assent — freedom consists in second-order endorsement of first-order impulses",
+        "B) The distinction between lekta and external objects",
         "C) The distinction between fate and providence",
         "D) The distinction between the Sage and the prokopton"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "Stoic 'providence' (pronoia) means:",
@@ -3027,21 +3027,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The Stoic response to the worry about 'moral luck' (that character is shaped by prior causes) is:",
       "options": [
         "A) Luck is real — responsibility is therefore a fiction",
-        "B) Philosophical training is itself part of the causal order, and choosing to engage in it is an exercise of one's rational nature",
-        "C) Only the Sage has a character that is genuinely their own",
-        "D) External causes fully explain character, so the Stoic abandons the concept of responsibility"
+        "B) Only the Sage has a character that is genuinely their own",
+        "C) External causes fully explain character, so the Stoic abandons the concept of responsibility",
+        "D) Philosophical training is itself part of the causal order, and choosing to engage in it is an exercise of one's rational nature"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The key difference between Stoic compatibilism and hard determinism is:",
       "options": [
-        "A) Hard determinism accepts fate; Stoicism rejects it",
-        "B) Hard determinism denies that principal causes are real causal contributions; Stoicism affirms that the soul's own rational nature is a genuine cause",
+        "A) Hard determinism denies that principal causes are real causal contributions; Stoicism affirms that the soul's own rational nature is a genuine cause",
+        "B) Hard determinism accepts fate; Stoicism rejects it",
         "C) Hard determinism requires the Logos; Stoicism does not",
         "D) There is no meaningful difference — both positions entail that no one is responsible"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "Chrysippus's cylinder argument was specifically designed to:",
@@ -3149,71 +3149,71 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The Stoic definition of a 'passion' (pathos) is:",
       "options": [
         "A) Any strong feeling or emotional response",
-        "B) An excessive impulse arising from assent to a false proposition about value",
-        "C) A physical sensation that bypasses the rational soul",
-        "D) Any emotion that the prokopton experiences but the Sage does not"
+        "B) A physical sensation that bypasses the rational soul",
+        "C) Any emotion that the prokopton experiences but the Sage does not",
+        "D) An excessive impulse arising from assent to a false proposition about value"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The four primary pathological passions in Stoic theory are:",
       "options": [
-        "A) Anger, envy, pride, lust",
-        "B) Fear, desire, distress, pathological pleasure",
+        "A) Fear, desire, distress, pathological pleasure",
+        "B) Anger, envy, pride, lust",
         "C) Grief, anxiety, rage, depression",
         "D) Cowardice, recklessness, intemperance, injustice"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "What false proposition does 'fear' (phobos) involve, on the Stoic account?",
       "options": [
         "A) 'This present thing is destroying me'",
-        "B) 'This upcoming external event is a genuine evil'",
-        "C) 'I am inferior to others who have more'",
+        "B) 'I am inferior to others who have more'",
+        "C) 'This upcoming external event is a genuine evil'",
         "D) 'My virtue is insufficient to face this challenge'"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The Greek term 'apatheia' in Stoic usage means:",
       "options": [
-        "A) Indifference and emotional numbness",
-        "B) Freedom from passion — an emotional life that is transformed, not extinguished",
+        "A) Freedom from passion — an emotional life that is transformed, not extinguished",
+        "B) Indifference and emotional numbness",
         "C) The absence of all feeling including propatheiai",
         "D) The state of one who has given up philosophical progress"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The three eupatheiai (good emotions) of the Sage are:",
       "options": [
         "A) Courage, temperance, justice",
-        "B) Caution (eulabeia), wishing (boulēsis), joy (chara)",
-        "C) Grief, love, hope",
-        "D) Fear, desire, pleasure — refined by philosophy"
+        "B) Grief, love, hope",
+        "C) Fear, desire, pleasure — refined by philosophy",
+        "D) Caution (eulabeia), wishing (boulēsis), joy (chara)"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "There is no eupatheia corresponding to distress because:",
       "options": [
-        "A) Distress is always physiological and cannot be rational",
-        "B) Nothing can be genuinely harmful to the Sage's rational soul — only vice is a genuine evil, and the Sage does not commit vice",
+        "A) Nothing can be genuinely harmful to the Sage's rational soul — only vice is a genuine evil, and the Sage does not commit vice",
+        "B) Distress is always physiological and cannot be rational",
         "C) The Sage never encounters anything painful",
         "D) Distress was redefined by Chrysippus as a preferred indifferent"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "Propatheiai (pre-passions) are:",
       "options": [
         "A) The four pathological passions before philosophical training",
-        "B) Involuntary first movements — automatic responses that precede rational assent and do not involve false judgments",
-        "C) The eupatheiai in their undeveloped form",
-        "D) Passions that have been successfully overcome"
+        "B) The eupatheiai in their undeveloped form",
+        "C) Passions that have been successfully overcome",
+        "D) Involuntary first movements — automatic responses that precede rational assent and do not involve false judgments"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "What distinguishes the Sage from the non-Sage in their response to propatheiai?",
@@ -3229,21 +3229,21 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "Joy (chara) as a Stoic eupatheia is rational because:",
       "options": [
         "A) It is a mild and socially acceptable form of pleasure",
-        "B) It is felt endorsement of the presence of genuine goods — virtue and wisdom — which really are good",
-        "C) The Sage controls its intensity through philosophical training",
-        "D) It does not involve any propositional content"
+        "B) The Sage controls its intensity through philosophical training",
+        "C) It does not involve any propositional content",
+        "D) It is felt endorsement of the presence of genuine goods — virtue and wisdom — which really are good"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Stoic therapeutic claim that 'correcting the judgment corrects the passion' implies:",
       "options": [
         "A) Passions can only be managed, never eliminated",
-        "B) Passions are cognitive errors at their root — since they involve false evaluative propositions, philosophical reasoning can in principle dissolve them",
-        "C) Therapy requires physical exercise as well as philosophical argument",
-        "D) Only the Sage can undergo Stoic therapy successfully"
+        "B) Therapy requires physical exercise as well as philosophical argument",
+        "C) Only the Sage can undergo Stoic therapy successfully",
+        "D) Passions are cognitive errors at their root — since they involve false evaluative propositions, philosophical reasoning can in principle dissolve them"
       ],
-      "correct": "B"
+      "correct": "D"
     }
   ]
 },
@@ -3331,12 +3331,12 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "In the Stoic tripartite value theory, 'genuine goods' (agatha) are:",
       "options": [
-        "A) Things worth pursuing, including health and wealth",
-        "B) The virtues only — wisdom, justice, courage, temperance, and virtuous actions",
+        "A) The virtues only — wisdom, justice, courage, temperance, and virtuous actions",
+        "B) Things worth pursuing, including health and wealth",
         "C) Things preferred by nature, including life and good reputation",
         "D) Whatever the Sage chooses to pursue"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The Stoic term 'adiaphora' refers to:",
@@ -3351,32 +3351,32 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "A 'preferred indifferent' (proēgmenon) is:",
       "options": [
-        "A) A virtue that is more important than the others",
-        "B) Something worth rationally selecting — it has axia — but does not contribute to eudaimonia in the way virtue does",
+        "A) Something worth rationally selecting — it has axia — but does not contribute to eudaimonia in the way virtue does",
+        "B) A virtue that is more important than the others",
         "C) A Stoic term for pleasure",
         "D) Any external good that the Sage pursues"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The distinction between axia (value) and agathotēs (goodness) is that:",
       "options": [
         "A) Only goods have value; evils have no value",
-        "B) Axia is rational selectibility; agathotēs is unconditional benefit to the soul — preferred indifferents have axia but not agathotēs",
-        "C) Axia applies to bodies; agathotēs to incorporeals",
-        "D) Both terms mean the same thing in Chrysippus's usage"
+        "B) Axia applies to bodies; agathotēs to incorporeals",
+        "C) Both terms mean the same thing in Chrysippus's usage",
+        "D) Axia is rational selectibility; agathotēs is unconditional benefit to the soul — preferred indifferents have axia but not agathotēs"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The claim 'virtue is sufficient for eudaimonia' means:",
       "options": [
-        "A) Virtue is a necessary but not sufficient condition for flourishing",
-        "B) A person who is fully virtuous is fully flourishing regardless of external circumstances — virtue alone constitutes eudaimonia",
+        "A) A person who is fully virtuous is fully flourishing regardless of external circumstances — virtue alone constitutes eudaimonia",
+        "B) Virtue is a necessary but not sufficient condition for flourishing",
         "C) The Sage needs only moderate external goods in addition to virtue",
         "D) Eudaimonia is only achievable after death"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The Stoic doctrine of the 'unity of virtue' holds that:",
@@ -3402,11 +3402,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "Why is death classified as a 'dispreferred indifferent' rather than a 'genuine evil'?",
       "options": [
         "A) Because the Stoics did not believe in death",
-        "B) Because death does not damage virtue or the rational soul's capacity for excellence — only vice is a genuine evil",
-        "C) Because death is natural and therefore good",
-        "D) Because the Sage never dies prematurely"
+        "B) Because death is natural and therefore good",
+        "C) Because the Sage never dies prematurely",
+        "D) Because death does not damage virtue or the rational soul's capacity for excellence — only vice is a genuine evil"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The Stoic claim that a Sage on the rack is still happy is:",
@@ -3422,11 +3422,11 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "question": "The practical consequence of distinguishing axia from agathotēs is:",
       "options": [
         "A) One should pursue external goods with the same urgency as virtue",
-        "B) External goods may be rationally pursued but their loss should not be experienced as damage to eudaimonia — they are worth choosing but not required for flourishing",
-        "C) External goods should be actively avoided",
-        "D) The prokopton should focus on external goods first, virtue second"
+        "B) External goods should be actively avoided",
+        "C) The prokopton should focus on external goods first, virtue second",
+        "D) External goods may be rationally pursued but their loss should not be experienced as damage to eudaimonia — they are worth choosing but not required for flourishing"
       ],
-      "correct": "B"
+      "correct": "D"
     }
   ]
 },
@@ -3466,8 +3466,8 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
       "title": "Seminar Background III — Propositional Completeness",
       "content": [
         "In 1921, Emil Post proved that propositional logic (with truth tables as the semantic basis) is complete: every tautology is provable. Paul Bernays proved an equivalent result for Hilbert's axiom system. This was a landmark in mathematical logic — the confirmation that the basic propositional system captures exactly the truths it ought to.",
-        "The Stoics were doing propositional logic — their five indemonstrables are introduction and elimination rules for the basic connectives, and the themata are reduction rules. The question is: were they implicitly claiming completeness? The statement 'all valid arguments reduce to the five indemonstrables via the themata' is a completeness claim — if true, it means the five indemonstrables are sufficient to derive all propositionally valid conclusions.",
-        "The answer, as we noted in Session 12, is that the Stoic system is complete for propositional logic but not for predicate logic (quantification). Post's and Bernays's proofs confirm the propositional result the Stoics were aiming for. What they lacked was the mathematical machinery to prove it — truth tables, model theory, formal derivability. But the target was correct."
+        "The Stoics were doing propositional logic: their five indemonstrables work like elimination rules for the connectives, and the themata are rules for chaining them. Were they implicitly claiming completeness? The sources say that every syllogism reduces to the indemonstrables. That is close to a completeness claim, but it is restricted to syllogisms: the Stoics also recognised valid arguments that are not syllogisms and do not reduce.",
+        "Post's theorem does not confirm the Stoic claim, because the Stoic system is not classical propositional logic. Its disjunction is exclusive, its conditional is not material on Chrysippus's reading, and it rejects Thinning, so some classically valid arguments are Stoically invalid. Completeness for the Stoic system has to be asked relative to a semantics built for it, and modern reconstructions (Bobzien's among them) supply formal versions against which the question can be posed. They differ on the themata and on redundancy. The honest answer, as in Session 12, is that the Stoics stated a reduction thesis for syllogisms; whether it holds depends on choices the ancient evidence does not fix."
       ]
     },
     {
@@ -3502,7 +3502,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
   "seminarPrompts": [
     "PROMPT 1 — Lekton and Frege The lekton and Frege's Sinn are both abstract, incorporeal (or non-physical) entities that mediate between language and world. But the motivations differ: Frege was solving the puzzle of informative identity statements; the Stoics were building a theory of logical content for assent. Does the difference in motivation matter for evaluating the philosophical adequacy of the two accounts? Or are they genuinely doing the same thing with different vocabulary?",
     "PROMPT 2 — The Conditional Debate Modern classical logic adopted the material conditional and lives with the paradoxes. Chrysippus's conflict criterion avoids the paradoxes but introduces modal notions (impossibility, necessity) that complicate the system. Was modern logic wrong to adopt the Philonian conditional? Is there a clean solution that captures genuine entailment without modal complications?",
-    "PROMPT 3 — Completeness and the Ancient Mind The Stoics claimed their five indemonstrables were sufficient for all valid propositional inference — an implicit completeness claim confirmed 2,200 years later by Post and Bernays. Does this confirm that the Stoics were doing real logic, or merely that they happened to identify the right rules by philosophical intuition? What would it mean to 'prove' completeness without truth tables or model theory?",
+    "PROMPT 3 — Completeness and the Ancient Mind The Stoics claimed that every syllogism reduces to the five indemonstrables. Post and Bernays proved classical propositional logic complete some two thousand years later, but the Stoic system is not classical: its disjunction is exclusive, its conditional is not material, and it rejects Thinning. Is the Stoic reduction thesis a completeness claim at all? What would it take to state, let alone prove, completeness without truth tables or model theory?",
     "PROMPT 4 — What Did the Stoics Miss? The Stoic system is powerful — propositional logic with connectives, indemonstrables, and reduction rules. But it lacks predicate quantification ('for all x,' 'there exists an x'), modal operators (possibility, necessity) as explicit operators, and a formal metalanguage. How much of modern logic could have been developed from the Stoic foundation? What was the conceptual obstacle that prevented it?",
     "PROMPT 5 — The Plagiarism Question Bobzien argues that Frege did not independently discover propositional logic — he absorbed it from the Stoics via Prantl, without acknowledgement. Her strongest evidence: Frege's errors track Prantl's errors, not the original Stoic texts. If Bobzien is right: (a) What follows for the history of modern logic? Is the standard narrative — Frege as the founder of modern logic — false, or merely incomplete? (b) Does it matter philosophically whether Frege invented or recovered these ideas? If the framework is correct, does its provenance change its value? (c) The Stoics built their logic as part of a unified philosophical project — logic, physics, and ethics inseparably connected. Frege built his logic as a foundation for mathematics, detached from ethics or metaphysics. If Frege borrowed the Stoic propositional framework, did he use it for purposes the Stoics would have recognized — or did he strip it of everything that made it Stoic? (d) Bobzien deliberately uses the word 'plagiarism' but says she is 'not concerned with finger pointing or casting moral judgement.' Is this position coherent? If the transmission was real, what should the philosophical community do with this information?"
   ],
@@ -3532,102 +3532,102 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
     {
       "question": "Frege's distinction between Sinn (sense) and Bedeutung (reference) most closely parallels the Stoic distinction between:",
       "options": [
-        "A) Signifier and external object",
-        "B) Lekton (sayable) and external object — both posit an abstract mediating entity between expression and world",
+        "A) Lekton (sayable) and external object — both posit an abstract mediating entity between expression and world",
+        "B) Signifier and external object",
         "C) Impression and assent",
         "D) Simple and complex propositions"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
       "question": "The 'morning star' and 'evening star' example illustrates Frege's sense/reference distinction because:",
       "options": [
         "A) Both expressions have different referents (different planets)",
-        "B) Both expressions have the same referent (Venus) but different senses — different modes of presentation",
-        "C) One is a true proposition and the other is false",
+        "B) One is a true proposition and the other is false",
+        "C) Both expressions have the same referent (Venus) but different senses — different modes of presentation",
         "D) The Stoics used both expressions in their logic texts"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "Modern classical logic (Frege, Russell) adopted which Hellenistic position on the conditional?",
       "options": [
-        "A) Chrysippus's conflict criterion",
-        "B) Diodorus's temporal strict conditional",
-        "C) Philo's material conditional",
+        "A) Philo's material conditional",
+        "B) Chrysippus's conflict criterion",
+        "C) Diodorus's temporal strict conditional",
         "D) The connectionist relevance criterion"
       ],
-      "correct": "C"
+      "correct": "A"
     },
     {
       "question": "C.I. Lewis's strict implication is closest to which ancient position?",
       "options": [
         "A) Philo's material conditional",
-        "B) Diodorus's temporal conditional",
-        "C) Chrysippus's conflict criterion (modal necessity)",
+        "B) Chrysippus's conflict criterion (modal necessity)",
+        "C) Diodorus's temporal conditional",
         "D) The connectionist relevance account"
       ],
-      "correct": "C"
+      "correct": "B"
     },
     {
       "question": "The 'paradoxes of material implication' are theorems of classical logic because:",
       "options": [
         "A) Classical logicians made errors in their proofs",
-        "B) The material conditional is true whenever its antecedent is false or its consequent is true — generating counterintuitive 'true' conditionals with no genuine connection",
-        "C) Frege rejected the paradoxes as informal",
-        "D) They only apply to propositional logic, not predicate logic"
+        "B) Frege rejected the paradoxes as informal",
+        "C) They only apply to propositional logic, not predicate logic",
+        "D) The material conditional is true whenever its antecedent is false or its consequent is true — generating counterintuitive 'true' conditionals with no genuine connection"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
-      "question": "Post's and Bernays's completeness proofs of 1921 confirmed:",
+      "question": "Post's 1921 completeness proof (and Bernays's equivalent result) showed:",
       "options": [
-        "A) That predicate logic is complete",
-        "B) That propositional logic — the system the Stoics were building — is complete: every propositional tautology is provable",
+        "A) That classical propositional logic is complete: every tautology is provable",
+        "B) That predicate logic is complete",
         "C) That the five indemonstrables are inconsistent",
-        "D) That the material conditional is superior to strict implication"
+        "D) That the Stoic system, with its exclusive disjunction and its rejection of Thinning, is complete"
       ],
-      "correct": "B"
+      "correct": "A"
     },
     {
-      "question": "The Stoic logical system is complete for propositional logic but not for:",
+      "question": "Why does Post's completeness theorem not settle whether the Stoic system is complete?",
       "options": [
-        "A) Truth-functional connectives",
-        "B) Predicate logic — quantification ('for all x,' 'there exists an x') requires additional apparatus beyond propositional logic",
-        "C) The Liar Paradox",
-        "D) The five indemonstrables"
+        "A) Because Post worked with axioms rather than inference rules, and the two can never be compared",
+        "B) Because the Liar Paradox makes every propositional system incomplete",
+        "C) Because the five indemonstrables are inconsistent",
+        "D) Because the Stoic system is not classical: exclusive disjunction, a non-material conditional, and no Thinning make some classically valid arguments Stoically invalid"
       ],
-      "correct": "B"
+      "correct": "D"
     },
     {
       "question": "The primary difference in motivation between the Stoic lekton and Frege's Sinn is:",
       "options": [
         "A) Frege's Sinn is physical; the lekton is abstract",
-        "B) The lekton is the logical content of propositions — the object of assent; Frege's Sinn primarily solves the puzzle of informative identity and co-reference",
-        "C) The lekton applies to all expressions; Frege's Sinn applies only to proper names",
+        "B) The lekton applies to all expressions; Frege's Sinn applies only to proper names",
+        "C) The lekton is the logical content of propositions — the object of assent; Frege's Sinn primarily solves the puzzle of informative identity and co-reference",
         "D) There is no meaningful difference in motivation"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
-      "question": "What Chrysippus was doing in identifying the five indemonstrables as 'sufficient for all valid argument' corresponds in modern terms to:",
+      "question": "The Stoic thesis that every syllogism reduces to the five indemonstrables is best described in modern terms as:",
       "options": [
         "A) Stating the axioms of set theory",
-        "B) Claiming completeness — that the basic inference rules are sufficient to derive all propositionally valid conclusions",
-        "C) Defining the material conditional",
-        "D) Proving Godel's incompleteness theorem"
+        "B) Defining the material conditional",
+        "C) A reduction thesis close to a completeness claim, but restricted to syllogisms and never proved in antiquity",
+        "D) A proof of completeness for classical propositional logic"
       ],
-      "correct": "B"
+      "correct": "C"
     },
     {
       "question": "The single most historically significant Stoic contribution to formal logic is often identified as:",
       "options": [
-        "A) The invention of syllogistic reasoning (term logic)",
-        "B) The first systematic propositional logic — the shift from terms to propositions as the basic unit of logical analysis",
+        "A) The first systematic propositional logic — the shift from terms to propositions as the basic unit of logical analysis",
+        "B) The invention of syllogistic reasoning (term logic)",
         "C) The resolution of the Liar Paradox",
         "D) The development of modal logic"
       ],
-      "correct": "B"
+      "correct": "A"
     }
   ]
 },
@@ -3726,7 +3726,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "b) Is it valid under Stoic disjunction?",
         "c) Is the disjunction exclusive or inclusive — and does it matter here?",
         "d) Is it sound?",
-        "Answer: a) 3rd indemonstrable (disjunctive tollens): Either P or Q; not-P; therefore Q. b) Valid under exclusive disjunction. c) For the Stoics, disjunction is exclusive — exactly one disjunct is true. In this case, the Stoic doctrine of the unity of virtue means there is no intermediate state between virtue and vice — every action is either virtuous or vicious. The exclusive reading is correct. d) Sound on Stoic grounds: the premises are true (the disjunction is exclusive and exhaustive by Stoic doctrine; the Sage by definition does not act viciously), and the argument is valid."
+        "Answer: a) 5th indemonstrable: Either P or Q; not-P; therefore Q. b) Valid under exclusive disjunction. c) For the Stoics, disjunction is exclusive: exactly one disjunct is true. In this case, the Stoic doctrine that nothing lies between virtue and vice (DL VII.127) means there is no intermediate state — every action is either virtuous or vicious. The exclusive reading is correct. d) Sound on Stoic grounds: the premises are true (the disjunction is exclusive and exhaustive by Stoic doctrine; the Sage by definition does not act viciously), and the argument is valid."
       ]
     },
     {
@@ -3748,7 +3748,7 @@ export const PHIL_705_SESSIONS: Phil705Session[] = [
         "b) Is it valid?",
         "c) Is the co-assumption ('C.I. Lewis showed...') a good co-assumption?",
         "d) What would a defender of material implication say?",
-        "Answer: a) 5th indemonstrable (conjunctive tollens): Not both P and Q; Q [wait — the co-assumption says Q is false, not true]. Let me restate: Not both P and Q. Not-Q [Lewis showed material conditional is wrong]. Therefore P [Chrysippus was right]. Yes — 5th indemonstrable: Not-(P and Q); not-Q [Lewis's critique of material conditional]; therefore P. b) Valid — correct application of the 5th indemonstrable. c) Reasonable co-assumption: Lewis's paradoxes of strict implication paper (1912, 1918) explicitly identifies the problems with material implication, vindicating Chrysippus's concern. d) Defender of material implication: Lewis showed that material implication generates paradoxes, but so does strict implication (paradoxes of strict implication — a necessary falsehood strictly implies everything; a necessary truth is strictly implied by everything). No conditional avoids all paradoxes. Material implication is chosen for tractability, not because it captures intuitive entailment. Chrysippus was right about what he wanted; modern logic chose a different goal."
+        "Answer: a) It resembles the 3rd indemonstrable but is not one. Its form is: Not both P and Q; not-Q; therefore P, where P = 'Chrysippus was correct about the conditional' and Q = 'the material conditional is the right account of implication.' The 3rd indemonstrable needs the co-assumption to affirm one conjunct, and it concludes the negation of the other. b) Invalid. 'Not both' is true when both conjuncts are false, so denying Q tells you nothing about P: Chrysippus and the material conditional could both be wrong. A valid 3rd indemonstrable from the same leading premise would be: Not both P and Q; Q; therefore not-P. c) The co-assumption is also overstated. Lewis criticised material implication in 'Implication and the Algebra of Logic' (1912) and in A Survey of Symbolic Logic (1918), where he proposed strict implication instead. Showing that material implication has paradoxes is not the same as showing that Chrysippus's conflict criterion is right. d) Defender of material implication: Lewis showed that material implication generates paradoxes, but so does strict implication (paradoxes of strict implication — a necessary falsehood strictly implies everything; a necessary truth is strictly implied by everything). No conditional avoids all paradoxes. Material implication is chosen for tractability, not because it captures intuitive entailment. Chrysippus was right about what he wanted; modern logic chose a different goal."
       ]
     },
     {
