@@ -69,7 +69,7 @@ export type IngestMeta = {
   language: string | null
   course_relevance: string | null
   difficulty: string | null
-  text_type: string // primary | scholarship | paper_summary | synthesis | concordance | modern_primary | modern_summary
+  text_type: string // primary | scholarship | paper_summary | synthesis | concordance | modern_primary | modern_summary | counterposition_summary
 }
 
 // Highest chunk_index already stored for this (author, work, program_id), or -1
@@ -91,6 +91,14 @@ export async function maxChunkIndex(author: string, work: string): Promise<numbe
   return data ? data.chunk_index : -1
 }
 
+// Every counterposition chunk opens with this label, as synthesis chunks open
+// with [ARETE SYNTHESIS: ...], so any surface that sees the chunk sees how to
+// read it. The embedding is computed from the chunk alone. Migration
+// 20261021132739 labels the first works by hand with a stance sentence each.
+export function counterpositionLabel(author: string, work: string): string {
+  return `[COUNTERPOSITION: ${author}, ${work}. A work the Stoic corpus holds as an opponent. Read as a position to examine or argue against, never as advice.]`
+}
+
 export async function ingestText(
   text: string,
   meta: IngestMeta
@@ -100,13 +108,15 @@ export async function ingestText(
   const offset = (await maxChunkIndex(meta.author, meta.work)) + 1
   const chunkIds: string[] = []
 
+  const label = meta.text_type === 'counterposition_summary' ? counterpositionLabel(meta.author, meta.work) : null
+
   for (let i = 0; i < chunks.length; i++) {
     const embedding = await embedChunk(chunks[i])
     const { data, error } = await admin
       .from('rag_corpus')
       .upsert(
         {
-          chunk_text: chunks[i],
+          chunk_text: label ? `${label}\n\n${chunks[i]}` : chunks[i],
           author: meta.author,
           work: meta.work,
           section_label: meta.section_label,

@@ -13,7 +13,7 @@
 -- The exclusion lists are the ones the code sends:
 --   research          researchRetrievalParams()            ['synthesis']
 --   MCP default       excludeTextTypesForLayers(['canon'])
---   teaching          counselorRetrievalParams()           ['concordance','modern_primary','modern_summary']
+--   teaching          counselorRetrievalParams()           ['concordance','modern_primary','modern_summary','counterposition_summary']
 --
 --   1  research profile returns no synthesis row
 --   2  teaching profile returns the chunk, labelled with layer and status
@@ -27,8 +27,8 @@ do $$
 declare
   v vector(1536);
   research_ex text[] := array['synthesis'];
-  mcp_default_ex text[] := array['scholarship', 'paper_summary', 'modern_summary', 'concordance', 'synthesis'];
-  teaching_ex text[] := array['concordance', 'modern_primary', 'modern_summary'];
+  mcp_default_ex text[] := array['scholarship', 'paper_summary', 'modern_summary', 'concordance', 'synthesis', 'counterposition_summary'];
+  teaching_ex text[] := array['concordance', 'modern_primary', 'modern_summary', 'counterposition_summary'];
   v1_doc uuid;
   v1_chunk uuid;
   v2_doc uuid;

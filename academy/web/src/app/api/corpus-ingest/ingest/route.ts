@@ -82,7 +82,11 @@ export async function POST(req: NextRequest) {
     //                  scholarship, off the shelf, reaches counselors;
     //                  modern_summary — Mode 2 summary of contemporary
     //                  philosophy of mind, off the shelf, fenced from
-    //                  counselors and the Daily Dispatch.
+    //                  counselors and the Daily Dispatch;
+    //                  counterposition_summary — Mode 2 summary of a work the
+    //                  corpus holds as an opponent (Greene's 48 Laws), off the
+    //                  shelf, fenced from counselor and modern surfaces, every
+    //                  chunk labelled [COUNTERPOSITION: ...].
     //   verbatim mode: primary (default) — the philosopher's own text;
     //                  scholarship — public-domain secondary scholarship;
     //                  modern_primary — public-domain modern philosophy of
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
     // A textType from the wrong mode is rejected rather than ignored, so a
     // caller that sends both surfaces its own bug instead of silently
     // publishing a copyrighted work to the shelf.
-    const SUMMARY_TYPES = ['paper_summary', 'modern_summary']
+    const SUMMARY_TYPES = ['paper_summary', 'modern_summary', 'counterposition_summary']
     const VERBATIM_TYPES = ['primary', 'scholarship', 'modern_primary']
     if (textType !== undefined) {
       const allowed = mode === 'summary' ? SUMMARY_TYPES : VERBATIM_TYPES

@@ -408,7 +408,7 @@ function splitMarkdownSections(content) {
 // Status for a checked section: corpus_verified when the passages support it,
 // via_summary when the passages that support it include a summary of a
 // copyrighted work, unverified when the check failed.
-const SUMMARY_TEXT_TYPES = new Set(['paper_summary', 'modern_summary']);
+const SUMMARY_TEXT_TYPES = new Set(['paper_summary', 'modern_summary', 'counterposition_summary']);
 function statusForCheck(check, passages, textTypes) {
   if (!check.supported) return ['unverified'];
   const used = check.sources.map(n => passages[n - 1]).filter(Boolean);

@@ -24,7 +24,7 @@ const { QUEUE_STRATEGIES } = require('./chunker');
 
 const SOURCE_TYPES = ['public_domain', 'original_language', 'summary'];
 // rag_corpus_text_type_check locks this set; server/lib/corpus-fence.js keys on it.
-const TEXT_TYPES = ['primary', 'scholarship', 'paper_summary', 'synthesis', 'concordance', 'modern_primary', 'modern_summary'];
+const TEXT_TYPES = ['primary', 'scholarship', 'paper_summary', 'synthesis', 'concordance', 'modern_primary', 'modern_summary', 'counterposition_summary'];
 
 function getArg(flag) {
   const i = process.argv.indexOf(flag);

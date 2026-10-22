@@ -6699,7 +6699,8 @@ app.get('/api/library/texts', async (req, res) => {
     // Modern summaries are summaries of copyrighted work — no shelf. Modern
     // verbatim texts (Russell, Eddington, James) are readable public-domain
     // works and stay; the counselor catalog fences them separately.
-    }).filter(t => !t.hidden && !['paper_summary', 'concordance', 'modern_summary'].includes(t.textType));
+    // Counterposition summaries are summaries of copyrighted work — no shelf.
+    }).filter(t => !t.hidden && !['paper_summary', 'concordance', 'modern_summary', 'counterposition_summary'].includes(t.textType));
 
     // Count of syntheses awaiting admin review (not yet ingested, so not on a
     // shelf). Surfaced only to the admin in the UI as a jump to /admin/synthesis.

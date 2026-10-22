@@ -15,6 +15,13 @@
 //   concordance     editorial retrieval bridges (academy/corpus-ingestion/concordance/)
 //   modern_primary  verbatim public-domain modern philosophy of mind
 //   modern_summary  Mode 2 summaries of copyrighted modern philosophy of mind
+//   counterposition_summary
+//                   Mode 2 summaries of works the corpus holds as opponents
+//                   (Greene's 48 Laws, Art of Seduction, 50th Law). Every chunk
+//                   opens with a [COUNTERPOSITION: ...] label. Never advice:
+//                   fenced from counselor and modern surfaces, visible to
+//                   research, opt-in for the MCP server
+//                   (ACQUISITION_PLAN.md test 7; migration 20261021132739).
 //
 // Two retrieval profiles sit over these fences
 // (academy/corpus-ingestion/synthesis/README.md):
@@ -46,12 +53,16 @@
 //              attributes what it says: the Cabinet (parallel and single),
 //              the Oracle, /ask, /v1/chat/completions, the library debate,
 //              the reader margin note, and the counselor source catalog.
-//              Excludes editorial apparatus and the modern layer.
+//              Excludes editorial apparatus, the modern layer, and
+//              counterpositions.
 //   modern     user-facing surfaces that are not a historical voice but must
 //              not carry contemporary philosophy of mind: the Daily Dispatch,
 //              the World Agent (Dispatch includes its passages), the Journal
 //              agent, the Academy seminar and the Socratic Proctor. The
 //              concordance is allowed here; a professor may use apparatus.
+//              Counterpositions are excluded: these surfaces speak to a
+//              user about their life, where a manual for power reads as
+//              advice whatever its label says.
 //   research   the research profile above: synthesis excluded.
 //   none       the remaining internal surfaces see everything: the eval
 //              harness, the Observatory.
@@ -62,9 +73,10 @@ const EDITORIAL_TEXT_TYPES = Object.freeze(['concordance']);
 const MODERN_TEXT_TYPES = Object.freeze(['modern_primary', 'modern_summary']);
 
 const SYNTHESIS_TEXT_TYPES = Object.freeze(['synthesis']);
+const COUNTERPOSITION_TEXT_TYPES = Object.freeze(['counterposition_summary']);
 
-const COUNSELOR_EXCLUDED_TEXT_TYPES = Object.freeze([...EDITORIAL_TEXT_TYPES, ...MODERN_TEXT_TYPES]);
-const MODERN_EXCLUDED_TEXT_TYPES = Object.freeze([...MODERN_TEXT_TYPES]);
+const COUNSELOR_EXCLUDED_TEXT_TYPES = Object.freeze([...EDITORIAL_TEXT_TYPES, ...MODERN_TEXT_TYPES, ...COUNTERPOSITION_TEXT_TYPES]);
+const MODERN_EXCLUDED_TEXT_TYPES = Object.freeze([...MODERN_TEXT_TYPES, ...COUNTERPOSITION_TEXT_TYPES]);
 const RESEARCH_EXCLUDED_TEXT_TYPES = Object.freeze([...SYNTHESIS_TEXT_TYPES]);
 
 // Every author that writes synthesis rows. Rows that arrive without a
@@ -77,12 +89,13 @@ const SYNTHESIS_AUTHORS_IN_LIST = `(${SYNTHESIS_AUTHORS.map(a => `"${a}"`).join(
 // Layers a corpus MCP caller can ask for, by text_type. Canon is the texts
 // themselves; scholarship is published secondary work, verbatim or as a Mode 2
 // summary; apparatus is editorial; synthesis is Arete's own AI-assisted
-// writing.
+// writing; counterposition is works held as opponents.
 const LAYERS = Object.freeze({
   canon: Object.freeze(['primary', 'modern_primary']),
   scholarship: Object.freeze(['scholarship', 'paper_summary', 'modern_summary']),
   apparatus: Object.freeze([...EDITORIAL_TEXT_TYPES]),
   synthesis: Object.freeze([...SYNTHESIS_TEXT_TYPES]),
+  counterposition: Object.freeze([...COUNTERPOSITION_TEXT_TYPES]),
 });
 const DEFAULT_MCP_LAYERS = Object.freeze(['canon']);
 
@@ -137,6 +150,7 @@ module.exports = {
   EDITORIAL_TEXT_TYPES,
   MODERN_TEXT_TYPES,
   SYNTHESIS_TEXT_TYPES,
+  COUNTERPOSITION_TEXT_TYPES,
   SYNTHESIS_AUTHORS,
   SYNTHESIS_AUTHORS_IN_LIST,
   COUNSELOR_EXCLUDED_TEXT_TYPES,

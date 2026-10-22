@@ -77,7 +77,7 @@ export async function buildReferences(
     if (error) throw new Error(`References (rag_corpus): ${error.message}`)
     for (const r of data ?? []) {
       const key = `${r.author}|${r.work}`
-      if (r.text_type === 'paper_summary' || r.text_type === 'modern_summary') {
+      if (r.text_type === 'paper_summary' || r.text_type === 'modern_summary' || r.text_type === 'counterposition_summary') {
         // section_label convention from lib/papers/ingest.ts:
         // 'scholarly summary — VENUE — YEAR', with either bit absent when
         // the submission lacked it, so the bits are told apart by shape
