@@ -21,6 +21,8 @@ import { PHIL703_READING } from './phil703_reading';
 import { PHIL704_READING } from './phil704_reading';
 import { PHIL706_READING } from './phil706_reading';
 import { PHIL707_READING } from './phil707_reading';
+import { PHIL_801_SESSIONS } from './phil801';
+import { PHIL801_READING } from './phil801_reading';
 import { SEMINARS } from './seminars';
 
 export type { ReadingItem };
@@ -118,6 +120,20 @@ export const PHIL_CURRICULUM: CurriculumCourse[] = [
       hasQuiz: (s.quiz?.length ?? 0) > 0,
     })),
     readings: PHIL707_READING,
+  },
+  // Year 3 — the doctoral research seminar. Prerequisites: PHIL 705 and
+  // GREK 101. Assessed by written work graded under the doctoral rubric and a
+  // research paper defended in the viva.
+  {
+    id: 'phil-801',
+    code: 'PHIL 801',
+    title: "Chrysippus' Syllogistic: Reconstruction, Evidence, Proof",
+    sessions: PHIL_801_SESSIONS.map(s => ({
+      id: s.id,
+      title: s.title,
+      hasQuiz: (s.quiz?.length ?? 0) > 0,
+    })),
+    readings: PHIL801_READING,
   },
 ];
 

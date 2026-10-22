@@ -11,7 +11,7 @@
 //
 // Reference answers are never shown before submission. On submit, everything
 // is graded, the score is computed (correct 1.0 / partial 0.5 / incorrect 0),
-// and >= PASS_THRESHOLD marks the session 'passed' — which unlocks the next
+// and >= the pass mark (passThresholdFor) marks the session 'passed' — which unlocks the next
 // session via the course page's completion gate. Below threshold marks
 // 'failed' and the student may retake.
 
@@ -43,7 +43,8 @@ interface Props {
 
 type SubmissionStatus = 'not_started' | 'completed' | 'passed' | 'failed';
 
-const PASS_THRESHOLD = 70;
+// Doctoral research seminars (course code 8xx) require 80%; every other course 70%.
+const passThresholdFor = (courseId: string) => (courseId.startsWith('phil-8') ? 80 : 70);
 
 const VERDICT_SCORE: Record<Verdict, number> = { correct: 1, partial: 0.5, incorrect: 0 };
 
@@ -238,7 +239,7 @@ export default function StudentQuiz({ courseId, sessionId, questions, onSubmitte
       const pct = Math.round(
         (results.reduce((n, r) => n + VERDICT_SCORE[r.verdict], 0) / questions.length) * 100
       );
-      const newStatus: SubmissionStatus = pct >= PASS_THRESHOLD ? 'passed' : 'failed';
+      const newStatus: SubmissionStatus = pct >= passThresholdFor(courseId) ? 'passed' : 'failed';
 
       const { error } = await supabase
         .from('session_progress')
@@ -323,7 +324,7 @@ export default function StudentQuiz({ courseId, sessionId, questions, onSubmitte
         {!isGraded && !isLegacySubmitted && (
           <p className="text-academy-muted text-sm mt-2 leading-relaxed">
             Answer every question, then submit. The Proctor grades your written answers against
-            the course material; {PASS_THRESHOLD}% or better passes and unlocks the next session.
+            the course material; {passThresholdFor(courseId)}% or better passes and unlocks the next session.
           </p>
         )}
       </div>
@@ -344,7 +345,7 @@ export default function StudentQuiz({ courseId, sessionId, questions, onSubmitte
               </p>
               <p className="text-academy-text text-sm leading-relaxed">
                 Score: <span className="font-semibold">{score}%</span>
-                {' '}({PASS_THRESHOLD}% required to pass{status === 'passed' ? ' — the next session is unlocked' : ''})
+                {' '}({passThresholdFor(courseId)}% required to pass{status === 'passed' ? ' — the next session is unlocked' : ''})
               </p>
             </div>
             {status === 'failed' && (

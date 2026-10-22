@@ -52,6 +52,11 @@ const CAPSTONE_APPENDIX = `
 
 This is a capstone assessment. "Demonstrated" additionally requires the student to handle a scenario type not covered verbatim in course material. Application to memorized examples earns at most "partial".`
 
+// Courses numbered 8xx are doctoral research seminars.
+const DOCTORAL_APPENDIX = `
+
+This is a doctoral research seminar (course code 8xx). "Demonstrated" additionally requires: every claim the student makes about an ancient text carries a locus (author and passage), and none is misattributed; any scholar the student names is represented as that scholar holds the position; any formal step (an indemonstrable, a thema, a reduction) is correct, with the indemonstrables numbered as in Diogenes Laertius 7.80 to 81; and where the evidence is thin or reconstructed the student says so. A doctrinal error on these fundamentals caps the objective at "partial" and must be listed under misconceptions.`
+
 const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
@@ -169,7 +174,9 @@ ${JSON.stringify(priorStatus, null, 2)}
 
 Assess each objective. A previously "demonstrated" objective stays demonstrated unless the transcript reveals a contradicting misconception.`
 
-  const system = EVALUATOR_SYSTEM + (body.capstone ? CAPSTONE_APPENDIX : '')
+  const system = EVALUATOR_SYSTEM
+    + (body.capstone ? CAPSTONE_APPENDIX : '')
+    + ((body.courseId ?? '').startsWith('phil-8') ? DOCTORAL_APPENDIX : '')
 
   // Run the evaluator; on validation failure, retry once with the errors appended.
   const runOnce = async (extraNote?: string): Promise<EvalResult> => {
