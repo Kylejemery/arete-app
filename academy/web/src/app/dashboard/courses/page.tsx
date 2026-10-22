@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getEnrollment, getProfile } from '@/lib/db';
+import { supabase } from '@/lib/supabase';
 import { Card, CardLabel } from '@/components/ui/Card';
 import Topbar from '@/components/navigation/Topbar';
 import type { Course, Tier } from '@/types';
@@ -156,8 +157,13 @@ const TRACK_BADGE: Record<string, { label: string; color: string }> = {
   'latn-201': { label: 'Language', color: '#4a2060' },
 };
 
+// Seminar Track courses (sem-NNN) live in the database. RLS returns a member
+// the published ones within their standing, and the admin every course.
+interface SeminarCourseRow { id: string; title: string; subtitle: string | null; description: string | null; tier_required: Tier; status: string; source_works: { author: string; work: string }[] }
+
 export default function CoursesPage() {
   const [tier, setTier] = useState<Tier>('auditor');
+  const [seminars, setSeminars] = useState<SeminarCourseRow[]>([]);
   const [currentCourse, setCurrentCourse] = useState('phil-701');
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -166,6 +172,8 @@ export default function CoursesPage() {
       if (e) { setTier(e.tier); setCurrentCourse(e.current_course); }
     });
     getProfile().then(p => setIsAdmin(p?.is_admin === true));
+    supabase.from('seminar_courses').select('id, title, subtitle, description, tier_required, status, source_works').order('id')
+      .then(({ data }) => setSeminars((data ?? []) as SeminarCourseRow[]));
   }, []);
 
   const adminBypass = isAdmin;
@@ -175,8 +183,19 @@ export default function CoursesPage() {
   const canAccess = (course: Course) => {
     if (adminBypass) return true;
     if (OPEN_ACCESS.has(course.id)) return true;
+    const seminar = seminars.find(x => x.id === course.id);
+    if (seminar) return TIER_RANK[tier] >= TIER_RANK[seminar.tier_required];
     return TIER_RANK[tier] >= 1;
   };
+
+  const seminarCourses: Course[] = seminars.map(x => ({
+    id: x.id,
+    code: x.id.toUpperCase().replace('-', ' '),
+    title: x.subtitle ? `${x.title}: ${x.subtitle}` : x.title,
+    description: x.description ?? '',
+    term: x.status === 'published' ? 'Seminar' : `Seminar · ${x.status}`,
+    assignedTexts: (x.source_works ?? []).map(w => ({ title: w.work, author: w.author, sourceSlug: '' })),
+  }));
 
   return (
     <div>
@@ -191,10 +210,10 @@ export default function CoursesPage() {
       />
 
       <div className="space-y-5">
-        {COURSES.map((course) => {
+        {[...COURSES, ...seminarCourses].map((course) => {
           const accessible = canAccess(course);
           const isCurrent = course.id === currentCourse;
-          const track = TRACK_BADGE[course.id];
+          const track = TRACK_BADGE[course.id] ?? (course.id.startsWith('sem-') ? { label: 'Seminar', color: '#6b5a2a' } : undefined);
           return (
             <Card key={course.id} gold={isCurrent} className={accessible ? '' : 'opacity-60'}>
               <div className="flex items-start justify-between gap-4">
