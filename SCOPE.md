@@ -32,14 +32,18 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 
 ## Where things stand
 
+*Updated 2026-10-22. The milestone list below is the authority on what is current.*
+
 **Done**
 
-* Evidence ledger, `evidence/suite.yaml`, as draft PR #281, with 38 cited passages verified as exact substrings of live corpus chunks.
-* Stoic logic encoded in Lean 4, with candidate reconstructions and an evaluation harness.
+* Evidence ledger, `evidence/suite.yaml`: 19 argument forms, 17 formal. Every form quotes a primary text, in `rag_corpus` or `research_sources` (Bury's Sextus, Wallies's Alexander, Origen), and every quotation passes `themata_ledger_problems`.
+* Stoic logic encoded in Lean 4, with candidate reconstructions and an evaluation harness. 158 of 792 candidate-settings fit, all proven; 580 of 634 non-fits proven.
+* The machine data export and the Themata Machine page (milestones 1 and 2).
 * First results, all relative to the current encoding:
   * the rules are sound in a relevance semantics, where a repeated premise can count once but premises cannot be added freely
   * Origen's two conditionals argument forces the first thema, relative to the current candidates
   * the Sorites requires "not not p = p"
+  * Bobzien's reconstruction has the same profile: monotonicity fails, and her second thema supplies the contraction every fit needs (rules R03, from the 1996 paper, pp. 168-171, 181-182). An earlier summary had reported the opposite.
 
 **Rulings already made in Phase 1**
 
@@ -48,20 +52,27 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 * Keep the Sorites chain form. Remove the Nobody argument.
 * S017 is dropped from the formal suite but kept in the ledger.
 * Corpus fixes go in separate migration PRs. Never edit canon text.
-* No Bobzien module until her 1996 paper is actually ingested.
+* No Bobzien module until her 1996 paper is actually ingested. (Satisfied 2026-09-29: the paper is in `research_sources` as `licensed_copy`. Encoding it is milestone 5.)
+* S015 merged into S014 (2026-09-30). New licence status `quotation_only` for Bury's Sextus (2026-10-05). The Mates translation of PH is deprecated: its provenance cannot be documented (2026-10-05).
 
 **Known weaknesses**
 
-* Only 18 formal items. Several rest on nineteenth century secondary quotation (Zeller) or on AI written summaries (Mates, Bobzien). These cannot count as evidence. Treat any result touching them as provisional until milestone 4.
-* The corpus has only one primary source for Stoic logic (Diogenes Laertius VII), so it cannot yet tell rival reconstructions apart.
-* Bobzien's reconstruction, the standard reference point, has not been engaged.
-* No ledger entry is signed off. All are `verified_by_kyle: false`.
+* Only 17 formal items.
+* The argument forms now rest on primary texts, but `rules.yaml` does not:
+  * T01-T04, C02, C03 and X02 quote their Greek or Latin through Zeller.
+  * T05, T06, R01 and R02 rest on Mode 2 summaries.
+  * T04's primary replacement (Wallies, in APr. 284.10-18) is drafted in `primary-proposals.yaml` but not moved.
+* Galen is not in the corpus or in `research_sources` (`evidence/gaps.md`).
+* Bobzien's reconstruction is engaged on paper (R03) but not encoded or run.
+* Sign-offs: 9 of 19 argument forms (S001-S007, S009, S020); none of the 19 rules.
 
 **Open items waiting on Kyle**
 
-* Bobzien, "Stoic Syllogistic" (1996). Kyle is getting it.
-* The Alexander passage for the T04 ruling.
-* Sign off on every ledger entry.
+* Sign off the remaining argument forms: S008, S010-S014, S016-S019. S008, S010 and S018 carry the notes Kyle's review asked for.
+* Sign off the rules, or say which of them milestone 4 has to cover.
+* Whether to move T04's Wallies proposal into `rules.yaml`.
+* The S016 question (separate premise or conjunct; the Redundancy parameter), parked until after the sign-offs.
+* Whether milestone 4 is done once the above are settled.
 
 ## Milestones, in order
 
@@ -174,3 +185,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-10-05: Milestone 4. Kyle's ledger review: S001-S007, S009 and S020 signed off (`verified_by_kyle: true`, `verified_on: 2026-10-05`). S008, S010 and S018 carry the notes his review asked for, awaiting sign-off; S019 awaits sign-off from the page, which now shows the non-formal entries (S017, S019) with their evidence and every entry's ledger notes. Export and pages regenerated.
 * 2026-10-06: Milestone 4. Wallies's in Top. (CAG II.2, 1891, public domain; title page checked, archive.org's 1882 is wrong) stored as `36848d34`: 10.5-14, transcribed from the page image with its apparatus. S011 now quotes in Top. 10.7-12 as its main witness, with in APr. 18.14-17; it passes the ledger check. The apparatus shows ἀδιαφόρως is Prantl's emendation (all manuscripts διαφόρως) and the disjunctive example rests on later corrections (ἤτοι in P's margin by P3; ἢ corrected in B, A has εἰ); recorded in S011's notes for Kyle's sign-off.
 * 2026-10-06: Milestone 4. S011, S012, S013, S014, S016 and S017 moved from `primary-proposals.yaml` into `suite.yaml`: each now cites primary texts in `research_sources` (Bury's Sextus, Wallies's Alexander) instead of Mates's Mode 2 summary or Zeller, with corpus_ref null. Schema, verdict, kind and flags unchanged; earlier notes kept for their rulings; confidence taken from the proposals. None signed off. All 19 entries pass `themata_ledger_problems`. Export and pages regenerated; no entry in the formal suite now rests on a non-primary witness. T04 remains a proposal for `rules.yaml`.
+* 2026-10-22: Milestone 4. Bobzien's Mode 2 summaries checked against her texts and replaced in `rag_corpus` (deprecate and replace; migrations `20261022120126` and `20261022174350`, applied; #425, #428): "Stoic Syllogistic" had section 5 backwards, the CHHP chapter was filed as a "Cambridge Companion" and misnumbered the indemonstrables, and the 1993 modal logic paper's summary inverted its Scheme 2. Rules R03 rewritten from the 1996 paper (#429): monotonicity fails, her T2 supplies contraction and is applied to S011, S020 and S012-type arguments, so the conflict FINDINGS reported with Bobzien was an artefact of the summary. R02 re-pointed at the replacement summary. Harness reproduced with Lean 4.22.0 (158 proven fits of 792); export and pages regenerated. Outside the milestone, at Kyle's request: PHIL 705 corrected and PHIL 801 built on this material (#424, #426, #427, #428). No sign-offs.
