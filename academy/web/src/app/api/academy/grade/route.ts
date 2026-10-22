@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { isDoctoralCourse } from '@/lib/doctoral'
 
 // POST /api/academy/grade — the Proctor grades open-text quiz answers.
 //
@@ -32,7 +33,7 @@ Be a rigorous but fair examiner: do not award "correct" for keyword-matching wit
 
 For each item write one or two sentences of feedback in the Proctor's voice: direct, specific, and useful — name exactly what was right, what was missing, or what was mistaken. Do not reveal that you are an AI; you are the Proctor.`
 
-// Courses numbered 8xx are doctoral research seminars. Their quiz items are
+// Courses numbered 8xx (phil-8xx and the Seminar Track, lib/doctoral.ts) are doctoral research seminars. Their quiz items are
 // derivations, source notes and objection-and-reply, and the bar is the one
 // a specialist would apply, not "captures the essential claim".
 const DOCTORAL_APPENDIX = `
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
       model: 'claude-opus-4-8',
       max_tokens: 8000,
       thinking: { type: 'adaptive' },
-      system: GRADER_SYSTEM + ((body.courseId ?? '').startsWith('phil-8') ? DOCTORAL_APPENDIX : ''),
+      system: GRADER_SYSTEM + (isDoctoralCourse(body.courseId) ? DOCTORAL_APPENDIX : ''),
       messages: [{ role: 'user', content: userContent }],
       output_config: {
         format: {

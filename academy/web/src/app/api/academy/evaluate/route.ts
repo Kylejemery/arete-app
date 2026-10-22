@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { createAdminClient } from '@/lib/supabase-admin'
+import { isDoctoralCourse } from '@/lib/doctoral'
 
 // POST /api/academy/evaluate — the Evaluator judges a Socratic dialogue.
 //
@@ -176,7 +177,7 @@ Assess each objective. A previously "demonstrated" objective stays demonstrated 
 
   const system = EVALUATOR_SYSTEM
     + (body.capstone ? CAPSTONE_APPENDIX : '')
-    + ((body.courseId ?? '').startsWith('phil-8') ? DOCTORAL_APPENDIX : '')
+    + (isDoctoralCourse(body.courseId) ? DOCTORAL_APPENDIX : '')
 
   // Run the evaluator; on validation failure, retry once with the errors appended.
   const runOnce = async (extraNote?: string): Promise<EvalResult> => {
