@@ -29,6 +29,8 @@ import { PHIL_706_SESSIONS, type Phil706Session } from '@/data/phil706';
 import { PHIL706_READING } from '@/data/phil706_reading';
 import { PHIL_707_SESSIONS, type Phil707Session } from '@/data/phil707';
 import { PHIL707_READING } from '@/data/phil707_reading';
+import { PHIL_801_SESSIONS, type Phil801Session } from '@/data/phil801';
+import { PHIL801_READING } from '@/data/phil801_reading';
 import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { getProfile } from '@/lib/db';
@@ -80,6 +82,7 @@ const COURSE_SESSIONS: Record<string, SessionItem[]> = {
   'phil-704': sidebarFromData(PHIL_704_SESSIONS),
   'phil-706': sidebarFromData(PHIL_706_SESSIONS),
   'phil-707': sidebarFromData(PHIL_707_SESSIONS),
+  'phil-801': sidebarFromData(PHIL_801_SESSIONS),
 };
 
 interface SessionContent {
@@ -233,6 +236,25 @@ const COURSE_CONTENT: Record<string, CourseContent> = {
       },
     },
   },
+  'phil-801': {
+    code: 'PHIL 801',
+    shortTitle: "Chrysippus'\nSyllogistic",
+    fullTitle: "Chrysippus' Syllogistic: Reconstruction, Evidence, Proof",
+    assignedText: 'Diogenes Laertius VII, Sextus Empiricus, Alexander of Aphrodisias, Apuleius, Simplicius, Galen; Bobzien, Stoic Syllogistic (1996)',
+    sessions: {
+      1: {
+        quote: '“All syllogisms are either indemonstrable or reducible to the indemonstrables by one or more of the themata.”',
+        quoteSource: '— Diogenes Laertius, Lives VII.78 (after Hicks)',
+        intro: [
+          "PHIL 705 taught what Stoic logic says. This seminar asks how we know. The logic survives in a doxographer's abridgement, in a sceptic's refutation, in Peripatetic commentators with their own purposes, and in manuscripts that editors have emended. Every modern account of it is a reconstruction, and the reconstructions disagree.",
+          "The course has one spine, Bobzien's Stoic Syllogistic (1996), and one laboratory, the Themata project, where rival reconstructions are encoded and run against the ancient verdicts. You will read the Greek, judge the scholars, derive by hand, and test what you believe against what the sources will bear.",
+          'The assessment is written work graded against the texts: derivations, source notes with loci, objection and reply against a named position, and a research paper defended in a viva. There is no multiple choice in this course and no credit for recitation.',
+        ],
+        readings: [],
+        prompt: 'Take the sentence from Diogenes Laertius quoted above. Who is speaking, from what source, and what would have to be true of the themata for the sentence to be a completeness claim rather than a definition of "syllogism"? Say what the sentence can establish on its own and what it cannot.',
+      },
+    },
+  },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -320,6 +342,10 @@ function hasQuizData(courseId: string, sessionId: number): boolean {
     const s = PHIL_707_SESSIONS.find(x => x.id === sessionId);
     return (s?.quiz?.length ?? 0) > 0;
   }
+  if (courseId === 'phil-801') {
+    const s = PHIL_801_SESSIONS.find(x => x.id === sessionId);
+    return (s?.quiz?.length ?? 0) > 0;
+  }
   return false;
 }
 
@@ -341,6 +367,9 @@ function getQuizQuestions(courseId: string, sessionId: number): QuizQuestion[] {
   }
   if (courseId === 'phil-707') {
     return PHIL_707_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
+  }
+  if (courseId === 'phil-801') {
+    return PHIL_801_SESSIONS.find(s => s.id === sessionId)?.quiz ?? [];
   }
   return [];
 }
@@ -1407,6 +1436,11 @@ function SeminarPage() {
   const phil707Session: Phil707Session | undefined = courseId === 'phil-707'
     ? PHIL_707_SESSIONS.find(s => s.id === activeSessionId)
     : undefined;
+  // PHIL 801 (doctoral research seminar) extends the shape with the briefing
+  // fields the renderer shows (watchFor, yourTask); same rendering contract.
+  const phil801Session: Phil801Session | undefined = courseId === 'phil-801'
+    ? PHIL_801_SESSIONS.find(s => s.id === activeSessionId)
+    : undefined;
   const agent = AGENT_MAP[agentId];
   const tier = (enrollment?.tier ?? 'auditor') as Tier;
   const briefingData = SEMINARS[courseId]?.[activeSessionId - 1] ?? null;
@@ -1414,7 +1448,7 @@ function SeminarPage() {
 
   // The rubric for this seminar: session objectives, or the capstone rubric
   // on final (seminar) sessions.
-  const activePhilSession = phil701Session ?? phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session;
+  const activePhilSession = phil701Session ?? phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session ?? phil801Session;
   const isSeminarSession = !!activePhilSession?.isSeminar;
   const { objectives: rubric, capstone } = useMemo(
     () => getSeminarObjectives(courseId, activeSessionId, isSeminarSession),
@@ -1666,7 +1700,7 @@ function SeminarPage() {
         const discussionPrompt =
           sessionContent?.prompt ??
           phil701Session?.preSeminarBriefing.problem ??
-          (phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session)?.briefing;
+          (phil702Session ?? phil703Session ?? phil704Session ?? phil706Session ?? phil707Session ?? phil801Session)?.briefing;
         const ctx: string[] = [
           `Current seminar session: Session ${activeSessionId}${sessionMeta ? ` — ${sessionMeta.title}` : ''}.`,
         ];
@@ -1975,6 +2009,25 @@ function SeminarPage() {
                           <Phil702SessionContent
                             session={phil707Session}
                             courseId="phil-707"
+                            onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
+                          />
+                        </>
+                      ) : phil801Session ? (
+                        <>
+                          <PreSeminarBriefing
+                            key={`phil-801-${activeSessionId}`}
+                            courseId="phil-801"
+                            session={activeSessionId}
+                            title={phil801Session.title}
+                            problem={phil801Session.briefing}
+                            whyItMatters=""
+                            watchFor={phil801Session.watchFor}
+                            yourTask={phil801Session.yourTask}
+                            requiredReading={PHIL801_READING[activeSessionId]}
+                          />
+                          <Phil702SessionContent
+                            session={phil801Session}
+                            courseId="phil-801"
                             onQuizClick={quizQs.length > 0 ? () => setActiveTab('quiz') : undefined}
                           />
                         </>

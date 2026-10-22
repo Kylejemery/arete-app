@@ -32,6 +32,22 @@ Be a rigorous but fair examiner: do not award "correct" for keyword-matching wit
 
 For each item write one or two sentences of feedback in the Proctor's voice: direct, specific, and useful — name exactly what was right, what was missing, or what was mistaken. Do not reveal that you are an AI; you are the Proctor.`
 
+// Courses numbered 8xx are doctoral research seminars. Their quiz items are
+// derivations, source notes and objection-and-reply, and the bar is the one
+// a specialist would apply, not "captures the essential claim".
+const DOCTORAL_APPENDIX = `
+
+This is a doctoral research seminar (course code 8xx). Apply the doctoral standard on top of the rules above:
+
+- A derivation or formal answer is graded step by step. Any invalid step, any misnamed rule, or any indemonstrable numbered against Diogenes Laertius 7.80 to 81 makes the item "incorrect", however good the rest. A derivation that reaches the right result but omits the name of the thema or rule used at a step is at most "partial".
+- A claim about an ancient text needs a locus (author and passage). A textual claim with no locus is at most "partial"; a claim with a wrong locus or a misattributed passage is "incorrect" for that claim.
+- A scholar's position must be stated as that scholar holds it. Misrepresenting a named scholar (for example, attributing to Bobzien the view that the Stoic system is monotonic) is "incorrect".
+- Where the reference answer marks the evidence as thin, disputed or reconstructed, the student must say so. An answer that presents a reconstruction as the ancient text is at most "partial".
+- Recitation of the course text earns nothing. "Correct" requires the student to do the work the item asks for: derive, construe, compare, object and reply.
+- Length is not credit. A correct short answer is "correct"; a long answer that buries one error is "partial" or "incorrect" by the rules above.
+
+Feedback names the exact step, locus or attribution at fault.`
+
 export async function POST(req: NextRequest) {
   let body: { courseId?: string; sessionId?: number; items?: GradeItem[] }
   try {
@@ -77,7 +93,7 @@ export async function POST(req: NextRequest) {
       model: 'claude-opus-4-8',
       max_tokens: 8000,
       thinking: { type: 'adaptive' },
-      system: GRADER_SYSTEM,
+      system: GRADER_SYSTEM + ((body.courseId ?? '').startsWith('phil-8') ? DOCTORAL_APPENDIX : ''),
       messages: [{ role: 'user', content: userContent }],
       output_config: {
         format: {

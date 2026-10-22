@@ -337,6 +337,78 @@ export const SESSION_OBJECTIVES: Record<string, Record<number, Objective[]>> = {
       { id: 'phil707-s8-obj3', description: 'Explains why the goal is trained assent in the world rather than permanent withdrawal from it, citing Discourses 3.12 on misdirected askēsis.' },
     ],
   },
+  // PHIL 801 — Chrysippus' Syllogistic (Year 3 research seminar, 14 sessions).
+  // Doctoral rubric: "demonstrated" additionally requires a locus for every
+  // textual claim, a fair statement of any scholar named, and correct formal
+  // steps (see the doctoral appendix in /api/academy/evaluate).
+  'phil-801': {
+    1: [
+      { id: 'phil801-s1-obj1', description: 'Classifies the main witnesses to Stoic logic (Diogenes Laertius, Sextus, Alexander, Galen, Apuleius, Simplicius, Cicero, Origen) by date, purpose and bias, and says what each can and cannot establish.' },
+      { id: 'phil801-s1-obj2', description: 'Runs the eight admission tests on a ledger item and records a verdict with reasons, including a weak item (the abridged Sorites at DL 7.82).' },
+      { id: 'phil801-s1-obj3', description: 'Distinguishes a reduction thesis for syllogisms from a completeness claim, using DL 7.78 and Sextus PH 2.156 to 157.' },
+    ],
+    2: [
+      { id: 'phil801-s2-obj1', description: 'Defines the assertible against sentence and propositional content, and explains truth at a time and changing assertibles with a case.' },
+      { id: 'phil801-s2-obj2', description: 'Classifies given assertibles as definite, middle or indefinite and states the truth conditions that connect them (Sextus M 8.96 to 100).' },
+      { id: 'phil801-s2-obj3', description: 'Explains the destroyed assertible ("this one is dead", Alexander in An. Pr. 177 to 178) and why it is not simply false.' },
+      { id: 'phil801-s2-obj4', description: 'Construes DL 7.69 on double negation and says what it does and does not settle about the contradictory of "not p".' },
+    ],
+    3: [
+      { id: 'phil801-s3-obj1', description: 'States the Philonian, Diodorean, Chrysippean and emphasis accounts of the conditional (PH 2.110 to 112) and gives a conditional that each classifies differently.' },
+      { id: 'phil801-s3-obj2', description: 'Explains the conflict criterion (DL 7.73) and applies it to Chrysippus\'s advice to the diviners (Cicero De Fato 12 to 15).' },
+      { id: 'phil801-s3-obj3', description: 'Argues for or against the view that one notion of consequence serves both the conditional and validity, naming the cost of each option.' },
+    ],
+    4: [
+      { id: 'phil801-s4-obj1', description: 'States Chrysippus\'s four modal definitions with their two clauses and contrasts them with Diodorus (DL 7.75; Boethius in Int. 234 to 235).' },
+      { id: 'phil801-s4-obj2', description: 'Reconstructs the Master Argument from Epictetus 2.19 and says which premiss each of Diodorus, Cleanthes and Chrysippus rejected.' },
+      { id: 'phil801-s4-obj3', description: 'Formalises the three accounts of possibility over a discrete time line and checks which inclusions hold, marking what rests only on a summary of the modal logic paper.' },
+    ],
+    5: [
+      { id: 'phil801-s5-obj1', description: 'States the Stoic criterion of validity and the four ways an argument fails (PH 2.137, 146 to 150) with an example of each.' },
+      { id: 'phil801-s5-obj2', description: 'Explains why a redundant premiss makes an argument invalid rather than inelegant, and what this implies for weakening.' },
+      { id: 'phil801-s5-obj3', description: 'Presents the Chrysippus and Antipater dispute on one-premiss arguments with loci and says what evidence could separate them.' },
+      { id: 'phil801-s5-obj4', description: 'Explains the Themata F1 finding: how S011 and S016 conflict under the strict reading of parelkōn and what the Greek allows.' },
+    ],
+    6: [
+      { id: 'phil801-s6-obj1', description: 'States the five indemonstrables in the order of DL 7.80 to 81 and distinguishes argument, mode, type and account.' },
+      { id: 'phil801-s6-obj2', description: 'Explains why these five were chosen (the connective suffices) and why the many-disjunct fifth (PH 1.69) does not reduce.' },
+      { id: 'phil801-s6-obj3', description: 'Identifies the indemonstrable in an argument with negated or compound constituents, or shows that none applies.' },
+    ],
+    7: [
+      { id: 'phil801-s7-obj1', description: 'Translates and construes the first thema (Apuleius Int. 209) and the two versions of the third (Alexander in An. Pr. 278; Simplicius in Cael. 237).' },
+      { id: 'phil801-s7-obj2', description: 'States the evidence for the second and fourth themata (Alexander 284; Galen PHP 2.3; Sextus M 8.231) and what the synthetic and dialectical theorems are.' },
+      { id: 'phil801-s7-obj3', description: 'Assesses Bobzien\'s case for Simplicius over Alexander and states the strongest reply on Alexander\'s behalf.' },
+    ],
+    8: [
+      { id: 'phil801-s8-obj1', description: 'States Bobzien\'s T1 to T4 and Frede\'s rival rules, and explains why Frede\'s second thema cannot reduce an argument on its own.' },
+      { id: 'phil801-s8-obj2', description: 'Reduces a three- or four-premiss argument to indemonstrables step by step, naming the thema at each step.' },
+      { id: 'phil801-s8-obj3', description: 'Shows that a given argument is irreducible and says whether the Stoics would have counted it valid in the specific sense, a syllogism, or invalid.' },
+    ],
+    9: [
+      { id: 'phil801-s9-obj1', description: 'States which structural properties hold in Bobzien\'s system (cut, permutation, antilogism) and which fail (reflexivity, monotonicity, premiss repetition), with the reason for each.' },
+      { id: 'phil801-s9-obj2', description: 'Explains the relevance and connexive parallels and their limits (McCall; neither system contains the other).' },
+      { id: 'phil801-s9-obj3', description: 'Says what completeness could mean for the Stoic system and why Post\'s theorem does not settle it.' },
+    ],
+    10: [
+      { id: 'phil801-s10-obj1', description: 'States the Themata research question and parameter space, and presents each finding with its caveats as unreviewed work in progress.' },
+      { id: 'phil801-s10-obj2', description: 'Derives S020 (Origen Cels. 7.15) by hand under the Mates candidate, marking where contraction is used, and explains why the attested-only candidate fails.' },
+      { id: 'phil801-s10-obj3', description: 'Checks the Sugihara countermodel to S016 and paraphrases the Lean statement of S020_needs_first_thema in plain words.' },
+    ],
+    11: [
+      { id: 'phil801-s11-obj1', description: 'Distinguishes syllogisms, subsyllogistic arguments and unmethodically concluding arguments with loci (DL 7.78; Alexander 84, 345, 373; Galen Inst. Log. 17 to 19).' },
+      { id: 'phil801-s11-obj2', description: 'Regiments an Aristotelian syllogism in Stoic form and says why the result is valid but not a syllogism.' },
+      { id: 'phil801-s11-obj3', description: 'Regiments a sentence with two quantifiers in both scope readings using only Stoic devices, marking what rests on the summary of Bobzien and Shogry.' },
+    ],
+    12: [
+      { id: 'phil801-s12-obj1', description: 'States Williamson\'s three arguments for Stoic sharp cut-offs and Bobzien\'s reply to each, with loci.' },
+      { id: 'phil801-s12-obj2', description: 'Explains the dialectical reading of Chrysippus\'s silence (Cicero Acad. 2.93 to 94; Sextus M 7.416 to 421) and why it is not an admission of ignorance.' },
+      { id: 'phil801-s12-obj3', description: 'Builds two of Bobzien\'s models of higher-order obscurity and shows each is compatible with truth-value gaps.' },
+    ],
+    13: [
+      { id: 'phil801-s13-obj1', description: 'Presents a paper proposal with a thesis, the sources it rests on, what would refute it, and where the evidence is thin.' },
+      { id: 'phil801-s13-obj2', description: 'States the standard the paper is held to and applies it to a sample thesis, identifying its unsupported claims.' },
+    ],
+  },
 };
 
 // Capstone rubrics — used for each course's final (seminar) session.
@@ -387,6 +459,12 @@ export const CAPSTONE_OBJECTIVES: Record<string, Objective[]> = {
     // until the scheduled fast completes and is logged — the first course
     // where completion requires lived time, not just dialogue.
     { id: 'phil707-cap-3', description: 'Reports on their completed fasting protocol from s8-obj2: what impressions arose, what was assented to, what the experiment demonstrated.' },
+  ],
+  // PHIL 801: the research paper defended. Judged under the doctoral rule.
+  'phil-801': [
+    { id: 'phil801-cap-1', description: 'Defends the paper\'s thesis under questioning: states it, names the passages it rests on with loci, and concedes or resolves the strongest objection the Examiner raises.' },
+    { id: 'phil801-cap-2', description: 'Given an argument not in the course, analyses it to indemonstrables with the themata or shows it irreducible, and classifies it as the Stoics would (syllogism, valid in the specific sense, invalid), with reasons.' },
+    { id: 'phil801-cap-3', description: 'Given a reconstruction (Bobzien, Frede, Mates or a Themata candidate) and a ledger item, says whether the reconstruction derives the item and what that shows about the reconstruction.' },
   ],
 };
 

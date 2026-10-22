@@ -17,6 +17,7 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-704': 'PHIL 704 — The Examined Correspondence — Seneca',
   'phil-706': 'PHIL 706 — The Impossibility of Willing Evil',
   'phil-707': 'PHIL 707 — The Prokopton in the Digital Age',
+  'phil-801': "PHIL 801 — Chrysippus' Syllogistic: Reconstruction, Evidence, Proof",
 };
 
 type ExamSignal = { label: string; href: string } | { done: true } | null;

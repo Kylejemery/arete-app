@@ -85,6 +85,18 @@ const COURSES: Course[] = [
     ],
   },
   {
+    id: 'phil-801',
+    code: 'PHIL 801',
+    title: "Chrysippus' Syllogistic: Reconstruction, Evidence, Proof",
+    description: 'Stoic logic survives in fragments, hostile reports and emended manuscripts, and every modern account of it is a reconstruction. This doctoral research seminar reads the sources in Greek and Latin, judges the rival reconstructions (Bobzien against Frede, Mates, Mueller, Mignucci, Williamson), derives with the themata by hand, and tests reconstructions against the ancient verdicts in the Themata laboratory. No multiple choice: derivations, source notes with loci, objection and reply, and a research paper defended in a viva. Prerequisites: PHIL 705 and GREK 101.',
+    term: 'Year 3 — Research Seminar',
+    assignedTexts: [
+      { title: 'Lives VII.63–83', author: 'Diogenes Laertius', sourceSlug: 'diogenes-laertius' },
+      { title: 'Outlines of Pyrrhonism II; Against the Logicians II', author: 'Sextus Empiricus', sourceSlug: 'sextus-empiricus' },
+      { title: 'Stoic Syllogistic (1996); Logic, CHHP (1999); Chrysippus and the Epistemic Theory of Vagueness (2002)', author: 'Susanne Bobzien', sourceSlug: 'bobzien' },
+    ],
+  },
+  {
     id: 'grek-101',
     code: 'GREK 101',
     title: 'Ancient Greek for Philosophers',
@@ -137,6 +149,7 @@ const OPEN_ACCESS = new Set(['phil-701']);
 // Track badge by course id. PHIL 701–704 show no track badge (unchanged).
 const TRACK_BADGE: Record<string, { label: string; color: string }> = {
   'phil-705': { label: 'Logic', color: '#C9A84C' },
+  'phil-801': { label: 'Logic · Research', color: '#8a6a1c' },
   'grek-101': { label: 'Language', color: '#1a5c38' },
   'latn-101': { label: 'Language', color: '#4a2060' },
   'grek-201': { label: 'Language', color: '#1a5c38' },

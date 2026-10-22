@@ -22,6 +22,7 @@ const COURSE_TITLES: Record<string, string> = {
   'phil-704': 'The Examined Correspondence — Seneca',
   'phil-706': 'The Impossibility of Willing Evil',
   'phil-707': 'The Prokopton in the Digital Age',
+  'phil-801': "Chrysippus' Syllogistic: Reconstruction, Evidence, Proof",
   'dissertation': 'The Doctoral Defense',
 };
 
