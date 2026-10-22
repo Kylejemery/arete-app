@@ -420,61 +420,103 @@
   verified_by_kyle: false
 
 - id: R02
-  schema: "Bobzien (Cambridge Companion ch., pp. 126–157): four themata reconstructed chiefly from Simplicius and Alexander; third thema as a transitivity / cut rule."
+  schema: "Bobzien (CHHP 1999, ch. 5, pp. 126-157): five indemonstrables in DL's order; first thema from Apuleius, third in two versions (Alexander, Simplicius); second and fourth lost; the synthetic theorem does the work of the second to fourth."
   status: reported
   kind: reconstruction
-  source: "Susanne Bobzien, Stoic Logic (Cambridge Companion), part 2 (Mode 2 summary)"
+  source: "Susanne Bobzien, Logic (Cambridge History of Hellenistic Philosophy), part 2: syllogistic (Mode 2 summary)"
   passage: |
-    A central portion of the analysis concerns the *themata* — meta-rules for
-    reducing complex arguments to indemonstrable ones. Bobzien reconstructs
-    the first, second, third, and fourth *themata* from surviving sources
-    (primarily Simplicius and Alexander), showing how the Stoics used these
-    reduction procedures to analyse multi-premise arguments into chains of
-    two-premise indemonstrable steps.
-  corpus_ref: "a94845be-9245-4327-b1d0-770bc5dc6064"
+    The second and fourth themata are lost in their wording.
+  corpus_ref: "070c6f0b-53e4-42fd-a823-dfb78ba70882"
   notes: |
-    The summary does not state the content of any thema, so a Phase 3
-    module cannot be built from it. It also contains an error. It describes
-    the third and fourth indemonstrables as both involving conjunctions and
-    the fifth as "given a disjunction and one disjunct, the contradictory of
-    the other follows", which is DL's fourth (suite S004). The summary is
-    not reliable on details.
-    Ruling (Kyle, 2026-09-27): no Bobzien module until the paper itself is
-    in the corpus.
+    Rewritten 2026-10-22. The earlier summary this entry quoted (chunk
+    a94845be-9245-4327-b1d0-770bc5dc6064, filed as "Stoic Logic (Cambridge
+    Companion), part 2") misnumbered the third to fifth indemonstrables,
+    called the dialectical theorem the third thema, and credited Mignucci's
+    section on paradoxes to Bobzien. It was deprecated and replaced by
+    migration 20261022120126; the work is the Cambridge History chapter, not
+    a Cambridge Companion. The chapter is held as OCR in Kyle's Papers folder,
+    not in research_sources, so this entry still rests on a summary. For the
+    content of the themata use R03, which cites the 1996 paper in full.
   confidence: low
   verified_by_kyle: false
 
 - id: R03
-  schema: "Bobzien (OSAP 1996, 'Stoic Syllogistic'): four themata as chain-inference rules; the reconstructed system as summarised satisfies monotonicity, cut, premise permutation; not contraction."
+  schema: "Bobzien (OSAP 1996, 'Stoic Syllogistic'): T1 is contraposition (antilogism); T2-T4 are chain-inference (cut) rules applied backwards. Reflexivity and monotonicity fail; cut holds through T2-T4 (component arguments need two or more premisses); permutation holds; contraction is partly covered by T2; premiss repetition probably fails."
   status: reported
   kind: reconstruction
-  source: "Susanne Bobzien, Stoic Syllogistic (Mode 2 summary)"
-  passage: |
-    Section five surveys the general logical properties of the reconstructed
-    system: it satisfies reflexivity (in a limited sense), monotonicity, cut
-    (transitivity), and premise permutation; it does not satisfy contraction
-    (in the standard sense), suppression, or antilogism.
-  corpus_ref: "76b4b6e1-9e59-478b-8807-457e1a7756b2"
+  source: "Susanne Bobzien, Stoic Syllogistic, Oxford Studies in Ancient Philosophy 14 (1996), pp. 133-192"
+  research_ref:
+    - {source_id: 48d67ff4-0e61-4e36-9578-2c868eec0f1c, locator: "p. 181"}
+    - {source_id: 48d67ff4-0e61-4e36-9578-2c868eec0f1c, locator: "p. 182"}
+    - {source_id: 48d67ff4-0e61-4e36-9578-2c868eec0f1c, locator: "p. 168"}
+    - {source_id: 48d67ff4-0e61-4e36-9578-2c868eec0f1c, locator: "p. 169"}
+  passages:
+    - ref: 0
+      text: |
+        Reflexivity does not hold in the system.
+    - ref: 0
+      text: |
+        Monotonicity does not hold in the system, in accordance with the
+        restriction on redundancy.
+    - ref: 1
+      text: |
+        Contraction is partly covered by (T2).
+    - ref: 1
+      text: |
+        Antilogism is taken care of by (T1).
+    - ref: 2
+      text: |
+        Arguments of this type take the second thema once
+    - ref: 3
+      text: |
+        Syllogisms of this form take the first thema twice, the second once
+  corpus_ref: null
   notes: |
-    Flag: "monotonicity" contradicts the project's working constraint that
-    redundant premises invalidate (suite S016). There are three possibilities:
-    the summary is wrong; Bobzien's reconstruction is monotonic, and
-    redundancy is then a separate condition outside the syllogistic; or
-    "monotonicity" means something narrower there. The summary cannot settle
-    which. Read the paper before Phase 3 encodes a Bobzien module. This is
-    the most consequential open item in Phase 1.
-    Same summary, chunk 562791d2-28ed-4b57-b5ad-112693d25b3e: "Bobzien argues
-    that the first thema handles contraposition, the second enables chain
-    inference, the third and fourth handle more complex reductions involving
-    three or more premises and 'external' assumptions". It also says she
-    "carefully compares the two principal ancient reconstructions, those of
-    Alexander and Simplicius". Neither ancient text is in the corpus
-    except for the fragments quoted in Zeller (T03, T04).
-    The summary names Frede, Mignucci, Mates and Barnes as rival
-    reconstructions. Of these, only Mates is in the corpus.
-    Ruling (Kyle, 2026-09-27): no Bobzien module until the paper itself is
-    in the corpus. The monotonicity question stays open until then.
-  confidence: low
+    Rewritten 2026-10-22 from the full text (research_sources 48d67ff4,
+    licensed_copy). The entry used to quote the Mode 2 summary (chunk
+    76b4b6e1-9e59-478b-8807-457e1a7756b2), which reversed section 5: it said
+    the system satisfies reflexivity and monotonicity and fails antilogism.
+    The paper says the opposite (pp. 181-182). That summary was deprecated
+    and replaced by migration 20261022120126.
+
+    What the paper says, against the project's results:
+    - Monotonicity fails "in accordance with the restriction on redundancy"
+      (p. 181), so the reconstruction rejects weakening, as every fitting
+      candidate here does (FINDINGS 3). The flag this entry used to carry,
+      that Bobzien's system is monotonic and so conflicts with S016, rested
+      on the summary's error.
+    - Contraction is "partly covered" by T2 (p. 182). T2 is a cut in which a
+      premiss of the first component argument is used again in the second
+      (p. 153; A1, A2 ⊢ A3 and Ai, A3 ⊢ C give A1, A2 ⊢ C). That is the
+      work the project's set view and merging cut do. Her own analyses use
+      T2 exactly where the harness needs contraction: S011 (indifferently
+      concluding, p. 168: A4 and A5 joined by T2), S020 (Origen's two
+      conditionals, p. 169: T1 twice and T2 once), and S012-type "infinite
+      content" arguments (p. 171: T2 once per nesting). Her S020 analysis
+      also uses the first thema, which agrees with FirstThema.lean
+      (S020_needs_first_thema).
+    - The restriction on contraction: arguments of the form A, A ⊢ B are
+      not arguments for her (pp. 175-179), premiss repetition probably fails
+      (p. 182), and she suggests doublets were eliminated before the themata
+      were applied (n. 96). This is close to the project's set view, which
+      collapses doublets, and is a reason to prefer it over the multiset
+      view when a Bobzien module is encoded.
+    - Her section 5 results hold for any reconstruction in which T2-T4
+      together have the deductive power of the synthetic theorem (n. 95),
+      which is how the project reads Mates + dialectical theorem.
+    - One-premiss arguments: Chrysippus rejected them and Antipater admitted
+      them (pp. 171-173, citing Sextus M 8.443 and PH 2.167); she argues
+      against Mueller and Mignucci that Chrysippus accepted none. This bears
+      on S014 and the single-premise parameter.
+
+    Her T1-T4 (p. 153) and the third thema's two versions (Alexander in APr.
+    278 has external premisses deduce a premiss; Simplicius in Cael. 237 has
+    one external join the conclusion; pp. 145-151, preferring Simplicius)
+    are the basis for a Bobzien candidate module. The Kyle ruling of
+    2026-09-27 (no Bobzien module until the paper is in the corpus) is now
+    satisfiable: the paper is in research_sources. Encoding it is SCOPE
+    milestone 5 and is not done here.
+  confidence: medium
   verified_by_kyle: false
 
 # ---------------------------------------------------------------------------

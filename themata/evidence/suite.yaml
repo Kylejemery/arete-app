@@ -620,8 +620,10 @@
     that the topic was his, not what the rule was.
     Mates, as summarised, doubts the doctrine ("Sextus erred or was working
     from a poor handbook"). See S011 for an accepted argument with an idle
-    premise, and see the Bobzien summary's monotonicity claim, which conflicts
-    with this entry (rules.yaml R03).
+    premise. (A Bobzien summary once reported her reconstruction as monotonic,
+    in conflict with this entry; the paper says the opposite, that
+    monotonicity fails because of the redundancy restriction, p. 181. See
+    rules.yaml R03, rewritten 2026-10-22.)
     Do not promote this entry to high confidence until the Sextus text is in
     the corpus.
     Redundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see
