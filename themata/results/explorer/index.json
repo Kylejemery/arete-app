@@ -88,7 +88,7 @@
   "ledger_items": 19
  },
  "source": {
-  "commit": "c8ca9c1fca5987b3e7af39f6d5e20fbd6e1a95c5",
+  "commit": "0b4473db4442c23d32af9e1cb87d6f61d1cb8e76",
   "inputs_clean": true,
   "inputs": [
    "themata/lean/",
@@ -96,12 +96,12 @@
    "themata/harness/"
   ],
   "encoding_version": {
-   "sha256": "d22b7cc50b29f8049ec91e3b1b13acef1332167b0f09a6d1162bbe761284a6bf",
+   "sha256": "ba1a098cb8250407ba9fefb472a786de4f01e2246c596f440160cc867d18fcd8",
    "scope": "every tracked file under themata/lean/, paths and contents",
    "files": 28,
    "lean_toolchain": "leanprover/lean4:v4.22.0"
   },
-  "ledger_sha256": "715a6802757e1c9beb7e8937f751005bf830756ca52de3c3e7f6a170357e2a74"
+  "ledger_sha256": "1c72d5077ef466956cc4f5c8132cd18dfe00efa18a30f52bae0ed758beab4186"
  },
  "counts": {
   "unit": "distinct searches: candidate x proof setting (single, contra, view) x formal item",
