@@ -867,3 +867,24 @@ quotations as `passages`. The export shows them as one passage, each quotation
 led by its locator in brackets. S011's worked example is now Alexander's own
 (in Top. 10.11-12), and S014 no longer carries the flag that its Chrysippus
 evidence came only through Mates's summary: M VIII 443 is quoted directly.
+
+## 2026-10-22: R03 checked against the paper
+
+Rules R03 now cites Bobzien, "Stoic Syllogistic" (1996), from the full text
+in `research_sources` (48d67ff4), instead of the Mode 2 summary. The summary
+had section 5 backwards. In the paper reflexivity and monotonicity fail, cut
+holds through T2-T4, contraction is partly covered by T2, premiss repetition
+probably fails, and antilogism is T1 (pp. 181-182). So the conflict recorded
+above (results 3 and 4; "the opposite of the profile the Mode 2 summary
+reports") was an artefact of the summary.
+
+Her own analyses use T2, her premise-reusing cut, exactly where the harness
+needs contraction: S011 (p. 168), S020 with T1 twice (p. 169), and the
+"infinite content" arguments of S012's shape (p. 171). She suggests premiss
+doublets were removed before analysis (n. 96), which favours the `set` view
+for a Bobzien module. Her section 5 results hold for any reconstruction in
+which T2-T4 have the power of the synthetic theorem (n. 95). FINDINGS.md
+section 5, findings.html, gaps.md and the S016 note are updated to match.
+R02 now cites the replacement CHHP summary chunk (the old one was
+deprecated by migration 20261022120126). No candidate, result or Lean file
+changes.

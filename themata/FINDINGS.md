@@ -147,11 +147,22 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
 - **The second and fourth themata are not isolated.** No attested argument in
   the ledger distinguishes a separate second or fourth thema from what the
   first thema and cut already give.
-- **Bobzien is not tested.** By ruling, no Bobzien module exists until her
-  paper is in the corpus. The Mode 2 summary reports her reconstruction as
-  monotonic and without contraction (R03). That is the opposite of what every
-  fit here needs. This is the most pointed open question the project raises
-  for a specialist.
+- **Bobzien is not yet tested, but she agrees on the profile.** Her paper
+  ("Stoic Syllogistic", 1996) is now held in full in `research_sources`, so
+  the 2026-09-27 ruling no longer blocks a Bobzien module; none is encoded yet
+  (SCOPE milestone 5). This section used to report that her reconstruction is
+  monotonic and without contraction, the opposite of every fit here. That came
+  from a Mode 2 summary that reversed her section 5 (rules R03, rewritten
+  2026-10-22). In the paper monotonicity fails, because of the redundancy
+  restriction, and contraction is partly covered by her second thema
+  (pp. 181-182). She uses that thema exactly where the harness needs
+  contraction: on the indifferently concluding argument (S011, p. 168), on
+  Origen's two conditionals together with the first thema twice (S020,
+  p. 169), and on the "infinite content" arguments of S012's shape (p. 171).
+  Her suggestion that premiss doublets were removed before the themata were
+  applied (n. 96) points to the `set` view. The conflict was an artefact of
+  the summary; what remains open is whether her T1-T4, encoded, fit the
+  ledger.
 
 ## 6. Limits and caveats
 
@@ -208,10 +219,10 @@ The questions we most need answered:
 2. **S020.** Is Origen's report of "the theorem of two propositions" good
    evidence that the Stoics treated the form as syllogistic, that is,
    reducible by the themata? Does the emendation in note 4701 affect that?
-3. **Contraction.** Every fit needs a repeated premise to count once. Is that
-   consistent with what is known of Stoic analysis? Does it conflict with
-   Bobzien's reconstruction, which the summary reports as having no
-   contraction?
+3. **Contraction.** Every fit needs a repeated premise to count once. Bobzien
+   (1996, pp. 168-171, 182) gets the same effect from her second thema and
+   suggests doublets were removed before analysis (n. 96). Is that the right
+   reading of the Stoic practice, and is the `set` view a fair encoding of it?
 4. **The contradictory.** Is reading the contradictory of "not p" as p
    (rather than "not not p") the standard view, given DL 7.69 on double
    negation?
