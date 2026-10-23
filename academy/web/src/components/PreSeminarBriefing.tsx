@@ -2,6 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import { getLibraryForSession } from '@/data/library';
+import { readingHref } from '@/data/reading-links';
+
+// The passage cell of a Required Reading row: a link when the row can be read
+// (the Library reader for corpus texts, a DOI or publisher page for
+// scholarship), plain text otherwise. Opens in a new tab so the briefing stays.
+function Passage({ r }: { r: { source: string; passage: string } }) {
+  const href = readingHref(r);
+  if (!href) return <>{r.passage}</>;
+  const inLibrary = href.startsWith('/library');
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={inLibrary ? 'Read this passage in the Library' : 'Publisher or DOI page'}
+      className="text-academy-gold hover:underline"
+    >
+      {r.passage} <span aria-hidden>{inLibrary ? '→' : '↗'}</span>
+    </a>
+  );
+}
 
 export interface BriefingData {
   session: number;
@@ -136,7 +157,7 @@ export default function PreSeminarBriefing({
                   {requiredReading.map((r, i) => (
                     <tr key={i} className="border-t border-academy-border align-top">
                       <td className="font-serif text-academy-text text-sm px-3 py-2">{r.source}</td>
-                      <td className="font-serif text-academy-text text-sm px-3 py-2">{r.passage}</td>
+                      <td className="font-serif text-academy-text text-sm px-3 py-2"><Passage r={r} /></td>
                       <td className="text-academy-muted text-sm leading-relaxed px-3 py-2">{r.note}</td>
                     </tr>
                   ))}
@@ -147,7 +168,7 @@ export default function PreSeminarBriefing({
                 {requiredReading.map((r, i) => (
                   <div key={i} className="border-l-2 border-academy-gold pl-3">
                     <p className="font-serif text-academy-text text-sm font-semibold">{r.source}</p>
-                    <p className="font-serif text-academy-text text-sm">{r.passage}</p>
+                    <p className="font-serif text-academy-text text-sm"><Passage r={r} /></p>
                     <p className="text-academy-muted text-sm italic leading-relaxed mt-0.5">{r.note}</p>
                   </div>
                 ))}
