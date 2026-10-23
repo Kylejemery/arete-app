@@ -1766,6 +1766,9 @@ function SeminarPage() {
             ctx.push(
               'Demand application, not recitation: press the student to apply concepts to cases and generate their own examples. Do not supply answers; scaffolded answers do not count as mastery.'
             );
+            ctx.push(
+              'Do not conclude or close the seminar while any of these objectives is open: do not say the session is over, deliver a closing synthesis, or send the student away. Whether an objective is met is decided by a separate assessment, not by you. If you judge that the student has now done what the open objectives require, say so plainly and tell them to press "Assess my understanding" in the objectives panel (or to ask "am I done"); otherwise keep questioning.'
+            );
             if (target) {
               ctx.push(
                 `This objective is still open after an assessment of the dialogue so far:\n- ${target.description}` +
