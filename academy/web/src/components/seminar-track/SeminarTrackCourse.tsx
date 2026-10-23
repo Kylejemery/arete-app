@@ -27,6 +27,7 @@ import { getOrCreateSession, appendSeminarMessage, getEnrollment } from '@/lib/d
 import { SYSTEM_PROMPTS } from '@/lib/agents';
 import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
+import { ReadingControls, useReadingView } from '@/components/ReadingView';
 import { toRoman } from '@/lib/roman';
 import type { SeminarMessage, SeminarSession } from '@/types';
 
@@ -64,6 +65,7 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
   const [detail, setDetail] = useState<UnitDetail | null>(null);
   const [progress, setProgress] = useState<Record<number, string>>({});
   const [tab, setTab] = useState<'reading' | 'transcript' | 'quiz'>('reading');
+  const view = useReadingView();
 
   const loadProgress = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -116,7 +118,7 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
   return (
     <div className="flex h-[calc(100vh-4rem)] min-h-0">
       {/* Units */}
-      <aside className="w-[220px] flex-shrink-0 border-r border-academy-border overflow-y-auto py-6 px-4">
+      <aside className={`w-[220px] flex-shrink-0 border-r border-academy-border overflow-y-auto py-6 px-4 ${view.fullPage ? 'hidden' : ''}`}>
         <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-academy-gold mb-1">{course.id.replace('sem-', 'SEM ')}</p>
         <h1 className="font-serif text-lg text-academy-text leading-snug mb-1">{course.title}</h1>
         {course.subtitle && <p className="text-academy-muted text-xs italic mb-5">{course.subtitle}</p>}
@@ -144,7 +146,9 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
       </aside>
 
       {/* The unit */}
-      <main className="flex-1 min-w-0 overflow-y-auto px-8 py-6">
+      <main className="flex-1 min-w-0 overflow-y-auto px-8 pb-6">
+        <ReadingControls view={view} />
+        <div className={`pt-2 ${view.fullPage ? 'max-w-3xl mx-auto' : ''}`} style={view.contentStyle}>
         {!active ? (
           <p className="text-academy-muted italic text-sm">No units are open yet.</p>
         ) : locked[active.unit_number] ? (
@@ -180,10 +184,11 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
             )}
           </>
         )}
+        </div>
       </main>
 
-      {/* The Proctor */}
-      <aside className="w-[380px] flex-shrink-0 border-l border-academy-border flex flex-col min-h-0">
+      {/* The Proctor: hidden, not unmounted, in full page so it keeps its thread. */}
+      <aside className={`w-[380px] flex-shrink-0 border-l border-academy-border flex-col min-h-0 ${view.fullPage ? 'hidden' : 'flex'}`}>
         {active && detail && !locked[active.unit_number]
           ? <ProctorPanel key={active.id} course={course} unit={active} detail={detail} />
           : <p className="text-academy-muted italic text-sm p-6">The Proctor convenes when a unit is open.</p>}
