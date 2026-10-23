@@ -40,6 +40,22 @@ import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
+// Threads saved before October 2026 can hold each Proctor reply twice (the
+// server and the page both wrote it) and "temporarily unavailable" notices
+// saved as replies. Read past both so neither is shown, sent back to the
+// model, or assessed; the stored rows are left as they are.
+const UNAVAILABLE = /^The seminar room is temporarily unavailable\./;
+function cleanThread(msgs: SeminarMessage[]): SeminarMessage[] {
+  const out: SeminarMessage[] = [];
+  for (const m of msgs) {
+    if (m.role === 'assistant' && UNAVAILABLE.test(m.content)) continue;
+    const prev = out[out.length - 1];
+    if (prev && prev.role === m.role && prev.content === m.content) continue;
+    out.push(m);
+  }
+  return out;
+}
+
 // ── Course data ───────────────────────────────────────────────────────────────
 
 interface SessionItem {
@@ -1385,6 +1401,12 @@ function SeminarPage() {
   const [objectiveStatus, setObjectiveStatus] = useState<Record<string, { status: string; note?: string }>>({});
   const [stagnation, setStagnation] = useState<Record<string, number>>({});
   const [suggestedRemediate, setSuggestedRemediate] = useState(false);
+  // An objective still open after an evaluation: the Proctor's next reply asks
+  // about it directly instead of steering toward it unannounced. Cleared once
+  // that reply is sent; the next evaluation picks again.
+  const [directTarget, setDirectTarget] = useState<{ id: string; description: string; note?: string } | null>(null);
+  const lastTargetRef = useRef<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [evaluating, setEvaluating] = useState(false);
   const [lastEvalTurn, setLastEvalTurn] = useState(0);
   const [objectivesOpen, setObjectivesOpen] = useState(true);
@@ -1555,7 +1577,7 @@ function SeminarPage() {
       }
       setSessionProgress(progress);
       const sess = await getOrCreateSession(courseId, agentId, activeSessionId);
-      if (sess) { setSession(sess); setMessages(sess.messages); }
+      if (sess) { setSession(sess); setMessages(cleanThread(sess.messages)); }
       setInitializing(false);
     }
     init();
@@ -1587,7 +1609,7 @@ function SeminarPage() {
     setSession(null);
     setInitializing(true);
     const sess = await getOrCreateSession(courseId, newAgentId, activeSessionId);
-    if (sess) { setSession(sess); setMessages(sess.messages); }
+    if (sess) { setSession(sess); setMessages(cleanThread(sess.messages)); }
     setInitializing(false);
   };
 
@@ -1672,6 +1694,16 @@ function SeminarPage() {
       setStagnation(stag);
       setSuggestedRemediate(data.session_recommendation === 'remediate');
       setLastEvalTurn(msgs.filter(m => m.role === 'user').length);
+
+      // Pick the objective the Proctor asks about directly next: the least
+      // demonstrated one, rotating away from the last target when another is
+      // equally open, so one objective does not monopolise the dialogue.
+      const rank: Record<string, number> = { not_demonstrated: 0, partial: 1 };
+      const open = rubric
+        .filter(o => map[o.id] && map[o.id].status !== 'demonstrated')
+        .sort((a, b) => rank[map[a.id].status] - rank[map[b.id].status]);
+      const pick = open.find(o => o.id !== lastTargetRef.current && rank[map[o.id].status] === rank[map[open[0].id].status]) ?? open[0];
+      setDirectTarget(pick ? { id: pick.id, description: pick.description, note: map[pick.id].note } : null);
     } catch {
       // Evaluation is advisory; a failed run never blocks the dialogue.
     } finally {
@@ -1697,10 +1729,12 @@ function SeminarPage() {
     }
     const userMsg: SeminarMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
     const newMessages = [...messages, userMsg];
+    const target = agentId === 'socratic-proctor' && directTarget && objectiveStatus[directTarget.id]?.status !== 'demonstrated'
+      ? directTarget : null;
     setMessages(newMessages);
     setInput('');
+    setSendError(null);
     setIsLoading(true);
-    await appendSeminarMessage(session.id, userMsg).catch(console.error);
     try {
       let systemPrompt = SYSTEM_PROMPTS[agentId]
         .replace('{course_id}', courseId)
@@ -1732,6 +1766,16 @@ function SeminarPage() {
             ctx.push(
               'Demand application, not recitation: press the student to apply concepts to cases and generate their own examples. Do not supply answers; scaffolded answers do not count as mastery.'
             );
+            ctx.push(
+              'Do not conclude or close the seminar while any of these objectives is open: do not say the session is over, deliver a closing synthesis, or send the student away. Whether an objective is met is decided by a separate assessment, not by you. If you judge that the student has now done what the open objectives require, say so plainly and tell them to press "Assess my understanding" in the objectives panel (or to ask "am I done"); otherwise keep questioning.'
+            );
+            if (target) {
+              ctx.push(
+                `This objective is still open after an assessment of the dialogue so far:\n- ${target.description}` +
+                (target.note ? `\nWhat the assessment found missing: ${target.note}` : '') +
+                '\nIn this reply, stop steering toward it indirectly. Respond briefly to what the student just said, then end with one direct question that asks the student to do exactly what this objective requires, in their own words and applied to a case. Do not name the objective, mention an assessment, or supply any part of the answer: no definitions, distinctions or examples the student could simply agree with.'
+              );
+            }
           }
           if (suggestedRemediate) {
             ctx.push(
@@ -1766,15 +1810,23 @@ function SeminarPage() {
           userId, sessionNumber: activeSessionId,
           messages: newMessages.map(m => ({ role: m.role, content: m.content })) }),
       });
-      const data = await res.json();
-      const responseText = data.content?.[0]?.text ?? data.response ?? 'The seminar room is temporarily unavailable.';
+      const data = await res.json().catch(() => ({}));
+      const responseText: string | undefined = res.ok ? (data.content?.[0]?.text ?? data.response) : undefined;
+      if (!responseText) throw new Error(`seminar ${res.status}`);
       const assistantMsg: SeminarMessage = { role: 'assistant', content: responseText, timestamp: Date.now() };
       setMessages(prev => [...prev, assistantMsg]);
+      // The thread is written only once the exchange succeeded (the server no
+      // longer writes it), so a failed send leaves no half-turn behind.
+      await appendSeminarMessage(session.id, userMsg).catch(console.error);
       await appendSeminarMessage(session.id, assistantMsg).catch(console.error);
+      if (target) { lastTargetRef.current = target.id; setDirectTarget(null); }
       // Evaluator cadence — fires in the background; never blocks the dialogue.
       maybeEvaluate([...newMessages, assistantMsg], userMsg.content);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'The seminar room is temporarily unavailable. Please try again.', timestamp: Date.now() }]);
+      // Nothing was saved: take the message back into the box to resend.
+      setMessages(messages);
+      setInput(userMsg.content);
+      setSendError('The Proctor could not answer just now. Your message is still in the box; send it again.');
     } finally {
       setIsLoading(false);
     }
@@ -2179,6 +2231,10 @@ function SeminarPage() {
             {isLoading && <TypingIndicator agentName={agent?.name ?? 'Proctor'} />}
             <div ref={messagesEndRef} />
           </div>
+
+          {sendError && (
+            <p role="alert" className="flex-shrink-0 px-4 pt-3 text-xs text-amber-300">{sendError}</p>
+          )}
 
           {/* Input */}
           <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">

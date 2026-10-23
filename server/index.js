@@ -4637,7 +4637,7 @@ app.post('/api/academy/seminar', async (req, res) => {
   try {
     const estimatedTokens = messages.reduce((sum, m) => sum + (typeof m.content === 'string' ? m.content.length : JSON.stringify(m.content).length), 0) / 4;
     console.log(`[/api/academy/seminar] messages: ${messages.length} | est. tokens: ${Math.round(estimatedTokens)} | model: claude-opus-4-5`);
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const callClaude = () => fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -4651,6 +4651,15 @@ app.post('/api/academy/seminar', async (req, res) => {
         messages,
       }),
     });
+    // Rate limits and overloads are usually gone in a few seconds; one retry
+    // keeps them from reaching the student as a failed turn.
+    let response = await callClaude();
+    for (const wait of [2000, 5000]) {
+      if (![429, 500, 502, 503, 529].includes(response.status)) break;
+      console.warn(`[/api/academy/seminar] Claude ${response.status}, retrying in ${wait}ms`);
+      await new Promise(r => setTimeout(r, wait));
+      response = await callClaude();
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -4667,26 +4676,9 @@ app.post('/api/academy/seminar', async (req, res) => {
       attributeUsage({ requestId, chunks: ragChunks, responseText: assistantText });
     }
 
-    // Persist updated session if sessionId provided
-    if (sessionId) {
-      if (assistantText) {
-        const { data: session } = await supabase
-          .from('academy_sessions')
-          .select('messages')
-          .eq('id', sessionId)
-          .single();
-        if (session) {
-          const updatedMessages = [
-            ...(session.messages ?? []),
-            { role: 'assistant', content: assistantText, timestamp: Date.now() },
-          ];
-          await supabase
-            .from('academy_sessions')
-            .update({ messages: updatedMessages, updated_at: new Date().toISOString() })
-            .eq('id', sessionId);
-        }
-      }
-    }
+    // The thread (academy_sessions.messages) is written by the page, which
+    // appends both sides of the exchange once it succeeds. This endpoint used
+    // to append the reply as well, which saved every reply twice.
 
     if (data.content && Array.isArray(data.content)) {
       const textBlocks = data.content.filter(b => b.type === 'text');
