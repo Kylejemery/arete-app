@@ -44,8 +44,9 @@
 #
 # verified_by_kyle records Kyle's sign-off, with verified_on its date. First
 # sign-offs, 2026-10-05: S001-S007, S009, S020. Second, 2026-10-23: S008,
-# S010-S014, S016, S017, S019, each as a faithful report of its sources, with
-# the open questions in its notes left for the specialist review. S018 is held.
+# S010-S014, S016-S019, each as a faithful report of its sources, with the
+# open questions in its notes left for the specialist review. All 19 entries
+# are signed off.
 
 # ---------------------------------------------------------------------------
 # The five indemonstrables
@@ -763,8 +764,27 @@
     to ten.
     (4) In DL 7.82 the text sits under "the Veiled", which is likely a
     lacuna. The excerpt's ellipsis hides this.
+    Checked 2026-10-23 for a second witness to the chain form. Cicero, Acad.
+    II.92-94 (Yonge, rag_corpus dc6299a6, cbdc328a) gives the Sorites as a
+    series of questions put step by step, with Chrysippus resting (ἡσυχάζειν)
+    before "many"; Sextus, M VII.416-421 (Bury, research_sources ca2d7557)
+    gives it as a series of presentations ("Fifty is few", "Fifty-one is
+    few") in an argument about the Sage's assent; PH II.253 (937d0561) names
+    it without a form. None states premisses of the form "not (p1 and not
+    p2)". Bobzien, "Chrysippus and the Epistemic Theory of Vagueness" (2002),
+    n. 3 (research_sources a4130c36), says DL 7.82 is the only evidence for a
+    formal premiss-conclusion version, and that there is no evidence
+    Chrysippus discussed the Sorites in that form. So this entry tests DL's
+    version of the argument, not Chrysippus's; whether the chain form is
+    Stoic doctrine or a doxographer's regimentation is for the specialist
+    review.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of DL 7.82.
+    Open questions recorded in these notes (the abridged and probably
+    misplaced text; whether the chain form is Chrysippus's) are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: low
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 - id: S019
   schema: "if someone is here, that one is not in Rhodes; someone is here; therefore no one is in Rhodes"
