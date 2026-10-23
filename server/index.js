@@ -55,6 +55,10 @@ const agora = require('./routes/agora');
 // enchiridion-agent.js. Wired with init() below, after the auth helpers.
 const enchiridion = require('./routes/enchiridion');
 
+// The Seminar Track: transcript generation and review for sem-NNN courses
+// (seminar/pipeline.js). Admin only; wired with init() below.
+const seminar = require('./routes/seminar');
+
 // Canonical concept layer (Observatory repair Part 1) — every raw theme label
 // maps through concept_aliases to one canonical concept; the Observatory only
 // ever speaks canonical names. Unmapped labels resolve lazily and are never
@@ -704,6 +708,7 @@ app.use(observatory.router);
 app.use(corpusMcp.router);
 app.use(agora.router);
 app.use(enchiridion.router);
+app.use(seminar.router);
 
 // ---------------------------------------------------------------------------
 // Local datetime helper
@@ -8208,6 +8213,8 @@ agora.init({
   slugToCounselorId: SLUG_TO_COUNSELOR_ID,
   claudeApiKey: CLAUDE_API_KEY,
 });
+
+seminar.init({ getAuthenticatedUserId, isAdmin, embedQuery });
 
 enchiridion.init({
   getAuthenticatedUserId,

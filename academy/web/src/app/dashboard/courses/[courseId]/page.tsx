@@ -33,6 +33,7 @@ import { PHIL_801_SESSIONS, type Phil801Session } from '@/data/phil801';
 import { PHIL801_READING } from '@/data/phil801_reading';
 import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
+import SeminarTrackCourse from '@/components/seminar-track/SeminarTrackCourse';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
@@ -1333,6 +1334,10 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
 export default function CoursePage() {
   const params = useParams();
   const courseId = params.courseId as string;
+  // Seminar Track courses (sem-NNN) are defined in the database.
+  if (courseId.startsWith('sem-')) {
+    return <SeminarTrackCourse courseId={courseId} />;
+  }
   if (courseId === 'phil-705') {
     return <Phil705CoursePage />;
   }

@@ -17,6 +17,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isDoctoralCourse } from '@/lib/doctoral';
 
 // Open questions may omit `type` — all pre-existing course data is open-text.
 export type QuizQuestion =
@@ -43,8 +44,8 @@ interface Props {
 
 type SubmissionStatus = 'not_started' | 'completed' | 'passed' | 'failed';
 
-// Doctoral research seminars (course code 8xx) require 80%; every other course 70%.
-const passThresholdFor = (courseId: string) => (courseId.startsWith('phil-8') ? 80 : 70);
+// Doctoral research seminars (phil-8xx, sem-8xx) require 80%; every other course 70%.
+const passThresholdFor = (courseId: string) => (isDoctoralCourse(courseId) ? 80 : 70);
 
 const VERDICT_SCORE: Record<Verdict, number> = { correct: 1, partial: 0.5, incorrect: 0 };
 

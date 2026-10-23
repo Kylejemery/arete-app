@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import { isDoctoralCourse } from '@/lib/doctoral'
 
 // POST /api/academy/viva — the Examiner conducts the Qualifying Examination.
 //
@@ -52,9 +53,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { mode, courseId, context } = body
-  // Courses numbered 8xx are doctoral research seminars: harder questions,
-  // and a verdict standard that fails on fundamentals.
-  const doctoral = (courseId ?? '').startsWith('phil-8')
+  // Courses numbered 8xx (phil-8xx and the Seminar Track) are doctoral
+  // research seminars: harder questions, and a verdict standard that fails on
+  // fundamentals.
+  const doctoral = isDoctoralCourse(courseId)
   const messages = Array.isArray(body.messages) ? body.messages.slice(0, 40) : []
   const syllabus = context && typeof context === 'string'
     ? context.slice(0, 6000)
