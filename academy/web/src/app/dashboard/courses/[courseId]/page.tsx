@@ -1410,6 +1410,9 @@ function SeminarPage() {
   const [evaluating, setEvaluating] = useState(false);
   const [lastEvalTurn, setLastEvalTurn] = useState(0);
   const [objectivesOpen, setObjectivesOpen] = useState(true);
+  // Set when a Proctor reply sends the student to "Assess my understanding";
+  // the button glows until it is pressed.
+  const [assessNudge, setAssessNudge] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Deep link: /dashboard/courses/<id>?session=N (used by the dashboard
@@ -1815,6 +1818,10 @@ function SeminarPage() {
       if (!responseText) throw new Error(`seminar ${res.status}`);
       const assistantMsg: SeminarMessage = { role: 'assistant', content: responseText, timestamp: Date.now() };
       setMessages(prev => [...prev, assistantMsg]);
+      if (agentId === 'socratic-proctor' && /assess my understanding/i.test(responseText)) {
+        setAssessNudge(true);
+        setObjectivesOpen(true);
+      }
       // The thread is written only once the exchange succeeded (the server no
       // longer writes it), so a failed send leaves no half-turn behind.
       await appendSeminarMessage(session.id, userMsg).catch(console.error);
@@ -2195,20 +2202,27 @@ function SeminarPage() {
                       ✓ All objectives demonstrated — the Proctor will conclude the seminar. Proceed to the quiz.
                     </p>
                   ) : (
-                    <div className="mt-2.5 flex items-center gap-3">
-                      <button
-                        onClick={() => runEvaluation(messages)}
-                        disabled={evaluating || messages.filter(m => m.role === 'user').length === 0}
-                        className="text-academy-gold text-[10px] font-semibold uppercase tracking-widest hover:opacity-80 disabled:opacity-40"
-                      >
-                        Assess my understanding
-                      </button>
-                      {suggestedRemediate && (
-                        <span className="text-academy-gold/80 text-[10px] italic">
-                          The Proctor is changing approach — consider revisiting the lesson.
-                        </span>
-                      )}
-                    </div>
+                    <>
+                      <p className="mt-2.5 text-academy-muted text-[11px] leading-snug">
+                        A separate assessment marks these, not the Proctor. When you think you have met them, press the button below or type &ldquo;am I done&rdquo;.
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        <button
+                          onClick={() => { setAssessNudge(false); runEvaluation(messages); }}
+                          disabled={evaluating || messages.filter(m => m.role === 'user').length === 0}
+                          className={`border border-academy-gold text-academy-gold text-xs font-semibold rounded-md px-3 py-1.5 hover:bg-academy-gold hover:text-navy transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-academy-gold ${
+                            assessNudge ? 'bg-academy-gold/15 ring-2 ring-academy-gold/60 animate-pulse' : ''
+                          }`}
+                        >
+                          {evaluating ? 'Assessing…' : 'Assess my understanding'}
+                        </button>
+                        {suggestedRemediate && (
+                          <span className="text-academy-gold/80 text-[10px] italic">
+                            The Proctor is changing approach — consider revisiting the lesson.
+                          </span>
+                        )}
+                      </div>
+                    </>
                   )}
                 </>
               )}
@@ -2223,6 +2237,11 @@ function SeminarPage() {
                 <p className="text-academy-muted text-xs leading-relaxed italic max-w-[220px]">
                   The Proctor awaits. Bring your response to the discussion prompt, and the examination will commence.
                 </p>
+                {rubric.length > 0 && (
+                  <p className="text-academy-muted/80 text-[11px] leading-relaxed mt-3 max-w-[240px]">
+                    When you think you have met the session objectives above, press <span className="text-academy-gold">Assess my understanding</span> or type &ldquo;am I done&rdquo;.
+                  </p>
+                )}
               </div>
             )}
             {messages.map((msg, i) => (
