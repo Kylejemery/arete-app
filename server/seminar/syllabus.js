@@ -21,7 +21,8 @@
 // work whose chunks carry no labels, by a search inside that work, which the
 // builder marks for Kyle to check.
 
-const { callClaude, textOf, extractJson } = require('../synthesis/shared');
+const { extractJson } = require('../synthesis/shared');
+const { callClaudeStream, readReply, glimpse } = require('./claude');
 const { findDashes } = require('./verify');
 
 const SYLLABUS_MODEL = 'claude-opus-5-5';
@@ -103,7 +104,7 @@ Return only JSON:
 /**
  * @returns {Promise<{draft: object, abridged: boolean, source_chars: number}>}
  */
-async function proposeSyllabus(supabase, course, { call = callClaude, model = SYLLABUS_MODEL } = {}) {
+async function proposeSyllabus(supabase, course, { call = callClaudeStream, model = SYLLABUS_MODEL } = {}) {
   const sources = await loadIndexedSources(supabase, course.source_works);
   const { text, abridged, total } = await sourceText(supabase, sources);
   const catalog = await must(supabase.rpc('seminar_corpus_catalog'), 'corpus catalog');
@@ -119,9 +120,10 @@ ${text}
 
 CORPUS CATALOG (author, work [layer, size]: section labels in reading order):
 ${catalogBlock(catalog)}`;
-  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 16000 });
-  const draft = extractJson(textOf(data));
-  if (!draft || !Array.isArray(draft.units) || !draft.units.length) throw new Error('the syllabus agent returned no units');
+  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 64000, effort: 'high' });
+  const reply = readReply(data, 'the syllabus agent');
+  const draft = extractJson(reply);
+  if (!draft || !Array.isArray(draft.units) || !draft.units.length) throw new Error(`the syllabus agent returned no units.${glimpse(reply)}`);
   return { draft, abridged, source_chars: total };
 }
 

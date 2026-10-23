@@ -9,7 +9,8 @@
 //
 // Every question passes the dash check before it is saved.
 
-const { callClaude, textOf, extractJson } = require('../synthesis/shared');
+const { extractJson } = require('../synthesis/shared');
+const { callClaudeStream, readReply, glimpse } = require('./claude');
 const { findDashes } = require('./verify');
 
 const QUESTIONS_MODEL = 'claude-opus-5-5';
@@ -30,7 +31,7 @@ Each question has a reference answer of 80 to 200 words that a specialist would 
 Return only JSON:
 {"questions": [{"type": "<recall | analysis | cross_examination | application>", "prompt": "...", "rubric": {"reference_answer": "...", "must_include": ["..."]}}]}`;
 
-async function generateQuestions(supabase, unitId, transcript, { call = callClaude, model = QUESTIONS_MODEL } = {}) {
+async function generateQuestions(supabase, unitId, transcript, { call = callClaudeStream, model = QUESTIONS_MODEL } = {}) {
   const unit = await must(supabase.from('seminar_units').select('*').eq('id', unitId).single(), 'unit');
   const course = await must(supabase.from('seminar_courses').select('id, title, stance').eq('id', unit.course_id).single(), 'course');
   const readings = await must(supabase.from('seminar_readings').select('author, work, locator, role').eq('unit_id', unitId).order('position', { ascending: true }), 'readings');
@@ -43,10 +44,11 @@ Objection left standing: ${transcript.checks?.outline?.open_objection || '(see t
 
 TRANSCRIPT (version ${transcript.version}):
 ${transcript.turns.map(t => `${t.speaker.toUpperCase()}: ${t.text}`).join('\n')}`;
-  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 6000 });
-  const parsed = extractJson(textOf(data));
+  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 32000, effort: 'high' });
+  const text = readReply(data, 'the questions agent');
+  const parsed = extractJson(text);
   const qs = (parsed && Array.isArray(parsed.questions)) ? parsed.questions : [];
-  if (!qs.length) throw new Error('the questions agent returned no questions');
+  if (!qs.length) throw new Error(`the questions agent returned no questions.${glimpse(text)}`);
   const problems = [];
   qs.forEach((q, i) => {
     if (!TYPES.includes(q.type)) problems.push(`question ${i + 1}: type "${q.type}"`);

@@ -11,7 +11,8 @@
 // his case at full strength in the steelman, but never says the prescription
 // is good advice or tells the student to follow it.
 
-const { callClaude, textOf, extractJson } = require('../synthesis/shared');
+const { extractJson } = require('../synthesis/shared');
+const { callClaudeStream, readReply, glimpse } = require('./claude');
 
 const FENCE_MODEL = 'claude-haiku-5-5';
 
@@ -32,15 +33,16 @@ Return only JSON: {"flags": [{"n": <turn number>, "reason": "<one sentence quoti
  * @returns {Promise<{n: number, reason: string}[]>}  throws when the model
  *   returns nothing parseable, so the verifier fails closed.
  */
-async function classifyEndorsement(tutorTurns, context, { model = FENCE_MODEL, call = callClaude } = {}) {
+async function classifyEndorsement(tutorTurns, context, { model = FENCE_MODEL, call = callClaudeStream } = {}) {
   if (!tutorTurns.length) return [];
   const userPrompt = `OPPONENT: ${context.opponent}, ${context.work}
 
 TUTOR TURNS:
 ${tutorTurns.map(t => `[Turn ${t.n}, ${t.segment}] ${t.text}`).join('\n\n')}`;
-  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 2000 });
-  const parsed = extractJson(textOf(data));
-  if (!parsed || !Array.isArray(parsed.flags)) throw new Error('the fence classifier returned no verdict');
+  const data = await call({ model, system: SYSTEM, userPrompt, maxTokens: 16000, effort: 'low' });
+  const text = readReply(data, 'the fence classifier');
+  const parsed = extractJson(text);
+  if (!parsed || !Array.isArray(parsed.flags)) throw new Error(`the fence classifier returned no verdict.${glimpse(text)}`);
   return parsed.flags.filter(f => Number.isInteger(f.n)).map(f => ({ n: f.n, reason: String(f.reason || '') }));
 }
 
