@@ -11,7 +11,8 @@
 // R1 with a page or section), and pipeline.js resolves those refs, so every
 // stored cite points at something the agent was actually given.
 
-const { callClaude, textOf, extractJson } = require('../synthesis/shared');
+const { extractJson } = require('../synthesis/shared');
+const { callClaudeStream, readReply, glimpse } = require('./claude');
 const { LENGTH, MIN_STUDENT_OBJECTIONS, QUOTATION_LIMIT_WORDS } = require('./verify');
 
 const OUTLINE_MODEL = 'claude-opus-5-5';
@@ -58,7 +59,7 @@ Proctor brief (what the Proctor will probe next): ${unit.proctor_brief || 'none'
  * Outline: a segment plan naming the passages each segment will use.
  * @returns {Promise<{segments: object[], open_objection: string}>}
  */
-async function outlineUnit(ctx, { notes = '', call = callClaude, model = OUTLINE_MODEL } = {}) {
+async function outlineUnit(ctx, { notes = '', call = callClaudeStream, model = OUTLINE_MODEL } = {}) {
   const stance = ctx.course.stance === 'aligned' ? 'aligned' : 'counterposition';
   const system = `You plan a seminar transcript for the Arete Academy: a two voice dialogue between a Tutor and a Student working through one unit's reading. You plan; you do not write the dialogue.
 
@@ -74,9 +75,10 @@ Return only JSON:
 ${notes ? `\nREVIEWER NOTES FOR THIS VERSION (Kyle):\n${notes}\n` : ''}
 MATERIAL:
 ${materialBlock(ctx)}`;
-  const data = await call({ model, system, userPrompt, maxTokens: 6000 });
-  const parsed = extractJson(textOf(data));
-  if (!parsed || !Array.isArray(parsed.segments) || !parsed.segments.length) throw new Error('the outline agent returned no segment plan');
+  const data = await call({ model, system, userPrompt, maxTokens: 32000, effort: 'high' });
+  const text = readReply(data, 'the outline agent');
+  const parsed = extractJson(text);
+  if (!parsed || !Array.isArray(parsed.segments) || !parsed.segments.length) throw new Error(`the outline agent returned no segment plan.${glimpse(text)}`);
   return { segments: parsed.segments, open_objection: String(parsed.open_objection || '') };
 }
 
@@ -86,7 +88,7 @@ ${materialBlock(ctx)}`;
  * @param {object[]} opts.prior   turns of the version Kyle sent back with notes
  * @returns {Promise<{speaker, segment, text, cites, pause_after_ms}[]>}
  */
-async function draftUnit(ctx, outline, { notes = '', previous = null, prior = null, call = callClaude, model = DRAFT_MODEL } = {}) {
+async function draftUnit(ctx, outline, { notes = '', previous = null, prior = null, call = callClaudeStream, model = DRAFT_MODEL } = {}) {
   const stance = ctx.course.stance === 'aligned' ? 'aligned' : 'counterposition';
   const system = `You write seminar transcripts for the Arete Academy: a two voice dialogue, the Tutor and the Student, that a student reads now and that will later be read aloud by two voices. You write from a segment plan and from the material given, and from nothing else: no recalled quotations, no facts about a text that the material does not show.
 
@@ -109,9 +111,10 @@ ${JSON.stringify(outline)}
 ${repair}
 MATERIAL:
 ${materialBlock(ctx)}`;
-  const data = await call({ model, system, userPrompt, maxTokens: 20000 });
-  const parsed = extractJson(textOf(data));
-  if (!parsed || !Array.isArray(parsed.turns) || !parsed.turns.length) throw new Error('the draft agent returned no turns');
+  const data = await call({ model, system, userPrompt, maxTokens: 64000, effort: 'high' });
+  const text = readReply(data, 'the draft agent');
+  const parsed = extractJson(text);
+  if (!parsed || !Array.isArray(parsed.turns) || !parsed.turns.length) throw new Error(`the draft agent returned no turns.${glimpse(text)}`);
   return parsed.turns;
 }
 
