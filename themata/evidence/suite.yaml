@@ -43,8 +43,9 @@
 #     the attribution (scripts/themata/verify_ledger.py).
 #
 # verified_by_kyle records Kyle's sign-off, with verified_on its date. First
-# sign-offs, 2026-10-05: S001-S007, S009, S020. The other entries are not yet
-# signed off; S008, S010 and S018 carry notes his review asked for first.
+# sign-offs, 2026-10-05: S001-S007, S009, S020. Second, 2026-10-23: S008,
+# S010-S014, S016, S017, S019, each as a faithful report of its sources, with
+# the open questions in its notes left for the specialist review. S018 is held.
 
 # ---------------------------------------------------------------------------
 # The five indemonstrables
@@ -262,8 +263,12 @@
     day and night" is false. That is not the same as the negated conjunction
     ("not both day and night") that the third indemonstrable requires. So the
     argument has the third indemonstrable's shape but cannot be reduced to it.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 # ---------------------------------------------------------------------------
 # Duplicated and indifferently concluding arguments
@@ -327,8 +332,12 @@
     Kyle's review (2026-10-05): "valid" records the Stoic position. Cicero
     (Ac. II.95-96) endorses the form only to turn it against the Stoics by way
     of the Liar.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: medium
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 - id: S011
   schema: "either p or q; p; therefore p"
@@ -400,8 +409,12 @@
     "adiaphorōs perainontes" for the transitivity arguments that Zeller calls
     ἀμεθόδως περαίνοντες (n.232). That looks like a conflation in the summary.
     Zeller is followed here because he quotes the terms in Greek.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: medium
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 # ---------------------------------------------------------------------------
 # Derived (non-indemonstrable) syllogisms
@@ -441,8 +454,12 @@
     absent from the corpus (gaps.md). Note that the premise p is used twice,
     which makes this a test of how premise multiplicity is handled (Phase 2,
     Argument.lean).
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: medium
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 - id: S013
   schema: "if (p and q), r; not r; p; therefore not q"
@@ -473,8 +490,12 @@
     The analysis runs: a second indemonstrable gives not (p and q), then a
     third indemonstrable with p gives not q. The summary attributes the step
     to the "dialectical theorem" (rules.yaml T05), not to a named thema.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 # ---------------------------------------------------------------------------
 # Single-premise arguments (Antipater vs Chrysippus)
@@ -556,10 +577,15 @@
     Chrysippus's policy it becomes S001 with the conditional made explicit.
     How to represent "p; therefore q" without a propositional link is a
     Phase 2 decision (Params.lean).
-    Primary replacement drafted in primary-proposals.yaml (Sextus PH II 159,
-    167; M VIII 443), pending the Sextus licences.
+    (Superseded 2026-10-23: the primary replacement drafted in
+    primary-proposals.yaml, Sextus PH II 159, 167 and M VIII 443, was moved
+    into this entry on 2026-10-06 and is quoted above.)
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 # ---------------------------------------------------------------------------
 # Redundant and deficient arguments
@@ -624,13 +650,19 @@
     in conflict with this entry; the paper says the opposite, that
     monotonicity fails because of the redundancy restriction, p. 181. See
     rules.yaml R03, rewritten 2026-10-22.)
-    Do not promote this entry to high confidence until the Sextus text is in
-    the corpus.
+    (Superseded 2026-10-23: this note asked that the entry not be promoted to
+    high confidence until the Sextus text was stored. Bury's PH and M VIII
+    have been in research_sources since 2026-10-05 and the entry now quotes
+    them, so the condition is met.)
     Redundancy is a parameter (Params.lean `Redundancy`: strict | narrow; see
     NOTES.md finding F1). This entry is invalid under both readings, since r
     is an unrelated atom.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 - id: S017
   schema: "either p or q; not p; therefore q   (where a third alternative r exists and was omitted)"
@@ -680,9 +712,13 @@
     decide.
     Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
     ledger flagged non_formal.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   flags: [non_formal]
   confidence: high
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 # ---------------------------------------------------------------------------
 # Sophisms and paradoxes whose form appears in the corpus
@@ -753,9 +789,13 @@
     Ruling (Kyle, 2026-09-27): removed from the formal suite, kept in the
     ledger flagged non_formal. Its fault is equivocation on the indefinite
     ("anyone" / "some one"), which propositional form cannot see.
+    Sign-off (Kyle, 2026-10-23): signed off as a faithful report of its
+    sources. Open questions recorded in these notes are left for the
+    specialist review (guardrail 5), not settled by this sign-off.
   flags: [non_formal]
   confidence: medium
-  verified_by_kyle: false
+  verified_by_kyle: true
+  verified_on: "2026-10-23"
 
 - id: S020
   schema: "if p, q; if p, not q; therefore not p"
