@@ -322,6 +322,7 @@ function ProctorPanel({ course, unit, detail }: { course: Course; unit: Unit; de
   const [messages, setMessages] = useState<SeminarMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [tier, setTier] = useState('auditor');
   const end = useRef<HTMLDivElement>(null);
 
@@ -338,8 +339,7 @@ function ProctorPanel({ course, unit, detail }: { course: Course; unit: Unit; de
     if (!input.trim() || loading || !session) return;
     const userMsg: SeminarMessage = { role: 'user', content: input.trim(), timestamp: Date.now() };
     const next = [...messages, userMsg];
-    setMessages(next); setInput(''); setLoading(true);
-    await appendSeminarMessage(session.id, userMsg).catch(console.error);
+    setMessages(next); setInput(''); setError(null); setLoading(true);
     try {
       const assigned = detail.readings.filter(r => r.role === 'assigned').map(r => `${r.author}, ${r.work}, ${r.locator}`).join('; ');
       const systemPrompt = SYSTEM_PROMPTS['socratic-proctor']
@@ -357,13 +357,19 @@ function ProctorPanel({ course, unit, detail }: { course: Course; unit: Unit; de
           messages: next.map(m => ({ role: m.role, content: m.content })),
         }),
       });
-      const data = await res.json();
-      const text = data.content?.[0]?.text ?? data.response ?? 'The seminar room is temporarily unavailable.';
+      const data = await res.json().catch(() => ({}));
+      const text: string | undefined = res.ok ? (data.content?.[0]?.text ?? data.response) : undefined;
+      if (!text) throw new Error(`seminar ${res.status}`);
       const reply: SeminarMessage = { role: 'assistant', content: text, timestamp: Date.now() };
       setMessages(prev => [...prev, reply]);
+      // Saved only once the exchange succeeded, so a failure leaves no half-turn.
+      await appendSeminarMessage(session.id, userMsg).catch(console.error);
       await appendSeminarMessage(session.id, reply).catch(console.error);
     } catch {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'The seminar room is temporarily unavailable.', timestamp: Date.now() }]);
+      // Nothing was saved: put the message back in the box to resend.
+      setMessages(messages);
+      setInput(userMsg.content);
+      setError('The Proctor could not answer just now. Your message is still in the box; send it again.');
     } finally {
       setLoading(false);
     }
@@ -382,6 +388,7 @@ function ProctorPanel({ course, unit, detail }: { course: Course; unit: Unit; de
         <div ref={end} />
       </div>
       <div className="border-t border-academy-border p-4">
+        {error && <p role="alert" className="text-xs text-amber-300 mb-2">{error}</p>}
         <textarea
           value={input}
           onChange={e => setInput(e.target.value)}
