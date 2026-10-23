@@ -34,6 +34,7 @@ import { PHIL801_READING } from '@/data/phil801_reading';
 import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import SeminarTrackCourse from '@/components/seminar-track/SeminarTrackCourse';
+import { ReadingControls, useReadingView } from '@/components/ReadingView';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
@@ -1166,6 +1167,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
+  const view = useReadingView();
   const [initializing, setInitializing] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const widthsRef = useRef({ leftWidth, rightWidth });
@@ -1234,6 +1236,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Session list */}
         <aside
           className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
@@ -1309,14 +1312,18 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
           onDelta={(d) => setLeftWidth(w => Math.min(320, Math.max(160, w + d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
         />
+        </div>
 
         {/* CENTER: Lesson */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6 py-10">
+          <ReadingControls view={view} />
+          <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
             <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} courseId={courseId} />
           </div>
         </div>
 
+        {/* Hidden, not unmounted, in full page so the drill keeps its thread. */}
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         <DragHandle
           onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
@@ -1324,6 +1331,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
 
         {/* RIGHT: Drill agent */}
         <DrillChatPanel courseId={courseId} width={rightWidth} />
+        </div>
       </div>
     </div>
   );
@@ -1362,6 +1370,7 @@ function SeminarPage() {
   const [activeSessionId, setActiveSessionId] = useState(1);
   const [isAdmin, setIsAdmin] = useState(false);
   const [paperExpanded, setPaperExpanded] = useState(false);
+  const view = useReadingView();
   const [briefingComplete, setBriefingComplete] = useState(false);
   // PHIL 707 capstone gate (the fast must have run and been reviewed) and
   // PHIL 706 practicum context for the Proctor.
@@ -1804,6 +1813,7 @@ function SeminarPage() {
       {/* ── THREE COLUMNS ── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
 
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Course Navigation */}
         <aside
           className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
@@ -1855,6 +1865,7 @@ function SeminarPage() {
           onDelta={(d) => setLeftWidth(w => Math.min(320, Math.max(160, w + d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
         />
+        </div>
 
         {/* CENTER: Session Content */}
         {(() => {
@@ -1887,7 +1898,8 @@ function SeminarPage() {
 
               {/* Scrollable content area */}
               <div className="flex-1 overflow-y-auto">
-                <div className="max-w-2xl mx-auto px-6 py-10">
+                <ReadingControls view={view} />
+                <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
                   {isLocked ? (
                     <CompletionGateLock sessionId={activeSessionId} sessions={sessions} />
                   ) : activeTab === 'quiz' && quizQs.length > 0 ? (
@@ -2061,6 +2073,8 @@ function SeminarPage() {
           );
         })()}
 
+        {/* Hidden, not unmounted, in full page so the dialogue stays put. */}
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         <DragHandle
           onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
@@ -2204,6 +2218,7 @@ function SeminarPage() {
               </div>
             )}
           </div>
+        </div>
         </div>
       </div>
     </div>
@@ -2382,6 +2397,7 @@ function Phil705CoursePage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [initializing, setInitializing] = useState(true);
   const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
+  const view = useReadingView();
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
   const widthsRef = useRef({ leftWidth, rightWidth });
@@ -2481,6 +2497,7 @@ function Phil705CoursePage() {
       </header>
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Block-grouped session list */}
         <aside
           className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
@@ -2554,10 +2571,12 @@ function Phil705CoursePage() {
           onDelta={(d) => setLeftWidth(w => Math.min(340, Math.max(180, w + d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
         />
+        </div>
 
         {/* CENTER: Briefing + session content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl mx-auto px-6 py-10">
+          <ReadingControls view={view} />
+          <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
             <LectureVideoBlock sessionId={activeSession.id} />
             {!activeSession.stub && !activeSession.isFinalExam && (
               <PreSeminarBriefing
@@ -2585,6 +2604,8 @@ function Phil705CoursePage() {
           </div>
         </div>
 
+        {/* Hidden, not unmounted, in full page so the Proctor keeps its thread. */}
+        <div className={view.fullPage ? 'hidden' : 'contents'}>
         <DragHandle
           onDelta={(d) => setRightWidth(w => Math.min(560, Math.max(300, w - d)))}
           onDragEnd={() => localStorage.setItem('academy-panel-widths', JSON.stringify(widthsRef.current))}
@@ -2592,6 +2613,7 @@ function Phil705CoursePage() {
 
         {/* RIGHT: Socratic Proctor */}
         <ProctorChatPanel session={activeSession} width={rightWidth} />
+        </div>
       </div>
     </div>
   );
