@@ -286,6 +286,27 @@ function LockIcon() {
   );
 }
 
+// Shown in place of the session number once session_progress says 'passed'.
+function PassedCheck({ score }: { score?: number | null }) {
+  const label = typeof score === 'number' ? `Passed · ${score}%` : 'Passed';
+  return (
+    <svg className="w-3.5 h-3.5 text-green-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" role="img" aria-label={label}>
+      <title>{label}</title>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+// The "n of N complete" line at the top of a session list.
+function CompletionCount({ done, total }: { done: number; total: number }) {
+  if (total === 0) return null;
+  return (
+    <p className={`text-[11px] mb-3 ${done === total ? 'text-green-400' : 'text-academy-muted'}`}>
+      {done} of {total} complete
+    </p>
+  );
+}
+
 function PreparedNotice({ sessionId, sessions }: { sessionId: number; sessions: SessionItem[] }) {
   const s = sessions.find(x => x.id === sessionId);
   return (
@@ -1191,8 +1212,24 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
   const view = useReadingView();
   const [initializing, setInitializing] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Quiz results (session_progress), for the completion markers only: language
+  // sessions are open-access and never gated on them.
+  const [progress, setProgress] = useState<Record<number, { status: string; score: number | null }>>({});
   const widthsRef = useRef({ leftWidth, rightWidth });
   widthsRef.current = { leftWidth, rightWidth };
+
+  const refreshProgress = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data } = await supabase
+      .from('session_progress')
+      .select('session_id, status, score')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId);
+    const map: Record<number, { status: string; score: number | null }> = {};
+    for (const row of data ?? []) map[row.session_id as number] = { status: row.status as string, score: row.score === null ? null : Number(row.score) };
+    setProgress(map);
+  }, [courseId]);
 
   useEffect(() => {
     async function init() {
@@ -1200,10 +1237,11 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
       if (!user) { router.replace('/login'); return; }
       const profile = await getProfile();
       setIsAdmin(profile?.is_admin === true);
+      await refreshProgress();
       setInitializing(false);
     }
     init();
-  }, [router]);
+  }, [router, refreshProgress]);
 
   useEffect(() => {
     try {
@@ -1225,7 +1263,10 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
     title: s.title,
     locked: isAdmin ? false : false,
     isMilestone: !!s.isMilestone,
+    passed: progress[s.id]?.status === 'passed',
+    score: progress[s.id]?.score ?? null,
   }));
+  const passedCount = sessionItems.filter(s => s.passed).length;
   const activeSession = meta.sessions.find(s => s.id === activeSessionId) ?? meta.sessions[0];
 
   if (initializing) {
@@ -1289,6 +1330,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
               </span>
               {meta.code} — Sessions
             </p>
+            <CompletionCount done={passedCount} total={sessionItems.length} />
             <nav className="space-y-0.5">
               {sessionItems.map(s => (
                 <button
@@ -1304,7 +1346,9 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
                   }`}
                 >
                   <span className="flex-shrink-0 w-5 mt-0.5 flex items-center">
-                    {s.isMilestone ? (
+                    {s.passed ? (
+                      <PassedCheck score={s.score} />
+                    ) : s.isMilestone ? (
                       <GoldStar />
                     ) : (
                       <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
@@ -1339,7 +1383,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         <div className="flex-1 overflow-y-auto">
           <ReadingControls view={view} />
           <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
-            <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} courseId={courseId} />
+            <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} courseId={courseId} onQuizRecorded={refreshProgress} />
           </div>
         </div>
 
@@ -1888,6 +1932,7 @@ function SeminarPage() {
             <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">
               {courseContent.code} &mdash; Sessions
             </p>
+            <CompletionCount done={sessions.filter(s => sessionProgress[s.id] === 'passed').length} total={sessions.length} />
             <nav className="space-y-0.5">
               {sessions.map(s => (
                 <button
@@ -1905,6 +1950,8 @@ function SeminarPage() {
                   <span className="flex-shrink-0 w-5 mt-0.5">
                     {s.locked ? (
                       <LockIcon />
+                    ) : sessionProgress[s.id] === 'passed' ? (
+                      <PassedCheck />
                     ) : (
                       <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
                         {toRoman(s.id)}
@@ -2576,6 +2623,7 @@ function Phil705CoursePage() {
             <p className="lg:hidden text-academy-gold text-xs font-semibold uppercase tracking-widest mb-3">
               PHIL 705 &mdash; Sessions
             </p>
+            <CompletionCount done={PHIL_705_SESSIONS.filter(s => sessionProgress[s.id] === 'passed').length} total={PHIL_705_SESSIONS.length} />
             <nav className="space-y-3">
               {grouped.map(group => (
                 <div key={group.block}>
@@ -2604,6 +2652,8 @@ function Phil705CoursePage() {
                           <span className="flex-shrink-0 w-5 mt-0.5 flex items-center">
                             {locked ? (
                               <LockIcon />
+                            ) : sessionProgress[s.id] === 'passed' ? (
+                              <PassedCheck />
                             ) : (
                               <span className={`text-xs font-mono leading-none ${s.id === activeSessionId ? 'text-academy-gold' : 'text-academy-muted'}`}>
                                 {s.id}
