@@ -2650,7 +2650,7 @@ button { background: none; border: none; font: inherit; }
   .lib-topbar .lib-reset { justify-content: center; }
   .lib-logo-sub { display: none !important; }
   .lib-nav { width: 100%; justify-content: center !important; flex-wrap: wrap; gap: 2px !important; }
-  .lib-nav .lib-nav-btn { padding: 6px 9px !important; font-size: 9px !important; letter-spacing: 0.12em !important; }
+  .lib-nav .lib-nav-btn { padding: 11px 8px !important; font-size: 10px !important; letter-spacing: 0.1em !important; }
   .lib-status { display: none !important; }
 
   /* atrium */

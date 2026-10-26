@@ -721,7 +721,7 @@ export default function Reader(props: {
               {reader && reader.totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 22 }}>
                   <button disabled={prevDisabled} onClick={() => turnTo(page - 1)} className="lib-page-btn" style={pageBtn(prevDisabled)}>← Previous</button>
-                  <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED }}>Folio {page + 1} of {reader.totalPages}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED, whiteSpace: 'nowrap' }}>Folio {page + 1} of {reader.totalPages}</span>
                   <button disabled={nextDisabled} onClick={() => turnTo(page + 1)} className="lib-page-btn" style={pageBtn(nextDisabled)}>Next →</button>
                 </div>
               )}
@@ -738,7 +738,7 @@ export default function Reader(props: {
               {reader && reader.totalPages > 1 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginTop: 34, paddingTop: 20, borderTop: '1px solid rgba(201,168,76,0.16)' }}>
                   <button disabled={prevDisabled} onClick={() => turnTo(page - 1)} className="lib-page-btn" style={pageBtn(prevDisabled)}>← Previous</button>
-                  <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED }}>Folio {page + 1} of {reader.totalPages}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 9.5, letterSpacing: '0.12em', color: MUTED, whiteSpace: 'nowrap' }}>Folio {page + 1} of {reader.totalPages}</span>
                   <button disabled={nextDisabled} onClick={() => turnTo(page + 1)} className="lib-page-btn" style={pageBtn(nextDisabled)}>Next →</button>
                 </div>
               )}
@@ -1180,6 +1180,7 @@ const READER_CSS = `
 .lib-view-toggle button { cursor: pointer; font-family: ${MONO}; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: ${MUTED}; padding: 6px 12px; }
 .lib-view-toggle button.is-on { color: #0a1020; background: ${GOLD}; }
 .lib-bar-folio { display: flex; align-items: center; gap: 4px; margin-right: 10px; font-family: ${MONO}; font-size: 9.5px; letter-spacing: 0.12em; color: ${MUTED}; }
+.lib-bar-folio span { white-space: nowrap; }
 .lib-bar-folio button { cursor: pointer; width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(201,168,76,0.3); background: transparent; color: ${GOLD}; font-size: 16px; line-height: 1; }
 .lib-bar-folio button:hover:not(:disabled) { background: rgba(201,168,76,0.12); }
 .lib-bar-folio button:disabled { opacity: 0.3; cursor: default; }
@@ -1348,6 +1349,13 @@ const READER_CSS = `
 @media (max-width: 760px) {
   .lib-reader-bar { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
   .lib-bar-title { flex-basis: 100%; order: 3; }
+  /* thumb-sized controls: folio arrows, view toggle and drawer buttons */
+  .lib-bar-right { flex: 1; justify-content: space-between; gap: 6px; }
+  .lib-bar-folio { margin-right: 0; font-size: 10.5px; }
+  .lib-bar-folio button { width: 32px; height: 32px; }
+  .lib-view-toggle button { padding: 9px 8px; font-size: 10px; letter-spacing: 0.1em; }
+  .lib-bar-btn { min-height: 32px; align-items: center; padding: 6px 8px; font-size: 10px; letter-spacing: 0.1em; }
+  .lib-page-btn { white-space: nowrap; padding: 9px 12px !important; }
   .lib-scroll-page { padding: 20px 16px 60px 50px; }
   .lib-para-gutter { left: -44px; width: 40px; }
   .lib-scroll-p { font-size: 18px; line-height: 1.65; }

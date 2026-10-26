@@ -1032,6 +1032,8 @@
   }
   .weeksGrid { gap: 1px; }
   .heartWrap { gap: 1.2rem; }
+  .railGroupLabel { font-size: 0.66rem; }
+  .railKicker { font-size: 0.62rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
