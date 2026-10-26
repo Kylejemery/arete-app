@@ -140,8 +140,8 @@ const CORPUS_LINKS: Record<string, CorpusLink> = {
 
 // Matched against "<source> <passage>"; first match wins. Each link was
 // checked against Crossref or the publisher's page on 2026-10-23. No stable
-// link was found for Sellars, The Art of Living; Nussbaum, Anger and
-// Forgiveness; or Frede, Die stoische Logik, so those rows stay plain text.
+// link was found for Nussbaum, Anger and Forgiveness, or Frede, Die stoische
+// Logik, so those rows stay plain text.
 const SCHOLARSHIP_LINKS: [RegExp, string][] = [
   [/Inner Citadel/, 'https://www.hup.harvard.edu/books/9780674007079'],
   [/PhWoL/, 'https://www.wiley.com/en-us/Philosophy+as+a+Way+of+Life%3A+Spiritual+Exercises+from+Socrates+to+Foucault-p-9780631180333'],
@@ -149,6 +149,10 @@ const SCHOLARSHIP_LINKS: [RegExp, string][] = [
   // The Acumen 2006 edition the reading lists cite, now on Cambridge Core.
   [/^Sellars, Stoicism/, 'https://doi.org/10.1017/upo9781844653720'],
   [/^Sellars, Marcus Aurelius/, 'https://doi.org/10.4324/9780429052651'],
+  // Bloomsbury (Bristol Classical Press) 2nd edition, 2009, checked on the
+  // publisher's page 2026-10-26. The Routledge reissue's DOI
+  // (10.4324/9781315198354) now lands on "no longer available".
+  [/^Sellars, The Art of Living/, 'https://www.bloomsbury.com/us/art-of-living-9781853997242/'],
   [/Lessons in Stoicism/, 'https://www.penguin.co.uk/books/312681/lessons-in-stoicism-by-sellars-john/9780141990040'],
   // Princeton's 2009 updated edition; the 1994 printing has no DOI.
   [/Therapy of Desire/, 'https://doi.org/10.1515/9781400831944'],
