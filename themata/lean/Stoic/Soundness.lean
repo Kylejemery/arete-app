@@ -177,6 +177,11 @@ theorem Candidate.sound {c : Candidate} (hc : ∀ r ∈ c.rules, r.Sound)
     rw [← hconc]
     exact this v hT fun x hx => hp x (heq.mem' hx)
 
+/-- A restriction of a sound rule is sound. -/
+theorem restrict_sound {r : Rule} (h : r.Sound) (n s : String) (g : List Argument → Bool) :
+    (r.restrict n s g).Sound :=
+  fun P T as has _ hb => h P T as has _ (Rule.mem_restrict_step hb)
+
 /-! ## Every Phase 3 candidate is sound -/
 
 theorem named_sound (r : Rule) (hs : r.Sound) (n : String) : ({ r with name := n } : Rule).Sound := hs
@@ -185,7 +190,7 @@ theorem candidates_sound : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.So
   intro c hc r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
     exact cut_sound _ _ _
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -204,6 +209,10 @@ theorem candidates_sound : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.So
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_sound _ _
     · exact cut_sound _ _ _
+  · simp only [Themata.bobzien, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · unfold Themata.bobzienT1; exact restrict_sound (contrapose_sound _ _) _ _ _
+    · unfold Themata.bobzienT2to4; exact restrict_sound (cut_sound _ _ _) _ _ _
 
 /-- **Proven underivable.** A Philonian countermodel to an argument, one that
 makes the background theory true, rules out its derivation by every Phase 3
@@ -270,11 +279,16 @@ theorem cut_keepsTwo (userAr : Arity) (pos : Position) (merge : Bool) :
     · simp at hb
   · simp at hb
 
+/-- A restriction of a rule that keeps two premises keeps them. -/
+theorem restrict_keepsTwo {r : Rule} (h : r.KeepsTwo) (n s : String) (g : List Argument → Bool) :
+    (r.restrict n s g).KeepsTwo :=
+  fun P as has _ hb => h P as has _ (Rule.mem_restrict_step hb)
+
 theorem candidates_keepTwo : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.KeepsTwo := by
   intro c hc r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
     exact cut_keepsTwo _ _ _
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -293,6 +307,10 @@ theorem candidates_keepTwo : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_keepsTwo _ _
     · exact cut_keepsTwo _ _ _
+  · simp only [Themata.bobzien, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · unfold Themata.bobzienT1; exact restrict_keepsTwo (contrapose_keepsTwo _ _) _ _ _
+    · unfold Themata.bobzienT2to4; exact restrict_keepsTwo (cut_keepsTwo _ _ _) _ _ _
 
 theorem Candidate.two_premises {c : Candidate} (hc : ∀ r ∈ c.rules, r.KeepsTwo)
     {P : Params} {T : Theory} (hs : P.single = .chrysippus) (hv : P.view ≠ .set)
@@ -460,13 +478,18 @@ theorem Candidate.relevant {c : Candidate} (hc : ∀ r ∈ c.rules, r.KeepsRelev
     rw [hconc] at h'
     exact h'.of_equiv hv heq
 
+/-- A restriction of a rule that keeps relevance keeps it. -/
+theorem restrict_keepsRelevant {r : Rule} (h : r.KeepsRelevant) (n s : String)
+    (g : List Argument → Bool) : (r.restrict n s g).KeepsRelevant :=
+  fun P as has _ hb => h P as has _ (Rule.mem_restrict_step hb)
+
 theorem candidates_keepRelevant : ∀ c ∈ Themata.candidates,
     (∀ r ∈ c.rules, r.merging = false) → ∀ r ∈ c.rules, r.KeepsRelevant := by
   intro c hc hm r hr
   have hmr := hm r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
     exact cut_keepsRelevant _ _
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -485,6 +508,11 @@ theorem candidates_keepRelevant : ∀ c ∈ Themata.candidates,
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_keepsRelevant _ _
     · simp only [cut] at hmr; subst hmr; exact cut_keepsRelevant _ _
+  · simp only [Themata.bobzien, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · unfold Themata.bobzienT1
+      exact restrict_keepsRelevant (contrapose_keepsRelevant _ _) _ _ _
+    · simp [Themata.bobzienT2to4, Rule.restrict, cut] at hmr
 
 /-- **Proven underivable.** Under the `list` or `multiset` view, with
 Chrysippus's policy or no background theory, no Phase 3 candidate without the

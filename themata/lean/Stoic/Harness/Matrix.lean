@@ -190,7 +190,7 @@ def probes : List (String × Argument) :=
     ("if p, q; if q, r; not r; therefore not p", ⟨[cond p₀ p₁, cond p₁ p₂, neg p₂], neg p₀⟩) ]
 
 def matrixMd (rows : List Row) (b : Bounds) : String := Id.run do
-  let named := [attested, mates, matesDT]
+  let named := [attested, mates, matesDT, bobzien]
   let fits := rows.filter (·.fits)
   let mut out : Array String := #[]
   out := out.push "# Phase 4 evaluation matrix"

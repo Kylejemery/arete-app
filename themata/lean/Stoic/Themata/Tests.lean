@@ -81,7 +81,7 @@ theorem S012_matesDT (P : Params) (T : Theory) :
 /-! ## The candidate list -/
 
 #guard generated.length = 63
-#guard candidates.length = 66
+#guard candidates.length = 67
 -- The control: exactly one generated candidate has no rules.
 #guard (generated.filter (·.rules.isEmpty)).length = 1
 -- `Attested` and `Mates` coincide with generated settings; `Mates + DT`
