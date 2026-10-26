@@ -58,20 +58,18 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 **Known weaknesses**
 
 * Only 17 formal items.
-* The argument forms now rest on primary texts, but `rules.yaml` does not:
-  * T01-T04, C02, C03 and X02 quote their Greek or Latin through Zeller.
-  * T05, T06, R01 and R02 rest on Mode 2 summaries.
-  * T04's primary replacement (Wallies, in APr. 284.10-18) is drafted in `primary-proposals.yaml` but not moved.
+* The argument forms rest on primary texts, but some rules in `rules.yaml` do not:
+  * T01-T03, C02, C03 and X02 quote their Greek or Latin through Zeller.
+  * T05, T06, R01 and R02 rest on Mode 2 summaries; their sign-off notes say the summary is not evidence for the Stoic rule.
+  * T04 now quotes Wallies's Alexander (in APr. 283.12-14, 284.12-15); its Stoic attribution rests on manuscript B.
 * Galen is not in the corpus or in `research_sources` (`evidence/gaps.md`).
 * Bobzien's reconstruction is engaged on paper (R03) but not encoded or run.
-* Sign-offs: all 19 argument forms; none of the 19 rules. The sign-offs of 2026-10-23 confirm that each entry reports its sources faithfully; the open questions in their notes are for the specialist review. S018 tests DL 7.82's version of the Sorites, the only witness to its chain form (Bobzien 2002, n. 3), not Chrysippus's.
+* Sign-offs: all 19 argument forms (2026-10-05 and 2026-10-23) and all 19 rules (2026-10-26). The sign-offs confirm that each entry reports its sources faithfully; the open questions in their notes are for the specialist review. S018 tests DL 7.82's version of the Sorites, the only witness to its chain form (Bobzien 2002, n. 3), not Chrysippus's.
 
 **Open items waiting on Kyle**
 
-* Sign off the rules, or say which of them milestone 4 has to cover.
-* Whether to move T04's Wallies proposal into `rules.yaml`.
-* The S016 question (separate premise or conjunct; the Redundancy parameter), parked until after the sign-offs.
-* Whether milestone 4 is done once the above are settled.
+* Whether milestone 4 is done. Every argument form and rule is signed off, and every argument form quotes a primary text.
+* The S016 question (separate premise or conjunct; the Redundancy parameter), parked until after the sign-offs, which are now complete.
 
 ## Milestones, in order
 
@@ -187,3 +185,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-10-22: Milestone 4. Bobzien's Mode 2 summaries checked against her texts and replaced in `rag_corpus` (deprecate and replace; migrations `20261022120126` and `20261022174350`, applied; #425, #428): "Stoic Syllogistic" had section 5 backwards, the CHHP chapter was filed as a "Cambridge Companion" and misnumbered the indemonstrables, and the 1993 modal logic paper's summary inverted its Scheme 2. Rules R03 rewritten from the 1996 paper (#429): monotonicity fails, her T2 supplies contraction and is applied to S011, S020 and S012-type arguments, so the conflict FINDINGS reported with Bobzien was an artefact of the summary. R02 re-pointed at the replacement summary. Harness reproduced with Lean 4.22.0 (158 proven fits of 792); export and pages regenerated. Outside the milestone, at Kyle's request: PHIL 705 corrected and PHIL 801 built on this material (#424, #426, #427, #428). No sign-offs.
 * 2026-10-23: Milestone 4. Kyle's second ledger review: S008, S010-S014, S016, S017 and S019 signed off (`verified_on: 2026-10-23`), each as a faithful report of its sources, with the open questions in its notes left for the specialist review. S018 held. Stale notes on S014 (pending licences) and S016 (do not promote) marked superseded. 18 of 19 argument forms now signed; no rules. Export and pages regenerated.
 * 2026-10-23 (later): Milestone 4. S018 checked for a second witness to the Sorites chain form: Cicero, Acad. II.92-94, Sextus, M VII.416-421 and PH II.253 give the Sorites as questions or as a series of presentations, not as premisses; Bobzien 2002 (n. 3) says DL 7.82 is the only evidence for a premiss-conclusion version. Recorded in S018's notes; S018 signed off as a faithful report of DL 7.82. All 19 argument forms are now signed; no rules. Export and pages regenerated.
+* 2026-10-26: Milestone 4. Kyle signed off all 19 rules in `rules.yaml` (`verified_on: 2026-10-26`), each as a faithful report of its source, with open questions left for the specialist review; T05, T06, R01 and R02 carry a note that the sign-off covers the report of a Mode 2 summary, not the summary as evidence. T04 moved from `primary-proposals.yaml`: it now quotes Wallies's Alexander, in APr. 283.12-14 and 284.12-15, instead of Zeller, and the pending check of our reading of the Greek is closed. The proposals file is empty. `verify_ledger.py` passes for rules, suite and proposals. Every ledger entry is now signed off. Not marked done: that is Kyle's call.
