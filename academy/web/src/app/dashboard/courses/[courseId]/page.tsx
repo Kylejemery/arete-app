@@ -35,6 +35,7 @@ import { getSeminarObjectives } from '@/data/objectives';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import SeminarTrackCourse from '@/components/seminar-track/SeminarTrackCourse';
 import { ReadingControls, useReadingView } from '@/components/ReadingView';
+import { Phil801PartFigures } from '@/components/phil801';
 import { getProfile } from '@/lib/db';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
@@ -785,7 +786,7 @@ function QuizSection({ quiz, courseId, sessionId, onRecorded }: {
   );
 }
 
-function LanguageLessonContent({ session, mono = false, courseId, onQuizRecorded }: { session: LessonSession; mono?: boolean; courseId?: string; onQuizRecorded?: () => void }) {
+function LanguageLessonContent({ session, mono = false, courseId, onQuizRecorded, afterPart }: { session: LessonSession; mono?: boolean; courseId?: string; onQuizRecorded?: () => void; afterPart?: (heading: string) => React.ReactNode }) {
   return (
     <article>
       <div className="flex items-center gap-2 mb-2">
@@ -847,6 +848,7 @@ function LanguageLessonContent({ session, mono = false, courseId, onQuizRecorded
               </p>
             </div>
           )}
+          {afterPart?.(part.heading)}
         </section>
       ))}
 
@@ -1053,7 +1055,10 @@ function Phil701SessionContent({ session, courseId, onQuizClick }: { session: Ph
 function Phil702SessionContent({ session, courseId, onQuizClick }: { session: Phil702Session; courseId?: string; onQuizClick?: () => void }) {
   return (
     <>
-      <LanguageLessonContent session={phil702ToLesson(session)} />
+      <LanguageLessonContent
+        session={phil702ToLesson(session)}
+        afterPart={courseId === 'phil-801' ? heading => <Phil801PartFigures sessionId={session.id} partTitle={heading} /> : undefined}
+      />
       {session.practiceAssignment && (
         <PracticeAssignmentBlock pa={session.practiceAssignment} courseId={courseId} sessionId={session.id} />
       )}
