@@ -4066,7 +4066,23 @@
    "provenance": "generated",
    "name": "contrapose[major,two] + cut[two,first]",
    "index": 65,
-   "file": "runs/c65.json"}],
+   "file": "runs/c65.json"},
+  {"source":
+   "rules R03 (Bobzien, Stoic Syllogistic, OSAP 14, 1996, p. 153; research_sources 48d67ff4): T1 and T1+ as contraposition of either premise for two or more premises; T2-T4 and their + forms as a merging cut from a two-premiss first component",
+   "rules":
+   [{"shape": "contrapose[either,≥2]",
+     "name": "T1, T1+ (Bobzien 1996, p. 153): contrapose[either,≥2]",
+     "merging": false,
+     "cut": false},
+    {"shape": "cut[2,≥2,any,merge]",
+     "name":
+     "T2-T4, T2+-T4+ (Bobzien 1996, p. 153): cut[first 2, user ≥2, any, merge]",
+     "merging": true,
+     "cut": true}],
+   "provenance": "reconstruction",
+   "name": "Bobzien",
+   "index": 66,
+   "file": "runs/c66.json"}],
  "bounds":
  {"premises": "at most one more than the item has",
   "max_size": 20000,

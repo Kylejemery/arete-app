@@ -888,3 +888,28 @@ section 5, findings.html, gaps.md and the S016 note are updated to match.
 R02 now cites the replacement CHHP summary chunk (the old one was
 deprecated by migration 20261022120126). No candidate, result or Lean file
 changes.
+
+## 2026-10-26: Milestone 5, Bobzien as a candidate
+
+`lean/Stoic/Themata/Bobzien.lean` encodes her T1-T4 (1996, p. 153; rules
+R03). T1/T1+ is `contrapose[either,any]` restricted to arguments with two or
+more premises (her system has no one-premiss arguments, pp. 171-173). T2-T4
+and their + forms are `cut[any,any,merge]` restricted to a two-premiss first
+component and a second component with at least two premises; the merging
+cut covers a repeated premise (T2), an external one (T3) and both (T4) at
+once, and the position of the cut proposition is free because permutation
+holds (p. 181). `Rule.restrict` (Rules.lean) is new: a restriction keeps a
+subset of a rule's outputs, so each property proved by quantifying over
+outputs carries over through one lemma (`restrict_sound`,
+`restrict_keepsTwo`, `restrict_keepsRelevant`, `restrict_soundS`,
+`restrict_soundG`). The candidate is appended last, so the 66 earlier
+candidates keep their indices and export ids.
+
+Harness (Lean 4.22.0): 804 candidate-settings, 164 fit, all proven; 586 of
+640 non-fits proven. Bobzien fits in all six `toggle` settings and fails,
+provably, in the six `negate` settings (S018, G3). S011 and S012 at depth 1,
+S020 at depth 3, as she analyses them (pp. 168-171). Her profile is cell for
+cell that of `contrapose[either,any] + cut[any,any,merge]` and
+`contrapose[either,any] + cut[two,any,merge]`: her restrictions change
+nothing on this ledger (cf. her n. 68). She is one of five candidates that
+fit under `list`, all contraposition of either premise plus a merging cut.
