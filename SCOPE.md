@@ -32,7 +32,7 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 
 ## Where things stand
 
-*Updated 2026-10-22. The milestone list below is the authority on what is current.*
+*Updated 2026-10-26. The milestone list below is the authority on what is current.*
 
 **Done**
 
@@ -68,7 +68,6 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 
 **Open items waiting on Kyle**
 
-* Whether milestone 4 is done. Every argument form and rule is signed off, and every argument form quotes a primary text.
 * The S016 question (separate premise or conjunct; the Redundancy parameter), parked until after the sign-offs, which are now complete.
 
 ## Milestones, in order
@@ -78,8 +77,8 @@ Work on the current milestone only. Do not start the next one until Kyle marks t
 1. **Machine data export** [DONE 2026-09-29, marked by Kyle]. Delivered in PRs #307, #309 and #310. See the brief below.
 2. **Machine page** [DONE 2026-09-29, marked by Kyle; delivered in #314] built and published. Kyle asked for it in this repo after all: the source is `themata/machine.html`, and it runs at `/playground/themata-machine` on the academy site, visible to the owner only until the specialist review (guardrail 5). A private copy is also on claude.ai. `node scripts/themata/sync-machine-page.mjs` carries the page and the export into `academy/web/`; rerun it after any new export.
 3. **Sextus and Bobzien 1996 ingested** [DONE 2026-09-30, marked by Kyle] into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
-4. **Ledger rebuilt on primary texts.** [CURRENT] Remove secondary summaries as evidence. Kyle signs off every entry.
-5. **Bobzien's reconstruction encoded as a candidate.** Rerun the harness and report results against the existing candidates.
+4. **Ledger rebuilt on primary texts.** [DONE 2026-10-26, marked by Kyle] Remove secondary summaries as evidence. Kyle signs off every entry.
+5. **Bobzien's reconstruction encoded as a candidate.** [CURRENT] Rerun the harness and report results against the existing candidates.
 6. **Review package for a Stoic logic specialist.** Ledger, encoding choices, results, and open questions.
 
 ## Milestone 1 brief: machine data export (done)
@@ -186,3 +185,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-10-23: Milestone 4. Kyle's second ledger review: S008, S010-S014, S016, S017 and S019 signed off (`verified_on: 2026-10-23`), each as a faithful report of its sources, with the open questions in its notes left for the specialist review. S018 held. Stale notes on S014 (pending licences) and S016 (do not promote) marked superseded. 18 of 19 argument forms now signed; no rules. Export and pages regenerated.
 * 2026-10-23 (later): Milestone 4. S018 checked for a second witness to the Sorites chain form: Cicero, Acad. II.92-94, Sextus, M VII.416-421 and PH II.253 give the Sorites as questions or as a series of presentations, not as premisses; Bobzien 2002 (n. 3) says DL 7.82 is the only evidence for a premiss-conclusion version. Recorded in S018's notes; S018 signed off as a faithful report of DL 7.82. All 19 argument forms are now signed; no rules. Export and pages regenerated.
 * 2026-10-26: Milestone 4. Kyle signed off all 19 rules in `rules.yaml` (`verified_on: 2026-10-26`), each as a faithful report of its source, with open questions left for the specialist review; T05, T06, R01 and R02 carry a note that the sign-off covers the report of a Mode 2 summary, not the summary as evidence. T04 moved from `primary-proposals.yaml`: it now quotes Wallies's Alexander, in APr. 283.12-14 and 284.12-15, instead of Zeller, and the pending check of our reading of the Greek is closed. The proposals file is empty. `verify_ledger.py` passes for rules, suite and proposals. Every ledger entry is now signed off. Not marked done: that is Kyle's call.
+* 2026-10-26: Kyle marked milestone 4 done; milestone 5 (Bobzien's reconstruction encoded as a candidate) is now current. Her T1-T4 are in rules R03, cited from the 1996 paper (p. 153), and the 2026-09-27 ruling against a Bobzien module is satisfied.
