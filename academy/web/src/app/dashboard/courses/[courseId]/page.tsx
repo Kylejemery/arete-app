@@ -37,6 +37,7 @@ import SeminarTrackCourse from '@/components/seminar-track/SeminarTrackCourse';
 import { ReadingControls, useReadingView } from '@/components/ReadingView';
 import { Phil801PartFigures } from '@/components/phil801';
 import { getProfile } from '@/lib/db';
+import { COURSE_PAGE_HEIGHT, MobilePaneTabs, paneClass, paneWidth, type MobilePane } from '@/components/MobilePanes';
 import type { AgentId, Enrollment, SeminarSession, SeminarMessage, Tier } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -1091,7 +1092,7 @@ function Phil702SessionContent({ session, courseId, onQuizClick }: { session: Ph
 
 interface DrillMsg { role: 'user' | 'assistant'; content: string }
 
-function DrillChatPanel({ courseId, width }: { courseId: string; width: number }) {
+function DrillChatPanel({ courseId, width, paneClassName }: { courseId: string; width: number; paneClassName: string }) {
   const [messages, setMessages] = useState<DrillMsg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1136,8 +1137,8 @@ function DrillChatPanel({ courseId, width }: { courseId: string; width: number }
 
   return (
     <div
-      className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
-      style={{ width }}
+      className={`${paneClassName} flex-col flex-1 min-h-0 lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)]`}
+      style={paneWidth(width)}
     >
       <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">
         <div className="flex items-center gap-2.5 mb-0.5">
@@ -1181,7 +1182,7 @@ function DrillChatPanel({ courseId, width }: { courseId: string; width: number }
 
       <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">
         <textarea
-          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
+          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-base lg:text-sm resize-none"
           rows={2}
           placeholder="Submit an attempt or ask a grammar question…"
           value={input}
@@ -1210,6 +1211,9 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
   const [leftWidth, setLeftWidth] = useState(220);
   const [rightWidth, setRightWidth] = useState(380);
   const view = useReadingView();
+  const [mobilePane, setMobilePane] = useState<MobilePane>('lesson');
+  // Full page shows the lesson alone, at every width.
+  const pane: MobilePane = view.fullPage ? 'lesson' : mobilePane;
   const [initializing, setInitializing] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   // Quiz results (session_progress), for the completion markers only: language
@@ -1278,8 +1282,8 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
   }
 
   return (
-    <div className="flex flex-col bg-navy" style={{ height: '100vh' }}>
-      <header className="flex-shrink-0 h-14 flex items-center justify-between px-6 border-b border-academy-border bg-academy-card">
+    <div className={`flex flex-col bg-navy ${COURSE_PAGE_HEIGHT}`}>
+      <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 sm:px-6 border-b border-academy-border bg-academy-card">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-gold text-sm transition-colors">
             ← Courses
@@ -1296,13 +1300,14 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
           ✎ Submit Paper
         </Link>
       </header>
+      {!view.fullPage && <MobilePaneTabs active={pane} onChange={setMobilePane} agentLabel="Drill" />}
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Session list */}
         <aside
-          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
-          style={{ width: leftWidth }}
+          className={`${paneClass('sessions', pane, 'block')} flex-1 min-h-0 overflow-y-auto lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)] bg-academy-card`}
+          style={paneWidth(leftWidth)}
         >
           <div className="p-5">
             <div className="hidden lg:block mb-5">
@@ -1335,7 +1340,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
               {sessionItems.map(s => (
                 <button
                   key={s.id}
-                  onClick={() => !s.locked && setActiveSessionId(s.id)}
+                  onClick={() => { if (!s.locked) { setActiveSessionId(s.id); setMobilePane('lesson'); } }}
                   disabled={s.locked}
                   className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2.5 transition-all ${
                     s.id === activeSessionId
@@ -1380,7 +1385,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         </div>
 
         {/* CENTER: Lesson */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`${paneClass('lesson', pane, 'block')} flex-1 min-h-0 overflow-y-auto`}>
           <ReadingControls view={view} />
           <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
             <LanguageLessonContent session={activeSession} mono={courseId === 'latn-101'} courseId={courseId} onQuizRecorded={refreshProgress} />
@@ -1395,7 +1400,7 @@ function LanguageCoursePage({ courseId }: { courseId: string }) {
         />
 
         {/* RIGHT: Drill agent */}
-        <DrillChatPanel courseId={courseId} width={rightWidth} />
+        <DrillChatPanel courseId={courseId} width={rightWidth} paneClassName={paneClass('agent', pane, 'flex')} />
         </div>
       </div>
     </div>
@@ -1436,6 +1441,9 @@ function SeminarPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [paperExpanded, setPaperExpanded] = useState(false);
   const view = useReadingView();
+  const [mobilePane, setMobilePane] = useState<MobilePane>('lesson');
+  // Full page shows the lesson alone, at every width.
+  const pane: MobilePane = view.fullPage ? 'lesson' : mobilePane;
   const [briefingComplete, setBriefingComplete] = useState(false);
   // PHIL 707 capstone gate (the fast must have run and been reviewed) and
   // PHIL 706 practicum context for the Proctor.
@@ -1459,6 +1467,11 @@ function SeminarPage() {
   const [evaluating, setEvaluating] = useState(false);
   const [lastEvalTurn, setLastEvalTurn] = useState(0);
   const [objectivesOpen, setObjectivesOpen] = useState(true);
+  // On a phone the open objectives push the conversation off screen; start
+  // them folded there.
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 1023px)').matches) setObjectivesOpen(false);
+  }, []);
   // Set when a Proctor reply sends the student to "Assess my understanding";
   // the button glows until it is pressed.
   const [assessNudge, setAssessNudge] = useState(false);
@@ -1897,10 +1910,10 @@ function SeminarPage() {
   }
 
   return (
-    <div className="flex flex-col bg-navy" style={{ height: '100vh' }}>
+    <div className={`flex flex-col bg-navy ${COURSE_PAGE_HEIGHT}`}>
 
       {/* ── HEADER ── */}
-      <header className="flex-shrink-0 h-14 flex items-center justify-between px-6 border-b border-academy-border bg-academy-card">
+      <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 sm:px-6 border-b border-academy-border bg-academy-card">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-gold text-sm transition-colors">
             &larr; Courses
@@ -1917,6 +1930,7 @@ function SeminarPage() {
           &#9998; Submit Paper
         </Link>
       </header>
+      {!view.fullPage && <MobilePaneTabs active={pane} onChange={setMobilePane} agentLabel="Dialogue" />}
 
       {/* ── THREE COLUMNS ── */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
@@ -1924,8 +1938,8 @@ function SeminarPage() {
         <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Course Navigation */}
         <aside
-          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
-          style={{ width: leftWidth }}
+          className={`${paneClass('sessions', pane, 'block')} flex-1 min-h-0 overflow-y-auto lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)] bg-academy-card`}
+          style={paneWidth(leftWidth)}
         >
           <div className="p-5">
             <div className="hidden lg:block mb-5">
@@ -1944,7 +1958,7 @@ function SeminarPage() {
               {sessions.map(s => (
                 <button
                   key={s.id}
-                  onClick={() => !s.locked && setActiveSessionId(s.id)}
+                  onClick={() => { if (!s.locked) { setActiveSessionId(s.id); setMobilePane('lesson'); } }}
                   disabled={s.locked}
                   className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2.5 transition-all ${
                     s.id === activeSessionId
@@ -1985,7 +1999,7 @@ function SeminarPage() {
           const quizQs = getQuizQuestions(courseId, activeSessionId);
           const showQuizTab = !isLocked && quizQs.length > 0;
           return (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className={`${paneClass('lesson', pane, 'flex')} flex-1 min-h-0 flex-col overflow-hidden`}>
               {/* Tab bar — Lesson / Quiz */}
               {showQuizTab && (
                 <div className="flex-shrink-0 border-b border-academy-border bg-academy-card">
@@ -2193,8 +2207,8 @@ function SeminarPage() {
 
         {/* RIGHT: Proctor Chat */}
         <div
-          className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
-          style={{ width: rightWidth }}
+          className={`${paneClass('agent', pane, 'flex')} flex-col flex-1 min-h-0 lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)]`}
+          style={paneWidth(rightWidth)}
         >
 
           {/* Proctor header */}
@@ -2310,7 +2324,7 @@ function SeminarPage() {
           {/* Input */}
           <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">
             <textarea
-              className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
+              className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-base lg:text-sm resize-none"
               rows={2}
               placeholder="Respond to the Proctor..."
               value={input}
@@ -2366,7 +2380,7 @@ function Phil705SessionPill({ kind }: { kind: 'seminar' | 'exam' }) {
   );
 }
 
-function ProctorChatPanel({ session, width }: { session: Phil705Session; width: number }) {
+function ProctorChatPanel({ session, width, paneClassName }: { session: Phil705Session; width: number; paneClassName: string }) {
   const [messages, setMessages] = useState<DrillMsg[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -2415,8 +2429,8 @@ function ProctorChatPanel({ session, width }: { session: Phil705Session; width: 
 
   return (
     <div
-      className="lg:flex-shrink-0 flex flex-col border-t lg:border-t-0 border-academy-border min-h-[560px] lg:min-h-0"
-      style={{ width }}
+      className={`${paneClassName} flex-col flex-1 min-h-0 lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)]`}
+      style={paneWidth(width)}
     >
       <div className="flex-shrink-0 px-5 py-4 border-b border-academy-border bg-academy-card">
         <div className="flex items-center gap-2.5 mb-0.5">
@@ -2460,7 +2474,7 @@ function ProctorChatPanel({ session, width }: { session: Phil705Session; width: 
 
       <div className="flex-shrink-0 border-t border-academy-border p-4 flex gap-2.5">
         <textarea
-          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-sm resize-none"
+          className="flex-1 bg-navy border border-academy-border rounded-lg px-4 py-3 text-academy-text placeholder-academy-muted focus:border-academy-gold focus:outline-none text-base lg:text-sm resize-none"
           rows={2}
           placeholder="Respond to the Proctor..."
           value={input}
@@ -2525,6 +2539,9 @@ function Phil705CoursePage() {
   const [initializing, setInitializing] = useState(true);
   const [sessionProgress, setSessionProgress] = useState<Record<number, string>>({});
   const view = useReadingView();
+  const [mobilePane, setMobilePane] = useState<MobilePane>('lesson');
+  // Full page shows the lesson alone, at every width.
+  const pane: MobilePane = view.fullPage ? 'lesson' : mobilePane;
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
   const widthsRef = useRef({ leftWidth, rightWidth });
@@ -2604,8 +2621,8 @@ function Phil705CoursePage() {
   }
 
   return (
-    <div className="flex flex-col bg-navy" style={{ height: '100vh' }}>
-      <header className="flex-shrink-0 h-14 flex items-center justify-between px-6 border-b border-academy-border bg-academy-card">
+    <div className={`flex flex-col bg-navy ${COURSE_PAGE_HEIGHT}`}>
+      <header className="flex-shrink-0 h-14 flex items-center justify-between px-4 sm:px-6 border-b border-academy-border bg-academy-card">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/courses" className="text-academy-muted hover:text-academy-gold text-sm transition-colors">
             &larr; Courses
@@ -2622,13 +2639,14 @@ function Phil705CoursePage() {
           &#9998; Submit Paper
         </Link>
       </header>
+      {!view.fullPage && <MobilePaneTabs active={pane} onChange={setMobilePane} agentLabel="Proctor" />}
 
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         <div className={view.fullPage ? 'hidden' : 'contents'}>
         {/* LEFT: Block-grouped session list */}
         <aside
-          className="lg:flex-shrink-0 lg:overflow-y-auto border-b lg:border-b-0 border-academy-border bg-academy-card"
-          style={{ width: leftWidth }}
+          className={`${paneClass('sessions', pane, 'block')} flex-1 min-h-0 overflow-y-auto lg:flex-none lg:flex-shrink-0 lg:w-[var(--pane-w)] bg-academy-card`}
+          style={paneWidth(leftWidth)}
         >
           <div className="p-5">
             <div className="hidden lg:block mb-5">
@@ -2658,7 +2676,7 @@ function Phil705CoursePage() {
                       return (
                         <button
                           key={s.id}
-                          onClick={() => !locked && setActiveSessionId(s.id)}
+                          onClick={() => { if (!locked) { setActiveSessionId(s.id); setMobilePane('lesson'); } }}
                           disabled={locked}
                           className={`w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-start gap-2.5 transition-all ${
                             s.id === activeSessionId
@@ -2704,7 +2722,7 @@ function Phil705CoursePage() {
         </div>
 
         {/* CENTER: Briefing + session content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className={`${paneClass('lesson', pane, 'block')} flex-1 min-h-0 overflow-y-auto`}>
           <ReadingControls view={view} />
           <div className="max-w-2xl mx-auto px-6 py-10" style={view.contentStyle}>
             <LectureVideoBlock sessionId={activeSession.id} />
@@ -2742,7 +2760,7 @@ function Phil705CoursePage() {
         />
 
         {/* RIGHT: Socratic Proctor */}
-        <ProctorChatPanel session={activeSession} width={rightWidth} />
+        <ProctorChatPanel session={activeSession} width={rightWidth} paneClassName={paneClass('agent', pane, 'flex')} />
         </div>
       </div>
     </div>
