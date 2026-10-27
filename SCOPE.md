@@ -32,13 +32,13 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 
 ## Where things stand
 
-*Updated 2026-10-26. The milestone list below is the authority on what is current.*
+*Updated 2026-10-27. The milestone list below is the authority on what is current.*
 
 **Done**
 
 * Evidence ledger, `evidence/suite.yaml`: 19 argument forms, 17 formal. Every form quotes a primary text, in `rag_corpus` or `research_sources` (Bury's Sextus, Wallies's Alexander, Origen), and every quotation passes `themata_ledger_problems`.
 * Stoic logic encoded in Lean 4, with candidate reconstructions and an evaluation harness. 164 of 804 candidate-settings fit, all proven; 586 of 640 non-fits proven (67 candidates, Bobzien's included).
-* The machine data export and the Themata Machine page (milestones 1 and 2).
+* The machine data export and the Themata Machine page (milestones 1 and 2), the ledger rebuilt on primary texts (milestone 4), and Bobzien's reconstruction encoded as a candidate (milestone 5, PR #445).
 * First results, all relative to the current encoding:
   * the rules are sound in a relevance semantics, where a repeated premise can count once but premises cannot be added freely
   * Origen's two conditionals argument forces the first thema, relative to the current candidates
@@ -78,8 +78,8 @@ Work on the current milestone only. Do not start the next one until Kyle marks t
 2. **Machine page** [DONE 2026-09-29, marked by Kyle; delivered in #314] built and published. Kyle asked for it in this repo after all: the source is `themata/machine.html`, and it runs at `/playground/themata-machine` on the academy site, visible to the owner only until the specialist review (guardrail 5). A private copy is also on claude.ai. `node scripts/themata/sync-machine-page.mjs` carries the page and the export into `academy/web/`; rerun it after any new export.
 3. **Sextus and Bobzien 1996 ingested** [DONE 2026-09-30, marked by Kyle] into the corpus. Sextus means *Outlines of Pyrrhonism* II and *Against the Logicians*.
 4. **Ledger rebuilt on primary texts.** [DONE 2026-10-26, marked by Kyle] Remove secondary summaries as evidence. Kyle signs off every entry.
-5. **Bobzien's reconstruction encoded as a candidate.** [CURRENT] Rerun the harness and report results against the existing candidates.
-6. **Review package for a Stoic logic specialist.** Ledger, encoding choices, results, and open questions.
+5. **Bobzien's reconstruction encoded as a candidate.** [DONE 2026-10-27, marked by Kyle; delivered in #445] Rerun the harness and report results against the existing candidates.
+6. **Review package for a Stoic logic specialist.** [CURRENT] Ledger, encoding choices, results, and open questions.
 
 ## Milestone 1 brief: machine data export (done)
 
@@ -187,3 +187,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-10-26: Milestone 4. Kyle signed off all 19 rules in `rules.yaml` (`verified_on: 2026-10-26`), each as a faithful report of its source, with open questions left for the specialist review; T05, T06, R01 and R02 carry a note that the sign-off covers the report of a Mode 2 summary, not the summary as evidence. T04 moved from `primary-proposals.yaml`: it now quotes Wallies's Alexander, in APr. 283.12-14 and 284.12-15, instead of Zeller, and the pending check of our reading of the Greek is closed. The proposals file is empty. `verify_ledger.py` passes for rules, suite and proposals. Every ledger entry is now signed off. Not marked done: that is Kyle's call.
 * 2026-10-26: Kyle marked milestone 4 done; milestone 5 (Bobzien's reconstruction encoded as a candidate) is now current. Her T1-T4 are in rules R03, cited from the 1996 paper (p. 153), and the 2026-09-27 ruling against a Bobzien module is satisfied.
 * 2026-10-26: Milestone 5. Bobzien's T1-T4 (1996, p. 153; rules R03) encoded in `lean/Stoic/Themata/Bobzien.lean` as restrictions of the existing shapes (new `Rule.restrict`, with one carry-over lemma per proved property), appended as the 67th candidate. Harness: 804 candidate-settings, 164 fit, all proven; 586 of 640 non-fits proven. Bobzien fits in all six `toggle` settings (every premise view, both single-premise policies) and fails provably under `negate` (the Sorites). S011 and S012 derive at depth 1 and S020 at depth 3, matching her analyses (pp. 168-171). Her profile is identical, cell for cell, to `contrapose[either,any] + cut[any,any,merge]` and `contrapose[either,any] + cut[two,any,merge]`, so her restrictions change nothing on this ledger and she does not narrow the answer. FINDINGS, NOTES, findings page, export and Machine page updated. Not marked done: that is Kyle's call.
+* 2026-10-27: Kyle marked milestone 5 done (delivered in #445); milestone 6 (review package for a Stoic logic specialist) is now current.
