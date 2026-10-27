@@ -46,7 +46,8 @@ interface UnitDetail { admin: boolean; unit: Unit; readings: Reading[]; transcri
 
 async function authed(path: string) {
   const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(`${API_BASE}${path}`, { headers: { Authorization: `Bearer ${session?.access_token ?? ''}` }, cache: 'no-store' });
+  // Same origin: app/api/seminar/[...path] forwards to the Railway server.
+  const res = await fetch(path, { headers: { Authorization: `Bearer ${session?.access_token ?? ''}` }, cache: 'no-store' });
   const data = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, data };
 }
