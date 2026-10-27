@@ -29,6 +29,7 @@ import { ChatMessage, TypingIndicator } from '@/components/seminar/ChatMessage';
 import StudentQuiz, { type QuizQuestion } from '@/components/StudentQuiz';
 import { ReadingControls, useReadingView } from '@/components/ReadingView';
 import { toRoman } from '@/lib/roman';
+import { MobilePaneTabs, paneClass, type MobilePane } from '@/components/MobilePanes';
 import type { SeminarMessage, SeminarSession } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -66,6 +67,9 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
   const [progress, setProgress] = useState<Record<number, string>>({});
   const [tab, setTab] = useState<'reading' | 'transcript' | 'quiz'>('reading');
   const view = useReadingView();
+  const [mobilePane, setMobilePane] = useState<MobilePane>('lesson');
+  // Full page shows the unit alone, at every width.
+  const pane: MobilePane = view.fullPage ? 'lesson' : mobilePane;
 
   const loadProgress = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -116,9 +120,10 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
   if (!course) return <p className="text-academy-muted text-sm italic p-8">Opening the seminar room...</p>;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] min-h-0">
+    <div className="flex flex-col lg:flex-row h-[calc(100dvh-4.5rem)] md:h-[calc(100vh-4rem)] min-h-0">
+      {!view.fullPage && <MobilePaneTabs active={pane} onChange={setMobilePane} agentLabel="Proctor" sessionsLabel="Units" />}
       {/* Units */}
-      <aside className={`w-[220px] flex-shrink-0 border-r border-academy-border overflow-y-auto py-6 px-4 ${view.fullPage ? 'hidden' : ''}`}>
+      <aside className={`${paneClass('sessions', pane, 'block')} flex-1 min-h-0 lg:flex-none lg:w-[220px] flex-shrink-0 lg:border-r border-academy-border overflow-y-auto py-6 px-4 ${view.fullPage ? '!hidden' : ''}`}>
         <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-academy-gold mb-1">{course.id.replace('sem-', 'SEM ')}</p>
         <h1 className="font-serif text-lg text-academy-text leading-snug mb-1">{course.title}</h1>
         {course.subtitle && <p className="text-academy-muted text-xs italic mb-5">{course.subtitle}</p>}
@@ -129,7 +134,7 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
           {units.map(u => (
             <li key={u.id}>
               <button
-                onClick={() => !locked[u.unit_number] && setActiveNumber(u.unit_number)}
+                onClick={() => { if (!locked[u.unit_number]) { setActiveNumber(u.unit_number); setMobilePane('lesson'); } }}
                 disabled={locked[u.unit_number]}
                 className={`w-full text-left rounded px-2 py-2 text-sm flex gap-2 ${u.unit_number === activeNumber ? 'bg-academy-card text-academy-gold' : locked[u.unit_number] ? 'text-academy-muted/50' : 'text-academy-text hover:bg-academy-card/60'}`}
               >
@@ -146,7 +151,7 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
       </aside>
 
       {/* The unit */}
-      <main className="flex-1 min-w-0 overflow-y-auto px-8 pb-6">
+      <main className={`${paneClass('lesson', pane, 'block')} flex-1 min-w-0 min-h-0 overflow-y-auto px-5 sm:px-8 pb-6`}>
         <ReadingControls view={view} />
         <div className={`pt-2 ${view.fullPage ? 'max-w-3xl mx-auto' : ''}`} style={view.contentStyle}>
         {!active ? (
@@ -188,7 +193,7 @@ export default function SeminarTrackCourse({ courseId }: { courseId: string }) {
       </main>
 
       {/* The Proctor: hidden, not unmounted, in full page so it keeps its thread. */}
-      <aside className={`w-[380px] flex-shrink-0 border-l border-academy-border flex-col min-h-0 ${view.fullPage ? 'hidden' : 'flex'}`}>
+      <aside className={`${paneClass('agent', pane, 'flex')} flex-1 lg:flex-none lg:w-[380px] flex-shrink-0 lg:border-l border-academy-border flex-col min-h-0 ${view.fullPage ? '!hidden' : ''}`}>
         {active && detail && !locked[active.unit_number]
           ? <ProctorPanel key={active.id} course={course} unit={active} detail={detail} />
           : <p className="text-academy-muted italic text-sm p-6">The Proctor convenes when a unit is open.</p>}
@@ -395,7 +400,7 @@ function ProctorPanel({ course, unit, detail }: { course: Course; unit: Unit; de
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
           rows={3}
           placeholder="Answer the Proctor"
-          className="w-full bg-academy-card border border-academy-border rounded p-3 text-sm text-academy-text resize-none focus:outline-none focus:border-academy-gold/60"
+          className="w-full bg-academy-card border border-academy-border rounded p-3 text-base lg:text-sm text-academy-text resize-none focus:outline-none focus:border-academy-gold/60"
         />
         <button onClick={send} disabled={loading || !input.trim() || !session} className="mt-2 w-full text-xs font-bold tracking-widest uppercase bg-academy-gold text-academy-bg rounded py-2 disabled:opacity-40">
           Send
