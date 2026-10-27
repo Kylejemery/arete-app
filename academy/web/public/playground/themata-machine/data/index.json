@@ -71,7 +71,8 @@
    "runs/c62.json",
    "runs/c63.json",
    "runs/c64.json",
-   "runs/c65.json"
+   "runs/c65.json",
+   "runs/c66.json"
   ]
  },
  "generated_by": "themata/harness/build_export.py, from lake exe harness --export and evidence/suite.yaml",
@@ -82,13 +83,13 @@
   "depth": 8
  },
  "axes": {
-  "candidates": 66,
+  "candidates": 67,
   "settings": 96,
   "formal_items": 17,
   "ledger_items": 19
  },
  "source": {
-  "commit": "d23819059a0ba3f8316f774974eb1de7f4db8bcb",
+  "commit": "12c994a3010ed9772a045510f34773e5332433d4",
   "inputs_clean": true,
   "inputs": [
    "themata/lean/",
@@ -96,42 +97,42 @@
    "themata/harness/"
   ],
   "encoding_version": {
-   "sha256": "ba1a098cb8250407ba9fefb472a786de4f01e2246c596f440160cc867d18fcd8",
+   "sha256": "ae7447c5236ab00b19a7c0bb5126c56a73e6f96f68965e672352c4d8670fedcd",
    "scope": "every tracked file under themata/lean/, paths and contents",
-   "files": 28,
+   "files": 29,
    "lean_toolchain": "leanprover/lean4:v4.22.0"
   },
   "ledger_sha256": "1c2cac5d63b786864ed52083f6e0dcdc525dbe2233f00de7dcffd802e300f991"
  },
  "counts": {
   "unit": "distinct searches: candidate x proof setting (single, contra, view) x formal item",
-  "searches": 13464,
-  "derived": 7988,
-  "not_found_within_depth": 1016,
-  "proven_underivable": 4460,
+  "searches": 13668,
+  "derived": 8126,
+  "not_found_within_depth": 1022,
+  "proven_underivable": 4520,
   "size_bound_hits": 0,
   "matches_ledger": {
-   "yes": 10760,
-   "no": 1912,
+   "yes": 10940,
+   "no": 1924,
    "unknown": 0,
-   "varies_with_cond": 792
+   "varies_with_cond": 804
   },
-  "redundant_variants": 7988,
-  "variant_derivation_lost": 7988,
-  "variant_loss_proven": 7988,
-  "duplicate_variants": 7988,
-  "duplicate_derivation_lost": 5026,
+  "redundant_variants": 8126,
+  "variant_derivation_lost": 8126,
+  "variant_loss_proven": 8126,
+  "duplicate_variants": 8126,
+  "duplicate_derivation_lost": 5114,
   "duplicate_loss_proven": 60,
   "variants_by_view": {
    "list": {
     "redundant_variant": {
      "derived": 0,
      "not_found_within_depth": 0,
-     "proven_underivable": 2466
+     "proven_underivable": 2512
     },
     "duplicate_variant": {
-     "derived": 28,
-     "not_found_within_depth": 2408,
+     "derived": 30,
+     "not_found_within_depth": 2452,
      "proven_underivable": 30
     }
    },
@@ -139,11 +140,11 @@
     "redundant_variant": {
      "derived": 0,
      "not_found_within_depth": 0,
-     "proven_underivable": 2616
+     "proven_underivable": 2662
     },
     "duplicate_variant": {
-     "derived": 28,
-     "not_found_within_depth": 2558,
+     "derived": 30,
+     "not_found_within_depth": 2602,
      "proven_underivable": 30
     }
    },
@@ -151,23 +152,23 @@
     "redundant_variant": {
      "derived": 0,
      "not_found_within_depth": 0,
-     "proven_underivable": 2906
+     "proven_underivable": 2952
     },
     "duplicate_variant": {
-     "derived": 2906,
+     "derived": 2952,
      "not_found_within_depth": 0,
      "proven_underivable": 0
     }
    }
   },
-  "run_records": 107712
+  "run_records": 109344
  },
  "invariance": {
   "method": "lake exe harness --export runs every search once under each of the 8 (cond, redundancy) combinations; this script compares the 8 records field by field. An observed check on this suite and these candidates, not a theorem.",
-  "searches_checked": 13464,
+  "searches_checked": 13668,
   "fields_identical": "every field except setting and matches_ledger",
   "matches_ledger": {
-   "varies_with_cond": 792,
+   "varies_with_cond": 804,
    "items": [
     "S008"
    ],

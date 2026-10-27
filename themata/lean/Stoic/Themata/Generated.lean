@@ -1,5 +1,6 @@
 import Stoic.Themata.Attested
 import Stoic.Themata.Mates
+import Stoic.Themata.Bobzien
 
 /-!
 # Generated variants
@@ -59,7 +60,9 @@ def generated : List Candidate :=
       rules := (f.map fun (w, a) => contrapose w a).toList ++
                (t.map fun (a, p, m) => cut a p m).toList }
 
-/-- Every candidate for Phase 4: the named ones, then the generated ones. -/
-def candidates : List Candidate := [attested, mates, matesDT] ++ generated
+/-- Every candidate for Phase 4: the named ones, then the generated ones, then
+Bobzien (milestone 5), appended last so the earlier candidates keep their
+indices in the export. -/
+def candidates : List Candidate := [attested, mates, matesDT] ++ generated ++ [bobzien]
 
 end Stoic.Themata

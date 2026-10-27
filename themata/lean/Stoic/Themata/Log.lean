@@ -24,7 +24,7 @@ def row (i : Nat) (c : Candidate) : String :=
   s!"| {i + 1} | {c.name} | {c.provenance.label} | {rules} | {sameAs c} |"
 
 def log : String :=
-  let named := [attested, mates, matesDT]
+  let named := [attested, mates, matesDT, bobzien]
   "\n".intercalate <|
     [ "# Phase 3 candidates"
     , ""

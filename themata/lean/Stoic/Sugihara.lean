@@ -276,11 +276,16 @@ theorem Candidate.soundS {c : Candidate} (hc : ∀ r ∈ c.rules, r.SoundS) (σ 
     rw [hconc] at h'
     exact h'.of_equiv heq
 
+/-- A restriction of a rule sound in the Sugihara model is sound there. -/
+theorem restrict_soundS {r : Rule} (h : r.SoundS) (n s : String) (g : List Argument → Bool) :
+    (r.restrict n s g).SoundS :=
+  fun σ P T as has _ hb => h σ P T as has _ (Rule.mem_restrict_step hb)
+
 theorem candidates_soundS : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.SoundS := by
   intro c hc r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
     exact cut_soundS _ _ _
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -299,6 +304,10 @@ theorem candidates_soundS : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.S
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_soundS _ _
     · exact cut_soundS _ _ _
+  · simp only [Themata.bobzien, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · unfold Themata.bobzienT1; exact restrict_soundS (contrapose_soundS _ _) _ _ _
+    · unfold Themata.bobzienT2to4; exact restrict_soundS (cut_soundS _ _ _) _ _ _
 
 /-- **Proven underivable.** A Sugihara countermodel that designates the
 background theory rules out derivation by every Phase 3 candidate, under every

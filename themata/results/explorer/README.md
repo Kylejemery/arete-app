@@ -19,9 +19,9 @@ example is not quoted from its passage, if any cell differs from
 not validate against `schema.json`.
 
 **Counts are distinct searches.** A search is one candidate × one proof
-setting (`single`, `contra`, `view`: 12 of them) × one formal item: 66 × 12 ×
-17 = 13,464. `runs/` holds eight records per search, one per (`cond`,
-`redundancy`), 107,712 in all. Quote the distinct figures (`index.json`
+setting (`single`, `contra`, `view`: 12 of them) × one formal item: 67 × 12 ×
+17 = 13,668. `runs/` holds eight records per search, one per (`cond`,
+`redundancy`), 109,344 in all. Quote the distinct figures (`index.json`
 `counts`); `counts.run_records` is the record total.
 
 **Review status.** No ledger entry is `verified_by_kyle`, and no specialist
@@ -35,7 +35,7 @@ Each run is one candidate × one setting × one formal item.
 
 | Axis | Values | Count |
 | --- | --- | --- |
-| candidate | the named reconstructions and generated variants, `Stoic/Themata/` | 66 |
+| candidate | the named reconstructions and generated variants, `Stoic/Themata/` | 67 |
 | `cond` | `philonian`, `diodorean`, `chrysippean`, `containment` | 4 |
 | `single` | `chrysippus`, `antipater` | 2 |
 | `contra` | `toggle`, `negate` | 2 |
@@ -46,7 +46,7 @@ Each run is one candidate × one setting × one formal item.
 That is 96 settings. The parameter names and values are the constructor
 names in `lean/Stoic/Params.lean`, read from Lean's `Repr`. Derivability
 reads only `single`, `contra` and `view`, so the 96 settings fold into 12
-proof settings and 13,464 distinct searches. The harness still makes every run
+proof settings and 13,668 distinct searches. The harness still makes every run
 under its full parameter record. `cond` and `redundancy` enter through
 `semantics` and through the S008 criterion check.
 
@@ -58,10 +58,10 @@ the eight (`cond`, `redundancy`) combinations, and `build_export.py` compares
 the eight records field by field:
 
 - every field except `setting` and `matches_ledger` is identical in all eight
-  records, for all 13,464 searches: `cell`, `status`, `depth`,
+  records, for all 13,668 searches: `cell`, `status`, `depth`,
   `within_depth`, `saturated`, `truncated`, `proof`, the reduction, and both
   redundant variants' results;
-- `matches_ledger` varies in 792 searches, every S008 search, and only with
+- `matches_ledger` varies in 804 searches, every S008 search, and only with
   `cond`, never with `redundancy`. S008 is `valid_nonsyllogistic`, so its
   match also asks the DL 7.77 criterion, which reads `cond`: it is `unknown`
   under `diodorean` and `yes` under the other three.

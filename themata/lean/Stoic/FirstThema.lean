@@ -86,7 +86,7 @@ theorem Candidate.holdsW {c : Candidate} (hc : c ∈ Themata.candidates)
       have hnr := hn r hr
       simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
         or_false] at hc
-      rcases hc with (rfl | rfl | rfl) | hc
+      rcases hc with ((rfl | rfl | rfl) | hc) | rfl
       · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
         exact ⟨_, _, _, rfl⟩
       · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -105,6 +105,9 @@ theorem Candidate.holdsW {c : Candidate} (hc : c ∈ Themata.candidates)
         rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
         · simp [contrapose] at hnr
         · exact ⟨_, _, _, rfl⟩
+      · exfalso
+        have h1 := hn Themata.bobzienT1 (by simp [Themata.bobzien])
+        simp [Themata.bobzienT1, Rule.restrict, contrapose] at h1
     obtain ⟨ua, ps, m, hs⟩ := hcut
     rw [hs] at hb'
     have := cut_holdsW ua ps m P _ _ ih b' hb'

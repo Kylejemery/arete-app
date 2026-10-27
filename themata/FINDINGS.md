@@ -24,9 +24,9 @@ several fit, so the evidence underdetermines the answer; or none fit.
 **Several fit, so the evidence underdetermines the themata. It does, however,
 fix three features of the logic.**
 
-- **50 of the 66 candidate rule sets fit** the ledger under at least one
-  parameter setting: 158 candidate-settings out of 792.
-- **All 158 fits are proven.** Each required derivation was found, and each
+- **51 of the 67 candidate rule sets fit** the ledger under at least one
+  parameter setting: 164 candidate-settings out of 804.
+- **All 164 fits are proven.** Each required derivation was found, and each
   rejection is covered by a Lean theorem.
 
 The fits agree on three things, and those are the findings with content:
@@ -63,7 +63,7 @@ Two things the suite cannot settle:
 | --- | --- | --- |
 | 1 | Evidence ledger: 19 argument forms and 19 rules or definitions, each quoting a verified passage from the corpus or from a stored research source | `evidence/suite.yaml`, `evidence/rules.yaml`, `evidence/gaps.md` |
 | 2 | Stoic propositional logic as its own object language in Lean 4; the five indemonstrables; parameters for the disputed readings | `lean/Stoic/*.lean` |
-| 3 | 66 candidate rule sets: the attested third thema, Mates (two variants), and 63 generated variants | `lean/Stoic/Themata/`, `results/candidates.md` |
+| 3 | 67 candidate rule sets: the attested third thema, Mates (two variants), Bobzien (1996), and 63 generated variants | `lean/Stoic/Themata/`, `results/candidates.md` |
 | 4 | Evaluation of every candidate × setting × item, with proofs of underivability | `lean/Stoic/Harness/`, `Soundness.lean`, `Sugihara.lean`, `Undergeneration.lean`, `FirstThema.lean`, `results/matrix.md` |
 
 Every interpretive decision, and the reason for it, is in `NOTES.md`.
@@ -109,25 +109,28 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
 1. **No overgeneration anywhere.** No candidate, under any setting, derives
    anything the ledger rejects, and every such cell is proven.
 2. **Fits.**
-   - 158 candidate-settings fit, across 50 candidates.
+   - 164 candidate-settings fit, across 51 candidates.
    - All of them use the `toggle` contradictory.
-   - 100 of them use the `set` view.
-   - The rest use the merging cut, under `multiset` (50) or `list` (8).
+   - 102 of them use the `set` view.
+   - The rest use the merging cut, under `multiset` (52) or `list` (10).
 3. **The named candidates.**
    - `Attested` (third thema only) fits nowhere: it fails on S020.
    - `Mates` (first and third) fits under the `set` view.
    - `Mates + dialectical theorem` fits under `set` and `multiset`.
+   - `Bobzien` fits under every view (`list`, `multiset`, `set`) with
+     either single-premise policy, wherever the contradictory is `toggle`
+     (section 5).
 4. **The sixteen candidates that never fit.**
    - Seven lack a third thema. The composite arguments S012, S013 and S018
      need cut.
    - Nine lack a first thema: `Attested` and the eight generated cut-only
      sets. S020 needs contraposition.
 5. **Non-fits.**
-   - 580 of the 634 non-fitting candidate-settings are proven not to fit.
+   - 586 of the 640 non-fitting candidate-settings are proven not to fit.
    - The other 54 fail only on search-bounded cells. They are mostly the
      Sorites and S020 under the `list` view, where the ledger's premise order
      matters, and cut-free candidates under `set`.
-   - So 158 is a proven lower bound on the number of fits.
+   - So 164 is a proven lower bound on the number of fits.
 6. **Redundancy (finding F1).**
    - S016 is valid by the Stoic validity criterion (DL 7.77) under every
      reading of the conditional, so its rejection rests on redundancy alone.
@@ -147,22 +150,33 @@ Full tables: `results/matrix.md` (and `matrix.csv` for every cell).
 - **The second and fourth themata are not isolated.** No attested argument in
   the ledger distinguishes a separate second or fourth thema from what the
   first thema and cut already give.
-- **Bobzien is not yet tested, but she agrees on the profile.** Her paper
-  ("Stoic Syllogistic", 1996) is now held in full in `research_sources`, so
-  the 2026-09-27 ruling no longer blocks a Bobzien module; none is encoded yet
-  (SCOPE milestone 5). This section used to report that her reconstruction is
-  monotonic and without contraction, the opposite of every fit here. That came
-  from a Mode 2 summary that reversed her section 5 (rules R03, rewritten
-  2026-10-22). In the paper monotonicity fails, because of the redundancy
-  restriction, and contraction is partly covered by her second thema
-  (pp. 181-182). She uses that thema exactly where the harness needs
-  contraction: on the indifferently concluding argument (S011, p. 168), on
-  Origen's two conditionals together with the first thema twice (S020,
-  p. 169), and on the "infinite content" arguments of S012's shape (p. 171).
-  Her suggestion that premiss doublets were removed before the themata were
-  applied (n. 96) points to the `set` view. The conflict was an artefact of
-  the summary; what remains open is whether her T1-T4, encoded, fit the
-  ledger.
+- **Bobzien's reconstruction fits (milestone 5, 2026-10-26).** Her T1-T4
+  ("Stoic Syllogistic", 1996, p. 153; rules R03) are encoded in
+  `lean/Stoic/Themata/Bobzien.lean`: T1/T1+ as contraposition of either
+  premise for two or more premises, and T2-T4 with their + forms as a merging
+  cut from a two-premiss first component. Both are restrictions of existing
+  shapes (`Rule.restrict`), so every soundness and invariant proof covers
+  her.
+  - She fits in all six `toggle` settings: every premise view, both
+    single-premise policies. The six `negate` settings fail, provably, on
+    the Sorites (S018, Gödel G₃ countermodel), as every candidate does.
+  - She derives S011, S012 and S020 in the way she analyses them (pp.
+    168-171): S011 and S012 at depth 1, S020 at depth 3, each through the
+    merging cut.
+  - She fits under `list`, where the ledger's premise order matters, which
+    only five of the 67 candidates do; all five are contraposition of either
+    premise plus a merging cut.
+  - She does not narrow the answer. Her 12-setting profile is, cell for
+    cell, that of two generated candidates, `contrapose[either,any] +
+    cut[any,any,merge]` and `contrapose[either,any] + cut[two,any,merge]`:
+    her restrictions (no one-premiss argument to contrapose, a two-premiss
+    first component) change nothing on this ledger, as her n. 68 leads one
+    to expect.
+  This section used to report a conflict between her reconstruction and the
+  fits here; that came from a Mode 2 summary that reversed her section 5
+  (rules R03, rewritten 2026-10-22). With her paper read and encoded, her
+  reconstruction is one of the fits: contraction without weakening, as she
+  says (pp. 181-182).
 
 ## 6. Limits and caveats
 

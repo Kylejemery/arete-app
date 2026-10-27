@@ -170,6 +170,26 @@ def cut (userAr : Arity) (pos : Position) (merge : Bool) : Rule :=
   let shape := s!"cut[{userAr.label},{pos.label}{if merge then ",merge" else ""}]"
   { name := shape, shape, step := cutStep userAr pos merge, merging := merge, isCut := true }
 
+/-! ## Restriction -/
+
+/-- A rule restricted by a guard on its inputs: the same outputs when the
+guard holds, none otherwise. Bobzien's themata are restrictions of the two
+shapes above (`Bobzien.lean`). Every property proved of a rule by quantifying
+over its outputs (soundness, the premise-count and relevance invariants, the
+countermodel checks) carries over to a restriction, through
+`Rule.mem_restrict_step`. -/
+def Rule.restrict (r : Rule) (name shape : String) (guard : List Argument → Bool) : Rule :=
+  { r with name, shape, step := fun P as => if guard as then r.step P as else [] }
+
+theorem Rule.mem_restrict_step {r : Rule} {name shape : String} {guard : List Argument → Bool}
+    {P : Params} {as : List Argument} {b : Argument}
+    (h : b ∈ (r.restrict name shape guard).step P as) : b ∈ r.step P as := by
+  unfold Rule.restrict at h
+  dsimp only at h
+  split at h
+  · exact h
+  · simp at h
+
 /-! ## Candidates -/
 
 inductive Provenance where

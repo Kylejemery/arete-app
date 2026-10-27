@@ -7,6 +7,7 @@ import Stoic.Tests
 import Stoic.Themata.Rules
 import Stoic.Themata.Attested
 import Stoic.Themata.Mates
+import Stoic.Themata.Bobzien
 import Stoic.Themata.Generated
 import Stoic.Themata.Tests
 import Stoic.Soundness

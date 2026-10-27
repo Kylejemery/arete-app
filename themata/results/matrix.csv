@@ -791,3 +791,15 @@ candidate,provenance,setting,S001,S002,S003,S004,S005,S006,S007,S008,S009,S010,S
 "contrapose[major,two] + cut[two,first]",generated,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,UNDER■rel,UNDER,D1,D0,■rm,UNDER■g3,UNDER,false,false
 "contrapose[major,two] + cut[two,first]",generated,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,UNDER■rel,UNDER,D1,D0,■rm,UNDER■g3,UNDER,false,false
 "contrapose[major,two] + cut[two,first]",generated,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,chrysippus/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,D2,D3,true,true
+"Bobzien",reconstruction,chrysippus/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,D1,D3,true,true
+"Bobzien",reconstruction,chrysippus/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,D1,D3,true,true
+"Bobzien",reconstruction,chrysippus/negate/list,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,chrysippus/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,chrysippus/negate/set,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,■cm,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,antipater/toggle/list,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,D2,D3,true,true
+"Bobzien",reconstruction,antipater/toggle/multiset,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,D1,D3,true,true
+"Bobzien",reconstruction,antipater/toggle/set,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,D1,D3,true,true
+"Bobzien",reconstruction,antipater/negate/list,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,antipater/negate/multiset,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,UNDER■g3,UNDER,false,false
+"Bobzien",reconstruction,antipater/negate/set,D0,D0,D0,D0,D0,■cm,■cm,■rm,D0,D0,D1,D1,D1,D0,■rm,UNDER■g3,UNDER,false,false

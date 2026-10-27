@@ -230,11 +230,17 @@ theorem Candidate.soundG {c : Candidate} (hc : ∀ r ∈ c.rules, r.SoundG)
     rw [hconc] at h'
     exact h'.of_equiv heq
 
+/-- A restriction of a rule sound in G₃ is sound there. -/
+theorem restrict_soundG {r : Rule} (h : r.SoundG) (n s : String) (g : List Argument → Bool) :
+    (r.restrict n s g).SoundG := by
+  intro P hP T as has b hb
+  exact h P hP T as has b (Rule.mem_restrict_step hb)
+
 theorem candidates_soundG : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.SoundG := by
   intro c hc r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr
     exact cut_soundG _ _ _
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
@@ -253,6 +259,10 @@ theorem candidates_soundG : ∀ c ∈ Themata.candidates, ∀ r ∈ c.rules, r.S
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_soundG _ _
     · exact cut_soundG _ _ _
+  · simp only [Themata.bobzien, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with rfl | rfl
+    · unfold Themata.bobzienT1; exact restrict_soundG (contrapose_soundG _ _) _ _ _
+    · unfold Themata.bobzienT2to4; exact restrict_soundG (cut_soundG _ _ _) _ _ _
 
 /-- **Proven underivable**, `negate` contradictory: a G₃ countermodel that
 designates the theory rules out derivation by every Phase 3 candidate. -/
@@ -303,7 +313,7 @@ theorem candidates_keepLength : ∀ c ∈ Themata.candidates,
   have hnr := hn r hr
   simp only [Themata.candidates, List.mem_append, List.mem_cons, List.not_mem_nil,
     or_false] at hc
-  rcases hc with (rfl | rfl | rfl) | hc
+  rcases hc with ((rfl | rfl | rfl) | hc) | rfl
   · simp [Themata.attested, Themata.thirdSimplicius] at hr; subst hr; simp [cut] at hnr
   · simp [Themata.mates, Themata.firstMates, Themata.thirdMates] at hr
     rcases hr with rfl | rfl
@@ -321,6 +331,9 @@ theorem candidates_keepLength : ∀ c ∈ Themata.candidates,
     rcases hr with ⟨⟨w, a⟩, _, rfl⟩ | ⟨⟨a, p, m⟩, _, rfl⟩
     · exact contrapose_keepsLength _ _
     · simp [cut] at hnr
+  · exfalso
+    have h2 := hn Themata.bobzienT2to4 (by simp [Themata.bobzien])
+    simp [Themata.bobzienT2to4, Rule.restrict, cut] at h2
 
 theorem Candidate.length_two {c : Candidate} (hc : ∀ r ∈ c.rules, r.KeepsLength)
     {P : Params} {T : Theory} (hT : P.single = .chrysippus ∨ T = []) (hv : P.view ≠ .set)

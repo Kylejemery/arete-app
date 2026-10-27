@@ -37,13 +37,13 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
 **Done**
 
 * Evidence ledger, `evidence/suite.yaml`: 19 argument forms, 17 formal. Every form quotes a primary text, in `rag_corpus` or `research_sources` (Bury's Sextus, Wallies's Alexander, Origen), and every quotation passes `themata_ledger_problems`.
-* Stoic logic encoded in Lean 4, with candidate reconstructions and an evaluation harness. 158 of 792 candidate-settings fit, all proven; 580 of 634 non-fits proven.
+* Stoic logic encoded in Lean 4, with candidate reconstructions and an evaluation harness. 164 of 804 candidate-settings fit, all proven; 586 of 640 non-fits proven (67 candidates, Bobzien's included).
 * The machine data export and the Themata Machine page (milestones 1 and 2).
 * First results, all relative to the current encoding:
   * the rules are sound in a relevance semantics, where a repeated premise can count once but premises cannot be added freely
   * Origen's two conditionals argument forces the first thema, relative to the current candidates
   * the Sorites requires "not not p = p"
-  * Bobzien's reconstruction has the same profile: monotonicity fails, and her second thema supplies the contraction every fit needs (rules R03, from the 1996 paper, pp. 168-171, 181-182). An earlier summary had reported the opposite.
+  * Bobzien's reconstruction, encoded (milestone 5), fits in all six `toggle` settings under every premise view, and derives S011, S012 and S020 as she analyses them (pp. 168-171). Its profile is identical, cell for cell, to two generated candidates, so it does not narrow the answer.
 
 **Rulings already made in Phase 1**
 
@@ -63,7 +63,7 @@ Constraints that make Stoic logic unlike Lean's built in classical logic, which 
   * T05, T06, R01 and R02 rest on Mode 2 summaries; their sign-off notes say the summary is not evidence for the Stoic rule.
   * T04 now quotes Wallies's Alexander (in APr. 283.12-14, 284.12-15); its Stoic attribution rests on manuscript B.
 * Galen is not in the corpus or in `research_sources` (`evidence/gaps.md`).
-* Bobzien's reconstruction is engaged on paper (R03) but not encoded or run.
+* Bobzien is the only modern reconstruction encoded from her own text; Frede, Mignucci and Barnes are not held, and Mates rests on a summary.
 * Sign-offs: all 19 argument forms (2026-10-05 and 2026-10-23) and all 19 rules (2026-10-26). The sign-offs confirm that each entry reports its sources faithfully; the open questions in their notes are for the specialist review. S018 tests DL 7.82's version of the Sorites, the only witness to its chain form (Bobzien 2002, n. 3), not Chrysippus's.
 
 **Open items waiting on Kyle**
@@ -186,3 +186,4 @@ The corpus MCP server's `search_corpus` tool does not return chunk ids, so it ca
 * 2026-10-23 (later): Milestone 4. S018 checked for a second witness to the Sorites chain form: Cicero, Acad. II.92-94, Sextus, M VII.416-421 and PH II.253 give the Sorites as questions or as a series of presentations, not as premisses; Bobzien 2002 (n. 3) says DL 7.82 is the only evidence for a premiss-conclusion version. Recorded in S018's notes; S018 signed off as a faithful report of DL 7.82. All 19 argument forms are now signed; no rules. Export and pages regenerated.
 * 2026-10-26: Milestone 4. Kyle signed off all 19 rules in `rules.yaml` (`verified_on: 2026-10-26`), each as a faithful report of its source, with open questions left for the specialist review; T05, T06, R01 and R02 carry a note that the sign-off covers the report of a Mode 2 summary, not the summary as evidence. T04 moved from `primary-proposals.yaml`: it now quotes Wallies's Alexander, in APr. 283.12-14 and 284.12-15, instead of Zeller, and the pending check of our reading of the Greek is closed. The proposals file is empty. `verify_ledger.py` passes for rules, suite and proposals. Every ledger entry is now signed off. Not marked done: that is Kyle's call.
 * 2026-10-26: Kyle marked milestone 4 done; milestone 5 (Bobzien's reconstruction encoded as a candidate) is now current. Her T1-T4 are in rules R03, cited from the 1996 paper (p. 153), and the 2026-09-27 ruling against a Bobzien module is satisfied.
+* 2026-10-26: Milestone 5. Bobzien's T1-T4 (1996, p. 153; rules R03) encoded in `lean/Stoic/Themata/Bobzien.lean` as restrictions of the existing shapes (new `Rule.restrict`, with one carry-over lemma per proved property), appended as the 67th candidate. Harness: 804 candidate-settings, 164 fit, all proven; 586 of 640 non-fits proven. Bobzien fits in all six `toggle` settings (every premise view, both single-premise policies) and fails provably under `negate` (the Sorites). S011 and S012 derive at depth 1 and S020 at depth 3, matching her analyses (pp. 168-171). Her profile is identical, cell for cell, to `contrapose[either,any] + cut[any,any,merge]` and `contrapose[either,any] + cut[two,any,merge]`, so her restrictions change nothing on this ledger and she does not narrow the answer. FINDINGS, NOTES, findings page, export and Machine page updated. Not marked done: that is Kyle's call.
