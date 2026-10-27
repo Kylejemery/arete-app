@@ -6098,7 +6098,8 @@ export default function KosmopolisWorld() {
             width={W}
             height={H}
             aria-hidden="true"
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", visibility: "hidden" }}
+            className="kp-globe"
+            style={{ visibility: "hidden" }}
           />
           <button
             className="kp-cam-btn"
@@ -7141,7 +7142,7 @@ function SoulCard({
         {townName ? `Of ${townName} · ` : ""}
         {age.toLocaleString()} yrs{elderly ? " · in their last years" : ""} · leans {dom.name.toLowerCase()}
       </p>
-      <p className="kp-stage">
+      <p className="kp-prokopton">
         <span className="kp-stage-badge">{stage}</span>
         {acting && (
           <span className={`kp-bearing kp-bearing-${bearing.kind}`} title={bearing.note}>

@@ -913,6 +913,13 @@
     grid-template-columns: 1fr;
   }
 
+  /* the smallest labels, raised to a size a phone can read */
+  .zoneSectionLabel { font-size: 10px; letter-spacing: 2px; }
+  .scaleGreek,
+  .scaleDirections,
+  .zoneGreekTerm,
+  .philName { font-size: 10px; }
+
   .masterGrid {
     grid-template-columns: 1fr;
   }
