@@ -257,4 +257,5 @@ router.post('/mcp/corpus', async (req, res) => {
 // SSE stream to refuse GET with 405.
 router.get('/mcp/corpus', (_req, res) => res.status(405).end());
 
-module.exports = { router, formatResults, resolveLayers, searchCorpus };
+// embedQuery and db are shared with the single-key MCP server in routes/mcp.js.
+module.exports = { router, formatResults, resolveLayers, searchCorpus, embedQuery, db };
