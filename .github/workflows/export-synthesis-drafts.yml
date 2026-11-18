@@ -1,0 +1,129 @@
+# Exports approved synthesis drafts (Stoic Life essays and the rest) into
+# academy/corpus-ingestion/synthesis/ and opens a PR, so an approval reaches
+# the Observatory journal without anyone running the script by hand.
+#
+# Each run:
+#   1. asks the database whether any draft is approved; if none, stops there
+#      (no checkout, no install), which keeps the hourly run to seconds;
+#   2. writes the files on the branch synthesis-export, adding to it if an
+#      earlier export PR is still open;
+#   3. pushes, opens the PR if none is open, and only then marks the drafts
+#      'exported' (export-synthesis-drafts.js --write-only / --mark-exported),
+#      so a failed push never leaves a draft marked exported with no file.
+#
+# The PR is merged by a person; the nightly sync loads the files after merge.
+# Needs the repository secrets SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY, and
+# "Allow GitHub Actions to create and approve pull requests" in Settings → Actions.
+name: Export synthesis drafts
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [synthesis-approved]
+
+concurrency:
+  group: export-synthesis-drafts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  BRANCH: synthesis-export
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Any approved drafts?
+        id: check
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            # Not configured yet: say so and stop, rather than fail every hour.
+            # library.synthesis_unexported reports any draft left approved.
+            echo "::warning::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY repository secrets are not set; nothing exported"
+            echo "approved=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          n=$(curl -fsS "$SUPABASE_URL/rest/v1/synthesis_drafts?select=id&status=eq.approved" \
+                -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+                -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" | jq length)
+          echo "approved=$n" >> "$GITHUB_OUTPUT"
+          echo "$n approved draft(s)"
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.approved != '0'
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.approved != '0'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: academy/corpus-ingestion/package-lock.json
+
+      - name: Write the files
+        id: write
+        if: steps.check.outputs.approved != '0'
+        working-directory: academy/corpus-ingestion
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898276+github-actions[bot]@users.noreply.github.com"
+          # Add to an open export PR's branch rather than racing it.
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git checkout -B "$BRANCH" "origin/$BRANCH"
+            git merge --no-edit origin/main
+          else
+            git checkout -B "$BRANCH" origin/main
+          fi
+          npm ci --no-audit --no-fund
+          # A draft that fails to parse is reported; the others still go out,
+          # and the last step fails the job so the error is seen.
+          node export-synthesis-drafts.js --write-only "$RUNNER_TEMP/pending.json" \
+            || echo "errors=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit, push and open the PR
+        id: push
+        if: steps.check.outputs.approved != '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(jq length "$RUNNER_TEMP/pending.json")
+          if [ "$n" = "0" ]; then echo "Nothing written."; echo "pushed=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          git add academy/corpus-ingestion/synthesis
+          titles=$(jq -r '.[].file' "$RUNNER_TEMP/pending.json" | sed 's/^/- /')
+          git commit -m "Export $n approved synthesis draft(s)" -m "$titles"
+          git push origin "HEAD:$BRANCH"
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create --head "$BRANCH" --base main \
+              --title "Export approved synthesis drafts" \
+              --body "Written by the Export synthesis drafts workflow from drafts approved on the admin page. The drafts are marked exported, so Stoic Life essays already show in the Observatory journal; the nightly sync loads these files into the corpus after merge.
+
+          $titles"
+          fi
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Mark the drafts exported
+        if: steps.push.outputs.pushed == 'true'
+        working-directory: academy/corpus-ingestion
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node export-synthesis-drafts.js --mark-exported "$RUNNER_TEMP/pending.json"
+
+      - name: Fail if a draft could not be exported
+        if: steps.write.outputs.errors == 'true'
+        run: |
+          echo "::error::At least one approved draft failed to export; see 'Write the files' above"
+          exit 1

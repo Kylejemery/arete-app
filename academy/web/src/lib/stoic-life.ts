@@ -47,6 +47,31 @@ export async function startStoicLifeCycle(token: string): Promise<KickResult> {
   }
 }
 
+// Asks GitHub to run the Export synthesis drafts workflow now, rather than at
+// its next hourly run. Optional: without SYNTHESIS_EXPORT_DISPATCH_TOKEN (a
+// fine-grained token on this repo with Contents: read and write) the approval
+// still stands and the hourly schedule exports it. Never throws.
+export async function dispatchSynthesisExport(): Promise<{ dispatched: boolean; message: string }> {
+  const token = process.env.SYNTHESIS_EXPORT_DISPATCH_TOKEN
+  if (!token) return { dispatched: false, message: 'No dispatch token; the hourly export run will pick it up' }
+  try {
+    const res = await fetch('https://api.github.com/repos/Kylejemery/arete-app/dispatches', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: JSON.stringify({ event_type: 'synthesis-approved' }),
+      signal: AbortSignal.timeout(8000),
+    })
+    if (res.status === 204) return { dispatched: true, message: 'Export started' }
+    return { dispatched: false, message: `GitHub answered ${res.status}; the hourly export run will pick it up` }
+  } catch (e) {
+    return { dispatched: false, message: `${e instanceof Error ? e.message : 'Dispatch failed'}; the hourly export run will pick it up` }
+  }
+}
+
 // The front matter's doc_key and version, so an edit cannot quietly rename a
 // draft. The full format check is the export's (parseSynthesis).
 export function frontMatterIdentity(md: string): { docKey: string | null; version: number | null } {
