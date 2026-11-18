@@ -13,7 +13,7 @@ commits, no pushes. Every finding names what to do; a person decides whether to.
 
 ## What it checks
 
-Thirty-one probes across four domains. A probe is a named check that knows one
+Thirty-two probes across four domains. A probe is a named check that knows one
 thing, returns findings, and never writes.
 
 ### `corpus` — the standing rules
@@ -61,6 +61,17 @@ service with no checkout and checks what readers are actually shown. Where the
 site cannot be reached and a checkout is present it reads `data.ts` instead and
 names that as its source; with neither, it reports one `info` finding and
 claims nothing. Each finding is keyed `case:set:chunkId`.
+
+`library.synthesis_unexported` reports a synthesis draft that was approved but
+never exported. Approval does not publish anything:
+`academy/corpus-ingestion/export-synthesis-drafts.js` writes the file and marks
+the draft `exported`, and the Observatory journal shows a Stoic Life essay only
+after that. Nothing runs the export on its own, and five approved essays once
+sat unseen for up to six weeks. It warns for a Stoic Life draft approved more
+than `synthesis_export_stale_days` ago (info for other modes, which readers do
+not see), and gives info for an exported draft still not in the corpus after
+`synthesis_ingest_stale_days`, which usually means the export PR is unmerged.
+Keyed `approved:<draft id>` or `exported:<draft id>`.
 
 ### `repo` — the code
 
@@ -267,6 +278,8 @@ the agent:
 | `locator_coarse_median` | `2` | Median chunks per locator at or above which a work's locator scheme is reported as too coarse to cite. Eleven of the twelve located works sit at 1. |
 | `locator_min_chunks` | `30` | Below this many chunks a work is too short for that median to mean anything. |
 | `queue_stale_days` | `7` | How long a pending queue row may sit. |
+| `synthesis_export_stale_days` | `3` | Days an approved synthesis draft may wait for export before `library.synthesis_unexported` reports it. |
+| `synthesis_ingest_stale_days` | `14` | Days an exported draft may wait to be loaded into the corpus before it is reported. |
 | `exhibit_reach_timeout_ms` | `8000` | Per-request timeout when checking that a gallery exhibit's page loads, and when fetching the Stoic QCA evidence. |
 | `academy_url` | `https://academy.pursuearete.com` | Where `library.qca_evidence` reads the published evidence from. |
 | `base_branch` | `main` | The branch `repo.checkout_stale` measures against. |
@@ -310,7 +323,7 @@ something the tab should show, not hide).
 - **Run now** starts an audit on the Railway server rather than waiting for
   09:00 UTC. It proxies to `POST /api/admin/quality-audit/run` on the backend,
   which fires the run and returns 202. It does **not** reimplement the probes in
-  TypeScript: thirty-one probes in two languages would be two copies of the
+  TypeScript: thirty-two probes in two languages would be two copies of the
   rules, and the probes are the rules.
 - **Mute…** on a finding writes its fingerprint and a reason to
   `quality_audit_mutes`. The reason is required — an unexplained mute is
