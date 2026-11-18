@@ -164,6 +164,11 @@ with no embedding cannot be retrieved by any `match_rag_corpus*` function.
 | `virtues-of-socrates.v1.md` (inactive, kept for history) | 66 | 40 corpus_verified, 20 interpretive, 5 unverified, 1 interpretive + unverified |
 | `stoic-life-practical-wisdom-telling-the-good-from-the-indifferent.v2.md` (live) | 8 | 5 corpus_verified, 3 interpretive |
 | `stoic-life-practical-wisdom-telling-the-good-from-the-indifferent.v1.md` (inactive, kept for history) | 8 | 5 corpus_verified, 3 interpretive |
+| `stoic-life-courage-fearing-only-what-is-shameful.v1.md` | 8 | 5 corpus_verified, 3 interpretive |
+| `stoic-life-self-control-wanting-less-and-enjoying-it-more.v1.md` | 9 | 4 corpus_verified, 3 interpretive, 2 unverified |
+| `stoic-life-rules-for-living-what-musonius-epictetus-seneca-and-marcus.v1.md` | 9 | 5 corpus_verified, 4 interpretive |
+| `stoic-life-justice-how-to-treat-the-people-around-you.v1.md` | 9 | 5 interpretive, 2 corpus_verified, 2 unverified |
+| `stoic-life-diet-eating-as-a-stoic.v1.md` | 8 | 6 corpus_verified, 2 interpretive |
 
 Converted from Kyle's Claude Docs exports (PDF) on 2026-09-29; the Virtues
 document is the updated export of that afternoon, with Diet, Small habits, and

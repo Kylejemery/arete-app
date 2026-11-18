@@ -518,6 +518,70 @@ const probes = [
       return out;
     },
   },
+
+  // Approval is not publication. A synthesis draft Kyle approves stays
+  // 'approved' until export-synthesis-drafts.js writes its file and marks it
+  // 'exported'; the Observatory journal shows only exported or ingested Stoic
+  // Life essays, and the nightly sync loads only committed files. Nothing runs
+  // the export on its own, so five approved essays once sat unpublished for up
+  // to six weeks (found 2026-11-18). This probe is that reminder.
+  {
+    id: 'library.synthesis_unexported',
+    domain: DOMAIN,
+    title: 'Approved synthesis drafts reach readers and the corpus',
+    needs: ['db'],
+    async run(ctx) {
+      const approvedDays = Number(ctx.config?.synthesis_export_stale_days ?? 3);
+      const exportedDays = Number(ctx.config?.synthesis_ingest_stale_days ?? 14);
+      const { data, error } = await ctx.supabase
+        .from('synthesis_drafts')
+        .select('id, mode, title, status, reviewed_at, exported_at')
+        .in('status', ['approved', 'exported']);
+      if (error) throw new Error(`synthesis_drafts read failed: ${error.message}`);
+
+      const now = Date.now();
+      const daysSince = t => (t ? (now - new Date(t).getTime()) / 86400000 : Infinity);
+      const out = [];
+      for (const d of data || []) {
+        if (d.status === 'approved' && daysSince(d.reviewed_at) > approvedDays) {
+          const shown = d.mode === 'stoic_life';
+          out.push(finding({
+            probe: 'library.synthesis_unexported',
+            domain: DOMAIN,
+            severity: shown ? 'warning' : 'info',
+            key: `approved:${d.id}`,
+            title: `Approved but not exported: "${d.title}"`,
+            detail:
+              `Approved ${String(d.reviewed_at).slice(0, 10)} and never exported. ` +
+              (shown
+                ? 'The Observatory journal shows a Stoic Life essay only once it is exported, so readers cannot see it.'
+                : 'It has no committed file, so the nightly sync cannot load it into the corpus.'),
+            evidence: [`synthesis_drafts ${d.id} (${d.mode})`],
+            action:
+              'cd academy/corpus-ingestion && node export-synthesis-drafts.js, then commit the files it writes ' +
+              'with the README and open a PR.',
+          }));
+        } else if (d.status === 'exported' && daysSince(d.exported_at) > exportedDays) {
+          out.push(finding({
+            probe: 'library.synthesis_unexported',
+            domain: DOMAIN,
+            severity: 'info',
+            key: `exported:${d.id}`,
+            title: `Exported but not in the corpus: "${d.title}"`,
+            detail:
+              `Exported ${String(d.exported_at).slice(0, 10)} but no loaded document matches it yet. The export PR ` +
+              'may be unmerged, or the file may have changed after export (the reconcile step leaves a hash ' +
+              'mismatch as exported).',
+            evidence: [`synthesis_drafts ${d.id} (${d.mode})`],
+            action:
+              'Merge the export PR if it is open; otherwise run node export-synthesis-drafts.js --reconcile and ' +
+              'read what it says about this draft.',
+          }));
+        }
+      }
+      return out;
+    },
+  },
 ];
 
 module.exports = { probes };
